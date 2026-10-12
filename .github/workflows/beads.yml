@@ -40,6 +40,7 @@ jobs:
             artifacts/beads-*-combo.bin
             artifacts/NOTICE.txt
             artifacts/SHA256SUMS
+            artifacts/RELEASE_NOTES.md
             artifacts/beads-*.wav
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -69,32 +70,22 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           (cd artifacts && sha256sum -c SHA256SUMS)
-          printf '%s\n' \
-            'Unofficial community build; not made or supported by Emilie Gillet or Mutable Instruments, and not a Mutable Instruments product.' \
-            'Emilie Gillet: "Code provided as is, builds on a Desktop platform but not verified to build and run on a module. Install at your own risks."' \
-            'Please do not contact Emilie Gillet or Mutable Instruments about this build; report problems in this repository.' \
-            "Reviewed build-kit commit: $GITHUB_SHA (this tag)." \
-            'Upstream released source: d8f473915232af74347762b6365202bfd26f73f6.' \
-            'WAV built and freshly decoded in this run, with negative controls.' \
-            'Flash with the official Beads update procedure in the zip README.txt.' \
-            'Tested playback: a 44.1 kHz line output; see README.txt for the 48 kHz stress note.' \
-            'Copyright and permission notices: NOTICE.txt.' > release-notes.txt
           assets=("artifacts/$RELEASE_TAG-wav.zip" "artifacts/$RELEASE_TAG-combo.zip"
                   artifacts/NOTICE.txt artifacts/SHA256SUMS)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             # Re-run: make the existing release match this build.
             gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest \
-              --title "Unofficial Beads build ${RELEASE_TAG#beads-}" --notes-file release-notes.txt
+              --title "Unofficial Beads build ${RELEASE_TAG#beads-}" --notes-file artifacts/RELEASE_NOTES.md
             gh release upload "$RELEASE_TAG" --clobber --repo "$GITHUB_REPOSITORY" "${assets[@]}"
             wanted=$(for f in "${assets[@]}"; do basename "$f"; done | sort)
             gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' |
               while IFS= read -r name; do
-                grep -qxF "$name" <<<"$wanted" || gh release delete-asset "$RELEASE_TAG" "$name" --yes --repo "$GITHUB_REPOSITORY"
+                grep -qxF "$name" <<<"$wanted" || gh release delete-asset "$RELEASE_TAG" "$name" --yes --repo "$GITHUB_REPOSITORY" </dev/null
               done
           else
             gh release create "$RELEASE_TAG" --verify-tag --latest \
               --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads build ${RELEASE_TAG#beads-}" \
-              --notes-file release-notes.txt "${assets[@]}"
+              --notes-file artifacts/RELEASE_NOTES.md "${assets[@]}"
           fi
           # Check what was published.
           mkdir published

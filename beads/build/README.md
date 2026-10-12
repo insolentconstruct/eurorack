@@ -21,7 +21,7 @@ For changes compared with older firmware, see [CHANGES.md](CHANGES.md).
 
 Follow the [official Beads firmware update procedure](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware); the full steps are in the zip's `README.txt`.
 
-**Do not hold SEED at power-on: it rewrites the settings/calibration sector.**
+**Do not hold SEED at power-on unless you mean to: it resets the settings (a valid calibration is kept).**
 
 ### Calibration backup and restore
 

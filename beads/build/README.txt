@@ -1,37 +1,22 @@
-Unofficial Beads released-source audio update
-==============================================
+Unofficial Beads firmware
+=========================
+Unofficial community build, not a Mutable Instruments product.
 
-PLEASE READ FIRST. Emilie Gillet's own note on the released Beads code
-(eurorack README, 2026-10-12):
+Emilie Gillet's note:
+"Code provided as is, builds on a Desktop platform but not verified to
+build and run on a module. Install at your own risks."
 
-  "Code provided as is, builds on a Desktop platform but not verified to
-   build and run on a module. Install at your own risks."
+Install at your own risk. Please don't contact Emilie Gillet or Mutable
+Instruments; report problems at:
+https://github.com/insolentconstruct/eurorack/issues
 
-This file is an UNOFFICIAL build of that code, made and tested by the
-community, not by Emilie Gillet or Mutable Instruments. It is not a Mutable
-Instruments product. Install at your own risk. Please do NOT contact Emilie
-Gillet or Mutable Instruments about it; report problems on the GitHub
-repository this release came from.
-
-Built unmodified from Emilie Gillet's released Beads source, eurorack commit
-d8f473915232af74347762b6365202bfd26f73f6. Credits: Emilie Gillet,
-Frederic Meslin / Fred's Lab, Oliver Rockstedt. Copyright and permission
-notices are in NOTICE.txt; keep them when redistributing this file.
-
-
-What changed from earlier firmware
----------------------------------
-This release is the 2024 recovery firmware (beads_patch_firmware.wav) plus
-one change to how grains are stolen when they arrive faster than 25 ms apart.
-The full list, back to the 2021 forum release, is in CHANGES.md in the build
-kit (beads/build/CHANGES.md in the GitHub repository).
-
+This is the 2024 recovery firmware (beads_patch_firmware.wav) plus one
+change to grain stealing; details are in CHANGES.md in the repository.
 
 Firmware update procedure
 -------------------------
-(From the Beads manual by Emilie Gillet, licensed CC-BY-SA 3.0:
+Beads manual by Emilie Gillet, CC-BY-SA 3.0; reproduced unchanged:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware
-Reproduced unchanged; this section remains under CC-BY-SA 3.0.)
 
 If you think your module is behaving strangely, updating the firmware is
 certainly not the right thing to do.
@@ -62,39 +47,32 @@ the procedure from another computer/audio interface, and make sure that no
 piece of equipment or software effect (equalizer, automatic gain control, FX
 processor) is inserted in the signal chain.
 
+Notes
+-----
+* Do NOT hold SEED at power-on: it rewrites the settings/calibration
+  sector, keeping a valid calibration.
+* The audio update writes only the application area. It leaves the
+  bootloader and settings/calibration sector untouched.
+* If updates keep failing, set the computer's output to 44.1 kHz or try
+  another device. As a last resort, flash the -combo.bin from -combo.zip
+  via ST-Link; see the build kit README for the command.
 
-Notes for this build
---------------------
-* Do NOT hold SEED while powering on. On this firmware, SEED held at power-on
-  erases and rewrites the settings sector, which holds your calibration.
-  A valid calibration is kept, but back it up first if you can (below).
-* Playback: this file has been flashed successfully from a 44.1 kHz audio
-  interface line output; update files in the same format have also been
-  flashed from a laptop headphone output. The file itself is 48 kHz. In offline stress testing, decoding at the
-  native 48 kHz failed once under an extreme clock error combined with
-  noise. If updates keep failing, set your computer's output to 44.1 kHz
-  or try another device.
-* This update file writes only the application area (0x08020000-0x0807FFFF).
-  It does not touch the bootloader or the settings/calibration sector.
-* Last resort if audio updates keep failing: program the -combo.bin file
-  from the release's -combo.zip (bootloader + this firmware) with an
-  ST-Link. See the build kit README for the command.
-
-
-Calibration backup and restore (ST-Link + OpenOCD; SAME UNIT ONLY)
-------------------------------------------------------------------
-Back up the 128 KiB settings sector (calibration and settings):
+Calibration backup and restore (ST-Link + OpenOCD; same unit only)
+----------------------------------------------------------------
+Back up the 128 KiB settings/calibration sector:
 
   openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; dump_image beads-settings.bin 0x081E0000 0x20000; reset run; shutdown"
 
-Check that beads-settings.bin is 131072 bytes and keep it labelled with the
-unit it came from. Calibration is specific to each module: never restore a
-backup onto a different unit. To restore onto the SAME unit:
+Check that beads-settings.bin is 131072 bytes. Label it with its unit.
+Restore to the same unit only; calibration is specific to each module:
 
   openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; flash write_image erase beads-settings.bin 0x081E0000; verify_image beads-settings.bin 0x081E0000; reset run; shutdown"
 
-With valid settings, a normal power-on does not write flash. If the settings
-sector is corrupt, the module rewrites it and starts in factory-test mode
-("breathing" LEDs) even without SEED held; restoring your backup fixes that.
+Corrupt settings make the module start in factory-test mode (breathing
+LEDs); restoring the backup fixes it.
+
+Credits: Emilie Gillet, Frederic Meslin / Fred's Lab, Oliver Rockstedt.
+Copyright and permission notices are in NOTICE.txt; keep them when
+redistributing.

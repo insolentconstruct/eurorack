@@ -1,27 +1,3 @@
-# Copyright 2026 insolentconstruct.
-#
-# Author: insolentconstruct
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-#
-# See http://creativecommons.org/licenses/MIT/ for more information.
-
 # GNU ARM Embedded 4.9-2015-q2 (amd64), hash-checked.
 FROM python@sha256:d8fac68ebdc45b8d66d53f1ed6c1532da81109a8f5532a6ca0c951ed31107d70 AS encoder
 # Python 2.7 for the audio update encoder.
@@ -39,7 +15,7 @@ RUN curl -fsSL https://archive.debian.org/debian/pool/main/q/qemu/qemu-user-stat
  && rm -rf /tmp/qemu /tmp/qemu.deb \
  && qemu-x86_64-static --version
 
-FROM docker.io/library/node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS compiler
+FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS compiler
 SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
 
 ARG DEBIAN_SNAPSHOT=20260916T000000Z

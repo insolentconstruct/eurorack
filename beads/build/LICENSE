@@ -1,6 +1,11 @@
-Copyright 2019 Emilie Gillet.
+Beads build kit
+===============
 
-Author: Emilie Gillet (emilie.o.gillet@gmail.com)
+The files in this directory (beads/build/) are the build kit: scripts and
+configuration for building and packaging the firmware. They are released
+under the MIT license:
+
+Copyright 2026 the Beads build kit contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-See http://creativecommons.org/licenses/MIT/ for more information.
-
-Build kit additions copyright 2026 insolentconstruct contributors.
+The Beads firmware itself is Emilie Gillet's work and keeps her license; see
+the headers of the beads/ and stmlib/ sources. tools/flashsim.cc drives the
+unchanged decoder from stm_audio_bootloader (see its LICENSE). The manual
+excerpt in README.txt is CC-BY-SA 3.0. The ST HAL license text referenced by
+the firmware's headers is in tools/ST-BSD-3-Clause.txt.

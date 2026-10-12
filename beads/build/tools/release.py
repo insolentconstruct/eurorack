@@ -1,30 +1,5 @@
 #!/usr/bin/env python3
-#
-# Copyright 2026 insolentconstruct.
-#
-# Author: insolentconstruct
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-#
-# See http://creativecommons.org/licenses/MIT/ for more information.
-
-"""Prove the NEW WAV with the vendor decoder, inventory notices, package assets."""
+"""Check the WAV with the vendor decoder, collect notices, package the release."""
 import hashlib
 import os
 import json
@@ -174,7 +149,7 @@ def notices(out):
     raise ValueError('missing compiler runtime licenses')
   for path in licenses:
     chunks.append('\n===== Toolchain: '+str(path.relative_to(tc))+' =====\n'+source_text(path)+'\n')
-  for name in ('beads/build/LICENSE','stm_audio_bootloader/LICENSE','beads/build/tools/LICENSE'):
+  for name in ('stm_audio_bootloader/LICENSE',):
     chunks.append('\n===== '+name+' =====\n'+(ROOT/name).read_text()+'\n')
   chunks.append('\n===== ST HAL BSD-3-Clause license (headers reference this license) =====\n'+(HERE/'tools/ST-BSD-3-Clause.txt').read_text())
   data=''.join(chunks)
@@ -197,6 +172,7 @@ def write_zip(path, names):
 
 def package(out):
   (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
+  (out/'RELEASE_NOTES.md').write_bytes((HERE/'RELEASE_NOTES.md').read_bytes())
   write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'])
   # Combo image, named after the release.
   (out/COMBO).write_bytes((out/'combo.bin').read_bytes())

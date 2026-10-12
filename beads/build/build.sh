@@ -1,42 +1,18 @@
 #!/usr/bin/env bash
-#
-# Copyright 2026 insolentconstruct.
-#
-# Author: insolentconstruct
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-#
-# See http://creativecommons.org/licenses/MIT/ for more information.
-
 # Run from the repository root.
 set -euo pipefail
 export LC_ALL=C
 unset MAKEFLAGS MFLAGS MAKELEVEL
-out=${1:?usage: beads/build/build.sh EMPTY_OUTPUT_DIR [--wav]}
+out=${1:?usage: beads/build/build.sh EMPTY_OUTPUT_DIR --wav   (from the repository root, on the host)}
 mode=${2:-}
 [[ $# -le 2 && ( -z "$mode" || "$mode" == --wav ) ]] || exit 2
 [[ "$out" = /* && "$out" != *[[:space:]]* ]] || { echo "Output must be an absolute path without whitespace" >&2; exit 2; }
 [[ ! -e "$out" || -z "$(ls -A "$out")" ]] || { echo "Output must be empty" >&2; exit 2; }
 if [[ "$mode" == --wav ]]; then
-  command -v docker >/dev/null
+  command -v docker >/dev/null 2>&1 || { echo "Docker is required" >&2; exit 1; }
   root="$(git rev-parse --show-toplevel)"
   [[ "$root" != *,* && "$out" != *,* ]] || { echo "Docker mount paths must not contain commas" >&2; exit 2; }
+  [[ -f "$root/stm_audio_bootloader/qpsk/encoder.py" && -f "$root/stmlib/makefile.inc" ]] || { echo "Run: git submodule update --init stmlib stm_audio_bootloader" >&2; exit 1; }
   [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1 ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
   name=${BEADS_RELEASE_NAME:-beads-dev}
@@ -62,6 +38,8 @@ if [[ "$mode" == --wav ]]; then
     nice -n 10 python3 beads/build/tools/release.py /out
   exit 0
 fi
+# Without --wav, this runs inside the compiler container.
+[[ -n "${TOOLCHAIN_PATH:-}" ]] || { echo "Use --wav on the host; the other mode runs inside the build container" >&2; exit 2; }
 [[ -f stmlib/makefile.inc && -f stm_audio_bootloader/qpsk/encoder.py ]] || { echo "Initialize submodules first" >&2; exit 1; }
 mkdir -p "$out/objects/beads" "$out/objects/beads_bootloader"
 for spec in 'beads/makefile beads' 'beads/bootloader/makefile beads_bootloader'; do
