@@ -1,5 +1,10 @@
 # Link in a fixed order (the default wildcard order depends on the filesystem).
 include $(KIT_MAKEFILE)
+# Match the compiler sweep without changing the released makefiles.
+ifeq ($(KIT_GCC9),1)
+CPPFLAGS += -std=gnu++98
+CCFLAGS += -Wno-error=uninitialized
+endif
 CC_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.cc))))
 C_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) $(sort $(CORE_C_FILES)) $(sort $(DRIVERS_C_FILES))
 AS_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.s))))

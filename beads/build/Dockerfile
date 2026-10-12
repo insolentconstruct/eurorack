@@ -1,4 +1,4 @@
-# GNU ARM Embedded 4.9-2015-q2 (amd64), hash-checked.
+# GNU Arm Embedded 9-2020-q2, with 4.9.3 for the golden build.
 FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS compiler
 SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
 
@@ -29,8 +29,19 @@ RUN if [ -n "$TC_LOCAL" ]; then cp "/kit-context/$TC_LOCAL" /tmp/tc.tar.bz2; els
  && tar -xjf /tmp/tc.tar.bz2 -C /opt \
  && rm -f /tmp/tc.tar.bz2
 
-ENV TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/
-ENV PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/bin:$PATH
+ARG GCC9_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+ARG GCC9_SHA256=5adc2ee03904571c2de79d5cfc0f7fe2a5c5f54f44da5b645c17ee57b217f11f
+ARG GCC9_LOCAL=
+# Arm publishes MD5; the same archive is pinned here by SHA256.
+RUN if [ -n "$GCC9_LOCAL" ]; then cp "/kit-context/$GCC9_LOCAL" /tmp/gcc9.tar.bz2; else curl -fsSL -o /tmp/gcc9.tar.bz2 "$GCC9_URL"; fi \
+ && echo "$GCC9_SHA256  /tmp/gcc9.tar.bz2" | sha256sum -c - \
+ && echo "2b9eeccc33470f9d3cda26983b9d2dc6  /tmp/gcc9.tar.bz2" | md5sum -c - \
+ && tar -xjf /tmp/gcc9.tar.bz2 -C /opt \
+ && rm -f /tmp/gcc9.tar.bz2
+
+ENV GOLDEN_TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/
+ENV TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-9-2020-q2-update/
+ENV PATH=/opt/gcc-arm-none-eabi-9-2020-q2-update/bin:$PATH
 
 # Smoke test.
 RUN arm-none-eabi-gcc --version | sed -n 1p \
@@ -39,6 +50,6 @@ RUN arm-none-eabi-gcc --version | sed -n 1p \
  && rm -f /tmp/probe.c /tmp/probe.o
 
 LABEL org.opencontainers.image.title="beads-build-kit" \
-      org.beads.toolchain="gcc-arm-none-eabi-4_9-2015q2"
+      org.beads.toolchain="gcc-arm-none-eabi-9-2020-q2-update"
 
 WORKDIR /src

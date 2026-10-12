@@ -14,6 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          fetch-depth: 0
           submodules: false
           persist-credentials: false
       - name: Initialize only Beads dependencies
@@ -25,6 +26,8 @@ jobs:
         env:
           RELEASE_NAME: ${{ startsWith(github.ref, 'refs/tags/drizzlet-') && github.ref_name || 'drizzlet-dev' }}
         run: bash beads/build/build.sh "$PWD/artifacts" --wav
+      - name: Build the unchanged 4.9.3 golden app
+        run: bash beads/build/golden.sh "$PWD/golden"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: drizzlet-release-assets
@@ -45,6 +48,14 @@ jobs:
           name: drizzlet-build-proof
           if-no-files-found: error
           path: |
+            golden/app.bin
+            golden/app.elf
+            golden/*.log
+            golden/source-commits.txt
+            golden/SHA256SUMS
+            artifacts/NOTICE.txt
+            golden/objects/beads/objects.txt
+            golden/objects/beads/link.txt
             artifacts/decode-proof.json
             artifacts/notice-inventory.json
             artifacts/*.log
