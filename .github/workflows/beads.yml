@@ -37,6 +37,7 @@ jobs:
             artifacts/bootloader.bin
             artifacts/bootloader-padded.bin
             artifacts/combo.bin
+            artifacts/beads-*-combo.bin
             artifacts/NOTICE.txt
             artifacts/SHA256SUMS
             artifacts/beads-*.wav
@@ -78,11 +79,18 @@ jobs:
             'Flash with the official Beads update procedure in the zip README.txt.' \
             'Tested playback: a 44.1 kHz line output; see README.txt for the 48 kHz stress note.' \
             'Copyright and permission notices: NOTICE.txt.' > release-notes.txt
-          assets=("artifacts/$RELEASE_TAG.zip" artifacts/combo.bin
+          assets=("artifacts/$RELEASE_TAG-wav.zip" "artifacts/$RELEASE_TAG-combo.bin"
                   artifacts/NOTICE.txt artifacts/SHA256SUMS)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # Re-run or partial earlier publish: replace assets, then verify below.
+            # Re-run or partial earlier publish: make the release match this run exactly.
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --latest \
+              --title "Unofficial Beads build ${RELEASE_TAG#beads-}" --notes-file release-notes.txt
             gh release upload "$RELEASE_TAG" --clobber --repo "$GITHUB_REPOSITORY" "${assets[@]}"
+            wanted=$(for f in "${assets[@]}"; do basename "$f"; done | sort)
+            gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' |
+              while IFS= read -r name; do
+                grep -qxF "$name" <<<"$wanted" || gh release delete-asset "$RELEASE_TAG" "$name" --yes --repo "$GITHUB_REPOSITORY"
+              done
           else
             gh release create "$RELEASE_TAG" --verify-tag --latest \
               --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads build ${RELEASE_TAG#beads-}" \
@@ -93,3 +101,5 @@ jobs:
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir published
           (cd published && sha256sum -c SHA256SUMS)
           for f in "${assets[@]}"; do cmp "$f" "published/$(basename "$f")"; done
+          # The published asset set must be exactly this run's set: nothing extra, nothing missing.
+          diff <(for f in "${assets[@]}"; do basename "$f"; done | sort) <(find published -maxdepth 1 -type f -printf "%f\n" | sort)

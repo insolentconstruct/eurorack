@@ -22,8 +22,9 @@ NAME = os.environ.get('BEADS_RELEASE_NAME', 'beads-dev')
 if not re.fullmatch(r'beads-[A-Za-z0-9._-]+', NAME):
     raise SystemExit('BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+')
 WAV = NAME + '.wav'
-ZIP = NAME + '.zip'
-ASSETS = [ZIP, 'combo.bin', 'NOTICE.txt']
+ZIP = NAME + '-wav.zip'
+COMBO = NAME + '-combo.bin'
+ASSETS = [ZIP, COMBO, 'NOTICE.txt']
 
 
 def sha(path):
@@ -173,6 +174,8 @@ def package(out):
             info.create_system=0; info.external_attr=0; info.internal_attr=0; info.extra=b''
             z.writestr(info,(out/name).read_bytes())
             info.external_attr=0  # zipfile otherwise inserts default Unix permissions
+    # Published copy of the hash-checked combo.bin, named after the release.
+    (out/COMBO).write_bytes((out/'combo.bin').read_bytes())
     (out/'SHA256SUMS').write_text(''.join(sha(out/name)+'  '+name+'\n' for name in ASSETS))
     subprocess.run(['sha256sum','-c','SHA256SUMS'],cwd=out,check=True)
 
