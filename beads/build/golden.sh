@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The golden app always uses committed release sources, without the pan pin.
+# Released-source golden app.
 set -euo pipefail
 export LC_ALL=C
 unset MAKEFLAGS MFLAGS MAKELEVEL
@@ -34,6 +34,6 @@ nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h 
   > "$out/build.log" 2>&1 || { tail -40 "$out/build.log" >&2; exit 1; }
 cp "$out/objects/beads/beads.bin" "$out/app.bin"
 cp "$out/objects/beads/beads.elf" "$out/app.elf"
-# Independent released-source payload, never repin this to the community app.
+# Fixed golden payload.
 echo "1f487b48e41dc4d813c5c457de115a4d798d001253ff90b5c5ef1b1a156eee6a  app.bin" | (cd "$out" && sha256sum -c -)
 (cd "$out" && sha256sum app.bin app.elf > SHA256SUMS)

@@ -32,7 +32,7 @@ RUN if [ -n "$TC_LOCAL" ]; then cp "/kit-context/$TC_LOCAL" /tmp/tc.tar.bz2; els
 ARG GCC9_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
 ARG GCC9_SHA256=5adc2ee03904571c2de79d5cfc0f7fe2a5c5f54f44da5b645c17ee57b217f11f
 ARG GCC9_LOCAL=
-# Arm publishes MD5; the same archive is pinned here by SHA256.
+# Verified Arm archive.
 RUN if [ -n "$GCC9_LOCAL" ]; then cp "/kit-context/$GCC9_LOCAL" /tmp/gcc9.tar.bz2; else curl -fsSL -o /tmp/gcc9.tar.bz2 "$GCC9_URL"; fi \
  && echo "$GCC9_SHA256  /tmp/gcc9.tar.bz2" | sha256sum -c - \
  && echo "2b9eeccc33470f9d3cda26983b9d2dc6  /tmp/gcc9.tar.bz2" | md5sum -c - \

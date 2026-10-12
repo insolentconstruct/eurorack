@@ -82,30 +82,18 @@ docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/b
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
-The app uses GNU Arm Embedded 9-2020-q2-update (GCC 9.3.1). The bootloader
-keeps GCC 4.9.3 so its padded image remains byte-identical to the recovery
-bootloader. Both compilers are archive-pinned in the same image; the Python 3
-encoder and pinned QEMU CPU are unchanged. `link-order.mk` adds `-std=gnu++98`
-for the app, matching the compiler qualification build without changing the
-released makefiles. It also keeps GCC 9's conservative uninitialized-variable
-warnings visible without treating them as errors.
+The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its
+previous bytes. Both compiler archives are pinned.
 
-The build checks every firmware output against pinned community hashes.
-GitHub Actions builds and publishes releases from `drizzlet-*` tags. CI also builds
-the unchanged released app with GCC 4.9.3 and verifies its independent golden
-payload hash. It checks WAV decoding and rejection controls; it does not prove
-whole-firmware or hardware equivalence.
+Builds verify the firmware and WAV hashes. CI also builds the unchanged
+released app with GCC 4.9.3 as a fixed golden reference, and checks WAV
+decoding. Releases publish from `drizzlet-*` tags.
 
-To build the optional golden reference with the same image:
+To build the golden reference locally (needs a full Git checkout):
 
 ```sh
 bash beads/build/golden.sh "$PWD/golden"
 ```
-
-This exports immutable eurorack `d8f473915232af74347762b6365202bfd26f73f6`
-and stmlib `e3bd7c9cc00e4364166f9905c0509b6ffd0535ec` from Git, not the
-working source or pan pin. Use a full Git checkout (CI uses `fetch-depth: 0`).
-The golden app hash is `1f487b48e41dc4d813c5c457de115a4d798d001253ff90b5c5ef1b1a156eee6a`.
 
 ## License and credits
 
