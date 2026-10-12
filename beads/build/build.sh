@@ -13,20 +13,19 @@ if [[ "$mode" == --wav ]]; then
   root="$(git rev-parse --show-toplevel)"
   [[ "$root" != *,* && "$out" != *,* ]] || { echo "Docker mount paths must not contain commas" >&2; exit 2; }
   [[ -f "$root/stm_audio_bootloader/qpsk/encoder.py" && -f "$root/stmlib/makefile.inc" ]] || { echo "Run: git submodule update --init stmlib stm_audio_bootloader" >&2; exit 1; }
-  [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1 ]] || { echo "Wrong encoder commit" >&2; exit 1; }
+  [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == 39d95a8be305c6bc4a99fd218518d832c7ff821c ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
   name=${BEADS_RELEASE_NAME:-beads-dev}
   [[ "$name" =~ ^beads-[A-Za-z0-9._-]+$ ]] || { echo "BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+" >&2; exit 2; }
   build_image=${BEADS_BUILD_IMAGE:-beads-build-kit}
-  encoder_image=${BEADS_ENCODER_IMAGE:-beads-encoder}
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
     --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" "$build_image" \
     nice -n 10 bash beads/build/build.sh /out
   encoder_start=$SECONDS
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
-    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e PYTHONPATH=/src "$encoder_image" \
-    nice -n 10 /usr/local/bin/qemu-x86_64-static \
-    -cpu SandyBridge,-avx,-x2apic,-tsc-deadline /usr/local/bin/python2.7 \
+    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e PYTHONPATH=/src "$build_image" \
+    nice -n 10 /usr/bin/qemu-x86_64-static \
+    -cpu SandyBridge,-avx,-x2apic,-tsc-deadline /usr/bin/python3 \
     stm_audio_bootloader/qpsk/encoder.py \
     -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 /out/app.bin
   echo "Pinned-CPU encoding (including container startup): $((SECONDS - encoder_start)) seconds"

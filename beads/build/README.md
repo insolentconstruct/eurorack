@@ -57,7 +57,6 @@ On an amd64 host with Docker, run from the repository root:
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
 docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/build
-docker build --platform linux/amd64 --target encoder -t beads-encoder beads/build
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 

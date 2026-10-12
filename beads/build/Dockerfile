@@ -1,20 +1,4 @@
 # GNU ARM Embedded 4.9-2015-q2 (amd64), hash-checked.
-FROM python@sha256:d8fac68ebdc45b8d66d53f1ed6c1532da81109a8f5532a6ca0c951ed31107d70 AS encoder
-# Python 2.7 for the audio update encoder.
-RUN printf '%s\n' 'numpy==1.16.6 --hash=sha256:1680c8d5086a88d293dfd1a10b6429a09140cacee878034fa2308472ec835db4' > /tmp/requirements.txt \
- && nice -n 10 python -m pip install --no-cache-dir --only-binary=:all: --require-hashes -r /tmp/requirements.txt
-
-
-# QEMU with a fixed CPU model, so the encoder output is identical on any host.
-RUN curl -fsSL https://archive.debian.org/debian/pool/main/q/qemu/qemu-user-static_3.1+dfsg-8+deb10u8_amd64.deb -o /tmp/qemu.deb \
- && echo '34d01a0ff83d44fe4f39e35c7f86346f5e5afa3731ce7623a12688b194ea8ca3  /tmp/qemu.deb' | sha256sum -c - \
- && dpkg-deb -x /tmp/qemu.deb /tmp/qemu \
- && cp /tmp/qemu/usr/bin/qemu-x86_64-static /usr/local/bin/ \
- && mkdir -p /usr/local/share/doc/qemu-user-static \
- && cp /tmp/qemu/usr/share/doc/qemu-user-static/copyright /usr/local/share/doc/qemu-user-static/ \
- && rm -rf /tmp/qemu /tmp/qemu.deb \
- && qemu-x86_64-static --version
-
 FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS compiler
 SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
 
@@ -33,6 +17,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update \
  && apt-get install -y --no-install-recommends \
         ca-certificates curl bzip2 git make python3 python3-numpy python3-scipy g++ \
+        qemu-user-static:amd64=1:7.2+dfsg-7+deb12u18+b3 \
         libc6:i386 libstdc++6:i386 zlib1g:i386 \
  && rm -rf /var/lib/apt/lists/* \
  && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
