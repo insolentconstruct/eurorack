@@ -1,11 +1,22 @@
 Unofficial Beads released-source audio update
 ==============================================
 
-Not a Mutable Instruments product. Built from Emilie Gillet's released
-Beads source, eurorack commit d8f473915232af74347762b6365202bfd26f73f6.
-Credits: Emilie Gillet, Frederic Meslin / Fred's Lab, Oliver Rockstedt.
-Copyright and permission notices are in NOTICE.txt; keep them when
-redistributing this file.
+PLEASE READ FIRST. Emilie Gillet's own note on the released Beads code
+(eurorack README, 2026-10-12):
+
+  "Code provided as is, builds on a Desktop platform but not verified to
+   build and run on a module. Install at your own risks."
+
+This file is an UNOFFICIAL build of that code, made and tested by the
+community, not by Emilie Gillet or Mutable Instruments. It is not a Mutable
+Instruments product. Install at your own risk. Please do NOT contact Emilie
+Gillet or Mutable Instruments about it; report problems on the GitHub
+repository this release came from.
+
+Built unmodified from Emilie Gillet's released Beads source, eurorack commit
+d8f473915232af74347762b6365202bfd26f73f6. Credits: Emilie Gillet,
+Frederic Meslin / Fred's Lab, Oliver Rockstedt. Copyright and permission
+notices are in NOTICE.txt; keep them when redistributing this file.
 
 
 Firmware update procedure

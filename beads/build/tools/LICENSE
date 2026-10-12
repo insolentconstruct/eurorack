@@ -26,6 +26,6 @@ Build kit additions copyright 2026 insolentconstruct contributors.
 
 Copyright (c) 2026 insolentconstruct
 The MIT permission and disclaimer above also apply to flashsim.cc and release.py,
-adapted from earlier MIT-licensed helper code.
+adapted from the kit author's MIT-licensed bench helpers.
 Vendor decoder sources remain in the pinned stm_audio_bootloader submodule,
 with their original notices; no decoder algorithm is modified here.

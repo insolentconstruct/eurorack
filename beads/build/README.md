@@ -1,6 +1,11 @@
 # Unofficial Beads released-source build kit
 
-This is an unofficial build of Émilie Gillet's released Beads source, not a Mutable Instruments product. Source: eurorack `d8f473915232af74347762b6365202bfd26f73f6`; stmlib `e3bd7c9cc00e4364166f9905c0509b6ffd0535ec`; encoder `d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1`. The release tag goes on the reviewed **kit commit**; the upstream source commit is stated separately in release notes.
+> **Émilie Gillet's note on the released Beads code** ([eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md), 2026-10-12):
+> *"Code provided as is, builds on a Desktop platform but not verified to build and run on a module. Install at your own risks."*
+
+This is an **unofficial, community build** of that code, not made or supported by Émilie Gillet or Mutable Instruments, and not a Mutable Instruments product. Install at your own risk. **Please do not contact Émilie Gillet or Mutable Instruments about it.** Report problems in this repository's issues.
+
+Source: eurorack `d8f473915232af74347762b6365202bfd26f73f6` (firmware code; unchanged in later README-only commits); stmlib `e3bd7c9cc00e4364166f9905c0509b6ffd0535ec`; encoder `d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1`. The release tag goes on the reviewed **kit commit**; the upstream source commit is stated separately in release notes.
 
 ## Build and verify
 

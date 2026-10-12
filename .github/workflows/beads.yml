@@ -67,7 +67,9 @@ jobs:
         run: |
           (cd artifacts && sha256sum -c SHA256SUMS)
           printf '%s\n' \
-            'Unofficial Beads build; not a Mutable Instruments product.' \
+            'Unofficial community build; not made or supported by Emilie Gillet or Mutable Instruments, and not a Mutable Instruments product.' \
+            'Emilie Gillet: "Code provided as is, builds on a Desktop platform but not verified to build and run on a module. Install at your own risks."' \
+            'Please do not contact Emilie Gillet or Mutable Instruments about this build; report problems in this repository.' \
             "Reviewed build-kit commit: $GITHUB_SHA (this tag)." \
             'Upstream released source: d8f473915232af74347762b6365202bfd26f73f6.' \
             'WAV built and freshly decoded in this run, with negative controls.' \
