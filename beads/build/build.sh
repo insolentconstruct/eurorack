@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from repository root inside the pinned amd64 container.
+# Run from repository root: --wav on host; binary-only inside compiler container.
 set -euo pipefail
 export LC_ALL=C
 unset MAKEFLAGS MFLAGS MAKELEVEL
@@ -8,13 +8,35 @@ mode=${2:-}
 [[ $# -le 2 && ( -z "$mode" || "$mode" == --wav ) ]] || exit 2
 [[ "$out" = /* && "$out" != *[[:space:]]* ]] || { echo "Output must be an absolute path without whitespace" >&2; exit 2; }
 [[ ! -e "$out" || -z "$(ls -A "$out")" ]] || { echo "Output must be empty" >&2; exit 2; }
+if [[ "$mode" == --wav ]]; then
+  # Host orchestration: encoder stays inside Buster, never copied into Bookworm.
+  command -v docker >/dev/null
+  root="$(git rev-parse --show-toplevel)"
+  [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1 ]] || { echo "Wrong encoder commit" >&2; exit 1; }
+  mkdir -p "$out"
+  build_image=${BEADS_BUILD_IMAGE:-beads-build-kit}
+  encoder_image=${BEADS_ENCODER_IMAGE:-beads-encoder}
+  docker run --rm --network none --user "$(id -u):$(id -g)" \
+    -v "$root:/src:ro" -v "$out:/out" "$build_image" \
+    nice -n 10 bash beads/build/build.sh /out
+  docker run --rm --network none --user "$(id -u):$(id -g)" -w /src \
+    -v "$root:/src:ro" -v "$out:/out" -e PYTHONPATH=/src "$encoder_image" \
+    nice -n 10 python stm_audio_bootloader/qpsk/encoder.py \
+    -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 /out/app.bin
+  mv "$out/app.wav" "$out/beads-d8f4739-released.wav"
+  (cd "$out" && sha256sum -c "$root/beads/build/expected-wav.sha256")
+  docker run --rm --network none --user "$(id -u):$(id -g)" \
+    -v "$root:/src:ro" -v "$out:/out" "$build_image" \
+    nice -n 10 python3 beads/build/tools/release.py /out
+  exit 0
+fi
 [[ -f stmlib/makefile.inc && -f stm_audio_bootloader/qpsk/encoder.py ]] || { echo "Initialize submodules first" >&2; exit 1; }
 mkdir -p "$out/objects/beads" "$out/objects/beads_bootloader"
 for spec in 'beads/makefile beads' 'beads/bootloader/makefile beads_bootloader'; do
   read -r mf target <<< "$spec"
   nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
     "KIT_MAKEFILE=$mf" "BUILD_ROOT=$out/objects/" \
-    "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" -j2 bin hex kit-info \
+    "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" -j2 bin hex kit-info notice-deps \
     > "$out/$target.log" 2>&1 || { tail -40 "$out/$target.log" >&2; exit 1; }
 done
 cp "$out/objects/beads/beads.bin" "$out/app.bin"
@@ -44,14 +66,5 @@ if (p/'objects/beads/beads_bootloader_combo.bin').read_bytes() != padded+a:
     raise SystemExit('Combo disagrees with upstream HEX merge')
 PYCODE
 (cd "$out" && sha256sum -c "$OLDPWD/beads/build/expected-hashes.sha256") || { echo "FATAL: released firmware hash mismatch" >&2; exit 1; }
-if [[ "$mode" == --wav ]]; then
-  # Pending: pinned gitlink does not implement stm32h7. Never substitute another encoder.
-  command -v python2 >/dev/null || { echo "WAV pending: Python 2 encoder environment and stm32h7 support" >&2; exit 1; }
-  PYTHONPATH="$PWD" python2 stm_audio_bootloader/qpsk/encoder.py \
-    -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 "$out/app.bin"
-else
-  echo "WAV pending: pinned encoder lacks stm32h7 support; see beads/build/README.md" >&2
-fi
 (cd "$out" && sha256sum bootloader.bin bootloader-padded.bin app.bin app.elf combo.bin > SHA256SUMS
- if [[ -f app.wav ]]; then sha256sum app.wav >> SHA256SUMS; fi
  sha256sum -c SHA256SUMS)

@@ -15,3 +15,14 @@ endif
 kit-info:
 	@printf '%s\n' '$(OBJS)' > '$(BUILD_DIR)objects.txt'
 	@printf '%s\n' '$(CC) $(LDFLAGS) -o $(TARGET_ELF) $(OBJS)' > '$(BUILD_DIR)link.txt'
+
+# Complete dependency inventory for notices, including toolchain/system headers.
+# This supplements the upstream -MM build dependencies; compile flags are identical.
+.PHONY: notice-deps
+notice-deps: $(OBJS:.o=.nd)
+$(BUILD_DIR)%.nd: %.s
+	$(CC) -c -x assembler-with-cpp -M $(ASFLAGS) $< -MF $@ -MT $(@:.nd=.o)
+$(BUILD_DIR)%.nd: %.c
+	$(CC) -M $(CCFLAGS) $< -MF $@ -MT $(@:.nd=.o)
+$(BUILD_DIR)%.nd: %.cc
+	$(CXX) -M $(CCFLAGS) $(CPPFLAGS) $< -MF $@ -MT $(@:.nd=.o)
