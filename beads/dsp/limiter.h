@@ -34,6 +34,7 @@
 #include "stmlib/dsp/dsp.h"
 
 #include "beads/dsp/frame.h"
+#include "beads/output_limiter_mode.h"
 
 namespace beads {
 
@@ -60,6 +61,21 @@ class Limiter {
       in_out->l *= gain;
       in_out->r *= gain;
       ++in_out;
+    }
+  }
+
+  void ProcessOutput(
+      FloatFrame* in_out, size_t size, OutputLimiterMode mode, float sr) {
+    if (mode == OUTPUT_LIMITER_OFF) {
+      // Re-enable with a fresh detector, not a stale overload.
+      peak_ = peak_lp_ = 0.5f;
+    } else if (mode == OUTPUT_LIMITER_FAST) {
+      float decay = decay_;
+      decay_ = 1.0f / (sr * 0.2f);
+      Process(in_out, size);
+      decay_ = decay;
+    } else {
+      Process(in_out, size);
     }
   }
 

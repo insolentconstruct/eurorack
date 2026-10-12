@@ -68,6 +68,10 @@ class Synth {
       FloatFrame* out,
       size_t size);
   
+  inline void set_output_limiter_mode(OutputLimiterMode mode) {
+    output_limiter_mode_ = mode;
+  }
+
  private:
   TriggerGenerator trigger_generator_;
   
@@ -77,6 +81,7 @@ class Synth {
   Reverb reverb_;
   Limiter pre_reverb_limiter_;
   Limiter output_limiter_;
+  OutputLimiterMode output_limiter_mode_;
   
   WavetableGranularPlayer wavetable_granular_player_;
   WavetableVoice wavetable_voice_;

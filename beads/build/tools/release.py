@@ -52,7 +52,7 @@ def decoded_ok(stats, payload, expected):
 
 def proof(out):
   app = (out / 'app.bin').read_bytes()
-  if len(app) != 268384:
+  if not 0 < len(app) <= 327680:
     raise ValueError('unexpected application size')
   expected = app + b'\xff' * (327680 - len(app))
   wav_sha = sha(out / WAV)

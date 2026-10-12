@@ -1806,7 +1806,7 @@ class CicDecimator {
   }
   
   void Process(float* input, float* output, size_t size) {
-    for (int i = 0; i < size / R; ++i) {
+    for (size_t i = 0; i < size / R; ++i) {
       // N integrators
       for (int r=0; r<R; r++) {
         hi[0] += (*input++) * 32768.0f;
@@ -1838,7 +1838,7 @@ class CicInterpolator {
   }
   
   void Process(float* input, float* output, size_t size) {
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
       int32_t v = static_cast<float>(*input++ * R * 32768.0f);
       for (int n=0; n<N; n++) {
         int32_t in = v;

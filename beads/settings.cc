@@ -67,6 +67,7 @@ bool Settings::Init(bool recovery_mode) {
   state_.frozen = 0;
   state_.disable_autosave = 0;
   state_.monophonic_mode = 0;
+  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   
   if (recovery_mode) {
     chunk_storage_.Recover(&persistent_data_, &state_);
@@ -80,6 +81,7 @@ bool Settings::Init(bool recovery_mode) {
     CONSTRAIN(state_.assignable_cv_destination, 0, 3);
   }
   
+  set_output_limiter_mode(output_limiter_mode());
   return success;
 }
 
@@ -92,7 +94,8 @@ void Settings::SavePersistentData() {
 }
 
 void Settings::SaveState() {
-  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
+  set_output_limiter_mode(output_limiter_mode());
+  fill(&state_.padding[1], &state_.padding[sizeof(state_.padding)], 0);
   chunk_storage_.SaveState();
 }
 

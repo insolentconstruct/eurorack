@@ -34,6 +34,7 @@
 #include "stmlib/ui/event_queue.h"
 
 #include "beads/pot_controller.h"
+#include "beads/options.h"
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
@@ -77,6 +78,7 @@ class Ui {
       GainControl* gain_control,
       Calibrator* calibrator,
       BackgroundBufferBackup* background_buffer_backup);
+  void LoadOptions();
   void Poll();
   void DoEvents();
   void FlushEvents();
@@ -134,7 +136,10 @@ class Ui {
     overwrite_reserve_ = overwrite_reserve;
   }
   
+  OutputLimiterMode output_limiter_mode() const;
+
   void ProcessPot(MixParameter parameter, float value) {
+    mix_pot_value_[parameter] = value;
     assignable_cv_pot_[parameter].ProcessControlRate(value);
   }
   
@@ -186,6 +191,9 @@ class Ui {
   BackgroundBufferBackup* background_buffer_backup_;
   
   PotController assignable_cv_pot_[MIX_PARAMETER_LAST];
+  float mix_pot_value_[MIX_PARAMETER_LAST];
+  Options options_;
+  volatile OutputLimiterMode output_limiter_mode_;
 
   static const Leds::Color media_palette_[4];
   

@@ -53,6 +53,8 @@ class Switches {
   bool Init();
   void Debounce();
   
+  inline bool up(Switch s) const { return switch_state_[s] == 0xff; }
+
   inline bool released(Switch s) const {
     return switch_state_[s] == 0x7f;
   }

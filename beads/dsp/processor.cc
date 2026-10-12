@@ -43,6 +43,7 @@ using namespace stmlib;
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
+  output_limiter_mode_ = OUTPUT_LIMITER_STOCK;
   processor_digital_.Init(48000.0f, buffers);
   processor_vintage_digital_.Init(32000.0f, buffers);
   processor_clean_tape_.Init(24000.0f, buffers);
@@ -243,7 +244,8 @@ void Processor::Process(
   reverb_.Process(out, size);
   
   // Final clipping/limiting
-  output_limiter_.Process(out, size);
+  output_limiter_.ProcessOutput(
+      out, size, output_limiter_mode_, sample_rate());
   
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {

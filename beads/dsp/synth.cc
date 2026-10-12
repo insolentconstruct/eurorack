@@ -36,6 +36,7 @@ using namespace std;
 using namespace stmlib;
 
 void Synth::Init(uint16_t* reverb_buffer) {
+  output_limiter_mode_ = OUTPUT_LIMITER_STOCK;
   const float sr = 48000.0f;
   
   reverb_.Init(reverb_buffer, sr);
@@ -131,7 +132,8 @@ void Synth::Render(
   reverb_.Process(out, size);
 
   // Final clipping/limiting
-  output_limiter_.Process(out, size);
+  output_limiter_.ProcessOutput(
+      out, size, output_limiter_mode_, 48000.0f);
   
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {

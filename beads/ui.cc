@@ -65,6 +65,9 @@ void Ui::Init(
   background_buffer_backup_ = background_buffer_backup;
   
   mode_ = MODE_NORMAL;
+  options_.Init();
+  LoadOptions();
+  fill(&mix_pot_value_[0], &mix_pot_value_[MIX_PARAMETER_LAST], 0.0f);
   
   queue_.Init();
   
@@ -84,6 +87,10 @@ void Ui::Init(
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
     assignable_cv_pot_[i].Init(1.0f, 0.0f);
   }
+}
+
+void Ui::LoadOptions() {
+  output_limiter_mode_ = settings_->output_limiter_mode();
 }
 
 void Ui::Poll() {
@@ -116,10 +123,49 @@ void Ui::Poll() {
     }
   }
   
+  Options::Stage previous_stage = options_.stage();
+  bool was_active = options_.active();
+  bool other = false;
+  bool all_up = true;
+  bool pot_touched = false;
+  for (int i = 0; i < SWITCH_LAST; ++i) {
+    Switch s = Switch(i);
+    bool down = switches_.pressed_immediate(s);
+    other = other || (s != SWITCH_ASSIGN && down);
+    all_up = all_up && !down && switches_.up(s);
+  }
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    assignable_cv_pot_[i].ProcessUIRate();
+    pot_touched = pot_touched ||
+        assignable_cv_pot_[i].editing_hidden_parameter();
+  }
+  options_.Poll(
+      system_clock.milliseconds(), switches_.pressed(SWITCH_ASSIGN) &&
+      switches_.pressed_immediate(SWITCH_ASSIGN),
+      other, all_up, switches_.just_pressed(SWITCH_ASSIGN),
+      mode_ == MODE_NORMAL, pot_touched,
+      mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode());
+  if (!was_active && options_.active()) {
+    queue_.Flush();
+    ignore_release_[SWITCH_ASSIGN] = true;
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      assignable_cv_pot_[i].Lock();
+    }
+  }
+  if (options_.stage() == Options::DRAIN &&
+      previous_stage != Options::DRAIN) {
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      assignable_cv_pot_[i].Unlock();
+    }
+    queue_.Flush();
+  }
+  if (was_active && !options_.active()) {
+    queue_.Flush();
+  }
+
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
     PotController* p = &assignable_cv_pot_[i];
-    p->ProcessUIRate();
-    if (p->editing_hidden_parameter()) {
+    if (!was_active && !options_.active() && p->editing_hidden_parameter()) {
       State* state = settings_->mutable_state();
       if (switches_.pressed(SWITCH_MEDIA)) {
         // Big hack to prevent the long press detection to fire!
@@ -132,6 +178,8 @@ void Ui::Poll() {
     }
   }
   
+  output_limiter_mode_ = options_.active()
+      ? options_.preview() : settings_->output_limiter_mode();
   UpdateLeds();
 }
 
@@ -228,6 +276,24 @@ void Ui::UpdateLeds() {
       break;
   }
   
+  if (options_.stage() == Options::WAIT_RELEASE ||
+      options_.stage() == Options::EDITING) {
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      leds_.set(Led(LED_ASSIGN_1 + i),
+          options_.stage() == Options::WAIT_RELEASE || i == options_.page()
+              ? triangle : 0);
+    }
+    const Leds::Color colors[3] = {
+      { 0, 255, 0 }, { 0, 96, 255 }, { 255, 144, 0 }
+    };
+    OutputLimiterMode value = options_.preview();
+    uint32_t phase = system_clock.milliseconds() % 1200;
+    bool pulse = value == OUTPUT_LIMITER_STOCK ||
+        phase < 120 || (value == OUTPUT_LIMITER_OFF &&
+        phase >= 240 && phase < 360);
+    leds_.set_media(colors[value], pulse ? 1.0f : 0.0f);
+  }
+
   if (mode_ != MODE_FACTORY_TEST) {
     if (gain_control_->adjusting()) {
       leds_.set(LED_VU_METER, (system_clock.milliseconds() & 128) ? 128 : 0);
@@ -450,10 +516,21 @@ void Ui::OnSwitchReleased(const Event& e) {
   }
 }
 
+OutputLimiterMode Ui::output_limiter_mode() const {
+  return output_limiter_mode_;
+}
+
 void Ui::DoEvents() {
+  if (options_.commit_requested()) {
+    if (options_.preview() != settings_->output_limiter_mode()) {
+      settings_->set_output_limiter_mode(options_.preview());
+      settings_->SaveState();
+    }
+    options_.ClearCommit();
+  }
   while (queue_.available()) {
     Event e = queue_.PullEvent();
-    if (e.control_type == CONTROL_SWITCH) {
+    if (!options_.active() && e.control_type == CONTROL_SWITCH) {
       if (e.data == 0) {
         OnSwitchPressed(e);
       } else {

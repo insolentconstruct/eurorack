@@ -241,6 +241,8 @@ void Process(
     processor.Trim();
     ui.ClearTrimFlag();
   }
+  processor.set_output_limiter_mode(ui.output_limiter_mode());
+  synth.set_output_limiter_mode(ui.output_limiter_mode());
   if (synth_mode) {
     synth.Render(
         seed_button_state,
@@ -326,6 +328,7 @@ void Init() {
 
   const bool recovery_mode = ui.pressed_immediate(SWITCH_SEED);
   const bool freshly_baked = !settings.Init(recovery_mode);
+  ui.LoadOptions();
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);

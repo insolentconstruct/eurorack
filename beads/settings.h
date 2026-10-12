@@ -33,6 +33,7 @@
 #include "stmlib/system/storage.h"
 
 #include "beads/drivers/cv_adc.h"
+#include "beads/output_limiter_mode.h"
 
 namespace beads {
 
@@ -69,6 +70,14 @@ class Settings {
 
   void SavePersistentData();
   void SaveState();
+
+  inline OutputLimiterMode output_limiter_mode() const {
+    return DecodeOutputLimiterMode(state_.padding[0]);
+  }
+
+  inline void set_output_limiter_mode(OutputLimiterMode mode) {
+    state_.padding[0] = EncodeOutputLimiterMode(mode);
+  }
   
   inline State* mutable_state() {
     return &state_;

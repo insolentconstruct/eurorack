@@ -163,6 +163,10 @@ class Processor {
       FloatFrame* out,
       size_t size);
   
+  inline void set_output_limiter_mode(OutputLimiterMode mode) {
+    output_limiter_mode_ = mode;
+  }
+
  private:
   GranularProcessor<
       RESOLUTION_16_BIT,
@@ -204,6 +208,7 @@ class Processor {
   Reverb reverb_;
   Limiter pre_reverb_limiter_;
   Limiter output_limiter_;
+  OutputLimiterMode output_limiter_mode_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

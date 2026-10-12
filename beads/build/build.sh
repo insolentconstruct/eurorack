@@ -74,6 +74,6 @@ padded = b + bytes(0x20000-len(b))
 if (p/'objects/beads/beads_bootloader_combo.bin').read_bytes() != padded+a:
     raise SystemExit('Combo disagrees with upstream HEX merge')
 PYCODE
-(cd "$out" && sha256sum -c "$OLDPWD/beads/build/expected-hashes.sha256") || { echo "FATAL: released firmware hash mismatch" >&2; exit 1; }
+(cd "$out" && sha256sum -c "$OLDPWD/beads/build/expected-hashes.sha256") || { echo "FATAL: branch firmware hash mismatch" >&2; exit 1; }
 (cd "$out" && sha256sum bootloader.bin bootloader-padded.bin app.bin app.elf combo.bin > SHA256SUMS
  sha256sum -c SHA256SUMS)
