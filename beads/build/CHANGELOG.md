@@ -1,11 +1,22 @@
-# Changes from earlier Beads firmware
+# Changelog
+
+Changes to this community build, newest first. Each feature adds a line under
+"Unreleased"; a release turns it into a dated heading.
+
+## Unreleased
+- Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
+
+## 2026.10.11
+- First build: Émilie Gillet's released Beads source, unmodified.
+
+## Earlier firmware (Émilie Gillet)
 
 - **2021 forum release:** `beads.wav`, posted on the Mutable Instruments forum in April 2021.
 - **2024 recovery firmware:** `beads_patch_firmware.wav` / `beads_golden_bootloader_combo.bin`, shared in the ModWiggler Beads thread in early 2024 to fix modules stuck on boot.
 
 These are the source changes needed to reproduce the older application images exactly, not the original history. The release bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation, not listening tests.
 
-## 2024 recovery firmware → released source
+### 2024 recovery firmware → released source
 
 One change: grain stealing in polyphonic mode (`beads/dsp/granular_player.h`).
 
@@ -22,7 +33,7 @@ The “freeze gate” and “gated density” bench tests reached the changed ra
 
 Monophonic mode is unchanged and compiled out of all shipped builds (`ENABLE_ADVANCED_FEATURES` is commented out).
 
-## 2021 forum release → 2024 recovery firmware
+### 2021 forum release → 2024 recovery firmware
 
 Five changes:
 

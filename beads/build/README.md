@@ -15,7 +15,7 @@ Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurora
 - `<tag>-wav.zip`: audio update, with `README.txt` and `NOTICE.txt`.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
-For changes compared with older firmware, see [CHANGES.md](CHANGES.md).
+What changed, including against older firmware: see [CHANGELOG.md](CHANGELOG.md).
 
 ## Updating your module
 

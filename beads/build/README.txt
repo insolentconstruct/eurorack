@@ -11,7 +11,7 @@ Instruments; report problems at:
 https://github.com/insolentconstruct/eurorack/issues
 
 This is the 2024 recovery firmware (beads_patch_firmware.wav) plus one
-change to grain stealing; details are in CHANGES.md in the repository.
+change to grain stealing; details are in CHANGELOG.md in the repository.
 
 Firmware update procedure
 -------------------------
