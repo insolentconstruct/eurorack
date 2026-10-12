@@ -20,6 +20,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
   Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero; later
   releases read a zero byte 11 as "no options saved", so every later option starts at stock.
 - Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
+- App built with GCC 9.3.1, with fused rounding pinned for the randomized pan. Audio matched the GCC 4.9.3 build across 20 emulated DSP scenarios plus the long fill and self-play runs. Bootloader bytes unchanged.
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 
 ## 2026.10.11
