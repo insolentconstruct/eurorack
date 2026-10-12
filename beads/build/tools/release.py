@@ -172,7 +172,6 @@ def write_zip(path, names):
 
 def package(out):
   (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
-  (out/'RELEASE_NOTES.md').write_bytes((HERE/'RELEASE_NOTES.md').read_bytes())
   write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'])
   # Combo image, named after the release.
   (out/COMBO).write_bytes((out/'combo.bin').read_bytes())

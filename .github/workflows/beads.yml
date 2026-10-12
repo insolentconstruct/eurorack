@@ -40,7 +40,6 @@ jobs:
             artifacts/beads-*-combo.bin
             artifacts/NOTICE.txt
             artifacts/SHA256SUMS
-            artifacts/RELEASE_NOTES.md
             artifacts/beads-*.wav
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -60,38 +59,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+          sparse-checkout: beads/build/publish.sh
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: beads-release-assets
           path: artifacts
-      - name: Verify assets and publish the reviewed kit tag
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          (cd artifacts && sha256sum -c SHA256SUMS)
-          assets=("artifacts/$RELEASE_TAG-wav.zip" "artifacts/$RELEASE_TAG-combo.zip"
-                  artifacts/NOTICE.txt artifacts/SHA256SUMS)
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # Re-run: make the existing release match this build.
-            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest \
-              --title "Unofficial Beads build ${RELEASE_TAG#beads-}" --notes-file artifacts/RELEASE_NOTES.md
-            gh release upload "$RELEASE_TAG" --clobber --repo "$GITHUB_REPOSITORY" "${assets[@]}"
-            wanted=$(for f in "${assets[@]}"; do basename "$f"; done | sort)
-            gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' |
-              while IFS= read -r name; do
-                grep -qxF "$name" <<<"$wanted" || gh release delete-asset "$RELEASE_TAG" "$name" --yes --repo "$GITHUB_REPOSITORY" </dev/null
-              done
-          else
-            gh release create "$RELEASE_TAG" --verify-tag --latest \
-              --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads build ${RELEASE_TAG#beads-}" \
-              --notes-file artifacts/RELEASE_NOTES.md "${assets[@]}"
-          fi
-          # Check what was published.
-          mkdir published
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir published
-          (cd published && sha256sum -c SHA256SUMS)
-          for f in "${assets[@]}"; do cmp "$f" "published/$(basename "$f")"; done
-          state=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease -q '"\(.isDraft) \(.isPrerelease)"')
-          [ "$state" = "false false" ] || { echo "release is not published: draft/prerelease = $state" >&2; exit 1; }
-          diff <(for f in "${assets[@]}"; do basename "$f"; done | sort) <(find published -maxdepth 1 -type f -printf "%f\n" | sort)
+        run: bash beads/build/publish.sh "$GITHUB_REF_NAME" artifacts
