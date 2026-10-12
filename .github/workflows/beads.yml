@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
       - name: Initialize only Beads dependencies
         run: git submodule update --init stmlib stm_audio_bootloader
-      - name: Build pinned amd64 compiler and Buster encoder
+      - name: Build pinned amd64 compiler and Buster pinned-CPU encoder
         run: |
           docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/build
           docker build --platform linux/amd64 --target encoder -t beads-encoder beads/build

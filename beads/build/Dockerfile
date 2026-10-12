@@ -6,6 +6,20 @@ FROM python@sha256:d8fac68ebdc45b8d66d53f1ed6c1532da81109a8f5532a6ca0c951ed31107
 RUN printf '%s\n' 'numpy==1.16.6 --hash=sha256:1680c8d5086a88d293dfd1a10b6429a09140cacee878034fa2308472ec835db4' > /tmp/requirements.txt \
  && nice -n 10 python -m pip install --no-cache-dir --only-binary=:all: --require-hashes -r /tmp/requirements.txt
 
+
+# Pin the emulator as well as the guest math environment. QEMU 3.1's TCG lacks
+# AVX; build.sh explicitly disables it and the other unsupported SandyBridge
+# features. This selects the non-FMA libm path that matches the tested WAV.
+# Debian buster package 1:3.1+dfsg-8+deb10u8 (amd64), archive index SHA256.
+RUN curl -fsSL https://archive.debian.org/debian/pool/main/q/qemu/qemu-user-static_3.1+dfsg-8+deb10u8_amd64.deb -o /tmp/qemu.deb \
+ && echo '34d01a0ff83d44fe4f39e35c7f86346f5e5afa3731ce7623a12688b194ea8ca3  /tmp/qemu.deb' | sha256sum -c - \
+ && dpkg-deb -x /tmp/qemu.deb /tmp/qemu \
+ && cp /tmp/qemu/usr/bin/qemu-x86_64-static /usr/local/bin/ \
+ && mkdir -p /usr/local/share/doc/qemu-user-static \
+ && cp /tmp/qemu/usr/share/doc/qemu-user-static/copyright /usr/local/share/doc/qemu-user-static/ \
+ && rm -rf /tmp/qemu /tmp/qemu.deb \
+ && qemu-x86_64-static --version
+
 FROM docker.io/library/node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS compiler
 SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
 

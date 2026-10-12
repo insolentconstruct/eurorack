@@ -12,21 +12,26 @@ if [[ "$mode" == --wav ]]; then
   # Host orchestration: encoder stays inside Buster, never copied into Bookworm.
   command -v docker >/dev/null
   root="$(git rev-parse --show-toplevel)"
+  [[ "$root" != *,* && "$out" != *,* ]] || { echo "Docker mount paths must not contain commas" >&2; exit 2; }
   [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1 ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
   build_image=${BEADS_BUILD_IMAGE:-beads-build-kit}
   encoder_image=${BEADS_ENCODER_IMAGE:-beads-encoder}
-  docker run --rm --network none --user "$(id -u):$(id -g)" \
-    -v "$root:/src:ro" -v "$out:/out" "$build_image" \
+  docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
+    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" "$build_image" \
     nice -n 10 bash beads/build/build.sh /out
-  docker run --rm --network none --user "$(id -u):$(id -g)" -w /src \
-    -v "$root:/src:ro" -v "$out:/out" -e PYTHONPATH=/src "$encoder_image" \
-    nice -n 10 python stm_audio_bootloader/qpsk/encoder.py \
+  encoder_start=$SECONDS
+  docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
+    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e PYTHONPATH=/src "$encoder_image" \
+    nice -n 10 /usr/local/bin/qemu-x86_64-static \
+    -cpu SandyBridge,-avx,-x2apic,-tsc-deadline /usr/local/bin/python2.7 \
+    stm_audio_bootloader/qpsk/encoder.py \
     -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 /out/app.bin
+  echo "Pinned-CPU encoding (including container startup): $((SECONDS - encoder_start)) seconds"
   mv "$out/app.wav" "$out/beads-d8f4739-released.wav"
   (cd "$out" && sha256sum -c "$root/beads/build/expected-wav.sha256")
-  docker run --rm --network none --user "$(id -u):$(id -g)" \
-    -v "$root:/src:ro" -v "$out:/out" "$build_image" \
+  docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
+    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" "$build_image" \
     nice -n 10 python3 beads/build/tools/release.py /out
   exit 0
 fi
