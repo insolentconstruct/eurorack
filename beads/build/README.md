@@ -7,6 +7,8 @@ This is an **unofficial, community build** of that code, not made or supported b
 
 Source: eurorack `d8f473915232af74347762b6365202bfd26f73f6` (firmware code; unchanged in later README-only commits); stmlib `e3bd7c9cc00e4364166f9905c0509b6ffd0535ec`; encoder `d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1`. The release tag goes on the reviewed **kit commit**; the upstream source commit is stated separately in release notes.
 
+**What changed compared with older Beads firmware** (the 2021 forum release and the 2024 recovery firmware): see [CHANGES.md](CHANGES.md).
+
 ## Build and verify
 
 On an amd64 host with Docker, from the repository root:

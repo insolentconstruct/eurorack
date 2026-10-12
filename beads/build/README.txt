@@ -19,6 +19,14 @@ Frederic Meslin / Fred's Lab, Oliver Rockstedt. Copyright and permission
 notices are in NOTICE.txt; keep them when redistributing this file.
 
 
+What changed from earlier firmware
+---------------------------------
+This release is the 2024 recovery firmware (beads_patch_firmware.wav) plus
+one change to how grains are stolen when they arrive faster than 25 ms apart.
+The full list, back to the 2021 forum release, is in CHANGES.md in the build
+kit (beads/build/CHANGES.md in the GitHub repository).
+
+
 Firmware update procedure
 -------------------------
 (From the Beads manual by Emilie Gillet, licensed CC-BY-SA 3.0:
