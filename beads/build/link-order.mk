@@ -22,10 +22,8 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 
-# Additive wrapper: upstream recipes and flags remain unchanged.
+# Link in a fixed order (the default wildcard order depends on the filesystem).
 include $(KIT_MAKEFILE)
-# Extension groups first, then declared package order, then alphabetic filenames.
-# Do not globally sort the entire source/object list.
 CC_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.cc))))
 C_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) $(sort $(CORE_C_FILES)) $(sort $(DRIVERS_C_FILES))
 AS_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.s))))
@@ -40,8 +38,7 @@ kit-info:
 	@printf '%s\n' '$(OBJS)' > '$(BUILD_DIR)objects.txt'
 	@printf '%s\n' '$(CC) $(LDFLAGS) -o $(TARGET_ELF) $(OBJS)' > '$(BUILD_DIR)link.txt'
 
-# Complete dependency inventory for notices, including toolchain/system headers.
-# This supplements the upstream -MM build dependencies; compile flags are identical.
+# Dependency list, used to collect license notices.
 .PHONY: notice-deps
 notice-deps: $(OBJS:.o=.nd)
 $(BUILD_DIR)%.nd: %.s

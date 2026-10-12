@@ -82,7 +82,7 @@ jobs:
           assets=("artifacts/$RELEASE_TAG-wav.zip" "artifacts/$RELEASE_TAG-combo.zip"
                   artifacts/NOTICE.txt artifacts/SHA256SUMS)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # Re-run or partial earlier publish: make the release match this run exactly.
+            # Re-run: make the existing release match this build.
             gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest \
               --title "Unofficial Beads build ${RELEASE_TAG#beads-}" --notes-file release-notes.txt
             gh release upload "$RELEASE_TAG" --clobber --repo "$GITHUB_REPOSITORY" "${assets[@]}"
@@ -96,13 +96,11 @@ jobs:
               --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads build ${RELEASE_TAG#beads-}" \
               --notes-file release-notes.txt "${assets[@]}"
           fi
-          # Verify what is actually published matches this run's checked assets.
+          # Check what was published.
           mkdir published
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir published
           (cd published && sha256sum -c SHA256SUMS)
           for f in "${assets[@]}"; do cmp "$f" "published/$(basename "$f")"; done
-          # The release must be public (not a leftover draft or a pre-release).
           state=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease -q '"\(.isDraft) \(.isPrerelease)"')
           [ "$state" = "false false" ] || { echo "release is not published: draft/prerelease = $state" >&2; exit 1; }
-          # The published asset set must be exactly this run's set: nothing extra, nothing missing.
           diff <(for f in "${assets[@]}"; do basename "$f"; done | sort) <(find published -maxdepth 1 -type f -printf "%f\n" | sort)

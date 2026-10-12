@@ -22,19 +22,14 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 
-# GNU ARM Embedded 4.9-2015-q2; amd64 only. Compiler archive and tree
-# are hash-checked. Debian packages use the same snapshot as beads-port.
-# Optional TC_LOCAL is a filename in the build context, still hash-checked.
+# GNU ARM Embedded 4.9-2015-q2 (amd64), hash-checked.
 FROM python@sha256:d8fac68ebdc45b8d66d53f1ed6c1532da81109a8f5532a6ca0c951ed31107d70 AS encoder
-# Python 2.7.18 environment; QPSK needs NumPy, not SciPy.
+# Python 2.7 for the audio update encoder.
 RUN printf '%s\n' 'numpy==1.16.6 --hash=sha256:1680c8d5086a88d293dfd1a10b6429a09140cacee878034fa2308472ec835db4' > /tmp/requirements.txt \
  && nice -n 10 python -m pip install --no-cache-dir --only-binary=:all: --require-hashes -r /tmp/requirements.txt
 
 
-# Pin the emulator as well as the guest math environment. QEMU 3.1's TCG lacks
-# AVX; build.sh explicitly disables it and the other unsupported SandyBridge
-# features. This selects the non-FMA libm path that matches the tested WAV.
-# Debian buster package 1:3.1+dfsg-8+deb10u8 (amd64), archive index SHA256.
+# QEMU with a fixed CPU model, so the encoder output is identical on any host.
 RUN curl -fsSL https://archive.debian.org/debian/pool/main/q/qemu/qemu-user-static_3.1+dfsg-8+deb10u8_amd64.deb -o /tmp/qemu.deb \
  && echo '34d01a0ff83d44fe4f39e35c7f86346f5e5afa3731ce7623a12688b194ea8ca3  /tmp/qemu.deb' | sha256sum -c - \
  && dpkg-deb -x /tmp/qemu.deb /tmp/qemu \
@@ -67,7 +62,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && rm -rf /var/lib/apt/lists/* \
  && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
 
-# Hash a sorted file/symlink listing in C collation.
+# Toolchain tree hash.
 RUN printf '%s\n' \
       '#!/bin/bash' \
       'set -euo pipefail' \
@@ -93,7 +88,7 @@ RUN if [ -n "$TC_LOCAL" ]; then cp "/kit-context/$TC_LOCAL" /tmp/tc.tar.bz2; els
 ENV TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/
 ENV PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/bin:$PATH
 
-# It must compile a translation unit with the C library headers, not merely exist.
+# Smoke test.
 RUN arm-none-eabi-gcc --version | sed -n 1p \
  && printf '#include <math.h>\n#include <stdint.h>\nfloat f(float x){return __builtin_sqrtf(x);}\n' > /tmp/probe.c \
  && arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 /tmp/probe.c -o /tmp/probe.o \

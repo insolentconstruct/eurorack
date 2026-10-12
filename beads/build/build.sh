@@ -24,7 +24,7 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 
-# Run from repository root: --wav on host; binary-only inside compiler container.
+# Run from the repository root.
 set -euo pipefail
 export LC_ALL=C
 unset MAKEFLAGS MFLAGS MAKELEVEL
@@ -34,7 +34,6 @@ mode=${2:-}
 [[ "$out" = /* && "$out" != *[[:space:]]* ]] || { echo "Output must be an absolute path without whitespace" >&2; exit 2; }
 [[ ! -e "$out" || -z "$(ls -A "$out")" ]] || { echo "Output must be empty" >&2; exit 2; }
 if [[ "$mode" == --wav ]]; then
-  # Host orchestration: encoder stays inside Buster, never copied into Bookworm.
   command -v docker >/dev/null
   root="$(git rev-parse --show-toplevel)"
   [[ "$root" != *,* && "$out" != *,* ]] || { echo "Docker mount paths must not contain commas" >&2; exit 2; }
@@ -56,7 +55,7 @@ if [[ "$mode" == --wav ]]; then
     -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 /out/app.bin
   echo "Pinned-CPU encoding (including container startup): $((SECONDS - encoder_start)) seconds"
   mv "$out/app.wav" "$out/$name.wav"
-  # The pinned hash is of the WAV content; the file name follows the release name.
+  # Check the WAV against the tested file.
   echo "$(cut -c1-64 "$root/beads/build/expected-wav.sha256")  $name.wav" | (cd "$out" && sha256sum -c -)
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
     --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e BEADS_RELEASE_NAME="$name" "$build_image" \
@@ -75,7 +74,7 @@ done
 cp "$out/objects/beads/beads.bin" "$out/app.bin"
 cp "$out/objects/beads/beads.elf" "$out/app.elf"
 cp "$out/objects/beads_bootloader/beads_bootloader.bin" "$out/bootloader.bin"
-# Independently reconstruct combo using the upstream HEX merge recipe.
+# Combo image, as in stmlib's makefile.
 nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
   KIT_MAKEFILE=beads/makefile "BUILD_ROOT=$out/objects/" \
   "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" "$out/objects/beads/beads_bootloader_combo.bin" \

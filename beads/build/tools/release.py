@@ -91,8 +91,7 @@ def proof(out):
     x = wav_read(out / WAV)
     corrupt = x.copy(); corrupt[30*48000:31*48000] = 0
     corrupted = work / 'corrupted.wav'; wav_write(corrupted, corrupt)
-    # Keep just 0.1 s of the final 3 s erase blank + 5 s outro.
-    # All payload packets remain, but the receiver must not see EOT.
+    # Truncated ending: must not decode.
     truncated = work / 'missing-eot.wav'; wav_write(truncated, x[:-int(7.9*48000)])
     for label, path, rate, want in [('nominal-48000', out/WAV, 48000, True),
                                    ('resampled-44100', out/WAV, 44100, True),
@@ -112,7 +111,6 @@ def proof(out):
       payload = work / 'decoded.bin'
       run = subprocess.run([str(sim), str(adc), str(payload)], capture_output=True, text=True, check=True)
       stats = {k:int(v) for k,v in (x.split('=') for x in run.stdout.split())}
-      # Infrastructure exceptions/nonzero exits never count as negative success.
       data = payload.read_bytes()
       ok = decoded_ok(stats, data, expected)
       if ok != want:
@@ -138,13 +136,11 @@ def source_text(path):
   try:
     return data.decode('utf-8')
   except UnicodeDecodeError:
-    # Older CMSIS headers use Windows-1252 punctuation. Transcode losslessly;
-    # never drop or replace copyright/permission text.
+    # Some CMSIS headers are Windows-1252.
     return data.decode('cp1252')
 
 
 def comments(text):
-  # Preserve full original comment blocks, including every permission/disclaimer.
   return [m.group() for m in re.finditer(r'/\*.*?\*/|(?m:^\s*//[^\n]*(?:\n\s*//[^\n]*)*)', text, re.S)
           if re.search(r'copyright|redistribution|permission is hereby|licensed?\b|SPDX', m.group(), re.I)]
 
@@ -165,7 +161,6 @@ def notices(out):
       raise ValueError('missing dependency: '+name)
     blocks = comments(source_text(path))
     chunks.append('\n===== '+name+' =====\n'+ ('\n\n'.join(blocks) if blocks else '(No standalone notice in this file.)')+'\n')
-  # Linked archive membership is recorded by the exact target link maps.
   for name in ('beads','beads_bootloader'):
     text = (out/'objects'/name/(name+'.map')).read_text()
     libs = sorted(set(re.findall(r'(/opt/[^\s()]+\.a)',text)))
@@ -191,7 +186,7 @@ def notices(out):
 
 
 def write_zip(path, names):
-  # ZIP_STORED avoids compressor-version variation. No extra fields or file attrs.
+  # Reproducible zip.
   with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_STORED) as z:
     for name in sorted(names):
       info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0))
@@ -203,7 +198,7 @@ def write_zip(path, names):
 def package(out):
   (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
   write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'])
-  # Copy of the hash-checked combo.bin, named after the release, shipped with the same README and notices.
+  # Combo image, named after the release.
   (out/COMBO).write_bytes((out/'combo.bin').read_bytes())
   write_zip(out/COMBO_ZIP, [COMBO, 'README.txt', 'NOTICE.txt'])
   (out/'SHA256SUMS').write_text(''.join(sha(out/name)+'  '+name+'\n' for name in ASSETS))
