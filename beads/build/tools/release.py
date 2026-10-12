@@ -2,6 +2,7 @@
 # Copyright 2026 insolentconstruct. MIT license; see ../LICENSE.
 """Prove the NEW WAV with the vendor decoder, inventory notices, package assets."""
 import hashlib
+import os
 import json
 import re
 import shlex
@@ -17,9 +18,12 @@ from scipy.signal import resample_poly
 
 ROOT = Path('/src')
 HERE = ROOT / 'beads/build'
-WAV = 'beads-d8f4739-released.wav'
-ZIP = 'beads-d8f4739-released.zip'
-ASSETS = [ZIP, 'app.bin', 'app.elf', 'bootloader.bin', 'bootloader-padded.bin', 'combo.bin', 'NOTICE.txt']
+NAME = os.environ.get('BEADS_RELEASE_NAME', 'beads-dev')
+if not re.fullmatch(r'beads-[A-Za-z0-9._-]+', NAME):
+    raise SystemExit('BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+')
+WAV = NAME + '.wav'
+ZIP = NAME + '.zip'
+ASSETS = [ZIP, 'combo.bin', 'NOTICE.txt']
 
 
 def sha(path):

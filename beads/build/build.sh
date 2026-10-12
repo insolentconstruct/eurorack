@@ -15,6 +15,8 @@ if [[ "$mode" == --wav ]]; then
   [[ "$root" != *,* && "$out" != *,* ]] || { echo "Docker mount paths must not contain commas" >&2; exit 2; }
   [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1 ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
+  name=${BEADS_RELEASE_NAME:-beads-dev}
+  [[ "$name" =~ ^beads-[A-Za-z0-9._-]+$ ]] || { echo "BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+" >&2; exit 2; }
   build_image=${BEADS_BUILD_IMAGE:-beads-build-kit}
   encoder_image=${BEADS_ENCODER_IMAGE:-beads-encoder}
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
@@ -28,10 +30,11 @@ if [[ "$mode" == --wav ]]; then
     stm_audio_bootloader/qpsk/encoder.py \
     -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 /out/app.bin
   echo "Pinned-CPU encoding (including container startup): $((SECONDS - encoder_start)) seconds"
-  mv "$out/app.wav" "$out/beads-d8f4739-released.wav"
-  (cd "$out" && sha256sum -c "$root/beads/build/expected-wav.sha256")
+  mv "$out/app.wav" "$out/$name.wav"
+  # The pinned hash is of the WAV content; the file name follows the release name.
+  echo "$(cut -c1-64 "$root/beads/build/expected-wav.sha256")  $name.wav" | (cd "$out" && sha256sum -c -)
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
-    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" "$build_image" \
+    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e BEADS_RELEASE_NAME="$name" "$build_image" \
     nice -n 10 python3 beads/build/tools/release.py /out
   exit 0
 fi
