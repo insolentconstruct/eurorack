@@ -43,11 +43,11 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 Back up calibration first, then flash the combo `.bin` from `<tag>-combo.zip`; this command doesn't touch the settings sector.
 
-Use your downloaded filename in place of `beads-2026.10.12-combo.bin`:
+Use your downloaded filename in place of `beads-2026.10.11-combo.bin`:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-  -c "init; halt; flash write_image erase beads-2026.10.12-combo.bin 0x08000000; verify_image beads-2026.10.12-combo.bin 0x08000000; reset run; shutdown"
+  -c "init; halt; flash write_image erase beads-2026.10.11-combo.bin 0x08000000; verify_image beads-2026.10.11-combo.bin 0x08000000; reset run; shutdown"
 ```
 
 ## Building it yourself
