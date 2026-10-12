@@ -1,6 +1,6 @@
 # Link in a fixed order (the default wildcard order depends on the filesystem).
 include $(KIT_MAKEFILE)
-# Match the compiler sweep without changing the released makefiles.
+# GCC 9 compatibility.
 ifeq ($(KIT_GCC9),1)
 CPPFLAGS += -std=gnu++98
 CCFLAGS += -Wno-error=uninitialized
