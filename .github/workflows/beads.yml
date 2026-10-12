@@ -71,11 +71,22 @@ jobs:
             "Reviewed build-kit commit: $GITHUB_SHA (this tag)." \
             'Upstream released source: d8f473915232af74347762b6365202bfd26f73f6.' \
             'WAV built and freshly decoded in this run, with negative controls.' \
-            'Use the qualified 44.1 kHz line-level playback procedure in the zip README.' \
-            'The recorded 48 kHz stress limitation remains; notices accompany binaries.' > release-notes.txt
-          gh release create "$RELEASE_TAG" --verify-tag --latest=false \
-            --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads $RELEASE_TAG" \
-            --notes-file release-notes.txt \
-            artifacts/beads-d8f4739-released.zip artifacts/app.bin artifacts/app.elf \
-            artifacts/bootloader.bin artifacts/bootloader-padded.bin artifacts/combo.bin \
-            artifacts/NOTICE.txt artifacts/SHA256SUMS
+            'Flash with the official Beads update procedure in the zip README.txt.' \
+            'Tested playback: a 44.1 kHz line output; see README.txt for the 48 kHz stress note.' \
+            'Copyright and permission notices: NOTICE.txt.' > release-notes.txt
+          assets=(artifacts/beads-d8f4739-released.zip artifacts/app.bin artifacts/app.elf
+                  artifacts/bootloader.bin artifacts/bootloader-padded.bin artifacts/combo.bin
+                  artifacts/NOTICE.txt artifacts/SHA256SUMS)
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Re-run or partial earlier publish: replace assets, then verify below.
+            gh release upload "$RELEASE_TAG" --clobber --repo "$GITHUB_REPOSITORY" "${assets[@]}"
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --latest=false \
+              --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads $RELEASE_TAG" \
+              --notes-file release-notes.txt "${assets[@]}"
+          fi
+          # Verify what is actually published matches this run's checked assets.
+          mkdir published
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir published
+          (cd published && sha256sum -c SHA256SUMS)
+          for f in "${assets[@]}"; do cmp "$f" "published/$(basename "$f")"; done

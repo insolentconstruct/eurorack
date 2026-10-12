@@ -49,6 +49,12 @@ Notes for this build
 * Do NOT hold SEED while powering on. On this firmware, SEED held at power-on
   erases and rewrites the settings sector, which holds your calibration.
   A valid calibration is kept, but back it up first if you can (below).
+* Playback: this file has been flashed successfully from a 44.1 kHz audio
+  interface line output; update files in the same format have also been
+  flashed from a laptop headphone output. The file itself is 48 kHz. In offline stress testing, decoding at the
+  native 48 kHz failed once under an extreme clock error combined with
+  noise. If updates keep failing, set your computer's output to 44.1 kHz
+  or try another device.
 * This update file writes only the application area (0x08020000-0x0807FFFF).
   It does not touch the bootloader or the settings/calibration sector.
 * Last resort if audio updates keep failing: program combo.bin (bootloader +
