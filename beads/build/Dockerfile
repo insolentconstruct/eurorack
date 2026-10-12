@@ -6,7 +6,7 @@ FROM python@sha256:d8fac68ebdc45b8d66d53f1ed6c1532da81109a8f5532a6ca0c951ed31107
 RUN printf '%s\n' 'numpy==1.16.6 --hash=sha256:1680c8d5086a88d293dfd1a10b6429a09140cacee878034fa2308472ec835db4' > /tmp/requirements.txt \
  && nice -n 10 python -m pip install --no-cache-dir --only-binary=:all: --require-hashes -r /tmp/requirements.txt
 
-FROM docker.io/library/node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+FROM docker.io/library/node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS compiler
 SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
 
 ARG DEBIAN_SNAPSHOT=20260916T000000Z
@@ -24,7 +24,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && dpkg --add-architecture i386 \
  && apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update \
  && apt-get install -y --no-install-recommends \
-        ca-certificates curl bzip2 git make python3 g++ \
+        ca-certificates curl bzip2 git make python3 python3-numpy python3-scipy g++ \
         libc6:i386 libstdc++6:i386 zlib1g:i386 \
  && rm -rf /var/lib/apt/lists/* \
  && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
@@ -66,9 +66,3 @@ LABEL org.opencontainers.image.title="beads-build-kit" \
       org.beads.toolchain-tree-sha256="7eed4a71b66c3ca6719b20428b9754b40cd802b93cf256c2443dfc3738a11c06"
 
 WORKDIR /src
-
-COPY --from=encoder /usr/local/ /opt/python2/
-COPY --from=encoder /usr/lib/x86_64-linux-gnu/libssl.so.1.1 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 /opt/python2/lib/
-RUN printf '%s\n' '#!/bin/sh' 'export LD_LIBRARY_PATH=/opt/python2/lib' 'export PYTHONHOME=/opt/python2' 'exec /opt/python2/bin/python2.7 "$@"' > /usr/local/bin/python2 \
- && chmod 755 /usr/local/bin/python2 \
- && python2 -c 'import hashlib, numpy, zlib; assert numpy.__version__ == "1.16.6"; assert hashlib.sha256("probe").hexdigest()'
