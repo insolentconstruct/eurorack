@@ -27,73 +27,56 @@ The deterministic `beads-d8f4739-released.zip` contains the WAV, short `README.t
 
 GitHub Actions builds the images and runs `--wav` on push/PR. A `beads-*` tag triggers the same proof, then a separate release job runs `gh release create` with only that job granted `contents: write`. All actions are pinned by SHA. Review the kit before tagging: tagging it publishes the assets. No flashing occurs in CI.
 
-## Flashing and calibration
+## Flashing
 
-Follow the [official Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware) and the procedure below. The tested playback path was a 44.1 kHz audio interface at line level. The recorded 48 kHz stress limitation is retained explicitly.
+The release zip's `README.txt` is the user-facing guide. It contains:
 
-Unplug all CV inputs/outputs. Connect a 44.1 kHz audio interface's line output
-to IN L. The tested playback path uses 44.1 kHz at line level. Set TIME near
-its midpoint. Leave SEED released; hold FREEZE while powering on to enter the
-updater. Disconnect speakers/monitors and prevent notifications, background
-music, equalizers, AGC and other audio effects from reaching the output.
-Play the complete WAV without interruption. TIME sets input gain: adjust it
-until the recording-quality LED is yellow (optimal level). Do not simply turn
-TIME fully clockwise; the updater's gain is quadratic and excessive level clips.
-FREEZE/SEED alternate while waiting, faster while syncing/receiving; all LEDs
-light during a flash write. Errors blink all indicators (red per the manual).
-Successful reception reaches the end of transmission and starts the app.
-If it fails, power-cycle with FREEZE held and SEED released, then retry; the
-manual also permits pressing FREEZE to retry after an error. Adjust level or
-try another interface. Last resort: ST-Link with the released combo.bin; see
-the build README for commands. Do not erase settings as part of that recovery.
+1. **The official procedure.** The Beads manual's firmware update procedure, reproduced unchanged under its CC-BY-SA 3.0 license. Source: [the Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware), by Émilie Gillet.
+2. **Notes for this build:**
+   - **Do not hold SEED at power-on.** On this firmware it erases and rewrites the settings sector, which holds the calibration.
+   - The update file writes only the application area.
+3. **Calibration backup and restore** with an ST-Link, for the same unit only (below).
 
-The file is native 48 kHz. Nominal 48 kHz vendor decoding passes offline, but
-a recorded +500 ppm / gain 0.3 / -60 dBFS noise stress case failed. Native-rate
-48 kHz playback is not the qualified path. Use a 44.1 kHz interface; offline
-resampling proof does not qualify every player or analog signal chain.
+The manual's own advice covers quiet sources: *"On non-studio audio equipment … you might have to turn up the gain to the maximum."*
 
-### Calibration backup and restore with ST-Link
-
-**Same unit only.**
-Before changes, save the complete 128 KiB settings sector, 0x081E0000-0x081FFFFF.
-With host OpenOCD and the ST-Link connected to this unit:
+### Calibration backup and restore with ST-Link (same unit only)
 
 ```sh
+# back up the 128 KiB settings sector (calibration + settings)
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; dump_image beads-settings.bin 0x081E0000 0x20000; reset run; shutdown"
-```
 
-Verify that beads-settings.bin is 131072 bytes and record its SHA256. Keep the
-backup labelled with the unit's identity. Restore ONLY to that same unit:
-
-```sh
+# restore onto the SAME unit only
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; flash write_image erase beads-settings.bin 0x081E0000; verify_image beads-settings.bin 0x081E0000; reset run; shutdown"
 ```
 
-Restoration erases/rewrites settings. Holding SEED at power-on erases and
-rewrites this settings sector on this firmware. With valid settings, ordinary
-boot does not write flash; corrupt/invalid settings are rewritten and the
-module enters factory test even without SEED. This is a boot statement, not
-a promise that background audio-buffer backup never writes flash.
+- Check that the backup is 131,072 bytes, and label it with its unit. Calibration is per-module.
+- With valid settings, a normal power-on does not write flash.
+- If the settings are corrupt, the module rewrites the sector and starts in factory test even without SEED held. Restoring the backup fixes this.
 
-This supplied WAV writes app blocks 0x08020000-0x0806FFFF, erasing three 128 KiB
-sectors through 0x0807FFFF. It excludes the bootloader and settings 0x081E0000.
-Evidence: bootloader.cc InitializeReception sets kStartAddress=0x08020000;
-five decoded 64 KiB blocks drive ProgramPage's sector-aligned erases and
-32-byte writes. EraseAllFirmwareSectors uses bank 1 sectors 1-7. The updater
-has no general upper write bound: the settings claim applies to this bounded,
-hash-verified file, not arbitrary oversized WAVs.
+### Last resort: ST-Link with combo.bin
 
-For last-resort ST-Link recovery, after saving calibration as above, program only the released combo's covered range:
+Back up the calibration first (above). Then program only the combo's range: the bootloader and the app. This does not erase the settings sector.
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
   -c "init; halt; flash write_image erase artifacts/combo.bin 0x08000000; verify_image artifacts/combo.bin 0x08000000; reset run; shutdown"
 ```
 
-This overwrites bootloader and app; it does not request a settings-sector erase. Confirm the target/adapter configuration matches your unit. Backups belong to the same unit only. These commands are documentation and are never run by the kit.
+### Notes for builders and reviewers
 
-Settings evidence: `beads.cc` reads immediate SEED into `recovery_mode`, then calls `settings.Init(recovery_mode)`; `settings.cc` erases when recovery is requested. `sector_storage_h7xx.h` `ChunkStorage::Init` rewrites invalid CALI/STAT records; the false return leads `beads.cc` into factory test. Valid settings are required for the no-boot-write statement.
+- **What this update writes.** It writes 0x08020000–0x0806FFFF, erasing three 128 KiB sectors through 0x0807FFFF. The bootloader and the settings sector (0x081E0000) are excluded.
+  - Evidence from `bootloader.cc`:
+    - `kStartAddress=0x08020000`;
+    - five decoded 64 KiB blocks drive `ProgramPage`'s sector-aligned erases and its 32-byte writes;
+    - `EraseAllFirmwareSectors` covers bank 1, sectors 1–7.
+  - The updater itself has no general upper write bound. So this claim covers this bounded, hash-verified file, not arbitrary oversized WAVs.
+- **Settings evidence.**
+  - `beads.cc` reads the immediate SEED state into `recovery_mode`, and `settings.cc` erases when recovery is requested.
+  - In `sector_storage_h7xx.h`, `ChunkStorage::Init` rewrites invalid CALI/STAT records, and the resulting false return sends `beads.cc` into factory test.
+- **Playback tests.** Tested on hardware: a Bela at 44.1 kHz line level (it is quiet, so TIME was turned fully up) and a laptop headphone output.
+  - Offline, the vendor decoder passes the nominal 48 kHz and the resampled 44.1 kHz cases.
+  - One severe stress case failed: native 48 kHz with +500 ppm clock error, gain 0.3 and −60 dBFS noise.
 
 Credits: Émilie Gillet, Frédéric Meslin / Fred's Lab, Oliver Rockstedt, ARM, STMicroelectronics and the toolchain contributors. Firmware and kit helpers have their applicable licenses reproduced in `NOTICE.txt`; hardware designs remain CC-BY-SA-3.0. Preserve notices when distributing binaries. See [LICENSE](LICENSE) and generated `NOTICE.txt`.
