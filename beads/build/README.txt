@@ -76,8 +76,9 @@ Notes for this build
   or try another device.
 * This update file writes only the application area (0x08020000-0x0807FFFF).
   It does not touch the bootloader or the settings/calibration sector.
-* Last resort if audio updates keep failing: program the release's -combo.bin file (bootloader +
-  this firmware) with an ST-Link. See the build kit README for the command.
+* Last resort if audio updates keep failing: program the -combo.bin file
+  from the release's -combo.zip (bootloader + this firmware) with an
+  ST-Link. See the build kit README for the command.
 
 
 Calibration backup and restore (ST-Link + OpenOCD; SAME UNIT ONLY)

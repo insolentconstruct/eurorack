@@ -79,7 +79,7 @@ jobs:
             'Flash with the official Beads update procedure in the zip README.txt.' \
             'Tested playback: a 44.1 kHz line output; see README.txt for the 48 kHz stress note.' \
             'Copyright and permission notices: NOTICE.txt.' > release-notes.txt
-          assets=("artifacts/$RELEASE_TAG-wav.zip" "artifacts/$RELEASE_TAG-combo.bin"
+          assets=("artifacts/$RELEASE_TAG-wav.zip" "artifacts/$RELEASE_TAG-combo.zip"
                   artifacts/NOTICE.txt artifacts/SHA256SUMS)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             # Re-run or partial earlier publish: make the release match this run exactly.

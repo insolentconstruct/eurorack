@@ -30,7 +30,7 @@ The newly generated waveform then passes the vendor demodulator/packet decoder a
 
 `NOTICE.txt` inventories both targets' compiled source and dependency files, including system headers (`-M`), preserving each original copyright/permission comment by file. It supplements those headers with actual linked archive names from the maps, toolchain license files and the ST HAL BSD-3-Clause terms. The download therefore carries applicable notices rather than credits alone.
 
-The deterministic `<release name>-wav.zip` (for example `beads-2026.10.12-wav.zip`, named after the release tag; `beads-dev-wav.zip` for branch builds) contains `<release name>.wav`, short `README.txt` and `NOTICE.txt`, sorted by name, stored uncompressed, timestamped 1980-01-01, with no extra fields or external attributes. Release assets are that zip, `<release name>-combo.bin` (bootloader + app, for ST-Link recovery), `NOTICE.txt` and `SHA256SUMS`. `app.bin`, `app.elf`, `bootloader.bin` and the 128 KiB padded bootloader are still built and hash-checked on every run and kept as CI artifacts, but not published. The kit separately pins the standalone WAV hash in `expected-wav.sha256`; SHA256SUMS covers the actual release assets. Locally retained objects, maps, source/license inventory and proof logs are not release assets.
+The deterministic `<release name>-wav.zip` (for example `beads-2026.10.12-wav.zip`, named after the release tag; `beads-dev-wav.zip` for branch builds) contains `<release name>.wav`, short `README.txt` and `NOTICE.txt`, sorted by name, stored uncompressed, timestamped 1980-01-01, with no extra fields or external attributes. Release assets are that zip, `<release name>-combo.zip` (bootloader + app as `<release name>-combo.bin`, for ST-Link recovery), `NOTICE.txt` and `SHA256SUMS`. `app.bin`, `app.elf`, `bootloader.bin` and the 128 KiB padded bootloader are still built and hash-checked on every run and kept as CI artifacts, but not published. The kit separately pins the standalone WAV hash in `expected-wav.sha256`; SHA256SUMS covers the actual release assets. Locally retained objects, maps, source/license inventory and proof logs are not release assets.
 
 GitHub Actions builds the images and runs `--wav` on push/PR. A `beads-*` tag triggers the same proof, then a separate release job runs `gh release create` with only that job granted `contents: write`. All actions are pinned by SHA. Review the kit before tagging: tagging it publishes the assets. No flashing occurs in CI.
 
@@ -64,7 +64,7 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 ### Last resort: ST-Link with the combo file
 
-The release's `<release name>-combo.bin` (for example `beads-2026.10.12-combo.bin`) is the bootloader padded to 128 KiB followed by the app. Back up the calibration first (above). Then program only the combo's range: the bootloader and the app. This does not erase the settings sector.
+The release's `<release name>-combo.zip` (for example `beads-2026.10.12-combo.zip`) contains `<release name>-combo.bin`, the bootloader padded to 128 KiB followed by the app, together with the same `README.txt` and `NOTICE.txt`. Back up the calibration first (above). Then program only the combo's range: the bootloader and the app. This does not erase the settings sector.
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \

@@ -24,7 +24,8 @@ if not re.fullmatch(r'beads-[A-Za-z0-9._-]+', NAME):
 WAV = NAME + '.wav'
 ZIP = NAME + '-wav.zip'
 COMBO = NAME + '-combo.bin'
-ASSETS = [ZIP, COMBO, 'NOTICE.txt']
+COMBO_ZIP = NAME + '-combo.zip'
+ASSETS = [ZIP, COMBO_ZIP, 'NOTICE.txt']
 
 
 def sha(path):
@@ -165,17 +166,22 @@ def notices(out):
     (out/'notice-inventory.json').write_text(json.dumps(sorted(files),indent=2)+'\n')
 
 
-def package(out):
-    (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
+def write_zip(path, names):
     # ZIP_STORED avoids compressor-version variation. No extra fields or file attrs.
-    with zipfile.ZipFile(out/ZIP, 'w', compression=zipfile.ZIP_STORED) as z:
-        for name in sorted([WAV, 'README.txt', 'NOTICE.txt']):
+    with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_STORED) as z:
+        for name in sorted(names):
             info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0))
             info.create_system=0; info.external_attr=0; info.internal_attr=0; info.extra=b''
-            z.writestr(info,(out/name).read_bytes())
-            info.external_attr=0  # zipfile otherwise inserts default Unix permissions
-    # Published copy of the hash-checked combo.bin, named after the release.
+            z.writestr(info,(path.parent/name).read_bytes())
+            info.external_attr=0  # writestr defaults Unix permissions; the central directory is written on close
+
+
+def package(out):
+    (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
+    write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'])
+    # Copy of the hash-checked combo.bin, named after the release, shipped with the same README and notices.
     (out/COMBO).write_bytes((out/'combo.bin').read_bytes())
+    write_zip(out/COMBO_ZIP, [COMBO, 'README.txt', 'NOTICE.txt'])
     (out/'SHA256SUMS').write_text(''.join(sha(out/name)+'  '+name+'\n' for name in ASSETS))
     subprocess.run(['sha256sum','-c','SHA256SUMS'],cwd=out,check=True)
 
