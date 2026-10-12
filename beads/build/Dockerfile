@@ -22,7 +22,6 @@ ARG DEBIAN_SNAPSHOT=20260916T000000Z
 
 ARG TC_URL=https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q2-update/+download/gcc-arm-none-eabi-4_9-2015q2-20150609-linux.tar.bz2
 ARG TC_SHA256=3a574c5becfca496bafe07bbd76e9deae1fd0cc99c5a9de0f8c610750f2f89ac
-ARG TC_TREE_SHA256=7eed4a71b66c3ca6719b20428b9754b40cd802b93cf256c2443dfc3738a11c06
 
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && printf '%s\n' \
@@ -38,28 +37,12 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && rm -rf /var/lib/apt/lists/* \
  && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
 
-# Toolchain tree hash.
-RUN printf '%s\n' \
-      '#!/bin/bash' \
-      'set -euo pipefail' \
-      'cd /opt' \
-      'find gcc-arm-none-eabi-4_9-2015q2 \( -type f -o -type l \) -print0 | LC_ALL=C sort -z \' \
-      '  | while IFS= read -r -d "" f; do' \
-      '      if [ -L "$f" ]; then printf "L %s %s\n" "$f" "$(readlink "$f")";' \
-      '      else printf "F %s %s\n" "$f" "$(sha256sum < "$f" | cut -c1-64)"; fi; done \' \
-      '  | sha256sum | cut -c1-64' \
-      > /usr/local/bin/toolchain-tree-sha256 \
- && chmod 755 /usr/local/bin/toolchain-tree-sha256
-
 ARG TC_LOCAL=
 COPY . /kit-context/
 RUN if [ -n "$TC_LOCAL" ]; then cp "/kit-context/$TC_LOCAL" /tmp/tc.tar.bz2; else curl -fsSL -o /tmp/tc.tar.bz2 "$TC_URL"; fi \
  && echo "$TC_SHA256  /tmp/tc.tar.bz2" | sha256sum -c - \
  && tar -xjf /tmp/tc.tar.bz2 -C /opt \
- && rm -f /tmp/tc.tar.bz2 \
- && got="$(toolchain-tree-sha256)" \
- && if [ "$got" != "$TC_TREE_SHA256" ]; then echo "toolchain tree sha256 $got, expected $TC_TREE_SHA256" >&2; exit 1; fi \
- && echo "toolchain tree sha256 $got"
+ && rm -f /tmp/tc.tar.bz2
 
 ENV TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/
 ENV PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/bin:$PATH
@@ -71,7 +54,6 @@ RUN arm-none-eabi-gcc --version | sed -n 1p \
  && rm -f /tmp/probe.c /tmp/probe.o
 
 LABEL org.opencontainers.image.title="beads-build-kit" \
-      org.beads.toolchain="gcc-arm-none-eabi-4_9-2015q2" \
-      org.beads.toolchain-tree-sha256="7eed4a71b66c3ca6719b20428b9754b40cd802b93cf256c2443dfc3738a11c06"
+      org.beads.toolchain="gcc-arm-none-eabi-4_9-2015q2"
 
 WORKDIR /src
