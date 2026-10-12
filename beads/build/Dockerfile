@@ -1,0 +1,74 @@
+# GNU ARM Embedded 4.9-2015-q2; amd64 only. Compiler archive and tree
+# are hash-checked. Debian packages use the same snapshot as beads-port.
+# Optional TC_LOCAL is a filename in the build context, still hash-checked.
+FROM python@sha256:d8fac68ebdc45b8d66d53f1ed6c1532da81109a8f5532a6ca0c951ed31107d70 AS encoder
+# Python 2.7.18 environment; QPSK needs NumPy, not SciPy.
+RUN printf '%s\n' 'numpy==1.16.6 --hash=sha256:1680c8d5086a88d293dfd1a10b6429a09140cacee878034fa2308472ec835db4' > /tmp/requirements.txt \
+ && nice -n 10 python -m pip install --no-cache-dir --only-binary=:all: --require-hashes -r /tmp/requirements.txt
+
+FROM docker.io/library/node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
+
+ARG DEBIAN_SNAPSHOT=20260916T000000Z
+
+ARG TC_URL=https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q2-update/+download/gcc-arm-none-eabi-4_9-2015q2-20150609-linux.tar.bz2
+ARG TC_SHA256=3a574c5becfca496bafe07bbd76e9deae1fd0cc99c5a9de0f8c610750f2f89ac
+ARG TC_TREE_SHA256=7eed4a71b66c3ca6719b20428b9754b40cd802b93cf256c2443dfc3738a11c06
+
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+ && printf '%s\n' \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm-updates main" \
+      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT} bookworm-security main" \
+      > /etc/apt/sources.list \
+ && dpkg --add-architecture i386 \
+ && apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update \
+ && apt-get install -y --no-install-recommends \
+        ca-certificates curl bzip2 git make python3 g++ \
+        libc6:i386 libstdc++6:i386 zlib1g:i386 \
+ && rm -rf /var/lib/apt/lists/* \
+ && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
+
+# Hash a sorted file/symlink listing in C collation.
+RUN printf '%s\n' \
+      '#!/bin/bash' \
+      'set -euo pipefail' \
+      'cd /opt' \
+      'find gcc-arm-none-eabi-4_9-2015q2 \( -type f -o -type l \) -print0 | LC_ALL=C sort -z \' \
+      '  | while IFS= read -r -d "" f; do' \
+      '      if [ -L "$f" ]; then printf "L %s %s\n" "$f" "$(readlink "$f")";' \
+      '      else printf "F %s %s\n" "$f" "$(sha256sum < "$f" | cut -c1-64)"; fi; done \' \
+      '  | sha256sum | cut -c1-64' \
+      > /usr/local/bin/toolchain-tree-sha256 \
+ && chmod 755 /usr/local/bin/toolchain-tree-sha256
+
+ARG TC_LOCAL=
+COPY . /kit-context/
+RUN if [ -n "$TC_LOCAL" ]; then cp "/kit-context/$TC_LOCAL" /tmp/tc.tar.bz2; else curl -fsSL -o /tmp/tc.tar.bz2 "$TC_URL"; fi \
+ && echo "$TC_SHA256  /tmp/tc.tar.bz2" | sha256sum -c - \
+ && tar -xjf /tmp/tc.tar.bz2 -C /opt \
+ && rm -f /tmp/tc.tar.bz2 \
+ && got="$(toolchain-tree-sha256)" \
+ && if [ "$got" != "$TC_TREE_SHA256" ]; then echo "toolchain tree sha256 $got, expected $TC_TREE_SHA256" >&2; exit 1; fi \
+ && echo "toolchain tree sha256 $got"
+
+ENV TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/
+ENV PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/bin:$PATH
+
+# It must compile a translation unit with the C library headers, not merely exist.
+RUN arm-none-eabi-gcc --version | sed -n 1p \
+ && printf '#include <math.h>\n#include <stdint.h>\nfloat f(float x){return __builtin_sqrtf(x);}\n' > /tmp/probe.c \
+ && arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 /tmp/probe.c -o /tmp/probe.o \
+ && rm -f /tmp/probe.c /tmp/probe.o
+
+LABEL org.opencontainers.image.title="beads-build-kit" \
+      org.beads.toolchain="gcc-arm-none-eabi-4_9-2015q2" \
+      org.beads.toolchain-tree-sha256="7eed4a71b66c3ca6719b20428b9754b40cd802b93cf256c2443dfc3738a11c06"
+
+WORKDIR /src
+
+COPY --from=encoder /usr/local/ /opt/python2/
+COPY --from=encoder /usr/lib/x86_64-linux-gnu/libssl.so.1.1 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 /opt/python2/lib/
+RUN printf '%s\n' '#!/bin/sh' 'export LD_LIBRARY_PATH=/opt/python2/lib' 'export PYTHONHOME=/opt/python2' 'exec /opt/python2/bin/python2.7 "$@"' > /usr/local/bin/python2 \
+ && chmod 755 /usr/local/bin/python2 \
+ && python2 -c 'import hashlib, numpy, zlib; assert numpy.__version__ == "1.16.6"; assert hashlib.sha256("probe").hexdigest()'

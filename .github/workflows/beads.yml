@@ -1,0 +1,36 @@
+name: Beads released source
+on:
+  workflow_dispatch:
+  push:
+    branches: [beads-build-kit]
+  pull_request:
+    paths: ['beads/**', 'stmlib', 'stm_audio_bootloader', '.github/workflows/beads.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Build pinned toolchain image
+        run: docker build --platform linux/amd64 -t beads-build-kit beads/build
+      - name: Build and verify released binaries (WAV pending encoder support)
+        run: |
+          mkdir artifacts
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            -v "$PWD:/src:ro" -v "$PWD/artifacts:/out" beads-build-kit \
+            bash beads/build/build.sh /out
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: beads-released-source
+          if-no-files-found: error
+          path: |
+            artifacts/bootloader.bin
+            artifacts/bootloader-padded.bin
+            artifacts/app.bin
+            artifacts/app.elf
+            artifacts/combo.bin
+            artifacts/SHA256SUMS
