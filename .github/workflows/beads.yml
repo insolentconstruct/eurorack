@@ -81,8 +81,8 @@ jobs:
             # Re-run or partial earlier publish: replace assets, then verify below.
             gh release upload "$RELEASE_TAG" --clobber --repo "$GITHUB_REPOSITORY" "${assets[@]}"
           else
-            gh release create "$RELEASE_TAG" --verify-tag --latest=false \
-              --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads $RELEASE_TAG" \
+            gh release create "$RELEASE_TAG" --verify-tag --latest \
+              --repo "$GITHUB_REPOSITORY" --title "Unofficial Beads build ${RELEASE_TAG#beads-}" \
               --notes-file release-notes.txt "${assets[@]}"
           fi
           # Verify what is actually published matches this run's checked assets.
