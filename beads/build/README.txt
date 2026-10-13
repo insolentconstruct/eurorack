@@ -13,6 +13,17 @@ https://github.com/insolentconstruct/eurorack/issues
 This is the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing; details are in CHANGELOG.md in the repository.
 
+Options page
+------------
+Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
+The assignment LEDs pulse together on entry; the feedback LED marks the limiter page.
+Move DRY/WET more than one tenth of its travel to start selecting.
+Left third: Stock (steady green MEDIA); middle: Fast release (one blue pulse).
+Right third: Off (two amber pulses); loud peaks can hard-clip.
+Tap ASSIGN to cycle pages; dry/wet and reverb pages are reserved.
+Hold ASSIGN for three seconds to save and exit; five seconds idle or another button cancels.
+DRY/WET stays held during editing and catches up smoothly after exit.
+
 Firmware update procedure
 -------------------------
 Beads manual by Emilie Gillet, CC-BY-SA 3.0; reproduced unchanged:

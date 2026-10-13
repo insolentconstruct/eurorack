@@ -66,6 +66,7 @@ void Ui::Init(
   
   mode_ = MODE_NORMAL;
   options_.Init();
+  flush_options_events_ = false;
   LoadOptions();
   fill(&mix_pot_value_[0], &mix_pot_value_[MIX_PARAMETER_LAST], 0.0f);
   
@@ -146,7 +147,7 @@ void Ui::Poll() {
       mode_ == MODE_NORMAL, pot_touched,
       mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode());
   if (!was_active && options_.active()) {
-    queue_.Flush();
+    flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Lock();
@@ -157,10 +158,10 @@ void Ui::Poll() {
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
-    queue_.Flush();
+    flush_options_events_ = true;
   }
   if (was_active && !options_.active()) {
-    queue_.Flush();
+    flush_options_events_ = true;
   }
 
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
@@ -528,8 +529,17 @@ void Ui::DoEvents() {
     }
     options_.ClearCommit();
   }
-  while (queue_.available()) {
+  // Only main owns the read pointer. Clear before flushing so an ISR request
+  // arriving during Flush remains pending for the next iteration.
+  while (true) {
+    if (flush_options_events_) {
+      flush_options_events_ = false;
+      queue_.Flush();
+    }
+    if (!queue_.available()) break;
     Event e = queue_.PullEvent();
+    // SysTick may have entered/exited options between available and PullEvent.
+    if (flush_options_events_) continue;
     if (!options_.active() && e.control_type == CONTROL_SWITCH) {
       if (e.data == 0) {
         OnSwitchPressed(e);

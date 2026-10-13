@@ -193,6 +193,7 @@ class Ui {
   PotController assignable_cv_pot_[MIX_PARAMETER_LAST];
   float mix_pot_value_[MIX_PARAMETER_LAST];
   Options options_;
+  volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
 
   static const Leds::Color media_palette_[4];

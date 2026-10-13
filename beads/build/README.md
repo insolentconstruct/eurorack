@@ -18,6 +18,17 @@ Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurora
 What changed, including against older firmware: see [CHANGELOG.md](CHANGELOG.md).
 Contributing code: follow [STYLE.md](STYLE.md).
 
+## Options page
+
+Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
+The assignment LEDs pulse together on entry; the feedback LED marks the limiter page.
+Move DRY/WET more than one tenth of its travel to start selecting.
+Left third: Stock (steady green MEDIA); middle: Fast release (one blue pulse).
+Right third: Off (two amber pulses); loud peaks can hard-clip.
+Tap ASSIGN to cycle pages; dry/wet and reverb pages are reserved.
+Hold ASSIGN for three seconds to save and exit; five seconds idle or another button cancels.
+DRY/WET stays held during editing and catches up smoothly after exit.
+
 ## Updating your module
 
 Follow the [official Beads firmware update procedure](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware); the full steps are in the zip's `README.txt`.

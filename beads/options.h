@@ -95,11 +95,11 @@ class Options {
         qualified_ = true;
         zone_ = pot < 1.0f / 3.0f ? 0 : pot < 2.0f / 3.0f ? 1 : 2;
       }
+      if (fabsf(pot - previous_) > 0.01f) {
+        last_action_ = now;
+        previous_ = pot;
+      }
       if (qualified_) {
-        if (fabsf(pot - previous_) > 0.01f) {
-          last_action_ = now;
-          previous_ = pot;
-        }
         if (pot < 1.0f / 3.0f - 0.03f) {
           zone_ = 0;
         } else if (pot > 2.0f / 3.0f + 0.03f) {

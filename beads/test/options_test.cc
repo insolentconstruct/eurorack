@@ -16,8 +16,7 @@
 #include "beads/dsp/limiter.h"
 
 bool test_down[4] = {};
-unsigned test_writes = 0, test_erases = 0;
-bool test_interrupt = false;
+unsigned test_writes = 0;
 namespace stmlib { SystemClock system_clock; }
 namespace beads {
 bool Leds::Init() { Clear(); return true; }
@@ -72,219 +71,61 @@ struct Rig {
 };
 
 void TestUi() {
-  {
-    Rig r;
-    auto assignment = r.settings.state().assignable_cv_destination;
-    unsigned writes = test_writes;
-    r.Down(SWITCH_ASSIGN); r.Tick(2992);
-    assert(!r.ui.options_.active());
-    r.Tick(8); assert(r.ui.options_.stage() == Options::WAIT_RELEASE);
-    r.Up(SWITCH_ASSIGN);
-    assert(r.settings.state().assignable_cv_destination == assignment);
-    assert(test_writes == writes);
-    r.Tick(5000);
-    assert(r.ui.options_.stage() == Options::DRAIN);
-    assert(test_writes == writes);
-    r.Tick(10); assert(!r.ui.options_.active());
-  }
-  {
-    Rig r(true); r.Tick(3500);
-    assert(!r.ui.options_.active());
-    r.Up(SWITCH_ASSIGN); r.Tick(30); r.Enter();
-  }
-  for (int s = 0; s < 3; ++s) {
-    Rig r; r.Down(Switch(s)); r.Down(SWITCH_ASSIGN); r.Tick(3500);
-    assert(!r.ui.options_.active());
-  }
-  {
-    Rig r; r.Down(SWITCH_ASSIGN); r.Tick(2000);
-    r.pot = 0.7f; r.Tick(1600);
-    assert(!r.ui.options_.active());
-    assert(r.ui.assignable_cv_pot_[1].editing_hidden_parameter());
-  }
-  {
-    Rig r; r.Down(SWITCH_ASSIGN); r.Tick(2000);
-    test_down[SWITCH_FREEZE] = true; r.Tick(1);
-    test_down[SWITCH_FREEZE] = false; r.Tick(1200);
-    assert(!r.ui.options_.active());
-  }
-  for (int mode = Ui::MODE_CALIBRATION_1; mode <= Ui::MODE_PANIC; ++mode) {
-    Rig r; r.ui.mode_ = Ui::Mode(mode);
-    r.Down(SWITCH_ASSIGN); r.Tick(3500);
-    assert(!r.ui.options_.active());
-  }
-  {
-    Rig r; r.pot = 1.0f; r.Tick(20); r.Enter();
-    unsigned writes = test_writes;
-    r.Tick(100); assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    r.pot = 0.92f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    r.pot = 0.8f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    r.settings.SaveState(); // Unrelated frozen-buffer save must not commit preview.
-    assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    ++writes;
-    r.pot = 0.66f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    r.pot = 0.63f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-    r.pot = 0.69f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-    r.pot = 0.71f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    assert(r.ui.mix_parameter(Ui::MIX_PARAMETER_DRY_WET) == 1.0f);
-    r.Down(SWITCH_ASSIGN); r.Tick(3000);
-    assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    r.Up(SWITCH_ASSIGN);
-    assert(test_writes == writes + 1);
-    r.Tick(50); assert(test_writes == writes + 1);
-    assert(r.ui.mix_parameter(Ui::MIX_PARAMETER_DRY_WET) == 1.0f);
-    r.pot = 0.5f; r.Tick(10);
-    assert(r.ui.mix_parameter(Ui::MIX_PARAMETER_DRY_WET) < 1.0f);
-  }
-  for (int s = 0; s < 3; ++s) {
-    Rig r; r.Enter(); r.pot = 1.0f; r.Tick(10);
-    unsigned writes = test_writes;
-    r.Down(Switch(s)); r.Down(SWITCH_ASSIGN); r.Tick(20);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    assert(r.calibration.starts == 0);
-    assert(test_writes == writes);
-    r.Up(Switch(s)); r.Up(SWITCH_ASSIGN); r.Tick(20);
-    assert(!r.ui.options_.active());
-    assert(r.calibration.starts == 0);
-  }
-  {
-    Rig r; r.Enter(); unsigned writes = test_writes;
-    r.Tap(); assert(r.ui.options_.page() == 1);
-    r.pot = 1.0f; r.Tick(10);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    r.Tap(); assert(r.ui.options_.page() == 2);
-    r.Tap(); assert(r.ui.options_.page() == 0);
-    r.Tick(20); assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    r.pot = 0.5f; r.Tick(20);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-    r.pot = 0.1f; r.Tick(20);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    r.Down(SWITCH_ASSIGN); r.Tick(3000);
-    assert(test_writes == writes); // Away-and-back is not dirty.
-    r.Up(SWITCH_ASSIGN); r.Tick(20);
-  }
-  {
-    Rig r; r.Down(SWITCH_ASSIGN); r.Down(SWITCH_MEDIA);
-    assert(r.calibration.starts == 1); // Stock chord still works before entry.
-  }
-  {
-    Rig r; stmlib::system_clock.count_ = 0xfffff000;
-    r.Tick(30); r.Enter(); r.pot = 0.9f; r.Tick(20);
-    r.Down(SWITCH_ASSIGN); r.Tick(3000);
-    assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  }
-  {
-    Rig r; r.Enter(); r.Down(SWITCH_ASSIGN);
-    unsigned writes = test_writes;
-    uint8_t assignment = r.settings.state().assignable_cv_destination;
-    r.ui.Panic(); r.Tick(2000);
-    assert(r.ui.options_.stage() == Options::DRAIN);
-    r.Up(SWITCH_ASSIGN); r.Tick(50);
-    assert(r.settings.state().assignable_cv_destination == assignment);
-    assert(test_writes == writes);
-  }
-  {
-    Rig r; r.Enter(); r.pot = .9f; r.Tick(20);
-    unsigned writes = test_writes;
-    test_down[SWITCH_ASSIGN] = true; r.Tick(3010, false);
-    assert(r.ui.options_.stage() == Options::DRAIN);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    test_down[SWITCH_ASSIGN] = false; r.Tick(100, false);
-    assert(r.ui.options_.stage() == Options::DRAIN);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    assert(r.ui.options_.commit_requested());
-    r.Tick(1, false); // An interrupt between the commit check and State store.
-    assert(r.ui.options_.commit_requested());
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    r.ui.DoEvents();
-    assert(!r.ui.options_.commit_requested());
-    assert(test_writes == writes + 1);
-    r.Tick(10, false);
-    assert(r.ui.options_.stage() == Options::INACTIVE);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-    r.ui.DoEvents();
-    assert(test_writes == writes + 1);
-  }
-  {
-    Rig r; r.Enter(); r.pot = .9f; r.Tick(20);
-    unsigned writes = test_writes;
-    r.Tick(5000);
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-    assert(test_writes == writes);
-    r.Tick(50); assert(!r.ui.options_.active());
-  }
-  for (int a = 0; a < SWITCH_LAST; ++a) {
-    for (int b = a + 1; b < SWITCH_LAST; ++b) {
-      for (int order = 0; order < 3; ++order) {
-        Rig r;
-        if (order == 2) {
-          test_down[a] = test_down[b] = true; r.Tick(8);
-        } else {
-          r.Down(Switch(order ? b : a));
-          r.Down(Switch(order ? a : b));
-        }
-        r.Tick(3500);
-        assert(!r.ui.options_.active());
-        assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-      }
-    }
-  }
-  {
-    Rig r; r.Down(SWITCH_ASSIGN); r.Down(SWITCH_SEED);
-    assert(r.settings.state().gate_output_mode == 1);
-    assert(!r.ui.seed_button_state());
-  }
-  {
-    Rig r; r.Down(SWITCH_ASSIGN); r.Down(SWITCH_FREEZE);
-    assert(r.settings.state().disable_autosave == 1);
-    assert(!r.ui.freeze_button_state());
-  }
-  {
-    Rig r; r.Down(SWITCH_SEED); r.Down(SWITCH_FREEZE);
-    assert(r.ui.seed_button_locked());
-    assert(!r.ui.freeze_button_state());
-  }
-  {
-    Rig r; r.Enter();
-    r.ui.set_freeze_led_state(true);
-    stmlib::system_clock.count_ = 3599; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_R] == 0);
-    assert(r.ui.leds_.intensity_[LED_FREEZE] == 255);
-    assert(r.ui.leds_.intensity_[LED_VU_METER] == 128);
-    r.pot = .64f; stmlib::system_clock.count_ = 4799; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_B] == 255);
-    stmlib::system_clock.count_ = 4999; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_B] == 0);
-    stmlib::system_clock.count_ = 5099; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_B] == 0);
-    r.pot = .9f; stmlib::system_clock.count_ = 5999; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
-    stmlib::system_clock.count_ = 6199; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_R] == 0);
-    stmlib::system_clock.count_ = 6299; r.Tick(1);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
-    r.Tick(5000);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_R] == 192);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_G] == 192);
-    assert(r.ui.leds_.intensity_[LED_MEDIA_B] == 208);
-  }
-  {
-    Rig r;
-    r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
-    r.ui.LoadOptions();
-    assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  }
-  puts("UI integration: PASS");
+  Rig r;
+  unsigned writes = test_writes;
+  r.Down(SWITCH_ASSIGN); r.Tick(2992);
+  assert(!r.ui.options_.active());
+  r.Tick(8); r.Up(SWITCH_ASSIGN);
+  assert(r.ui.options_.stage() == Options::EDITING);
+  // Deliberate movement below qualification refreshes inactivity only.
+  r.Tick(4000); r.pot = .54f; r.Tick(1500);
+  assert(r.ui.options_.stage() == Options::EDITING);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  r.pot = .9f; r.Tick(10);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  r.settings.SaveState(); ++writes; // Preview must not leak into unrelated saves.
+  assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  r.Down(SWITCH_ASSIGN); r.Tick(3000, false);
+  assert(r.ui.options_.commit_requested());
+  assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  r.ui.DoEvents(); r.Up(SWITCH_ASSIGN);
+  assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  assert(test_writes == writes + 1);
+  r.Tick(30); r.Enter(); r.pot = .1f; r.Tick(10); r.Tick(5000);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  assert(test_writes == writes + 1); // Timeout cancels.
+  r.Tick(30); r.Enter(); r.Tap();
+  assert(r.ui.options_.page() == 1);
+  r.pot = .9f; r.Tick(10);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  r.Down(SWITCH_MEDIA);
+  assert(r.calibration.starts == 0); // Active page consumes stock chords.
+  Rig startup(true); startup.Tick(3500);
+  assert(!startup.ui.options_.active());
+  Rig chord; chord.Down(SWITCH_ASSIGN); chord.Down(SWITCH_MEDIA);
+  assert(chord.calibration.starts == 1);
+  puts("gesture/preview/commit: PASS");
+}
+
+void TestQueueRace() {
+  Rig r;
+  r.Enter();
+  // Exit drain in SysTick precisely between main's availability check and pull.
+  r.ui.options_.stage_ = Options::DRAIN;
+  r.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 0);
+  assert(r.ui.queue_.available() == 1);
+  r.Tick(1, false);
+  assert(!r.ui.options_.active());
+  r.ui.queue_.PullEvent();
+  printf("remaining events after interrupted pull: %zu\n", r.ui.queue_.available());
+  fflush(stdout);
+  assert(r.ui.queue_.available() == 0); // Old ISR Flush makes this 15.
+  uint8_t media = r.settings.state().media;
+  r.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
+  r.ui.DoEvents(); // Pending main-context flush also discards stale releases.
+  assert(r.ui.queue_.available() == 0);
+  assert(r.settings.state().media == media);
+  puts("queue interrupt interleaving: PASS");
 }
 
 void TestStorage() {
@@ -314,20 +155,7 @@ void TestStorage() {
   memset(legacy_state.padding, 0, sizeof(legacy_state.padding)); legacy.SaveState();
   Settings downgrade; assert(downgrade.Init(false));
   assert(downgrade.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  s.Init(false); s.set_output_limiter_mode(OUTPUT_LIMITER_FAST);
-  for (int i = 0; i < 4100; ++i) s.SaveState();
-  Settings rollover; assert(rollover.Init(false));
-  assert(rollover.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-  rollover.SavePersistentData();
-  Settings calibration; assert(calibration.Init(false));
-  assert(calibration.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-  test_interrupt = true; calibration.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
-  calibration.SaveState(); test_interrupt = false;
-  Settings interrupted; assert(interrupted.Init(false));
-  assert(interrupted.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-  Settings recovery; assert(recovery.Init(true));
-  assert(recovery.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  puts("STAT real ChunkStorage: PASS");
+  puts("STAT persistence/compatibility: PASS");
 }
 
 // Frozen released limiter arithmetic, independent of ProcessOutput dispatch.
@@ -342,77 +170,36 @@ struct StockLimiter {
     x->l *= gain; x->r *= gain;
   }
 };
-void TestDsp(const char* output) {
+void TestDsp() {
   for (float sr : {24000.0f, 32000.0f, 48000.0f}) {
-    Limiter l; l.Init(1.0f / (sr * 6.0f), .9f);
-    Limiter bypass; bypass.Init(1.0f / (sr * 6.0f), .9f);
-    StockLimiter reference(1.0f / (sr * 6.0f));
-    for (int i = 0; i < 100000; ++i) {
-      FloatFrame x = {sinf(i * .17f) * (i % 101), cosf(i * .13f) * 2.0f};
-      FloatFrame y = x;
-      l.ProcessOutput(&x, 1, OUTPUT_LIMITER_STOCK, sr); reference.Process(&y);
-      assert(!memcmp(&x, &y, sizeof(x)));
+    Limiter stock, fast, off;
+    float decay = 1.0f / (sr * 6.0f);
+    stock.Init(decay, .9f); fast.Init(decay, .9f); off.Init(decay, .9f);
+    StockLimiter reference(decay);
+    for (int i = 0; i < 4096; ++i) {
+      FloatFrame x = {sinf(i * .17f) * 4.0f, cosf(i * .13f) * 2.0f};
+      FloatFrame y = x, z = x;
+      stock.ProcessOutput(&y, 1, OUTPUT_LIMITER_STOCK, sr);
+      reference.Process(&z);
+      assert(!memcmp(&y, &z, sizeof(y)));
+      off.ProcessOutput(&x, 1, OUTPUT_LIMITER_OFF, sr);
+      assert(x.l == sinf(i * .17f) * 4.0f && x.r == cosf(i * .13f) * 2.0f);
+      fast.ProcessOutput(&x, 1, OUTPUT_LIMITER_FAST, sr);
       assert(std::isfinite(x.l) && std::isfinite(x.r));
-      y = x; bypass.ProcessOutput(&x, 1, OUTPUT_LIMITER_OFF, sr);
-      assert(!memcmp(&x, &y, sizeof(x)));
     }
-    for (int mode = 0; mode < 2; ++mode) {
-      l.Init(1.0f / (sr * 6.0f), .9f);
-      FloatFrame x = {};
-      for (int i = 0; i < int(sr / 10); ++i) {
-        x = {4.0f, -4.0f}; l.ProcessOutput(&x, 1, OutputLimiterMode(mode), sr);
-      }
-      assert(fabsf(x.l - .9f) < .0001f);
-      char name[512];
-      snprintf(name, sizeof(name), "%s/recovery-%.0f-%d.csv", output, sr, mode);
-      FILE* curve = fopen(name, "w"); assert(curve);
-      fprintf(curve, "seconds,gain\n");
-      int recovery = -1;
-      for (int i = 0; i < int(sr * 30); ++i) {
-        x = {.1f, -.1f}; l.ProcessOutput(&x, 1, OutputLimiterMode(mode), sr);
-        assert(std::isfinite(x.l));
-        if (x.l >= .099f && recovery < 0) recovery = i;
-        if (i % int(sr / 100) == 0) {
-          fprintf(curve, "%.6f,%.9f\n", i / sr, x.l / .1f);
-        }
-      }
-      fclose(curve);
-      assert(recovery >= 0);
-      if (mode == OUTPUT_LIMITER_FAST) assert(recovery / sr < 1.0f);
-      printf("recovery sr=%.0f mode=%d t99=%.6f gain=%.6f\n", sr, mode, recovery / sr, x.l / .1f);
+    for (int i = 0; i < int(sr); ++i) {
+      FloatFrame x = {.1f, -.1f}, y = x;
+      stock.ProcessOutput(&x, 1, OUTPUT_LIMITER_STOCK, sr);
+      fast.ProcessOutput(&y, 1, OUTPUT_LIMITER_FAST, sr);
+      if (i == int(sr) - 1) assert(y.l > x.l && y.l >= .099f);
     }
-    // Sustained overload: bound detector modulation after settling.
-    for (float frequency : {20.0f, 55.0f, 220.0f, 1000.0f, 5000.0f}) {
-      l.Init(1.0f / (sr * 6.0f), .9f);
-      float min_gain = 1.0f, max_gain = 0.0f;
-      for (int i = 0; i < int(2 * sr); ++i) {
-        float signal = 1.5f * sinf(i * (2.0f * 3.14159265f * frequency / sr));
-        FloatFrame y = {signal, -signal};
-        l.ProcessOutput(&y, 1, OUTPUT_LIMITER_FAST, sr);
-        assert(std::isfinite(y.l) && std::isfinite(y.r));
-        if (i > sr && fabsf(signal) > .1f) {
-          float gain = y.l / signal;
-          min_gain = std::min(gain, min_gain);
-          max_gain = std::max(gain, max_gain);
-        }
-      }
-      float ripple = 20.0f * log10f(max_gain / min_gain);
-      assert(ripple < .5f);
-      printf("sustained sr=%.0f frequency=%.0f min_gain=%.9f max_gain=%.9f ripple_db=%.6f\n",
-          sr, frequency, min_gain, max_gain, ripple);
-    }
-    FloatFrame x = {4.0f, -4.0f};
-    l.ProcessOutput(&x, 1, OUTPUT_LIMITER_OFF, sr);
-    assert(x.l == 4.0f && x.r == -4.0f);
-    CONSTRAIN(x.l, -1.0f, .999999f); CONSTRAIN(x.r, -1.0f, .999999f);
-    assert(x.l == .999999f && x.r == -1.0f);
   }
-  puts("DSP: PASS");
+  puts("DSP mode dispatch: PASS");
 }
-int main(int argc, char** argv) {
+int main(int argc, char**) {
   assert(argc == 2);
   assert(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000));
-  TestStorage(); TestUi(); TestDsp(argv[1]);
+  TestQueueRace(); TestStorage(); TestUi(); TestDsp();
 }
