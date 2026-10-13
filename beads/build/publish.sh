@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Publish the GitHub release for a beads-* tag from a build's artifacts.
+# Publish the GitHub release for a drizzlet-* tag from a build's artifacts.
 # Usage: publish.sh TAG ARTIFACT_DIR   (needs GH_TOKEN and GITHUB_REPOSITORY)
 set -euo pipefail
 tag=${1:?usage: publish.sh TAG ARTIFACT_DIR}
 dir=${2:?usage: publish.sh TAG ARTIFACT_DIR}
 repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
-[[ $tag =~ ^beads-[A-Za-z0-9._-]+$ ]] || { echo "Bad tag: $tag" >&2; exit 2; }
+[[ $tag =~ ^drizzlet-[A-Za-z0-9._-]+$ ]] || { echo "Bad tag: $tag" >&2; exit 2; }
 
-title="Unofficial Beads build ${tag#beads-}"
-notes="Unofficial build of Émilie Gillet's released Beads firmware; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
+title="Drizzlet ${tag#drizzlet-}"
+notes="Alternative firmware for Mutable Instruments Beads, built on Émilie Gillet's released source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }

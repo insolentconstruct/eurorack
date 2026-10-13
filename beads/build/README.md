@@ -1,6 +1,6 @@
-# Unofficial Beads firmware build
+# Drizzlet
 
-An unofficial, community build of Émilie Gillet's released Beads source; not a Mutable Instruments product.
+Alternative firmware for Mutable Instruments Beads, built on Émilie Gillet's released source; not a Mutable Instruments product.
 
 From [Émilie's eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
@@ -43,11 +43,11 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 Back up calibration first, then flash the combo `.bin` from `<tag>-combo.zip`; this command doesn't touch the settings sector.
 
-Use your downloaded filename in place of `beads-2026.10.11-combo.bin`:
+Use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-  -c "init; halt; flash write_image erase beads-2026.10.11-combo.bin 0x08000000; verify_image beads-2026.10.11-combo.bin 0x08000000; reset run; shutdown"
+  -c "init; halt; flash write_image erase drizzlet-YYYY.MM.DD-combo.bin 0x08000000; verify_image drizzlet-YYYY.MM.DD-combo.bin 0x08000000; reset run; shutdown"
 ```
 
 ## Building it yourself
@@ -61,7 +61,7 @@ bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
 The build checks every firmware output against pinned hashes.
-GitHub Actions builds and publishes releases from `beads-*` tags.
+GitHub Actions builds and publishes releases from `drizzlet-*` tags.
 
 ## License and credits
 

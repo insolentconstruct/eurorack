@@ -17,9 +17,9 @@ from scipy.signal import resample_poly
 
 ROOT = Path('/src')
 HERE = ROOT / 'beads/build'
-NAME = os.environ.get('BEADS_RELEASE_NAME', 'beads-dev')
-if not re.fullmatch(r'beads-[A-Za-z0-9._-]+', NAME):
-  raise SystemExit('BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+')
+NAME = os.environ.get('RELEASE_NAME', 'drizzlet-dev')
+if not re.fullmatch(r'drizzlet-[A-Za-z0-9._-]+', NAME):
+  raise SystemExit('RELEASE_NAME must match drizzlet-[A-Za-z0-9._-]+')
 WAV = NAME + '.wav'
 ZIP = NAME + '-wav.zip'
 COMBO = NAME + '-combo.bin'
@@ -127,7 +127,7 @@ def notices(out):
     files.update(shlex.split(text.split(':',1)[1]))
   if not files or not any('stm32h7xx_hal.c' in f for f in files):
     raise ValueError('incomplete compiled source inventory')
-  chunks = ['Unofficial released-source Beads build. Applicable notices by compiled file.\n'
+  chunks = ['Drizzlet, alternative firmware for Mutable Instruments Beads. Notices by compiled file.\n'
             'Original notices below are preserved verbatim. Files without a standalone\n'
             'notice are listed too; dependency/runtime licenses follow.\n']
   for name in sorted(files):

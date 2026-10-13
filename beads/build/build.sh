@@ -15,8 +15,8 @@ if [[ "$mode" == --wav ]]; then
   [[ -f "$root/stm_audio_bootloader/qpsk/encoder.py" && -f "$root/stmlib/makefile.inc" ]] || { echo "Run: git submodule update --init stmlib stm_audio_bootloader" >&2; exit 1; }
   [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == 39d95a8be305c6bc4a99fd218518d832c7ff821c ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
-  name=${BEADS_RELEASE_NAME:-beads-dev}
-  [[ "$name" =~ ^beads-[A-Za-z0-9._-]+$ ]] || { echo "BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+" >&2; exit 2; }
+  name=${RELEASE_NAME:-drizzlet-dev}
+  [[ "$name" =~ ^drizzlet-[A-Za-z0-9._-]+$ ]] || { echo "RELEASE_NAME must match drizzlet-[A-Za-z0-9._-]+" >&2; exit 2; }
   build_image=${BEADS_BUILD_IMAGE:-beads-build-kit}
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
     --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" "$build_image" \
@@ -33,7 +33,7 @@ if [[ "$mode" == --wav ]]; then
   # Check the WAV against the tested file.
   echo "$(cut -c1-64 "$root/beads/build/expected-wav.sha256")  $name.wav" | (cd "$out" && sha256sum -c -)
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
-    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e BEADS_RELEASE_NAME="$name" "$build_image" \
+    --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" -e RELEASE_NAME="$name" "$build_image" \
     nice -n 10 python3 beads/build/tools/release.py /out
   exit 0
 fi

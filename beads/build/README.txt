@@ -1,6 +1,7 @@
-Unofficial Beads firmware
-=========================
-Unofficial community build, not a Mutable Instruments product.
+Drizzlet
+========
+Alternative firmware for Mutable Instruments Beads; not a Mutable
+Instruments product.
 
 Emilie Gillet's note:
 "Code provided as is, builds on a Desktop platform but not verified to

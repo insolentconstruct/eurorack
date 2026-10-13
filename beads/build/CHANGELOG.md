@@ -1,13 +1,14 @@
 # Changelog
 
-Changes to this community build, newest first. Each feature adds a line under
+Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
 ## Unreleased
+- Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 
 ## 2026.10.11
-- First build: Émilie Gillet's released Beads source, unmodified.
+- First build (tag `beads-2026.10.11`): Émilie Gillet's released Beads source, unmodified.
 
 ## Earlier firmware (Émilie Gillet)
 
