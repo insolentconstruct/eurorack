@@ -43,8 +43,9 @@ jobs:
           if [[ -z "$target" ]]; then
             target="$PUSH_BEFORE"
           fi
-          if [[ -z "$target" || "$target" =~ ^0+$ ]]; then
-            target="origin/$DEFAULT_BRANCH"
+          if [[ -z "$target" || "$target" =~ ^0+$ ]] || ! git cat-file -e "$target^{commit}" 2>/dev/null; then
+            # New branch, or a rewritten history: compare with upstream so only our lines are checked.
+            target="origin/master"
           fi
           base=$(git merge-base HEAD "$target")
           git diff --check "$base" HEAD -- ':(glob)beads/**/*.c' ':(glob)beads/**/*.cc' ':(glob)beads/**/*.cpp' ':(glob)beads/**/*.cxx' ':(glob)beads/**/*.h' ':(glob)beads/**/*.hpp' ':(glob)beads/**/*.hxx'
