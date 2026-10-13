@@ -8,7 +8,7 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 [[ $tag =~ ^beads-[A-Za-z0-9._-]+$ ]] || { echo "Bad tag: $tag" >&2; exit 2; }
 
 title="Unofficial Beads build ${tag#beads-}"
-notes="Unofficial build of Émilie Gillet's released Beads firmware; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
+notes="Unofficial build of the released Mutable Instruments Beads firmware; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
