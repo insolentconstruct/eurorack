@@ -8,7 +8,7 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 [[ $tag =~ ^drizzlet-[A-Za-z0-9._-]+$ ]] || { echo "Bad tag: $tag" >&2; exit 2; }
 
 title="Drizzlet ${tag#drizzlet-}"
-notes="Alternative firmware for Mutable Instruments Beads, built on Émilie Gillet's released source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
+notes="Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }

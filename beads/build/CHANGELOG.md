@@ -8,9 +8,9 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 
 ## 2026.10.11
-- First build (tag `beads-2026.10.11`): Émilie Gillet's released Beads source, unmodified.
+- First build (tag `beads-2026.10.11`): the released Mutable Instruments Beads source, unmodified.
 
-## Earlier firmware (Émilie Gillet)
+## Earlier Mutable Instruments firmware
 
 - **2021 forum release:** `beads.wav`, posted on the Mutable Instruments forum in April 2021.
 - **2024 recovery firmware:** `beads_patch_firmware.wav` / `beads_golden_bootloader_combo.bin`, shared in the ModWiggler Beads thread in early 2024 to fix modules stuck on boot.

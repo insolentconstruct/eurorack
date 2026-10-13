@@ -1,6 +1,6 @@
 # Code style
 
-Code changes should read like Émilie's code. When in doubt, copy the nearest existing file.
+Code changes should read like the existing Mutable Instruments code. When in doubt, copy the nearest existing file.
 
 ## Layout
 

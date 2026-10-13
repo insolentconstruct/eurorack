@@ -3,12 +3,11 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-Emilie Gillet's note:
+Note from the Mutable Instruments eurorack README:
 "Code provided as is, builds on a Desktop platform but not verified to
 build and run on a module. Install at your own risks."
 
-Install at your own risk. Please don't contact Emilie Gillet or Mutable
-Instruments; report problems at:
+Install at your own risk. Please don't contact Mutable Instruments; report problems at:
 https://github.com/insolentconstruct/eurorack/issues
 
 This is the 2024 recovery firmware (beads_patch_firmware.wav) plus one

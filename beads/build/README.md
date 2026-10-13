@@ -1,12 +1,12 @@
 # Drizzlet
 
-Alternative firmware for Mutable Instruments Beads, built on Émilie Gillet's released source; not a Mutable Instruments product.
+Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
 
-From [Émilie's eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
+From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
 > Code provided as is, builds on a Desktop platform but not verified to build and run on a module. Install at your own risks.
 
-Install at your own risk. Please do not contact Émilie Gillet or Mutable Instruments about it; report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
+Install at your own risk. Please do not contact Mutable Instruments about it; report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
 
 ## Downloads
 
