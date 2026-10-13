@@ -16,6 +16,7 @@ Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurora
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
 What changed, including against older firmware: see [CHANGELOG.md](CHANGELOG.md).
+Contributing code: follow [STYLE.md](STYLE.md).
 
 ## Updating your module
 
