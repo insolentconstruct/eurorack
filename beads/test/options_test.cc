@@ -107,25 +107,80 @@ void TestUi() {
   puts("gesture/preview/commit: PASS");
 }
 
+static Rig* interrupted_rig;
+static bool interrupt_session;
+namespace beads {
+void TestOptionsDispatchInterrupt() {
+  if (interrupted_rig) {
+    Rig* r = interrupted_rig;
+    interrupted_rig = nullptr;
+    if (interrupt_session) {
+      test_down[SWITCH_ASSIGN] = true; r->Tick(3010, false);
+      assert(r->ui.options_.active());
+      test_down[SWITCH_ASSIGN] = false; r->Tick(5010, false);
+    } else {
+      r->Tick(1, false); // After flush check, before options_.active().
+    }
+  }
+}
+}
 void TestQueueRace() {
   Rig r;
   r.Enter();
-  // Exit drain in SysTick precisely between main's availability check and pull.
+  r.Down(SWITCH_MEDIA); // Cancellation enters DRAIN with MEDIA down.
+  assert(r.ui.options_.stage() == Options::DRAIN);
+  test_down[SWITCH_MEDIA] = false;
+  r.Tick(7, false); // Debounce 0x7f: release; next tick 0xff exits DRAIN.
+  assert(r.ui.options_.stage() == Options::DRAIN);
+  uint8_t media = r.settings.state().media;
+  unsigned writes = test_writes;
+  interrupted_rig = &r;
+  r.ui.DoEvents();
+  if (interrupted_rig) { // Fixed ISR did not queue a release to dispatch.
+    interrupted_rig = nullptr;
+    r.Tick(1, false);
+  }
+  printf("DRAIN release interleaving: media %u -> %u, saves %u\n",
+      media, r.settings.state().media, test_writes - writes);
+  fflush(stdout);
+  assert(!r.ui.options_.active());
+  assert(r.ui.queue_.available() == 0);
+  assert(r.settings.state().media == media && test_writes == writes);
+
+  // Retain the read-pointer regression: interrupt between available and pull.
   r.ui.options_.stage_ = Options::DRAIN;
-  r.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 0);
+  r.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
   assert(r.ui.queue_.available() == 1);
   r.Tick(1, false);
-  assert(!r.ui.options_.active());
   r.ui.queue_.PullEvent();
-  printf("remaining events after interrupted pull: %zu\n", r.ui.queue_.available());
-  fflush(stdout);
-  assert(r.ui.queue_.available() == 0); // Old ISR Flush makes this 15.
-  uint8_t media = r.settings.state().media;
-  r.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
-  r.ui.DoEvents(); // Pending main-context flush also discards stale releases.
-  assert(r.ui.queue_.available() == 0);
-  assert(r.settings.state().media == media);
-  puts("queue interrupt interleaving: PASS");
+  assert(r.ui.queue_.available() == 0); // An ISR Flush would create 15 phantoms.
+
+  // Pre-entry events remain pending through an entire session without DoEvents.
+  Rig delayed;
+  delayed.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
+  test_down[SWITCH_ASSIGN] = true;
+  delayed.Tick(3010, false);
+  assert(delayed.ui.options_.active());
+  test_down[SWITCH_ASSIGN] = false;
+  delayed.Tick(5010, false); // Release, inactivity cancellation, drain exit.
+  assert(!delayed.ui.options_.active());
+  media = delayed.settings.state().media; writes = test_writes;
+  delayed.ui.DoEvents();
+  assert(delayed.ui.queue_.available() == 0);
+  assert(delayed.settings.state().media == media && test_writes == writes);
+
+  delayed.Tick(30); // Re-arm after the preceding drain exit.
+  // An event already pulled when entry/exit preempts main is rejected too.
+  delayed.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
+  interrupt_session = true;
+  interrupted_rig = &delayed;
+  delayed.ui.DoEvents();
+  interrupt_session = false;
+  assert(!interrupted_rig && !delayed.ui.options_.active());
+  assert(delayed.settings.state().media == media && test_writes == writes);
+  delayed.Down(SWITCH_MEDIA); delayed.Up(SWITCH_MEDIA);
+  assert(delayed.settings.state().media != media && test_writes == writes + 1);
+  puts("queue interrupt/pre-entry/normal dispatch: PASS");
 }
 
 void TestStorage() {

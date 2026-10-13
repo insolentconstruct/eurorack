@@ -193,6 +193,7 @@ class Ui {
   PotController assignable_cv_pot_[MIX_PARAMETER_LAST];
   float mix_pot_value_[MIX_PARAMETER_LAST];
   Options options_;
+  // Entry-only request: main discards events queued before options entry.
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
 

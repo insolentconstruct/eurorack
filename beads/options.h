@@ -161,7 +161,8 @@ class Options {
     holding_ = false;
   }
 
-  Stage stage_;
+  // Published by SysTick; main reads it before the entry flush request.
+  volatile Stage stage_;
   bool armed_;
   bool eligible_;
   bool holding_;

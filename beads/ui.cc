@@ -98,32 +98,6 @@ void Ui::Poll() {
   system_clock.Tick();
   switches_.Debounce();
   
-  for (int i = 0; i < SWITCH_LAST; ++i) {
-    Switch s = Switch(i);
-    
-    if (switches_.just_pressed(s)) {
-      queue_.AddEvent(CONTROL_SWITCH, i, 0);
-      press_time_[i] = system_clock.milliseconds();
-      ignore_release_[i] = false;
-    }
-    
-    if (switches_.pressed(s) && !ignore_release_[i]) {
-      uint32_t pressed_time = system_clock.milliseconds() - press_time_[i];
-      if (pressed_time >= long_press_duration[i]) {
-        queue_.AddEvent(CONTROL_SWITCH, i, pressed_time);
-        ignore_release_[i] = true;
-      }
-    }
-    
-    if (switches_.released(s) && !ignore_release_[i]) {
-      queue_.AddEvent(
-          CONTROL_SWITCH,
-          i,
-          system_clock.milliseconds() - press_time_[i] + 1);
-      ignore_release_[i] = true;
-    }
-  }
-  
   Options::Stage previous_stage = options_.stage();
   bool was_active = options_.active();
   bool other = false;
@@ -158,10 +132,39 @@ void Ui::Poll() {
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
-    flush_options_events_ = true;
   }
-  if (was_active && !options_.active()) {
-    flush_options_events_ = true;
+
+  // Acceptance and the options transition share the SysTick context. Suppress
+  // entry, active/drain and exit ticks, while retaining stock debounce bookkeeping.
+  bool accept_switch_events = !was_active && !options_.active();
+  for (int i = 0; i < SWITCH_LAST; ++i) {
+    Switch s = Switch(i);
+
+    if (switches_.just_pressed(s)) {
+      if (accept_switch_events) queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      press_time_[i] = system_clock.milliseconds();
+      ignore_release_[i] = false;
+    }
+
+    if (switches_.pressed(s) && !ignore_release_[i]) {
+      uint32_t pressed_time = system_clock.milliseconds() - press_time_[i];
+      if (pressed_time >= long_press_duration[i]) {
+        if (accept_switch_events) {
+          queue_.AddEvent(CONTROL_SWITCH, i, pressed_time);
+        }
+        ignore_release_[i] = true;
+      }
+    }
+
+    if (switches_.released(s) && !ignore_release_[i]) {
+      if (accept_switch_events) {
+        queue_.AddEvent(
+            CONTROL_SWITCH,
+            i,
+            system_clock.milliseconds() - press_time_[i] + 1);
+      }
+      ignore_release_[i] = true;
+    }
   }
 
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
@@ -538,9 +541,14 @@ void Ui::DoEvents() {
     }
     if (!queue_.available()) break;
     Event e = queue_.PullEvent();
-    // SysTick may have entered/exited options between available and PullEvent.
-    if (flush_options_events_) continue;
-    if (!options_.active() && e.control_type == CONTROL_SWITCH) {
+    // No options-era events enter the queue. The entry request also rejects
+    // a pre-entry event pulled before an entire options session interrupts main.
+#ifdef TEST
+    extern void TestOptionsDispatchInterrupt();
+    TestOptionsDispatchInterrupt();
+#endif
+    if (!options_.active() && !flush_options_events_ &&
+        e.control_type == CONTROL_SWITCH) {
       if (e.data == 0) {
         OnSwitchPressed(e);
       } else {
