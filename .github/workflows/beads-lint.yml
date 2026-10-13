@@ -1,0 +1,62 @@
+name: Beads checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Install pinned lint tools
+        run: |
+          curl --fail --silent --show-error --location --retry 2 \
+            https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz -o /tmp/shellcheck.tar.xz
+          curl --fail --silent --show-error --location --retry 2 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz -o /tmp/actionlint.tar.gz
+          echo '6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87  /tmp/shellcheck.tar.xz' | sha256sum --check
+          echo '023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/actionlint.tar.gz' | sha256sum --check
+          mkdir -p /tmp/beads-lint
+          tar -xJf /tmp/shellcheck.tar.xz -C /tmp/beads-lint
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp/beads-lint actionlint
+          echo /tmp/beads-lint/shellcheck-v0.10.0 >> "$GITHUB_PATH"
+          echo /tmp/beads-lint >> "$GITHUB_PATH"
+      - name: Lint scripts and workflows
+        run: |
+          shellcheck beads/build/*.sh
+          actionlint .github/workflows/*.yml .github/workflows/*.yaml
+        # Only .yml files currently exist; use nullglob for future .yaml files.
+        shell: bash --noprofile --norc -eo pipefail -O nullglob {0}
+      - name: Check changed C/C++ lines
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          target="$PR_BASE"
+          if [[ -z "$target" ]]; then
+            target="$PUSH_BEFORE"
+          fi
+          if [[ -z "$target" || "$target" =~ ^0+$ ]]; then
+            target="origin/$DEFAULT_BRANCH"
+          fi
+          base=$(git merge-base HEAD "$target")
+          git diff --check "$base" HEAD -- ':(glob)beads/**/*.c' ':(glob)beads/**/*.cc' ':(glob)beads/**/*.cpp' ':(glob)beads/**/*.cxx' ':(glob)beads/**/*.h' ':(glob)beads/**/*.hpp' ':(glob)beads/**/*.hxx'
+          BASE="$base" python3 beads/build/tools/check_added_tabs.py
+      - name: Run available host test scripts
+        run: |
+          shopt -s nullglob
+          scripts=(beads/test/*.sh beads/tests/*.sh)
+          if (( ${#scripts[@]} == 0 )); then
+            echo 'No host test scripts found; skipping.'
+          fi
+          for script in "${scripts[@]}"; do
+            echo "Running $script"
+            bash "$script"
+          done
