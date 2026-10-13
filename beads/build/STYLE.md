@@ -4,42 +4,41 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 
 ## Layout
 
-- 2-space indent, no tabs. `public:` and `private:` get one space. Lines up to 80 columns.
-- Braces on the same line. Empty bodies are written `{ }`.
-- Header guards: `BEADS_<PATH>_H_`, e.g. `BEADS_DSP_LIMITER_H_`. Close namespaces with `}  // namespace beads`.
-- Includes: in a `.cc`, its own header first, then `<system>`, `stmlib/...`, `beads/...`, as groups separated by blank lines.
+- 2-space indent, no tabs. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
+- Put code in `namespace beads` and close it with `}  // namespace beads`.
+- New headers use `BEADS_<PATH>_H_` guards, e.g. `BEADS_DSP_LIMITER_H_`.
+- Includes, usually: the file's own header, then `<system>`, `stmlib/...`, `beads/...`.
 
 ## Names
 
-- Classes and methods: `PascalCase` (`Process`, `Init`). Simple accessors: `lower_case()`.
-- Members end in `_` (`peak_lp_`). Locals and parameters: `lower_case`.
-- Constants: `kPascalCase`. Enum values: `ALL_CAPS` with a common prefix (`MEDIA_DIGITAL`).
+- Types and methods: `PascalCase` (`Process`, `Init`). Accessors, locals and parameters: `lower_case`.
+- Private members end in `_` (`peak_lp_`); public struct fields usually don't.
+- Constants: `kPascalCase`. Named enum values and macros: `ALL_CAPS`, enum values with a common prefix (`MEDIA_DIGITAL`).
 
 ## Classes
 
-- Constructor and destructor are empty: `Limiter() { }`. Real setup goes in `Init()`.
-- End each class with `DISALLOW_COPY_AND_ASSIGN(Name);`.
-- Small DSP classes live entirely in the header. Hardware and UI code is split into `.h` and `.cc`.
-- Use templates for variants (sample resolution, buffer size), not runtime flags.
+- Most stateful classes have empty constructors, set up in `Init()`, and end with `DISALLOW_COPY_AND_ASSIGN(Name);`.
+- Small DSP classes usually live in the header. Follow how nearby files are split.
+- Templates are used for fixed DSP variants (sample resolution, buffer size).
 
 ## Code
 
-- Plain C++98: no `auto`, `nullptr`, lambdas or `constexpr`.
-- Use `const` for locals that don't change, and `bool` for flags.
-- Loops: `while (size--)` with a pointer for sample buffers; `for (size_t i = 0; ...; ++i)` or `int i` elsewhere. Not `uint8_t`.
+- C++98-era syntax: no `auto`, `nullptr`, lambdas or `constexpr`.
+- Prefer `const` for locals that don't change, and `bool` for flags.
+- Loops: `while (size--)` with a pointer, or an indexed `for`; indices are usually `size_t` or `int`.
 - Use the stmlib helpers: `CONSTRAIN`, `ONE_POLE`, `SLOPE`, `ParameterInterpolator`, the `Interpolate*` functions and lookup tables.
-- Casts: `float(x)` or `static_cast<T>(x)`.
-- Float literals: new float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
+- Numeric casts: `float(x)` or `static_cast<T>(x)`.
+- New float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
 - Name a constant when it has meaning; small obvious numbers can stay inline.
-- No `__builtin_expect`, `noinline`, `flatten` or other compiler hints.
 
 ## Comments
 
-- Few comments. Explain what the DSP or UI does and why, not what each line does.
-- `//` comments, full sentences.
+- Brief `//` comments that explain intent. Short labels and units are fine.
+- New files start with the MIT notice, an accurate copyright line and a one-line description, like the existing files.
 
-## Changes
+## Project policy
 
-- Don't edit the copyright headers of existing files. New files use the same MIT header.
-- Keep the stock behaviour bit-exact unless the change is the point. Put new options behind a setting that defaults to stock.
-- New behaviour gets a line in CHANGELOG.md.
+- Don't edit the copyright headers of existing files.
+- Keep stock behaviour unchanged unless the change is the point. New options default to stock.
+- No compiler hints such as `__builtin_expect`, `noinline` or `flatten`.
+- Behaviour changes get a line in CHANGELOG.md.
