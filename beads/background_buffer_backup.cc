@@ -126,6 +126,7 @@ void BackgroundBufferBackup::EraseSector() {
 
 void BackgroundBufferBackup::WriteBlock() {
   if (remaining_bytes_) {
+    HAL_FLASH_Unlock();  // A settings save may have locked it.
     uint8_t* source = processor_->delay_buffer_raw_bytes(write_offset_);
     uint8_t buffer[kFlashWordSize];
     copy(&source[0], &source[kFlashWordSize], &buffer[0]);
@@ -164,6 +165,10 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
         !previous_freeze_state_ && !settings_->state().disable_autosave) {
       previous_freeze_state_ = true;
       remaining_sectors_ = 6;
+      if (settings_->state().frozen) {
+        // Stale flag: an interrupted save must not be restored.
+        SaveState(false);
+      }
     }
   }
   EraseSector();
