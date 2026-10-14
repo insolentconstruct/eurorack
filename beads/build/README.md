@@ -15,6 +15,7 @@ Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurora
 - `<tag>-wav.zip`: audio update, with `README.txt` and `NOTICE.txt`.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
+For the module itself, read the [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the [Beads development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/).
 What changed, including against older firmware: see [CHANGELOG.md](CHANGELOG.md).
 Where the Beads manual and the firmware disagree, see [MANUAL_ERRATA.md](MANUAL_ERRATA.md).
 
