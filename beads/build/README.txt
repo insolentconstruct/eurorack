@@ -13,6 +13,10 @@ https://github.com/insolentconstruct/eurorack/issues
 This is the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing; details are in CHANGELOG.md in the repository.
 
+Beads manual and development history:
+https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
+https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/
+
 Options page
 ------------
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
