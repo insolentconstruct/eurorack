@@ -92,12 +92,22 @@ void TestUi() {
   assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
   assert(test_writes == writes + 1);
   r.Tick(30); r.Enter(); r.pot = .1f; r.Tick(10); r.Tick(5000);
-  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  assert(test_writes == writes + 1); // Timeout cancels.
-  r.Tick(30); r.Enter(); r.Tap();
-  assert(r.ui.options_.page() == 1);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  assert(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  assert(test_writes == writes + 2); // Timeout saves a changed value.
+  r.Tick(30); r.Enter(); r.Tick(5010);
+  assert(!r.ui.options_.active());
+  assert(test_writes == writes + 2); // Timeout without a change writes nothing.
+  r.Tick(30); r.Enter();
+  assert(r.ui.options_.page() == Options::LIMITER_PAGE); // Opens on dry/wet.
+  r.Tap();
+  assert(r.ui.options_.page() == 2);
   r.pot = .9f; r.Tick(10);
-  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK); // Reserved.
+  r.Tap(); r.Tap();
+  assert(r.ui.options_.page() == Options::LIMITER_PAGE);
+  r.pot = .5f; r.Tick(10);
+  assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
   r.Down(SWITCH_MEDIA);
   assert(r.calibration.starts == 0); // Active page consumes stock chords.
   Rig startup(true); startup.Tick(3500);

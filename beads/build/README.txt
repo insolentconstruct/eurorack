@@ -16,13 +16,22 @@ change to grain stealing; details are in CHANGELOG.md in the repository.
 Options page
 ------------
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
-The assignment LEDs pulse together on entry; the feedback LED marks the limiter page.
-Move DRY/WET more than one tenth of its travel to start selecting.
-Left third: Stock (steady green MEDIA); middle: Fast release (one blue pulse).
-Right third: Off (two amber pulses); loud peaks can hard-clip.
-Tap ASSIGN to cycle pages; dry/wet and reverb pages are reserved.
-Hold ASSIGN for three seconds to save and exit; five seconds idle or another button cancels.
-DRY/WET stays held during editing and catches up smoothly after exit.
+The assignment LEDs pulse together on entry.
+Options come in three categories, marked by the feedback, dry/wet and reverb
+LEDs; the page opens on the dry/wet category. Tap ASSIGN to cycle categories.
+In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three
+settings. Move a knob more than one tenth of its travel to start selecting; its
+thirds pick the value, shown on MEDIA.
+
+Output limiter: dry/wet category, DRY/WET knob.
+  Left third: Stock (steady green MEDIA).
+  Middle: Fast release (one blue pulse).
+  Right third: Off (two amber pulses); loud peaks can hard-clip.
+The other knobs and categories are reserved for later options and do nothing yet.
+
+Hold ASSIGN for three seconds to save and exit. After five seconds without
+changes the page also exits and saves any change. Another button cancels.
+The mix knobs stay held during editing and catch up smoothly after exit.
 
 Firmware update procedure
 -------------------------

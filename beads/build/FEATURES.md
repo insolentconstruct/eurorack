@@ -32,14 +32,14 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by thirds. Hold ASSIGN 3 s to save/exit; another button or 5 s idle cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry/wet category; tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by thirds. Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
-| Category 1 / feedback LED, DRY/WET | Limiter; left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:90-113; beads/ui.h:69-73 --> |
-| Category 1 / feedback LED, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Available for coordinated new options <!-- beads/options.h:90-113; beads/ui.cc:128-131 --> |
-| Category 2 / dry/wet LED, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-113; beads/build/README.md --> |
-| Category 3 / reverb LED, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-113; beads/build/README.md --> |
+| Feedback LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
+| Dry/wet LED category, DRY/WET | Limiter (`LIMITER_PAGE`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
+| Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Available for coordinated new options <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
+| Reverb LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
 | MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; reserved categories still show the limiter preview <!-- beads/ui.cc:290-299 --> |
 | Mix knobs | All three normal values locked while editing; DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |

@@ -37,6 +37,8 @@ namespace beads {
 class Options {
  public:
   enum Stage { INACTIVE, WAIT_RELEASE, EDITING, DRAIN };
+  // Category marked by the dry/wet LED: the limiter is set with DRY/WET.
+  enum { LIMITER_PAGE = 1 };
 
   void Init() {
     stage_ = INACTIVE;
@@ -66,7 +68,8 @@ class Options {
         return;
       }
       if (uint32_t(now - last_action_) >= 5000) {
-        Finish(false, committed);
+        // Idle exit keeps a changed value, like the hold exit.
+        Finish(preview_ != committed, committed);
         return;
       }
       if (stage_ == WAIT_RELEASE) {
@@ -108,7 +111,7 @@ class Options {
                    (zone_ == 2 && pot < 2.0f / 3.0f - 0.03f)) {
           zone_ = 1;
         }
-        if (page_ == 0) {
+        if (page_ == LIMITER_PAGE) {
           preview_ = OutputLimiterMode(zone_);
         }
       }
@@ -133,7 +136,7 @@ class Options {
     if (eligible_ && assign && uint32_t(now - press_time_) >= 3000) {
       stage_ = WAIT_RELEASE;
       preview_ = committed;
-      page_ = 0;
+      page_ = LIMITER_PAGE;
       ResetPot(pot);
       last_action_ = now;
       eligible_ = false;

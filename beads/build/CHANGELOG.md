@@ -6,7 +6,9 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 ## Unreleased
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`)
-- Output limiter option (Stock, Fast release, Off), saved; hold ASSIGN for three seconds to change it.
+- Output limiter option (Stock, Fast release, Off), saved; hold ASSIGN for three seconds to open the options page, then set it with DRY/WET (dry/wet LED category).
+  The options page has three categories (feedback, dry/wet, reverb LEDs) of three settings (the mix knobs); the other eight are reserved.
+  Holding ASSIGN or five idle seconds saves a change and exits; another button cancels.
   Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero; later
   releases read a zero byte 11 as "no options saved", so every later option starts at stock.
 - Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
