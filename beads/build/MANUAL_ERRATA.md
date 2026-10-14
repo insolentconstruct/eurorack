@@ -1,0 +1,50 @@
+# Beads manual errata
+
+Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the module page differ from the released firmware source. Everything here was checked against the source; Drizzlet keeps all of it unless noted. Drizzlet's own additions are in [README.md](README.md) and [FEATURES.md](FEATURES.md).
+
+Several differences come from the April 2021 firmware update, which the manual predates; its [release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572) list them.
+<!-- Source: Mutable Instruments eurorack d8f4739 (stmlib e3bd7c9); manual.md and index.md from the mutable-instruments-documentation repository. Each item cites manual line and source. -->
+
+## Corrections
+
+- **Restarting automatic gain** (Recording quality): hold MEDIA for about **1.5 s**, not one second. Releasing after one second changes the recording quality instead. <!-- manual.md:44; beads/ui.cc:48-50,402-425 -->
+- **Synth quality table** (Beads as a granular wavetable synth): the amber setting is **16-bit dry, 6-bit grains**, not 4-bit. <!-- manual.md:190, images/wavetable_quality_table.png; beads/dsp/synth.cc:83-84,112-118; beads/dsp/synth.h:50-54; beads/dsp/wavetable_grain.h:142 -->
+- **Update error** (Firmware update procedure): the MEDIA and input-level LEDs keep showing the input level; the other LEDs blink. <!-- manual.md:253; beads/bootloader/bootloader.cc:118-145 -->
+
+## Changed by the April 2021 update
+
+- **Synth banks:** FEEDBACK (and its assigned CV) selects **12 banks** of 16 waveforms, not 8; four FM banks were added. <!-- manual.md:182; beads/dsp/synth.h:43; beads/dsp/synth.cc:82; release notes post 1 -->
+- **Shortest grains:** grains near the reverse/forward point of SIZE (about 10:30) can be much shorter than 30 ms, down to about 8 ms requested (10–20 ms heard, depending on SHAPE). <!-- manual.md:91; index.md:51; beads/dsp/granular_player.h:97-104; beads/dsp/grain_envelope.h -->
+- **Autosave toggle:** hold ASSIGN and press FREEZE to turn buffer autosave on or off. FREEZE lights dim for off, brighter for on. With it off, a saved buffer is also not loaded at power-up. <!-- manual.md:49; beads/ui.cc:195-196,276-285; beads/background_buffer_backup.cc:54-56,154-158 -->
+- **Delay bandwidth:** in delay and slice mode, the SIZE attenurandomizer is a filter: counterclockwise darker, centre unfiltered, clockwise thinner. SIZE CV also moves it. <!-- manual.md:93,174; beads/dsp/granular_processor.h:277-282,326-349; beads/dsp/multitap_delay.h:38 -->
+- **Overwrite indicator:** while recording, the quality LED fades as the record head approaches the point where FREEZE was last released, then brightens once past it. Not in synth mode. <!-- manual.md:32; beads/beads.cc:156; beads/dsp/processor.h:116-119; beads/ui.cc:189-192 -->
+- **Manual gain display:** while setting manual gain (MEDIA + FEEDBACK), the quality LED becomes a green-to-red gain indicator. <!-- manual.md:44; beads/ui.cc:152-153,186-192 -->
+- **Manual gain clipping:** with manual gain, overloads hard-clip in the digital modes, soft-clip in Scorched cassette, and use a blend in Sunny tape. <!-- manual.md:44; beads/beads.cc:281-287; beads/gain_control.cc:133-181 -->
+- **Granular/delay switch:** turning SIZE into or out of delay fades the wet signal out and back in; the change takes about 1.5 s. <!-- manual.md:93,144; beads/dsp/processor.cc:37-38,112-119,205-222 -->
+
+## Not in the manual
+
+- **Power-on reset:** holding SEED while powering on resets saved settings to defaults; calibration is kept. In Drizzlet this also resets the output limiter to Stock. <!-- beads/beads.cc:327-328; beads/settings.cc:43-75; stmlib/system/sector_storage_h7xx.h:126-130 -->
+- **Erase chord:** holding FREEZE and ASSIGN at power-on erases the firmware and waits for an update. Holding FREEZE alone enters the updater without erasing. Use only for recovery. <!-- beads/bootloader/bootloader.cc:28,266-281,315-322 -->
+- **Calibration:** pressing MEDIA and ASSIGN together starts CV calibration, which needs precise reference voltages and overwrites the stored calibration. Avoid it unless you are recalibrating. <!-- beads/ui.cc:320-328,358-384; beads/calibrator.h:91-118 -->
+- **Saved choices:** recording quality, ASSIGN routing and amounts, the R trigger-output mode and autosave are all remembered across power cycles, not just input gain. <!-- beads/ui.cc:261-264,276-279,416-418,437-444; beads/settings.cc -->
+- **Buffer save takes time:** the 10 s of FREEZE starts the save; FREEZE dims while it runs. Keep FREEZE on until it finishes, or the buffer is not restored. <!-- manual.md:49; beads/background_buffer_backup.cc:42,54-81,136-158; beads/ui.cc -->
+- **Quality changes while frozen** are remembered and shown, and take effect when you unfreeze. <!-- manual.md:51; beads/ui.cc:416-418; beads/beads.cc:351-355,382-391 -->
+- **Knobs after hidden edits:** after setting gain or an ASSIGN amount, the knob you used catches up gradually with its normal parameter instead of jumping. <!-- beads/pot_controller.h:87-92,112-146; beads/ui.cc:425,431-444 -->
+- **Synth controls:** in synth mode TIME scans the 16 waveforms of the bank, fully clockwise SIZE gives long grains (not delay), and counterclockwise SIZE does not reverse anything. <!-- manual.md:87,144,180; beads/dsp/wavetable_grain.h:124-146; beads/dsp/wavetable_voice.h:89-94; beads/beads.cc:244-259; beads/dsp/synth.cc:72-80 -->
+- **Slow clocks in delay mode:** clock or tap intervals of 4 s or more are ignored; the last accepted tempo (initially 0.25 s) stays. <!-- manual.md:158; beads/dsp/delay_clock.cc:38-40,59-85 -->
+- **Fast clocks:** with SEED clocked above about 48 Hz and DENSITY fully accepting, grains follow a smoothed internal rhythm rather than each edge. <!-- manual.md:69; beads/dsp/trigger_generator.cc:43-54,149-217 -->
+- **Randomness with CV:** with a cable patched and the attenurandomizer counterclockwise, only positive CV adds randomness, but grain panning stays random. <!-- manual.md:102; beads/dsp/randomized_parameter.h:96-101,128-133; beads/dsp/granular_player.h:85-94,124-126 -->
+- **R trigger output** is a gate whose length depends on how grains are generated, not a fixed pulse. In synth mode it keeps running while FREEZE stops new grains. <!-- manual.md:138,205; beads/dsp/trigger_generator.cc:115-118,215-224,305-307; beads/dsp/processor.cc:145-159 -->
+- **SEED input delay:** external SEED triggers are delayed about 2.5 ms on purpose; the 0.25 ms latency on the module page is not the trigger response. <!-- index.md:84; beads/beads.cc:50,133-148,293; stmlib/dsp/delay_line.h -->
+- **Pitch CV range:** PITCH tracks ±5 V (±60 semitones); the ±8 V on the module page is the input range, not the tracking range. <!-- index.md:85; beads/cv_reader.cc:67-85 -->
+- **Updater start-up:** the updater ignores the first 2 s or so of audio after it starts, so start playback a moment after entering it. <!-- manual.md:251; beads/bootloader/bootloader.cc:151-176,308 -->
+
+## Clarifications
+
+- **Automatic gain** waits about 1 s, then listens for 5 s, and keeps adapting afterwards; silence postpones it. Restarting with MEDIA skips the wait. <!-- manual.md:42; beads/gain_control.cc:44-45,61-65,92-119 -->
+- **DENSITY extremes:** fully counterclockwise gives a steady C3 rate (about 131 grains/s); fully clockwise is random with a lower average, not a steady C3. <!-- manual.md:65; beads/dsp/trigger_generator.cc:42,73-74,88-110,265-279 -->
+- **Gated SEED at noon:** the button and the SEED input are combined, so a trigger while the button is held does not start another grain. <!-- manual.md:75; beads/dsp/trigger_generator.cc:255-263,289-307 -->
+- **Entering synth mode:** the 10 s countdown only runs while the output is silent and FREEZE is off; lingering feedback or reverb postpones it. <!-- manual.md:180; beads/beads.cc:268-269,351-369 -->
+- **Feedback schemes:** Cold digital and Sunny tape share the same feedback saturation; they still sound different through sample rate and dry path. <!-- manual.md:123; beads/dsp/processor.h:171-178; beads/dsp/granular_processor.h:287-312 -->
+- **"Gaussian" randomness** is bell-shaped but bounded. <!-- index.md:60; beads/dsp/randomized_parameter.h:45-47,128-131 -->

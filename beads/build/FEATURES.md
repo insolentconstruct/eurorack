@@ -97,7 +97,7 @@ No physical knob, CV jack, gate jack or LED is unallocated. New normal-mode cont
 
 ## Budgets
 
-Latest successful Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, 400 MHz configuration. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt; beads/makefile:27-29 -->
+Latest successful Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
 
 | Region | TAKEN | FREE / qualification |
 |---|---|---|
@@ -107,7 +107,7 @@ Latest successful Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, 40
 | D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM <!-- measurement: CI 38491527444 app.elf sections 7-9; beads/beads.cc:54-56; linker script:39-42 --> |
 | D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement <!-- measurement: CI 38491527444 app.elf section 6; linker script:41 --> |
 
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 100,000 cycles at 400 MHz, before interrupt overhead. No worst-case block timing has been measured for Drizzlet yet. <!-- beads/beads.cc:50,295; beads/makefile:27-29 -->
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. No worst-case block timing has been measured for Drizzlet yet. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
 The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Treat CPU headroom as UNKNOWN: time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
 ## Planning rules

@@ -16,6 +16,8 @@ Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurora
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
 What changed, including against older firmware: see [CHANGELOG.md](CHANGELOG.md).
+Where the Beads manual and the firmware disagree, see [MANUAL_ERRATA.md](MANUAL_ERRATA.md).
+
 Contributing code: follow [STYLE.md](STYLE.md). Before adding a feature, check [FEATURES.md](FEATURES.md) for which buttons, settings bytes, flash and RAM are already taken.
 
 ## Options page
