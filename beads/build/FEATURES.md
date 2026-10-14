@@ -68,8 +68,22 @@ Keep size, tags, offsets and checksum format compatible: records require matchin
 |---|---|---|
 | Bootloader, 0x08000000–0x0801FFFF | Reserved 128 KiB sector; updater starts app at 0x08020000 | Not free app space <!-- beads/bootloader/bootloader.cc:53,266-280 --> |
 | CALI + STAT, 0x081E0000–0x081FFFFF | One 128 KiB sector; CALI payload 120 B (6×8 B calibration + 72 B padding), record 128 B; STAT payload 24 B, record 32 B | Append space is owned by storage, not a new feature area; CALI padding[0–71] FREE format bytes, but cleared on save; change clearing before use <!-- beads/settings.h:40-61,101; beads/drivers/cv_adc.h:45-52; beads/settings.cc:88-99; stmlib/system/sector_storage_h7xx.h:58-59,213-224 --> |
-| FRZZ, 0x08100000–0x081BFFFF | Intended reservation: six 128 KiB sectors; 32 B header word + 768,000 B audio | 18,400 B tail reserved with backup; header sector erased first and header written last, so only a complete save is restored; a failed erase or program abandons the save <!-- beads/background_buffer_backup.cc:58-71,95-116,157; beads/background_buffer_backup.h:54-59; beads/dsp/processor.h:51; stmlib/system/sector_storage_h7xx.h:51-57 --> |
+| FRZZ, 0x08100000–0x081BFFFF | Intended reservation: six 128 KiB sectors; 32 B header word + 768,000 B audio | 18,400 B tail reserved with backup; header layout below <!-- beads/background_buffer_backup.cc; beads/background_buffer_backup.h; beads/dsp/processor.h:51; stmlib/system/sector_storage_h7xx.h:51-57 --> |
 | 0x081C0000–0x081DFFFF | No stock storage owner | FREE 128 KiB sector by current code; linker permits app here, so reserve explicitly before using <!-- beads/settings.h:101; beads/background_buffer_backup.cc:157; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld:36; stmlib/system/sector_storage_h7xx.h:57-58 --> |
+
+Frozen-buffer backup header: one 32-byte flash word at 0x08100000, little-endian, followed by the 768,000 audio bytes. Stock firmware reads bytes 0–9 only, so stock and Drizzlet load each other's backups.
+
+| Bytes | Field | Rule |
+|---|---|---|
+| 0–3 | `tag` | `FRZZ` (0x5a5a5246), as stock |
+| 4–7 | `write_ptr` | Signed frame index of the next write, as stock; must be below the buffer length: 384,000 / 256,000 / 256,000 / 192,000 stereo frames for media 0–3, twice that in mono |
+| 8, 9 | `media`, `mono` | As stock; 0–3 and 0–1 |
+| 10–11 | `padding` | Zero |
+| 12–15 | `crc` | stmlib `crc32` (CRC-32/ISO-HDLC) of the audio, continued over this header with `crc` = 0 |
+| 16–19 | `crc_tag` | `CRC1` (0x31435243): `crc` is valid. Stock backups hold leftover stack bytes in 10–31, so without this tag a backup loads as stock did, after the range checks |
+| 20–31 | `reserved` | Zero. A later release may use a byte only if older firmware can ignore it safely; anything else needs a new `crc_tag` |
+
+Saving erases the header's sector first and writes the header last, after the audio, so a header means a complete backup; a failed erase or program abandons the save. Loading checks the ranges, then the CRC when tagged, before touching the processor; any failure starts with an empty buffer. Known limit: power lost while a flash word is being programmed can leave an ECC error that faults when read, as in stock. <!-- beads/background_buffer_backup.h; beads/background_buffer_backup.cc; beads/test/backup_test.cc -->
 
 Updater reception has no end-address guard; extending app/update files can overwrite FRZZ or settings. Reserve an update boundary as well as a linker boundary before assigning new flash storage. <!-- beads/bootloader/bootloader.cc:234-259,291,345-355 -->
 

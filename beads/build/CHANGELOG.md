@@ -6,9 +6,9 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 ## Unreleased
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`)
-- Abort a frozen-buffer backup on flash errors instead of marking an incomplete save as restorable.
-- Keep a frozen-buffer backup going when a setting is saved during it; settings saves locked the flash and the rest of the backup failed.
-- Write the frozen-buffer backup's header last and erase its sector first, so an interrupted backup is never restored at power-up.
+- Frozen-buffer backup is checked: a CRC over the audio and header, written in bytes stock ignores, so stock and Drizzlet still load each other's backups. Header fields are range-checked before use, including on stock backups. See FEATURES.md for the format.
+- An interrupted or failed backup is never restored: the header's sector is erased first and the header written last, flash errors abandon the save, and a stale frozen flag is cleared before a new backup starts.
+- A setting saved during a backup no longer makes the rest of the backup fail (settings saves locked the flash).
 - Initialize dummy grain triggers used for CPU padding, removing undefined reads during processing.
 - Add a guard row after the last wavetable, so interpolation from the final waveform of the last bank stays inside the table (output unchanged).
 - Prevent invalid frozen delay reads when negative exponential FM makes a slice longer than the buffer.
