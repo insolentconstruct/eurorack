@@ -7,7 +7,7 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 2
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -57,7 +57,10 @@ jobs:
           if (( ${#scripts[@]} == 0 )); then
             echo 'No host test scripts found; skipping.'
           fi
+          if (( ${#scripts[@]} > 0 )); then
+            git submodule update --init stmlib
+          fi
           for script in "${scripts[@]}"; do
             echo "Running $script"
-            bash "$script"
+            bash "$script" "$(mktemp -d)"
           done
