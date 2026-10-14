@@ -118,3 +118,12 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 - Check button order, long holds, startup and disabled-feature collisions; keep calibration/reset/update chords reserved. <!-- derived: beads/ui.cc:315-399; beads/bootloader/bootloader.cc:315-322; beads/beads.cc:329 -->
 - Keep new options stock by default; account for both processor and synth, and restore borrowed controls/LEDs after editing. <!-- beads/build/STYLE.md:42; derived: beads/beads.cc:244-261; beads/ui.cc:123-134,198-308 -->
 - Reserve flash by erase sector; measure CPU and stack on the actual build before spending static size headroom. <!-- derived: stmlib/system/sector_storage_h7xx.h:43-59,149-164; linker script:29-42; measurement: CI 38491527444 app.elf -->
+
+## Decisions
+
+Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
+
+- **Saved options use one format byte plus packed fields.** Byte 11 holds a fixed marker, a layout version and the variant. If it doesn't match, every extension option reads as stock; this covers stock firmware zeroing the bytes and garbage. Bytes 12–20 hold small bit fields, and 21–23 stay in reserve. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's format byte keeps the common bytes and resets its own.
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, limiter and mono included. Other requests stay open as issues.
+- **Reserved gestures:** MEDIA+SEED for explicit engine entry, MEDIA+FREEZE for buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
