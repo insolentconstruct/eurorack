@@ -1,6 +1,6 @@
-// Copyright 2017 Emilie Gillet.
+// Copyright 2026 Drizzlet contributors.
 //
-// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
+// Part of Drizzlet, alternative firmware for Mutable Instruments Beads.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
