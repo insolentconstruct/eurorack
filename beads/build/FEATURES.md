@@ -37,7 +37,7 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
 | Feedback LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
-| Dry/wet LED category, DRY/WET | Limiter (`LIMITER_PAGE`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
+| Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Available for coordinated new options <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
 | Reverb LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |

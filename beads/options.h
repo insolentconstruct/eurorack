@@ -34,11 +34,12 @@
 
 namespace beads {
 
+// Category marked by the dry/wet LED: the limiter is set with DRY/WET.
+const int kLimiterPage = 1;
+
 class Options {
  public:
   enum Stage { INACTIVE, WAIT_RELEASE, EDITING, DRAIN };
-  // Category marked by the dry/wet LED: the limiter is set with DRY/WET.
-  enum { LIMITER_PAGE = 1 };
 
   void Init() {
     stage_ = INACTIVE;
@@ -111,7 +112,7 @@ class Options {
                    (zone_ == 2 && pot < 2.0f / 3.0f - 0.03f)) {
           zone_ = 1;
         }
-        if (page_ == LIMITER_PAGE) {
+        if (page_ == kLimiterPage) {
           preview_ = OutputLimiterMode(zone_);
         }
       }
@@ -136,7 +137,7 @@ class Options {
     if (eligible_ && assign && uint32_t(now - press_time_) >= 3000) {
       stage_ = WAIT_RELEASE;
       preview_ = committed;
-      page_ = LIMITER_PAGE;
+      page_ = kLimiterPage;
       ResetPot(pot);
       last_action_ = now;
       eligible_ = false;

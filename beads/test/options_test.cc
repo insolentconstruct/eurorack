@@ -99,13 +99,13 @@ void TestUi() {
   assert(!r.ui.options_.active());
   assert(test_writes == writes + 2); // Timeout without a change writes nothing.
   r.Tick(30); r.Enter();
-  assert(r.ui.options_.page() == Options::LIMITER_PAGE); // Opens on dry/wet.
+  assert(r.ui.options_.page() == kLimiterPage); // Opens on dry/wet.
   r.Tap();
   assert(r.ui.options_.page() == 2);
   r.pot = .9f; r.Tick(10);
   assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK); // Reserved.
   r.Tap(); r.Tap();
-  assert(r.ui.options_.page() == Options::LIMITER_PAGE);
+  assert(r.ui.options_.page() == kLimiterPage);
   r.pot = .5f; r.Tick(10);
   assert(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
   r.Down(SWITCH_MEDIA);
