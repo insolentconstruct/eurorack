@@ -40,6 +40,7 @@ using namespace stmlib;
 
 const size_t kFlashWordSize = 32;
 const uint32_t kBackupDelay = 10000; // milliseconds
+const size_t kNumSectors = 6;
 
 void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
   processor_ = processor;
@@ -92,7 +93,8 @@ void BackgroundBufferBackup::EraseSector() {
     FLASH_EraseInitTypeDef erase_params;
     erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
     erase_params.Banks = FLASH_BANK_2;
-    erase_params.Sector = 8 + remaining_sectors_ - 1;
+    // The header's sector first: an interrupted backup is never loaded.
+    erase_params.Sector = 8 + kNumSectors - remaining_sectors_;
     erase_params.NbSectors = 1;
     erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
     uint32_t sector_error;
@@ -103,21 +105,6 @@ void BackgroundBufferBackup::EraseSector() {
     --remaining_sectors_;
   
     if (!remaining_sectors_) {
-      BufferBackupHeader header;
-      header.tag = 0x5a5a5246;  // FRZZ
-      header.write_ptr = *processor_->mutable_delay_write_ptr();
-      header.media = processor_->media();
-      header.mono = processor_->mono();
-  
-      uint32_t flash_address = Sector<8>::start;
-      if (HAL_FLASH_Program(
-          FLASH_TYPEPROGRAM_FLASHWORD,
-          flash_address,
-          (uint64_t)(&header)) != HAL_OK) {
-        remaining_sectors_ = remaining_bytes_ = 0;
-        return;
-      }
-
       write_offset_ = 0;
       remaining_bytes_ = kDelayBufferSizeBits / 8;
     }
@@ -144,6 +131,18 @@ void BackgroundBufferBackup::WriteBlock() {
     remaining_bytes_ -= kFlashWordSize;
     
     if (!remaining_bytes_) {
+      // The header goes last, once all the audio is in.
+      BufferBackupHeader header;
+      header.tag = 0x5a5a5246;  // FRZZ
+      header.write_ptr = *processor_->mutable_delay_write_ptr();
+      header.media = processor_->media();
+      header.mono = processor_->mono();
+      if (HAL_FLASH_Program(
+          FLASH_TYPEPROGRAM_FLASHWORD,
+          Sector<8>::start,
+          (uint64_t)(&header)) != HAL_OK) {
+        return;
+      }
       // We've saved everything, we are now sure that we can restart with
       // the FREEZE button enabled!
       SaveState(true);
@@ -164,11 +163,7 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
     if ((system_clock.milliseconds() - freeze_start_time_) >= kBackupDelay && 
         !previous_freeze_state_ && !settings_->state().disable_autosave) {
       previous_freeze_state_ = true;
-      remaining_sectors_ = 6;
-      if (settings_->state().frozen) {
-        // Stale flag: an interrupted save must not be restored.
-        SaveState(false);
-      }
+      remaining_sectors_ = kNumSectors;
     }
   }
   EraseSector();

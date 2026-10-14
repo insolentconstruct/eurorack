@@ -8,7 +8,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 ## 2026.10.14 (tag `drizzlet-2026.10.14`)
 - Abort a frozen-buffer backup on flash errors instead of marking an incomplete save as restorable.
 - Keep a frozen-buffer backup going when a setting is saved during it; settings saves locked the flash and the rest of the backup failed.
-- Clear a stale "frozen" flag before a new backup starts, so an interrupted backup is never restored at power-up (after autosave had been turned off and on).
+- Write the frozen-buffer backup's header last and erase its sector first, so an interrupted backup is never restored at power-up.
 - Initialize dummy grain triggers used for CPU padding, removing undefined reads during processing.
 - Add a guard row after the last wavetable, so interpolation from the final waveform of the last bank stays inside the table (output unchanged).
 - Prevent invalid frozen delay reads when negative exponential FM makes a slice longer than the buffer.
