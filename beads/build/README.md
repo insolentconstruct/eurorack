@@ -77,6 +77,6 @@ GitHub Actions builds and publishes releases from `drizzlet-*` tags.
 
 ## License and credits
 
-Code: MIT, by Émilie Gillet, with credits to Frédéric Meslin / Fred's Lab and Oliver Rockstedt; see [LICENSE](LICENSE).
+Code: MIT, from the Mutable Instruments source, with credits to Frédéric Meslin / Fred's Lab and Oliver Rockstedt; see [LICENSE](LICENSE).
 The manual excerpt and hardware designs are licensed CC-BY-SA 3.0.
 Copyright and permission notices are in `NOTICE.txt`; preserve them when redistributing.

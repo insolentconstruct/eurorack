@@ -84,6 +84,6 @@ Restore to the same unit only; calibration is specific to each module:
 Corrupt settings make the module start in factory-test mode (breathing
 LEDs); restoring the backup fixes it.
 
-Credits: Emilie Gillet, Frederic Meslin / Fred's Lab, Oliver Rockstedt.
+Credits: Mutable Instruments, Frederic Meslin / Fred's Lab, Oliver Rockstedt.
 Copyright and permission notices are in NOTICE.txt; keep them when
 redistributing.
