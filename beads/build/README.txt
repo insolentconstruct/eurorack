@@ -10,8 +10,10 @@ build and run on a module. Install at your own risks."
 Install at your own risk. Please don't contact Mutable Instruments; report problems at:
 https://github.com/insolentconstruct/eurorack/issues
 
-This is the 2024 recovery firmware (beads_patch_firmware.wav) plus one
-change to grain stealing; details are in CHANGELOG.md in the repository.
+Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
+change to grain stealing, as in the released source. This release adds the
+output limiter option below and four bug fixes; details are in CHANGELOG.md
+in the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
