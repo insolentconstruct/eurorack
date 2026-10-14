@@ -32,15 +32,16 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Move DRY/WET >10% to select; tap ASSIGN cycles pages. Hold ASSIGN 3 s to save/exit; another button or 5 s idle cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by thirds. Hold ASSIGN 3 s to save/exit; another button or 5 s idle cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
-| Page 0 / feedback LED | Limiter; left/middle/right DRY/WET thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:90-113; beads/ui.h:69-73 --> |
-| Page 1 / dry/wet LED | Reserved page, no setter | Available for a coordinated new option <!-- beads/options.h:90-113; beads/build/README.md:28 --> |
-| Page 2 / reverb LED | Reserved page, no setter | Available for a coordinated new option <!-- beads/options.h:90-113; beads/build/README.md:28 --> |
-| Assignment LEDs | All pulse at entry; only selected page pulses when editing | No extra page LED <!-- beads/ui.cc:283-289 --> |
-| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; reserved pages still show limiter preview <!-- beads/ui.cc:290-299 --> |
+| Category 1 / feedback LED, DRY/WET | Limiter; left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:90-113; beads/ui.h:69-73 --> |
+| Category 1 / feedback LED, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Available for coordinated new options <!-- beads/options.h:90-113; beads/ui.cc:128-131 --> |
+| Category 2 / dry/wet LED, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-113; beads/build/README.md --> |
+| Category 3 / reverb LED, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-113; beads/build/README.md --> |
+| Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
+| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; reserved categories still show the limiter preview <!-- beads/ui.cc:290-299 --> |
 | Mix knobs | All three normal values locked while editing; DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
 
 ## Saved settings
@@ -79,7 +80,7 @@ Updater reception has no end-address guard; extending app/update files can overw
 | DENSITY knob + CV | Grain rate; noon stops latched grains; clock divider/probability; unlatched noon triggers single grains. Delay: base time or clock/tap ratio | Synth grain rate, with density CV also used for exponential FM at high rates; TAKEN <!-- manual.md:63-77,150-162; beads/dsp/synth.cc:70-81 --> |
 | TIME, PITCH, SIZE, SHAPE knobs + CV | Position, transposition, duration/direction, envelope. SIZE fully CW enters delay; TIME then delay multiple/frozen slice, PITCH pitch-shift, SHAPE tap envelopes | Synth TIME wave position, PITCH root/grain pitch, SIZE duration, SHAPE envelope; all TAKEN <!-- manual.md:87-97,144-174; beads/dsp/wavetable_voice.h:84-94; beads/dsp/wavetable_granular_player.h:65-68; beads/dsp/delay_controller.cc:173-175,293-294,346 --> |
 | Four attenurandomizers | Patched: CW CV amount, CCW CV-controlled randomness; unpatched: peaky/uniform randomness. Delay: slow random LFOs; SIZE amount + SIZE CV also set bandwidth | Synth PITCH CV always 1 V/oct root; PITCH attenurandomizer remains grain randomness; TAKEN <!-- manual.md:102-106,174,192-194; beads/dsp/granular_processor.h:277-282 --> |
-| Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow DRY/WET; TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
+| Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow all three mix knobs (DRY/WET in use); TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
 | FREEZE + SEED gate inputs | Record stop; grain clock/gate, delay clock. Button freeze ORs with gate; SEED input delayed 2.5 ms | Synth freeze stops new grains/holds envelopes; SEED still drives grains; TAKEN <!-- beads/beads.cc:132-151; manual.md:158,186; beads/dsp/synth.cc:73-81 --> |
 | L/R audio in, L/R audio out | Input normalization selects mono/stereo; output always stereo, unpatched R sums to L; optional R grain gate replaces audio | Both inputs empty for 10 s selects synth; R gate costs stereo output; no spare dedicated gate output <!-- manual.md:36-40,134-138; beads/beads.cc:360-394; beads/dsp/synth.cc:138-142 --> |
 | MEDIA RGB LED | 0 dirty tape red/pink, 1 clean tape amber, 2 vintage digital teal, 3 digital white; dims with overwrite reserve; manual gain overrides with meter | Same palette marks synth resolutions 4/4, 16/6, 7/7, 16/16 bits (continuous/grains); options override colours; TAKEN <!-- beads/ui.cc:190-195,238-245; beads/dsp/processor.h:58-63; beads/dsp/synth.cc:84-85 --> |
@@ -112,7 +113,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 ## Planning rules
 
-- Allocate a reserved options page before borrowing another normal gesture; record page, colours and saved bytes together. <!-- derived: beads/options.h:90-113; beads/ui.cc:283-299; beads/settings.h:60 -->
+- Allocate a reserved category knob before borrowing another normal gesture; record category, knob, colours and saved bytes together. <!-- derived: beads/options.h:90-113; beads/ui.cc:283-299; beads/settings.h:60 -->
 - Give zero/unknown settings the stock default; preserve the 24-byte State layout and accept that stock saves erase extension bytes. <!-- derived: beads/output_limiter_mode.h:42-49; stock:beads/settings.cc:94-96; stmlib/system/sector_storage_h7xx.h:168-175 -->
 - Change load/save clearing when assigning padding; do not claim byte 9 or flash journal/backup tails as free. <!-- derived: beads/settings.cc:84,96-99; beads/settings.h:59; beads/background_buffer_backup.cc:95-116,157 -->
 - Check button order, long holds, startup and disabled-feature collisions; keep calibration/reset/update chords reserved. <!-- derived: beads/ui.cc:315-399; beads/bootloader/bootloader.cc:315-322; beads/beads.cc:329 -->
