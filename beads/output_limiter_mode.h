@@ -1,6 +1,6 @@
-// Copyright 2026 Drizzlet contributors.
+// Copyright 2026 Insolent Construct.
 //
-// Part of Drizzlet, alternative firmware for Mutable Instruments Beads.
+// Author: Insolent Construct (insolentconstruct@gmail.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal

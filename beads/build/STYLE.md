@@ -34,7 +34,7 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 ## Comments
 
 - Brief `//` comments that explain intent. Short labels and units are fine.
-- New files start with the MIT notice, an accurate copyright line and a one-line description, like the existing files.
+- New files use the existing header format with your own name: `// Copyright YEAR Your Name.`, `// Author: Your Name (email)`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
 
 ## Project policy
 
