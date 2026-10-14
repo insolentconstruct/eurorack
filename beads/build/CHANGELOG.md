@@ -4,7 +4,11 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
 ## Unreleased
+
+## 2026.10.14 (tag `drizzlet-2026.10.14`)
 - Output limiter option (Stock, Fast release, Off), saved; hold ASSIGN for three seconds to change it.
+  Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero; later
+  releases read a zero byte 11 as "no options saved", so every later option starts at stock.
 - Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 
