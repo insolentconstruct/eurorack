@@ -24,13 +24,14 @@ Options page
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
 The assignment LEDs pulse together on entry.
 Options come in three categories, marked by the feedback, dry/wet and reverb
-LEDs; the page opens on the dry/wet category. Tap ASSIGN to cycle categories.
+LEDs: the open category's LED pulses slowly. The page opens on the dry/wet
+category. Tap ASSIGN to cycle categories.
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three
 settings. Move a knob more than one tenth of its travel to start selecting; its
-thirds pick the value, shown on MEDIA.
+thirds pick the value, shown on the quality LED.
 
 Output limiter: dry/wet category, DRY/WET knob.
-  Left third: Stock (steady green MEDIA).
+  Left third: Stock (steady green).
   Middle: Fast release (one blue pulse).
   Right third: Off (two amber pulses); loud peaks can hard-clip.
 The other knobs and categories are reserved for later options and do nothing yet.
