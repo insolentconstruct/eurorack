@@ -6,6 +6,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 ## Unreleased
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`)
+- Initialize dummy grain triggers used for CPU padding, removing undefined reads during processing.
 - Add a guard row after the last wavetable, so interpolation from the final waveform of the last bank stays inside the table (output unchanged).
 - Prevent invalid frozen delay reads when negative exponential FM makes a slice longer than the buffer.
 - Output limiter option (Stock, Fast release, Off), saved; hold ASSIGN for three seconds to open the options page, then set it with DRY/WET (dry/wet LED category).
