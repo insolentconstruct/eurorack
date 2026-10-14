@@ -305,5 +305,8 @@ for wave in waves:
   x -= x.mean()
   x = list(numpy.round(x * (4 * 32768.0 / WAVETABLE_SIZE)).astype(int))
   data += list(x[-n-4:])
+
+# Guard row: the readers interpolate towards the next wave, even from the last.
+data += data[-WAVETABLE_SIZE-4:]
   
 wavetables.append(('integrated_waves', data))

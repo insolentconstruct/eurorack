@@ -55,7 +55,7 @@ extern const int16_t wav_integrated_waves[];
 #define LUT_SINE 0
 #define LUT_SINE_SIZE 1281
 #define WAV_INTEGRATED_WAVES 0
-#define WAV_INTEGRATED_WAVES_SIZE 49920
+#define WAV_INTEGRATED_WAVES_SIZE 50180
 
 }  // namespace beads
 
