@@ -1,12 +1,12 @@
 # Testing
 
-How far release 2026.10.14 (alpha) was tested before release. Everything ran on one module, by its developers.
+How far release 2026.10.14 (alpha) was tested before release, by its developers. Hardware testing used one module.
 
 ## TL;DR
 
 - **Automated:** every build is reproducible to pinned hashes, and host tests cover the options page and the frozen-buffer save on every push.
 - **Before release:**
-  - sanitizer runs show each fixed bug before the fix and its absence after;
+  - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - an emulator comparison against the previous release found identical audio in 44 of 44 scenarios.
 - **On a module:** seven checks passed, from installing the release file to a stock firmware loading a Drizzlet save.
 - **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
@@ -18,11 +18,15 @@ How far release 2026.10.14 (alpha) was tested before release. Everything ran on 
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
 | `beads/test/options.sh` | Options page entry, categories, knob zones, idle save, cancel, settings stored in the format later releases expect, and the limiter's arithmetic; normal and advanced builds |
 | `beads/test/delay.sh` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5; every tap reads a valid delay |
-| `beads/test/backup.sh` | Frozen-buffer save format byte by byte; stock saves load; corrupt headers and audio refused; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; settings saved during a save |
+| `beads/test/backup.sh` | Frozen-buffer save format byte by byte; stock saves load; out-of-range headers refused on every save; corrupted audio or header refused on saves carrying the CRC tag; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; settings saved during a save |
 
 The backup test was checked by removing each safeguard in turn: each removal makes a test fail.
 
+Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
+
 ## Before release
+
+Run by the developers; these scripts and results are not in this repository.
 
 | Check | Result |
 |---|---|
