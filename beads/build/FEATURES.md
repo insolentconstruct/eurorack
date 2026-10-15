@@ -1,6 +1,6 @@
 # Feature allocation
-Drizzlet `0ca3a69`, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. <!-- source: git trees 0ca3a69, d8f4739 -->
-Source comments use repository-relative paths; `stock:` means `d8f4739`, stmlib is pinned to `e3bd7c9`; “linker script” means `stmlib/linker_scripts/stm32h7xx_flash_application_large.ld`, and `manual.md` is the Beads manual. <!-- source: git ls-tree 0ca3a69 stmlib -->
+The `drizzlet` branch, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. Planned uses come from the tentative roadmap in [#32](https://github.com/insolentconstruct/eurorack/issues/32); they can change until built. <!-- source: git trees fc549d7, d8f4739 -->
+Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzlet pins stmlib `d18def8` (stock `e3bd7c9`; the stmlib files cited here are identical in both); “linker script” means `stmlib/linker_scripts/stm32h7xx_flash_application_large.ld`, and `manual.md` is the Beads manual. <!-- source: git ls-tree fc549d7 stmlib; git ls-tree d8f4739 stmlib -->
 
 ## Buttons and startup
 
@@ -8,7 +8,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`, stmlib 
 |---|---|---|
 | MEDIA tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
 | MEDIA hold, 1.5 s | TAKEN: with no input, FREEZE off and On request, toggle self-play; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
-| MEDIA + feedback knob | TAKEN: manual input gain; release saves | Yes <!-- beads/ui.cc:174-177,491-495 --> |
+| MEDIA + feedback knob | TAKEN: manual input gain; release saves. Planned: manual gain improvements (#19) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state saved after 10 s if autosave enabled, outside synth mode <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
 | SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot <!-- beads/ui.cc:81-83,406-411,463-469 --> |
@@ -21,7 +21,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`, stmlib 
 | Hold ASSIGN, press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | ASSIGN + MEDIA, either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold MEDIA, press SEED | TAKEN: toggle monophonic grains; consumes both releases; MEDIA first | Yes <!-- beads/ui.cc:358-369 --> |
-| MEDIA + FREEZE | FREE dedicated action in this build; reserved by disabled trim feature | Would trim/unfreeze, not save directly <!-- beads/ui.cc:372-384; beads/ui.h:44 --> |
+| MEDIA + FREEZE | FREE dedicated action in this build; reserved by disabled trim feature. Planned: buffer trim (#31), parked until a saved buffer keeps its trimmed length | Would trim/unfreeze, not save directly <!-- beads/ui.cc:372-384; beads/ui.h:44 --> |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + ASSIGN | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration | Rewrites settings sector <!-- beads/beads.cc:329-330; beads/settings.cc:60-76; stmlib/system/sector_storage_h7xx.h:126-130 --> |
@@ -37,10 +37,10 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
 | Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
-| Feedback LED category, DRY/WET and REVERB | Reserved | Available |
+| Feedback LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET delay mode (#26, #9); REVERB stereo width (#5) |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
-| Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Available for coordinated new options <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
-| Reverb LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
+| Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Planned: FEEDBACK mix law (#21, #48); REVERB reverb character (#20, #22) <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
+| Reverb LED category, all three knobs | Reserved category, no setter | Planned: FEEDBACK pitch scale (#6, #8); DRY/WET LED brightness (#40); REVERB open <!-- beads/options.h:90-117; beads/build/README.md --> |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
 | MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; reserved categories show limiter <!-- beads/ui.cc:290-299 --> |
 | Mix knobs | All three normal values locked while editing; FEEDBACK or DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
