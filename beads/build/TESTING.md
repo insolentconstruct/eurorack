@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. They cover the options page and other panel gestures, input gain, grain triggering and playback, the attenurandomizers, the frozen-buffer save, delay mode and synth mode: 70 of the 117 behaviours listed from the manual.
+- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real audio processor, synth and panel code on a computer. They cover 109 of the 117 behaviours listed from the manual, 10 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - an emulator comparison against the previous release found identical audio in 44 of 44 scenarios.
@@ -16,13 +16,16 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 | Check | What it covers |
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
-| `beads/test/options.mk` | Options page entry, categories, knob zones, idle save, cancel and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds |
+| `beads/test/options.mk` | Options page entry, categories, knob zones, idle save, cancel and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
 | `beads/test/trigger.mk` | Grain triggering with sanitizers: free-running rates at both ends of DENSITY, silence at noon (free and clocked), clock probability and divisions, SEED and gate enabling, one grain per press or gate at noon, and density FM |
-| `beads/test/granular.mk` | Grain playback and attenurandomizers with sanitizers: TIME, direction, SIZE, SHAPE, the PITCH notches, patched and unpatched knob laws, random distributions and the shared random stream |
+| `beads/test/granular.mk` | Grain playback and attenurandomizers with sanitizers: TIME, direction, SIZE, SHAPE, the PITCH notches, patched and unpatched knob laws, random distributions and the shared random stream; through the processor, parameters fixed at grain start, envelopes, voice stealing and the grain count, PITCH CV response, random pan, and CV channel separation |
 | `beads/test/delay.mk` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5, slice changes only at slice boundaries, every clock divider ratio, and the clock's idle counter stopping at its limit; every tap reads a valid delay. Also DENSITY and its CV, the secondary tap, SEED clocking and its crossfade, TIME multipliers, SHAPE envelopes and TIME's random modulation |
 | `beads/test/backup.mk` | Frozen-buffer save format byte by byte; no save before 10 s of FREEZE and a clean cancel; stock saves load; out-of-range headers refused on every save; corrupted audio or header refused on saves carrying the CRC tag; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; settings saved during a save |
-| `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios; FEEDBACK's bank selection and its hysteresis |
+| `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios; FEEDBACK's bank selection and its hysteresis; dry/wet, FREEZE, the output resolution of each quality, 1 V/octave and pitch spread, and the dry sine level at octaves from C3 to C9 |
+| `beads/test/processor.mk` | The whole audio processor with sanitizers: each quality's sample rate, bit depth and buffer length, mono and stereo; FREEZE from the button and the gate; frozen grains keep playing; the crossfade when recording resumes |
+| `beads/test/mix.mk` | Mixing with sanitizers: feedback into the recording, feedback saturation per quality, dry/wet, reverb after dry/wet and its tail when the send is closed, stereo output from a mono recording, feedback echoes in delay mode |
+| `beads/test/delay_mode.mk` | Delay mode through the processor with sanitizers: continuous playback with SIZE fully clockwise, the fade when switching modes, the pitch shifter and its bypass at noon, the delay bandwidth control and SIZE CV |
 
 The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail.
 
@@ -30,23 +33,24 @@ Saves without the CRC tag, including every stock save, load after the range chec
 
 ## Coverage of the manual
 
-The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 70 of them, three only in part (audio-rate FM and 1 V/octave pitch without the CV calibration, and the power-on reset without the button read at start-up).
+The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 109 of them.
 
 | Area | Behaviours | Host tests | Not covered by host tests |
 |---|---:|---:|---|
-| Recording quality, mono/stereo | 9 | 2 | 6 need the whole firmware, 1 a module |
+| Recording quality, mono/stereo | 9 | 8 | 1 needs a module |
 | Input gain | 10 | 10 | |
-| FREEZE, buffer save, autosave | 9 | 4 | 5 need the whole firmware |
+| FREEZE, buffer save, autosave | 9 | 9 | |
 | Grain generation: SEED, DENSITY | 16 | 16 | |
-| Grain playback: TIME, PITCH, SIZE, SHAPE | 13 | 8 | 4 need the whole firmware, 1 untestable |
-| Attenurandomizers | 9 | 7 | 2 need the whole firmware |
-| Mixing, output, ASSIGN | 14 | 3 | 8 need the whole firmware, 2 a module, 1 untestable |
-| Delay and slicer | 19 | 15 | 4 need the whole firmware |
-| Synth mode | 15 | 4 | 10 need the whole firmware, 1 untestable |
-| Calibration and recovery | 3 | 1 | 1 needs the whole firmware, 1 untestable |
-| **Total** | **117** | **70** | **40 whole firmware, 3 module, 4 untestable** |
+| Grain playback: TIME, PITCH, SIZE, SHAPE | 13 | 12 | 1 untestable |
+| Attenurandomizers | 9 | 9 | |
+| Mixing, output, ASSIGN | 14 | 11 | 2 need a module, 1 untestable |
+| Delay and slicer | 19 | 19 | |
+| Synth mode | 15 | 13 | 1 needs `beads.cc` (self-play after 10 s), 1 untestable |
+| Calibration and recovery | 3 | 2 | 1 untestable |
+| **Total** | **117** | **109** | **1 `beads.cc`, 3 module, 4 untestable** |
 
-- **Whole firmware:** behaviours that only show with the full audio path running, such as quality-dependent sound or synth self-play. The developers' emulator comparison exercises some of them; it is not in this repository.
+- **Only in part (10):** the hardware code in `beads.cc` (start-up, main loop and audio callback), which reads the panel and builds the parameters for each audio block, is not built on a computer. So these tests check the code it calls, not the call: input patch detection without the switch to a mono buffer, the quality lock while frozen, the overwrite indicator's colours without the record-head distance, the trigger-output chord without the output signal, a corrupted calibration without the start-up branch, CV routing to TIME, SIZE, SHAPE and PITCH, and the power-on reset without the button read. Audio-rate FM and 1 V/octave pitch (granular and synth) are checked without the CV calibration.
+- **`beads.cc`:** synth self-play starts from a timer in that code.
 - **Module:** the left-channel crackle report, and audio and triggers summed into OUT L when OUT R is unpatched.
 - **Untestable:** three compare with the original factory firmware, which the developers do not have; one needs a corrupted-storage sample, and none has been identified.
 
