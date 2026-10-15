@@ -490,10 +490,135 @@ void TestLimiterLinkedGainAndModeSwitch() {
   }
 }
 
+// Panel quality, gain and assignment displays.
+void TestQualityTapCycle() {
+  test_checker.Start("TestQualityTapCycle");
+  Rig r;
+  const int media[] = { 2, 1, 0, 3 };
+  unsigned writes = test_writes;
+  for (int i = 0; i < 4; ++i) {
+    r.Down(SWITCH_MEDIA);
+    CHECK(r.settings.state().media == (i == 0 ? 3 : media[i - 1]));
+    r.Up(SWITCH_MEDIA);
+    CHECK(r.settings.state().media == media[i]);
+    CHECK(test_writes == writes + i + 1);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.state().media == media[i]);
+  }
+}
+
+void TestManualGainGestureAndMeter() {
+  test_checker.Start("TestManualGainGestureAndMeter");
+  Rig r;
+  const float positions[] = { 0.125f, 0.375f, 0.75f };
+  const int gains[] = { 32, 96, 192 };
+  const int red[] = { 0, 160, 255 };
+  const int green[] = { 172, 255, 121 };
+  const uint8_t media = r.settings.state().media;
+  unsigned writes = test_writes;
+  r.Down(SWITCH_MEDIA);
+  for (int i = 0; i < 3; ++i) {
+    r.feedback = positions[i];
+    r.Tick(20);
+    CHECK(r.settings.state().gain == gains[i]);
+    CHECK(r.ui.mix_parameter(Ui::MIX_PARAMETER_FEEDBACK) == 0.5f);
+    CHECK(r.settings.state().media == media);
+    CHECK(test_writes == writes);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == red[i]);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == green[i]);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  }
+  r.Tick(1700);
+  CHECK(r.settings.state().gain == 192 && test_writes == writes);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.state().media == media);
+  CHECK(test_writes == writes + 1);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 192);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 192);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 208);
+}
+
+void TestSeedStartupLatch() {
+  test_checker.Start("TestSeedStartupLatch");
+  Rig r;
+  CHECK(r.ui.seed_button_locked());
+  CHECK(!r.ui.seed_button_state());
+  CHECK(!r.ui.freeze_button_state());
+}
+
+void TestAssignableAmountLeds() {
+  test_checker.Start("TestAssignableAmountLeds");
+  Rig r;
+  State* state = r.settings.mutable_state();
+  state->assignable_cv_destination = 3;
+  const uint8_t amounts[][3] = {
+    { 0, 1, 255 }, { 255, 128, 64 }, { 32, 254, 129 }
+  };
+  for (int j = 0; j < 3; ++j) {
+    memcpy(state->assignable_cv_amount, amounts[j], 3);
+    r.Tick(1);
+    for (int i = 0; i < 3; ++i) {
+      CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + i] == amounts[j][i] / 2);
+    }
+  }
+  for (int j = 0; j < 3; ++j) {
+    state->assignable_cv_destination = j;
+    r.Tick(1);
+    for (int i = 0; i < 3; ++i) {
+      CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + i] == (i == j ? 128 : 0));
+    }
+  }
+}
+
+void TestAgcAdjustmentBlink() {
+  test_checker.Start("TestAgcAdjustmentBlink");
+  Rig r;
+  r.gain.adjusting_ = true;
+  for (int i = 0; i < 256; ++i) {
+    r.Tick(1);
+    CHECK(r.ui.leds_.intensity_[LED_VU_METER] ==
+        ((stmlib::system_clock.milliseconds() & 128) ? 128 : 0));
+  }
+  r.gain.adjusting_ = false;
+  r.gain.meter_ = 73;
+  r.Tick(1);
+  CHECK(r.ui.leds_.intensity_[LED_VU_METER] == 73);
+}
+
+void TestRecoveryPreservesCalibration() {
+  test_checker.Start("TestRecoveryPreservesCalibration");
+  Rig r;
+  const State defaults = r.settings.state();
+  PersistentData* data = r.settings.mutable_persistent_data();
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    data->adc_calibration[i].scale = -3.0f - i;
+    data->adc_calibration[i].offset = 0.25f + i;
+  }
+  r.settings.SavePersistentData();
+  const PersistentData calibration = r.settings.persistent_data();
+  memset(r.settings.mutable_state(), 1, sizeof(State));
+  r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+  r.settings.SaveState();
+  Settings recovered;
+  CHECK(recovered.Init(true));
+  CHECK(!memcmp(&recovered.state(), &defaults, sizeof(State)));
+  CHECK(!memcmp(&recovered.persistent_data(), &calibration,
+      sizeof(PersistentData)));
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(!memcmp(&loaded.state(), &defaults, sizeof(State)));
+  CHECK(!memcmp(&loaded.persistent_data(), &calibration,
+      sizeof(PersistentData)));
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) return 1;
+  TestQualityTapCycle(); TestManualGainGestureAndMeter();
+  TestSeedStartupLatch(); TestAssignableAmountLeds();
+  TestAgcAdjustmentBlink(); TestRecoveryPreservesCalibration();
   TestStockAssignRouting(); TestStockAssignAmounts();
   TestAutosaveChordAndDisplay(); TestSeedLatchGestures();
   TestGainHoldThresholdAndReload(); TestBackupLedAndRestore();

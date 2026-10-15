@@ -89,7 +89,52 @@ void TestGuardRow() {
       wav_integrated_waves + (rows - 1) * stride, stride * sizeof(int16_t)));
 }
 
+void TestFmBankRatios() {
+  test_checker.Start("TestFmBankRatios");
+  const float carrier[] = { 2.0f, 1.0f, 1.0f, 1.0f };
+  const float modulator[] = { 1.0f, 0.5f, 3.0f, 8.0f };
+  const float amount[] = { 4.0f, 8.0f, 3.0f, 2.0f };
+  const double two_pi = 6.283185307179586;
+  for (int bank = 0; bank < 4; ++bank) {
+    for (int wave = 0; wave < 16; ++wave) {
+      const int16_t* row = wav_integrated_waves +
+          ((bank + 8) * 16 + wave) * (kTableSize + 4);
+      double expected[256];
+      double mean = 0.0;
+      for (int n = 0; n < 256; ++n) {
+        const double t = double(n) / 256.0;
+        const double index = amount[bank] * wave * wave / 225.0;
+        expected[n] = sin(two_pi * (t * carrier[bank] +
+            sin(two_pi * t * modulator[bank]) * index));
+        mean += expected[n];
+      }
+      mean /= 256.0;
+      double dot = 0.0, energy = 0.0, reference_energy = 0.0;
+      for (int n = 1; n < 256; ++n) {
+        // Differentiation recovers the source wave from the integrated table.
+        const double sample = row[n + 4] - row[n + 3];
+        const double reference = expected[n] - mean;
+        dot += sample * reference;
+        energy += sample * sample;
+        reference_energy += reference * reference;
+      }
+      CHECK(dot / sqrt(energy * reference_energy) > 0.9999);
+      WavetableVoice voice;
+      voice.Init(48000);
+      voice.bank_ = bank + 8;
+      voice.wave_lp_ = float(wave) / 15.0f;
+      Parameters parameters = {};
+      parameters.time.base = voice.wave_lp_;
+      bool freeze = false;
+      FloatFrame out = {};
+      voice.Render(bank + 8, 16, &freeze, parameters, &out, 1);
+      CHECK(std::isfinite(out.l) && out.l == out.r);
+    }
+  }
+}
+
 int main() {
+  TestFmBankRatios();
   TestFinalBankRendering();
   TestGuardRow();
   return test_checker.failures() ? 1 : 0;

@@ -216,10 +216,194 @@ void TestClockIdleCounter() {
   printf("PASS clock: idle counter stops at the limit\n");
 }
 
+void RenderFree(DelayController* controller, float density, float cv,
+    float time, DelayController::Output* out) {
+  RandomizedParameter position = { time, 0.0f, 0.0f, false };
+  RandomizedParameter shape = { 0.0f, 0.0f, 0.0f, false };
+  bool freeze = false;
+  controller->Render(SEED_BUTTON_STATE_LOCKED, NULL, &freeze,
+      density, cv, 0.0f, position, shape, out, 1);
+}
+
+void TestFreeDelayDensityAndCv() {
+  test_checker.Start("TestFreeDelayDensityAndCv");
+  const float density[] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+  // Ascending controls settle 0.0025 below each nonzero input.
+  const float expected[] = { 375.0f, 8224.695f, 186103.5f,
+      8754.125f, 386.881f };
+  for (int cv = 0; cv < 2; ++cv) {
+    for (int i = 0; i < 5; ++i) {
+      DelayController controller;
+      controller.Init(48000, kMaxDelay);
+      DelayController::Output out;
+      for (int n = 0; n < 16000; ++n) {
+        RenderFree(&controller, cv ? 0.0f : density[i],
+            cv ? density[i] : 0.0f, 0.0f, &out);
+      }
+      CHECK(fabsf(controller.clock_.interval(0) - expected[i]) <
+          expected[i] * 0.001f);
+    }
+  }
+}
+
+void TestSecondaryTapModulation() {
+  test_checker.Start("TestSecondaryTapModulation");
+  DelayController controller;
+  controller.Init(48000, kMaxDelay);
+  DelayController::Output out;
+  float minimum = 1.0f, maximum = 0.0f, previous = 0.0f;
+  for (int n = 0; n < 300000; ++n) {
+    RenderFree(&controller, 0.75f, 0.0f, 0.0f, &out);
+    if (n < 16000) continue;
+    const float gain = out.tap[6].gain;
+    if (!CHECK(gain >= 0.199f && gain <= 0.801f)) return;
+    if (n > 16000 && !CHECK(fabsf(gain - previous) < 0.0001f)) return;
+    previous = gain;
+    minimum = std::min(minimum, gain);
+    maximum = std::max(maximum, gain);
+    if (!CHECK(fabsf(float(out.tap[6].delay) / out.tap[4].delay - 0.77f)
+        < 0.00001f)) return;
+  }
+  CHECK(maximum - minimum > 0.1f);
+  controller.Init(48000, kMaxDelay);
+  for (int n = 0; n < 16000; ++n) {
+    RenderFree(&controller, 0.25f, 0.0f, 0.0f, &out);
+  }
+  CHECK(out.tap[6].gain == 0.0f && out.tap[4].gain == 1.0f);
+}
+
+void TestSeedClockIntervalsAndCrossfade() {
+  test_checker.Start("TestSeedClockIntervalsAndCrossfade");
+  for (int tap = 0; tap < 2; ++tap) {
+    DelayClock tapped;
+    tapped.Init(48000);
+    tapped.Process(!tap, tap);
+    for (int n = 0; n < 5999; ++n) tapped.Process(false, false);
+    tapped.Process(!tap, tap);
+    CHECK(tapped.interval(tapped.new_interval_index()) == 6000.0f);
+    DelayClock clock;
+    clock.Init(48000);
+    for (int n = 0; n < 6000; ++n) clock.Process(false, false);
+    clock.Process(!tap, tap);
+    const int current = clock.new_interval_index();
+    CHECK(clock.interval(current) == 6001.0f);
+    CHECK(clock.interval(1 - current) == 12000.0f);
+    for (int n = 0; n < 100; ++n) clock.Process(false, false);
+    CHECK(clock.gain(0) > 0.0f && clock.gain(1) > 0.0f);
+    CHECK(fabsf(clock.gain(0) + clock.gain(1) - 1.0f) < 0.00001f);
+    for (int n = 100; n < 192000 - 1; ++n) {
+      clock.Process(false, false);
+    }
+    clock.Process(!tap, tap);
+    CHECK(clock.interval(current) == 6001.0f);
+    CHECK(clock.interval(1 - current) == 12000.0f);
+  }
+  DelayController controller;
+  controller.Init(48000, kMaxDelay);
+  RandomizedParameter position = { 0.0f, 0.0f, 0.0f, false };
+  RandomizedParameter shape = { 0.0f, 0.0f, 0.0f, false };
+  bool freeze = false;
+  DelayController::Output out;
+  for (int n = 0; n <= 6101; ++n) {
+    GateFlags gate = n == 6000 ? GATE_FLAG_RISING : GATE_FLAG_LOW;
+    controller.Render(SEED_BUTTON_STATE_OFF, &gate, &freeze,
+        0.425f, 0.0f, 0.0f, position, shape, &out, 1);
+  }
+  CHECK(out.tap[0].gain > 0.0f && out.tap[4].gain > 0.0f);
+  CHECK(out.tap[0].delay == 6001 * 1024);
+  CHECK(out.tap[4].delay == 12000 * 1024);
+}
+
+void TestTimeMultipliersAndCrossfade() {
+  test_checker.Start("TestTimeMultipliersAndCrossfade");
+  for (int multiple = 1; multiple <= 16; ++multiple) {
+    DelayController controller;
+    controller.Init(48000, kMaxDelay);
+    DelayController::Output out;
+    const float time = float(multiple - 1) / (15.0f * 1.005f);
+    for (int n = 0; n < 16000; ++n) {
+      RenderFree(&controller, 0.0f, 0.0f, time, &out);
+    }
+    int sounding = 0;
+    for (int i = 0; i < DelayController::NUM_TAPS; ++i) {
+      if (out.tap[i].gain > 0.001f) {
+        CHECK(abs(out.tap[i].delay - multiple * 375 * 1024) < 2048);
+        ++sounding;
+      }
+    }
+    CHECK(sounding == 1);
+  }
+  DelayController controller;
+  controller.Init(48000, kMaxDelay);
+  DelayController::Output out;
+  for (int n = 0; n < 16000; ++n) {
+    RenderFree(&controller, 0.0f, 0.0f, 0.0f, &out);
+  }
+  bool overlap = false;
+  for (int n = 0; n < 1000; ++n) {
+    RenderFree(&controller, 0.0f, 0.0f, 1.0f / 15.075f, &out);
+    if (out.tap[4].gain > 0.01f && out.tap[5].gain > 0.01f) {
+      CHECK(abs(out.tap[4].delay * 2 - out.tap[5].delay) <= 1);
+      CHECK(fabsf(out.tap[4].gain + out.tap[5].gain - 1.0f) < 0.00001f);
+      overlap = true;
+    }
+  }
+  CHECK(overlap);
+}
+
+void TestDelayShapeEnvelope() {
+  test_checker.Start("TestDelayShapeEnvelope");
+  TapEnvelope envelope;
+  envelope.Init();
+  envelope.set_phase_increment(1.0f / 128.0f);
+  for (int n = 0; n < 256; ++n) CHECK(envelope.Render(0.0f) == 1.0f);
+  CHECK(envelope.phase() == 0.0f);
+  for (int n = 0; n < 256; ++n) {
+    const float phase = float(n % 128) / 128.0f;
+    const float expected = phase < 0.5f ? phase * 2.0f : 2.0f - phase * 2.0f;
+    CHECK(fabsf(envelope.Render(0.6f) - expected) < 0.00001f);
+  }
+}
+
+void TestDelayRandomModulation() {
+  test_checker.Start("TestDelayRandomModulation");
+  float sequence[2000];
+  for (int run = 0; run < 2; ++run) {
+    Random::Seed(12345);
+    DelayController controller;
+    controller.Init(48000, kMaxDelay);
+    RandomizedParameter position = { 0.5f, 0.4f, 0.0f, false };
+    RandomizedParameter shape = { 0.0f, 0.0f, 0.0f, false };
+    bool freeze = false;
+    DelayController::Output out;
+    float previous = 0.0f;
+    for (int n = 0; n < 516000; ++n) {
+      controller.Render(SEED_BUTTON_STATE_LOCKED, NULL, &freeze,
+          0.0f, 0.0f, 0.0f, position, shape, &out, 1);
+      if (n < 16000 || n % 250) continue;
+      const int index = (n - 16000) / 250;
+      const float value = controller.multiplier_lp_;
+      CHECK(value >= -1.0f && value <= 1.0f);
+      // SmoothStep slope <= 1.5, with samples 250 frames apart.
+      if (index && !CHECK(fabsf(value - previous) < 0.0026f)) return;
+      previous = value;
+      if (run) CHECK(value == sequence[index]);
+      else sequence[index] = value;
+    }
+  }
+  CHECK(fabsf(sequence[1500] - sequence[0]) > 0.01f);
+}
+
 int main() {
   TestFrozenSliceBoundarySelection();
   TestClockDividerTable();
   TestDelayIntervals();
   TestClockIdleCounter();
+  TestFreeDelayDensityAndCv();
+  TestSecondaryTapModulation();
+  TestSeedClockIntervalsAndCrossfade();
+  TestTimeMultipliersAndCrossfade();
+  TestDelayShapeEnvelope();
+  TestDelayRandomModulation();
   return test_checker.failures() ? 1 : 0;
 }
