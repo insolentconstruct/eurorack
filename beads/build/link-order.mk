@@ -3,7 +3,6 @@ include $(KIT_MAKEFILE)
 # GCC 9 compatibility.
 ifeq ($(KIT_GCC9),1)
 CPPFLAGS += -std=gnu++98
-CCFLAGS += -Wno-error=uninitialized
 endif
 CC_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.cc))))
 C_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) $(sort $(CORE_C_FILES)) $(sort $(DRIVERS_C_FILES))
