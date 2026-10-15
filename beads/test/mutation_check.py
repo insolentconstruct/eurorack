@@ -322,6 +322,44 @@ cases = [
   ('TestBackupRestoredThaw', 'backup', 'beads/background_buffer_backup.cc',
     '    if (freeze_state_) {',
     '    if (freeze_state_ && save_started_) {'),
+  ('TestMainLoopMatchesHarness', 'firmware', 'beads/beads.cc',
+    'processor.WasteCPUCycles(16);',
+    'processor.WasteCPUCycles(15);'),
+  ('TestAutomaticSelfPlay', 'firmware', 'beads/beads.cc',
+    ') >= 10000)',
+    ') >= 9900)'),
+  ('TestRequestedSelfPlay', 'firmware', 'beads/beads.cc',
+    'if (ui.self_play_requested()) {',
+    'if (false) {'),
+  ('TestSelfPlayRequestLifecycle', 'firmware', 'beads/beads.cc',
+    '    ui.ClearSelfPlayRequest();\n    return;',
+    '    return;'),
+  ('TestMonoStereo', 'firmware', 'beads/beads.cc',
+    'bool mono = normalization_detector.mono();',
+    'bool mono = false;'),
+  ('TestFrozenQualityLock', 'firmware', 'beads/beads.cc',
+    'if (ui.should_ignore_state_change() || codec_transition_frames) {',
+    'if ((ui.should_ignore_state_change() && !ui.freeze_led_state()) || '
+    'codec_transition_frames) {'),
+  ('TestOverwriteIndicator', 'firmware', 'beads/beads.cc',
+    'synth_mode ? 1.0f : processor.overwrite_reserve()',
+    '1.0f'),
+  ('TestTriggerOutput', 'firmware', 'beads/beads.cc',
+    'm.output_gate = settings.state().gate_output_mode;',
+    'm.output_gate = false;'),
+  ('TestStartupBranches', 'firmware', 'beads/beads.cc',
+    'const bool recovery_mode = ui.pressed_immediate(SWITCH_SEED);',
+    'const bool recovery_mode = false;'),
+  ('TestCallbackCvRouting', 'firmware', 'beads/beads.cc',
+    'p.time.cv = cv_reader.cv(CV_ADC_CHANNEL_TIME);',
+    'p.time.cv = cv_reader.cv(CV_ADC_CHANNEL_SIZE);'),
+  ('TestPitchChain', 'firmware', 'beads/beads.cc',
+    'p.pitch.cv = cv_reader.cv(CV_ADC_CHANNEL_PITCH);',
+    'p.pitch.cv = 0.5f * cv_reader.cv(CV_ADC_CHANNEL_PITCH);'),
+  ('TestSelfPlayFrozenBackup', 'firmware',
+    'beads/background_buffer_backup.cc',
+    'if (previous_freeze_state_) {',
+    'if (false) {'),
 ]
 started = time.monotonic()
 results = []
@@ -373,8 +411,10 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     try:
       with log.open('w') as stream:
         run = subprocess.run(
-            ['make', '-s', '-f', 'beads/test/' + suite + '.mk', 'test'],
-            cwd=work, stdout=stream, stderr=subprocess.STDOUT, timeout=60)
+            ['nice', '-n', '10', 'make', '-s', '-f',
+                'beads/test/' + suite + '.mk', 'test'],
+            cwd=work, stdout=stream, stderr=subprocess.STDOUT,
+            timeout=180 if suite == 'firmware' else 60)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestFinalBankRendering':
