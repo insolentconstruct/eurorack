@@ -132,6 +132,68 @@ struct Rig {
   }
 };
 
+void TestMonophonicGesture() {
+  test_checker.Start("TestMonophonicGesture");
+  for (int latched = 0; latched < 2; ++latched) {
+    for (int order = 0; order < 2; ++order) {
+      Rig r;
+      CHECK(!r.settings.state().monophonic_mode);
+      if (!latched) {
+        r.Down(SWITCH_SEED);
+        r.Up(SWITCH_SEED);
+      }
+      const bool seed = r.ui.seed_button_state_;
+      const uint8_t media = r.settings.state().media;
+      unsigned writes = test_writes;
+      for (int toggle = 0; toggle < 2; ++toggle) {
+        r.Down(SWITCH_MEDIA);
+        r.Down(SWITCH_SEED);
+        CHECK(r.settings.state().monophonic_mode == !toggle);
+        CHECK(test_writes == ++writes);
+        r.Tick(1600);
+        r.Up(order ? SWITCH_MEDIA : SWITCH_SEED);
+        r.Up(order ? SWITCH_SEED : SWITCH_MEDIA);
+        CHECK(test_writes == writes);
+        CHECK(r.settings.state().media == media);
+        CHECK(r.gain.restarts == 0);
+        CHECK(r.ui.seed_button_locked_ == bool(latched));
+        CHECK(r.ui.seed_button_state_ == seed);
+        Settings loaded;
+        CHECK(loaded.Init(false));
+        CHECK(loaded.state().monophonic_mode == !toggle);
+        r.ui.set_overwrite_reserve(1.0f);
+        r.Tick(1);
+        Leds::Color color = r.ui.media_palette_[media];
+        const float brightness = toggle ? 1.0f : 0.5f;
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
+            uint8_t(color.r * brightness * brightness));
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
+            uint8_t(color.g * brightness));
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
+            uint8_t(color.b * brightness));
+      }
+    }
+  }
+  Rig reverse;
+  const uint8_t media = reverse.settings.state().media;
+  reverse.Down(SWITCH_SEED);
+  CHECK(!reverse.ui.seed_button_locked_);
+  CHECK(reverse.ui.seed_button_state_);
+  reverse.Down(SWITCH_MEDIA);
+  reverse.Up(SWITCH_SEED);
+  reverse.Up(SWITCH_MEDIA);
+  CHECK(!reverse.settings.state().monophonic_mode);
+  CHECK(!reverse.ui.seed_button_state_);
+  CHECK(reverse.settings.state().media == (media + 3) % 4);
+  Rig page;
+  page.Enter();
+  page.Down(SWITCH_MEDIA);
+  page.Down(SWITCH_SEED);
+  page.Up(SWITCH_SEED);
+  page.Up(SWITCH_MEDIA);
+  CHECK(!page.settings.state().monophonic_mode);
+}
+
 void TestUi() {
   test_checker.Start("TestUi");
   Rig r;
@@ -831,6 +893,7 @@ int main() {
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestMonophonicGesture();
   TestAudioPatchDetection();
   TestFrozenStateChangeGuard();
   TestGateOutputChordPersistence();

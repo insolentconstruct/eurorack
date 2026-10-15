@@ -355,10 +355,9 @@ void Ui::OnSwitchPressed(const Event& e) {
     return;
   }
 
-#ifdef ENABLE_ADVANCED_FEATURES
   // Combo
   //
-  // Media + SEED = toogle monophonic mode.
+  // Media + SEED = toggle monophonic mode.
   //
   if (switches_.pressed(SWITCH_MEDIA) && e.control_id == SWITCH_SEED) {
     State* state = settings_->mutable_state();
@@ -369,6 +368,7 @@ void Ui::OnSwitchPressed(const Event& e) {
     return;
   }
 
+#ifdef ENABLE_ADVANCED_FEATURES
   // Combo
   //
   // Media + FREEZE = trim the buffer and unfreeze.

@@ -38,9 +38,7 @@
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
-// Enable two advanced features:
-// - MEDIA + SEED enables or disables monophonic grain mode.
-// - MEDIA + FREEZE trims the duration of the buffer to 0.
+// Enable MEDIA + FREEZE to trim the duration of the buffer to 0.
 // #define ENABLE_ADVANCED_FEATURES
 
 namespace beads {

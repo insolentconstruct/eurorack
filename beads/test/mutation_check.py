@@ -289,6 +289,11 @@ cases = [
   ('TestCorruptCalibrationRewritesOnce', 'options',
     'stmlib/system/sector_storage_h7xx.h',
     '    RewriteSector();\n    return false;', '    return false;'),
+  ('TestMonophonicGesture', 'options', 'beads/ui.cc',
+    'state->monophonic_mode = !state->monophonic_mode;',
+    'state->monophonic_mode = state->monophonic_mode;'),
+  ('TestMonophonicGrains', 'granular', 'beads/dsp/granular_player.h',
+    'if (monophonic_mode) {', 'if (false && monophonic_mode) {'),
 ]
 started = time.monotonic()
 results = []

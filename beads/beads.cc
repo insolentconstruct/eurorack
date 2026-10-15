@@ -200,11 +200,7 @@ void Process(
       NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV);
   p.pitch.cv = cv_reader.cv(CV_ADC_CHANNEL_PITCH);
   
-#ifdef ENABLE_ADVANCED_FEATURES
   p.monophonic_mode = settings.state().monophonic_mode;
-#else
-  p.monophonic_mode = false;
-#endif  // ENABLE_ADVANCED_FEATURES
 
   ModulatedParameter d;
   d.base = cv_reader.pot(POTS_ADC_CHANNEL_DENSITY);

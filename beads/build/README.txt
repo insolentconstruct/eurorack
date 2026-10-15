@@ -14,13 +14,25 @@ Install at your own risk. Please don't contact Mutable Instruments; report probl
 https://github.com/insolentconstruct/eurorack/issues
 
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
-change to grain stealing, as in the released source. This release adds the
-output limiter option below and bug fixes; details are in CHANGELOG.md in
-the repository.
+change to grain stealing, as in the released source. This release adds
+monophonic grains, the output limiter option and bug fixes; details are in
+CHANGELOG.md in the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
 https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/
+
+Monophonic grains
+-----------------
+Hold MEDIA first, then press SEED to toggle monophonic grains; the setting
+is saved and defaults off. The MEDIA/quality LED is half as bright when on
+(the recording reserve can dim it further). This enables Mutable Instruments'
+original code and gesture. Each new grain fades the previous grains out.
+It suits the square and decay SHAPE settings. Slower shapes can go nearly
+silent because each new grain cuts the previous one's attack. To recover
+sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
+or use the same gesture to turn mono off. Turn mono off before downgrading
+to stock firmware.
 
 Options page
 ------------

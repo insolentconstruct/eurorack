@@ -20,7 +20,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`, stmlib 
 | Hold ASSIGN, press SEED | TAKEN: toggle R output between audio and grain gate | Yes <!-- beads/ui.cc:331-339; manual.md:138 --> |
 | Hold ASSIGN, press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | ASSIGN + MEDIA, either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
-| MEDIA + SEED | FREE dedicated action in this build; reserved by disabled mono feature | Would save mono <!-- beads/ui.cc:358-369; beads/ui.h:44 --> |
+| Hold MEDIA, press SEED | TAKEN: toggle monophonic grains; consumes both releases; MEDIA first | Yes <!-- beads/ui.cc:358-369 --> |
 | MEDIA + FREEZE | FREE dedicated action in this build; reserved by disabled trim feature | Would trim/unfreeze, not save directly <!-- beads/ui.cc:372-384; beads/ui.h:44 --> |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + ASSIGN | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
@@ -57,9 +57,11 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 6 | `gate_output_mode` | 0 = audio; TAKEN <!-- beads/settings.h:56; beads/settings.cc:66; beads/ui.cc:333 --> |
 | 7 | `frozen` | 0; TAKEN: completed backup flag, not immediate button latch <!-- beads/settings.h:57; beads/background_buffer_backup.cc:84-86,136-139 --> |
 | 8 | `disable_autosave` | 0; TAKEN <!-- beads/settings.h:58; beads/settings.cc:68 --> |
-| 9 | `monophonic_mode` | 0; RESERVED for disabled feature, not free padding <!-- beads/settings.h:59; beads/beads.cc:203-207 --> |
+| 9 | `monophonic_mode` | 0 = off (default), 1 = on; TAKEN: monophonic grains, using Mutable Instruments' original code <!-- beads/settings.h:59; beads/beads.cc:203; beads/ui.cc:358-369 --> |
 | 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
 | 11–23, individually | `padding[1]` … `padding[13]` | FREE format bytes; currently all zeroed on every save <!-- beads/settings.cc:96-99 --> |
+
+Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright MEDIA cue, but ignores mono in the DSP. Turn mono off before downgrading. Drizzlet uses byte 9 without changing the settings layout. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
 Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes byte 10 on load/save and preserves loaded bytes 11–23 until save clears them; a new option must change save clearing and add load validation. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->

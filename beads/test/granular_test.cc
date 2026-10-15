@@ -374,6 +374,70 @@ DelayGranularPlayer& Player() {
   return processor.processor_digital_.granular_player_;
 }
 
+void TestMonophonicGrains() {
+  test_checker.Start("TestMonophonicGrains");
+  for (int interval = 48; interval <= 480; interval *= 10) {
+    DelayGranularPlayer player;
+    player.Init(48000.0f);
+    TaggedLine line;
+    for (int j = 0; j < 32; ++j) {
+      player.grain_[j].Start(&line, 480000.0f, 1.0f, 48000.0f,
+          0.0f, 1.0f, 0.5f, 0.0f);
+    }
+    player.grain_interval_ = interval;
+    DelayGrain* candidate = player.grain_priority_list_[1];
+    DelayGrain* fresh = player.grain_priority_list_[0];
+    player.SortGrainList(true);
+    CHECK(candidate->remaining_samples() == std::min(interval, 240));
+    CHECK(fresh->remaining_samples() > 240);
+    for (int j = 1; j < 31; ++j) {
+      CHECK(player.grain_priority_list_[j]->remaining_samples() == 240);
+    }
+  }
+  for (int mono = 0; mono < 2; ++mono) {
+    for (int interval = 48; interval <= 480; interval *= 10) {
+      InitProcessor();
+      // Fill the priority list before switching modes.
+      for (int i = 0; i < 32; ++i) {
+        ProcessSample(true);
+        ProcessSample(false);
+      }
+      for (int i = 0; i < interval; ++i) {
+        ProcessSample(false);
+      }
+      DelayGrain* candidate = Player().grain_priority_list_[1];
+      const int elapsed = Player().grain_interval_;
+      parameters.monophonic_mode = mono;
+      ProcessSample(true);
+      if (mono) {
+        CHECK(candidate->remaining_samples() <= std::min(elapsed, 240));
+        for (int j = 0; j < 31; ++j) {
+          CHECK(Player().grain_priority_list_[j]->remaining_samples() <= 240);
+        }
+      }
+      for (int i = 0; i < 241; ++i) {
+        ProcessSample(false);
+      }
+      int active = 0;
+      for (int j = 0; j < 32; ++j) {
+        active += !Player().grain_[j].done();
+      }
+      CHECK(mono ? active == 1 : active > 20);
+    }
+  }
+  for (int shape = 0; shape < 2; ++shape) {
+    InitProcessor();
+    parameters.monophonic_mode = true;
+    parameters.shape.base = float(shape) / 3.0f;
+    float peak = 0.0f;
+    for (int i = 0; i < 9600; ++i) {
+      FloatFrame output = ProcessSample(i % 2400 == 0);
+      peak = std::max(peak, fabsf(output.l));
+    }
+    CHECK(peak > 0.01f);
+  }
+}
+
 void TestProcessorGrainLatch() {
   test_checker.Start("TestProcessorGrainLatch");
   InitProcessor();
@@ -598,6 +662,7 @@ void TestCvChannelIsolation() {
 }
 
 int main() {
+  TestMonophonicGrains();
   TestProcessorGrainLatch();
   TestProcessorEnvelopeCompletion();
   TestProcessorVoiceRelease();

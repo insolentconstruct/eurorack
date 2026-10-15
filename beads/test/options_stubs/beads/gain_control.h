@@ -33,10 +33,11 @@ namespace beads {
 
 class GainControl {
  public:
-  GainControl() : adjusting_(false), meter_(128) { }
+  GainControl() : adjusting_(false), meter_(128), restarts(0) { }
   bool adjusting_;
   int meter_;
-  void Restart() { }
+  int restarts;
+  void Restart() { ++restarts; }
   bool adjusting() const { return adjusting_; }
   int vu_meter() const { return meter_; }
 };

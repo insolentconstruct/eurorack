@@ -23,6 +23,18 @@ Where the Beads manual and the firmware disagree, see [MANUAL_ERRATA.md](MANUAL_
 
 Contributing code: follow [STYLE.md](STYLE.md). Before adding a feature, check [FEATURES.md](FEATURES.md) for which buttons, settings bytes, flash and RAM are already taken.
 
+## Monophonic grains
+
+Hold MEDIA first, then press SEED to toggle monophonic grains; the setting
+is saved and defaults off. The MEDIA/quality LED is half as bright when on
+(the recording reserve can dim it further). This enables Mutable Instruments'
+original code and gesture. Each new grain fades the previous grains out.
+It suits the square and decay SHAPE settings. Slower shapes can go nearly
+silent because each new grain cuts the previous one's attack. To recover
+sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
+or use the same gesture to turn mono off. Turn mono off before downgrading
+to stock firmware.
+
 ## Options page
 
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
