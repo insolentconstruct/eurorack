@@ -38,12 +38,16 @@
 #define private public
 #include "beads/settings.h"
 #include "beads/ui.h"
+#include "beads/normalization_detector.h"
 #undef private
 
 #include "beads/background_buffer_backup.h"
 #include "beads/calibrator.h"
 #include "beads/dsp/limiter.h"
 #include "beads/gain_control.h"
+
+// Keep the detector in this harness without changing its build recipe.
+#include "beads/normalization_detector.cc"
 
 bool test_down[4] = { };
 unsigned test_writes = 0;
@@ -702,12 +706,136 @@ void TestRecoveryPreservesCalibration() {
       sizeof(PersistentData)));
 }
 
+void TestAudioPatchDetection() {
+  test_checker.Start("TestAudioPatchDetection");
+  NormalizationDetector detector;
+  detector.Init(2);
+  uint16_t cv[CV_ADC_CHANNEL_LAST] = { };
+  for (int patch = 0; patch < 4; ++patch) {
+    for (int i = 0; i < 1400; ++i) {
+      bool probe = detector.rng_state_ >> 31;
+      Codec::Frame input;
+      input.l = (patch & 1 ? !probe : probe) ? 1 : -1;
+      input.r = (patch & 2 ? !probe : probe) ? 1 : -1;
+      detector.Process(Codec::EVENT_NONE, input, cv);
+    }
+    CHECK(detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT)
+        == !(patch & 1));
+    CHECK(detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT)
+        == !(patch & 2));
+    CHECK(detector.mono() == (patch != 3));
+    CHECK(detector.no_input() == (patch == 0));
+  }
+}
+
+void TestFrozenStateChangeGuard() {
+  test_checker.Start("TestFrozenStateChangeGuard");
+  Rig r;
+  CHECK(!r.ui.should_ignore_state_change());
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(r.ui.freeze_button_state());
+  r.ui.set_freeze_led_state(true);
+  CHECK(r.ui.should_ignore_state_change());
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.state().media == 2);
+  CHECK(r.ui.should_ignore_state_change());
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  r.ui.set_freeze_led_state(false);
+  CHECK(!r.ui.should_ignore_state_change());
+  // The callback also merges the external FREEZE gate into this flag.
+  r.ui.set_freeze_led_state(true);
+  CHECK(r.ui.should_ignore_state_change());
+  r.ui.set_freeze_led_state(false);
+  CHECK(!r.ui.should_ignore_state_change());
+}
+
+void TestGateOutputChordPersistence() {
+  test_checker.Start("TestGateOutputChordPersistence");
+  Rig r;
+  unsigned writes = test_writes;
+  const State before = r.settings.state();
+  for (int i = 0; i < 2; ++i) {
+    r.Down(SWITCH_ASSIGN);
+    r.Down(SWITCH_SEED);
+    CHECK(r.settings.state().gate_output_mode == !i);
+    CHECK(test_writes == writes + i + 1);
+    r.Tick(100);
+    r.Up(SWITCH_SEED);
+    r.Up(SWITCH_ASSIGN);
+    CHECK(test_writes == writes + i + 1);
+    CHECK(r.settings.state().assignable_cv_destination ==
+        before.assignable_cv_destination);
+    CHECK(r.ui.seed_button_locked());
+    CHECK(!r.ui.seed_button_state());
+    CHECK(!r.ui.options_.active());
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.state().gate_output_mode == !i);
+  }
+}
+
+void TestOverwriteReserveDisplay() {
+  test_checker.Start("TestOverwriteReserveDisplay");
+  Rig r;
+  const float reserve[] = { 1.0f, 0.5f, 0.0f, 0.5f, 1.0f };
+  for (int media = 0; media < 4; ++media) {
+    r.settings.mutable_state()->media = media;
+    for (int i = 0; i < 5; ++i) {
+      r.ui.set_overwrite_reserve(reserve[i]);
+      r.Tick(1);
+      Leds::Color color = r.ui.media_palette_[media];
+      // LED conversion truncates; these binary fractions are exact.
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
+          uint8_t(color.r * reserve[i] * reserve[i]));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
+          uint8_t(color.g * reserve[i]));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
+          uint8_t(color.b * reserve[i]));
+    }
+  }
+}
+
+void TestCorruptCalibrationRewritesOnce() {
+  test_checker.Start("TestCorruptCalibrationRewritesOnce");
+  Rig r;
+  const State defaults = r.settings.state();
+  const PersistentData calibration = r.settings.persistent_data();
+  r.settings.mutable_state()->media = 0;
+  r.settings.SaveState();
+  uint8_t* flash = reinterpret_cast<uint8_t*>(0x081e0000);
+  flash[8] ^= 1;  // Corrupt CALI payload without changing its checksum.
+  unsigned writes = test_writes;
+  Settings first;
+  CHECK(!first.Init(false));
+  CHECK(test_writes > writes);
+  CHECK(!memcmp(&first.state(), &defaults, sizeof(State)));
+  CHECK(!memcmp(first.persistent_data().adc_calibration,
+      calibration.adc_calibration, sizeof(calibration.adc_calibration)));
+  writes = test_writes;
+  for (int i = 0; i < 3; ++i) {
+    Settings next;
+    CHECK(next.Init(false));
+    CHECK(test_writes == writes);
+    CHECK(!memcmp(&next.state(), &defaults, sizeof(State)));
+    CHECK(!memcmp(next.persistent_data().adc_calibration,
+        calibration.adc_calibration, sizeof(calibration.adc_calibration)));
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestAudioPatchDetection();
+  TestFrozenStateChangeGuard();
+  TestGateOutputChordPersistence();
+  TestOverwriteReserveDisplay();
+  TestCorruptCalibrationRewritesOnce();
   TestQualityTapCycle();
   TestManualGainGestureAndMeter();
   TestSeedStartupLatch();

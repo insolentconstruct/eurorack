@@ -32,31 +32,34 @@
 
 #include "beads/test/test_checker.h"
 
-#include "beads/dsp/delay_granular_player.h"
+#define private public
+#define protected public
+#include "beads/dsp/processor.h"
+#undef protected
+#undef private
 
-// Exclude hardware declarations; exercise the real channel laws below.
-#define BEADS_DRIVERS_CV_ADC_H_
-#define BEADS_DRIVERS_POTS_ADC_H_
-#define BEADS_SETTINGS_H_
-namespace beads {
-
-enum CvAdcChannel { CV_ADC_CHANNEL_LAST };
-enum PotsAdcChannel { POTS_ADC_CHANNEL_LAST };
-class Settings;
-struct CvAdc {
-  const uint16_t* values();
-  float float_value(int) const;
-};
-struct PotsAdc {
-  float float_value(int) const;
-};
-
-}  // namespace beads
-
+// ADC transfers are inert; channel filtering and calibration are firmware.
+struct ADC_HandleTypeDef { };
+struct DMA_HandleTypeDef { };
+struct TIM_HandleTypeDef { };
+#define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CV_ADC_H_
+#define private public
+#include "../drivers/cv_adc.h"
 #include "beads/cv_reader.h"
+#undef private
+#include "beads/cv_reader.cc"
 
 namespace beads {
 
+uint16_t CvAdc::values_[CV_ADC_CHANNEL_LAST];
+uint16_t PotsAdc::values_[POTS_ADC_CHANNEL_LAST];
+bool CvAdc::Init() { return true; }
+void CvAdc::Convert() { }
+bool PotsAdc::Init() { return true; }
+void PotsAdc::Convert() { }
+void PotsAdc::StartMuxedPotsConversion() { }
+CvChannel::CvChannel() { }
+CvChannel::~CvChannel() { }
 PotChannel::PotChannel() { }
 PotChannel::~PotChannel() { }
 
@@ -327,7 +330,281 @@ void TestSharedRandomStream() {
   CHECK(first != second);
 }
 
+// Real Processor path with a frozen, nonzero digital recording.
+static Processor processor;
+static uint8_t banks[3][256 * 1024];
+static uint16_t reverb_buffer[32768];
+static Parameters parameters;
+
+void InitProcessor() {
+  uint8_t* buffers[] = { banks[0], banks[1], banks[2] };
+  processor.Init(buffers, reverb_buffer);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  parameters = Parameters();
+  parameters.time.base = 0.5f;
+  parameters.size.base = 0.8f;
+  parameters.shape.base = 0.0f;
+  int16_t* samples = reinterpret_cast<int16_t*>(banks);
+  for (size_t i = 0; i < sizeof(banks) / sizeof(int16_t); ++i) {
+    samples[i] = 4096;
+  }
+  stmlib::Random::Seed(12345);
+}
+
+FloatFrame ProcessSample(
+    bool trigger, float density_base = 0.48f, bool external = true) {
+  const bool freeze = true;
+  const stmlib::GateFlags gate = trigger
+      ? static_cast<stmlib::GateFlags>(
+          stmlib::GATE_FLAG_RISING | stmlib::GATE_FLAG_HIGH)
+      : stmlib::GATE_FLAG_LOW;
+  ModulatedParameter density = { density_base, 0.0f };
+  Processor::MixParameters mix = { 0.0f, 1.0f, 0.0f, false };
+  FloatFrame input = { 0.0f, 0.0f };
+  FloatFrame output;
+  processor.Process(
+      external ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_ON,
+      external ? &gate : NULL,
+      &freeze, density,
+      parameters, mix, &input, &output, 1);
+  return output;
+}
+
+DelayGranularPlayer& Player() {
+  return processor.processor_digital_.granular_player_;
+}
+
+void TestProcessorGrainLatch() {
+  test_checker.Start("TestProcessorGrainLatch");
+  InitProcessor();
+  ProcessSample(true);
+  DelayGrain& grain = Player().grain_[0];
+  const int speed = grain.speed_;
+  const int initial_delay = grain.initial_delay_;
+  const float attack = grain.envelope_.phase_increment_[0];
+  const float release = grain.envelope_.phase_increment_[2];
+  const int remaining = grain.remaining_samples();
+  CHECK(!grain.done());
+  for (int i = 0; i < 100; ++i) {
+    parameters.time.base = 0.9f;
+    parameters.size.base = 0.0f;
+    parameters.pitch.base = 12.0f;
+    parameters.shape.base = 1.0f;
+    parameters.time.cv = 0.3f;
+    parameters.time.has_cv = true;
+    parameters.time.attenuverter = 1.0f;
+    ProcessSample(false);
+    CHECK(grain.speed_ == speed);
+    CHECK(grain.initial_delay_ == initial_delay);
+    CHECK(grain.envelope_.phase_increment_[0] == attack);
+    CHECK(grain.envelope_.phase_increment_[2] == release);
+  }
+  CHECK(grain.remaining_samples() == remaining - 100);
+  ProcessSample(true);
+  DelayGrain& next = Player().grain_[1];
+  CHECK(!next.done());
+  CHECK(next.speed_ == -2 * speed);
+  CHECK(next.initial_delay_ != initial_delay);
+  CHECK(next.envelope_.phase_increment_[0] != attack);
+}
+
+void TestProcessorEnvelopeCompletion() {
+  test_checker.Start("TestProcessorEnvelopeCompletion");
+  InitProcessor();
+  parameters.size.base = 1.0f / 3.0f;
+  parameters.shape.base = 2.0f / 3.0f;
+  ProcessSample(true);
+  DelayGrain& first = Player().grain_[0];
+  float peak = 0.0f;
+  for (int i = 0; i < 1000; ++i) {
+    FloatFrame output = ProcessSample(false);
+    peak = std::max(peak, output.l);
+  }
+  CHECK(peak > 0.01f);
+  CHECK(first.envelope_.done());
+  CHECK(first.done());
+  CHECK(first.remaining_samples() == 0);
+  for (int i = 0; i < 100; ++i) {
+    FloatFrame output = ProcessSample(false);
+    CHECK(output.l == 0.0f && output.r == 0.0f);
+  }
+  ProcessSample(true);
+  CHECK(!Player().grain_[1].done());
+  CHECK(first.done());
+}
+
+void TestProcessorVoiceRelease() {
+  test_checker.Start("TestProcessorVoiceRelease");
+  InitProcessor();
+  for (int i = 0; i < 20; ++i) {
+    ProcessSample(i == 0);
+  }
+  DelayGrain& grain = Player().grain_[0];
+  CHECK(grain.voice_stealing_envelope_.value_ == 1.0f);
+  // A full rotation brings the sounding voice into the safety set.
+  for (int i = 0; i < 28; ++i) {
+    ProcessSample(true);
+    ProcessSample(false);
+  }
+  CHECK(grain.voice_stealing_envelope_.decrement_ > 0.0f);
+  float previous = grain.voice_stealing_envelope_.value_;
+  CHECK(previous > 0.0f && previous < 1.0f);
+  for (int i = 0; i < 10; ++i) {
+    FloatFrame output = ProcessSample(false);
+    float value = grain.voice_stealing_envelope_.value_;
+    CHECK(value > 0.0f && value < previous);
+    CHECK(output.l > 0.0f);
+    previous = value;
+  }
+  for (int i = 0; i < 5000; ++i) {
+    ProcessSample(false);
+  }
+  CHECK(grain.done());
+}
+
+void TestProcessorVoiceSaturation() {
+  test_checker.Start("TestProcessorVoiceSaturation");
+  InitProcessor();
+  int max_musical = 0;
+  int max_safety = 0;
+  int max_active = 0;
+  for (int i = 0; i < 20000; ++i) {
+    ProcessSample(i % 240 == 0);
+    int musical = 0;
+    int safety = 0;
+    for (int j = 0; j < Player().NUM_GRAINS; ++j) {
+      DelayGrain& grain = Player().grain_[j];
+      if (!grain.done()) {
+        if (grain.voice_stealing_envelope_.decrement_ > 0.0f) {
+          ++safety;
+        } else {
+          ++musical;
+        }
+      }
+    }
+    max_musical = std::max(max_musical, musical);
+    max_safety = std::max(max_safety, safety);
+    max_active = std::max(max_active, musical + safety);
+  }
+  printf("Voice maxima: musical=%d safety=%d active=%d\n",
+      max_musical, max_safety, max_active);
+  CHECK(Player().NUM_GRAINS == 32);
+  CHECK(max_musical == 28);
+  CHECK(max_safety >= 2);
+  CHECK(max_active >= 30 && max_active <= 32);
+}
+
+void TestProcessorRandomPan() {
+  test_checker.Start("TestProcessorRandomPan");
+  for (int mode = 0; mode < 5; ++mode) {
+    InitProcessor();
+    RandomizedParameter* controls[] = {
+      &parameters.time, &parameters.size,
+      &parameters.shape, &parameters.pitch
+    };
+    if (mode >= 1 && mode <= 4) {
+      controls[mode - 1]->attenuverter = 0.1f;
+    }
+    float minimum = 10.0f;
+    float maximum = -10.0f;
+    for (int i = 0; i < 20; ++i) {
+      ProcessSample(true);
+      DelayGrain& grain = Player().grain_[i];
+      float balance = grain.gain_[0][0] - grain.gain_[1][1];
+      minimum = std::min(minimum, balance);
+      maximum = std::max(maximum, balance);
+      ProcessSample(false);
+    }
+    if (mode == 0) {
+      CHECK(minimum == 0.0f && maximum == 0.0f);
+    } else {
+      CHECK(maximum - minimum > 0.01f);
+    }
+  }
+  InitProcessor();
+  float minimum = 10.0f;
+  float maximum = -10.0f;
+  for (int i = 0; i < 24000; ++i) {
+    ProcessSample(false, 0.9f, false);
+    for (int j = 0; j < Player().NUM_GRAINS; ++j) {
+      DelayGrain& grain = Player().grain_[j];
+      if (!grain.done()) {
+        float balance = grain.gain_[0][0] - grain.gain_[1][1];
+        minimum = std::min(minimum, balance);
+        maximum = std::max(maximum, balance);
+      }
+    }
+  }
+  CHECK(maximum - minimum > 0.01f);
+}
+
+void TestPitchCvImmediate() {
+  test_checker.Start("TestPitchCvImmediate");
+  Settings settings;
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    settings.mutable_persistent_data()->adc_calibration[i].scale = 120.0f;
+    settings.mutable_persistent_data()->adc_calibration[i].offset = -60.0f;
+  }
+  CvReader reader;
+  reader.Init(&settings);
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    reader.cv_.values_[i] = 32768;
+  }
+  reader.Read();
+  CHECK(reader.cv(CV_ADC_CHANNEL_PITCH) == 0.0f);
+  reader.cv_.values_[CV_ADC_CHANNEL_PITCH] = 39322;
+  reader.Read();
+  const float expected = 120.0f * (39322.0f / 65536.0f) - 60.0f;
+  CHECK(reader.cv(CV_ADC_CHANNEL_PITCH) == expected);
+  InitProcessor();
+  parameters.pitch.has_cv = true;
+  parameters.pitch.attenuverter = 1.0f;
+  parameters.pitch.cv = reader.cv(CV_ADC_CHANNEL_PITCH);
+  ProcessSample(true);
+  // The replay increment is quantized to 1/1024 sample.
+  CHECK(abs(Player().grain_[0].speed_ - 2048) <= 1);
+  reader.cv_.values_[CV_ADC_CHANNEL_PITCH] = 32768;
+  reader.Read();
+  CHECK(reader.cv(CV_ADC_CHANNEL_PITCH) == 0.0f);
+}
+
+void TestCvChannelIsolation() {
+  test_checker.Start("TestCvChannelIsolation");
+  Settings settings;
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    settings.mutable_persistent_data()->adc_calibration[i].scale = 2.0f;
+    settings.mutable_persistent_data()->adc_calibration[i].offset = -1.0f;
+  }
+  const CvAdcChannel channels[] = {
+    CV_ADC_CHANNEL_TIME, CV_ADC_CHANNEL_SIZE,
+    CV_ADC_CHANNEL_SHAPE, CV_ADC_CHANNEL_PITCH
+  };
+  for (int changed = 0; changed < 4; ++changed) {
+    CvReader reader;
+    reader.Init(&settings);
+    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+      reader.cv_.values_[i] = 32768;
+    }
+    reader.Read();
+    reader.cv_.values_[channels[changed]] = 49152;
+    reader.Read();
+    for (int i = 0; i < 4; ++i) {
+      const float expected = i == changed
+          ? (channels[i] == CV_ADC_CHANNEL_PITCH ? 0.5f : 0.25f)
+          : 0.0f;
+      CHECK(reader.cv(channels[i]) == expected);
+    }
+  }
+}
+
 int main() {
+  TestProcessorGrainLatch();
+  TestProcessorEnvelopeCompletion();
+  TestProcessorVoiceRelease();
+  TestProcessorVoiceSaturation();
+  TestProcessorRandomPan();
+  TestPitchCvImmediate();
+  TestCvChannelIsolation();
   TestGrainTimeAndDirection();
   TestGrainDuration();
   TestGrainShape();

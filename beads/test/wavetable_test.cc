@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Final wavetable interpolation row tests.
+// Wavetable interpolation and synth signal path tests.
 
 #include <cmath>
 #include <cstring>
@@ -33,14 +33,15 @@
 #include "stmlib/dsp/units.h"
 
 #include "beads/dsp/frame.h"
-#include "beads/dsp/granular_player.h"
 #include "beads/resources.h"
 #include "beads/test/test_checker.h"
 
 #define private public
+#define protected public
 #include "beads/dsp/synth.h"
 #include "beads/dsp/wavetable_grain.h"
 #include "beads/dsp/wavetable_voice.h"
+#undef protected
 #undef private
 
 using namespace beads;
@@ -179,7 +180,203 @@ void TestSynthBankSelection() {
   CHECK(bank == 0);
 }
 
+
+struct SynthHarness {
+  uint16_t reverb_buffer[32768];
+  Synth synth;
+  Parameters parameters;
+  Processor::MixParameters mix;
+  Synth::Resolution resolution;
+
+  void Init() {
+    memset(reverb_buffer, 0, sizeof(reverb_buffer));
+    memset(&parameters, 0, sizeof(parameters));
+    memset(&mix, 0, sizeof(mix));
+    parameters.size.base = 1.0f;
+    parameters.shape.base = 0.5f;
+    resolution = Synth::RESOLUTION_16_BIT;
+    synth.Init(reverb_buffer);
+    stmlib::Random::Seed(12345);
+  }
+
+  FloatFrame Tick(bool gate, bool frozen) {
+    stmlib::GateFlags seed = gate ? stmlib::GATE_FLAG_HIGH :
+        stmlib::GATE_FLAG_LOW;
+    ModulatedParameter density = { 0.5f, 0.0f };
+    FloatFrame out;
+    synth.Render(SEED_BUTTON_STATE_OFF, &seed, &frozen, resolution,
+        density, parameters, mix, &out, 1);
+    return out;
+  }
+};
+
+void TestSynthMixEndpoints() {
+  test_checker.Start("TestSynthMixEndpoints");
+  static SynthHarness h;
+  h.Init();
+  double energy = 0.0;
+  for (int i = 0; i < 4096; ++i) {
+    FloatFrame out = h.Tick(false, false);
+    energy += out.l * out.l;
+    CHECK(out.l == out.r);
+  }
+  CHECK(energy > 1.0);
+  CHECK(h.synth.dry_ == 0.5f && h.synth.wet_ == 0.0f);
+  h.mix.dry_wet = 1.0f;
+  for (int i = 0; i < 256; ++i) {
+    FloatFrame out = h.Tick(false, false);
+    CHECK(out.l == 0.0f && out.r == 0.0f);
+  }
+  CHECK(h.synth.dry_ == 0.0f && h.synth.wet_ == 1.0f);
+  h.Tick(true, false);
+  energy = 0.0;
+  for (int i = 0; i < 4096; ++i) {
+    FloatFrame out = h.Tick(false, false);
+    energy += out.l * out.l + out.r * out.r;
+  }
+  CHECK(energy > 1.0);
+}
+
+void TestSynthFreeze() {
+  test_checker.Start("TestSynthFreeze");
+  static SynthHarness h;
+  h.Init();
+  h.Tick(true, true);
+  CHECK(h.synth.wavetable_granular_player_.CountActiveGrains() == 0);
+  h.Tick(false, false);
+  h.Tick(true, false);
+  WavetableGrain& grain = h.synth.wavetable_granular_player_.grain_[0];
+  CHECK(!grain.done());
+  for (int i = 0; i < 256; ++i) {
+    h.Tick(false, false);
+  }
+  const int remaining = grain.remaining_samples();
+  const float envelope = grain.envelope_sample_;
+  const float phase = grain.phase_;
+  for (int i = 0; i < 256; ++i) {
+    h.Tick(i & 1, true);
+  }
+  CHECK(h.synth.wavetable_granular_player_.CountActiveGrains() == 1);
+  CHECK(grain.remaining_samples() == remaining);
+  CHECK(grain.envelope_sample_ == envelope);
+  CHECK(grain.phase_ != phase);
+  h.Tick(false, false);
+  CHECK(grain.remaining_samples() == remaining - 1);
+}
+
+void TestSynthResolution() {
+  test_checker.Start("TestSynthResolution");
+  const int dry_bits[] = { 4, 16, 7, 16 };
+  const int wet_bits[] = { 4, 6, 7, 16 };
+  static SynthHarness h;
+  for (int quality = 0; quality < 4; ++quality) {
+    h.Init();
+    h.resolution = Synth::Resolution(quality);
+    h.Tick(true, false);
+    CHECK(h.synth.wavetable_granular_player_.grain_[0].scale_up_ ==
+        float(1 << wet_bits[quality]));
+    bool off_coarser_grid = false;
+    for (int i = 0; i < 4096; ++i) {
+      const FloatFrame out = h.Tick(false, false);
+      // Dry gain is 1/2; the reverb mix and both limiters are unity here.
+      const float scaled = out.l * float(2 << dry_bits[quality]);
+      CHECK(fabsf(scaled - roundf(scaled)) < 0.001f);
+      if (fabsf(scaled * 0.5f - roundf(scaled * 0.5f)) > 0.1f) {
+        off_coarser_grid = true;
+      }
+    }
+    CHECK(off_coarser_grid);
+    if (wet_bits[quality] == 16) {
+      continue;
+    }
+    // One wet grain: its output over envelope and pan gain sits on the
+    // grain's sample grid.
+    h.Init();
+    h.resolution = Synth::Resolution(quality);
+    h.mix.dry_wet = 1.0f;
+    h.Tick(false, false);
+    h.Tick(true, false);
+    const WavetableGrain& grain =
+        h.synth.wavetable_granular_player_.grain_[0];
+    int checked = 0;
+    for (int i = 0; i < 4096; ++i) {
+      const FloatFrame out = h.Tick(false, false);
+      const float gain = grain.envelope_sample_ * grain.gain_l_;
+      if (fabsf(gain) > 0.01f) {
+        const float level = out.l / gain * float(1 << wet_bits[quality]);
+        CHECK(fabsf(level - roundf(level)) < 0.01f);
+        ++checked;
+      }
+    }
+    CHECK(checked > 1000);
+  }
+}
+
+void TestSynthPitchCvAndSpread() {
+  test_checker.Start("TestSynthPitchCvAndSpread");
+  static SynthHarness h;
+  const float amounts[] = { -1.0f, 0.0f, 1.0f };
+  for (int a = 0; a < 3; ++a) {
+    float frequency[2][32];
+    for (int octave = 0; octave < 2; ++octave) {
+      h.Init();
+      h.parameters.pitch.has_cv = true;
+      h.parameters.pitch.cv = float(octave * 12);
+      h.parameters.pitch.attenuverter = amounts[a];
+      for (int i = 0; i < 32; ++i) {
+        h.Tick(false, false);
+        WavetableGrain* grain =
+            h.synth.wavetable_granular_player_.new_grain();
+        h.Tick(true, false);
+        frequency[octave][i] = grain->frequency_;
+        const float expected = kWavetableRootNote / 48000.0f *
+            float(1 << octave);
+        // Lookup interpolation and single precision rounding.
+        CHECK(fabsf(h.synth.wavetable_voice_.frequency_ - expected) <
+            expected * 0.0001f);
+      }
+    }
+    float low = frequency[0][0];
+    float high = low;
+    for (int i = 0; i < 32; ++i) {
+      CHECK(fabsf(frequency[1][i] / frequency[0][i] - 2.0f) < 0.0001f);
+      low = std::min(low, frequency[0][i]);
+      high = std::max(high, frequency[0][i]);
+    }
+    if (a == 1) {
+      CHECK(high == low);
+    } else {
+      CHECK(high / low > 4.0f);
+    }
+  }
+}
+
+void TestSynthAmplitudeSweep() {
+  test_checker.Start("TestSynthAmplitudeSweep");
+  static SynthHarness h;
+  for (int octave = 0; octave <= 6; ++octave) {
+    h.Init();
+    h.parameters.pitch.base = float(octave * 12);
+    double energy = 0.0;
+    for (int i = 0; i < 16384; ++i) {
+      const FloatFrame out = h.Tick(false, false);
+      if (i >= 8192) {
+        energy += out.l * out.l;
+      }
+    }
+    const double rms = sqrt(energy / 8192.0);
+    // A unit sine at dry gain 1/2 has RMS sqrt(1/8). Allow 6% for
+    // differentiation droop up to C9 and the finite observation window.
+    CHECK(fabs(rms / sqrt(0.125) - 1.0) < 0.06);
+  }
+}
+
 int main() {
+  TestSynthMixEndpoints();
+  TestSynthFreeze();
+  TestSynthResolution();
+  TestSynthPitchCvAndSpread();
+  TestSynthAmplitudeSweep();
   TestFmBankRatios();
   TestFinalBankRendering();
   TestGuardRow();
