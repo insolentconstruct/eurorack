@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
 ## Unreleased
+- Clocked frozen delay: SEED edges less than 16 samples apart (a fast clock, contact bounce, plugging a cable) could make a zero-length slice, an integer division by zero. On the module it gave silent play heads; slices are now at least one sample long (#33).
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha)
 - Frozen-buffer backup is checked: a CRC over the audio and header, written in bytes stock ignores, so stock and Drizzlet still load each other's backups. Header fields are range-checked before use, including on stock backups. See FEATURES.md for the format.

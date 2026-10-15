@@ -17,6 +17,7 @@ How far release 2026.10.14 (alpha) was tested before release. Everything ran on 
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
 | `beads/test/options.sh` | Options page entry, categories, knob zones, idle save, cancel, settings stored in the format later releases expect, and the limiter's arithmetic; normal and advanced builds |
+| `beads/test/delay.sh` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5; every tap reads a valid delay |
 | `beads/test/backup.sh` | Frozen-buffer save format byte by byte; stock saves load; corrupt headers and audio refused; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; settings saved during a save |
 
 The backup test was checked by removing each safeguard in turn: each removal makes a test fail.
