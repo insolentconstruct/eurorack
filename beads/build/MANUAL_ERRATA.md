@@ -7,16 +7,18 @@ Several differences come from the April 2021 firmware update, which the manual p
 
 ## Corrections
 
+- **Sunny tape buffer:** holds about 10.67 s in stereo or 21.33 s in mono, rather than 10 or 20 s. <!-- manual.md:34, images/quality_table.png; beads/dsp/processor.h:50-51,179-182; beads/dsp/processor.cc:49; beads/dsp/granular_processor.h:384-385 -->
 - **Restarting automatic gain** (Recording quality): hold MEDIA for about **1.5 s**, not one second. Releasing after one second changes the recording quality instead. <!-- manual.md:44; beads/ui.cc:48-50,402-425 -->
 - **Synth quality table** (Beads as a granular wavetable synth): the amber setting is **16-bit dry, 6-bit grains**, not 4-bit. <!-- manual.md:190, images/wavetable_quality_table.png; beads/dsp/synth.cc:83-84,112-118; beads/dsp/synth.h:50-54; beads/dsp/wavetable_grain.h:142 -->
 - **Update error** (Firmware update procedure): the MEDIA and input-level LEDs keep showing the input level; the other LEDs blink. <!-- manual.md:253; beads/bootloader/bootloader.cc:118-145 -->
 
 ## Changed by the April 2021 update
 
+- **Unfreezing:** recording resumes with a short crossfade from audio received just after FREEZE was engaged into the current input. It does not replay the old buffer tail. <!-- manual.md:47; beads/dsp/delay_line.h:180,296-322; release notes post 1 -->
 - **Synth banks:** FEEDBACK (and its assigned CV) selects **12 banks** of 16 waveforms, not 8; four FM banks were added. <!-- manual.md:182; beads/dsp/synth.h:43; beads/dsp/synth.cc:82; release notes post 1 -->
 - **Shortest grains:** grains near the reverse/forward point of SIZE (about 10:30) can be much shorter than 30 ms, down to about 8 ms requested (10–20 ms heard, depending on SHAPE). <!-- manual.md:91; index.md:51; beads/dsp/granular_player.h:97-104; beads/dsp/grain_envelope.h -->
 - **Autosave toggle:** hold ASSIGN and press FREEZE to turn buffer autosave on or off. FREEZE lights dim for off, brighter for on. With it off, a saved buffer is also not loaded at power-up. <!-- manual.md:49; beads/ui.cc:195-196,276-285; beads/background_buffer_backup.cc:54-56,154-158 -->
-- **Delay bandwidth:** in delay and slice mode, the SIZE attenurandomizer is a filter: counterclockwise darker, centre unfiltered, clockwise thinner. SIZE CV also moves it. <!-- manual.md:93,174; beads/dsp/granular_processor.h:277-282,326-349; beads/dsp/multitap_delay.h:38 -->
+- **Delay bandwidth:** in delay and slice mode, the SIZE attenurandomizer is a filter: counterclockwise darker, centre unfiltered, clockwise thinner. SIZE CV also moves it, even with the attenurandomizer at noon. <!-- manual.md:93,102,174; beads/dsp/granular_processor.h:280-282,329-351; beads/dsp/multitap_delay.h:38; release notes post 1 -->
 - **Overwrite indicator:** while recording, the quality LED fades as the record head approaches the point where FREEZE was last released, then brightens once past it. Not in synth mode. <!-- manual.md:32; beads/beads.cc:156; beads/dsp/processor.h:116-119; beads/ui.cc:189-192 -->
 - **Manual gain display:** while setting manual gain (MEDIA + FEEDBACK), the quality LED becomes a green-to-red gain indicator. <!-- manual.md:44; beads/ui.cc:152-153,186-192 -->
 - **Manual gain clipping:** with manual gain, overloads hard-clip in the digital modes, soft-clip in Scorched cassette, and use a blend in Sunny tape. <!-- manual.md:44; beads/beads.cc:281-287; beads/gain_control.cc:133-181 -->
@@ -42,6 +44,7 @@ Several differences come from the April 2021 firmware update, which the manual p
 
 ## Clarifications
 
+- **Scorched cassette resolution:** the 8-bit recording uses µ-law compression, which preserves quiet sounds better than linear 8-bit recording. <!-- manual.md:34, images/quality_table.png; index.md:36; beads/dsp/processor.h:183-192; beads/dsp/delay_line.h:124-153; beads/dsp/mu_law.h:46-78 -->
 - **Automatic gain** waits about 1 s, then listens for 5 s, and keeps adapting afterwards; silence postpones it. Restarting with MEDIA skips the wait. <!-- manual.md:42; beads/gain_control.cc:44-45,61-65,92-119 -->
 - **Input limiter:** the limiter for big level changes is the automatic gain itself. A sudden jump can briefly pass above full scale; the gain then falls with a response time of about 0.2 s (0.1 s while still listening). Recovery depends on the level. <!-- manual.md:42; beads/gain_control.cc:96-111,161-166 -->
 - **ASSIGN LEDs** (Mixing and audio output): the LEDs under FEEDBACK, DRY/WET and REVERB show the ASSIGN setting. With one destination, its LED is half lit; with individual amounts, each LED shows its amount. They do not follow the incoming CV. <!-- manual.md:129-130; beads/ui.cc:263-271 -->

@@ -1,4 +1,6 @@
-# Link in a fixed order (the default wildcard order depends on the filesystem).
+# Keep package order, sort files explicitly and reject duplicate object
+# basenames, so the link order does not depend on the make version (GNU make
+# 4.3 restored sorted wildcard expansion).
 include $(KIT_MAKEFILE)
 # GCC 9 compatibility.
 ifeq ($(KIT_GCC9),1)
