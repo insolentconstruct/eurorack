@@ -76,6 +76,10 @@ class BackgroundBufferBackup {
   uint32_t crc_;
   uint32_t freeze_start_time_;
   
+  uint32_t backup_delay_;
+  uint32_t thaw_start_time_;
+  bool freeze_state_;
+  bool save_started_;
   bool previous_freeze_state_;
   bool busy_;
   

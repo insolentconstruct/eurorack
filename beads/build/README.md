@@ -35,6 +35,13 @@ sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
 or use the same gesture to turn mono off. Turn mono off before downgrading
 to stock firmware.
 
+## Frozen-buffer autosave
+
+Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
+short after erasing doubles the next wait, up to 320 seconds, until a save
+completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
+The one-minute reset only counts while Beads is not in self-play.
+
 ## Options page
 
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.

@@ -45,6 +45,7 @@ extern bool test_locked;
 extern int test_budget;    // Operations left before power is lost; -1: none.
 extern int test_fail_at;   // Operation number that fails; 0: none.
 extern int test_ops;
+extern int test_erases;
 extern bool test_half_erase;  // Power goes halfway through an erase.
 inline bool TestOperation() {
   if (test_locked || test_budget == 0) {
@@ -58,6 +59,9 @@ inline bool TestOperation() {
 inline void HAL_FLASH_Unlock() { test_locked = false; }
 inline void HAL_FLASH_Lock() { test_locked = true; }
 inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
+  if (e->Sector >= 8 && e->Sector < 14) {
+    test_erases += e->NbSectors;
+  }
   if (test_half_erase && test_budget == 1 && !test_locked) {
     memset(reinterpret_cast<void*>(0x08100000 + (e->Sector - 8) * 0x20000),
       255, 0x10000);

@@ -9,7 +9,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 | MEDIA tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
 | MEDIA hold, 1.5 s | TAKEN: with no input, FREEZE off and On request, toggle self-play; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
 | MEDIA + feedback knob | TAKEN: manual input gain; release saves. Planned: manual gain improvements (#19) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
-| FREEZE tap | TAKEN: toggle freeze | Buffer/state saved after 10 s if autosave enabled, outside synth mode <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
+| FREEZE tap | TAKEN: toggle freeze | Buffer/state save starts after 10 s (with interruption backoff below) if autosave enabled, outside synth mode <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
 | SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot <!-- beads/ui.cc:81-83,406-411,463-469 --> |
 | SEED hold, 4 s | TAKEN: latch generation | No <!-- beads/ui.cc:48-50,463-469; manual.md:59 --> |
@@ -86,6 +86,12 @@ Frozen-buffer backup header: one 32-byte flash word at 0x08100000, little-endian
 | 12–15 | `crc` | stmlib `crc32` (CRC-32/ISO-HDLC) of the audio, continued over this header with `crc` = 0 |
 | 16–19 | `crc_tag` | `CRC1` (0x31435243): `crc` is valid. Stock backups hold leftover stack bytes in 10–31, so without this tag a backup loads as stock did, after the range checks |
 | 20–31 | `reserved` | Zero. A later release may use a byte only if older firmware can ignore it safely; anything else needs a new `crc_tag` |
+
+Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
+short after erasing doubles the next wait, up to 320 seconds, until a save
+completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
+The thaw timer does not run in synth mode (backup processing is skipped).
+Backoff is RAM-only and runs in the main loop.
 
 Saving erases the header's sector first and writes the header last, after the audio, so a header means a complete backup; a failed erase or program abandons the save. Loading checks the ranges, then the CRC when tagged, before touching the processor; any failure starts with an empty buffer. Known limit: power lost while a flash word is being programmed can leave an ECC error that faults when read, as in stock. <!-- beads/background_buffer_backup.h; beads/background_buffer_backup.cc; beads/test/backup_test.cc -->
 

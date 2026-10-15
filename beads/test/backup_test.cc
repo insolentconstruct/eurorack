@@ -31,11 +31,10 @@
 #include <cstring>
 #include <sys/mman.h>
 
-#include "stmlib/system/system_clock.h"
-
 #include "beads/test/test_checker.h"
 
 #define private public
+#include "stmlib/system/system_clock.h"
 #include "beads/background_buffer_backup.h"
 #include "beads/settings.h"
 #undef private
@@ -46,6 +45,7 @@ bool test_locked = true;
 int test_budget = -1;
 int test_fail_at = 0;
 int test_ops = 0;
+int test_erases = 0;
 bool test_half_erase = false;
 namespace stmlib {
 
@@ -142,6 +142,7 @@ struct Rig {
 void Wipe() {
   memset(kFlash, 255, 0x100000);
   test_ops = 0;
+  test_erases = 0;
 }
 
 void Save(Processor::Media media, bool mono, int write_ptr, uint8_t seed) {
@@ -369,10 +370,190 @@ void TestFreezeDeadlineAndCancel() {
     CHECK(kFlash[i] == 255);
   }
   CHECK(!r.settings.state().frozen);
+  for (int i = 0; i < 10000; ++i) {
+    system_clock.Tick();
+  }
   CHECK(r.Freeze());
   CHECK(kHeader->tag == 0x5a5a5246 && r.settings.state().frozen);
   Rig after;
   CHECK(after.Boot() && Restored(17));
+}
+
+void Run(Rig& rig, bool freeze, uint32_t milliseconds) {
+  for (uint32_t i = 0; i < milliseconds; ++i) {
+    system_clock.Tick();
+    rig.backup.Process(freeze);
+  }
+}
+
+void TestModulatedFreeze() {
+  test_checker.Start("TestModulatedFreeze");
+  for (int on = 15000; on <= 25000; on += 10000) {
+    Wipe();
+    Rig rig;
+    rig.Boot();
+    for (int cycle = 0; cycle < 40; ++cycle) {
+      Run(rig, true, on);
+      Run(rig, false, 5000);
+      CHECK(test_erases <= (on == 15000 ? 6 : 12));
+      if (cycle >= 2) {
+        CHECK(test_erases == (on == 15000 ? 6 : 12));
+      }
+    }
+  }
+}
+
+void TestBackupBackoff() {
+  test_checker.Start("TestBackupBackoff");
+  Wipe();
+  Rig rig;
+  rig.Boot();
+  uint32_t delay = 10000;
+  for (int attempt = 0; attempt < 9; ++attempt) {
+    const int erases = test_erases;
+    Run(rig, true, delay - 1);
+    CHECK(test_erases == erases);
+    Run(rig, true, 1);
+    CHECK(test_erases == erases + 1);
+    rig.backup.Process(false);
+    delay = delay < 320000 ? delay * 2 : 320000;
+    CHECK(rig.backup.backup_delay_ == delay);
+  }
+  CHECK(!rig.Boot());
+  CHECK(rig.backup.backup_delay_ == 10000);
+}
+
+void TestBackupCompletionReset() {
+  test_checker.Start("TestBackupCompletionReset");
+  Wipe();
+  Rig rig;
+  rig.Boot();
+  Run(rig, true, 10000);
+  rig.backup.Process(false);
+  Run(rig, true, 20000);
+  while (rig.backup.busy()) {
+    rig.backup.Process(true);
+  }
+  CHECK(rig.settings.state().frozen);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  rig.backup.Process(false);
+  const int erases = test_erases;
+  Run(rig, true, 10001);
+  CHECK(test_erases == erases + 2);
+}
+
+void TestBackupThawReset() {
+  test_checker.Start("TestBackupThawReset");
+  Wipe();
+  Rig rig;
+  rig.Boot();
+  Run(rig, true, 10000);
+  rig.backup.Process(false);
+  Run(rig, false, 59000);
+  CHECK(rig.backup.backup_delay_ == 20000);
+  Run(rig, true, 10000);
+  CHECK(test_erases == 1);
+  rig.backup.Process(false);
+  Run(rig, false, 59999);
+  CHECK(rig.backup.backup_delay_ == 20000);
+  Run(rig, false, 1);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  Run(rig, true, 10000);
+  CHECK(test_erases == 2);
+}
+
+void TestBackupEarlyCancel() {
+  test_checker.Start("TestBackupEarlyCancel");
+  Wipe();
+  Rig rig;
+  rig.Boot();
+  for (int i = 0; i < 8; ++i) {
+    Run(rig, true, 9999);
+    rig.backup.Process(false);
+    CHECK(test_erases == 0);
+    CHECK(rig.backup.backup_delay_ == 10000);
+  }
+  Run(rig, true, 10001);
+  while (rig.backup.busy()) {
+    rig.backup.Process(true);
+  }
+  CHECK(test_erases == 6 && rig.settings.state().frozen);
+}
+
+void TestBackupClockWrap() {
+  test_checker.Start("TestBackupClockWrap");
+  Wipe();
+  Rig rig;
+  rig.Boot();
+  // Start just before wrap; the doubled deadline crosses it.
+  system_clock.count_ = UINT32_MAX - 15000;
+  rig.backup.Process(false);
+  Run(rig, true, 9999);
+  CHECK(test_erases == 0 && !rig.backup.busy());
+  Run(rig, true, 1);
+  CHECK(test_erases == 1 && rig.backup.busy());
+  rig.backup.Process(false);
+  CHECK(!rig.backup.busy() && rig.backup.backup_delay_ == 20000);
+  // The doubled deadline also crosses wrap, without starting early.
+  Run(rig, true, 19999);
+  CHECK(test_erases == 1 && !rig.backup.busy());
+  Run(rig, true, 1);
+  CHECK(test_erases == 2 && rig.backup.busy());
+  rig.backup.Process(false);
+  CHECK(rig.backup.backup_delay_ == 40000);
+  // A fresh boot lets the thaw interval cross wrap as well.
+  Wipe();
+  CHECK(!rig.Boot());
+  system_clock.count_ = UINT32_MAX - 15000;
+  rig.backup.Process(false);
+  Run(rig, true, 10000);
+  rig.backup.Process(false);
+  Run(rig, false, 59999);
+  CHECK(rig.backup.backup_delay_ == 20000);
+  Run(rig, false, 1);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  Run(rig, true, 9999);
+  CHECK(test_erases == 1 && !rig.backup.busy());
+  Run(rig, true, 1);
+  CHECK(test_erases == 2 && rig.backup.busy());
+  while (rig.backup.busy()) {
+    rig.backup.Process(true);
+  }
+  CHECK(rig.settings.state().frozen);
+  CHECK(rig.backup.backup_delay_ == 10000);
+}
+
+void TestBackupRestoredThaw() {
+  test_checker.Start("TestBackupRestoredThaw");
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 19);
+  Rig rig;
+  CHECK(rig.Boot() && Restored(19));
+  const int erases = test_erases;
+  Run(rig, true, 70000);
+  CHECK(test_erases == erases && !rig.backup.busy());
+  rig.backup.Process(false);
+  const uint32_t released = system_clock.milliseconds();
+  CHECK(rig.backup.thaw_start_time_ == released);
+  CHECK(!rig.settings.state().frozen);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  Run(rig, false, 59999);
+  CHECK(rig.backup.thaw_start_time_ == released);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  Run(rig, false, 1);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  Fill(20);
+  Run(rig, true, 9999);
+  CHECK(test_erases == erases && !rig.backup.busy());
+  Run(rig, true, 1);
+  CHECK(test_erases == erases + 1 && rig.backup.busy());
+  while (rig.backup.busy()) {
+    rig.backup.Process(true);
+  }
+  CHECK(rig.settings.state().frozen);
+  CHECK(rig.backup.backup_delay_ == 10000);
+  Rig after;
+  CHECK(after.Boot() && Restored(20));
 }
 
 void TestPowerLoss() {
@@ -390,6 +571,13 @@ int main() {
     return 1;
   }
   TestFreezeDeadlineAndCancel();
+  TestModulatedFreeze();
+  TestBackupBackoff();
+  TestBackupCompletionReset();
+  TestBackupThawReset();
+  TestBackupEarlyCancel();
+  TestBackupClockWrap();
+  TestBackupRestoredThaw();
   TestFormat();
   TestStock();
   TestCorruption();
