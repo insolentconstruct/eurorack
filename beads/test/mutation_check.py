@@ -38,6 +38,9 @@ cases = [
     ('TestClockDividerTable', 'delay', 'beads/dsp/delay_controller.cc',
      'tap_ratio[flip] = kRatio[ratio_integral];',
      'tap_ratio[flip] = kRatio[ratio_integral] * 2.0f;'),
+    ('TestClockIdleCounter', 'delay', 'beads/dsp/delay_clock.cc',
+     '  if (next_interval_ >= max_interval_) {\n    next_interval_ = max_interval_;\n  }\n',
+     ''),
     ('TestFinalBankRendering', 'wavetable', 'beads/resources.cc',
      None, None),
     ('TestLimiterLinkedGainAndModeSwitch', 'options', 'beads/dsp/limiter.h',
@@ -96,10 +99,13 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
                 stack = report.split('SUMMARY:', 1)[0]
                 assert re.search(r'^\s*#\d+ .*beads::Wavetable(?:Grain|Voice)::',
                                  stack, re.MULTILINE), failure
+            elif name == 'TestClockIdleCounter':
+                assert re.search(r'delay_clock\.cc:\d+:\d+: runtime error: '
+                                 r'signed integer overflow', failure), failure
             else:
                 assert 'ERROR: ' + name + ':' in failure, failure
             evidence = next(x for x in failure.splitlines()
-                            if 'ERROR: ' in x)
+                            if 'ERROR: ' in x or 'runtime error: ' in x)
             results.append(f'{name}: {source}:{line}: {change}\n  {evidence}')
             print(results[-1], flush=True)
         finally:

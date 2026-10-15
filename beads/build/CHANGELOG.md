@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
 ## Unreleased
+- Delay mode: after about 12 hours without a SEED clock or tap, the next one could set a negative tempo and collapse the echoes for one clock period. The idle count now stops at its 4 s limit (#57).
 - Clocked frozen delay: SEED edges less than 16 samples apart (a fast clock, contact bounce, plugging a cable) could make a zero-length slice, an integer division by zero. On the module it gave silent play heads; slices are now at least one sample long (#33).
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha)

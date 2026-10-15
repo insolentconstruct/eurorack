@@ -197,9 +197,29 @@ void TestDelayIntervals() {
   printf("PASS free-running delay: FM from -0.7 to +0.5\n");
 }
 
+void TestClockIdleCounter() {
+  test_checker.Start("TestClockIdleCounter");
+  DelayClock clock;
+  clock.Init(48000.0f);
+  // Hours without a tick: the counter stops at the limit instead of wrapping.
+  clock.next_interval_ = 2147483647 - 4;
+  for (int i = 0; i < 16; ++i) {
+    clock.Process(false, false);
+  }
+  CHECK(clock.next_interval_ == clock.max_interval_);
+  // The next tick is ignored, as after any gap longer than 4 s.
+  const float interval_0 = clock.interval(0);
+  const float interval_1 = clock.interval(1);
+  clock.Process(true, false);
+  CHECK(clock.next_interval_ == 0);
+  CHECK(clock.interval(0) == interval_0 && clock.interval(1) == interval_1);
+  printf("PASS clock: idle counter stops at the limit\n");
+}
+
 int main() {
   TestFrozenSliceBoundarySelection();
   TestClockDividerTable();
   TestDelayIntervals();
+  TestClockIdleCounter();
   return test_checker.failures() ? 1 : 0;
 }
