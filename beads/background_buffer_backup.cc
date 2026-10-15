@@ -45,18 +45,15 @@ const size_t kNumSectors = 6;
 const uint32_t kCrcTag = 0x31435243;  // CRC1
 
 // Stereo frames in the buffer, by media. Mono has twice as many.
-const int32_t kMaxDelay[] = {
+const int kMaxDelay[] = {
   kDelayBufferSizeBits / 16,
   kDelayBufferSizeBits / 24,
   kDelayBufferSizeBits / 24,
   kDelayBufferSizeBits / 32
 };
 
-STATIC_ASSERT(
-    sizeof(BackgroundBufferBackup::BufferBackupHeader) == kFlashWordSize,
-    header_is_one_flash_word);
-
 void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
+  STATIC_ASSERT(sizeof(BufferBackupHeader) == kFlashWordSize, one_flash_word);
   processor_ = processor;
   settings_ = settings;
   
