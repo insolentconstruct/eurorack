@@ -5,7 +5,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 
 ## Unreleased
 
-## 2026.10.14 (tag `drizzlet-2026.10.14`)
+## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha)
 - Frozen-buffer backup is checked: a CRC over the audio and header, written in bytes stock ignores, so stock and Drizzlet still load each other's backups. Header fields are range-checked before use, including on stock backups. See FEATURES.md for the format.
 - An interrupted or failed backup is never restored: the header's sector is erased first and the header written last, flash errors abandon the save, and a stale frozen flag is cleared before a new backup starts.
 - A setting saved during a backup no longer makes the rest of the backup fail (settings saves locked the flash).

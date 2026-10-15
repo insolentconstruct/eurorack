@@ -3,6 +3,9 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
+ALPHA: tested only by its developers, on one module. Expect bugs, and
+please report them.
+
 Note from the Mutable Instruments eurorack README:
 "Code provided as is, builds on a Desktop platform but not verified to
 build and run on a module. Install at your own risks."
@@ -12,8 +15,8 @@ https://github.com/insolentconstruct/eurorack/issues
 
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing, as in the released source. This release adds the
-output limiter option below and four bug fixes; details are in CHANGELOG.md
-in the repository.
+output limiter option below and bug fixes; details are in CHANGELOG.md in
+the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/

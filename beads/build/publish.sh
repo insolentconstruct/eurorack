@@ -8,7 +8,9 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 [[ $tag =~ ^drizzlet-[A-Za-z0-9._-]+$ ]] || { echo "Bad tag: $tag" >&2; exit 2; }
 
 title="Drizzlet ${tag#drizzlet-}"
-notes="Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
+# Alpha: only its developers have tested it. Publish as a pre-release until users report back.
+prerelease=true
+notes="Alpha: tested only by its developers, on one module. Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
@@ -16,7 +18,7 @@ names() { for f in "$@"; do basename "$f"; done | sort; }
 publish() {
   if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
     # Re-run: make the existing release match this build.
-    gh release edit "$tag" --repo "$repo" --draft=false --prerelease=false --latest \
+    gh release edit "$tag" --repo "$repo" --draft=false --prerelease=$prerelease \
       --title "$title" --notes "$notes"
     gh release upload "$tag" --repo "$repo" --clobber "${assets[@]}"
     local wanted name
@@ -26,7 +28,7 @@ publish() {
         grep -qxF "$name" <<<"$wanted" || gh release delete-asset "$tag" "$name" --repo "$repo" --yes </dev/null
       done
   else
-    gh release create "$tag" --repo "$repo" --verify-tag --latest \
+    gh release create "$tag" --repo "$repo" --verify-tag --prerelease=$prerelease \
       --title "$title" --notes "$notes" "${assets[@]}"
   fi
 }
@@ -39,7 +41,7 @@ verify() {
   for f in "${assets[@]}"; do cmp "$f" "$out/$(basename "$f")"; done
   diff <(names "${assets[@]}") <(find "$out" -maxdepth 1 -type f -printf '%f\n' | sort)
   state=$(gh release view "$tag" --repo "$repo" --json isDraft,isPrerelease -q '"\(.isDraft) \(.isPrerelease)"')
-  [[ $state == "false false" ]] || { echo "Release is a draft or pre-release" >&2; exit 1; }
+  [[ $state == "false $prerelease" ]] || { echo "Release is a draft, or its pre-release flag is not $prerelease" >&2; exit 1; }
 }
 
 (cd "$dir" && sha256sum -c SHA256SUMS)
