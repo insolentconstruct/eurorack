@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
 
-**Alpha:** tested only by its developers, on one module. Expect bugs, and please report them.
+**Alpha:** tested only by its developers, on one module; see [TESTING.md](TESTING.md) for what was covered. Expect bugs, and please report them.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
