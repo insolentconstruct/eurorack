@@ -4,8 +4,8 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 
 ## Layout
 
-- 2-space indent, no tabs. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
-- Put code in `namespace beads` and close it with `}  // namespace beads`.
+- 2-space indent, no tabs in C/C++. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
+- Put firmware code in `namespace beads` and close it with `}  // namespace beads`. Host test functions may be global, as in MI tests.
 - New headers use `BEADS_<PATH>_H_` guards, e.g. `BEADS_DSP_LIMITER_H_`.
 - Includes, usually: the file's own header, then `<system>`, `stmlib/...`, `beads/...`.
 
@@ -42,3 +42,12 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 - Keep stock behaviour unchanged unless the change is the point. New options default to stock.
 - No compiler hints such as `__builtin_expect`, `noinline` or `flatten`.
 - Behaviour changes get a line in CHANGELOG.md.
+
+## Tests
+
+- Use `void TestXxx()` functions called from `main()`.
+- Print `ERROR: <test>: <condition>` and count failures; return non-zero on failure.
+- Keep compile-time layout checks and sanitizer coverage.
+- Use the options.h MIT header and a `// ---` separator with a brief description.
+- Use one Beads-style makefile per program; run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
+- Make recipes use tabs, as in upstream test makefiles.

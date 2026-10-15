@@ -1,6 +1,32 @@
-// Host tests for the frozen buffer backup: format, compatibility with the
-// stock firmware, power loss and flash errors at every stage.
-#include <cassert>
+// Copyright 2026 Insolent Construct.
+//
+// Author: Insolent Construct (insolentconstruct@gmail.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// See http://creativecommons.org/licenses/MIT/ for more information.
+//
+// -----------------------------------------------------------------------------
+//
+// Frozen buffer backup tests.
+
+#include "beads/test/test_checker.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -103,34 +129,35 @@ void Save(Processor::Media media, bool mono, int write_ptr, uint8_t seed) {
   processor.Configure(media, mono);
   processor.write_ptr_ = write_ptr;
   Fill(seed);
-  assert(rig.Freeze());
-  assert(rig.settings.state().frozen);
+  CHECK(rig.Freeze());
+  CHECK(rig.settings.state().frozen);
 }
 
 void TestFormat() {
+  test_checker.Start("TestFormat");
   for (int media = 0; media < 4; ++media) {
     for (int mono = 0; mono < 2; ++mono) {
       Wipe();
       const int last = (kMaxDelay[media] << mono) - 1;
       Save(Processor::Media(media), mono, last, uint8_t(media * 2 + mono));
       // The fields the stock firmware reads.
-      assert(kHeader->tag == 0x5a5a5246);
-      assert(kHeader->write_ptr == last);
-      assert(kHeader->media == media && kHeader->mono == mono);
+      CHECK(kHeader->tag == 0x5a5a5246);
+      CHECK(kHeader->write_ptr == last);
+      CHECK(kHeader->media == media && kHeader->mono == mono);
       // Ours: all defined.
-      assert(kHeader->padding[0] == 0 && kHeader->padding[1] == 0);
-      assert(kHeader->crc_tag == 0x31435243);
+      CHECK(kHeader->padding[0] == 0 && kHeader->padding[1] == 0);
+      CHECK(kHeader->crc_tag == 0x31435243);
       for (size_t i = 0; i < sizeof(kHeader->reserved); ++i) {
-        assert(kHeader->reserved[i] == 0);
+        CHECK(kHeader->reserved[i] == 0);
       }
       Header h = *kHeader;
       h.crc = 0;
-      assert(kHeader->crc == Crc(Crc(0, kFlash + 32, kAudio), &h, sizeof(h)));
+      CHECK(kHeader->crc == Crc(Crc(0, kFlash + 32, kAudio), &h, sizeof(h)));
       Rig rig;
-      assert(rig.Boot());
-      assert(processor.media_ == media && processor.mono_ == mono);
-      assert(processor.write_ptr_ == last);
-      assert(Restored(uint8_t(media * 2 + mono)));
+      CHECK(rig.Boot());
+      CHECK(processor.media_ == media && processor.mono_ == mono);
+      CHECK(processor.write_ptr_ == last);
+      CHECK(Restored(uint8_t(media * 2 + mono)));
     }
   }
   printf("PASS format, all media, mono and stereo\n");
@@ -153,11 +180,12 @@ void WriteStock(int media, int mono, int write_ptr, uint8_t seed) {
 }
 
 void TestStock() {
+  test_checker.Start("TestStock");
   WriteStock(2, 0, 12345, 9);
   Rig rig;
-  assert(rig.Boot());
-  assert(processor.media_ == 2 && !processor.mono_ && processor.write_ptr_ == 12345);
-  assert(Restored(9));
+  CHECK(rig.Boot());
+  CHECK(processor.media_ == 2 && !processor.mono_ && processor.write_ptr_ == 12345);
+  CHECK(Restored(9));
   const int bad[][3] = {
     { 4, 0, 0 }, { 255, 0, 0 }, { 0, 2, 0 }, { 3, 0, -1 },
     { 3, 0, 192000 }, { 3, 1, 384000 }, { 0, 1, 768000 }, { 1, 0, 256000 },
@@ -165,30 +193,31 @@ void TestStock() {
   for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); ++i) {
     WriteStock(bad[i][0], bad[i][1], bad[i][2], 1);
     Rig rig;
-    assert(!rig.Boot());
-    assert(processor.configured_ == 0);
+    CHECK(!rig.Boot());
+    CHECK(processor.configured_ == 0);
   }
   WriteStock(0, 1, 767999, 3);
   Rig edge;
-  assert(edge.Boot() && Restored(3));
+  CHECK(edge.Boot() && Restored(3));
   printf("PASS stock backups load; out-of-range headers are refused\n");
 }
 
 void TestCorruption() {
+  test_checker.Start("TestCorruption");
   const size_t offsets[] = { 32, 32 + 12345, 32 + kAudio - 1, 4, 8, 9 };
   for (size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); ++i) {
     Wipe();
     Save(Processor::MEDIA_DIGITAL, false, 100, 5);
     kFlash[offsets[i]] ^= 1;  // Header fields stay in range: only the CRC sees it.
     Rig rig;
-    assert(!rig.Boot());
+    CHECK(!rig.Boot());
   }
   // A half-erased sector in the middle of the audio.
   Wipe();
   Save(Processor::MEDIA_DIGITAL, false, 100, 5);
   memset(kFlash + 3 * 0x20000, 255, 0x10000);
   Rig rig;
-  assert(!rig.Boot());
+  CHECK(!rig.Boot());
   printf("PASS corrupted audio or header is refused\n");
 }
 
@@ -197,7 +226,7 @@ void TestCorruption() {
 // flash operations, with a half-done erase if `half`; at the next power-up,
 // either complete backup may load, never a mix. The old backup has no CRC
 // if `stock` wrote it.
-void TestPowerLoss(bool half, bool stock) {
+void CheckPowerLoss(bool half, bool stock) {
   int checked = 0, loaded[3] = { 0, 0, 0 };
   for (int budget = 0; budget <= 24010; budget += budget < 40 ? 1 :
        budget < 23960 ? 997 : 1) {
@@ -213,8 +242,8 @@ void TestPowerLoss(bool half, bool stock) {
       rig.Autosave(false);
     }
     Rig rig;
-    assert(!rig.Boot());  // Autosave off: not loaded, flag left set.
-    assert(rig.settings.state().frozen);
+    CHECK(!rig.Boot());  // Autosave off: not loaded, flag left set.
+    CHECK(rig.settings.state().frozen);
     rig.Autosave(true);
     processor.Configure(Processor::MEDIA_DIGITAL, false);
     processor.write_ptr_ = 200;
@@ -226,7 +255,7 @@ void TestPowerLoss(bool half, bool stock) {
     Rig after;
     if (after.Boot()) {
       // Every byte of one backup or the other.
-      assert((processor.write_ptr_ == 200 && Restored(2)) ||
+      CHECK((processor.write_ptr_ == 200 && Restored(2)) ||
              (processor.write_ptr_ == 100 && Restored(1)));
       ++loaded[processor.write_ptr_ / 100];
     } else {
@@ -241,6 +270,7 @@ void TestPowerLoss(bool half, bool stock) {
 }
 
 void TestFlashErrors() {
+  test_checker.Start("TestFlashErrors");
   int checked = 0;
   for (int fail = 1; fail <= 24010; fail += fail < 40 ? 1 :
        fail < 23960 ? 997 : 1) {
@@ -255,46 +285,82 @@ void TestFlashErrors() {
     if (rig.settings.state().frozen) {
       continue;  // The failure came after the backup: nothing to check.
     }
-    assert(!rig.backup.busy());
+    CHECK(!rig.backup.busy());
     Rig after;
-    assert(!after.Boot());
+    CHECK(!after.Boot());
     // Unfreezing and freezing again saves normally.
     after.backup.Process(false);
     processor.Configure(Processor::MEDIA_CLEAN_TAPE, true);
     processor.write_ptr_ = 7;
     Fill(4);
-    assert(after.Freeze());
+    CHECK(after.Freeze());
     Rig again;
-    assert(again.Boot() && Restored(4));
+    CHECK(again.Boot() && Restored(4));
     ++checked;
   }
   printf("PASS flash errors at %d points abandon the backup cleanly\n", checked);
 }
 
 void TestSettingsSaves() {
+  test_checker.Start("TestSettingsSaves");
   Wipe();
   Rig rig;
   rig.Boot();
   processor.Configure(Processor::MEDIA_DIRTY_TAPE, false);
   processor.write_ptr_ = 383999;
   Fill(6);
-  assert(rig.Freeze(1000));  // A settings save every 1000 blocks.
-  assert(rig.settings.state().frozen);
+  CHECK(rig.Freeze(1000));  // A settings save every 1000 blocks.
+  CHECK(rig.settings.state().frozen);
   Rig after;
-  assert(after.Boot() && Restored(6));
+  CHECK(after.Boot() && Restored(6));
   printf("PASS settings saves during a backup\n");
 }
 
-int main(int argc, char**) {
-  assert(argc == 2);
+void TestFreezeDeadlineAndCancel() {
+  test_checker.Start("TestFreezeDeadlineAndCancel");
+  Wipe();
+  Rig r;
+  CHECK(!r.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(17);
+  r.backup.Process(false);
+  const int ops = test_ops;
+  for (int i = 1; i < 10000; ++i) {
+    system_clock.Tick();
+    r.backup.Process(true);
+    CHECK(!r.backup.busy() && test_ops == ops);
+  }
+  system_clock.Tick();
+  r.backup.Process(true);
+  CHECK(r.backup.busy() && test_ops == ops + 1);
+  for (int i = 0; i < 10; ++i) r.backup.Process(true);
+  CHECK(r.backup.remaining_bytes_ > 0 && r.backup.write_offset_ > 0);
+  r.backup.Process(false);
+  CHECK(!r.backup.busy() && kHeader->tag == 0xffffffff);
+  for (size_t i = 0; i < sizeof(Header); ++i) CHECK(kFlash[i] == 255);
+  CHECK(!r.settings.state().frozen);
+  CHECK(r.Freeze());
+  CHECK(kHeader->tag == 0x5a5a5246 && r.settings.state().frozen);
+  Rig after;
+  CHECK(after.Boot() && Restored(17));
+}
+
+void TestPowerLoss() {
+  test_checker.Start("TestPowerLoss");
+  for (int i = 0; i < 4; ++i) CheckPowerLoss(i & 1, i & 2);
+}
+
+int main() {
   setvbuf(stdout, NULL, _IONBF, 0);
-  assert(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
+  if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
-      -1, 0) == reinterpret_cast<void*>(0x08100000));
+      -1, 0) == reinterpret_cast<void*>(0x08100000))) return 1;
+  TestFreezeDeadlineAndCancel();
   TestFormat();
   TestStock();
   TestCorruption();
-  for (int i = 0; i < 4; ++i) TestPowerLoss(i & 1, i & 2);
+  TestPowerLoss();
   TestFlashErrors();
   TestSettingsSaves();
+  return test_checker.failures() ? 1 : 0;
 }

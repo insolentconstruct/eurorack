@@ -45,3 +45,7 @@ build
 *_BETA.sch
 *_beta.brd
 *_BETA.brd
+
+# Host test programs (beads/test/*.mk)
+/*_test
+/*_test_advanced

@@ -50,17 +50,10 @@ jobs:
           base=$(git merge-base HEAD "$target")
           git diff --check "$base" HEAD -- ':(glob)beads/**/*.c' ':(glob)beads/**/*.cc' ':(glob)beads/**/*.cpp' ':(glob)beads/**/*.cxx' ':(glob)beads/**/*.h' ':(glob)beads/**/*.hpp' ':(glob)beads/**/*.hxx'
           BASE="$base" python3 beads/build/tools/check_added_tabs.py
-      - name: Run available host test scripts
+      - name: Run host tests
         run: |
-          shopt -s nullglob
-          scripts=(beads/test/*.sh beads/tests/*.sh)
-          if (( ${#scripts[@]} == 0 )); then
-            echo 'No host test scripts found; skipping.'
-          fi
-          if (( ${#scripts[@]} > 0 )); then
-            git submodule update --init stmlib
-          fi
-          for script in "${scripts[@]}"; do
-            echo "Running $script"
-            bash "$script" "$(mktemp -d)"
+          git submodule update --init stmlib
+          for makefile in beads/test/*.mk; do
+            echo "Running $makefile"
+            make -f "$makefile" test
           done
