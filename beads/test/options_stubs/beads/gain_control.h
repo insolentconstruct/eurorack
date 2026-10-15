@@ -30,6 +30,7 @@
 #define BEADS_TEST_OPTIONS_STUBS_BEADS_GAIN_CONTROL_H_
 
 namespace beads {
+
 class GainControl {
  public:
   GainControl() : adjusting_(false), meter_(128) { }
@@ -39,6 +40,7 @@ class GainControl {
   bool adjusting() const { return adjusting_; }
   int vu_meter() const { return meter_; }
 };
+
 }  // namespace beads
 
 #endif  // BEADS_TEST_OPTIONS_STUBS_BEADS_GAIN_CONTROL_H_

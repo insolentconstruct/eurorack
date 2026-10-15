@@ -26,15 +26,19 @@
 //
 // Final wavetable interpolation row tests.
 
-#include "beads/test/test_checker.h"
 #include <cmath>
 #include <cstring>
+
 #include "stmlib/dsp/dsp.h"
-#include "beads/resources.h"
+#include "stmlib/dsp/units.h"
+
 #include "beads/dsp/frame.h"
 #include "beads/dsp/granular_player.h"
-#include "stmlib/dsp/units.h"
+#include "beads/resources.h"
+#include "beads/test/test_checker.h"
+
 #define private public
+#include "beads/dsp/synth.h"
 #include "beads/dsp/wavetable_grain.h"
 #include "beads/dsp/wavetable_voice.h"
 #undef private
@@ -56,26 +60,26 @@ void TestFinalBankRendering() {
     for (int n = 0; n < 4096; ++n) {
       float phase = (float(n) + 0.37f) / 4096.0f;
       CHECK(std::isfinite(grain.ReadSample(phase)));
-      FloatFrame out = {};
+      FloatFrame out = { };
       grain.Render(&out);
       CHECK(std::isfinite(out.l) && std::isfinite(out.r));
     }
     WavetableVoice voice;
     voice.Init(48000);
-    Parameters p = {};
+    Parameters p = { };
     p.time.base = positions[i];
     bool freeze = false;
     for (int n = 0; n < 8192; ++n) {
-      FloatFrame out = {};
+      FloatFrame out = { };
       voice.Render(bank, 16, &freeze, p, &out, 1);
       CHECK(std::isfinite(out.l) && std::isfinite(out.r));
       CHECK(fabsf(out.l) <= 1.0f && out.l == out.r);
     }
     CHECK(voice.bank_ == bank && voice.wave_lp_ > 0.998f);
-    // Force the exact endpoint; the smoother otherwise approaches it from below.
+    // Force the endpoint; the smoother approaches it from below.
     voice.wave_lp_ = 1.0f;
     p.time.base = 1.0f;
-    FloatFrame out = {};
+    FloatFrame out = { };
     voice.Render(bank, 16, &freeze, p, &out, 1);
     CHECK(std::isfinite(out.l) && std::isfinite(out.r));
   }
@@ -123,19 +127,62 @@ void TestFmBankRatios() {
       voice.Init(48000);
       voice.bank_ = bank + 8;
       voice.wave_lp_ = float(wave) / 15.0f;
-      Parameters parameters = {};
+      Parameters parameters = { };
       parameters.time.base = voice.wave_lp_;
       bool freeze = false;
-      FloatFrame out = {};
+      FloatFrame out = { };
       voice.Render(bank + 8, 16, &freeze, parameters, &out, 1);
       CHECK(std::isfinite(out.l) && out.l == out.r);
     }
   }
 }
 
+void TestSynthBankSelection() {
+  test_checker.Start("TestSynthBankSelection");
+  static uint16_t reverb_buffer[32768];
+  static Synth synth;
+  synth.Init(reverb_buffer);
+  const size_t kSize = 8;
+  stmlib::GateFlags seed[kSize] = { };
+  bool freeze[kSize] = { };
+  ModulatedParameter density = { 0.5f, 0.0f };
+  Parameters parameters = { };
+  Processor::MixParameters mix = { 0.0f, 0.0f, 0.0f, false };
+  FloatFrame out[kSize];
+  // FEEDBACK selects one of 12 banks. Moving up, bank b + 1 starts at
+  // (b + 1.048) / 12; moving down, bank b returns at (b + 0.952) / 12.
+  const int kSteps = 12000;
+  int bank = 0;
+  for (int i = 0; i <= kSteps; ++i) {
+    mix.feedback = float(i) / kSteps;
+    synth.Render(SEED_BUTTON_STATE_OFF, seed, freeze,
+        Synth::RESOLUTION_16_BIT, density, parameters, mix, out, kSize);
+    const int selected = synth.bank_quantizer_.quantized_value();
+    if (selected != bank) {
+      CHECK(selected == bank + 1);
+      CHECK(fabsf(mix.feedback * 12.0f - (bank + 1.048f)) < 0.002f);
+      bank = selected;
+    }
+  }
+  CHECK(bank == 11);
+  for (int i = kSteps; i >= 0; --i) {
+    mix.feedback = float(i) / kSteps;
+    synth.Render(SEED_BUTTON_STATE_OFF, seed, freeze,
+        Synth::RESOLUTION_16_BIT, density, parameters, mix, out, kSize);
+    const int selected = synth.bank_quantizer_.quantized_value();
+    if (selected != bank) {
+      CHECK(selected == bank - 1);
+      CHECK(fabsf(mix.feedback * 12.0f - (selected + 0.952f)) < 0.002f);
+      bank = selected;
+    }
+  }
+  CHECK(bank == 0);
+}
+
 int main() {
   TestFmBankRatios();
   TestFinalBankRendering();
   TestGuardRow();
+  TestSynthBankSelection();
   return test_checker.failures() ? 1 : 0;
 }

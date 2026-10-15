@@ -27,8 +27,9 @@
 // Input gain DSP tests.
 
 #include <cmath>
-#include "beads/test/test_checker.h"
+
 #include "beads/gain_control.h"
+#include "beads/test/test_checker.h"
 
 using namespace beads;
 
@@ -123,8 +124,12 @@ void TestGainNoiseAmplification() {
     }
     control.Process(true, 0, false, false, in, out, 24);
     for (int i = 0; i < 24; ++i) {
-      if (block < 100) early += out[i].l * out[i].l;
-      if (block >= 15900) late += out[i].l * out[i].l;
+      if (block < 100) {
+        early += out[i].l * out[i].l;
+      }
+      if (block >= 15900) {
+        late += out[i].l * out[i].l;
+      }
     }
   }
   CHECK(late > early * 100.0);

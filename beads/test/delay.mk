@@ -5,7 +5,7 @@ VPATH          = $(PACKAGES)
 TARGET         = delay_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
-CC_FILES       = delay_test.cc \
+CC_FILES       = 		delay_test.cc \
 		delay_clock.cc \
 		resources.cc \
 		units.cc \
@@ -21,13 +21,18 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedef -Wno-unused-local-typedefs -I. -fsanitize=address,undefined,integer-divide-by-zero -fno-sanitize-recover=all -fno-pie $< -o $@
+	g++ -c -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedef \
+		-Wno-unused-local-typedefs -I. \
+		-fsanitize=address,undefined,integer-divide-by-zero \
+		-fno-sanitize-recover=all -fno-pie $< -o $@
 
 $(BUILD_DIR)%.d: %.cc
-	g++ -MM -DTEST -I. -fsanitize=address,undefined,integer-divide-by-zero -fno-sanitize-recover=all -fno-pie $< -MF $@ -MT $(@:.d=.o)
+	g++ -MM -DTEST -I. -fsanitize=address,undefined,integer-divide-by-zero \
+		-fno-sanitize-recover=all -fno-pie $< -MF $@ -MT $(@:.d=.o)
 
 delay_test:  $(OBJS)
-	g++ -o $(TARGET) $(OBJS) -fsanitize=address,undefined,integer-divide-by-zero -no-pie
+	g++ -o $(TARGET) $(OBJS) \
+		-fsanitize=address,undefined,integer-divide-by-zero -no-pie
 
 depends:  $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)

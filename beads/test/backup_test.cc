@@ -26,24 +26,33 @@
 //
 // Frozen buffer backup tests.
 
-#include "beads/test/test_checker.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <sys/mman.h>
+
+#include "stmlib/system/system_clock.h"
+
+#include "beads/test/test_checker.h"
+
 #define private public
 #include "beads/background_buffer_backup.h"
 #include "beads/settings.h"
 #undef private
+
 #include "beads/dsp/processor.h"
-#include "stmlib/system/system_clock.h"
 
 bool test_locked = true;
 int test_budget = -1;
 int test_fail_at = 0;
 int test_ops = 0;
 bool test_half_erase = false;
-namespace stmlib { SystemClock system_clock; }
+namespace stmlib {
+
+SystemClock system_clock;
+
+}  // namespace stmlib
+
 using namespace beads;
 using namespace stmlib;
 
@@ -69,18 +78,24 @@ uint32_t Crc(uint32_t crc, const void* data, size_t size) {
   crc = ~crc;
   while (size--) {
     crc ^= *p++;
-    for (int i = 0; i < 8; ++i) crc = crc & 1 ? (crc >> 1) ^ 0xedb88320 : crc >> 1;
+    for (int i = 0; i < 8; ++i) {
+      crc = crc & 1 ? (crc >> 1) ^ 0xedb88320 : crc >> 1;
+    }
   }
   return ~crc;
 }
 
 void Fill(uint8_t seed) {
-  for (size_t i = 0; i < kAudio; ++i) processor.data_[i] = uint8_t(i * 7 + seed + (i >> 9));
+  for (size_t i = 0; i < kAudio; ++i) {
+    processor.data_[i] = uint8_t(i * 7 + seed + (i >> 9));
+  }
 }
 
 bool Restored(uint8_t seed) {
   for (size_t i = 0; i < kAudio; ++i) {
-    if (processor.data_[i] != uint8_t(i * 7 + seed + (i >> 9))) return false;
+    if (processor.data_[i] != uint8_t(i * 7 + seed + (i >> 9))) {
+      return false;
+    }
   }
   return true;
 }
@@ -107,11 +122,17 @@ struct Rig {
   // Freeze for 10 s, then run the main loop until the backup ends or the
   // power goes. Returns false on power loss.
   bool Freeze(int save_every = 0) {
-    for (int i = 0; i < 10000; ++i) system_clock.Tick();
+    for (int i = 0; i < 10000; ++i) {
+      system_clock.Tick();
+    }
     backup.Process(true);
     for (int i = 1; backup.busy(); ++i) {
-      if (test_budget == 0) return false;
-      if (save_every && i % save_every == 0) settings.SaveState();
+      if (test_budget == 0) {
+        return false;
+      }
+      if (save_every && i % save_every == 0) {
+        settings.SaveState();
+      }
       backup.Process(true);
     }
     return test_budget != 0;
@@ -172,7 +193,9 @@ void WriteStock(int media, int mono, int write_ptr, uint8_t seed) {
   rig.settings.SaveState();
   Fill(seed);
   memcpy(kFlash + 32, processor.data_, kAudio);
-  for (int i = 10; i < 32; ++i) kFlash[i] = uint8_t(0xa5 ^ (i * 29));
+  for (int i = 10; i < 32; ++i) {
+    kFlash[i] = uint8_t(0xa5 ^ (i * 29));
+  }
   kHeader->tag = 0x5a5a5246;
   kHeader->write_ptr = write_ptr;
   kHeader->media = media;
@@ -184,7 +207,8 @@ void TestStock() {
   WriteStock(2, 0, 12345, 9);
   Rig rig;
   CHECK(rig.Boot());
-  CHECK(processor.media_ == 2 && !processor.mono_ && processor.write_ptr_ == 12345);
+  CHECK(processor.media_ == 2 && !processor.mono_ &&
+      processor.write_ptr_ == 12345);
   CHECK(Restored(9));
   const int bad[][3] = {
     { 4, 0, 0 }, { 255, 0, 0 }, { 0, 2, 0 }, { 3, 0, -1 },
@@ -208,7 +232,8 @@ void TestCorruption() {
   for (size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); ++i) {
     Wipe();
     Save(Processor::MEDIA_DIGITAL, false, 100, 5);
-    kFlash[offsets[i]] ^= 1;  // Header fields stay in range: only the CRC sees it.
+    // Header fields stay in range; only the CRC sees the change.
+    kFlash[offsets[i]] ^= 1;
     Rig rig;
     CHECK(!rig.Boot());
   }
@@ -298,7 +323,8 @@ void TestFlashErrors() {
     CHECK(again.Boot() && Restored(4));
     ++checked;
   }
-  printf("PASS flash errors at %d points abandon the backup cleanly\n", checked);
+  printf("PASS flash errors at %d points abandon the backup cleanly\n",
+      checked);
 }
 
 void TestSettingsSaves() {
@@ -333,11 +359,15 @@ void TestFreezeDeadlineAndCancel() {
   system_clock.Tick();
   r.backup.Process(true);
   CHECK(r.backup.busy() && test_ops == ops + 1);
-  for (int i = 0; i < 10; ++i) r.backup.Process(true);
+  for (int i = 0; i < 10; ++i) {
+    r.backup.Process(true);
+  }
   CHECK(r.backup.remaining_bytes_ > 0 && r.backup.write_offset_ > 0);
   r.backup.Process(false);
   CHECK(!r.backup.busy() && kHeader->tag == 0xffffffff);
-  for (size_t i = 0; i < sizeof(Header); ++i) CHECK(kFlash[i] == 255);
+  for (size_t i = 0; i < sizeof(Header); ++i) {
+    CHECK(kFlash[i] == 255);
+  }
   CHECK(!r.settings.state().frozen);
   CHECK(r.Freeze());
   CHECK(kHeader->tag == 0x5a5a5246 && r.settings.state().frozen);
@@ -347,14 +377,18 @@ void TestFreezeDeadlineAndCancel() {
 
 void TestPowerLoss() {
   test_checker.Start("TestPowerLoss");
-  for (int i = 0; i < 4; ++i) CheckPowerLoss(i & 1, i & 2);
+  for (int i = 0; i < 4; ++i) {
+    CheckPowerLoss(i & 1, i & 2);
+  }
 }
 
 int main() {
   setvbuf(stdout, NULL, _IONBF, 0);
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
-      -1, 0) == reinterpret_cast<void*>(0x08100000))) return 1;
+      -1, 0) == reinterpret_cast<void*>(0x08100000))) {
+    return 1;
+  }
   TestFreezeDeadlineAndCancel();
   TestFormat();
   TestStock();

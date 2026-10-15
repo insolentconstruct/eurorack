@@ -28,29 +28,44 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
-#include "beads/test/test_checker.h"
-#include <cstddef>
 #include <sys/mman.h>
-#define private public
-#include "beads/ui.h"
-#include "beads/settings.h"
-#undef private
-#include "beads/calibrator.h"
-#include "beads/background_buffer_backup.h"
-#include "beads/gain_control.h"
-#include "beads/dsp/limiter.h"
 
-bool test_down[4] = {};
+#include "beads/test/test_checker.h"
+
+#define private public
+#include "beads/settings.h"
+#include "beads/ui.h"
+#undef private
+
+#include "beads/background_buffer_backup.h"
+#include "beads/calibrator.h"
+#include "beads/dsp/limiter.h"
+#include "beads/gain_control.h"
+
+bool test_down[4] = { };
 unsigned test_writes = 0;
-namespace stmlib { SystemClock system_clock; }
+namespace stmlib {
+
+SystemClock system_clock;
+
+}  // namespace stmlib
+
 namespace beads {
-bool Leds::Init() { Clear(); return true; }
+
+bool Leds::Init() {
+  Clear();
+  return true;
+}
 void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
 void Leds::Write() { }
-}
+
+}  // namespace beads
+
 using namespace beads;
+
 static_assert(sizeof(State) == 24, "STAT size");
 static_assert(offsetof(State, media) == 0, "media");
 static_assert(offsetof(State, assignable_cv_destination) == 1, "assignment");
@@ -68,10 +83,12 @@ struct Rig {
   Calibrator calibration;
   BackgroundBufferBackup backup;
   Ui ui;
-  float pot = 0.5f;
-  float feedback = 0.5f;
-  float reverb = 0.5f;
-  Rig(bool startup_assign = false) {
+  float pot;
+  float feedback;
+  float reverb;
+
+  Rig(bool startup_assign = false)
+      : pot(0.5f), feedback(0.5f), reverb(0.5f) {
     std::fill(test_down, test_down + 4, false);
     test_down[SWITCH_ASSIGN] = startup_assign;
     memset(reinterpret_cast<void*>(0x081e0000), 255, 0x20000);
@@ -85,64 +102,97 @@ struct Rig {
       ui.ProcessPot(Ui::MIX_PARAMETER_DRY_WET, pot);
       ui.ProcessPot(Ui::MIX_PARAMETER_REVERB, reverb);
       ui.Poll();
-      if (events) ui.DoEvents();
+      if (events) {
+        ui.DoEvents();
+      }
     }
   }
-  void Down(Switch s) { test_down[s] = true; Tick(8); }
-  void Up(Switch s) { test_down[s] = false; Tick(8); }
+  void Down(Switch s) {
+    test_down[s] = true;
+    Tick(8);
+  }
+  void Up(Switch s) {
+    test_down[s] = false;
+    Tick(8);
+  }
   void Enter() {
-    Down(SWITCH_ASSIGN); Tick(2999);
+    Down(SWITCH_ASSIGN);
+    Tick(2999);
     CHECK(ui.options_.stage() == Options::WAIT_RELEASE);
     Up(SWITCH_ASSIGN);
     CHECK(ui.options_.stage() == Options::EDITING);
   }
-  void Tap() { Down(SWITCH_ASSIGN); Up(SWITCH_ASSIGN); }
+  void Tap() {
+    Down(SWITCH_ASSIGN);
+    Up(SWITCH_ASSIGN);
+  }
 };
 
 void TestUi() {
   test_checker.Start("TestUi");
   Rig r;
   unsigned writes = test_writes;
-  r.Down(SWITCH_ASSIGN); r.Tick(2992);
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(2992);
   CHECK(!r.ui.options_.active());
-  r.Tick(8); r.Up(SWITCH_ASSIGN);
+  r.Tick(8);
+  r.Up(SWITCH_ASSIGN);
   CHECK(r.ui.options_.stage() == Options::EDITING);
   // Deliberate movement below qualification refreshes inactivity only.
-  r.Tick(4000); r.pot = .54f; r.Tick(1500);
+  r.Tick(4000);
+  r.pot = .54f;
+  r.Tick(1500);
   CHECK(r.ui.options_.stage() == Options::EDITING);
   CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.pot = .9f; r.Tick(10);
+  r.pot = .9f;
+  r.Tick(10);
   CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  r.settings.SaveState(); ++writes; // Preview must not leak into unrelated saves.
+  r.settings.SaveState();
+  ++writes;  // Preview must not leak into unrelated saves.
   CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.Down(SWITCH_ASSIGN); r.Tick(3000, false);
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000, false);
   CHECK(r.ui.options_.commit_requested());
   CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.ui.DoEvents(); r.Up(SWITCH_ASSIGN);
+  r.ui.DoEvents();
+  r.Up(SWITCH_ASSIGN);
   CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
   CHECK(test_writes == writes + 1);
-  r.Tick(30); r.Enter(); r.pot = .1f; r.Tick(10); r.Tick(5000);
+  r.Tick(30);
+  r.Enter();
+  r.pot = .1f;
+  r.Tick(10);
+  r.Tick(5000);
   CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
   CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  CHECK(test_writes == writes + 2); // Timeout saves a changed value.
-  r.Tick(30); r.Enter(); r.Tick(5010);
+  CHECK(test_writes == writes + 2);  // Timeout saves a changed value.
+  r.Tick(30);
+  r.Enter();
+  r.Tick(5010);
   CHECK(!r.ui.options_.active());
-  CHECK(test_writes == writes + 2); // Timeout without a change writes nothing.
-  r.Tick(30); r.Enter();
-  CHECK(r.ui.options_.page() == kLimiterPage); // Opens on dry/wet.
+  CHECK(test_writes == writes + 2);  // Timeout without a change writes nothing.
+  r.Tick(30);
+  r.Enter();
+  CHECK(r.ui.options_.page() == kLimiterPage);  // Opens on dry/wet.
   r.Tap();
   CHECK(r.ui.options_.page() == 2);
-  r.pot = .9f; r.Tick(10);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK); // Reserved.
-  r.Tap(); r.Tap();
+  r.pot = .9f;
+  r.Tick(10);
+  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);  // Reserved.
+  r.Tap();
+  r.Tap();
   CHECK(r.ui.options_.page() == kLimiterPage);
-  r.pot = .5f; r.Tick(10);
+  r.pot = .5f;
+  r.Tick(10);
   CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
   r.Down(SWITCH_MEDIA);
-  CHECK(r.calibration.starts == 0); // Active page consumes stock chords.
-  Rig startup(true); startup.Tick(3500);
+  CHECK(r.calibration.starts == 0);  // Active page consumes stock chords.
+  Rig startup(true);
+  startup.Tick(3500);
   CHECK(!startup.ui.options_.active());
-  Rig chord; chord.Down(SWITCH_ASSIGN); chord.Down(SWITCH_MEDIA);
+  Rig chord;
+  chord.Down(SWITCH_ASSIGN);
+  chord.Down(SWITCH_MEDIA);
   CHECK(chord.calibration.starts == 1);
   puts("gesture/preview/commit: PASS");
 }
@@ -150,35 +200,40 @@ void TestUi() {
 static Rig* interrupted_rig;
 static bool interrupt_session;
 namespace beads {
+
 void TestOptionsDispatchInterrupt() {
   if (interrupted_rig) {
     Rig* r = interrupted_rig;
-    interrupted_rig = nullptr;
+    interrupted_rig = NULL;
     if (interrupt_session) {
-      test_down[SWITCH_ASSIGN] = true; r->Tick(3010, false);
+      test_down[SWITCH_ASSIGN] = true;
+      r->Tick(3010, false);
       CHECK(r->ui.options_.active());
-      test_down[SWITCH_ASSIGN] = false; r->Tick(5010, false);
+      test_down[SWITCH_ASSIGN] = false;
+      r->Tick(5010, false);
     } else {
-      r->Tick(1, false); // After flush check, before options_.active().
+      r->Tick(1, false);  // After flush check, before options_.active().
     }
   }
 }
-}
+
+}  // namespace beads
+
 void TestQueueRace() {
   test_checker.Start("TestQueueRace");
   Rig r;
   r.Enter();
-  r.Down(SWITCH_MEDIA); // Cancellation enters DRAIN with MEDIA down.
+  r.Down(SWITCH_MEDIA);  // Cancellation enters DRAIN with MEDIA down.
   CHECK(r.ui.options_.stage() == Options::DRAIN);
   test_down[SWITCH_MEDIA] = false;
-  r.Tick(7, false); // Debounce 0x7f: release; next tick 0xff exits DRAIN.
+  r.Tick(7, false);  // Debounce 0x7f: release; next tick 0xff exits DRAIN.
   CHECK(r.ui.options_.stage() == Options::DRAIN);
   uint8_t media = r.settings.state().media;
   unsigned writes = test_writes;
   interrupted_rig = &r;
   r.ui.DoEvents();
   if (interrupted_rig) { // Fixed ISR did not queue a release to dispatch.
-    interrupted_rig = nullptr;
+    interrupted_rig = NULL;
     r.Tick(1, false);
   }
   printf("DRAIN release interleaving: media %u -> %u, saves %u\n",
@@ -194,7 +249,8 @@ void TestQueueRace() {
   CHECK(r.ui.queue_.available() == 1);
   r.Tick(1, false);
   r.ui.queue_.PullEvent();
-  CHECK(r.ui.queue_.available() == 0); // An ISR Flush would create 15 phantoms.
+  // An ISR Flush would create 15 phantom events.
+  CHECK(r.ui.queue_.available() == 0);
 
   // Pre-entry events remain pending through an entire session without DoEvents.
   Rig delayed;
@@ -203,14 +259,15 @@ void TestQueueRace() {
   delayed.Tick(3010, false);
   CHECK(delayed.ui.options_.active());
   test_down[SWITCH_ASSIGN] = false;
-  delayed.Tick(5010, false); // Release, inactivity cancellation, drain exit.
+  delayed.Tick(5010, false);  // Release, inactivity cancellation, drain exit.
   CHECK(!delayed.ui.options_.active());
-  media = delayed.settings.state().media; writes = test_writes;
+  media = delayed.settings.state().media;
+  writes = test_writes;
   delayed.ui.DoEvents();
   CHECK(delayed.ui.queue_.available() == 0);
   CHECK(delayed.settings.state().media == media && test_writes == writes);
 
-  delayed.Tick(30); // Re-arm after the preceding drain exit.
+  delayed.Tick(30);  // Re-arm after the preceding drain exit.
   // An event already pulled when entry/exit preempts main is rejected too.
   delayed.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
   interrupt_session = true;
@@ -219,7 +276,8 @@ void TestQueueRace() {
   interrupt_session = false;
   CHECK(!interrupted_rig && !delayed.ui.options_.active());
   CHECK(delayed.settings.state().media == media && test_writes == writes);
-  delayed.Down(SWITCH_MEDIA); delayed.Up(SWITCH_MEDIA);
+  delayed.Down(SWITCH_MEDIA);
+  delayed.Up(SWITCH_MEDIA);
   CHECK(delayed.settings.state().media != media && test_writes == writes + 1);
   puts("queue interrupt/pre-entry/normal dispatch: PASS");
 }
@@ -230,7 +288,8 @@ void TestStorage() {
   memset(reinterpret_cast<void*>(0x081e0000), 255, 0x20000);
   CHECK(!s.Init(false));
   CHECK(s.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  Settings old_record; CHECK(old_record.Init(false));
+  Settings old_record;
+  CHECK(old_record.Init(false));
   CHECK(old_record.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
   for (int i = 0; i < 256; ++i) {
     s.mutable_state()->padding[0] = i;
@@ -238,19 +297,23 @@ void TestStorage() {
         i == 0xa2 ? OUTPUT_LIMITER_OFF : OUTPUT_LIMITER_STOCK));
   }
   for (int i = 0; i < 3; ++i) {
-    s.set_output_limiter_mode(OutputLimiterMode(i)); s.SaveState();
-    Settings loaded; CHECK(loaded.Init(false));
+    s.set_output_limiter_mode(OutputLimiterMode(i));
+    s.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
     CHECK(loaded.output_limiter_mode() == i);
     CHECK(loaded.state().media == 3);
   }
-  // The exact legacy layout uses the same tag and size and reads the new record.
-  State legacy_state = {};
-  PersistentData legacy_calibration = {};
+  // The legacy layout reads the new record with the same tag and size.
+  State legacy_state = { };
+  PersistentData legacy_calibration = { };
   stmlib::ChunkStorage<15, PersistentData, State> legacy;
   CHECK(legacy.Init(&legacy_calibration, &legacy_state));
   CHECK(legacy_state.media == 3 && legacy_state.padding[0] == 0xa2);
-  memset(legacy_state.padding, 0, sizeof(legacy_state.padding)); legacy.SaveState();
-  Settings downgrade; CHECK(downgrade.Init(false));
+  memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
+  legacy.SaveState();
+  Settings downgrade;
+  CHECK(downgrade.Init(false));
   CHECK(downgrade.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
   puts("STAT persistence/compatibility: PASS");
 }
@@ -264,7 +327,8 @@ struct StockLimiter {
     SLOPE(peak, p, .1f, decay);
     SLOPE(lp, peak, .5f, decay);
     float gain = lp <= .9f ? 1.0f : .9f / lp;
-    x->l *= gain; x->r *= gain;
+    x->l *= gain;
+    x->r *= gain;
   }
 };
 void TestDsp() {
@@ -272,7 +336,9 @@ void TestDsp() {
   for (float sr : {24000.0f, 32000.0f, 48000.0f}) {
     Limiter stock, fast, off;
     float decay = 1.0f / (sr * 6.0f);
-    stock.Init(decay, .9f); fast.Init(decay, .9f); off.Init(decay, .9f);
+    stock.Init(decay, .9f);
+    fast.Init(decay, .9f);
+    off.Init(decay, .9f);
     StockLimiter reference(decay);
     for (int i = 0; i < 4096; ++i) {
       FloatFrame x = {sinf(i * .17f) * 4.0f, cosf(i * .13f) * 2.0f};
@@ -289,7 +355,9 @@ void TestDsp() {
       FloatFrame x = {.1f, -.1f}, y = x;
       stock.ProcessOutput(&x, 1, OUTPUT_LIMITER_STOCK, sr);
       fast.ProcessOutput(&y, 1, OUTPUT_LIMITER_FAST, sr);
-      if (i == int(sr) - 1) CHECK(y.l > x.l && y.l >= .099f);
+      if (i == int(sr) - 1) {
+        CHECK(y.l > x.l && y.l >= .099f);
+      }
     }
   }
   puts("DSP mode dispatch: PASS");
@@ -302,7 +370,8 @@ void TestStockAssignRouting() {
     r.Tap();
     CHECK(r.settings.state().assignable_cv_destination == i % 3);
   }
-  r.Tick(30); r.Enter();
+  r.Tick(30);
+  r.Enter();
   for (int i = 0; i < 4; ++i) {
     r.Tap();
     CHECK(r.settings.state().assignable_cv_destination == 0);
@@ -316,9 +385,15 @@ void TestStockAssignAmounts() {
     const State before = r.settings.state();
     unsigned writes = test_writes;
     r.Down(SWITCH_ASSIGN);
-    if (i == 0) r.feedback = 0.25f;
-    if (i == 1) r.pot = 0.75f;
-    if (i == 2) r.reverb = 0.125f;
+    if (i == 0) {
+      r.feedback = 0.25f;
+    }
+    if (i == 1) {
+      r.pot = 0.75f;
+    }
+    if (i == 2) {
+      r.reverb = 0.125f;
+    }
     r.Tick(3100);
     CHECK(!r.ui.options_.active());
     const int expected[] = { 64, 192, 32 };
@@ -343,7 +418,8 @@ void TestAutosaveChordAndDisplay() {
   for (int i = 0; i < 2; ++i) {
     unsigned writes = test_writes;
     bool before = r.settings.state().disable_autosave;
-    r.Down(SWITCH_ASSIGN); r.Down(SWITCH_FREEZE);
+    r.Down(SWITCH_ASSIGN);
+    r.Down(SWITCH_FREEZE);
     r.Tick(200);
     CHECK(r.settings.state().disable_autosave == !before);
     CHECK(test_writes == writes + 1);
@@ -354,7 +430,8 @@ void TestAutosaveChordAndDisplay() {
     r.Tick(4300);
     CHECK(r.settings.state().disable_autosave == !before);
     CHECK(test_writes == writes + 1);
-    r.Up(SWITCH_FREEZE); r.Up(SWITCH_ASSIGN);
+    r.Up(SWITCH_FREEZE);
+    r.Up(SWITCH_ASSIGN);
     CHECK(test_writes == writes + 1);
     CHECK(!r.ui.freeze_button_state_);
     r.Tick(1100);
@@ -366,19 +443,24 @@ void TestSeedLatchGestures() {
   Rig r;
   r.Down(SWITCH_SEED);
   uint32_t start = r.ui.press_time_[SWITCH_SEED];
-  while (stmlib::system_clock.milliseconds() - start < 3999) r.Tick(1);
+  while (stmlib::system_clock.milliseconds() - start < 3999) {
+    r.Tick(1);
+  }
   CHECK(!r.ui.seed_button_locked_);
   r.Tick(1);
   CHECK(r.ui.seed_button_locked_ && !r.ui.seed_button_state_);
   r.Up(SWITCH_SEED);
   CHECK(r.ui.seed_button_locked_);
-  r.Down(SWITCH_SEED); r.Up(SWITCH_SEED);
+  r.Down(SWITCH_SEED);
+  r.Up(SWITCH_SEED);
   CHECK(!r.ui.seed_button_locked_ && !r.ui.seed_button_state_);
-  r.Down(SWITCH_SEED); r.Down(SWITCH_FREEZE);
+  r.Down(SWITCH_SEED);
+  r.Down(SWITCH_FREEZE);
   CHECK(r.ui.seed_button_locked_ && !r.ui.seed_button_state_);
   CHECK(r.ui.ignore_release_[SWITCH_SEED]);
   CHECK(r.ui.ignore_release_[SWITCH_FREEZE]);
-  r.Up(SWITCH_SEED); r.Up(SWITCH_FREEZE);
+  r.Up(SWITCH_SEED);
+  r.Up(SWITCH_FREEZE);
   CHECK(r.ui.seed_button_locked_ && !r.ui.freeze_button_state_);
 }
 
@@ -396,7 +478,9 @@ void TestGainHoldThresholdAndReload() {
   media = r.settings.state().media;
   r.Down(SWITCH_MEDIA);
   uint32_t start = r.ui.press_time_[SWITCH_MEDIA];
-  while (stmlib::system_clock.milliseconds() - start < 1499) r.Tick(1);
+  while (stmlib::system_clock.milliseconds() - start < 1499) {
+    r.Tick(1);
+  }
   CHECK(r.settings.state().gain == 123 && test_writes == writes);
   r.Tick(1);
   CHECK(r.settings.state().gain == 0 && test_writes == writes + 1);
@@ -417,9 +501,11 @@ void TestBackupLedAndRestore() {
   r.backup.busy_ = false;
   r.Tick(1);
   CHECK(r.ui.leds_.intensity_[LED_FREEZE] == 255);
-  r.Down(SWITCH_ASSIGN); r.Down(SWITCH_FREEZE);
+  r.Down(SWITCH_ASSIGN);
+  r.Down(SWITCH_FREEZE);
   CHECK(r.ui.leds_.intensity_[LED_FREEZE] == 16);
-  r.Up(SWITCH_FREEZE); r.Up(SWITCH_ASSIGN);
+  r.Up(SWITCH_FREEZE);
+  r.Up(SWITCH_ASSIGN);
   r.Tick(1100);
   CHECK(r.ui.mode_ == Ui::MODE_NORMAL);
   CHECK(r.ui.leds_.intensity_[LED_FREEZE] == 255);
@@ -481,12 +567,16 @@ void TestLimiterLinkedGainAndModeSwitch() {
     // The detector cap does not bound the output to the audio range.
     CHECK(fabsf(x.l) > 1.0f && fabsf(x.l) <= fabsf(input));
     CHECK(x.r == -x.l * 0.25f);
-    if (mode == OUTPUT_LIMITER_OFF) CHECK(x.l == input);
+    if (mode == OUTPUT_LIMITER_OFF) {
+      CHECK(x.l == input);
+    }
     FloatFrame small = { 0.1f, -0.025f };
     limiter.ProcessOutput(&small, 1, mode, 48000.0f);
     CHECK(std::isfinite(small.l) && std::isfinite(small.r));
     CHECK(fabsf(small.l) <= 0.1f && small.r == -small.l * 0.25f);
-    if (mode == OUTPUT_LIMITER_OFF) CHECK(small.l == 0.1f);
+    if (mode == OUTPUT_LIMITER_OFF) {
+      CHECK(small.l == 0.1f);
+    }
   }
 }
 
@@ -615,14 +705,25 @@ void TestRecoveryPreservesCalibration() {
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
-      -1, 0) == reinterpret_cast<void*>(0x081e0000))) return 1;
-  TestQualityTapCycle(); TestManualGainGestureAndMeter();
-  TestSeedStartupLatch(); TestAssignableAmountLeds();
-  TestAgcAdjustmentBlink(); TestRecoveryPreservesCalibration();
-  TestStockAssignRouting(); TestStockAssignAmounts();
-  TestAutosaveChordAndDisplay(); TestSeedLatchGestures();
-  TestGainHoldThresholdAndReload(); TestBackupLedAndRestore();
+      -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
+    return 1;
+  }
+  TestQualityTapCycle();
+  TestManualGainGestureAndMeter();
+  TestSeedStartupLatch();
+  TestAssignableAmountLeds();
+  TestAgcAdjustmentBlink();
+  TestRecoveryPreservesCalibration();
+  TestStockAssignRouting();
+  TestStockAssignAmounts();
+  TestAutosaveChordAndDisplay();
+  TestSeedLatchGestures();
+  TestGainHoldThresholdAndReload();
+  TestBackupLedAndRestore();
   TestLimiterLinkedGainAndModeSwitch();
-  TestQueueRace(); TestStorage(); TestUi(); TestDsp();
+  TestQueueRace();
+  TestStorage();
+  TestUi();
+  TestDsp();
   return test_checker.failures() ? 1 : 0;
 }

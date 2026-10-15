@@ -5,7 +5,7 @@ VPATH          = $(PACKAGES)
 TARGET         = backup_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
-CC_FILES       = backup_test.cc \
+CC_FILES       = 		backup_test.cc \
 		background_buffer_backup.cc \
 		settings.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
@@ -19,10 +19,14 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedef -Wno-unused-local-typedefs -DSTM32H7XX -ffp-contract=off -Wno-int-to-pointer-cast -Ibeads/test/backup_stubs -I. $< -o $@
+	g++ -c -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedef \
+		-Wno-unused-local-typedefs -DSTM32H7XX -ffp-contract=off \
+		-Wno-int-to-pointer-cast -Ibeads/test/backup_stubs -I. $< -o \
+		$@
 
 $(BUILD_DIR)%.d: %.cc
-	g++ -MM -DTEST -DSTM32H7XX -ffp-contract=off -Wno-int-to-pointer-cast -Ibeads/test/backup_stubs -I. $< -MF $@ -MT $(@:.d=.o)
+	g++ -MM -DTEST -DSTM32H7XX -ffp-contract=off -Wno-int-to-pointer-cast \
+		-Ibeads/test/backup_stubs -I. $< -MF $@ -MT $(@:.d=.o)
 
 backup_test:  $(OBJS)
 	g++ -o $(TARGET) $(OBJS)

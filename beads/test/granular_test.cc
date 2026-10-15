@@ -29,7 +29,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+
 #include "beads/test/test_checker.h"
+
 #include "beads/dsp/delay_granular_player.h"
 
 // Exclude hardware declarations; exercise the real channel laws below.
@@ -37,6 +39,7 @@
 #define BEADS_DRIVERS_POTS_ADC_H_
 #define BEADS_SETTINGS_H_
 namespace beads {
+
 enum CvAdcChannel { CV_ADC_CHANNEL_LAST };
 enum PotsAdcChannel { POTS_ADC_CHANNEL_LAST };
 class Settings;
@@ -44,13 +47,21 @@ struct CvAdc {
   const uint16_t* values();
   float float_value(int) const;
 };
-struct PotsAdc { float float_value(int) const; };
-}
+struct PotsAdc {
+  float float_value(int) const;
+};
+
+}  // namespace beads
+
 #include "beads/cv_reader.h"
+
 namespace beads {
+
 PotChannel::PotChannel() { }
 PotChannel::~PotChannel() { }
-}
+
+}  // namespace beads
+
 using namespace beads;
 
 struct TaggedLine {
@@ -68,9 +79,9 @@ struct TaggedLine {
 
 void TestGrainTimeAndDirection() {
   test_checker.Start("TestGrainTimeAndDirection");
-  Parameters p = {};
+  Parameters p = { };
   p.size.base = 0.5f;
-  TriggerGenerator::Output trigger = {};
+  TriggerGenerator::Output trigger = { };
   trigger.trigger = true;
   trigger.regularity = 1.0f;
   TaggedLine line;
@@ -165,7 +176,10 @@ void TestGrainShape() {
         FloatFrame out = { 0.0f, 0.0f };
         grain.Render<HEAD_CROSSING_POLICY_STOP, false>(&line, &out);
         float envelope = out.l / (line.age / TaggedLine::MAX_DELAY);
-        if (envelope > peak) { peak = envelope; attacks[shape] = i; }
+        if (envelope > peak) {
+          peak = envelope;
+          attacks[shape] = i;
+        }
       }
       CHECK(grain.done());
     }
@@ -188,8 +202,10 @@ void TestPitchNotches() {
       }
     }
   }
-  pot.Process(0); CHECK(pot.value() == -24.0f);
-  pot.Process(65535); CHECK(fabsf(pot.value() - 24.0f) < 0.001f);
+  pot.Process(0);
+  CHECK(pot.value() == -24.0f);
+  pot.Process(65535);
+  CHECK(fabsf(pot.value() - 24.0f) < 0.001f);
 }
 
 void TestPatchedAndNoon() {
@@ -208,12 +224,19 @@ void TestPatchedAndNoon() {
       CHECK(p.value() == p.base);
     }
   }
-  p.has_cv = true; p.base = 0.0f; p.attenuverter = 1.0f;
-  p.cv = 0.0f; float rate = p.pitch_value();
-  p.cv = 12.0f; CHECK(fabsf(p.pitch_value() / rate - 2.0f) < 0.001f);
+  p.has_cv = true;
+  p.base = 0.0f;
+  p.attenuverter = 1.0f;
+  p.cv = 0.0f;
+  float rate = p.pitch_value();
+  p.cv = 12.0f;
+  CHECK(fabsf(p.pitch_value() / rate - 2.0f) < 0.001f);
   for (int sign = -1; sign <= 1; sign += 2) {
-    p.has_cv = false; p.attenuverter = float(sign); p.base = 0.0f;
-    stmlib::Random::Seed(123); rate = p.pitch_value();
+    p.has_cv = false;
+    p.attenuverter = float(sign);
+    p.base = 0.0f;
+    stmlib::Random::Seed(123);
+    rate = p.pitch_value();
     p.base = 12.0f;
     stmlib::Random::Seed(123);
     CHECK(fabsf(p.pitch_value() / rate - 2.0f) < 0.001f);
@@ -224,13 +247,17 @@ void TestPatchedRandomDepth() {
   test_checker.Start("TestPatchedRandomDepth");
   stmlib::Random::Seed(456);
   RandomizedParameter p = { 0.5f, -0.5f, -1.0f, true };
-  for (int i = 0; i < 100; ++i) CHECK(p.value() == 0.5f);
+  for (int i = 0; i < 100; ++i) {
+    CHECK(p.value() == 0.5f);
+  }
   float spread = 0.0f;
   for (int i = 1; i <= 100; ++i) {
     stmlib::Random::Seed(i);
-    p.cv = 0.25f; float small = p.value() - p.base;
+    p.cv = 0.25f;
+    float small = p.value() - p.base;
     stmlib::Random::Seed(i);
-    p.cv = 0.5f; float large = p.value() - p.base;
+    p.cv = 0.5f;
+    float large = p.value() - p.base;
     CHECK(fabsf(large - 2.0f * small) < 0.000001f);
     CHECK(fabsf(large) <= 0.25f);
     spread = std::max(spread, fabsf(large));
@@ -242,7 +269,7 @@ void TestPatchedRandomDepth() {
 void TestInternalDistributions() {
   test_checker.Start("TestInternalDistributions");
   const int kDraws = 40000;
-  int bins[10] = {};
+  int bins[10] = { };
   int centres[2] = { 0, 0 };
   for (int mode = 0; mode < 2; ++mode) {
     RandomizedParameter p = { 0.5f, mode ? -0.25f : 0.25f, 0.0f, false };
@@ -250,12 +277,18 @@ void TestInternalDistributions() {
     for (int i = 0; i < kDraws; ++i) {
       float v = p.value(NULL, 0, 1.0f, false) - p.base;
       CHECK(fabsf(v) <= (mode ? 0.75f : 0.25f));
-      if (fabsf(v) < (mode ? 0.075f : 0.025f)) ++centres[mode];
-      if (!mode) ++bins[std::min(int((v + 0.25f) * 20.0f), 9)];
+      if (fabsf(v) < (mode ? 0.075f : 0.025f)) {
+        ++centres[mode];
+      }
+      if (!mode) {
+        ++bins[std::min(int((v + 0.25f) * 20.0f), 9)];
+      }
     }
   }
   // Uniform bins expect 4000; tolerance exceeds six standard deviations.
-  for (int i = 0; i < 10; ++i) CHECK(bins[i] > 3600 && bins[i] < 4400);
+  for (int i = 0; i < 10; ++i) {
+    CHECK(bins[i] > 3600 && bins[i] < 4400);
+  }
   CHECK(centres[0] > 3600 && centres[0] < 4400);
   CHECK(centres[1] > 11000 && centres[1] < 16000);
 }
@@ -268,11 +301,15 @@ void TestAttenurandomizerLaw() {
   for (int raw = 0; raw <= 65535; raw += 257) {
     pot.Process(raw);
     CHECK(pot.value() >= previous);
-    if (raw >= 30802 && raw <= 34734) CHECK(pot.value() == 0.0f);
+    if (raw >= 30802 && raw <= 34734) {
+      CHECK(pot.value() == 0.0f);
+    }
     previous = pot.value();
   }
-  pot.Process(0); CHECK(pot.value() == -1.0f);
-  pot.Process(65535); CHECK(pot.value() > 0.999f);
+  pot.Process(0);
+  CHECK(pot.value() == -1.0f);
+  pot.Process(65535);
+  CHECK(pot.value() > 0.999f);
   pot.Process(49152);
   CHECK(fabsf(pot.value() - 0.23404255f) < 0.000001f);
 }

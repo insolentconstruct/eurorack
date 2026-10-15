@@ -27,9 +27,10 @@
 
 #include <cmath>
 
+#include "stmlib/utils/random.h"
+
 #include "beads/dsp/trigger_generator.h"
 #include "beads/test/test_checker.h"
-#include "stmlib/utils/random.h"
 
 using namespace beads;
 using namespace stmlib;
@@ -55,8 +56,12 @@ int Count(SeedButtonState state, float density, float linear_fm,
     if (o.trigger) {
       if (previous >= 0) {
         const int interval = i - previous;
-        if (interval < *shortest) *shortest = interval;
-        if (interval > *longest) *longest = interval;
+        if (interval < *shortest) {
+          *shortest = interval;
+        }
+        if (interval > *longest) {
+          *longest = interval;
+        }
       }
       previous = i;
       ++count;
@@ -158,7 +163,9 @@ void TestClockProbability() {
       TriggerGenerator::Output o;
       generator.Render(SEED_BUTTON_STATE_LOCKED, &flags, densities[j],
           0, 0, &o, 1);
-      if (o.trigger) ++accepted;
+      if (o.trigger) {
+        ++accepted;
+      }
       CHECK(!o.trigger || i % period == 0);
     }
     const float root = (densities[j] - 0.52f) * 2.15f;
@@ -206,7 +213,9 @@ void TestSeedGateEnable() {
           : SEED_BUTTON_STATE_OFF, button ? NULL : &flags,
           0, 0, 0, &o, 1);
       CHECK(active || (!o.trigger && !o.gate));
-      if (o.trigger) ++count;
+      if (o.trigger) {
+        ++count;
+      }
     }
     CHECK(count > 120);
   }
@@ -227,7 +236,9 @@ void TestManualNoonEdges() {
           0.5f, 0, 0, &o, 1);
       CHECK(o.trigger == (i % 2000 == 100));
       CHECK(o.gate == active);
-      if (o.trigger) ++count;
+      if (o.trigger) {
+        ++count;
+      }
     }
     CHECK(count == 5);
   }

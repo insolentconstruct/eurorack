@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. They cover the options page and other panel gestures, input gain, grain triggering and playback, the attenurandomizers, the frozen-buffer save, delay mode and synth mode: 69 of the 117 behaviours listed from the manual.
+- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. They cover the options page and other panel gestures, input gain, grain triggering and playback, the attenurandomizers, the frozen-buffer save, delay mode and synth mode: 70 of the 117 behaviours listed from the manual.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - an emulator comparison against the previous release found identical audio in 44 of 44 scenarios.
@@ -22,7 +22,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 | `beads/test/granular.mk` | Grain playback and attenurandomizers with sanitizers: TIME, direction, SIZE, SHAPE, the PITCH notches, patched and unpatched knob laws, random distributions and the shared random stream |
 | `beads/test/delay.mk` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5, slice changes only at slice boundaries, every clock divider ratio, and the clock's idle counter stopping at its limit; every tap reads a valid delay. Also DENSITY and its CV, the secondary tap, SEED clocking and its crossfade, TIME multipliers, SHAPE envelopes and TIME's random modulation |
 | `beads/test/backup.mk` | Frozen-buffer save format byte by byte; no save before 10 s of FREEZE and a clean cancel; stock saves load; out-of-range headers refused on every save; corrupted audio or header refused on saves carrying the CRC tag; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; settings saved during a save |
-| `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios |
+| `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios; FEEDBACK's bank selection and its hysteresis |
 
 The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail.
 
@@ -30,7 +30,7 @@ Saves without the CRC tag, including every stock save, load after the range chec
 
 ## Coverage of the manual
 
-The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 69 of them, three only in part (audio-rate FM and 1 V/octave pitch without the CV calibration, and the power-on reset without the button read at start-up).
+The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 70 of them, three only in part (audio-rate FM and 1 V/octave pitch without the CV calibration, and the power-on reset without the button read at start-up).
 
 | Area | Behaviours | Host tests | Not covered by host tests |
 |---|---:|---:|---|
@@ -42,9 +42,9 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 | Attenurandomizers | 9 | 7 | 2 need the whole firmware |
 | Mixing, output, ASSIGN | 14 | 3 | 8 need the whole firmware, 2 a module, 1 untestable |
 | Delay and slicer | 19 | 15 | 4 need the whole firmware |
-| Synth mode | 15 | 3 | 10 need the whole firmware, 1 host test still to write (bank selection), 1 untestable |
+| Synth mode | 15 | 4 | 10 need the whole firmware, 1 untestable |
 | Calibration and recovery | 3 | 1 | 1 needs the whole firmware, 1 untestable |
-| **Total** | **117** | **69** | **40 whole firmware, 3 module, 1 to write, 4 untestable** |
+| **Total** | **117** | **70** | **40 whole firmware, 3 module, 4 untestable** |
 
 - **Whole firmware:** behaviours that only show with the full audio path running, such as quality-dependent sound or synth self-play. The developers' emulator comparison exercises some of them; it is not in this repository.
 - **Module:** the left-channel crackle report, and audio and triggers summed into OUT L when OUT R is unpatched.

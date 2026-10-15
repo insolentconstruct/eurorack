@@ -48,6 +48,8 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 - Use `void TestXxx()` functions called from `main()`.
 - Print `ERROR: <test>: <condition>` and count failures; return non-zero on failure.
 - Keep compile-time layout checks and sanitizer coverage.
-- Use the options.h MIT header and a `// ---` separator with a brief description.
+- Preserve the file's licence. For new host files, use the Beads/Clouds MIT
+  header, separator and brief description. Upstream Plaits, Marbles and Stages
+  tests instead retain GPL headers without a separator; do not replace them.
 - Use one Beads-style makefile per program; run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
 - Make recipes use tabs, as in upstream test makefiles.

@@ -26,9 +26,11 @@
 //
 // Frozen delay slice tests.
 
-#include "beads/test/test_checker.h"
 #include <cstdint>
 #include <cstdio>
+
+#include "beads/test/test_checker.h"
+
 #define private public
 #include "beads/dsp/delay_controller.h"
 #undef private
@@ -93,7 +95,10 @@ void TestFrozenSliceBoundarySelection() {
     bool pending = false;
     int unchanged = 0, changed = 0;
     for (int n = 0; n < 80000; ++n) {
-      if (n == 40000) { position.base = 0.9f; pending = true; }
+      if (n == 40000) {
+        position.base = 0.9f;
+        pending = true;
+      }
       PlayHead* head[DelayController::NUM_TAPS];
       int start[DelayController::NUM_TAPS];
       int remaining[DelayController::NUM_TAPS];
@@ -109,7 +114,9 @@ void TestFrozenSliceBoundarySelection() {
       c.Render(clocked ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_LOCKED,
           clocked ? &g : NULL, &frozen, 0.25f, 0.0f, 0.0f,
           position, shape, &o, 1);
-      if (!pending || (clocked && c.clock_.retrig())) continue;
+      if (!pending || (clocked && c.clock_.retrig())) {
+        continue;
+      }
       for (int i = 0; i < DelayController::NUM_TAPS; ++i) {
         if (remaining[i] > 0) {
           CHECK(head[i]->start_ == start[i]);
@@ -127,11 +134,14 @@ void TestFrozenSliceBoundarySelection() {
 void TestClockDividerTable() {
   test_checker.Start("TestClockDividerTable");
   const float expected[] = {
-    1.0f/16, 1.0f/16, 1.0f/8, 1.0f/8, 1.0f/4, 1.0f/4,
-    1.0f/2, 1.0f/2, 1, 1, 1, 1, 1.0f/2, 1.0f/3, 1.0f/4,
-    1.0f/6, 1.0f/8, 1.0f/10, 1.0f/12, 1.0f/16, 1.0f/16, 1.0f/16
+    1.0f / 16, 1.0f / 16, 1.0f / 8, 1.0f / 8, 1.0f / 4, 1.0f / 4,
+    1.0f / 2, 1.0f / 2, 1, 1, 1, 1, 1.0f / 2, 1.0f / 3, 1.0f / 4,
+    1.0f / 6, 1.0f / 8, 1.0f / 10, 1.0f / 12,
+    1.0f / 16, 1.0f / 16, 1.0f / 16
   };
-  for (int i = 0; i < 22; ++i) CHECK(kRatio[i] == expected[i]);
+  for (int i = 0; i < 22; ++i) {
+    CHECK(kRatio[i] == expected[i]);
+  }
   Line line;
   line.Init(line_data, sizeof(line_data));
   for (int index = 0; index < 20; ++index) {
@@ -152,7 +162,9 @@ void TestClockDividerTable() {
         CHECK(o.tap[i].delay <= (kMaxDelay + kStartOffset) * 1024);
         line.Read<INTERPOLATION_HERMITE>(o.tap[i].delay);
       }
-      if (n < 12000) continue;
+      if (n < 12000) {
+        continue;
+      }
       CHECK(int(c.density_ * 20) == index);
       for (int i = 0; i < DelayController::NUM_HEADS; ++i) {
         const PlayHead& h = c.play_head_[i];
@@ -161,7 +173,9 @@ void TestClockDividerTable() {
             expected[ratio_index]));
         CHECK(fabsf(h.phase_increment_ * duration - 1.0f) < 0.00001f);
         CHECK(duration >= 1);
-        if (h.remaining_ == duration - 1) ++checked;
+        if (h.remaining_ == duration - 1) {
+          ++checked;
+        }
       }
     }
     CHECK(checked > 0);
@@ -177,7 +191,8 @@ void TestDelayIntervals() {
   // a zero-length slice at the 1/16 ratio: an integer division by zero.
   // Such slices now last one sample, which plays silently, as before.
   const int short_periods[] = { 2, 4, 8, 15 };
-  for (size_t i = 0; i < sizeof(short_periods) / sizeof(short_periods[0]); ++i) {
+  for (size_t i = 0;
+       i < sizeof(short_periods) / sizeof(short_periods[0]); ++i) {
     Check(short_periods[i], 0, 0, 0.0f, 0.0f);
     Check(short_periods[i], 0, 50000, 0.0f, 0.0f);
     Check(short_periods[i], 1000, 50000, 0.0f, 0.0f);
@@ -254,15 +269,23 @@ void TestSecondaryTapModulation() {
   float minimum = 1.0f, maximum = 0.0f, previous = 0.0f;
   for (int n = 0; n < 300000; ++n) {
     RenderFree(&controller, 0.75f, 0.0f, 0.0f, &out);
-    if (n < 16000) continue;
+    if (n < 16000) {
+      continue;
+    }
     const float gain = out.tap[6].gain;
-    if (!CHECK(gain >= 0.199f && gain <= 0.801f)) return;
-    if (n > 16000 && !CHECK(fabsf(gain - previous) < 0.0001f)) return;
+    if (!CHECK(gain >= 0.199f && gain <= 0.801f)) {
+      return;
+    }
+    if (n > 16000 && !CHECK(fabsf(gain - previous) < 0.0001f)) {
+      return;
+    }
     previous = gain;
     minimum = std::min(minimum, gain);
     maximum = std::max(maximum, gain);
     if (!CHECK(fabsf(float(out.tap[6].delay) / out.tap[4].delay - 0.77f)
-        < 0.00001f)) return;
+        < 0.00001f)) {
+      return;
+    }
   }
   CHECK(maximum - minimum > 0.1f);
   controller.Init(48000, kMaxDelay);
@@ -278,17 +301,23 @@ void TestSeedClockIntervalsAndCrossfade() {
     DelayClock tapped;
     tapped.Init(48000);
     tapped.Process(!tap, tap);
-    for (int n = 0; n < 5999; ++n) tapped.Process(false, false);
+    for (int n = 0; n < 5999; ++n) {
+      tapped.Process(false, false);
+    }
     tapped.Process(!tap, tap);
     CHECK(tapped.interval(tapped.new_interval_index()) == 6000.0f);
     DelayClock clock;
     clock.Init(48000);
-    for (int n = 0; n < 6000; ++n) clock.Process(false, false);
+    for (int n = 0; n < 6000; ++n) {
+      clock.Process(false, false);
+    }
     clock.Process(!tap, tap);
     const int current = clock.new_interval_index();
     CHECK(clock.interval(current) == 6001.0f);
     CHECK(clock.interval(1 - current) == 12000.0f);
-    for (int n = 0; n < 100; ++n) clock.Process(false, false);
+    for (int n = 0; n < 100; ++n) {
+      clock.Process(false, false);
+    }
     CHECK(clock.gain(0) > 0.0f && clock.gain(1) > 0.0f);
     CHECK(fabsf(clock.gain(0) + clock.gain(1) - 1.0f) < 0.00001f);
     for (int n = 100; n < 192000 - 1; ++n) {
@@ -356,7 +385,9 @@ void TestDelayShapeEnvelope() {
   TapEnvelope envelope;
   envelope.Init();
   envelope.set_phase_increment(1.0f / 128.0f);
-  for (int n = 0; n < 256; ++n) CHECK(envelope.Render(0.0f) == 1.0f);
+  for (int n = 0; n < 256; ++n) {
+    CHECK(envelope.Render(0.0f) == 1.0f);
+  }
   CHECK(envelope.phase() == 0.0f);
   for (int n = 0; n < 256; ++n) {
     const float phase = float(n % 128) / 128.0f;
@@ -380,15 +411,22 @@ void TestDelayRandomModulation() {
     for (int n = 0; n < 516000; ++n) {
       controller.Render(SEED_BUTTON_STATE_LOCKED, NULL, &freeze,
           0.0f, 0.0f, 0.0f, position, shape, &out, 1);
-      if (n < 16000 || n % 250) continue;
+      if (n < 16000 || n % 250) {
+        continue;
+      }
       const int index = (n - 16000) / 250;
       const float value = controller.multiplier_lp_;
       CHECK(value >= -1.0f && value <= 1.0f);
       // SmoothStep slope <= 1.5, with samples 250 frames apart.
-      if (index && !CHECK(fabsf(value - previous) < 0.0026f)) return;
+      if (index && !CHECK(fabsf(value - previous) < 0.0026f)) {
+        return;
+      }
       previous = value;
-      if (run) CHECK(value == sequence[index]);
-      else sequence[index] = value;
+      if (run) {
+        CHECK(value == sequence[index]);
+      } else {
+        sequence[index] = value;
+      }
     }
   }
   CHECK(fabsf(sequence[1500] - sequence[0]) > 0.01f);
