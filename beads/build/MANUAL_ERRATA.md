@@ -43,6 +43,8 @@ Several differences come from the April 2021 firmware update, which the manual p
 ## Clarifications
 
 - **Automatic gain** waits about 1 s, then listens for 5 s, and keeps adapting afterwards; silence postpones it. Restarting with MEDIA skips the wait. <!-- manual.md:42; beads/gain_control.cc:44-45,61-65,92-119 -->
+- **Input limiter:** the limiter for big level changes is the automatic gain itself. A sudden jump can briefly pass above full scale; the gain then falls with a response time of about 0.2 s (0.1 s while still listening). Recovery depends on the level. <!-- manual.md:42; beads/gain_control.cc:96-111,161-166 -->
+- **ASSIGN LEDs** (Mixing and audio output): the LEDs under FEEDBACK, DRY/WET and REVERB show the ASSIGN setting. With one destination, its LED is half lit; with individual amounts, each LED shows its amount. They do not follow the incoming CV. <!-- manual.md:129-130; beads/ui.cc:263-271 -->
 - **DENSITY extremes:** fully counterclockwise gives a steady C3 rate (about 131 grains/s); fully clockwise is random with a lower average, not a steady C3. <!-- manual.md:65; beads/dsp/trigger_generator.cc:42,73-74,88-110,265-279 -->
 - **Gated SEED at noon:** the button and the SEED input are combined, so a trigger while the button is held does not start another grain. <!-- manual.md:75; beads/dsp/trigger_generator.cc:255-263,289-307 -->
 - **Entering synth mode:** the 10 s countdown only runs while the output is silent and FREEZE is off; lingering feedback or reverb postpones it. <!-- manual.md:180; beads/beads.cc:268-269,351-369 -->
