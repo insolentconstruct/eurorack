@@ -34,9 +34,14 @@
 #include "stmlib/dsp/dsp.h"
 
 #include "beads/dsp/frame.h"
-#include "beads/output_limiter_mode.h"
 
 namespace beads {
+
+enum OutputLimiterMode {
+  OUTPUT_LIMITER_STOCK,
+  OUTPUT_LIMITER_FAST,
+  OUTPUT_LIMITER_OFF
+};
 
 class Limiter {
  public:

@@ -58,7 +58,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 7 | `frozen` | 0; TAKEN: completed backup flag, not immediate button latch <!-- beads/settings.h:57; beads/background_buffer_backup.cc:84-86,136-139 --> |
 | 8 | `disable_autosave` | 0; TAKEN <!-- beads/settings.h:58; beads/settings.cc:68 --> |
 | 9 | `monophonic_mode` | 0; RESERVED for disabled feature, not free padding <!-- beads/settings.h:59; beads/beads.cc:203-207 --> |
-| 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-79; beads/output_limiter_mode.h:42-49 --> |
+| 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
 | 11–23, individually | `padding[1]` … `padding[13]` | FREE format bytes; currently all zeroed on every save <!-- beads/settings.cc:96-99 --> |
 
 Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes byte 10 on load/save and preserves loaded bytes 11–23 until save clears them; a new option must change save clearing and add load validation. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
@@ -128,7 +128,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 ## Planning rules
 
 - Allocate a reserved category knob before borrowing another normal gesture; record category, knob, colours and saved bytes together. <!-- derived: beads/options.h:90-113; beads/ui.cc:283-299; beads/settings.h:60 -->
-- Give zero/unknown settings the stock default; preserve the 24-byte State layout and accept that stock saves erase extension bytes. <!-- derived: beads/output_limiter_mode.h:42-49; stock:beads/settings.cc:94-96; stmlib/system/sector_storage_h7xx.h:168-175 -->
+- Give zero/unknown settings the stock default; preserve the 24-byte State layout and accept that stock saves erase extension bytes. <!-- derived: beads/settings.h:74-85; stock:beads/settings.cc:94-96; stmlib/system/sector_storage_h7xx.h:168-175 -->
 - Change load/save clearing when assigning padding; do not claim byte 9 or flash journal/backup tails as free. <!-- derived: beads/settings.cc:84,96-99; beads/settings.h:59; beads/background_buffer_backup.cc:95-116,157 -->
 - Check button order, long holds, startup and disabled-feature collisions; keep calibration/reset/update chords reserved. <!-- derived: beads/ui.cc:315-399; beads/bootloader/bootloader.cc:315-322; beads/beads.cc:329 -->
 - Keep new options stock by default; account for both processor and synth, and restore borrowed controls/LEDs after editing. <!-- beads/build/STYLE.md:42; derived: beads/beads.cc:244-261; beads/ui.cc:123-134,198-308 -->

@@ -30,7 +30,7 @@
 #define BEADS_OPTIONS_H_
 
 #include <cmath>
-#include "beads/output_limiter_mode.h"
+#include "beads/dsp/limiter.h"
 
 namespace beads {
 

@@ -33,7 +33,7 @@
 #include "stmlib/system/storage.h"
 
 #include "beads/drivers/cv_adc.h"
-#include "beads/output_limiter_mode.h"
+#include "beads/dsp/limiter.h"
 
 namespace beads {
 
@@ -71,12 +71,17 @@ class Settings {
   void SavePersistentData();
   void SaveState();
 
+  // Stored in the first padding byte. Unknown values, including the zero
+  // left by stock firmware, read as Stock.
   inline OutputLimiterMode output_limiter_mode() const {
-    return DecodeOutputLimiterMode(state_.padding[0]);
+    const uint8_t value = state_.padding[0];
+    return value == 0xa1 ? OUTPUT_LIMITER_FAST
+        : value == 0xa2 ? OUTPUT_LIMITER_OFF : OUTPUT_LIMITER_STOCK;
   }
 
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
-    state_.padding[0] = EncodeOutputLimiterMode(mode);
+    state_.padding[0] = mode == OUTPUT_LIMITER_FAST ? 0xa1
+        : mode == OUTPUT_LIMITER_OFF ? 0xa2 : 0;
   }
   
   inline State* mutable_state() {
