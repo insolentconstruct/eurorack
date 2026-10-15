@@ -1,10 +1,10 @@
 # Testing
 
-How far release 2026.10.14 (alpha) was tested before release, by its developers. Hardware testing used one module.
+How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the checks its developers ran before release 2026.10.14 (alpha). Hardware testing used one module.
 
 ## TL;DR
 
-- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. They cover the options page and other panel gestures, input gain, grain triggering and playback, the attenurandomizers, the frozen-buffer save, delay mode and synth mode.
+- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. They cover the options page and other panel gestures, input gain, grain triggering and playback, the attenurandomizers, the frozen-buffer save, delay mode and synth mode: 69 of the 117 behaviours listed from the manual.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - an emulator comparison against the previous release found identical audio in 44 of 44 scenarios.
@@ -27,6 +27,28 @@ How far release 2026.10.14 (alpha) was tested before release, by its developers.
 The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail.
 
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
+
+## Coverage of the manual
+
+The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 69 of them, three only in part (audio-rate FM and 1 V/octave pitch without the CV calibration, and the power-on reset without the button read at start-up).
+
+| Area | Behaviours | Host tests | Not covered by host tests |
+|---|---:|---:|---|
+| Recording quality, mono/stereo | 9 | 2 | 6 need the whole firmware, 1 a module |
+| Input gain | 10 | 10 | |
+| FREEZE, buffer save, autosave | 9 | 4 | 5 need the whole firmware |
+| Grain generation: SEED, DENSITY | 16 | 16 | |
+| Grain playback: TIME, PITCH, SIZE, SHAPE | 13 | 8 | 4 need the whole firmware, 1 untestable |
+| Attenurandomizers | 9 | 7 | 2 need the whole firmware |
+| Mixing, output, ASSIGN | 14 | 3 | 8 need the whole firmware, 2 a module, 1 untestable |
+| Delay and slicer | 19 | 15 | 4 need the whole firmware |
+| Synth mode | 15 | 3 | 10 need the whole firmware, 1 host test still to write (bank selection), 1 untestable |
+| Calibration and recovery | 3 | 1 | 1 needs the whole firmware, 1 untestable |
+| **Total** | **117** | **69** | **40 whole firmware, 3 module, 1 to write, 4 untestable** |
+
+- **Whole firmware:** behaviours that only show with the full audio path running, such as quality-dependent sound or synth self-play. The developers' emulator comparison exercises some of them; it is not in this repository.
+- **Module:** the left-channel crackle report, and audio and triggers summed into OUT L when OUT R is unpatched.
+- **Untestable:** three compare with the original factory firmware, which the developers do not have; one needs a corrupted-storage sample, and none has been identified.
 
 ## Before release
 
