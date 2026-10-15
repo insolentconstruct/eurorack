@@ -90,7 +90,7 @@ Frozen-buffer backup header: one 32-byte flash word at 0x08100000, little-endian
 Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
 short after erasing doubles the next wait, up to 320 seconds, until a save
 completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
-The thaw timer does not run in synth mode (backup processing is skipped).
+The thaw reset is checked only outside synth mode (backup processing is skipped there): if FREEZE is released during synth mode, the minute starts when synth mode ends.
 Backoff is RAM-only and runs in the main loop.
 
 Saving erases the header's sector first and writes the header last, after the audio, so a header means a complete backup; a failed erase or program abandons the save. Loading checks the ranges, then the CRC when tagged, before touching the processor; any failure starts with an empty buffer. Known limit: power lost while a flash word is being programmed can leave an ECC error that faults when read, as in stock. <!-- beads/background_buffer_backup.h; beads/background_buffer_backup.cc; beads/test/backup_test.cc -->
@@ -106,7 +106,7 @@ Updater reception has no end-address guard; extending app/update files can overw
 | Four attenurandomizers | Patched: CW CV amount, CCW CV-controlled randomness; unpatched: peaky/uniform randomness. Delay: slow random LFOs; SIZE amount + SIZE CV also set bandwidth | Synth PITCH CV always 1 V/oct root; PITCH attenurandomizer remains grain randomness; TAKEN <!-- manual.md:102-106,174,192-194; beads/dsp/granular_processor.h:277-282 --> |
 | Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow all three mix knobs (FEEDBACK and DRY/WET in use); TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
 | FREEZE + SEED gate inputs | Record stop; grain clock/gate, delay clock. Button freeze ORs with gate; SEED input delayed 2.5 ms | Synth freeze stops new grains/holds envelopes; SEED still drives grains; TAKEN <!-- beads/beads.cc:132-151; manual.md:158,186; beads/dsp/synth.cc:73-81 --> |
-| L/R audio in, L/R audio out | Input normalization selects mono/stereo; output always stereo, unpatched R sums to L; optional R grain gate replaces audio | Both inputs empty for 10 s selects synth; R gate costs stereo output; no spare dedicated gate output <!-- manual.md:36-40,134-138; beads/beads.cc:360-394; beads/dsp/synth.cc:138-142 --> |
+| L/R audio in, L/R audio out | Input normalization selects mono/stereo; output always stereo, unpatched R sums to L; optional R grain gate replaces audio | Automatic self-play: both inputs empty, FREEZE off and quiet output for 10 s selects synth; On request: a MEDIA hold instead; patching an input exits once FREEZE is off; R gate costs stereo output; no spare dedicated gate output <!-- manual.md:36-40,134-138; beads/beads.cc:360-394; beads/dsp/synth.cc:138-142 --> |
 | MEDIA RGB LED | 0 dirty tape red/pink, 1 clean tape amber, 2 vintage digital teal, 3 digital white; dims with overwrite reserve; manual gain overrides with meter | Same palette marks synth resolutions 4/4, 16/6, 7/7, 16/16 bits (continuous/grains); options override colours; TAKEN <!-- beads/ui.cc:190-195,238-245; beads/dsp/processor.h:58-63; beads/dsp/synth.cc:84-85 --> |
 | FREEZE / SEED LEDs | Freeze status (half-bright during backup); SEED gate/held or breathing latch. Autosave display FREEZE dim=disabled, brighter=enabled | Same ownership in synth; no spare status LED <!-- beads/ui.cc:247-262 --> |
 | Three assignment LEDs / input-level LED | Destination or custom amounts / input VU, blinking during gain adjustment | Options page markers / VU retained; TAKEN <!-- beads/ui.cc:264-272,283-306 --> |
@@ -116,13 +116,13 @@ No physical knob, CV jack, gate jack or LED is unallocated. New normal-mode cont
 
 ## Compiled out
 
-`ENABLE_ADVANCED_FEATURES` is commented out: mono and trim have no active button entry; MEDIA+SEED / MEDIA+FREEZE would collide with new uses if enabled. Automatic input mono/stereo detection remains active. <!-- beads/ui.h:44; beads/ui.cc:358-384; beads/beads.cc:203-207,385-394 -->
+`ENABLE_ADVANCED_FEATURES` is commented out: buffer trim has no active button entry and MEDIA+FREEZE stays reserved for it. Monophonic grains (MEDIA+SEED) are enabled independently of that flag. Automatic input mono/stereo detection remains active. <!-- beads/ui.h:44; beads/ui.cc:358-384; beads/beads.cc:203-207,385-394 -->
 `PROFILE_INTERRUPT` and bootloader `ENABLE_ERROR_DETECTION` are off; their debug-pin/error-check paths are excluded. `ENABLE_HARDWARE_24K`, `ENABLE_BANDWIDTH_CONTROL` and bootloader `ENABLE_ERASE_BUTTON_COMBO` are ON; their alternate branches are excluded. `TEST` hooks belong to host tests. <!-- beads/beads.cc:74,109-111,338-340; beads/bootloader/bootloader.cc:27-28,190-264; beads/dsp/processor.h:46,79-92; beads/dsp/multitap_delay.h:38,90; beads/ui.cc:546-549 -->
 `WasteCPUCycles(16)` is always called in main, including synth mode: it renders a dummy vintage-digital grain workload with memory accesses, discarding output. Main-loop occupancy is not audio CPU headroom. <!-- beads/beads.cc:403-410; beads/dsp/processor.h:150-153; beads/dsp/granular_processor.h:116-147 -->
 
 ## Budgets
 
-Latest successful Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
+Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before the GCC 9 app build and this cycle's features; remeasure before allocating this headroom. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
 
 | Region | TAKEN | FREE / qualification |
 |---|---|---|
@@ -150,5 +150,5 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 
 - **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Bytes 12–23 remain free; any future format marker or packed fields must use those bytes. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's format byte keeps the common bytes and resets its own.
-- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, limiter and mono included. Other requests stay open as issues.
-- **Reserved gestures:** MEDIA+SEED for explicit engine entry, MEDIA+FREEZE for buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
+- **Gestures:** MEDIA+SEED is taken by monophonic grains; MEDIA+FREEZE is reserved for buffer trim; the FREEZE long hold and flash sector 14 are unassigned.

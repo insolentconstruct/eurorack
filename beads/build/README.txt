@@ -10,13 +10,16 @@ Note from the Mutable Instruments eurorack README:
 "Code provided as is, builds on a Desktop platform but not verified to
 build and run on a module. Install at your own risks."
 
-Install at your own risk. Please don't contact Mutable Instruments; report problems at:
+Install at your own risk. Please don't contact Mutable Instruments;
+report problems at:
 https://github.com/insolentconstruct/eurorack/issues
 
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing, as in the released source. This release adds
-monophonic grains, the output limiter option and bug fixes; details are in
-CHANGELOG.md in the repository.
+monophonic grains and self-play on request, stops a modulated FREEZE from
+wearing the save flash, and fixes two delay bugs; the app is now built with
+GCC 9. The output limiter option came in the previous release. Details are
+in CHANGELOG.md in the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
@@ -40,7 +43,7 @@ Frozen-buffer autosave
 Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
 short after erasing doubles the next wait, up to 320 seconds, until a save
 completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
-The one-minute reset only counts while Beads is not in self-play.
+If FREEZE is released during self-play, the minute starts when self-play ends.
 
 Options page
 ------------
@@ -63,8 +66,9 @@ Self-play: Feedback LED category, FEEDBACK knob. Lower half selects Automatic
 has a small dead band to prevent flicker.
 With On request, self-play never starts by itself. With both audio inputs
 unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
-hold again to stop. Patching either input also stops it. With an input patched,
-the hold restarts automatic gain as usual. Automatic keeps stock behaviour.
+hold again to stop. Patching either input also stops it (once FREEZE is off).
+With an input patched, the hold restarts automatic gain as usual.
+Automatic keeps stock behaviour.
 The setting is saved. Stock firmware ignores it; saving after a downgrade
 resets it to Automatic.
 

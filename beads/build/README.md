@@ -40,7 +40,7 @@ to stock firmware.
 Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
 short after erasing doubles the next wait, up to 320 seconds, until a save
 completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
-The one-minute reset only counts while Beads is not in self-play.
+If FREEZE is released during self-play, the minute starts when self-play ends.
 
 ## Options page
 
@@ -60,8 +60,8 @@ Self-play: Feedback LED category, FEEDBACK knob. Lower half selects Automatic
 has a small dead band to prevent flicker.
 With On request, self-play never starts by itself. With both audio inputs
 unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
-hold again to stop. Patching either input also stops it. With an input patched,
-the hold restarts automatic gain as usual. Automatic keeps stock behaviour.
+hold again to stop. Patching either input also stops it (once FREEZE is off).
+With an input patched, the hold restarts automatic gain as usual. Automatic keeps stock behaviour.
 The setting is saved. Stock firmware ignores it; saving after a downgrade
 resets it to Automatic.
 

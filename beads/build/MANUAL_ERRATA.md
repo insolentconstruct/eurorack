@@ -8,7 +8,7 @@ Several differences come from the April 2021 firmware update, which the manual p
 ## Corrections
 
 - **Sunny tape buffer:** holds about 10.67 s in stereo or 21.33 s in mono, rather than 10 or 20 s. <!-- manual.md:34, images/quality_table.png; beads/dsp/processor.h:50-51,179-182; beads/dsp/processor.cc:49; beads/dsp/granular_processor.h:384-385 -->
-- **Restarting automatic gain** (Recording quality): hold MEDIA for about **1.5 s**, not one second. Releasing after one second changes the recording quality instead. <!-- manual.md:44; beads/ui.cc:48-50,402-425 -->
+- **Restarting automatic gain** (Recording quality): hold MEDIA for about **1.5 s**, not one second. Releasing after one second changes the recording quality instead. In Drizzlet's self-play On request setting, with both inputs unpatched and FREEZE off, this hold starts or stops self-play instead. <!-- manual.md:44; beads/ui.cc:48-50,402-425 -->
 - **Synth quality table** (Beads as a granular wavetable synth): the amber setting is **16-bit dry, 6-bit grains**, not 4-bit. <!-- manual.md:190, images/wavetable_quality_table.png; beads/dsp/synth.cc:83-84,112-118; beads/dsp/synth.h:50-54; beads/dsp/wavetable_grain.h:142 -->
 - **Update error** (Firmware update procedure): the MEDIA and input-level LEDs keep showing the input level; the other LEDs blink. <!-- manual.md:253; beads/bootloader/bootloader.cc:118-145 -->
 
@@ -26,11 +26,11 @@ Several differences come from the April 2021 firmware update, which the manual p
 
 ## Not in the manual
 
-- **Power-on reset:** holding SEED while powering on resets saved settings to defaults; calibration is kept. In Drizzlet this also resets the output limiter to Stock. <!-- beads/beads.cc:327-328; beads/settings.cc:43-75; stmlib/system/sector_storage_h7xx.h:126-130 -->
+- **Power-on reset:** holding SEED while powering on resets saved settings to defaults; calibration is kept. In Drizzlet this also resets the output limiter to Stock, self-play to Automatic and monophonic grains to off. <!-- beads/beads.cc:327-328; beads/settings.cc:43-75; stmlib/system/sector_storage_h7xx.h:126-130 -->
 - **Erase chord:** holding FREEZE and ASSIGN at power-on erases the firmware and waits for an update. Holding FREEZE alone enters the updater without erasing. Use only for recovery. <!-- beads/bootloader/bootloader.cc:28,266-281,315-322 -->
 - **Calibration:** pressing MEDIA and ASSIGN together starts CV calibration, which needs precise reference voltages and overwrites the stored calibration. Avoid it unless you are recalibrating. <!-- beads/ui.cc:320-328,358-384; beads/calibrator.h:91-118 -->
 - **Saved choices:** recording quality, ASSIGN routing and amounts, the R trigger-output mode and autosave are all remembered across power cycles, not just input gain. <!-- beads/ui.cc:261-264,276-279,416-418,437-444; beads/settings.cc -->
-- **Buffer save takes time:** the 10 s of FREEZE starts the save; FREEZE dims while it runs. Keep FREEZE on until it finishes, or the buffer is not restored. <!-- manual.md:49; beads/background_buffer_backup.cc:42,54-81,136-158; beads/ui.cc -->
+- **Buffer save takes time:** the 10 s of FREEZE starts the save; FREEZE dims while it runs. Keep FREEZE on until it finishes, or the buffer is not restored. In Drizzlet, each save cut short makes the next one wait longer, up to 320 s (see README.md). <!-- manual.md:49; beads/background_buffer_backup.cc:42,54-81,136-158; beads/ui.cc -->
 - **Quality changes while frozen** are remembered and shown, and take effect when you unfreeze. <!-- manual.md:51; beads/ui.cc:416-418; beads/beads.cc:351-355,382-391 -->
 - **Knobs after hidden edits:** after setting gain or an ASSIGN amount, the knob you used catches up gradually with its normal parameter instead of jumping. <!-- beads/pot_controller.h:87-92,112-146; beads/ui.cc:425,431-444 -->
 - **Synth controls:** in synth mode TIME scans the 16 waveforms of the bank, fully clockwise SIZE gives long grains (not delay), and counterclockwise SIZE does not reverse anything. <!-- manual.md:87,144,180; beads/dsp/wavetable_grain.h:124-146; beads/dsp/wavetable_voice.h:89-94; beads/beads.cc:244-259; beads/dsp/synth.cc:72-80 -->
@@ -50,6 +50,6 @@ Several differences come from the April 2021 firmware update, which the manual p
 - **ASSIGN LEDs** (Mixing and audio output): the LEDs under FEEDBACK, DRY/WET and REVERB show the ASSIGN setting. With one destination, its LED is half lit; with individual amounts, each LED shows its amount. They do not follow the incoming CV. <!-- manual.md:129-130; beads/ui.cc:263-271 -->
 - **DENSITY extremes:** fully counterclockwise gives a steady C3 rate (about 131 grains/s); fully clockwise is random with a lower average, not a steady C3. <!-- manual.md:65; beads/dsp/trigger_generator.cc:42,73-74,88-110,265-279 -->
 - **Gated SEED at noon:** the button and the SEED input are combined, so a trigger while the button is held does not start another grain. <!-- manual.md:75; beads/dsp/trigger_generator.cc:255-263,289-307 -->
-- **Entering synth mode:** the 10 s countdown only runs while the output is silent and FREEZE is off; lingering feedback or reverb postpones it. <!-- manual.md:180; beads/beads.cc:268-269,351-369 -->
+- **Entering synth mode:** the 10 s countdown only runs while the output is silent and FREEZE is off; lingering feedback or reverb postpones it. Drizzlet's On request setting turns the countdown off and uses a MEDIA hold instead. <!-- manual.md:180; beads/beads.cc:268-269,351-369 -->
 - **Feedback schemes:** Cold digital and Sunny tape share the same feedback saturation; they still sound different through sample rate and dry path. <!-- manual.md:123; beads/dsp/processor.h:171-178; beads/dsp/granular_processor.h:287-312 -->
 - **"Gaussian" randomness** is bell-shaped but bounded. <!-- index.md:60; beads/dsp/randomized_parameter.h:45-47,128-131 -->
