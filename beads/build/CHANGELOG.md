@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
 ## Unreleased
+- App built with GCC 9.3.1 instead of 4.9.3: about 2% faster in the worst audio block and 2% smaller. The randomized-pan rounding is pinned so output is unchanged: all 44 emulated scenarios are bit-identical to the GCC 4.9.3 build. The bootloader stays on GCC 4.9.3 with its bytes unchanged.
 - Delay mode: after about 12 hours without a SEED clock or tap, the next one could set a negative tempo and collapse the echoes for one clock period. The idle count now stops at its 4 s limit (#57).
 - Clocked frozen delay: SEED edges less than 16 samples apart (a fast clock, contact bounce, plugging a cable) could make a zero-length slice, an integer division by zero. On the module it gave silent play heads; slices are now at least one sample long (#33).
 
@@ -20,7 +21,6 @@ Changes to Drizzlet, newest first. Each feature adds a line under
   Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero; later
   releases read a zero byte 11 as "no options saved", so every later option starts at stock.
 - Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
-- App built with GCC 9.3.1, with fused rounding pinned for the randomized pan. Audio matched the GCC 4.9.3 build across 20 emulated DSP scenarios plus the long fill and self-play runs. Bootloader bytes unchanged.
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 
 ## 2026.10.11
