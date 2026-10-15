@@ -8,6 +8,10 @@ on:
     paths: ['beads/**', 'stmlib', 'stm_audio_bootloader', '.github/workflows/beads.yml']
 permissions:
   contents: read
+concurrency:
+  # Each tagged release build gets its own group, so it is never cancelled.
+  group: ${{ github.workflow }}-${{ startsWith(github.ref, 'refs/tags/') && github.run_id || github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-24.04
