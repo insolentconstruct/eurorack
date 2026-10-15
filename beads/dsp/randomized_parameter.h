@@ -41,13 +41,13 @@
 namespace beads {
 
 #ifdef TEST
-  inline float MulAdd(float a, float b, float c) {
-    return fmaf(a, b, c);
-  }
+inline float MulAdd(float a, float b, float c) {
+  return fmaf(a, b, c);
+}
 #else
-  inline float MulAdd(float a, float b, float c) {
-    return __builtin_fmaf(a, b, c);
-  }
+inline float MulAdd(float a, float b, float c) {
+  return __builtin_fmaf(a, b, c);
+}
 #endif
 
 inline float CenteredUniform() {
