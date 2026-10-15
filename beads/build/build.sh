@@ -43,9 +43,15 @@ fi
 mkdir -p "$out/objects/beads" "$out/objects/beads_bootloader"
 for spec in 'beads/makefile beads' 'beads/bootloader/makefile beads_bootloader'; do
   read -r mf target <<< "$spec"
+  tc=$TOOLCHAIN_PATH
+  gcc9=1
+  if [[ "$target" == beads_bootloader ]]; then
+    tc=${GOLDEN_TOOLCHAIN_PATH:?Missing golden compiler}
+    gcc9=0
+  fi
   nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
     "KIT_MAKEFILE=$mf" "BUILD_ROOT=$out/objects/" \
-    "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" -j2 bin hex kit-info notice-deps \
+    "TOOLCHAIN_PATH=$tc" "KIT_GCC9=$gcc9" -j2 bin hex kit-info notice-deps \
     > "$out/$target.log" 2>&1 || { tail -40 "$out/$target.log" >&2; exit 1; }
 done
 cp "$out/objects/beads/beads.bin" "$out/app.bin"
@@ -54,7 +60,7 @@ cp "$out/objects/beads_bootloader/beads_bootloader.bin" "$out/bootloader.bin"
 # Combo image, as in stmlib's makefile.
 nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
   KIT_MAKEFILE=beads/makefile "BUILD_ROOT=$out/objects/" \
-  "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" "$out/objects/beads/beads_bootloader_combo.bin" \
+  "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" KIT_GCC9=1 "$out/objects/beads/beads_bootloader_combo.bin" \
   > "$out/combo.log" 2>&1 || { cat "$out/combo.log" >&2; exit 1; }
 python3 - "$out" <<'PYCODE'
 import pathlib, subprocess, sys

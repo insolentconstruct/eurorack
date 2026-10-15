@@ -142,13 +142,14 @@ def notices(out):
     if not libs:
       raise ValueError('missing runtime archive inventory')
     chunks.append('\n===== Linked runtime archives: '+name+' =====\n'+'\n'.join(libs)+'\n')
-  tc = Path('/opt/gcc-arm-none-eabi-4_9-2015q2')
-  licenses = sorted(p for p in tc.rglob('*') if p.is_file() and
-                    re.search(r'(?i)(license|copying)',p.name) and p.suffix.lower() not in ('.pdf','.html','.info'))
-  if not licenses:
-    raise ValueError('missing compiler runtime licenses')
-  for path in licenses:
-    chunks.append('\n===== Toolchain: '+str(path.relative_to(tc))+' =====\n'+source_text(path)+'\n')
+  for tc in (Path('/opt/gcc-arm-none-eabi-4_9-2015q2'),
+             Path('/opt/gcc-arm-none-eabi-9-2020-q2-update')):
+    licenses = sorted(p for p in tc.rglob('*') if p.is_file() and
+                      re.search(r'(?i)(license|copying)',p.name) and p.suffix.lower() not in ('.pdf','.html','.info'))
+    if not licenses:
+      raise ValueError('missing compiler runtime licenses: '+str(tc))
+    for path in licenses:
+      chunks.append('\n===== Toolchain: '+str(tc.name/path.relative_to(tc))+' =====\n'+source_text(path)+'\n')
   for name in ('stm_audio_bootloader/LICENSE',):
     chunks.append('\n===== '+name+' =====\n'+(ROOT/name).read_text()+'\n')
   chunks.append('\n===== ST HAL BSD-3-Clause license (headers reference this license) =====\n'+(HERE/'tools/ST-BSD-3-Clause.txt').read_text())
