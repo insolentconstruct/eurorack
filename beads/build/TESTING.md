@@ -41,7 +41,7 @@ The backup test was checked by removing each safeguard in turn: each removal mak
 
 | # | Check | Result |
 |---|---|---|
-| 1 | Install with the release update file | Decoded first time; new firmware running |
+| 1 | Install with the release update file, over the stock 2021 firmware | Decoded first time; new firmware running |
 | 2 | Settings from an earlier Drizzlet survive the update | Yes |
 | 3 | Options page: change the limiter, idle save, power cycle | Saved and kept |
 | 4 | Frozen-buffer save and restore across a power cycle | Restored audio plays, stereo |
@@ -54,6 +54,5 @@ The backup test was checked by removing each safeguard in turn: each removal mak
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
 - Listening tests of the limiter modes. Their code is unchanged since the limiter's own measurements.
-- Upgrading a module that has never run Drizzlet. That's covered by the options host test, but not on hardware.
 
 Report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).

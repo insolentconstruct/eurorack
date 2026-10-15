@@ -10,7 +10,7 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 title="Drizzlet ${tag#drizzlet-}"
 # Alpha: only its developers have tested it. Publish as a pre-release until users report back.
 prerelease=true
-notes="Alpha: tested only by its developers, on one module. Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
+notes="Alpha: tested only by its developers, on one module. Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first. How it was tested: [TESTING.md](https://github.com/$repo/blob/$tag/beads/build/TESTING.md)."
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
