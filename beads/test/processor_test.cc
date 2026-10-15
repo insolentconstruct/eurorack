@@ -36,8 +36,8 @@
 
 #define private public
 #include "beads/dsp/processor.h"
-#include "beads/ui.h"
 #include "beads/settings.h"
+#include "beads/ui.h"
 #undef private
 
 #include "beads/background_buffer_backup.h"

@@ -27,8 +27,8 @@
 // The firmware entry point, driven by host hardware.
 
 #include <algorithm>
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -61,7 +61,7 @@ namespace stmlib {
 SystemClock system_clock;
 }  // namespace stmlib
 namespace beads {
-// These declared constructors have no firmware definitions (MI host precedent).
+// The firmware does not define these constructors.
 CvChannel::CvChannel() { }
 CvChannel::~CvChannel() { }
 PotChannel::PotChannel() { }
@@ -72,7 +72,10 @@ bool test_freeze_input;
 bool test_seed_input;
 uint16_t CvAdc::values_[CV_ADC_CHANNEL_LAST];
 uint16_t PotsAdc::values_[POTS_ADC_CHANNEL_LAST];
-bool Leds::Init() { Clear(); return true; }
+bool Leds::Init() {
+  Clear();
+  return true;
+}
 void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
 void Leds::Write() { }
 }  // namespace beads
@@ -188,8 +191,12 @@ struct Rig {
   void Tick(int milliseconds, bool main_loop = true) {
     while (milliseconds--) {
       // The first main step starts the codec; thereafter four callbacks/ms.
-      if (main_loop) MainLoopStep();
-      for (int i = 0; i < 4; ++i) Block();
+      if (main_loop) {
+        MainLoopStep();
+      }
+      for (int i = 0; i < 4; ++i) {
+        Block();
+      }
       SysTick_Handler();
     }
   }
@@ -218,7 +225,9 @@ struct Rig {
     // Dispatch the hold event, leaving MonitorStateChange to the caller.
     Tick(8, false);
     ui.DoEvents();
-    if (consume) MainLoopStep();
+    if (consume) {
+      MainLoopStep();
+    }
   }
 
   // Eight 32 ms probe windows plus 250 ms of codec blanking.
@@ -228,7 +237,9 @@ struct Rig {
 std::string Compact(const std::string& source) {
   std::string result;
   for (size_t i = 0; i < source.size(); ++i) {
-    if (!isspace(static_cast<unsigned char>(source[i]))) result += source[i];
+    if (!isspace(static_cast<unsigned char>(source[i]))) {
+      result += source[i];
+    }
   }
   return result;
 }
@@ -251,8 +262,12 @@ std::string Body(const char* path, const char* anchor, const char* opening) {
   size_t end = start;
   int depth = 1;
   for (; end < source.size() && depth; ++end) {
-    if (source[end] == '{') ++depth;
-    if (source[end] == '}') --depth;
+    if (source[end] == '{') {
+      ++depth;
+    }
+    if (source[end] == '}') {
+      --depth;
+    }
   }
   return depth ? std::string() : source.substr(start, end - start - 1);
 }
@@ -470,7 +485,9 @@ void TestOverwriteIndicator() {
     r.Block();
     CHECK(fabsf(ui.overwrite_reserve_ - expected) < 1.0e-6f);
     minimum = std::min(minimum, ui.overwrite_reserve_);
-    if (minimum < 0.01f && ui.overwrite_reserve_ == 1.0f) passed = true;
+    if (minimum < 0.01f && ui.overwrite_reserve_ == 1.0f) {
+      passed = true;
+    }
   }
   CHECK(minimum < 0.01f);
   CHECK(passed);
@@ -482,7 +499,9 @@ void TestOverwriteIndicator() {
   r.Tick(1);
   test_freeze_input = false;
   r.Tick(1);
-  for (int i = 0; i < 15800; ++i) r.Block();
+  for (int i = 0; i < 15800; ++i) {
+    r.Block();
+  }
   r.HoldMedia(false);
   CHECK(processor.overwrite_reserve() < 0.5f);
   MainLoopStep();
@@ -500,7 +519,9 @@ void TestTriggerOutput() {
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
     r.audio = 0x10000000;
     r.Settle();
-    if (!mode) r.StartAutomatic();
+    if (!mode) {
+      r.StartAutomatic();
+    }
     settings.mutable_state()->gate_output_mode = 1;
     bool high = false;
     bool low = false;
@@ -568,7 +589,9 @@ void TestCallbackCvRouting() {
   extern uint16_t reverb_buffer[];
   for (int channel = 0; channel < CV_ADC_CHANNEL_LAST; ++channel) {
     Rig r(false, false);
-    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) r.cv_patched[i] = true;
+    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+      r.cv_patched[i] = true;
+    }
     // Every channel starts at zero; one channel alone then receives a step.
     for (int i = POTS_ADC_CHANNEL_TIME_AMOUNT;
          i <= POTS_ADC_CHANNEL_PITCH_AMOUNT; ++i) {
@@ -618,7 +641,9 @@ void TestCallbackCvRouting() {
       float mix[3];
       for (int i = 0; i < 3; ++i) {
         mix[i] = ui.mix_parameter(Ui::MixParameter(i)) * 1.005f;
-        if (i == 0) mix[i] += cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+        if (i == 0) {
+          mix[i] += cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+        }
         CONSTRAIN(mix[i], 0.0f, 1.0f);
       }
       m.feedback = mix[0];
@@ -628,7 +653,9 @@ void TestCallbackCvRouting() {
       FloatFrame in[kMaxCodecBlockSize];
       FloatFrame out[kMaxCodecBlockSize];
       bool freeze[kMaxCodecBlockSize] = { };
-      for (size_t i = 0; i < codec.block_size_; ++i) in[i] = 0.0f;
+      for (size_t i = 0; i < codec.block_size_; ++i) {
+        in[i] = 0.0f;
+      }
       Random::Seed(random);
       expected.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze, d, p, m,
           in, out, codec.block_size_);
@@ -681,7 +708,9 @@ void TestPitchChain() {
     PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 65535;
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
     r.Settle();
-    if (mode) r.StartAutomatic();
+    if (mode) {
+      r.StartAutomatic();
+    }
     const float base = mode ? synth.wavetable_voice_.frequency_ :
         NextGrainSpeed(&r);
     r.cv[CV_ADC_CHANNEL_PITCH] = 26214;  // 1 V: 1/10 ADC range.
@@ -707,13 +736,17 @@ void TestPitchChain() {
     const float before = trigger.phase_;
     r.Block();
     float delta = trigger.phase_ - before;
-    if (delta < 0.0f) delta += 1.0f;
+    if (delta < 0.0f) {
+      delta += 1.0f;
+    }
     r.cv[CV_ADC_CHANNEL_DENSITY] = 26214;  // 1 V -> 0.2 -> 12 st.
     r.Block();
     const float after = trigger.phase_;
     r.Block();
     float shifted = trigger.phase_ - after;
-    if (shifted < 0.0f) shifted += 1.0f;
+    if (shifted < 0.0f) {
+      shifted += 1.0f;
+    }
     // Phase subtraction introduces rounding; this is <0.01 semitone.
     CHECK(fabsf(12.0f * log2f(shifted / delta) - 12.0f) < 0.01f);
   }
@@ -768,7 +801,9 @@ int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-  if (flash == MAP_FAILED) return 2;
+  if (flash == MAP_FAILED) {
+    return 2;
+  }
   TestMainLoopMatchesHarness();
   TestAutomaticSelfPlay();
   TestRequestedSelfPlay();

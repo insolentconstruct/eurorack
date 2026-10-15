@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Host interface for normalization detection.
+// Host codec interface.
 
 #ifndef BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CODEC_H_
 #define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CODEC_H_

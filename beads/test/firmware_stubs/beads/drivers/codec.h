@@ -37,11 +37,18 @@ namespace beads {
 const size_t kMaxCodecBlockSize = 24;
 class Codec {
  public:
-  struct Frame { int32_t l; int32_t r; };
+  struct Frame {
+    int32_t l;
+    int32_t r;
+  };
   enum Event { EVENT_NONE, EVENT_SEED, EVENT_FREEZE };
   typedef void (*FillBufferCallback)(
       const Event*, const Frame*, Frame*, size_t);
-  bool Init() { callback_ = NULL; starts_ = stops_ = 0; return true; }
+  bool Init() {
+    callback_ = NULL;
+    starts_ = stops_ = 0;
+    return true;
+  }
   bool Start(int32_t rate, size_t size, FillBufferCallback callback) {
     sample_rate_ = rate;
     block_size_ = size;
