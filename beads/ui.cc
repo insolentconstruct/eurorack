@@ -82,6 +82,7 @@ void Ui::Init(
   seed_button_locked_ = true;
   seed_led_state_ = false;
   trim_flag_ = false;
+  no_input_ = self_play_requested_ = false;
   
   overwrite_reserve_ = 1.0f;
   
@@ -119,7 +120,9 @@ void Ui::Poll() {
       switches_.pressed_immediate(SWITCH_ASSIGN),
       other, all_up, switches_.just_pressed(SWITCH_ASSIGN),
       mode_ == MODE_NORMAL, pot_touched,
-      mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode());
+      mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode(),
+      mix_pot_value_[MIX_PARAMETER_FEEDBACK],
+      settings_->self_play_on_request());
   if (!was_active && options_.active()) {
     flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
@@ -295,7 +298,14 @@ void Ui::UpdateLeds() {
     bool pulse = value == OUTPUT_LIMITER_STOCK ||
         phase < 120 || (value == OUTPUT_LIMITER_OFF &&
         phase >= 240 && phase < 360);
-    leds_.set_media(colors[value], pulse ? 1.0f : 0.0f);
+    if (options_.page() == kSelfPlayPage) {
+      const Leds::Color automatic = { 0, 255, 255 };
+      const Leds::Color on_request = { 255, 0, 255 };
+      leds_.set_media(options_.self_play_preview() ? on_request : automatic,
+          !options_.self_play_preview() || phase < 120 ? 1.0f : 0.0f);
+    } else {
+      leds_.set_media(colors[value], pulse ? 1.0f : 0.0f);
+    }
   }
 
   if (mode_ != MODE_FACTORY_TEST) {
@@ -476,12 +486,17 @@ void Ui::OnSwitchReleased(const Event& e) {
             NextCalibrationStep();
           } else {
             if (uint32_t(e.data) >= long_press_duration[SWITCH_MEDIA]) {
-              State* state = settings_->mutable_state();
-              if (state->gain != 0) {
-                state->gain = 0;
-                settings_->SaveState();
+              if (settings_->self_play_on_request() && no_input_ &&
+                  !should_ignore_state_change()) {
+                self_play_requested_ = true;
+              } else {
+                State* state = settings_->mutable_state();
+                if (state->gain != 0) {
+                  state->gain = 0;
+                  settings_->SaveState();
+                }
+                gain_control_->Restart();
               }
-              gain_control_->Restart();
             } else {
               State* state = settings_->mutable_state();
               state->media = (state->media + 3) % 4;
@@ -526,8 +541,10 @@ OutputLimiterMode Ui::output_limiter_mode() const {
 
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
-    if (options_.preview() != settings_->output_limiter_mode()) {
+    if (options_.preview() != settings_->output_limiter_mode() ||
+        options_.self_play_preview() != settings_->self_play_on_request()) {
       settings_->set_output_limiter_mode(options_.preview());
+      settings_->set_self_play_on_request(options_.self_play_preview());
       settings_->SaveState();
     }
     options_.ClearCommit();

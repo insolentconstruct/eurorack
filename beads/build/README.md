@@ -41,13 +41,24 @@ Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
 The assignment LEDs pulse together on entry.
 Options come in three categories, marked by the feedback, dry/wet and reverb LEDs: the open category's LED pulses slowly. The page opens on the dry/wet category. Tap ASSIGN to cycle categories.
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three settings.
-Move a knob more than one tenth of its travel to start selecting; its thirds pick the value, shown on the quality LED (next to MEDIA).
+Move a knob more than one tenth of its travel to start selecting; its zones pick the value, shown on the quality LED (next to MEDIA).
 
 | Category | Knob | Setting | Left third | Middle | Right third |
 |---|---|---|---|---|---|
 | Dry/wet LED | DRY/WET | Output limiter | Stock (steady green) | Fast release (one blue pulse) | Off (two amber pulses); loud peaks can hard-clip |
 
-The other knobs and categories are reserved for later options and do nothing yet.
+Self-play: Feedback LED category, FEEDBACK knob. Lower half selects Automatic
+(stock, steady cyan); upper half selects On request (one magenta pulse per
+1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
+has a small dead band to prevent flicker.
+With On request, self-play never starts by itself. With both audio inputs
+unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
+hold again to stop. Patching either input also stops it. With an input patched,
+the hold restarts automatic gain as usual. Automatic keeps stock behaviour.
+The setting is saved. Stock firmware ignores it; saving after a downgrade
+resets it to Automatic.
+
+The remaining knobs and categories are reserved for later options.
 Hold ASSIGN for three seconds to save and exit. After five seconds without changes the page also exits and saves any change. Another button cancels.
 The mix knobs stay held during editing and catch up smoothly after exit.
 

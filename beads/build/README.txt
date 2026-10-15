@@ -43,13 +43,24 @@ LEDs: the open category's LED pulses slowly. The page opens on the dry/wet
 category. Tap ASSIGN to cycle categories.
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three
 settings. Move a knob more than one tenth of its travel to start selecting; its
-thirds pick the value, shown on the quality LED.
+zones pick the value, shown on the quality LED.
 
 Output limiter: dry/wet category, DRY/WET knob.
   Left third: Stock (steady green).
   Middle: Fast release (one blue pulse).
   Right third: Off (two amber pulses); loud peaks can hard-clip.
-The other knobs and categories are reserved for later options and do nothing yet.
+Self-play: Feedback LED category, FEEDBACK knob. Lower half selects Automatic
+(stock, steady cyan); upper half selects On request (one magenta pulse per
+1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
+has a small dead band to prevent flicker.
+With On request, self-play never starts by itself. With both audio inputs
+unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
+hold again to stop. Patching either input also stops it. With an input patched,
+the hold restarts automatic gain as usual. Automatic keeps stock behaviour.
+The setting is saved. Stock firmware ignores it; saving after a downgrade
+resets it to Automatic.
+
+The remaining knobs and categories are reserved for later options.
 
 Hold ASSIGN for three seconds to save and exit. After five seconds without
 changes the page also exits and saves any change. Another button cancels.

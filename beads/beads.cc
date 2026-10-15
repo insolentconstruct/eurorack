@@ -348,13 +348,26 @@ void Init() {
 }
 
 void MonitorStateChange() {
+  ui.set_no_input(normalization_detector.no_input());
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
+    ui.ClearSelfPlayRequest();
     return;
   }
   
   if (normalization_detector.no_input()) {
-    if (!synth_mode) {
+    if (settings.self_play_on_request()) {
+      // Self-play starts and stops only on a MEDIA hold.
+      if (ui.self_play_requested()) {
+        ui.ClearSelfPlayRequest();
+        codec.Stop();
+        if (synth_mode) {
+          processor.Configure(Processor::Media(settings.state().media),
+              normalization_detector.mono());
+        }
+        ConfigureAndStartCodec(!synth_mode, true);
+      }
+    } else if (!synth_mode) {
       if (!synth_mode_start_time) {
         synth_mode_start_time = system_clock.milliseconds();
         if (!synth_mode_start_time) synth_mode_start_time = 1;
@@ -390,6 +403,7 @@ void MonitorStateChange() {
       ConfigureAndStartCodec(false, mono_changed || synth_mode);
     }
     synth_mode_start_time = 0;
+    ui.ClearSelfPlayRequest();
   }
 }
 

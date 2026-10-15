@@ -7,7 +7,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`, stmlib 
 | Gesture | Allocation / action | Saved? |
 |---|---|---|
 | MEDIA tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
-| MEDIA hold, 1.5 s | TAKEN: restart automatic gain; clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
+| MEDIA hold, 1.5 s | TAKEN: with no input, FREEZE off and On request, toggle self-play; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
 | MEDIA + feedback knob | TAKEN: manual input gain; release saves | Yes <!-- beads/ui.cc:174-177,491-495 --> |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state saved after 10 s if autosave enabled, outside synth mode <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
@@ -32,17 +32,18 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry/wet category; tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by thirds. Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry/wet category; tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter thirds, self-play halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
-| Feedback LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
+| Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
+| Feedback LED category, DRY/WET and REVERB | Reserved | Available |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Available for coordinated new options <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
 | Reverb LED category, all three knobs | Reserved category, no setter | Available for coordinated new options <!-- beads/options.h:90-117; beads/build/README.md --> |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
-| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; reserved categories still show the limiter preview <!-- beads/ui.cc:290-299 --> |
-| Mix knobs | All three normal values locked while editing; DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
+| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; reserved categories show limiter <!-- beads/ui.cc:290-299 --> |
+| Mix knobs | All three normal values locked while editing; FEEDBACK or DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
 
 ## Saved settings
 
@@ -59,11 +60,12 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 8 | `disable_autosave` | 0; TAKEN <!-- beads/settings.h:58; beads/settings.cc:68 --> |
 | 9 | `monophonic_mode` | 0 = off (default), 1 = on; TAKEN: monophonic grains, using Mutable Instruments' original code <!-- beads/settings.h:59; beads/beads.cc:203; beads/ui.cc:358-369 --> |
 | 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
-| 11–23, individually | `padding[1]` … `padding[13]` | FREE format bytes; currently all zeroed on every save <!-- beads/settings.cc:96-99 --> |
+| 11 | `padding[1]` | Self-play: 0xA1 = On request; 0 and all unknown values = Automatic; canonicalized on load/save |
+| 12–23, individually | `padding[2]` … `padding[13]` | FREE; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright MEDIA cue, but ignores mono in the DSP. Turn mono off before downgrading. Drizzlet uses byte 9 without changing the settings layout. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes byte 10 on load/save and preserves loaded bytes 11–23 until save clears them; a new option must change save clearing and add load validation. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10 and 11 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Bytes 12–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 | Flash area | TAKEN | FREE / limit |
@@ -96,7 +98,7 @@ Updater reception has no end-address guard; extending app/update files can overw
 | DENSITY knob + CV | Grain rate; noon stops latched grains; clock divider/probability; unlatched noon triggers single grains. Delay: base time or clock/tap ratio | Synth grain rate, with density CV also used for exponential FM at high rates; TAKEN <!-- manual.md:63-77,150-162; beads/dsp/synth.cc:70-81 --> |
 | TIME, PITCH, SIZE, SHAPE knobs + CV | Position, transposition, duration/direction, envelope. SIZE fully CW enters delay; TIME then delay multiple/frozen slice, PITCH pitch-shift, SHAPE tap envelopes | Synth TIME wave position, PITCH root/grain pitch, SIZE duration, SHAPE envelope; all TAKEN <!-- manual.md:87-97,144-174; beads/dsp/wavetable_voice.h:84-94; beads/dsp/wavetable_granular_player.h:65-68; beads/dsp/delay_controller.cc:173-175,293-294,346 --> |
 | Four attenurandomizers | Patched: CW CV amount, CCW CV-controlled randomness; unpatched: peaky/uniform randomness. Delay: slow random LFOs; SIZE amount + SIZE CV also set bandwidth | Synth PITCH CV always 1 V/oct root; PITCH attenurandomizer remains grain randomness; TAKEN <!-- manual.md:102-106,174,192-194; beads/dsp/granular_processor.h:277-282 --> |
-| Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow all three mix knobs (DRY/WET in use); TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
+| Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow all three mix knobs (FEEDBACK and DRY/WET in use); TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
 | FREEZE + SEED gate inputs | Record stop; grain clock/gate, delay clock. Button freeze ORs with gate; SEED input delayed 2.5 ms | Synth freeze stops new grains/holds envelopes; SEED still drives grains; TAKEN <!-- beads/beads.cc:132-151; manual.md:158,186; beads/dsp/synth.cc:73-81 --> |
 | L/R audio in, L/R audio out | Input normalization selects mono/stereo; output always stereo, unpatched R sums to L; optional R grain gate replaces audio | Both inputs empty for 10 s selects synth; R gate costs stereo output; no spare dedicated gate output <!-- manual.md:36-40,134-138; beads/beads.cc:360-394; beads/dsp/synth.cc:138-142 --> |
 | MEDIA RGB LED | 0 dirty tape red/pink, 1 clean tape amber, 2 vintage digital teal, 3 digital white; dims with overwrite reserve; manual gain overrides with meter | Same palette marks synth resolutions 4/4, 16/6, 7/7, 16/16 bits (continuous/grains); options override colours; TAKEN <!-- beads/ui.cc:190-195,238-245; beads/dsp/processor.h:58-63; beads/dsp/synth.cc:84-85 --> |
@@ -140,7 +142,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options use one format byte plus packed fields.** Byte 11 holds a fixed marker, a layout version and the variant. If it doesn't match, every extension option reads as stock; this covers stock firmware zeroing the bytes and garbage. Bytes 12–20 hold small bit fields, and 21–23 stay in reserve. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Bytes 12–23 remain free; any future format marker or packed fields must use those bytes. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's format byte keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, limiter and mono included. Other requests stay open as issues.
 - **Reserved gestures:** MEDIA+SEED for explicit engine entry, MEDIA+FREEZE for buffer trim; the FREEZE long hold and flash sector 14 are unassigned.

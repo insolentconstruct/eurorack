@@ -149,6 +149,10 @@ class Ui {
     mode_ = factory_test ? MODE_FACTORY_TEST : MODE_NORMAL;
   }
   
+  inline void set_no_input(bool no_input) { no_input_ = no_input; }
+  inline bool self_play_requested() const { return self_play_requested_; }
+  inline void ClearSelfPlayRequest() { self_play_requested_ = false; }
+
   inline bool trim_flag() const {
     return trim_flag_;
   }
@@ -174,6 +178,8 @@ class Ui {
   Mode mode_;
   
   bool trim_flag_;
+  bool no_input_;
+  bool self_play_requested_;
   bool freeze_button_state_;
   bool freeze_led_state_;
   

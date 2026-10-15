@@ -887,12 +887,144 @@ void TestCorruptCalibrationRewritesOnce() {
   }
 }
 
+void TestSelfPlayOptions() {
+  test_checker.Start("TestSelfPlayOptions");
+  Rig r;
+  r.Enter();
+  r.Tap();
+  r.Tap();
+  CHECK(r.ui.options_.page() == kSelfPlayPage);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  r.feedback = 0.8f;
+  r.Tick(1);
+  CHECK(r.ui.options_.self_play_preview());
+  r.feedback = 0.49f;
+  r.Tick(1);
+  CHECK(r.ui.options_.self_play_preview());
+  r.feedback = 0.46f;
+  r.Tick(1);
+  CHECK(!r.ui.options_.self_play_preview());
+  r.feedback = 0.51f;
+  r.Tick(1);
+  CHECK(!r.ui.options_.self_play_preview());
+  r.feedback = 0.8f;
+  for (int i = 0; i < 1200; ++i) {
+    r.Tick(1);
+    bool pulse = stmlib::system_clock.milliseconds() % 1200 < 120;
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (pulse ? 255 : 0));
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (pulse ? 255 : 0));
+  }
+  CHECK(!r.settings.self_play_on_request());
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(r.settings.self_play_on_request());
+  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.self_play_on_request());
+  r.Tick(30);
+  r.Enter();
+  r.Tap();
+  r.Tap();
+  r.feedback = 0.1f;
+  r.Tick(1);
+  CHECK(!r.ui.options_.self_play_preview());
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.self_play_on_request());
+  CHECK(r.gain.restarts == 0 && !r.ui.self_play_requested());
+  r.Tick(30);
+  r.Enter();
+  r.Tap();
+  r.Tap();
+  r.feedback = 0.9f;
+  r.Tick(1);
+  r.feedback = 0.1f;
+  r.Tick(5001);
+  CHECK(!r.settings.self_play_on_request());
+  CHECK(loaded.Init(false) && !loaded.self_play_on_request());
+}
+
+void TestSelfPlayStorage() {
+  test_checker.Start("TestSelfPlayStorage");
+  Rig r;
+  for (int i = 0; i < 256; ++i) {
+    r.settings.mutable_state()->padding[1] = i;
+    CHECK(r.settings.self_play_on_request() == (i == 0xa1));
+    r.settings.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.self_play_on_request() == (i == 0xa1));
+    CHECK(loaded.state().padding[1] == (i == 0xa1 ? 0xa1 : 0));
+  }
+  r.settings.set_self_play_on_request(true);
+  r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+  r.settings.SaveState();
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.self_play_on_request());
+  CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  State legacy_state = { };
+  PersistentData calibration = { };
+  stmlib::ChunkStorage<15, PersistentData, State> legacy;
+  CHECK(legacy.Init(&calibration, &legacy_state));
+  memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
+  legacy.SaveState();
+  CHECK(loaded.Init(false) && !loaded.self_play_on_request());
+  loaded.mutable_state()->padding[1] = 0xff;
+  loaded.chunk_storage_.SaveState();
+  CHECK(loaded.Init(false));
+  CHECK(loaded.state().padding[1] == 0);
+}
+
+void TestSelfPlayHold() {
+  test_checker.Start("TestSelfPlayHold");
+  for (int mode = 0; mode < 2; ++mode) {
+    for (int no_input = 0; no_input < 2; ++no_input) {
+      for (int frozen = 0; frozen < 2; ++frozen) {
+        Rig r;
+        r.settings.set_self_play_on_request(mode);
+        r.ui.set_no_input(no_input);
+        r.ui.freeze_led_state_ = frozen;
+        r.settings.mutable_state()->gain = 123;
+        unsigned writes = test_writes;
+        uint8_t media = r.settings.state().media;
+        // While frozen, the hold restarts automatic gain as in stock.
+        const bool request = mode && no_input && !frozen;
+        for (int hold = 0; hold < 2; ++hold) {
+          r.Down(SWITCH_MEDIA);
+          uint32_t start = r.ui.press_time_[SWITCH_MEDIA];
+          while (stmlib::system_clock.milliseconds() - start < 1499) {
+            r.Tick(1);
+          }
+          CHECK(!r.ui.self_play_requested());
+          r.Tick(1);
+          CHECK(r.ui.self_play_requested() == request);
+          CHECK(r.gain.restarts == (request ? 0 : hold + 1));
+          if (request) {
+            CHECK(r.settings.state().gain == 123 && test_writes == writes);
+          }
+          r.ui.ClearSelfPlayRequest();
+          CHECK(!r.ui.self_play_requested());
+          r.Up(SWITCH_MEDIA);
+          CHECK(!r.ui.self_play_requested());
+          CHECK(r.settings.state().media == media);
+        }
+      }
+    }
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestSelfPlayOptions();
+  TestSelfPlayStorage();
+  TestSelfPlayHold();
   TestMonophonicGesture();
   TestAudioPatchDetection();
   TestFrozenStateChangeGuard();

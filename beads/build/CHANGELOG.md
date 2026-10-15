@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
 ## Unreleased
+- Self-play option: Automatic (stock, default) or On request. In On request, self-play never starts by itself; hold MEDIA 1.5 s with both inputs unpatched and FREEZE off to start or stop it. Feedback category, FEEDBACK knob; steady cyan / one magenta pulse. Saved in byte 11; stock ignores it and resets it on save (#17).
 - Enable Mutable Instruments' original monophonic grain code: hold MEDIA, then press SEED to toggle and save (default off). The MEDIA LED dims to half brightness. Use square or decay SHAPE; slower attacks can be cut nearly silent. Toggle off to recover sound and before downgrading to stock.
 - App built with GCC 9.3.1 instead of 4.9.3. In an earlier timing sweep of the released source on an STM32H750 at 480 MHz it was about 2% faster in the worst audio block, and 2% smaller. The randomized-pan rounding is pinned so output is unchanged: all 44 emulated scenarios are bit-identical to the GCC 4.9.3 build. The bootloader stays on GCC 4.9.3 with its bytes unchanged.
 - Delay mode: after about 12 hours without a SEED clock or tap, the next one could set a negative tempo and collapse the echoes for one clock period. The idle count now stops at its 4 s limit (#57).

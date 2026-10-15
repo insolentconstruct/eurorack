@@ -84,6 +84,14 @@ class Settings {
         : mode == OUTPUT_LIMITER_OFF ? 0xa2 : 0;
   }
   
+  inline bool self_play_on_request() const {
+    return state_.padding[1] == 0xa1;
+  }
+
+  inline void set_self_play_on_request(bool on_request) {
+    state_.padding[1] = on_request ? 0xa1 : 0;
+  }
+
   inline State* mutable_state() {
     return &state_;
   }

@@ -294,6 +294,13 @@ cases = [
     'state->monophonic_mode = state->monophonic_mode;'),
   ('TestMonophonicGrains', 'granular', 'beads/dsp/granular_player.h',
     'if (monophonic_mode) {', 'if (false && monophonic_mode) {'),
+  ('TestSelfPlayOptions', 'options', 'beads/options.h',
+    'pot > 0.5f + 0.03f', 'pot > 0.9f + 0.03f'),
+  ('TestSelfPlayStorage', 'options', 'beads/settings.h',
+    'state_.padding[1] == 0xa1', 'state_.padding[1] != 0'),
+  ('TestSelfPlayHold', 'options', 'beads/ui.cc',
+    'settings_->self_play_on_request() && no_input_',
+    'settings_->self_play_on_request()'),
 ]
 started = time.monotonic()
 results = []
