@@ -30,7 +30,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <xmmintrin.h>
 
 #define private public
 #include "beads/dsp/processor.h"

@@ -41,22 +41,35 @@
 
 using namespace beads;
 
-// Captured from da792fd, GCC host build with contraction disabled.
-const uint32_t kStockHashes[4][3] = {
-  { 0x6eac02c8, 0x72c5604b, 0x27adc2e7 },
-  { 0x79a67055, 0x2d9eb3b9, 0x0e6f80d8 },
-  { 0x4d4af04d, 0xe5c6ff67, 0x971a869b },
-  { 0x88735508, 0x780972b3, 0xf0642700 }
+// Captured from da792fd and 1366739, with contraction disabled.
+#if defined(__aarch64__)
+const uint32_t kStockSynthHashes[4] = {
+  0xe67ef064, 0xdde6451f, 0xde7f8524, 0x1777a760
 };
-
-
-const uint32_t kCloudsHashes[4][3] = {
-  { 0x9ef8ffbf, 0x585619e3, 0xd04954b1 },
-  { 0x455c8d06, 0x6246c9f2, 0x6c42e900 },
-  { 0x1ba970f7, 0x85b58047, 0x750dd32f },
-  { 0xa8f5e418, 0xa612bb0c, 0x3bcf8e5c }
+const uint32_t kCloudsSynthHashes[4] = {
+  0x9564363d, 0xdfa0677d, 0xa1cb4546, 0x037ff25a
 };
+#else
+const uint32_t kStockSynthHashes[4] = {
+  0x27adc2e7, 0x0e6f80d8, 0x971a869b, 0xf0642700
+};
+const uint32_t kCloudsSynthHashes[4] = {
+  0xd04954b1, 0x6c42e900, 0x750dd32f, 0x3bcf8e5c
+};
+#endif
 
+const uint32_t kStockHashes[4][2] = {
+  { 0x6eac02c8, 0x72c5604b },
+  { 0x79a67055, 0x2d9eb3b9 },
+  { 0x4d4af04d, 0xe5c6ff67 },
+  { 0x88735508, 0x780972b3 }
+};
+const uint32_t kCloudsHashes[4][2] = {
+  { 0x9ef8ffbf, 0x585619e3 },
+  { 0x455c8d06, 0x6246c9f2 },
+  { 0x1ba970f7, 0x85b58047 },
+  { 0xa8f5e418, 0xa612bb0c }
+};
 
 static Processor processor;
 static Synth synth;
@@ -141,7 +154,7 @@ void TestStockHashes() {
       const uint32_t hash = Render(q, mode, false);
       printf("Stock q%d mode%d %08x\n", q, mode, hash);
 #ifndef REFERENCE_CAPTURE
-      CHECK(hash == kStockHashes[q][mode]);
+      CHECK(hash == (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
 #endif
     }
   }
@@ -155,8 +168,8 @@ void TestCloudsOutput() {
     for (int mode = 0; mode < 3; ++mode) {
       const uint32_t hash = Render(q, mode, true);
       printf("Clouds q%d mode%d %08x\n", q, mode, hash);
-      CHECK(hash != kStockHashes[q][mode]);
-      CHECK(hash == kCloudsHashes[q][mode]);
+      CHECK(hash != (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
+      CHECK(hash == (mode == 2 ? kCloudsSynthHashes[q] : kCloudsHashes[q][mode]));
     }
   }
 #endif
