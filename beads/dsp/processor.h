@@ -194,6 +194,12 @@ class Processor {
     processor_dirty_tape_.set_pitch_scale(scale);
   }
 
+#ifdef DWT_CALIBRATION
+  void PrepareCalibration(unsigned block) {
+    processor_digital_.PrepareCalibration(block);
+  }
+#endif  // DWT_CALIBRATION
+
  private:
   GranularProcessor<
       RESOLUTION_16_BIT,

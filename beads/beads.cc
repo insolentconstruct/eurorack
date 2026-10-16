@@ -37,6 +37,7 @@
 #include "beads/drivers/watchdog.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
+#include "beads/dwt_calibration.h"
 #include "beads/factory_test.h"
 #include "beads/gain_control.h"
 #include "beads/normalization_detector.h"
@@ -113,6 +114,9 @@ void Process(
 #ifdef PROFILE_INTERRUPT
   ScopedDebugPinToggler toggler;
 #endif  // PROFILE_INTERRUPT
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Callback calibration_callback;
+#endif  // DWT_CALIBRATION
   FloatFrame float_in[kMaxCodecBlockSize];
   FloatFrame float_out[kMaxCodecBlockSize];
   bool freeze[kMaxCodecBlockSize];
@@ -259,10 +263,22 @@ void Process(
   } else if (reverb_style_gain < 1.0f) {
     reverb_style_gain = min(1.0f, reverb_style_gain + kReverbStyleFadeStep);
   }
+#ifdef DWT_CALIBRATION
+  if (dwt_calibration::stats.synthetic) {
+    dwt_calibration::PrepareSynthetic(
+        processor, delay_buffer_1, sizeof(delay_buffer_1),
+        delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
+        clouds_style, synth_mode, p, d, m, seed_button_state,
+        seed_input, seed, freeze, float_in, size, calibration_callback);
+  }
+#endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
   if (synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
     synth.Render(
         seed_button_state,
         seed_input,
@@ -270,8 +286,14 @@ void Process(
         Synth::Resolution(settings.state().media),
         d, p, m,
         float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(1, dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
     processor.Process(
         seed_button_state,
         seed_input,
@@ -279,6 +301,9 @@ void Process(
         d, p, m,
         float_in,
         float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(1, dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
   }
   
   if (reverb_style_previous_gain != 1.0f || reverb_style_gain != 1.0f) {
@@ -326,6 +351,9 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 void Init() {
   System sys;
   sys.Init(true);
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Init();
+#endif  // DWT_CALIBRATION
 
   Watchdog::Start();
   freeze_input.Init();

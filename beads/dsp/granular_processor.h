@@ -222,6 +222,12 @@ class GranularProcessor {
     granular_player_.set_pitch_scale(scale);
   }
 
+#ifdef DWT_CALIBRATION
+  void PrepareCalibration(unsigned block) {
+    granular_player_.PrepareCalibration(&stereo_delay_line_, block);
+  }
+#endif  // DWT_CALIBRATION
+
  private:
   inline void DownsampleGate(const bool* in, bool* out, size_t size) {
     for (size_t i = 0; i < size / ratio; ++i) {

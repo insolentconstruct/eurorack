@@ -204,6 +204,27 @@ class GranularPlayer {
     grain_interval_ = 0;
   }
   
+#ifdef DWT_CALIBRATION
+  template<typename DelayLine>
+  void PrepareCalibration(DelayLine* line, unsigned block) {
+    const unsigned kGrains = 32;
+    const unsigned kGrainStride = 337;
+    const unsigned kBlockStride = 19;
+    const unsigned kDelayRange = 16000;
+    const float kDelayOffset = 4096.0f;
+    const float kPitchRatio = 4.0f;
+    const float kDuration = 1000.0f;
+    const float kEnvelopeShape = 0.5f;
+    const float kAmplitude = 0.1f;
+    for (unsigned g = 0; g < kGrains; ++g) {
+      const float delay = kDelayOffset
+          + float((g * kGrainStride + block * kBlockStride) % kDelayRange);
+      grain_[g].Start(line, delay, kPitchRatio, kDuration, kEnvelopeShape,
+          kAmplitude, float(g) / kGrains, 0.0f);
+    }
+  }
+#endif  // DWT_CALIBRATION
+
  protected:
   T grain_[num_grains];
   T* grain_priority_list_[num_grains];
