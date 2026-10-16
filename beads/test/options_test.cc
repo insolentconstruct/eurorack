@@ -287,6 +287,80 @@ void TestOptionsEntry() {
   CHECK(r.ui.options_.page() == kPitchScalePage);
 }
 
+void TestOptionsEntryButtons() {
+  test_checker.Start("TestOptionsEntryButtons");
+  const PitchScale saved[] = {
+    PITCH_SCALE_OFF, PITCH_SCALE_CHROMATIC, PITCH_SCALE_MINOR
+  };
+  const uint8_t colors[][3] = {
+    { 255, 255, 255 }, { 0, 255, 0 }, { 255, 255, 0 }
+  };
+  for (int i = 0; i < 3; ++i) {
+    for (int action = 0; action < 3; ++action) {
+      Rig r;
+      r.settings.set_pitch_scale(saved[i]);
+      r.settings.set_output_limiter_mode(OUTPUT_LIMITER_FAST);
+      r.settings.set_clouds_style(true);
+      r.settings.SaveState();
+      if (action == 1) {
+        r.Down(SWITCH_SEED);
+        r.Up(SWITCH_SEED);
+      }
+      const State state = r.settings.state();
+      const unsigned writes = test_writes;
+      const bool seed = r.ui.seed_button_state();
+      const bool locked = r.ui.seed_button_locked();
+      r.Enter();
+      // Neither direction may select the Clouds-style control on entry.
+      for (int direction = 0; action == 2 && direction < 2; ++direction) {
+        r.reverb = direction ? 0.9f : 0.1f;
+        r.Tick(1);
+        CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
+        CHECK(r.ui.options_.page() == kPitchScalePage);
+        CHECK(!r.ui.options_.reverb_selected());
+        CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
+        CHECK(r.ui.clouds_style());
+        CHECK(r.ui.pitch_scale() == saved[i]);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == colors[i][0]);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == colors[i][1]);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == colors[i][2]);
+      }
+      if (action == 2) {
+        CHECK(!memcmp(&r.settings.state(), &state, sizeof(State)));
+        CHECK(test_writes == writes);
+        continue;
+      }
+      // FEEDBACK stays at its entry position, including through scale wrap.
+      const int taps = i == 2 ? 8 : 1;
+      for (int tap = 0; tap < taps; ++tap) {
+        test_down[SWITCH_SEED] = true;
+        r.Tick(8, false);
+        CHECK(!r.ui.queue_.available());
+        CHECK(r.ui.options_.stage() == (i == 2
+            ? Options::STAGE_EDITING : Options::STAGE_DRAIN));
+        r.ui.DoEvents();
+        CHECK(r.ui.seed_button_state() == seed);
+        CHECK(r.ui.seed_button_locked() == locked);
+        test_down[SWITCH_SEED] = false;
+        r.Tick(8, false);
+        CHECK(!r.ui.queue_.available());
+        r.ui.DoEvents();
+        CHECK(r.ui.seed_button_state() == seed);
+        CHECK(r.ui.seed_button_locked() == locked);
+        CHECK(r.ui.options_.active() == (i == 2));
+        const int scale = (PITCH_SCALE_MINOR - PITCH_SCALE_FIFTHS +
+            tap + 1) % 8;
+        CHECK(r.ui.pitch_scale() == (i == 2
+            ? PitchScale(PITCH_SCALE_FIFTHS + scale) : saved[i]));
+        CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
+        CHECK(r.ui.clouds_style());
+        CHECK(!memcmp(&r.settings.state(), &state, sizeof(State)));
+        CHECK(test_writes == writes);
+      }
+    }
+  }
+}
+
 void TestUi() {
   test_checker.Start("TestUi");
   Rig r;
@@ -1379,6 +1453,7 @@ int main() {
   TestQueueRace();
   TestStorage();
   TestOptionsEntry();
+  TestOptionsEntryButtons();
   TestUi();
   TestDsp();
   return test_checker.failures() ? 1 : 0;

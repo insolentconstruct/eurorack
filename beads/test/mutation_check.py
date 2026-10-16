@@ -42,6 +42,10 @@ out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
     'beads/test/.runs/mutations').resolve()
 out.mkdir(parents=True, exist_ok=True)
 cases = [
+  ('TestOptionsEntryButtons', 'options', 'beads/options.h',
+    'return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&',
+    'return qualified_ && stage_ == STAGE_EDITING && '
+    'page_ == kPitchScalePage &&'),
   ('TestOptionsEntry', 'options', 'beads/options.h',
     'page_ = kPitchScalePage;', 'page_ = kLimiterPage;'),
   ('TestOptionsEntry', 'options', 'beads/options.h',
