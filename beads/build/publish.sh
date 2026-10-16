@@ -10,12 +10,13 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 title="Drizzlet ${tag#drizzlet-}"
 # Alpha: only its developers have tested it. Publish as a pre-release until users report back.
 prerelease=true
-notes="Alpha: tested only by its developers, on one module. Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first. How it was tested: [TESTING.md](https://github.com/$repo/blob/$tag/beads/build/TESTING.md)."
+notes="Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first. How it was tested: [TESTING.md](https://github.com/$repo/blob/$tag/beads/build/TESTING.md)."
 # This release's CHANGELOG.md section, under its "## VERSION" heading.
 changelog=${CHANGELOG:-beads/build/CHANGELOG.md}
 changes=$(awk -v v="${tag#drizzlet-}" '/^## /{p = $2 == v; next} p' "$changelog")
 [[ -n ${changes//[[:space:]]/} ]] || { echo "No CHANGELOG.md section for ${tag#drizzlet-}" >&2; exit 1; }
 notes+=$'\n\n## Changes\n'"$changes"
+notes+=$'\n\n'"**Alpha:** install at your own risk, and report problems in the [issues](https://github.com/$repo/issues)."
 # The heading's label, e.g. "alpha 2" from "## 2026.10.16 (tag `...`, alpha 2)", goes in the title.
 heading=$(awk -v v="${tag#drizzlet-}" '/^## / && $2 == v {print; exit}' "$changelog")
 if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then title+=" (${BASH_REMATCH[1]})"; fi
