@@ -50,9 +50,15 @@ The feedback, dry/wet and reverb LEDs mark three categories; the open one's LED 
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three settings.
 Move a knob more than one tenth of its travel to start selecting; its zones pick the value, shown on the quality LED (next to MEDIA).
 
-| Category | Knob | Setting | Left third | Middle | Right third |
-|---|---|---|---|---|---|
-| Dry/wet LED | DRY/WET | Output limiter | Stock (steady green) | Fast release (one blue pulse) | Off (two amber pulses); loud peaks can hard-clip |
+| Category | Knob | Choices |
+|---|---|---|
+| Feedback LED (page 0) | FEEDBACK | Automatic / On request (halves) |
+| Dry/wet LED (page 1) | DRY/WET | Stock / Fast release / Off (thirds) |
+| Dry/wet LED (page 1) | REVERB | Stock / Clouds-style (halves) |
+| Reverb LED (page 2) | FEEDBACK | Off / Chromatic / Scale (thirds) |
+
+Output limiter: Stock is steady green; Fast release is one blue pulse;
+Off is two amber pulses. With Off, loud peaks can hard-clip.
 
 Self-play: Feedback LED category, FEEDBACK knob. Lower half selects Automatic
 (stock, steady cyan); upper half selects On request (one magenta pulse per

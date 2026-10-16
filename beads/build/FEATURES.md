@@ -35,7 +35,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry/wet category; tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter thirds, self-play halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry/wet category; tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter and pitch thirds, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
@@ -44,12 +44,11 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 | Feedback LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET delay mode (#26, #9); REVERB stereo width (#5) |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK | Reserved | Planned: mix law (#21, #48) |
-| Dry/wet LED category, REVERB | Lower half Stock; upper half Clouds-style | Steady green / one cyan pulse; grain diffusion (#2, #22) |
 | Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle seven scales |
 | Reverb LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET LED brightness (#40); REVERB grain starts on recorded attacks (#58, #47) |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
 | MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; Dry/wet REVERB shows Stock steady green or Clouds-style one cyan pulse, following the last knob moved; Reverb shows pitch scale <!-- beads/ui.cc:290-299 --> |
-| Mix knobs | All three normal values locked while editing; FEEDBACK or DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
+| Mix knobs | All three normal values locked while editing; FEEDBACK, DRY/WET or REVERB selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
 
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
 select Off (white), Chromatic (green), or Scale. In Scale,
@@ -146,11 +145,9 @@ No physical knob, CV jack, gate jack or LED is unallocated. New normal-mode cont
 
 ## Budgets
 
-The GCC 9 pitch-quantization build uses 268,920 B of app flash and 32,760 B
-of static DTCM, plus the 1,536 B minimum heap/stack reservation. Pitch
-quantization adds 1,784 B flash and 44 B static RAM to the preceding build.
-Instruction counts with Off show small compiler-generated changes outside
-grain starts; they are not a measurement of hardware cycle headroom.
+The combined pitch-scale and reverb build uses 273,456 B of app flash.
+Off matches Stock audio in emulator fixtures; instruction counts vary with
+code generation. Hardware cycle headroom remains unmeasured for this build.
 
 Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before the GCC 9 app build and this cycle's features; remeasure before allocating this headroom. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
 
