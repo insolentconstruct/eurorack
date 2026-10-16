@@ -3,7 +3,7 @@
 Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
-## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha)
+## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)
 - Self-play option (options page, FEEDBACK): Automatic (stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).
 - Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, up to 320 s, reset by a completed save or a minute unfrozen (#56).
 - Monophonic grains, Mutable Instruments' original code: hold MEDIA and press SEED to toggle; use square or decay SHAPE, and turn it off before downgrading (#31).
