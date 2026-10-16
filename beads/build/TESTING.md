@@ -1,6 +1,6 @@
 # Testing
 
-How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the checks its developers ran before release 2026.10.14 (alpha). Hardware testing used one module.
+How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the checks its developers ran before releases 2026.10.14 and 2026.10.16 (alphas). Hardware testing used one module.
 
 ## TL;DR
 
@@ -8,7 +8,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - an emulator comparison against the previous release found identical audio in 44 of 44 scenarios.
-- **On a module:** seven checks passed, from installing the release file to a stock firmware loading a Drizzlet save.
+- **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle fix, flash wear from a modulated FREEZE, monophonic grains and self-play, using oscilloscope captures and the debug probe.
 - **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
 
 ## Automated (every push)
@@ -74,6 +74,8 @@ Run by the developers; these scripts and results are not in this repository.
 - an oscilloscope captures both outputs;
 - a laptop plays audio into the inputs.
 
+### 2026.10.14
+
 | # | Check | Result |
 |---|---|---|
 | 1 | Install with the release update file, over the stock 2021 firmware | Decoded first time; new firmware running |
@@ -84,14 +86,29 @@ Run by the developers; these scripts and results are not in this repository.
 | 6 | Frozen delay, FM swept negative with SEED low, held and pulsed | No faults in 1,200 samples of the program counter |
 | 7 | Stock firmware (2021 release) loads a Drizzlet save | Yes: restored audio plays |
 
-**Crackle (#1), checked after 2026.10.14.** Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L went to a scope with OUT R unplugged, so it carried L+R. A detector counted clicks on the scope captures:
+### 2026.10.16
+
+Control voltages and gates from the Bela; OUT L on the oscilloscope; flash activity from samples of the program counter.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Install with the release update file, over the 2021 firmware | Decoded; new firmware running; the settings read back (trigger output, FREEZE, mode) unchanged |
+| 2 | Crackle recipe (#1), below | No clicks in 83 s (2021 firmware: 145 in 21 s) |
+| 3 | 20 s LFO into FREEZE, autosave on (#56) | Flash activity in the first cycle only (11–15 s), none in the next 77 s; the 2021 firmware showed it every cycle |
+| 4 | Frozen-buffer save from the FREEZE gate, then the same image re-flashed by the debug probe while still frozen | Flash activity for 7 s, ending before the restart; after it FREEZE was back on and the restored audio played (1.4 V RMS, inputs silent, grains from a DENSITY CV) |
+| 5 | Monophonic grains (#31): SEED pulsed 10 times a second into long grains | MEDIA LED at half brightness; the envelope dips to 23 % of its peak between triggers (81 % with mono off), and 48 % of its power is at 10 Hz and harmonics (5 %) |
+| 6 | Self-play, Automatic (the default): both inputs unplugged, SEED pulsed 10 times a second | Plays (1.4 V RMS); silent without the pulses, since a patched, unlatched SEED jack is the only grain trigger |
+
+Self-play On request, the delay clock fix (#57) and the frozen-delay slice fix (#33) were checked by host tests only.
+
+**Crackle (#1).** Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L went to a scope with OUT R unplugged, so it carried L+R. A detector counted clicks on the scope captures:
 
 | Firmware | Clicks | Output observed |
 |---|---:|---:|
 | 2021 forum release | 145 | 21 s |
 | 2024 recovery firmware | 164 | 20.6 s |
 | Released source, same GCC 4.9.3 compiler | 0 | 14 s |
-| Next Drizzlet alpha | 0 | 83 s (four runs) |
+| Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
 
 Reverse, square-envelope, low-pitch and no-grain variants gave none on any firmware. See CHANGELOG.md for the source difference.
 
@@ -100,5 +117,6 @@ Reverse, square-envelope, low-pitch and no-grain variants gave none on any firmw
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
 - Listening tests of the limiter modes. Their code is unchanged since the limiter's own measurements.
+- The full bench suite was not rerun on 2026.10.16.
 
 Report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).

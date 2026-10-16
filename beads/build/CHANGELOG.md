@@ -3,7 +3,7 @@
 Changes to Drizzlet, newest first. Each feature adds a line under
 "Unreleased"; a release turns it into a dated heading.
 
-## Unreleased
+## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha)
 - Self-play option: Automatic (stock, default) or On request. In On request, self-play never starts by itself; hold MEDIA 1.5 s with both inputs unpatched and FREEZE off to start or stop it. Feedback category, FEEDBACK knob; steady cyan / one magenta pulse. Saved in byte 11; stock ignores it and resets it on save (#17).
 - Modulated FREEZE no longer repeatedly erases the buffer save area: interrupted saves double the next wait up to 320 s; completion or a minute unfrozen resets it (#56).
 - Enable Mutable Instruments' original monophonic grain code: hold MEDIA, then press SEED to toggle and save (default off). The MEDIA LED dims to half brightness. Use square or decay SHAPE; slower attacks can be cut nearly silent. Toggle off to recover sound and before downgrading to stock (#31).
@@ -58,7 +58,7 @@ Together, these two changes removed the clicks behind the crackle report (#1) in
 | 2021 forum release | 145 | 21 s |
 | 2024 recovery firmware | 164 | 20.6 s |
 | Released source, same GCC 4.9.3 compiler | 0 | 14 s |
-| Next Drizzlet alpha | 0 | 83 s (four runs) |
+| Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
 
 Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any of the four. CPU overload is a hypothesis; CPU load has not been measured.
 
