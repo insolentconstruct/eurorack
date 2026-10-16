@@ -24,7 +24,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 | Hold ASSIGN, press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | ASSIGN + MEDIA, either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold MEDIA, press SEED | TAKEN: toggle monophonic grains; consumes both releases; MEDIA first | Yes <!-- beads/ui.cc:358-369 --> |
-| MEDIA + FREEZE | FREE dedicated action in this build; reserved by disabled trim feature. Planned for Beta 1: buffer trim (#31), once a saved buffer keeps its trimmed length | Would trim/unfreeze, not save directly <!-- beads/ui.cc:372-384; beads/ui.h:44 --> |
+| MEDIA + FREEZE | TAKEN: hold MEDIA first, then press FREEZE to trim the recording window to zero and clear the button freeze latch | Mutable Instruments’ original gesture; saves keep the length; stock loads full length |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + ASSIGN | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration | Rewrites settings sector <!-- beads/beads.cc:329-330; beads/settings.cc:60-76; stmlib/system/sector_storage_h7xx.h:126-130 --> |
@@ -108,7 +108,8 @@ Frozen-buffer backup header: one 32-byte flash word at 0x08100000, little-endian
 | 10–11 | `padding` | Zero |
 | 12–15 | `crc` | stmlib `crc32` (CRC-32/ISO-HDLC) of the audio, continued over this header with `crc` = 0 |
 | 16–19 | `crc_tag` | `CRC1` (0x31435243): `crc` is valid. Stock backups hold leftover stack bytes in 10–31, so without this tag a backup loads as stock did, after the range checks |
-| 20–31 | `reserved` | Zero. A later release may use a byte only if older firmware can ignore it safely; anything else needs a new `crc_tag` |
+| 20–23 | `trimmed_frames` | Frames removed from the full buffer; 0 = full length, CRC-covered; stock ignores it |
+| 24–31 | `reserved` | Zero |
 
 Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
 short after erasing doubles the next wait, up to 320 seconds, until a save
@@ -137,9 +138,9 @@ Updater reception has no end-address guard; extending app/update files can overw
 
 No physical knob, CV jack, gate jack or LED is unallocated. New normal-mode controls need a deliberate shared gesture; only MEDIA is RGB, and R is already shared with gate output. <!-- beads/beads.cc:178-234; beads/drivers/leds.h:42-52; manual.md:138 -->
 
-## Compiled out
+## Build options
 
-`ENABLE_ADVANCED_FEATURES` is commented out: buffer trim has no active button entry and MEDIA+FREEZE stays reserved for it. Monophonic grains (MEDIA+SEED) are enabled independently of that flag. Automatic input mono/stereo detection remains active. <!-- beads/ui.h:44; beads/ui.cc:358-384; beads/beads.cc:203-207,385-394 -->
+Buffer trim and monophonic grains use Mutable Instruments’ original gestures and are always enabled. Automatic input mono/stereo detection remains active.
 `PROFILE_INTERRUPT` and bootloader `ENABLE_ERROR_DETECTION` are off; their debug-pin/error-check paths are excluded. `ENABLE_HARDWARE_24K`, `ENABLE_BANDWIDTH_CONTROL` and bootloader `ENABLE_ERASE_BUTTON_COMBO` are ON; their alternate branches are excluded. `TEST` hooks belong to host tests. <!-- beads/beads.cc:74,109-111,338-340; beads/bootloader/bootloader.cc:27-28,190-264; beads/dsp/processor.h:46,79-92; beads/dsp/multitap_delay.h:38,90; beads/ui.cc:546-549 -->
 `WasteCPUCycles(16)` is always called in main, including synth mode: it renders a dummy vintage-digital grain workload with memory accesses, discarding output. Main-loop occupancy is not audio CPU headroom. <!-- beads/beads.cc:403-410; beads/dsp/processor.h:150-153; beads/dsp/granular_processor.h:116-147 -->
 
@@ -183,7 +184,7 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 - **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Byte 12 stores pitch scale (0 Off, 0xA1–0xA8); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Bytes 14–22 remain free for options. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
-- **Gestures:** MEDIA+SEED is taken by monophonic grains; MEDIA+FREEZE is reserved for buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
+- **Gestures:** MEDIA+SEED is taken by monophonic grains; MEDIA+FREEZE = buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
 
 Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
 mapping, with Clouds delay lengths and modulation. The grain wet path adds

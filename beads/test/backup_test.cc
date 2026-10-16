@@ -64,7 +64,8 @@ STATIC_ASSERT(offsetof(Header, media) == 8, media);
 STATIC_ASSERT(offsetof(Header, mono) == 9, mono);
 STATIC_ASSERT(offsetof(Header, crc) == 12, crc);
 STATIC_ASSERT(offsetof(Header, crc_tag) == 16, crc_tag);
-STATIC_ASSERT(offsetof(Header, reserved) == 20, reserved);
+STATIC_ASSERT(offsetof(Header, trimmed_frames) == 20, trimmed_frames);
+STATIC_ASSERT(offsetof(Header, reserved) == 24, reserved);
 
 const size_t kAudio = kDelayBufferSizeBits / 8;
 uint8_t* const kFlash = reinterpret_cast<uint8_t*>(0x08100000);
@@ -155,6 +156,40 @@ void Save(Processor::Media media, bool mono, int write_ptr, uint8_t seed) {
   CHECK(rig.settings.state().frozen);
 }
 
+void TestTrimBackup() {
+  test_checker.Start("TestTrimBackup");
+  for (int media = 0; media < 4; ++media) {
+    for (int mono = 0; mono < 2; ++mono) {
+      const int capacity = kMaxDelay[media] << mono;
+      int lengths[4];
+      lengths[0] = 0;
+      lengths[1] = 1;
+      lengths[2] = capacity / 2;
+      lengths[3] = capacity;
+      for (int i = 0; i < 4; ++i) {
+        Wipe();
+        Rig r;
+        r.Boot();
+        processor.Configure(Processor::Media(media), mono);
+        processor.write_ptr_ = 123;
+        processor.duration_ = lengths[i];
+        Fill(3);
+        CHECK(r.Freeze());
+        CHECK(kHeader->trimmed_frames == uint32_t(capacity - lengths[i]));
+        CHECK(r.Boot());
+        CHECK(processor.duration_ == lengths[i]);
+        CHECK(Restored(3));
+      }
+      kHeader->trimmed_frames = capacity + 1;
+      kHeader->crc = 0;
+      kHeader->crc = Crc(Crc(0, kFlash + 32, kAudio), kHeader, sizeof(Header));
+      Rig invalid;
+      CHECK(!invalid.Boot());
+      CHECK(processor.configured_ == 0);
+    }
+  }
+}
+
 void TestFormat() {
   test_checker.Start("TestFormat");
   for (int media = 0; media < 4; ++media) {
@@ -203,14 +238,48 @@ void WriteStock(int media, int mono, int write_ptr, uint8_t seed) {
   kHeader->mono = mono;
 }
 
+void TestFrozenTrimBackup() {
+  test_checker.Start("TestFrozenTrimBackup");
+  for (int stock = 0; stock < 2; ++stock) {
+    Wipe();
+    if (stock) {
+      WriteStock(3, 0, 123, 7);
+    } else {
+      Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+    }
+    Rig r;
+    CHECK(r.Boot());
+    CHECK(processor.duration_ == kMaxDelay[3]);
+    processor.duration_ = 0;
+    r.backup.Process(true);
+    CHECK(!r.settings.state().frozen);
+    CHECK(!r.backup.busy());
+    CHECK(!r.backup.previous_freeze_state_);
+    CHECK(r.Freeze());
+    CHECK(kHeader->trimmed_frames == uint32_t(kMaxDelay[3]));
+    CHECK(r.Boot());
+    CHECK(processor.duration_ == 0);
+    CHECK(Restored(7));
+  }
+}
+
 void TestStock() {
   test_checker.Start("TestStock");
+  for (int media = 0; media < 4; ++media) {
+    for (int mono = 0; mono < 2; ++mono) {
+      WriteStock(media, mono, 123, 9);
+      Rig r;
+      CHECK(r.Boot());
+      CHECK(processor.duration_ == kMaxDelay[media] << mono);
+    }
+  }
   WriteStock(2, 0, 12345, 9);
   Rig rig;
   CHECK(rig.Boot());
   CHECK(processor.media_ == 2 && !processor.mono_ &&
       processor.write_ptr_ == 12345);
   CHECK(Restored(9));
+  CHECK(processor.duration_ == kMaxDelay[2]);
   const int bad[][3] = {
     { 4, 0, 0 }, { 255, 0, 0 }, { 0, 2, 0 }, { 3, 0, -1 },
     { 3, 0, 192000 }, { 3, 1, 384000 }, { 0, 1, 768000 }, { 1, 0, 256000 },
@@ -229,7 +298,7 @@ void TestStock() {
 
 void TestCorruption() {
   test_checker.Start("TestCorruption");
-  const size_t offsets[] = { 32, 32 + 12345, 32 + kAudio - 1, 4, 8, 9 };
+  const size_t offsets[] = { 20, 32, 32 + 12345, 32 + kAudio - 1, 4, 8, 9 };
   for (size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); ++i) {
     Wipe();
     Save(Processor::MEDIA_DIGITAL, false, 100, 5);
@@ -578,6 +647,8 @@ int main() {
   TestBackupEarlyCancel();
   TestBackupClockWrap();
   TestBackupRestoredThaw();
+  TestTrimBackup();
+  TestFrozenTrimBackup();
   TestFormat();
   TestStock();
   TestCorruption();

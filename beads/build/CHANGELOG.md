@@ -6,6 +6,7 @@ heading; a release turns it into a dated heading.
 ## Unreleased
 - Clouds-style reverb option: Dry/wet category, REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output (#2, #22). Switching briefly fades and clears the old tail.
 - Grain pitch quantization: Off, Chromatic or seven scales, including Mutable Instruments Marbles' microtonal tunings. Set with FEEDBACK in the Reverb options category; tap SEED on Scale to cycle scales (#6, #8). Delay and the continuous synth oscillator keep their existing pitch behaviour.
+- Buffer trim: hold MEDIA, then press FREEZE (Mutable Instruments’ original gesture). Frozen-buffer saves keep the trimmed length; stock firmware loads them at full length.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)
 - Self-play option (options page, FEEDBACK): Automatic (stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).

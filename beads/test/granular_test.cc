@@ -35,6 +35,7 @@
 #define private public
 #define protected public
 #include "beads/dsp/processor.h"
+#include "beads/test/legacy_delay_grain.h"
 #undef protected
 #undef private
 
@@ -79,6 +80,132 @@ struct TaggedLine {
     return result;
   }
 };
+
+struct TrimmedLine {
+  enum { MAX_DELAY = 262144, NUM_CHANNELS = 2 };
+  int length;
+  bool freeze;
+  mutable float age;
+  bool frozen() const { return freeze; }
+  int duration() const { return length; }
+  template<int method>
+  FloatFrame Read(int delay, float fraction) const {
+    age = float(delay) + fraction;
+    FloatFrame result;
+    result.l = sinf(age * 0.1f);
+    result.r = cosf(age * 0.07f);
+    return result;
+  }
+};
+
+const int kTrimLengths[] = { 0, 1, 3, 16, 128, 512, 1024, 4096, 200000 };
+const float kTrimPitches[] = { -4.0f, -1.7f, -0.5f, 0.12345f, 0.5f,
+    0.9999f, 1.0f, 1.0001f, 1.7f, 4.0f };
+
+void TestTrimGrainBounds() {
+  test_checker.Start("TestTrimGrainBounds");
+  for (int frozen = 0; frozen < 2; ++frozen) {
+    for (size_t pitch = 0;
+        pitch < sizeof(kTrimPitches) / sizeof(float); ++pitch) {
+      for (size_t length = 0;
+          length < sizeof(kTrimLengths) / sizeof(int); ++length) {
+        TrimmedLine line;
+        line.length = kTrimLengths[length];
+        line.freeze = frozen;
+        line.age = 0.0f;
+        DelayGrain grain;
+        grain.Init(48000.0f);
+        const float consumption = kTrimPitches[pitch] - (frozen ? 0.0f : 1.0f);
+        const float intended = consumption == 0.0f ? 4000.0f :
+            std::min(4000.0f, line.length / fabsf(consumption));
+        grain.Start(&line, float(line.length) * 0.5f, kTrimPitches[pitch],
+            4000.0f, 0.5f, 1.0f, 0.5f, 0.0f);
+        const float start = float(grain.initial_delay_) / 1024.0f;
+        const float end = start - intended * consumption;
+        CHECK(start >= 0.0f && start <= line.length);
+        CHECK(end >= -0.001f && end <= line.length + 0.001f);
+        CHECK(grain.remaining_samples() == int(intended));
+        // Attack <= 2 ms, release 10 ms, sustain >= 2 samples.
+        // Allow four samples for phase rounding at this test's durations.
+        const float extra = 0.012f * 48000.0f + 2.0f + 4.0f;
+        const float margin = extra * fabsf(consumption) + 6.0f;
+        int elapsed = 0;
+        while (elapsed < int(intended + extra) && !grain.done()) {
+          FloatFrame out;
+          out.l = out.r = 0.0f;
+          grain.Render<HEAD_CROSSING_POLICY_STOP, true>(&line, &out);
+          CHECK(line.age >= 0.0f && line.age < line.MAX_DELAY);
+          CHECK(line.age <= line.length + margin);
+          ++elapsed;
+        }
+        CHECK(grain.done());
+        CHECK(grain.remaining_samples() == 0);
+      }
+    }
+  }
+}
+
+void TestUntrimmedGrainRender() {
+  test_checker.Start("TestUntrimmedGrainRender");
+  for (int frozen = 0; frozen < 2; ++frozen) {
+    for (int pitch = -4; pitch <= 4; ++pitch) {
+      for (int time = 0; time < 3; ++time) {
+        TrimmedLine line;
+        line.length = line.MAX_DELAY;
+        line.freeze = frozen;
+        line.age = 0.0f;
+        DelayGrain grain;
+        LegacyDelayGrain original;
+        grain.Init(48000.0f);
+        original.Init(48000.0f);
+        const float delay = float(time) * 4000.0f + 64.0f;
+        const float pan = time & 1 ? 0.7f : 0.3f;
+        const float duration = time == 2 ? 600000.0f : 20000.0f;
+        grain.Start(&line, delay, float(pitch) * 0.5f,
+            duration, 0.5f, 0.75f, pan, 0.25f);
+        original.Start(&line, delay, float(pitch) * 0.5f,
+            duration, 0.5f, 0.75f, pan, 0.25f);
+        for (int i = 0; i < int(duration) * 2 &&
+            (!grain.done() || !original.done()); ++i) {
+          FloatFrame out, reference;
+          out.l = out.r = reference.l = reference.r = 0.0f;
+          grain.Render<HEAD_CROSSING_POLICY_STOP, true>(&line, &out);
+          original.Render<HEAD_CROSSING_POLICY_STOP, true>(&line, &reference);
+          if (!CHECK(memcmp(&out, &reference, sizeof(out)) == 0) ||
+              !CHECK(grain.done() == original.done())) {
+            break;
+          }
+        }
+        CHECK(grain.done() && original.done());
+      }
+    }
+  }
+}
+
+void TestPlayingGrainSurvivesTrim() {
+  test_checker.Start("TestPlayingGrainSurvivesTrim");
+  TrimmedLine line;
+  line.length = line.MAX_DELAY;
+  line.freeze = true;
+  line.age = 0.0f;
+  DelayGrain grain;
+  LegacyDelayGrain original;
+  grain.Init(48000.0f);
+  original.Init(48000.0f);
+  grain.Start(&line, 4000.0f, -1.0f, 1000.0f,
+      0.5f, 1.0f, 0.5f, 0.0f);
+  original.Start(&line, 4000.0f, -1.0f, 1000.0f,
+      0.5f, 1.0f, 0.5f, 0.0f);
+  line.length = 0;
+  for (int i = 0; i < 2000; ++i) {
+    FloatFrame out, reference;
+    out.l = out.r = reference.l = reference.r = 0.0f;
+    grain.Render<HEAD_CROSSING_POLICY_STOP, true>(&line, &out);
+    original.Render<HEAD_CROSSING_POLICY_STOP, true>(&line, &reference);
+    CHECK(memcmp(&out, &reference, sizeof(out)) == 0);
+  }
+  CHECK(grain.done());
+}
 
 void TestGrainTimeAndDirection() {
   test_checker.Start("TestGrainTimeAndDirection");
@@ -731,6 +858,9 @@ int main() {
   TestProcessorRandomPan();
   TestPitchCvImmediate();
   TestCvChannelIsolation();
+  TestTrimGrainBounds();
+  TestUntrimmedGrainRender();
+  TestPlayingGrainSurvivesTrim();
   TestGrainTimeAndDirection();
   TestGrainDuration();
   TestGrainShape();

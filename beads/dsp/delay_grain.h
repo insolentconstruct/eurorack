@@ -85,7 +85,7 @@ class DelayGrain : public Grain {
     if (consumption_speed != 0.0f) {
       duration = std::min(
           duration,
-          DelayLineType::MAX_DELAY / fabsf(consumption_speed));
+          delay_line->duration() / fabsf(consumption_speed));
     }
     
     if (consumption_speed > 0.0f) {
@@ -94,7 +94,7 @@ class DelayGrain : public Grain {
     } else if (consumption_speed < 0.0f) {
       // Trim delay time so we don't loop and hit back of the recording head.
       delay = std::min(delay, 
-          DelayLineType::MAX_DELAY + duration * consumption_speed);
+          delay_line->duration() + duration * consumption_speed);
     }
     
     initial_delay_ = delay_ = int32_t(delay * 1024.0f);

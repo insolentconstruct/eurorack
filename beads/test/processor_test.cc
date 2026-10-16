@@ -259,12 +259,85 @@ void TestUnfreezeCrossfade() {
   }
 }
 
+void TestTrimDispatch() {
+  test_checker.Start("TestTrimDispatch");
+  for (int media = 0; media < 4; ++media) {
+    for (int mono = 0; mono < 2; ++mono) {
+      rig.Init(Processor::Media(media), mono);
+      int* durations[8];
+      durations[0] =
+          rig.processor.processor_dirty_tape_.mutable_delay_duration(false);
+      durations[1] =
+          rig.processor.processor_dirty_tape_.mutable_delay_duration(true);
+      durations[2] =
+          rig.processor.processor_clean_tape_.mutable_delay_duration(false);
+      durations[3] =
+          rig.processor.processor_clean_tape_.mutable_delay_duration(true);
+      durations[4] =
+          rig.processor.processor_vintage_digital_.mutable_delay_duration(
+              false);
+      durations[5] =
+          rig.processor.processor_vintage_digital_.mutable_delay_duration(true);
+      durations[6] =
+          rig.processor.processor_digital_.mutable_delay_duration(false);
+      durations[7] =
+          rig.processor.processor_digital_.mutable_delay_duration(true);
+      for (int i = 0; i < 8; ++i) {
+        *durations[i] = 100 + i;
+      }
+      rig.processor.Trim();
+      for (int i = 0; i < 8; ++i) {
+        CHECK(*durations[i] == (i == media * 2 + mono ? 0 : 100 + i));
+      }
+      CHECK(*rig.processor.mutable_delay_duration() == 0);
+      rig.Block(true, 0.25f);
+      CHECK(*rig.processor.mutable_delay_duration() == 0);
+      rig.Block(false, 0.25f);
+      CHECK(*rig.processor.mutable_delay_duration() ==
+          int(rig.processor.sample_rate()) / (4000 * rig.processor.ratio()));
+    }
+  }
+}
+
+template<typename Line>
+void CheckTrimGrowth(Line& line) {
+  const int capacity = line.MAX_DELAY;
+  FloatFrame input;
+  input.l = input.r = 0.25f;
+  line.Trim();
+  for (int i = 0; i < capacity + 2; ++i) {
+    line.Write(input, true);
+    if (!CHECK(line.duration() == std::min(i, capacity))) {
+      return;
+    }
+    line.Write(input, false);
+    if (!CHECK(line.duration() == std::min(i + 1, capacity))) {
+      return;
+    }
+  }
+}
+
+void TestTrimGrowth() {
+  test_checker.Start("TestTrimGrowth");
+  rig.Init();
+  CheckTrimGrowth(rig.processor.processor_dirty_tape_.mono_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_dirty_tape_.stereo_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_clean_tape_.mono_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_clean_tape_.stereo_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_vintage_digital_.mono_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_vintage_digital_.stereo_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_digital_.mono_delay_line_);
+  CheckTrimGrowth(rig.processor.processor_digital_.stereo_delay_line_);
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestTrimDispatch();
+  TestTrimGrowth();
   TestBrightRecording();
   TestFreezeButtonRecording();
   TestFreezeGateRecording();

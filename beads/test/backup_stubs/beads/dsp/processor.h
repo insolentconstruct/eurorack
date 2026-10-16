@@ -35,6 +35,7 @@
 namespace beads {
 
 const size_t kDelayBufferSizeBits = 768 * 1000 * 8;
+const int kBackupTestMaxDelay[] = { 384000, 256000, 256000, 192000 };
 // The buffer bytes and the state the backup saves, nothing else.
 class Processor {
  public:
@@ -47,16 +48,19 @@ class Processor {
   void Configure(Media media, bool mono) {
     media_ = media;
     mono_ = mono;
+    duration_ = kBackupTestMaxDelay[media] << mono;
     ++configured_;
   }
   Media media() const { return media_; }
   bool mono() const { return mono_; }
+  int* mutable_delay_duration() { return &duration_; }
   int* mutable_delay_write_ptr() { return &write_ptr_; }
   uint8_t* delay_buffer_raw_bytes(size_t offset) { return &data_[offset]; }
   uint8_t data_[kDelayBufferSizeBits / 8];
   Media media_;
   bool mono_;
   int write_ptr_;
+  int duration_;
   int configured_;
 };
 

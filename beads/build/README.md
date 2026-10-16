@@ -35,6 +35,16 @@ sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
 or use the same gesture to turn monophonic grains off. Turn them off before
 downgrading to stock firmware.
 
+## Buffer trim
+
+Hold MEDIA first, then press FREEZE to start a new recording window from
+zero length and clear the FREEZE button latch. Release both buttons, record
+the desired length, then freeze. A FREEZE gate keeps the window empty until
+the gate goes low. Grains already playing finish normally.
+Frozen-buffer saves keep the trimmed length. Stock firmware loads these
+saves at full length. The gesture comes from Mutable Instruments' disabled
+buffer-trim code.
+
 ## Frozen-buffer autosave
 
 Autosave normally starts after FREEZE has been on for 10 seconds. A save cut

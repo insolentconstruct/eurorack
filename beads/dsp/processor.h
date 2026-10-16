@@ -115,6 +115,20 @@ class Processor {
     }
   }
   
+  inline int* mutable_delay_duration() {
+    switch (media_) {
+      case MEDIA_DIRTY_TAPE:
+        return processor_dirty_tape_.mutable_delay_duration(mono_);
+      case MEDIA_CLEAN_TAPE:
+        return processor_clean_tape_.mutable_delay_duration(mono_);
+      case MEDIA_VINTAGE_DIGITAL:
+        return processor_vintage_digital_.mutable_delay_duration(mono_);
+      case MEDIA_DIGITAL:
+      default:
+        return processor_digital_.mutable_delay_duration(mono_);
+    }
+  }
+
   inline float overwrite_reserve() const {
     float reserve = float(remaining());
     float fade_duration = sample_rate() * 0.15f / float(ratio());
@@ -139,13 +153,17 @@ class Processor {
     switch (media_) {
       case MEDIA_DIRTY_TAPE:
         processor_dirty_tape_.Trim(mono_);
+        break;
       case MEDIA_CLEAN_TAPE:
         processor_clean_tape_.Trim(mono_);
+        break;
       case MEDIA_VINTAGE_DIGITAL:
         processor_vintage_digital_.Trim(mono_);
+        break;
       case MEDIA_DIGITAL:
       default:
         processor_digital_.Trim(mono_);
+        break;
     }
   }
   

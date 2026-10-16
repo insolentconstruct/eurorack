@@ -52,7 +52,7 @@ class BackgroundBufferBackup {
   inline bool busy() const { return remaining_bytes_ || remaining_sectors_; }
   
   // One flash word; the stock firmware reads tag to mono only. padding and
-  // reserved are zero: later uses must be safe for older firmware to ignore.
+  // reserved are zero; trimmed_frames is ignored by stock firmware.
   struct BufferBackupHeader {
     uint32_t tag;
     int32_t write_ptr;
@@ -61,7 +61,8 @@ class BackgroundBufferBackup {
     uint8_t padding[2];
     uint32_t crc;  // Audio, then this header with crc = 0.
     uint32_t crc_tag;
-    uint8_t reserved[12];
+    uint32_t trimmed_frames;
+    uint8_t reserved[8];
   };
 
  private:

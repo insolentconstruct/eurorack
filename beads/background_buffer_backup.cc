@@ -90,6 +90,10 @@ bool BackgroundBufferBackup::Load() {
       }
 
       *processor_->mutable_delay_write_ptr() = header->write_ptr;
+      if (header->crc_tag == kCrcTag) {
+        *processor_->mutable_delay_duration() =
+            (kMaxDelay[header->media] << header->mono) - header->trimmed_frames;
+      }
     } else {
       frozen = false;
     }
@@ -110,6 +114,10 @@ bool BackgroundBufferBackup::Valid(const BufferBackupHeader& header) const {
   }
   if (header.crc_tag != kCrcTag) {
     return true;  // No CRC tag: accept after the range checks.
+  }
+  if (header.trimmed_frames >
+      uint32_t(kMaxDelay[header.media] << header.mono)) {
+    return false;
   }
   BufferBackupHeader h = header;
   h.crc = 0;
@@ -181,6 +189,8 @@ void BackgroundBufferBackup::WriteBlock() {
       fill(&header.padding[0], &header.padding[sizeof(header.padding)], 0);
       header.crc = 0;
       header.crc_tag = kCrcTag;
+      header.trimmed_frames = (kMaxDelay[header.media] << header.mono) -
+          *processor_->mutable_delay_duration();
       fill(&header.reserved[0], &header.reserved[sizeof(header.reserved)], 0);
       header.crc = crc32(crc_, &header, sizeof(header));
       if (HAL_FLASH_Program(
@@ -219,6 +229,21 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
     freeze_start_time_ = system_clock.milliseconds();
     previous_freeze_state_ = false;
   } else {
+    // A trim can change the length while a gate keeps FREEZE on.
+    if (previous_freeze_state_ && !busy() && settings_->state().frozen) {
+      const BufferBackupHeader* header =
+          (const BufferBackupHeader*)(Sector<8>::start);
+      const uint32_t saved_trimmed_frames = header->crc_tag == kCrcTag
+          ? header->trimmed_frames : 0;
+      const uint32_t trimmed_frames =
+          (kMaxDelay[processor_->media()] << processor_->mono()) -
+          *processor_->mutable_delay_duration();
+      if (trimmed_frames != saved_trimmed_frames) {
+        previous_freeze_state_ = false;
+        freeze_start_time_ = now;
+        SaveState(false);
+      }
+    }
     if ((now - freeze_start_time_) >= backup_delay_ &&
         !previous_freeze_state_ && !settings_->state().disable_autosave) {
       previous_freeze_state_ = true;

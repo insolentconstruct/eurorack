@@ -404,7 +404,6 @@ void Ui::OnSwitchPressed(const Event& e) {
     return;
   }
 
-#ifdef ENABLE_ADVANCED_FEATURES
   // Combo
   //
   // Media + FREEZE = trim the buffer and unfreeze.
@@ -417,7 +416,6 @@ void Ui::OnSwitchPressed(const Event& e) {
     ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_FREEZE] = true;
     return;
   }
-#endif  // ENABLE_ADVANCED_FEATURES
   
   // Combo
   //

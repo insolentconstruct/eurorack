@@ -38,8 +38,6 @@
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
-// Enable MEDIA + FREEZE to trim the duration of the buffer to 0.
-// #define ENABLE_ADVANCED_FEATURES
 
 namespace beads {
 

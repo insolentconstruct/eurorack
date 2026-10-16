@@ -27,6 +27,16 @@ Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
 https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/
 
+Buffer trim
+-----------
+Hold MEDIA first, then press FREEZE to start a new recording window from
+zero length and clear the FREEZE button latch. Release both buttons, record
+the desired length, then freeze. A FREEZE gate keeps the window empty until
+the gate goes low. Grains already playing finish normally.
+Frozen-buffer saves keep the trimmed length. Stock firmware loads these
+saves at full length. The gesture comes from Mutable Instruments' disabled
+buffer-trim code.
+
 Monophonic grains
 -----------------
 Hold MEDIA first, then press SEED to toggle monophonic grains; the setting

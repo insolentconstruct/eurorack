@@ -100,6 +100,12 @@ class GranularProcessor {
         ? mono_delay_line_.mutable_write_ptr()
         : stereo_delay_line_.mutable_write_ptr();
   }
+
+  inline int* mutable_delay_duration(bool mono) {
+    return mono
+        ? mono_delay_line_.mutable_duration()
+        : stereo_delay_line_.mutable_duration();
+  }
   
   inline int remaining(bool mono) const {
     return mono

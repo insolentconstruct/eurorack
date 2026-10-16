@@ -367,6 +367,7 @@ class DelayLine {
   
   inline bool frozen() const { return frozen_; }
   
+  inline int* mutable_duration() { return &duration_; }
   inline int duration() const { return duration_; }
 
   inline int remaining() const {

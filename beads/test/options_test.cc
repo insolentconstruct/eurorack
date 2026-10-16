@@ -132,6 +132,38 @@ struct Rig {
   }
 };
 
+void TestTrimGesture() {
+  test_checker.Start("TestTrimGesture");
+  for (int order = 0; order < 2; ++order) {
+    Rig r;
+    r.Down(SWITCH_FREEZE);
+    r.Up(SWITCH_FREEZE);
+    CHECK(r.ui.freeze_button_state_);
+    const uint8_t media = r.settings.state().media;
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.trim_flag_);
+    CHECK(!r.ui.freeze_button_state_);
+    CHECK(r.ui.ignore_release_[SWITCH_MEDIA]);
+    CHECK(r.ui.ignore_release_[SWITCH_FREEZE]);
+    r.ui.ClearTrimFlag();
+    CHECK(!r.ui.trim_flag_);
+    r.Up(order ? SWITCH_MEDIA : SWITCH_FREEZE);
+    r.Up(order ? SWITCH_FREEZE : SWITCH_MEDIA);
+    CHECK(!r.ui.freeze_button_state_);
+    CHECK(r.settings.state().media == media);
+  }
+  Rig reverse;
+  const uint8_t media = reverse.settings.state().media;
+  reverse.Down(SWITCH_FREEZE);
+  reverse.Down(SWITCH_MEDIA);
+  CHECK(!reverse.ui.trim_flag_);
+  reverse.Up(SWITCH_FREEZE);
+  reverse.Up(SWITCH_MEDIA);
+  CHECK(reverse.ui.freeze_button_state_);
+  CHECK(reverse.settings.state().media == (media + 3) % 4);
+}
+
 void TestMonophonicGesture() {
   test_checker.Start("TestMonophonicGesture");
   for (int latched = 0; latched < 2; ++latched) {
@@ -1265,6 +1297,7 @@ int main() {
   TestPitchSeedCancelAndCommit();
   TestSelfPlayStorage();
   TestSelfPlayHold();
+  TestTrimGesture();
   TestMonophonicGesture();
   TestAudioPatchDetection();
   TestFrozenStateChangeGuard();
