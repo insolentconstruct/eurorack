@@ -74,7 +74,7 @@ void Processor::Init(
 void Processor::SetCloudsStyle(bool clouds) {
   clouds_style_ = clouds;
   diffuser_.Init(diffuser_buffer_);
-  reverb_.SetCloudsStyle(clouds, sample_rate());
+  reverb_.SetCloudsStyle(clouds, sample_rate(), true);
 }
 
 void Processor::Configure(Media media, bool mono) {

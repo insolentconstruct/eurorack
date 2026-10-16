@@ -75,7 +75,7 @@ uint32_t Render(int quality, int mode, bool clouds) {
 #ifndef REFERENCE_CAPTURE
   if (clouds) {
     processor.SetCloudsStyle(true);
-    synth.SetCloudsStyle(true);
+    synth.SetCloudsStyle(true, true);
   }
 #endif
   stmlib::Random::Seed(0x12345678);

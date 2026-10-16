@@ -47,6 +47,7 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 - Use the stmlib helpers: `CONSTRAIN`, `ONE_POLE`, `SLOPE`, `ParameterInterpolator`, the `Interpolate*` functions and lookup tables.
 - Numeric casts: `float(x)` or `static_cast<T>(x)`.
 - New float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
+- Initialize struct fields one by one, as in Beads codec frames.
 - Name a constant when it has meaning; small obvious numbers can stay inline.
 
 ## Comments
@@ -69,8 +70,6 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 - Preserve the file's licence. For new host files, use the Beads/Clouds MIT
   header, separator and brief description. Upstream Plaits, Marbles and Stages
   tests instead retain GPL headers without a separator; do not replace them.
-- Upstream tests may use GPL headers and system includes before module headers
-  (Plaits); the new host tests here use the MIT header above.
 - Use one Beads-style makefile per program; run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
 - CI runs every `beads/test/*.mk` as its own job, and `mutation_check.py` weekly; a new program needs no workflow change.
 - Make recipes use tabs, as in upstream test makefiles.
