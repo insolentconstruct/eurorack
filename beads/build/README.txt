@@ -3,8 +3,8 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-ALPHA: tested only by its developers, on one module. Expect bugs, and
-please report them.
+ALPHA: please report any problems you find. TESTING.md in the repository
+shows how it was tested.
 
 Note from the Mutable Instruments eurorack README:
 "Code provided as is, builds on a Desktop platform but not verified to
