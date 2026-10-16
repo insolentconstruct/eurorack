@@ -11,7 +11,7 @@ heading; a release turns it into a dated heading.
 - Delay mode: no tempo glitch on the first clock after about 12 hours without one (#57).
 - Clocked frozen delay: very fast SEED edges no longer silence the play heads (#33).
 
-## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha)
+## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha 1)
 - Output limiter option (Stock, Fast release, Off): hold ASSIGN for three seconds to open the options page and set it with DRY/WET.
 - Frozen-buffer backups carry a CRC and are range-checked; stock and Drizzlet still load each other's backups.
 - An interrupted or failed backup is never restored.

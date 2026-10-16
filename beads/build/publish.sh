@@ -16,6 +16,9 @@ changelog=${CHANGELOG:-beads/build/CHANGELOG.md}
 changes=$(awk -v v="${tag#drizzlet-}" '/^## /{p = $2 == v; next} p' "$changelog")
 [[ -n ${changes//[[:space:]]/} ]] || { echo "No CHANGELOG.md section for ${tag#drizzlet-}" >&2; exit 1; }
 notes+=$'\n\n## Changes\n'"$changes"
+# The heading's label, e.g. "alpha 2" from "## 2026.10.16 (tag `...`, alpha 2)", goes in the title.
+heading=$(awk -v v="${tag#drizzlet-}" '/^## / && $2 == v {print; exit}' "$changelog")
+if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then title+=" (${BASH_REMATCH[1]})"; fi
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
