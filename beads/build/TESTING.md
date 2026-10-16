@@ -51,7 +51,7 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 | **Total** | **117** | **110** | **3 module, 4 untestable** |
 
 - **Only in part (3):** audio-rate FM and 1 V/octave pitch (granular and synth) are checked through the real CV input path with the default calibration. How closely a given module tracks depends on its own stored calibration.
-- **Module:** the left-channel crackle report, and audio and triggers summed into OUT L when OUT R is unpatched.
+- **Module:** the left-channel crackle report (checked on a module since, below), and audio and triggers summed into OUT L when OUT R is unpatched.
 - **Untestable:** three compare with the original factory firmware, which the developers do not have; one needs a corrupted-storage sample, and none has been identified.
 
 ## Before release
@@ -83,6 +83,17 @@ Run by the developers; these scripts and results are not in this repository.
 | 5 | A setting saved while the buffer is being saved | Restore still complete (the recorded tone plays back) |
 | 6 | Frozen delay, FM swept negative with SEED low, held and pulsed | No faults in 1,200 samples of the program counter |
 | 7 | Stock firmware (2021 release) loads a Drizzlet save | Yes: restored audio plays |
+
+**Crackle (#1), checked after 2026.10.14.** Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L went to a scope with OUT R unplugged, so it carried L+R. A detector counted clicks on the scope captures:
+
+| Firmware | Clicks | Output observed |
+|---|---:|---:|
+| 2021 forum release | 145 | 21 s |
+| 2024 recovery firmware | 164 | 20.6 s |
+| Released source, same GCC 4.9.3 compiler | 0 | 14 s |
+| Next Drizzlet alpha | 0 | 83 s (four runs) |
+
+Reverse, square-envelope, low-pitch and no-grain variants gave none on any firmware. See CHANGELOG.md for the source difference.
 
 ## Not tested
 

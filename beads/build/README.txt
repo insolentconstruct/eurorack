@@ -15,7 +15,9 @@ report problems at:
 https://github.com/insolentconstruct/eurorack/issues
 
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
-change to grain stealing, as in the released source. This release adds
+change to grain stealing, as in the released source. In a test on one
+module, the 2021 and 2024 firmware clicked with DENSITY and PITCH near
+fully clockwise; builds with this change did not. This release adds
 monophonic grains and self-play on request, stops a modulated FREEZE from
 wearing the save flash, and fixes two delay bugs; the app is now built with
 GCC 9. The output limiter option came in the previous release. Details are

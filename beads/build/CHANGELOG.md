@@ -27,7 +27,7 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 
 ## 2026.10.11
-- First build (tag `beads-2026.10.11`): the released Mutable Instruments Beads source, unmodified.
+- First build (tag `beads-2026.10.11`): the released Mutable Instruments Beads source, unmodified. Its grain-stealing change, absent from the 2021 and 2024 firmware, removed the clicks of #1 in a test on one module.
 
 ## Earlier Mutable Instruments firmware
 
@@ -49,7 +49,18 @@ With identical input and state, emulation shows:
 - At intervals from 5 ms to <25 ms, outputs differ.
 - At intervals <5 ms, both run the same code. Differences can persist briefly if earlier intervals in the 5–25 ms range changed grain history.
 
-The “freeze gate” and “gated density” bench tests reached the changed range. Lower CPU use in dense textures is a possible reason for the change, but has not been measured.
+The “freeze gate” and “gated density” bench tests reached the changed range.
+
+Together, these two changes removed the clicks behind the crackle report (#1) in a test on one module; they were not tested separately. Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L went to a scope with OUT R unplugged, so it carried L+R. Clicks were found by a detector on the scope captures, not by ear:
+
+| Firmware | Clicks | Output observed |
+|---|---:|---:|
+| 2021 forum release | 145 | 21 s |
+| 2024 recovery firmware | 164 | 20.6 s |
+| Released source, same GCC 4.9.3 compiler | 0 | 14 s |
+| Next Drizzlet alpha | 0 | 83 s (four runs) |
+
+Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any of the four. CPU overload is a hypothesis; CPU load has not been measured.
 
 In these older builds, monophonic mode is unchanged and compiled out (`ENABLE_ADVANCED_FEATURES` is commented out).
 
@@ -62,5 +73,7 @@ Five changes:
 3. **Delay density/FM smoothing:** the dead band changes from 0.005 to 0.0025. The FM follower no longer tracks the input directly for the 7 calls after a change.
 4. **Frozen delay slices:** during frozen playback, manual and clocked delay add hysteresis with a 0.0025 dead band to slice/TIME selection.
 5. **Clocked delay FM:** both FM inputs affect the clock divider. Exponential FM previously bent tap ratios separately. Manual delay is unchanged.
+
+None of these five touch grain playback, and the 2024 firmware clicks like the 2021 release.
 
 Upgrading from 2021 to this build includes all six changes. The build kit here builds Drizzlet only; patches and comparison details for the older builds are available on request.
