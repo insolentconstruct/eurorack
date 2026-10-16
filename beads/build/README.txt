@@ -3,7 +3,8 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-ALPHA: please report any problems you find. TESTING.md in the repository
+BETA 1 PREPARATION: module checks and outside testing are still pending.
+Please report any problems you find. TESTING.md in the repository
 shows how it was tested.
 
 Note from the Mutable Instruments eurorack README:
@@ -17,10 +18,8 @@ https://github.com/insolentconstruct/eurorack/issues
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing, as in the released source. In a test on one
 module, the 2021 and 2024 firmware clicked with DENSITY and PITCH near
-fully clockwise; builds with this change did not. This release adds
-monophonic grains and self-play on request, reduces flash wear from a
-modulated FREEZE, and fixes two delay bugs; the app is now built with GCC 9.
-The output limiter option came in the previous release. Details are in
+fully clockwise; builds with this change did not. New since alpha 2: buffer trim, pitch scales and a Clouds-style reverb
+setting. Pitch scale defaults to Off and reverb to Stock. Details are in
 CHANGELOG.md in the repository.
 
 Beads manual and development history:
@@ -68,10 +67,11 @@ settings. Move a knob more than one tenth of its travel to start selecting; its
 zones pick the value, shown on the quality LED.
 
 Category (page)   Knob       Choices
-Feedback (0)      FEEDBACK   Automatic / On request (halves)
-Dry/wet (1)       DRY/WET    Stock / Fast release / Off (thirds)
-Dry/wet (1)       REVERB     Stock / Clouds-style (halves)
-Reverb (2)        FEEDBACK   Off / Chromatic / Scale (thirds)
+Feedback (0)      FEEDBACK   Self-play: Automatic / On request (halves)
+Dry/wet (1)       DRY/WET    Limiter: Stock / Fast release / Off (thirds)
+Dry/wet (1)       REVERB     Reverb: Stock / Clouds-style (halves)
+Reverb (2)        FEEDBACK   Pitch scale: Off / Chromatic / Scale (thirds);
+                            tap SEED on Scale to cycle
 
 Output limiter: Stock is steady green; Fast release is one blue pulse;
 Off is two amber pulses. With Off, loud peaks can hard-clip.
@@ -118,6 +118,34 @@ Hold ASSIGN for three seconds to save and exit. After five seconds without
 changes the page also exits and saves any change. Another button cancels, except SEED taps while selecting a scale.
 While you edit, the mix settings keep their values; after exit they catch up
 smoothly with the knobs.
+
+Saved data
+----------
+The settings and frozen-buffer format below are frozen for Beta 1. Off,
+Automatic and Stock keep the stock behaviour; zero and unknown option values
+select those defaults.
+
+Settings offsets are bytes in the 24-byte State payload:
+
+| Byte | Setting | Saved values | Stock firmware |
+|---|---|---|---|
+| 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown -> Stock | Ignores; clears to 0 on save |
+| 11 | Self-play | 0 Automatic, 0xA1 On request; unknown -> Automatic | Ignores; clears to 0 on save |
+| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Pentatonic, 0xA6 Pelog, 0xA7 Raag Bhairav, 0xA8 Raag Shri; unknown -> Off | Ignores; clears to 0 on save |
+| 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, -> Stock | Ignores; clears to 0 on save |
+
+Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
+byte but compiles out the gesture, so turn mono off before downgrading.
+
+The frozen-buffer header is 32 bytes, little-endian. Bytes 20–23 hold an
+unsigned 32-bit count of frames removed from the full buffer, not the remaining
+length: 0 means full length; the full frame count means empty. The count must
+not exceed the full length for the saved quality and mono/stereo mode. It is
+covered by the audio/header CRC and read only with the CRC1 tag in bytes
+16–19. Alpha 1 and 2 wrote zero here; untagged older saves load at full length.
+Stock reads only bytes 0–9 and loads a trimmed save at full length. Stock
+rewrites do not preserve the trimmed length. Bytes 24–31 remain reserved and
+are written as zero. The audio payload and header size are unchanged.
 
 Firmware update procedure
 -------------------------

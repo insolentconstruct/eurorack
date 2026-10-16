@@ -65,7 +65,35 @@ Scales use Mutable Instruments Marbles' tunings and notes with weight at
 least 64, including its C–D–F–G–A pentatonic and four-note Pelog.
 Pelog and the raags are microtonal.
 
-## Saved settings
+## Saved data
+
+The settings and frozen-buffer format below are frozen for Beta 1. Off,
+Automatic and Stock keep the stock behaviour; zero and unknown option values
+select those defaults.
+
+Settings offsets are bytes in the 24-byte State payload:
+
+| Byte | Setting | Saved values | Stock firmware |
+|---|---|---|---|
+| 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown → Stock | Ignores; clears to 0 on save |
+| 11 | Self-play | 0 Automatic, 0xA1 On request; unknown → Automatic | Ignores; clears to 0 on save |
+| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Pentatonic, 0xA6 Pelog, 0xA7 Raag Bhairav, 0xA8 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
+| 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
+
+Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
+byte but compiles out the gesture, so turn mono off before downgrading.
+
+The frozen-buffer header is 32 bytes, little-endian. Bytes 20–23 hold an
+unsigned 32-bit count of frames removed from the full buffer, not the remaining
+length: 0 means full length; the full frame count means empty. The count must
+not exceed the full length for the saved quality and mono/stereo mode. It is
+covered by the audio/header CRC and read only with the CRC1 tag in bytes
+16–19. Alpha 1 and 2 wrote zero here; untagged older saves load at full length.
+Stock reads only bytes 0–9 and loads a trimmed save at full length. Stock
+rewrites do not preserve the trimmed length. Bytes 24–31 remain reserved and
+are written as zero. The audio payload and header size are unchanged.
+
+### Settings layout
 
 State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no payload bytes. Defaults below are before flash loading. <!-- beads/settings.h:51-62; beads/settings.cc:60-70 -->
 
@@ -146,7 +174,8 @@ Buffer trim and monophonic grains use Mutable Instruments’ original gestures a
 
 ## Budgets
 
-The combined pitch-scale and reverb build uses 273,456 B of app flash.
+Earlier combined pitch-scale and reverb build: 273,456 B of app flash;
+this excludes the later trim changes.
 Off matches Stock audio in emulator fixtures; instruction counts vary with
 code generation. Hardware cycle headroom remains unmeasured for this build.
 
