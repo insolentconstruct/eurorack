@@ -53,8 +53,8 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
 select Off (white), Chromatic (green), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (red), Major (orange), Minor
-(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (azure), Raag Bhairav (violet), and
-Raag Shri (pink). Holds do not cycle. SEED taps here do not trigger or latch
+(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (azure),
+Raag Bhairav (violet), and Raag Shri (pink). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons cancel as usual. The setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start.
