@@ -169,7 +169,8 @@ void TestCloudsOutput() {
       const uint32_t hash = Render(q, mode, true);
       printf("Clouds q%d mode%d %08x\n", q, mode, hash);
       CHECK(hash != (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
-      CHECK(hash == (mode == 2 ? kCloudsSynthHashes[q] : kCloudsHashes[q][mode]));
+      CHECK(hash == (mode == 2
+          ? kCloudsSynthHashes[q] : kCloudsHashes[q][mode]));
     }
   }
 #endif

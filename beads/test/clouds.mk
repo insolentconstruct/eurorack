@@ -1,11 +1,11 @@
-PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
+PACKAGES       = beads/dsp beads/test stmlib/utils stmlib/dsp beads
 
 VPATH          = $(PACKAGES) beads/dsp/fx
 
 TARGET         = clouds_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
-CC_FILES       = 		clouds_test.cc \
+CC_FILES       = clouds_test.cc \
 		synth.cc \
 		processor.cc \
 		diffuser.cc \

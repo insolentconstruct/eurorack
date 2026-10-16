@@ -1,6 +1,8 @@
 # Code style
 
-Code changes should read like the existing Mutable Instruments code. When in doubt, copy the nearest existing file.
+Follow upstream Mutable Instruments master: Beads (2021) first, then Plaits,
+Stages and Marbles. Use Clouds effects as the diffuser/reverb idiom. These
+rules come after those sources; leave unrelated existing code alone.
 
 ## Layout
 
@@ -41,6 +43,7 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 
 ## Code
 
+- Pass new arguments explicitly rather than adding default arguments.
 - C++98-era syntax: no `auto`, `nullptr`, lambdas or `constexpr`.
 - Prefer `const` for locals that don't change, and `bool` for flags.
 - Loops: `while (size--)` with a pointer, or an indexed `for`; indices are usually `size_t` or `int`.
