@@ -42,6 +42,20 @@ out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
     'beads/test/.runs/mutations').resolve()
 out.mkdir(parents=True, exist_ok=True)
 cases = [
+  ('TestPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
+    '0.0000f, 2.0004f, 3.9996f, 6.9996f, 9.0000f,',
+    '0.0000f, 2.0004f, 5.0004f, 6.9996f, 9.0000f,'),
+  ('TestPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
+    '0.0000f, 3.0000f, 5.0004f, 6.9996f, 9.9996f,',
+    '0.0000f, 3.0000f, 5.0004f, 6.9996f, 9.0000f,'),
+  ('TestPitchStorage', 'options', 'beads/settings.h',
+    'value <= 0xa9', 'value <= 0xa8'),
+  ('TestPitchStorage', 'options', 'beads/settings.h',
+    'value <= 0xa9', 'value <= 0xaa'),
+  ('TestPitchOptions', 'options', 'beads/options.h',
+    'scale_ == PITCH_SCALE_SHRI', 'scale_ == PITCH_SCALE_BHAIRAV'),
+  ('TestPitchOptions', 'options', 'beads/ui.cc',
+    '{ 128, 255, 0 }', '{ 0, 255, 255 }'),
   ('TestCloudsStorage', 'options', 'beads/settings.h',
     'state_.padding[3] == 0xa2', 'state_.padding[3] != 0'),
   ('TestCloudsOptions', 'options', 'beads/options.h',

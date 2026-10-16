@@ -1033,14 +1033,14 @@ void TestCloudsStorage() {
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->padding[3] = value;
     CHECK(r.settings.clouds_style() == (value == 0xa2));
-    r.settings.mutable_state()->padding[2] = 0xa6;
+    r.settings.mutable_state()->padding[2] = 0xa7;
     r.settings.mutable_state()->padding[13] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.clouds_style() == (value == 0xa2));
     CHECK(loaded.state().padding[3] == (value == 0xa2 ? 0xa2 : 0));
-    CHECK(loaded.state().padding[2] == 0xa6);
+    CHECK(loaded.state().padding[2] == 0xa7);
     CHECK(loaded.pitch_scale() == PITCH_SCALE_PELOG);
     CHECK(loaded.state().padding[13] == 0);
     // Bypass SaveState normalization to exercise load normalization too.
@@ -1159,7 +1159,7 @@ void TestPitchStorage() {
   r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
   r.settings.set_self_play_on_request(true);
   for (int i = 0; i < 256; ++i) {
-    const PitchScale expected = i >= 0xa1 && i <= 0xa8
+    const PitchScale expected = i >= 0xa1 && i <= 0xa9
         ? PitchScale(i - 0xa0) : PITCH_SCALE_OFF;
     r.settings.mutable_state()->padding[2] = i;
     CHECK(r.settings.pitch_scale() == expected);
@@ -1179,9 +1179,9 @@ void TestPitchStorage() {
   }
 }
 
-const uint8_t kTestScaleColors[7][3] = {
+const uint8_t kTestScaleColors[8][3] = {
   { 255, 0, 0 }, { 255, 96, 0 }, { 255, 255, 0 }, { 0, 255, 255 },
-  { 0, 96, 255 }, { 128, 0, 255 }, { 255, 0, 128 }
+  { 128, 255, 0 }, { 0, 96, 255 }, { 128, 0, 255 }, { 255, 0, 128 }
 };
 
 void TestPitchOptions() {
@@ -1199,7 +1199,7 @@ void TestPitchOptions() {
   const bool seed = r.ui.seed_button_state_;
   const bool locked = r.ui.seed_button_locked_;
   const unsigned writes = test_writes;
-  for (int i = 0; i < 7; ++i) {
+  for (int i = 0; i < 8; ++i) {
     CHECK(r.ui.pitch_scale() == PitchScale(PITCH_SCALE_FIFTHS + i));
     CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == kTestScaleColors[i][0]);
     CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == kTestScaleColors[i][1]);

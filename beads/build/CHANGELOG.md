@@ -5,7 +5,8 @@ heading; a release turns it into a dated heading.
 
 ## Unreleased
 - Buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
-- Pitch scale: Off (default), Chromatic or seven scales. Reverb category, FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Marbles' Major, Minor, Pentatonic, Pelog, Raag Bhairav and Raag Shri. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
+- Pitch scale: Off (default), Chromatic or eight scales. Reverb category, FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Marbles' Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
+- Saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 14–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.
 - Clouds-style reverb: Dry/wet category, REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)

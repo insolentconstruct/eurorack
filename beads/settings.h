@@ -104,7 +104,7 @@ class Settings {
 
   inline PitchScale pitch_scale() const {
     const uint8_t value = state_.padding[2];
-    return value >= 0xa1 && value <= 0xa8
+    return value >= 0xa1 && value <= 0xa9
         ? PitchScale(value - 0xa0) : PITCH_SCALE_OFF;
   }
 

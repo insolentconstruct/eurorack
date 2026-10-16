@@ -41,7 +41,23 @@ void TestPitchGrids() {
   CHECK(QuantizePitch(9.5f, PITCH_SCALE_FIFTHS) == 7.0f);
   CHECK(QuantizePitch(2.0f, PITCH_SCALE_MAJOR) == 2.0004f);
   CHECK(QuantizePitch(8.0f, PITCH_SCALE_MINOR) == 8.0004f);
-  CHECK(QuantizePitch(4.0f, PITCH_SCALE_PENTATONIC) == 5.0004f);
+  const float pentatonics[2][5] = {
+    { 0.0f, 2.0004f, 3.9996f, 6.9996f, 9.0f },
+    { 0.0f, 3.0f, 5.0004f, 6.9996f, 9.9996f }
+  };
+  for (int s = 0; s < 2; ++s) {
+    const PitchScale scale = PitchScale(PITCH_SCALE_PENTATONIC_MAJOR + s);
+    CHECK(kPitchScales[scale - 1].size == 5);
+    for (int i = 0; i < 5; ++i) {
+      const float lower = pentatonics[s][i];
+      const float upper = i == 4 ? 12.0f : pentatonics[s][i + 1];
+      const float midpoint = 0.5f * (lower + upper);
+      CHECK(QuantizePitch(lower, scale) == lower);
+      CHECK(QuantizePitch(midpoint - 0.0001f, scale) == lower);
+      CHECK(QuantizePitch(midpoint, scale) == lower);
+      CHECK(QuantizePitch(midpoint + 0.0001f, scale) == upper);
+    }
+  }
   CHECK(fabsf(QuantizePitch(1.6f, PITCH_SCALE_PELOG) - 1.53f) < 0.00001f);
   CHECK(fabsf(QuantizePitch(-4.0f, PITCH_SCALE_BHAIRAV) + 4.0788f)
       < 0.00001f);

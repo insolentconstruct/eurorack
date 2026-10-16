@@ -97,7 +97,7 @@ it and resets it to Stock when saving after a downgrade.
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
 select Off (white), Chromatic (green), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (red), Major (orange), Minor
-(yellow), Pentatonic (cyan), Pelog (azure), Raag Bhairav (violet), and
+(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (azure), Raag Bhairav (violet), and
 Raag Shri (pink). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons cancel as usual. The setting is saved; default is Off.
 
@@ -106,7 +106,8 @@ The grid has a fixed root at unity (0 semitones); +1 V remains one octave.
 Playing grains keep their pitch. Synth grains snap too; the continuous
 synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at
-least 64, including its C–D–F–G–A pentatonic and four-note Pelog.
+least 64, including four-note Pelog. Major and Minor pentatonic are subsets
+of its Major and Minor scales.
 Pelog and the raags are microtonal.
 
 The remaining knobs are reserved for later options.
@@ -152,13 +153,16 @@ The settings and frozen-buffer format below are frozen for Beta 1. Off,
 Automatic and Stock keep the stock behaviour; zero and unknown option values
 select those defaults.
 
+Byte 12/13 values are frozen at Beta 1. Future options use a free byte
+14–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
+
 Settings offsets are bytes in the 24-byte State payload:
 
 | Byte | Setting | Saved values | Stock firmware |
 |---|---|---|---|
 | 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown → Stock | Ignores; clears to 0 on save |
 | 11 | Self-play | 0 Automatic, 0xA1 On request; unknown → Automatic | Ignores; clears to 0 on save |
-| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Pentatonic, 0xA6 Pelog, 0xA7 Raag Bhairav, 0xA8 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
+| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Major pentatonic, 0xA6 Minor pentatonic, 0xA7 Pelog, 0xA8 Raag Bhairav, 0xA9 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
 | 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
 
 Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this

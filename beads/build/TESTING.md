@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **In numbers:** 145 tests in 13 host test programs (870 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 141 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 145 tests in 13 host test programs (874 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 147 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
@@ -23,7 +23,7 @@ execute more than once. The manual-coverage totals below are unchanged.
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
 | `beads/test/options.mk` | Options page entry, categories, knob zones, idle save, cancel and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds; the monophonic grain gesture, its LED cue and saving; the self-play setting, its storage and the MEDIA hold; pitch and reverb option storage, zones, scale cycling and cancellation; trim gesture and FREEZE gate |
-| `beads/test/pitch_quantizer.mk` | Pitch grids, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
+| `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
 | `beads/test/trigger.mk` | Grain triggering with sanitizers: free-running rates at both ends of DENSITY, silence at noon (free and clocked), clock probability and divisions, SEED and gate enabling, one grain per press or gate at noon, and density FM |
@@ -47,11 +47,11 @@ execute more than once. The manual-coverage totals below are unchanged.
 | granular | 21 | 92 |
 | mix | 7 | 28 |
 | options | 32 | 318 |
-| pitch_quantizer | 2 | 19 |
+| pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **145** | **870** |
+| **Total** | **145** | **874** |
 
 The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
 

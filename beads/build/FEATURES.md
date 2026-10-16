@@ -44,7 +44,7 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 | Feedback LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET delay mode (#26, #9); REVERB stereo width (#5) |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK | Reserved | Planned: mix law (#21, #48) |
-| Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle seven scales |
+| Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle eight scales |
 | Reverb LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET LED brightness (#40); REVERB grain starts on recorded attacks (#58, #47) |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
 | MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; Dry/wet REVERB shows Stock steady green or Clouds-style one cyan pulse, following the last knob moved; Reverb shows pitch scale <!-- beads/ui.cc:290-299 --> |
@@ -53,7 +53,7 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
 select Off (white), Chromatic (green), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (red), Major (orange), Minor
-(yellow), Pentatonic (cyan), Pelog (azure), Raag Bhairav (violet), and
+(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (azure), Raag Bhairav (violet), and
 Raag Shri (pink). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons cancel as usual. The setting is saved; default is Off.
 
@@ -62,7 +62,8 @@ The grid has a fixed root at unity (0 semitones); +1 V remains one octave.
 Playing grains keep their pitch. Synth grains snap too; the continuous
 synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at
-least 64, including its C–D–F–G–A pentatonic and four-note Pelog.
+least 64, including four-note Pelog. Major and Minor pentatonic are subsets
+of its Major and Minor scales.
 Pelog and the raags are microtonal.
 
 ## Saved data
@@ -71,13 +72,16 @@ The settings and frozen-buffer format below are frozen for Beta 1. Off,
 Automatic and Stock keep the stock behaviour; zero and unknown option values
 select those defaults.
 
+Byte 12/13 values are frozen at Beta 1. Future options use a free byte
+14–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
+
 Settings offsets are bytes in the 24-byte State payload:
 
 | Byte | Setting | Saved values | Stock firmware |
 |---|---|---|---|
 | 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown → Stock | Ignores; clears to 0 on save |
 | 11 | Self-play | 0 Automatic, 0xA1 On request; unknown → Automatic | Ignores; clears to 0 on save |
-| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Pentatonic, 0xA6 Pelog, 0xA7 Raag Bhairav, 0xA8 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
+| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Major pentatonic, 0xA6 Minor pentatonic, 0xA7 Pelog, 0xA8 Raag Bhairav, 0xA9 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
 | 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
 
 Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
@@ -109,7 +113,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 9 | `monophonic_mode` | 0 = off (default), 1 = on; TAKEN: monophonic grains, using Mutable Instruments' original code <!-- beads/settings.h:59; beads/beads.cc:203; beads/ui.cc:358-369 --> |
 | 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
 | 11 | `padding[1]` | Self-play: 0xA1 = On request; 0 and all unknown values = Automatic; canonicalized on load/save |
-| 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA8 Fifths, Major, Minor, Pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
+| 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14–22, individually | `padding[4]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
@@ -210,9 +214,10 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Byte 12 stores pitch scale (0 Off, 0xA1–0xA8); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Bytes 14–22 remain free for options. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Byte 12 stores pitch scale (0 Off, 0xA1–0xA9); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Byte 12/13 values are frozen at Beta 1. Future options take a free byte 14–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
+- **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** MEDIA+SEED is taken by monophonic grains; MEDIA+FREEZE = buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
 
 Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
