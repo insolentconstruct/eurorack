@@ -117,7 +117,8 @@ previous bytes. Both compiler archives are pinned.
 
 Builds verify the firmware and WAV hashes. CI also builds the unchanged
 released app with GCC 4.9.3 as a fixed golden reference, and checks WAV
-decoding. Releases publish from `drizzlet-*` tags.
+decoding. Releases publish from `drizzlet-*` tags; the release notes include
+the tag's CHANGELOG.md section, and publishing stops if it is missing.
 
 To build the golden reference locally (needs a full Git checkout):
 

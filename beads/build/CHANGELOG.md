@@ -4,30 +4,24 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha)
-- Self-play option: Automatic (stock, default) or On request. In On request, self-play never starts by itself; hold MEDIA 1.5 s with both inputs unpatched and FREEZE off to start or stop it. Feedback category, FEEDBACK knob; steady cyan / one magenta pulse. Saved in byte 11; stock ignores it and resets it on save (#17).
-- Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, up to 320 s; a completed save or a minute unfrozen resets it (#56).
-- Enable Mutable Instruments' original monophonic grain code: hold MEDIA, then press SEED to toggle and save (default off). The MEDIA LED dims to half brightness. Use square or decay SHAPE; slower attacks can be cut nearly silent. Toggle off to recover sound and before downgrading to stock (#31).
-- App built with GCC 9.3.1 instead of 4.9.3. In an earlier timing sweep of the released source on an STM32H750 at 480 MHz it was about 2% faster in the worst audio block, and 2% smaller. The randomized-pan rounding is pinned so output is unchanged: all 44 emulated scenarios are bit-identical to the GCC 4.9.3 build. The bootloader stays on GCC 4.9.3 with its bytes unchanged.
-- Delay mode: after about 12 hours without a SEED clock or tap, the next one could set a negative tempo and collapse the echoes for one clock period. The idle count now stops at its 4 s limit (#57).
-- Clocked frozen delay: SEED edges less than 16 samples apart (a fast clock, contact bounce, plugging a cable) could make a zero-length slice, an integer division by zero. On the module it gave silent play heads; slices are now at least one sample long (#33).
+- Self-play option (options page, FEEDBACK): Automatic (stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).
+- Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, up to 320 s, reset by a completed save or a minute unfrozen (#56).
+- Monophonic grains, Mutable Instruments' original code: hold MEDIA and press SEED to toggle; use square or decay SHAPE, and turn it off before downgrading (#31).
+- App built with GCC 9 instead of 4.9.3; all 44 emulated scenarios give bit-identical audio.
+- Delay mode: no tempo glitch on the first clock after about 12 hours without one (#57).
+- Clocked frozen delay: very fast SEED edges no longer silence the play heads (#33).
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha)
-- Frozen-buffer backup is checked: a CRC over the audio and header, written in bytes stock ignores, so stock and Drizzlet still load each other's backups. Header fields are range-checked before use, including on stock backups. See FEATURES.md for the format.
-- An interrupted or failed backup is never restored: the header's sector is erased first and the header written last, flash errors abandon the save, and a stale frozen flag is cleared before a new backup starts.
-- A setting saved during a backup no longer makes the rest of the backup fail (settings saves locked the flash).
-- Initialize dummy grain triggers used for CPU padding, removing undefined reads during processing.
-- Add a guard row after the last wavetable, so interpolation from the final waveform of the last bank stays inside the table (output unchanged).
-- Prevent invalid frozen delay reads when negative exponential FM makes a slice longer than the buffer.
-- Output limiter option (Stock, Fast release, Off), saved; hold ASSIGN for three seconds to open the options page, then set it with DRY/WET (dry/wet LED category).
-  The options page has three categories (feedback, dry/wet, reverb LEDs) of three settings (the mix knobs); the other eight are reserved.
-  Holding ASSIGN or five idle seconds saves a change and exits; another button cancels.
-  Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero;
-  2026.10.16 reads a zero byte 11 as self-play Automatic, the stock behaviour.
-- Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
-- Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
+- Output limiter option (Stock, Fast release, Off): hold ASSIGN for three seconds to open the options page and set it with DRY/WET.
+- Frozen-buffer backups carry a CRC and are range-checked; stock and Drizzlet still load each other's backups.
+- An interrupted or failed backup is never restored.
+- A setting saved during a backup no longer breaks the backup.
+- Frozen delay with negative FM no longer reads outside the buffer (#33).
+- Fixed undefined reads in the dummy CPU-load grains and past the last wavetable (output unchanged).
+- Named Drizzlet; release tags are `drizzlet-YYYY.MM.DD`.
 
 ## 2026.10.11
-- First build (tag `beads-2026.10.11`): the released Mutable Instruments Beads source, unmodified. Its grain-stealing change, absent from the 2021 and 2024 firmware, removed the clicks of #1 in a test on one module.
+- First build (tag `beads-2026.10.11`): the released Mutable Instruments Beads source, unmodified.
 
 ## Earlier Mutable Instruments firmware
 
