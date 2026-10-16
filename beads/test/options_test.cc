@@ -162,6 +162,21 @@ void TestTrimGesture() {
   reverse.Up(SWITCH_MEDIA);
   CHECK(reverse.ui.freeze_button_state_);
   CHECK(reverse.settings.state().media == (media + 3) % 4);
+  Rig page;
+  page.Enter();
+  const uint8_t page_media = page.settings.state().media;
+  test_down[SWITCH_MEDIA] = true;
+  page.Tick(8, false);
+  CHECK(!page.ui.queue_.available());
+  test_down[SWITCH_FREEZE] = true;
+  page.Tick(8, false);
+  CHECK(!page.ui.queue_.available());
+  page.ui.DoEvents();
+  page.Up(SWITCH_FREEZE);
+  page.Up(SWITCH_MEDIA);
+  CHECK(!page.ui.trim_flag_);
+  CHECK(!page.ui.freeze_button_state_);
+  CHECK(page.settings.state().media == page_media);
 }
 
 void TestMonophonicGesture() {
