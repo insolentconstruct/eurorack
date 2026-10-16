@@ -42,8 +42,8 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 | Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
 | Feedback LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET delay mode (#26, #9); REVERB stereo width (#5) |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
-| Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Planned: FEEDBACK mix law (#21, #48); REVERB reverb character (#20, #22) <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
-| Reverb LED category, all three knobs | Reserved category, no setter | Planned: FEEDBACK pitch scale (#6, #8); DRY/WET LED brightness (#40); REVERB open <!-- beads/options.h:90-117; beads/build/README.md --> |
+| Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Planned: FEEDBACK mix law (#21, #48); REVERB reverb character, Clouds-style with grain diffusion (#20, #22, #2) <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
+| Reverb LED category, all three knobs | Reserved category, no setter | Planned: FEEDBACK pitch scale (#6, #8); DRY/WET LED brightness (#40); REVERB grain starts on recorded attacks (#58, #47) <!-- beads/options.h:90-117; beads/build/README.md --> |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
 | MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; reserved categories show limiter <!-- beads/ui.cc:290-299 --> |
 | Mix knobs | All three normal values locked while editing; FEEDBACK or DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
