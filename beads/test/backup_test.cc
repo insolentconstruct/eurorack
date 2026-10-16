@@ -57,14 +57,14 @@ using namespace beads;
 using namespace stmlib;
 
 typedef BackgroundBufferBackup::BufferBackupHeader Header;
-static_assert(sizeof(Header) == 32, "one flash word");
-static_assert(offsetof(Header, tag) == 0, "tag");
-static_assert(offsetof(Header, write_ptr) == 4, "write_ptr");
-static_assert(offsetof(Header, media) == 8, "media");
-static_assert(offsetof(Header, mono) == 9, "mono");
-static_assert(offsetof(Header, crc) == 12, "crc");
-static_assert(offsetof(Header, crc_tag) == 16, "crc tag");
-static_assert(offsetof(Header, reserved) == 20, "reserved");
+STATIC_ASSERT(sizeof(Header) == 32, one_flash_word);
+STATIC_ASSERT(offsetof(Header, tag) == 0, tag);
+STATIC_ASSERT(offsetof(Header, write_ptr) == 4, write_ptr);
+STATIC_ASSERT(offsetof(Header, media) == 8, media);
+STATIC_ASSERT(offsetof(Header, mono) == 9, mono);
+STATIC_ASSERT(offsetof(Header, crc) == 12, crc);
+STATIC_ASSERT(offsetof(Header, crc_tag) == 16, crc_tag);
+STATIC_ASSERT(offsetof(Header, reserved) == 20, reserved);
 
 const size_t kAudio = kDelayBufferSizeBits / 8;
 uint8_t* const kFlash = reinterpret_cast<uint8_t*>(0x08100000);

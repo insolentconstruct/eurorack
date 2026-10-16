@@ -1,11 +1,11 @@
 # Changelog
 
-Changes to Drizzlet, newest first. Each feature adds a line under
-"Unreleased"; a release turns it into a dated heading.
+Changes to Drizzlet, newest first. New changes go under an "Unreleased"
+heading; a release turns it into a dated heading.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha)
 - Self-play option: Automatic (stock, default) or On request. In On request, self-play never starts by itself; hold MEDIA 1.5 s with both inputs unpatched and FREEZE off to start or stop it. Feedback category, FEEDBACK knob; steady cyan / one magenta pulse. Saved in byte 11; stock ignores it and resets it on save (#17).
-- Modulated FREEZE no longer repeatedly erases the buffer save area: interrupted saves double the next wait up to 320 s; completion or a minute unfrozen resets it (#56).
+- Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, up to 320 s; a completed save or a minute unfrozen resets it (#56).
 - Enable Mutable Instruments' original monophonic grain code: hold MEDIA, then press SEED to toggle and save (default off). The MEDIA LED dims to half brightness. Use square or decay SHAPE; slower attacks can be cut nearly silent. Toggle off to recover sound and before downgrading to stock (#31).
 - App built with GCC 9.3.1 instead of 4.9.3. In an earlier timing sweep of the released source on an STM32H750 at 480 MHz it was about 2% faster in the worst audio block, and 2% smaller. The randomized-pan rounding is pinned so output is unchanged: all 44 emulated scenarios are bit-identical to the GCC 4.9.3 build. The bootloader stays on GCC 4.9.3 with its bytes unchanged.
 - Delay mode: after about 12 hours without a SEED clock or tap, the next one could set a negative tempo and collapse the echoes for one clock period. The idle count now stops at its 4 s limit (#57).
@@ -21,8 +21,8 @@ Changes to Drizzlet, newest first. Each feature adds a line under
 - Output limiter option (Stock, Fast release, Off), saved; hold ASSIGN for three seconds to open the options page, then set it with DRY/WET (dry/wet LED category).
   The options page has three categories (feedback, dry/wet, reverb LEDs) of three settings (the mix knobs); the other eight are reserved.
   Holding ASSIGN or five idle seconds saves a change and exits; another button cancels.
-  Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero; later
-  releases read a zero byte 11 as "no options saved", so every later option starts at stock.
+  Saved in settings byte 10 (0 Stock, 0xA1 Fast, 0xA2 Off). Bytes 11–23 are written as zero;
+  2026.10.16 reads a zero byte 11 as self-play Automatic, the stock behaviour.
 - Named Drizzlet; release tags are now `drizzlet-YYYY.MM.DD`.
 - Encoder runs on Python 3 (stm_audio_bootloader fork); the update file is unchanged.
 

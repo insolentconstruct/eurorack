@@ -30,7 +30,7 @@
 #define BEADS_TEST_BACKUP_STUBS_BEADS_DSP_PROCESSOR_H_
 
 #include <cstddef>
-#include <cstdint>
+#include <stdint.h>
 
 namespace beads {
 

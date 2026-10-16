@@ -1,5 +1,7 @@
 # Beads manual errata
 
+**TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s MEDIA hold for automatic gain and 12 synth banks rather than 8.
+
 Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the module page differ from the released firmware source. Everything here was checked against the source; Drizzlet keeps all of it unless noted. Drizzlet's own additions are in [README.md](README.md) and [FEATURES.md](FEATURES.md).
 
 Several differences come from the April 2021 firmware update, which the manual predates; its [release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572) list them.
@@ -30,7 +32,7 @@ Several differences come from the April 2021 firmware update, which the manual p
 - **Erase chord:** holding FREEZE and ASSIGN at power-on erases the firmware and waits for an update. Holding FREEZE alone enters the updater without erasing. Use only for recovery. <!-- beads/bootloader/bootloader.cc:28,266-281,315-322 -->
 - **Calibration:** pressing MEDIA and ASSIGN together starts CV calibration, which needs precise reference voltages and overwrites the stored calibration. Avoid it unless you are recalibrating. <!-- beads/ui.cc:320-328,358-384; beads/calibrator.h:91-118 -->
 - **Saved choices:** recording quality, ASSIGN routing and amounts, the R trigger-output mode and autosave are all remembered across power cycles, not just input gain. <!-- beads/ui.cc:261-264,276-279,416-418,437-444; beads/settings.cc -->
-- **Buffer save takes time:** the 10 s of FREEZE starts the save; FREEZE dims while it runs. Keep FREEZE on until it finishes, or the buffer is not restored. In Drizzlet, each save cut short makes the next one wait longer, up to 320 s (see README.md). <!-- manual.md:49; beads/background_buffer_backup.cc:42,54-81,136-158; beads/ui.cc -->
+- **Buffer save takes time:** 10 s of FREEZE starts the save, and the FREEZE LED dims while it runs. Keep FREEZE on until it finishes, or the buffer is not restored. In Drizzlet, each save cut short makes the next one wait longer, up to 320 s (see README.md). <!-- manual.md:49; beads/background_buffer_backup.cc:42,54-81,136-158; beads/ui.cc -->
 - **Quality changes while frozen** are remembered and shown, and take effect when you unfreeze. <!-- manual.md:51; beads/ui.cc:416-418; beads/beads.cc:351-355,382-391 -->
 - **Knobs after hidden edits:** after setting gain or an ASSIGN amount, the knob you used catches up gradually with its normal parameter instead of jumping. <!-- beads/pot_controller.h:87-92,112-146; beads/ui.cc:425,431-444 -->
 - **Synth controls:** in synth mode TIME scans the 16 waveforms of the bank, fully clockwise SIZE gives long grains (not delay), and counterclockwise SIZE does not reverse anything. <!-- manual.md:87,144,180; beads/dsp/wavetable_grain.h:124-146; beads/dsp/wavetable_voice.h:89-94; beads/beads.cc:244-259; beads/dsp/synth.cc:72-80 -->

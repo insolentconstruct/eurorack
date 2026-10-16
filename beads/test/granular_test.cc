@@ -28,7 +28,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
+#include <stdint.h>
 
 #include "beads/test/test_checker.h"
 
@@ -150,14 +150,14 @@ void TestGrainDuration() {
         - 0.0078125f) < 0.00001f);
     float previous = 0.0f;
     for (int i = 0; i <= 100; ++i) {
-      float duration = player.ComputeGrainDuration(
+      const float duration = player.ComputeGrainDuration(
           1.0f / 3.0f + float(i) / 150.0f);
       CHECK(duration >= previous);
       previous = duration;
     }
     previous = 0.0f;
     for (int i = 100; i >= 0; --i) {
-      float duration = player.ComputeGrainDuration(float(i) / 300.0f);
+      const float duration = player.ComputeGrainDuration(float(i) / 300.0f);
       CHECK(duration >= previous);
       previous = duration;
     }
@@ -515,7 +515,7 @@ void TestProcessorVoiceRelease() {
   CHECK(previous > 0.0f && previous < 1.0f);
   for (int i = 0; i < 10; ++i) {
     FloatFrame output = ProcessSample(false);
-    float value = grain.voice_stealing_envelope_.value_;
+    const float value = grain.voice_stealing_envelope_.value_;
     CHECK(value > 0.0f && value < previous);
     CHECK(output.l > 0.0f);
     previous = value;

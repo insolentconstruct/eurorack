@@ -109,11 +109,11 @@ bool BackgroundBufferBackup::Valid(const BufferBackupHeader& header) const {
     return false;
   }
   if (header.crc_tag != kCrcTag) {
-    return true;  // Saved by the stock firmware: no CRC.
+    return true;  // No CRC tag: accept after the range checks.
   }
   BufferBackupHeader h = header;
   h.crc = 0;
-  uint32_t crc = crc32(
+  const uint32_t crc = crc32(
       0,
       (const void*)(Sector<8>::start + kFlashWordSize),
       kDelayBufferSizeBits / 8);

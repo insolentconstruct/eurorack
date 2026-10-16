@@ -26,7 +26,7 @@
 //
 // Frozen delay slice tests.
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstdio>
 
 #include "beads/test/test_checker.h"

@@ -31,6 +31,8 @@
 
 #include <cstdio>
 
+#include "stmlib/stmlib.h"
+
 namespace beads {
 
 class TestChecker {
@@ -50,6 +52,8 @@ class TestChecker {
  private:
   const char* test_;
   int failures_;
+
+  DISALLOW_COPY_AND_ASSIGN(TestChecker);
 };
 
 }  // namespace beads

@@ -481,7 +481,7 @@ void TestOverwriteIndicator() {
   float minimum = 1.0f;
   bool passed = false;
   for (int i = 0; i < 17000; ++i) {
-    float expected = processor.overwrite_reserve();
+    const float expected = processor.overwrite_reserve();
     r.Block();
     CHECK(fabsf(ui.overwrite_reserve_ - expected) < 1.0e-6f);
     minimum = std::min(minimum, ui.overwrite_reserve_);

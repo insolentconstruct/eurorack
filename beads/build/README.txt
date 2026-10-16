@@ -18,10 +18,10 @@ Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing, as in the released source. In a test on one
 module, the 2021 and 2024 firmware clicked with DENSITY and PITCH near
 fully clockwise; builds with this change did not. This release adds
-monophonic grains and self-play on request, stops a modulated FREEZE from
-wearing the save flash, and fixes two delay bugs; the app is now built with
-GCC 9. The output limiter option came in the previous release. Details are
-in CHANGELOG.md in the repository.
+monophonic grains and self-play on request, reduces flash wear from a
+modulated FREEZE, and fixes two delay bugs; the app is now built with GCC 9.
+The output limiter option came in the previous release. Details are in
+CHANGELOG.md in the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
@@ -36,8 +36,8 @@ original code and gesture. Each new grain fades the previous grains out.
 It suits the square and decay SHAPE settings. Slower shapes can go nearly
 silent because each new grain cuts the previous one's attack. To recover
 sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
-or use the same gesture to turn mono off. Turn mono off before downgrading
-to stock firmware.
+or use the same gesture to turn monophonic grains off. Turn them off before
+downgrading to stock firmware.
 
 Frozen-buffer autosave
 ----------------------
@@ -51,9 +51,8 @@ Options page
 ------------
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
 The assignment LEDs pulse together on entry.
-Options come in three categories, marked by the feedback, dry/wet and reverb
-LEDs: the open category's LED pulses slowly. The page opens on the dry/wet
-category. Tap ASSIGN to cycle categories.
+The feedback, dry/wet and reverb LEDs mark three categories; the open one's
+LED pulses slowly. The page opens on dry/wet. Tap ASSIGN to cycle categories.
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three
 settings. Move a knob more than one tenth of its travel to start selecting; its
 zones pick the value, shown on the quality LED.
@@ -78,7 +77,8 @@ The remaining knobs and categories are reserved for later options.
 
 Hold ASSIGN for three seconds to save and exit. After five seconds without
 changes the page also exits and saves any change. Another button cancels.
-The mix knobs stay held during editing and catch up smoothly after exit.
+While you edit, the mix settings keep their values; after exit they catch up
+smoothly with the knobs.
 
 Firmware update procedure
 -------------------------

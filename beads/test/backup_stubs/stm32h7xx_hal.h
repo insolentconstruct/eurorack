@@ -29,7 +29,7 @@
 #ifndef BEADS_TEST_BACKUP_STUBS_STM32H7XX_HAL_H_
 #define BEADS_TEST_BACKUP_STUBS_STM32H7XX_HAL_H_
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstring>
 
 // Bank 2 flash, mapped at its real address by the test. Programming can only

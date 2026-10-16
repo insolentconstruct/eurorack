@@ -29,7 +29,7 @@
 #ifndef BEADS_TEST_OPTIONS_STUBS_STM32H7XX_HAL_H_
 #define BEADS_TEST_OPTIONS_STUBS_STM32H7XX_HAL_H_
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstring>
 
 struct GPIO_TypeDef { };

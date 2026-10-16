@@ -75,7 +75,7 @@ class Limiter {
       // Re-enable with a fresh detector, not a stale overload.
       peak_ = peak_lp_ = 0.5f;
     } else if (mode == OUTPUT_LIMITER_FAST) {
-      float decay = decay_;
+      const float decay = decay_;
       decay_ = 1.0f / (sr * 0.2f);
       Process(in_out, size);
       decay_ = decay;

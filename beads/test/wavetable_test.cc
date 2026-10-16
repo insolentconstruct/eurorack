@@ -59,7 +59,7 @@ void TestFinalBankRendering() {
     grain.Start(bank, 16, positions[i], 0.00371f, 4096, 0.5f,
         0.5f, 0.5f, 0.37f);
     for (int n = 0; n < 4096; ++n) {
-      float phase = (float(n) + 0.37f) / 4096.0f;
+      const float phase = (float(n) + 0.37f) / 4096.0f;
       CHECK(std::isfinite(grain.ReadSample(phase)));
       FloatFrame out = { };
       grain.Render(&out);

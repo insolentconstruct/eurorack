@@ -30,6 +30,9 @@
 #define BEADS_OPTIONS_H_
 
 #include <cmath>
+
+#include "stmlib/stmlib.h"
+
 #include "beads/dsp/limiter.h"
 
 namespace beads {
@@ -40,10 +43,18 @@ const int kSelfPlayPage = 0;
 
 class Options {
  public:
-  enum Stage { INACTIVE, WAIT_RELEASE, EDITING, DRAIN };
+  enum Stage {
+    STAGE_INACTIVE,
+    STAGE_WAIT_RELEASE,
+    STAGE_EDITING,
+    STAGE_DRAIN
+  };
+
+  Options() { }
+  ~Options() { }
 
   void Init() {
-    stage_ = INACTIVE;
+    stage_ = STAGE_INACTIVE;
     armed_ = eligible_ = holding_ = commit_ = false;
     all_up_time_ = last_action_ = press_time_ = 0;
     page_ = zone_ = 0;
@@ -58,18 +69,18 @@ class Options {
       bool just_pressed, bool normal, bool pot_touched, float pot,
       OutputLimiterMode committed, float feedback, bool self_play) {
     const float dry_wet = pot;
-    if (stage_ != INACTIVE && page_ == kSelfPlayPage) {
+    if (stage_ != STAGE_INACTIVE && page_ == kSelfPlayPage) {
       pot = feedback;
     }
-    if (stage_ == DRAIN) {
+    if (stage_ == STAGE_DRAIN) {
       if (all_up && !commit_) {
-        stage_ = INACTIVE;
+        stage_ = STAGE_INACTIVE;
         all_up_time_ = now;
         armed_ = false;
       }
       return;
     }
-    if (stage_ != INACTIVE) {
+    if (stage_ != STAGE_INACTIVE) {
       if (other || !normal) {
         Finish(false, committed, self_play);
         return;
@@ -80,9 +91,9 @@ class Options {
             committed, self_play);
         return;
       }
-      if (stage_ == WAIT_RELEASE) {
+      if (stage_ == STAGE_WAIT_RELEASE) {
         if (all_up) {
-          stage_ = EDITING;
+          stage_ = STAGE_EDITING;
           holding_ = false;
           last_action_ = now;
         }
@@ -149,7 +160,7 @@ class Options {
       eligible_ = false;
     }
     if (eligible_ && assign && uint32_t(now - press_time_) >= 3000) {
-      stage_ = WAIT_RELEASE;
+      stage_ = STAGE_WAIT_RELEASE;
       preview_ = committed;
       self_play_preview_ = self_play;
       page_ = kLimiterPage;
@@ -159,7 +170,7 @@ class Options {
     }
   }
 
-  inline bool active() const { return stage_ != INACTIVE; }
+  inline bool active() const { return stage_ != STAGE_INACTIVE; }
   inline Stage stage() const { return stage_; }
   inline int page() const { return page_; }
   inline OutputLimiterMode preview() const { return preview_; }
@@ -178,7 +189,7 @@ class Options {
       self_play_preview_ = self_play;
     }
     commit_ = commit;
-    stage_ = DRAIN;
+    stage_ = STAGE_DRAIN;
     holding_ = false;
   }
 
@@ -198,6 +209,8 @@ class Options {
   float previous_;
   OutputLimiterMode preview_;
   bool self_play_preview_;
+
+  DISALLOW_COPY_AND_ASSIGN(Options);
 };
 
 }  // namespace beads

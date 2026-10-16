@@ -99,14 +99,14 @@ void Ui::Poll() {
   system_clock.Tick();
   switches_.Debounce();
   
-  Options::Stage previous_stage = options_.stage();
-  bool was_active = options_.active();
+  const Options::Stage previous_stage = options_.stage();
+  const bool was_active = options_.active();
   bool other = false;
   bool all_up = true;
   bool pot_touched = false;
   for (int i = 0; i < SWITCH_LAST; ++i) {
-    Switch s = Switch(i);
-    bool down = switches_.pressed_immediate(s);
+    const Switch s = Switch(i);
+    const bool down = switches_.pressed_immediate(s);
     other = other || (s != SWITCH_ASSIGN && down);
     all_up = all_up && !down && switches_.up(s);
   }
@@ -130,16 +130,17 @@ void Ui::Poll() {
       assignable_cv_pot_[i].Lock();
     }
   }
-  if (options_.stage() == Options::DRAIN &&
-      previous_stage != Options::DRAIN) {
+  if (options_.stage() == Options::STAGE_DRAIN &&
+      previous_stage != Options::STAGE_DRAIN) {
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
   }
 
-  // Acceptance and the options transition share the SysTick context. Suppress
-  // entry, active/drain and exit ticks, while retaining stock debounce bookkeeping.
-  bool accept_switch_events = !was_active && !options_.active();
+  // Options transitions and event acceptance both run in SysTick. Suppress
+  // events on entry, while editing or draining, and on exit, but keep the
+  // stock debounce bookkeeping.
+  const bool accept_switch_events = !was_active && !options_.active();
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
@@ -283,19 +284,19 @@ void Ui::UpdateLeds() {
       break;
   }
   
-  if (options_.stage() == Options::WAIT_RELEASE ||
-      options_.stage() == Options::EDITING) {
+  if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
+      options_.stage() == Options::STAGE_EDITING) {
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       leds_.set(Led(LED_ASSIGN_1 + i),
-          options_.stage() == Options::WAIT_RELEASE || i == options_.page()
-              ? triangle : 0);
+          options_.stage() == Options::STAGE_WAIT_RELEASE ||
+              i == options_.page() ? triangle : 0);
     }
     const Leds::Color colors[3] = {
       { 0, 255, 0 }, { 0, 96, 255 }, { 255, 144, 0 }
     };
-    OutputLimiterMode value = options_.preview();
-    uint32_t phase = system_clock.milliseconds() % 1200;
-    bool pulse = value == OUTPUT_LIMITER_STOCK ||
+    const OutputLimiterMode value = options_.preview();
+    const uint32_t phase = system_clock.milliseconds() % 1200;
+    const bool pulse = value == OUTPUT_LIMITER_STOCK ||
         phase < 120 || (value == OUTPUT_LIMITER_OFF &&
         phase >= 240 && phase < 360);
     if (options_.page() == kSelfPlayPage) {
@@ -367,7 +368,7 @@ void Ui::OnSwitchPressed(const Event& e) {
 
   // Combo
   //
-  // Media + SEED = toggle monophonic mode.
+  // Media + SEED = toogle monophonic mode.
   //
   if (switches_.pressed(SWITCH_MEDIA) && e.control_id == SWITCH_SEED) {
     State* state = settings_->mutable_state();

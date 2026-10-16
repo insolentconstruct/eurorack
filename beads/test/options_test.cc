@@ -70,16 +70,16 @@ void Leds::Write() { }
 
 using namespace beads;
 
-static_assert(sizeof(State) == 24, "STAT size");
-static_assert(offsetof(State, media) == 0, "media");
-static_assert(offsetof(State, assignable_cv_destination) == 1, "assignment");
-static_assert(offsetof(State, assignable_cv_amount) == 2, "CV amounts");
-static_assert(offsetof(State, gain) == 5, "gain");
-static_assert(offsetof(State, gate_output_mode) == 6, "gate");
-static_assert(offsetof(State, frozen) == 7, "frozen");
-static_assert(offsetof(State, disable_autosave) == 8, "autosave");
-static_assert(offsetof(State, monophonic_mode) == 9, "mono");
-static_assert(offsetof(State, padding) == 10, "options");
+STATIC_ASSERT(sizeof(State) == 24, stat_size);
+STATIC_ASSERT(offsetof(State, media) == 0, media);
+STATIC_ASSERT(offsetof(State, assignable_cv_destination) == 1, assignment);
+STATIC_ASSERT(offsetof(State, assignable_cv_amount) == 2, cv_amounts);
+STATIC_ASSERT(offsetof(State, gain) == 5, gain);
+STATIC_ASSERT(offsetof(State, gate_output_mode) == 6, gate);
+STATIC_ASSERT(offsetof(State, frozen) == 7, frozen);
+STATIC_ASSERT(offsetof(State, disable_autosave) == 8, autosave);
+STATIC_ASSERT(offsetof(State, monophonic_mode) == 9, mono);
+STATIC_ASSERT(offsetof(State, padding) == 10, options);
 
 struct Rig {
   Settings settings;
@@ -122,9 +122,9 @@ struct Rig {
   void Enter() {
     Down(SWITCH_ASSIGN);
     Tick(2999);
-    CHECK(ui.options_.stage() == Options::WAIT_RELEASE);
+    CHECK(ui.options_.stage() == Options::STAGE_WAIT_RELEASE);
     Up(SWITCH_ASSIGN);
-    CHECK(ui.options_.stage() == Options::EDITING);
+    CHECK(ui.options_.stage() == Options::STAGE_EDITING);
   }
   void Tap() {
     Down(SWITCH_ASSIGN);
@@ -203,12 +203,12 @@ void TestUi() {
   CHECK(!r.ui.options_.active());
   r.Tick(8);
   r.Up(SWITCH_ASSIGN);
-  CHECK(r.ui.options_.stage() == Options::EDITING);
+  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
   // Deliberate movement below qualification refreshes inactivity only.
   r.Tick(4000);
   r.pot = .54f;
   r.Tick(1500);
-  CHECK(r.ui.options_.stage() == Options::EDITING);
+  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
   CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
   r.pot = .9f;
   r.Tick(10);
@@ -290,10 +290,10 @@ void TestQueueRace() {
   Rig r;
   r.Enter();
   r.Down(SWITCH_MEDIA);  // Cancellation enters DRAIN with MEDIA down.
-  CHECK(r.ui.options_.stage() == Options::DRAIN);
+  CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
   test_down[SWITCH_MEDIA] = false;
   r.Tick(7, false);  // Debounce 0x7f: release; next tick 0xff exits DRAIN.
-  CHECK(r.ui.options_.stage() == Options::DRAIN);
+  CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
   uint8_t media = r.settings.state().media;
   unsigned writes = test_writes;
   interrupted_rig = &r;
@@ -310,7 +310,7 @@ void TestQueueRace() {
   CHECK(r.settings.state().media == media && test_writes == writes);
 
   // Retain the read-pointer regression: interrupt between available and pull.
-  r.ui.options_.stage_ = Options::DRAIN;
+  r.ui.options_.stage_ = Options::STAGE_DRAIN;
   r.ui.queue_.AddEvent(stmlib::CONTROL_SWITCH, SWITCH_MEDIA, 1);
   CHECK(r.ui.queue_.available() == 1);
   r.Tick(1, false);
@@ -386,22 +386,24 @@ void TestStorage() {
 
 // Frozen released limiter arithmetic, independent of ProcessOutput dispatch.
 struct StockLimiter {
-  float peak = .5f, lp = .5f, decay;
-  explicit StockLimiter(float d) : decay(d) { }
+  float peak, lp, decay;
+  explicit StockLimiter(float d) : peak(.5f), lp(.5f), decay(d) { }
   void Process(FloatFrame* x) {
-    float p = std::min(std::max(fabsf(x->l), fabsf(x->r)), 40.0f);
+    const float p = std::min(std::max(fabsf(x->l), fabsf(x->r)), 40.0f);
     SLOPE(peak, p, .1f, decay);
     SLOPE(lp, peak, .5f, decay);
-    float gain = lp <= .9f ? 1.0f : .9f / lp;
+    const float gain = lp <= .9f ? 1.0f : .9f / lp;
     x->l *= gain;
     x->r *= gain;
   }
 };
 void TestDsp() {
   test_checker.Start("TestDsp");
-  for (float sr : {24000.0f, 32000.0f, 48000.0f}) {
+  const float sample_rates[] = { 24000.0f, 32000.0f, 48000.0f };
+  for (size_t j = 0; j < 3; ++j) {
+    const float sr = sample_rates[j];
     Limiter stock, fast, off;
-    float decay = 1.0f / (sr * 6.0f);
+    const float decay = 1.0f / (sr * 6.0f);
     stock.Init(decay, .9f);
     fast.Init(decay, .9f);
     off.Init(decay, .9f);
@@ -483,7 +485,7 @@ void TestAutosaveChordAndDisplay() {
   Rig r;
   for (int i = 0; i < 2; ++i) {
     unsigned writes = test_writes;
-    bool before = r.settings.state().disable_autosave;
+    const bool before = r.settings.state().disable_autosave;
     r.Down(SWITCH_ASSIGN);
     r.Down(SWITCH_FREEZE);
     r.Tick(200);
@@ -625,8 +627,8 @@ void TestLimiterLinkedGainAndModeSwitch() {
   Limiter limiter;
   limiter.Init(1.0f / (48000.0f * 6.0f), 0.9f);
   for (int i = 0; i < 3000; ++i) {
-    OutputLimiterMode mode = OutputLimiterMode((i / 100) % 3);
-    float input = i % 2 ? 1.0e20f : -1.0e20f;
+    const OutputLimiterMode mode = OutputLimiterMode((i / 100) % 3);
+    const float input = i % 2 ? 1.0e20f : -1.0e20f;
     FloatFrame x = { input, -input * 0.25f };
     limiter.ProcessOutput(&x, 1, mode, 48000.0f);
     CHECK(std::isfinite(x.l) && std::isfinite(x.r));

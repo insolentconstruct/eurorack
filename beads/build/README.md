@@ -32,8 +32,8 @@ original code and gesture. Each new grain fades the previous grains out.
 It suits the square and decay SHAPE settings. Slower shapes can go nearly
 silent because each new grain cuts the previous one's attack. To recover
 sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
-or use the same gesture to turn mono off. Turn mono off before downgrading
-to stock firmware.
+or use the same gesture to turn monophonic grains off. Turn them off before
+downgrading to stock firmware.
 
 ## Frozen-buffer autosave
 
@@ -46,7 +46,7 @@ If FREEZE is released during self-play, the minute starts when self-play ends.
 
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
 The assignment LEDs pulse together on entry.
-Options come in three categories, marked by the feedback, dry/wet and reverb LEDs: the open category's LED pulses slowly. The page opens on the dry/wet category. Tap ASSIGN to cycle categories.
+The feedback, dry/wet and reverb LEDs mark three categories; the open one's LED pulses slowly. The page opens on dry/wet. Tap ASSIGN to cycle categories.
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three settings.
 Move a knob more than one tenth of its travel to start selecting; its zones pick the value, shown on the quality LED (next to MEDIA).
 
@@ -67,7 +67,7 @@ resets it to Automatic.
 
 The remaining knobs and categories are reserved for later options.
 Hold ASSIGN for three seconds to save and exit. After five seconds without changes the page also exits and saves any change. Another button cancels.
-The mix knobs stay held during editing and catch up smoothly after exit.
+While you edit, the mix settings keep their values; after exit they catch up smoothly with the knobs.
 
 ## Updating your module
 
