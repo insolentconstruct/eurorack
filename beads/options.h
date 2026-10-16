@@ -62,12 +62,18 @@ class Options {
     origin_ = previous_ = 0.0f;
     preview_ = OUTPUT_LIMITER_STOCK;
     self_play_preview_ = false;
+    clouds_preview_ = false;
+    reverb_qualified_ = false;
+    reverb_selected_ = false;
+    reverb_origin_ = 0.0f;
+    reverb_previous_ = 0.0f;
   }
 
   void Poll(
       uint32_t now, bool assign, bool other, bool all_up,
       bool just_pressed, bool normal, bool pot_touched, float pot,
-      OutputLimiterMode committed, float feedback, bool self_play) {
+      OutputLimiterMode committed, float feedback, bool self_play,
+      float reverb = 0.5f, bool clouds = false) {
     const float dry_wet = pot;
     if (stage_ != STAGE_INACTIVE && page_ == kSelfPlayPage) {
       pot = feedback;
@@ -82,13 +88,13 @@ class Options {
     }
     if (stage_ != STAGE_INACTIVE) {
       if (other || !normal) {
-        Finish(false, committed, self_play);
+        Finish(false, committed, self_play, clouds);
         return;
       }
       if (uint32_t(now - last_action_) >= 5000) {
         // Idle exit keeps a changed value, like the hold exit.
-        Finish(preview_ != committed || self_play_preview_ != self_play,
-            committed, self_play);
+        Finish(preview_ != committed || self_play_preview_ != self_play ||
+            clouds_preview_ != clouds, committed, self_play, clouds);
         return;
       }
       if (stage_ == STAGE_WAIT_RELEASE) {
@@ -104,7 +110,7 @@ class Options {
         press_time_ = last_action_ = now;
       }
       if (holding_ && assign && uint32_t(now - press_time_) >= 3000) {
-        Finish(true, committed, self_play);
+        Finish(true, committed, self_play, clouds);
         return;
       }
       if (holding_ && all_up) {
@@ -112,7 +118,25 @@ class Options {
         page_ = (page_ + 1) % 3;
         pot = page_ == kSelfPlayPage ? feedback : dry_wet;
         ResetPot(pot);
+        ResetReverb(reverb);
         last_action_ = now;
+      }
+      if (page_ == kLimiterPage) {
+        if (!reverb_qualified_ && fabsf(reverb - reverb_origin_) > 0.10f) {
+          reverb_qualified_ = true;
+        }
+        if (fabsf(reverb - reverb_previous_) > 0.01f) {
+          last_action_ = now;
+          reverb_previous_ = reverb;
+          reverb_selected_ = true;
+        }
+        if (reverb_qualified_) {
+          if (reverb < 0.5f - 0.03f) {
+            clouds_preview_ = false;
+          } else if (reverb > 0.5f + 0.03f) {
+            clouds_preview_ = true;
+          }
+        }
       }
       if (!qualified_ && fabsf(pot - origin_) > 0.10f) {
         qualified_ = true;
@@ -121,6 +145,7 @@ class Options {
       if (fabsf(pot - previous_) > 0.01f) {
         last_action_ = now;
         previous_ = pot;
+        reverb_selected_ = false;
       }
       if (qualified_ && page_ == kSelfPlayPage) {
         if (pot < 0.5f - 0.03f) {
@@ -163,6 +188,8 @@ class Options {
       stage_ = STAGE_WAIT_RELEASE;
       preview_ = committed;
       self_play_preview_ = self_play;
+      clouds_preview_ = clouds;
+      ResetReverb(reverb);
       page_ = kLimiterPage;
       ResetPot(pot);
       last_action_ = now;
@@ -175,18 +202,28 @@ class Options {
   inline int page() const { return page_; }
   inline OutputLimiterMode preview() const { return preview_; }
   inline bool self_play_preview() const { return self_play_preview_; }
+  inline bool clouds_preview() const { return clouds_preview_; }
+  inline bool reverb_selected() const { return reverb_selected_; }
   inline bool commit_requested() const { return commit_; }
   inline void ClearCommit() { commit_ = false; }
 
  private:
+  void ResetReverb(float reverb) {
+    reverb_origin_ = reverb;
+    reverb_previous_ = reverb;
+    reverb_qualified_ = false;
+    reverb_selected_ = false;
+  }
   void ResetPot(float pot) {
     origin_ = previous_ = pot;
     qualified_ = false;
   }
-  void Finish(bool commit, OutputLimiterMode committed, bool self_play) {
+  void Finish(bool commit, OutputLimiterMode committed, bool self_play,
+      bool clouds) {
     if (!commit) {
       preview_ = committed;
       self_play_preview_ = self_play;
+      clouds_preview_ = clouds;
     }
     commit_ = commit;
     stage_ = STAGE_DRAIN;
@@ -209,6 +246,11 @@ class Options {
   float previous_;
   OutputLimiterMode preview_;
   bool self_play_preview_;
+  bool clouds_preview_;
+  bool reverb_qualified_;
+  bool reverb_selected_;
+  float reverb_origin_;
+  float reverb_previous_;
 
   DISALLOW_COPY_AND_ASSIGN(Options);
 };

@@ -134,7 +134,10 @@ class Ui {
     overwrite_reserve_ = overwrite_reserve;
   }
   
-  OutputLimiterMode output_limiter_mode() const;
+  inline OutputLimiterMode output_limiter_mode() const {
+    return output_limiter_mode_;
+  }
+  inline bool clouds_style() const { return clouds_style_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -200,6 +203,7 @@ class Ui {
   // Entry-only request: main discards events queued before options entry.
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
+  volatile bool clouds_style_;
 
   static const Leds::Color media_palette_[4];
   

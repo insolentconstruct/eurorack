@@ -1,12 +1,14 @@
 PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
 
-VPATH          = $(PACKAGES)
+VPATH          = $(PACKAGES) beads/dsp/fx
 
 TARGET         = granular_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = 		granular_test.cc \
 		processor.cc \
+		diffuser.cc \
+		reverb.cc \
 		delay_clock.cc \
 		delay_controller.cc \
 		trigger_generator.cc \

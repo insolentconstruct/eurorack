@@ -42,6 +42,22 @@ out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
     'beads/test/.runs/mutations').resolve()
 out.mkdir(parents=True, exist_ok=True)
 cases = [
+  ('TestCloudsStorage', 'options', 'beads/settings.h',
+    'state_.padding[3] == 0xa2', 'state_.padding[3] != 0'),
+  ('TestCloudsOptions', 'options', 'beads/options.h',
+    'reverb > 0.5f + 0.03f', 'reverb > 0.9f + 0.03f'),
+  ('TestStockHashes', 'clouds', 'beads/dsp/processor.cc',
+    'const float post_gain_wet = 1.5f;', 'const float post_gain_wet = 1.4f;'),
+  ('TestCloudsOutput', 'clouds', 'beads/dsp/processor.cc',
+    'reverb_.ProcessClouds(out, size);', 'reverb_.Process(out, size);'),
+  ('TestCloudsOutput', 'clouds', 'beads/dsp/processor.cc',
+    'diffuser_.Process(out, size);', '(void)out;'),
+  ('TestCloudsOutput', 'clouds', 'beads/dsp/fx/reverb.cc',
+    '4680.0f, LFO_2', '4600.0f, LFO_2'),
+  ('TestDiffuserImpulse', 'clouds', 'beads/dsp/fx/diffuser.cc',
+    'c.WriteAllPass(apl1, -kap);', 'c.WriteAllPass(apl1, kap);'),
+  ('TestCloudsSwitch', 'firmware', 'beads/beads.cc',
+    'if (reverb_style_previous_gain == 0.0f) {', 'if (true) {'),
   ('TestStockAssignRouting', 'options', 'beads/ui.cc',
     '(state->assignable_cv_destination + 1) % 3',
     '(state->assignable_cv_destination + 2) % 3'),
@@ -190,13 +206,13 @@ cases = [
     'bank_quantizer_.Init(kNumBanks, 0.048f, false);',
     'bank_quantizer_.Init(kNumBanks, 0.1f, false);'),
   ('TestBrightRecording', 'processor', 'beads/dsp/processor.h',
-    'float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };',
-    'float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 24000.0f };'),
+    'float kSampleRates[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };',
+    'float kSampleRates[4] = { 24000.0f, 48000.0f, 32000.0f, 24000.0f };'),
   ('TestColdRecording', 'processor', 'beads/dsp/processor.h',
-    'float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };',
-    'float sr[4] = { 24000.0f, 48000.0f, 24000.0f, 48000.0f };'),
+    'float kSampleRates[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };',
+    'float kSampleRates[4] = { 24000.0f, 48000.0f, 24000.0f, 48000.0f };'),
   ('TestSunnyRecording', 'processor', 'beads/dsp/processor.h',
-    'int ratio[4] = { 1, 2, 1, 1 };', 'int ratio[4] = { 1, 1, 1, 1 };'),
+    'int kRatios[4] = { 1, 2, 1, 1 };', 'int kRatios[4] = { 1, 1, 1, 1 };'),
   ('TestCassetteRecording', 'processor', 'beads/dsp/processor.h',
     '24000.0f, 48000.0f, 32000.0f', '32000.0f, 48000.0f, 32000.0f'),
   ('TestFreezeButtonRecording', 'processor', 'beads/ui.cc',
@@ -419,7 +435,7 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
             ['nice', '-n', '10', 'make', '-s', '-f',
                 'beads/test/' + suite + '.mk', 'test'],
             cwd=work, stdout=stream, stderr=subprocess.STDOUT,
-            timeout=180 if suite == 'firmware' else 60)
+            timeout=240 if suite in ('firmware', 'clouds') else 60)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestFinalBankRendering':

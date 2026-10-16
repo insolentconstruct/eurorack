@@ -1,7 +1,7 @@
 PACKAGES       =  beads/drivers beads/dsp beads/test stmlib/utils stmlib/dsp \
 		beads
 
-VPATH          = $(PACKAGES)
+VPATH          = $(PACKAGES) beads/dsp/fx
 
 TARGET         = firmware_test
 BUILD_ROOT     = build/
@@ -15,6 +15,8 @@ CC_FILES       = 		firmware_test.cc \
 		factory_test.cc \
 		synth.cc \
 		processor.cc \
+		diffuser.cc \
+		reverb.cc \
 		mu_law.cc \
 		delay_controller.cc \
 		delay_clock.cc \

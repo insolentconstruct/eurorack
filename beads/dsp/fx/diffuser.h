@@ -1,0 +1,64 @@
+// Copyright 2014 Emilie Gillet.
+//
+// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// See http://creativecommons.org/licenses/MIT/ for more information.
+//
+// -----------------------------------------------------------------------------
+//
+// AP diffusion network.
+
+#ifndef BEADS_DSP_FX_DIFFUSER_H_
+#define BEADS_DSP_FX_DIFFUSER_H_
+
+#include "stmlib/stmlib.h"
+
+#include "beads/dsp/frame.h"
+#include "beads/dsp/fx/fx_engine.h"
+
+namespace beads {
+
+class Diffuser {
+ public:
+  Diffuser() { }
+  ~Diffuser() { }
+
+  void Init(uint16_t* buffer) {
+    engine_.Init(buffer);
+  }
+
+  void Process(FloatFrame* in_out, size_t size);
+
+  void set_amount(float amount) {
+    amount_ = amount;
+  }
+
+ private:
+  typedef FxEngine<2048, FORMAT_16_BIT> E;
+  E engine_;
+
+  float amount_;
+  DISALLOW_COPY_AND_ASSIGN(Diffuser);
+};
+
+}  // namespace beads
+
+#endif  // BEADS_DSP_FX_DIFFUSER_H_

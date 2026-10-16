@@ -92,6 +92,15 @@ class Settings {
     state_.padding[1] = on_request ? 0xa1 : 0;
   }
 
+  // Byte 12 belongs to pitch scale; 0xa1 in byte 13 is reserved.
+  inline bool clouds_style() const {
+    return state_.padding[3] == 0xa2;
+  }
+
+  inline void set_clouds_style(bool clouds) {
+    state_.padding[3] = clouds ? 0xa2 : 0;
+  }
+
   inline State* mutable_state() {
     return &state_;
   }

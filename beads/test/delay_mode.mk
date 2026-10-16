@@ -1,12 +1,14 @@
 PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
 
-VPATH          = $(PACKAGES)
+VPATH          = $(PACKAGES) beads/dsp/fx
 
 TARGET         = delay_mode_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = 		delay_mode_test.cc \
 		processor.cc \
+		diffuser.cc \
+		reverb.cc \
 		mu_law.cc \
 		delay_clock.cc \
 		delay_controller.cc \

@@ -65,6 +65,16 @@ With an input patched, the hold restarts automatic gain as usual. Automatic keep
 The setting is saved. Stock firmware ignores it; saving after a downgrade
 resets it to Automatic.
 
+Reverb character: Dry/wet LED category, REVERB knob. Lower half selects
+Stock (default, steady green); upper half selects Clouds-style (one cyan pulse
+per 1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
+has a small dead band. The quality LED shows the last knob moved on this page.
+Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
+plus fixed diffusion on the grain wet output. In delay and self-play modes,
+only the reverb character changes. Switching briefly fades the sound out and
+back in and clears the old tail. The setting is saved; stock firmware ignores
+it and resets it to Stock when saving after a downgrade.
+
 The remaining knobs and categories are reserved for later options.
 Hold ASSIGN for three seconds to save and exit. After five seconds without changes the page also exits and saves any change. Another button cancels.
 While you edit, the mix settings keep their values; after exit they catch up smoothly with the knobs.

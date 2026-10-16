@@ -34,6 +34,7 @@
 
 namespace beads {
 
+const float kCloudsDiffusion = 0.7f;
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
@@ -43,6 +44,9 @@ using namespace stmlib;
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
+  clouds_style_ = false;
+  diffuser_.Init(diffuser_buffer_);
+  diffuser_.set_amount(kCloudsDiffusion);
   output_limiter_mode_ = OUTPUT_LIMITER_STOCK;
   processor_digital_.Init(48000.0f, buffers);
   processor_vintage_digital_.Init(32000.0f, buffers);
@@ -65,6 +69,12 @@ void Processor::Init(
   
   // Used for the timing of the delay to granular transition.
   delay_mode_transition_ = -kDelayModeTransitionTime;
+}
+
+void Processor::SetCloudsStyle(bool clouds) {
+  clouds_style_ = clouds;
+  diffuser_.Init(diffuser_buffer_);
+  reverb_.SetCloudsStyle(clouds, sample_rate());
 }
 
 void Processor::Configure(Media media, bool mono) {
@@ -97,7 +107,7 @@ void Processor::Configure(Media media, bool mono) {
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
-  reverb_.Reset(sr);
+  reverb_.Reset(clouds_style_ ? 32000.0f : sr);
 }
 
 void Processor::Process(
@@ -124,7 +134,6 @@ void Processor::Process(
 
   TriggerGenerator::Output triggers_buffer[size];
   DelayController::Output taps_buffer[size];
-  bool gate_out[size];
 
   TriggerGenerator::Output* triggers = &triggers_buffer[0];
   DelayController::Output* taps = &taps_buffer[0];
@@ -143,9 +152,6 @@ void Processor::Process(
         parameters.shape,
         taps,
         size);
-    for (size_t i = 0; i < size; ++i) {
-      gate_out[i] = taps[i].gate;
-    }
   } else {
     taps = NULL;
     trigger_generator_.Render(
@@ -156,9 +162,6 @@ void Processor::Process(
         expo_fm_amount * density.cv,
         triggers,
         size);
-    for (size_t i = 0; i < size; ++i) {
-      gate_out[i] = triggers[i].gate;
-    }
   }
   
   FloatFrame dry_signal[size];
@@ -203,6 +206,10 @@ void Processor::Process(
       break;
   }
   
+  if (clouds_style_ && !delay_mode) {
+    diffuser_.Process(out, size);
+  }
+
   // Fade-out / Fade-in the dry signal when switching between granular and
   // Delay mode.
   const float wet_fade = SmoothStep(
@@ -241,7 +248,11 @@ void Processor::Process(
       : (0.3f + 0.6f * reverb_time));
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
-  reverb_.Process(out, size);
+  if (clouds_style_) {
+    reverb_.ProcessClouds(out, size);
+  } else {
+    reverb_.Process(out, size);
+  }
   
   // Final clipping/limiting
   output_limiter_.ProcessOutput(
@@ -250,7 +261,7 @@ void Processor::Process(
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {
       out[i].l = (out[i].l + out[i].r) * 0.5f;
-      out[i].r = gate_out[i] ? -0.8f : 0.0f;
+      out[i].r = (delay_mode ? taps[i].gate : triggers[i].gate) ? -0.8f : 0.0f;
     }
   }
 }

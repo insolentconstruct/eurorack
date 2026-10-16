@@ -797,6 +797,60 @@ void TestSelfPlayFrozenBackup() {
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
 }
 
+void TestCloudsSwitch() {
+  test_checker.Start("TestCloudsSwitch");
+  extern bool clouds_style;
+  extern float reverb_style_gain;
+  for (int mode = 0; mode < 2; ++mode) {
+    Rig r(false, mode != 0);
+    r.audio = 0x20000000;
+    PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 40000;
+    r.Settle();
+    if (mode) {
+      r.StartAutomatic();
+    }
+    CHECK(synth_mode == (mode != 0));
+    for (int change = 0; change < 2; ++change) {
+      const bool requested = change == 0;
+      settings.set_clouds_style(requested);
+      SysTick_Handler();
+      bool switched = false;
+      bool faded = false;
+      for (int block = 0; block < 100; ++block) {
+        const bool previous = clouds_style;
+        const float gain = reverb_style_gain;
+        r.Block();
+        CHECK(fabsf(reverb_style_gain - gain) <= 0.025001f);
+        if (previous != clouds_style) {
+          switched = true;
+          CHECK(gain == 0.0f && reverb_style_gain == 0.0f);
+          for (size_t i = 0; i < codec.block_size_; ++i) {
+            CHECK(r.out[i].l == 0 && r.out[i].r == 0);
+          }
+          CHECK(processor.clouds_style_ == requested);
+          CHECK(synth.clouds_style_ == requested);
+          extern uint16_t reverb_buffer[];
+          for (int i = 0; i < 32768; ++i) {
+            CHECK(reverb_buffer[i] == 0);
+          }
+          for (int i = 0; i < 2048; ++i) {
+            CHECK(processor.diffuser_buffer_[i] == 0);
+          }
+        }
+        faded |= reverb_style_gain == 0.0f;
+      }
+      CHECK(switched && faded && clouds_style == requested);
+      CHECK(reverb_style_gain == 1.0f);
+    }
+    settings.set_clouds_style(true);
+    settings.SaveState();
+    r.Reboot();
+    CHECK(settings.clouds_style());
+    r.Settle();
+    CHECK(clouds_style);
+  }
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -804,6 +858,7 @@ int main() {
   if (flash == MAP_FAILED) {
     return 2;
   }
+  TestCloudsSwitch();
   TestMainLoopMatchesHarness();
   TestAutomaticSelfPlay();
   TestRequestedSelfPlay();

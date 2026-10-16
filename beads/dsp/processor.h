@@ -34,6 +34,7 @@
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
 #include "beads/dsp/fx/reverb.h"
+#include "beads/dsp/fx/diffuser.h"
 #include "beads/dsp/fx/wow_and_flutter.h"
 
 // Setting this flag slows down the codec to 24kHz for the MEDIA_DIRTY_TAPE
@@ -70,6 +71,7 @@ class Processor {
   };
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
+  void SetCloudsStyle(bool clouds);
   void Configure(Media media, bool mono);
   
   inline Media media() const { return media_; }
@@ -77,20 +79,20 @@ class Processor {
   
   inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
-    float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
+    static const float kSampleRates[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
 #else
-    float sr[4] = { 48000.0f, 48000.0f, 32000.0f, 48000.0f };
+    static const float kSampleRates[4] = { 48000.0f, 48000.0f, 32000.0f, 48000.0f };
 #endif  // ENABLE_HARDWARE_24K
-    return sr[media_];
+    return kSampleRates[media_];
   }
   
   inline int ratio() const {
 #ifdef ENABLE_HARDWARE_24K
-    int ratio[4] = { 1, 2, 1, 1 };
+    static const int kRatios[4] = { 1, 2, 1, 1 };
 #else
-    int ratio[4] = { 2, 2, 1, 1 };
+    static const int kRatios[4] = { 2, 2, 1, 1 };
 #endif  // ENABLE_HARDWARE_24K
-    return ratio[media_];
+    return kRatios[media_];
   }
   
   inline uint8_t* delay_buffer_raw_bytes(size_t offset) {
@@ -209,6 +211,9 @@ class Processor {
   Limiter pre_reverb_limiter_;
   Limiter output_limiter_;
   OutputLimiterMode output_limiter_mode_;
+  Diffuser diffuser_;
+  uint16_t diffuser_buffer_[2048];
+  bool clouds_style_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

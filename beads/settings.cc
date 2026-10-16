@@ -83,6 +83,7 @@ bool Settings::Init(bool recovery_mode) {
   
   set_output_limiter_mode(output_limiter_mode());
   set_self_play_on_request(self_play_on_request());
+  set_clouds_style(clouds_style());
   return success;
 }
 
@@ -97,7 +98,8 @@ void Settings::SavePersistentData() {
 void Settings::SaveState() {
   set_output_limiter_mode(output_limiter_mode());
   set_self_play_on_request(self_play_on_request());
-  fill(&state_.padding[2], &state_.padding[sizeof(state_.padding)], 0);
+  set_clouds_style(clouds_style());
+  fill(&state_.padding[4], &state_.padding[sizeof(state_.padding)], 0);
   chunk_storage_.SaveState();
 }
 

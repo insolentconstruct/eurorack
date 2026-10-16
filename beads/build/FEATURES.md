@@ -39,13 +39,14 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
+| Dry/wet LED category, REVERB | Reverb character: lower half Stock (default), upper half Clouds-style; midpoint hysteresis ±3% | Steady green / one cyan pulse per 1.2 s; quality LED follows last knob moved |
 | Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
 | Feedback LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET delay mode (#26, #9); REVERB stereo width (#5) |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK and REVERB | Reserved settings, no setter (knobs locked during editing) | Planned: FEEDBACK mix law (#21, #48); REVERB reverb character, Clouds-style with grain diffusion (#20, #22, #2) <!-- beads/options.h:90-117; beads/ui.cc:128-131 --> |
 | Reverb LED category, all three knobs | Reserved category, no setter | Planned: FEEDBACK pitch scale (#6, #8); DRY/WET LED brightness (#40); REVERB grain starts on recorded attacks (#58, #47) <!-- beads/options.h:90-117; beads/build/README.md --> |
 | Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
-| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; reserved categories show limiter <!-- beads/ui.cc:290-299 --> |
+| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; Dry/wet REVERB shows Stock steady green or Clouds-style one cyan pulse, following the last knob moved; reserved categories show limiter <!-- beads/ui.cc:290-299 --> |
 | Mix knobs | All three normal values locked while editing; FEEDBACK or DRY/WET selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
 
 ## Saved settings
@@ -64,12 +65,14 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 9 | `monophonic_mode` | 0 = off (default), 1 = on; TAKEN: monophonic grains, using Mutable Instruments' original code <!-- beads/settings.h:59; beads/beads.cc:203; beads/ui.cc:358-369 --> |
 | 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
 | 11 | `padding[1]` | Self-play: 0xA1 = On request; 0 and all unknown values = Automatic; canonicalized on load/save |
-| 12–22, individually | `padding[2]` … `padding[12]` | FREE; zeroed on every save |
+| 12 | `padding[2]` | RESERVED: pitch scale in another branch; preserved on save |
+| 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
+| 14–22, individually | `padding[4]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright MEDIA cue, but plays grains polyphonically. Turn monophonic grains off before downgrading. Drizzlet uses byte 9 without changing the settings layout. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10 and 11 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Bytes 12–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10, 11 and 13 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Byte 12 is preserved; bytes 14–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 | Flash area | TAKEN | FREE / limit |
@@ -136,6 +139,11 @@ Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before t
 | D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM <!-- measurement: CI 38491527444 app.elf sections 7-9; beads/beads.cc:54-56; linker script:39-42 --> |
 | D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement <!-- measurement: CI 38491527444 app.elf section 6; linker script:41 --> |
 
+The GCC 9 Clouds-style build uses 270,808 app flash bytes and 35,700 DTCM
+`.bss` bytes, plus 1,188 `.data` bytes and the 1,536-byte minimum heap/stack
+reservation. D1/D2/D3 and DMA reservations are unchanged. Actual module stack
+high-water and total callback timing remain unverified.
+
 Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. No worst-case block timing has been measured for Drizzlet yet. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
 The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Treat CPU headroom as UNKNOWN: time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
@@ -152,7 +160,16 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Bytes 12–22 remain free for options. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Byte 12 is reserved for pitch scale; byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Bytes 14–22 remain free for options. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
 - **Gestures:** MEDIA+SEED is taken by monophonic grains; MEDIA+FREEZE is reserved for buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
+
+Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
+mapping, with Clouds delay lengths and modulation. The grain wet path adds
+four 16-bit allpasses per channel (4 KiB buffer), coefficient 0.625, amount 0.7.
+Clouds' granular TEXTURE maps 0.75–1 to diffusion 0–1; amount 0.7 corresponds to
+TEXTURE 0.925. Delay and self-play use the reverb character without the grain
+diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
+changes, including canceled previews. Actual module listening and timing
+remain to be verified.

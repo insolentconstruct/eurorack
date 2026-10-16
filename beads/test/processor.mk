@@ -1,13 +1,15 @@
 PACKAGES       =  beads/drivers beads/dsp beads/test stmlib/utils stmlib/dsp \
 		beads
 
-VPATH          = $(PACKAGES)
+VPATH          = $(PACKAGES) beads/dsp/fx
 
 TARGET         = processor_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = 		processor_test.cc \
 		processor.cc \
+		diffuser.cc \
+		reverb.cc \
 		mu_law.cc \
 		delay_controller.cc \
 		delay_clock.cc \

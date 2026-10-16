@@ -48,6 +48,7 @@ using namespace beads;
 using namespace stmlib;
 
 const int kBlockRate = 4000;
+const float kReverbStyleFadeStep = 1.0f / (0.01f * kBlockRate);
 
 const bool skip_factory_test = false;
 
@@ -95,6 +96,9 @@ void SysTick_Handler() {
 // the AGC while the normalization detection system is still catching up with
 // a codec restart.
 int codec_transition_frames;
+bool clouds_style;
+float reverb_style_gain;
+float reverb_style_previous_gain;
 bool synth_mode;
 int synth_mode_start_time;
 
@@ -237,9 +241,27 @@ void Process(
     processor.Trim();
     ui.ClearTrimFlag();
   }
-  processor.set_output_limiter_mode(ui.output_limiter_mode());
-  synth.set_output_limiter_mode(ui.output_limiter_mode());
+  // Fade to silence before changing delay topology in the shared buffer.
+  const bool requested_style = ui.clouds_style();
+  reverb_style_previous_gain = reverb_style_gain;
+  if (requested_style != clouds_style) {
+    reverb_style_gain = max(0.0f, reverb_style_gain - kReverbStyleFadeStep);
+    if (reverb_style_previous_gain == 0.0f) {
+      clouds_style = requested_style;
+      processor.SetCloudsStyle(clouds_style);
+      synth.SetCloudsStyle(clouds_style, false);
+      Codec::Frame silence;
+      silence.l = 0;
+      silence.r = 0;
+      fill(&out[0], &out[size], silence);
+      return;
+    }
+  } else if (reverb_style_gain < 1.0f) {
+    reverb_style_gain = min(1.0f, reverb_style_gain + kReverbStyleFadeStep);
+  }
+  const OutputLimiterMode limiter = ui.output_limiter_mode();
   if (synth_mode) {
+    synth.set_output_limiter_mode(limiter);
     synth.Render(
         seed_button_state,
         seed_input,
@@ -248,6 +270,7 @@ void Process(
         d, p, m,
         float_out, size);
   } else {
+    processor.set_output_limiter_mode(limiter);
     processor.Process(
         seed_button_state,
         seed_input,
@@ -257,6 +280,14 @@ void Process(
         float_out, size);
   }
   
+  if (reverb_style_previous_gain != 1.0f || reverb_style_gain != 1.0f) {
+    ParameterInterpolator gain(
+        &reverb_style_previous_gain, reverb_style_gain, size);
+    for (size_t i = 0; i < size; ++i) {
+      float_out[i] = float_out[i] * gain.Next();
+    }
+  }
+
   // Conversion of output samples into integers.
   for (size_t i = 0; i < size; ++i) {
     float l = float_out[i].l;
@@ -310,6 +341,9 @@ void Init() {
   
   processor.Init(delay_buffers, reverb_buffer);
   synth.Init(reverb_buffer);
+  clouds_style = false;
+  reverb_style_gain = 1.0f;
+  reverb_style_previous_gain = 1.0f;
   background_buffer_backup.Init(&processor, &settings);
 
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);

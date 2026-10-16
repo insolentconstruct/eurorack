@@ -1,12 +1,13 @@
 PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
 
-VPATH          = $(PACKAGES)
+VPATH          = $(PACKAGES) beads/dsp/fx
 
 TARGET         = wavetable_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = 		wavetable_test.cc \
 		synth.cc \
+		reverb.cc \
 		trigger_generator.cc \
 		resources.cc \
 		units.cc \

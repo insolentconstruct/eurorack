@@ -56,6 +56,10 @@ class Synth {
   
   void Init(uint16_t* reverb_buffer);
   void Reset();
+  void SetCloudsStyle(bool clouds, bool clear = true) {
+    clouds_style_ = clouds;
+    reverb_.SetCloudsStyle(clouds, 48000.0f, clear);
+  }
   
   void Render(
       SeedButtonState seed_button_state,
@@ -87,6 +91,7 @@ class Synth {
   WavetableVoice wavetable_voice_;
   
   stmlib::HysteresisQuantizer2 bank_quantizer_;
+  bool clouds_style_;
   
   DISALLOW_COPY_AND_ASSIGN(Synth);
 };

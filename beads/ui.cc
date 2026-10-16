@@ -93,6 +93,7 @@ void Ui::Init(
 
 void Ui::LoadOptions() {
   output_limiter_mode_ = settings_->output_limiter_mode();
+  clouds_style_ = settings_->clouds_style();
 }
 
 void Ui::Poll() {
@@ -122,7 +123,8 @@ void Ui::Poll() {
       mode_ == MODE_NORMAL, pot_touched,
       mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode(),
       mix_pot_value_[MIX_PARAMETER_FEEDBACK],
-      settings_->self_play_on_request());
+      settings_->self_play_on_request(),
+      mix_pot_value_[MIX_PARAMETER_REVERB], settings_->clouds_style());
   if (!was_active && options_.active()) {
     flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
@@ -186,6 +188,8 @@ void Ui::Poll() {
     }
   }
   
+  clouds_style_ = options_.active()
+      ? options_.clouds_preview() : settings_->clouds_style();
   output_limiter_mode_ = options_.active()
       ? options_.preview() : settings_->output_limiter_mode();
   UpdateLeds();
@@ -304,6 +308,11 @@ void Ui::UpdateLeds() {
       const Leds::Color on_request = { 255, 0, 255 };
       leds_.set_media(options_.self_play_preview() ? on_request : automatic,
           !options_.self_play_preview() || phase < 120 ? 1.0f : 0.0f);
+    } else if (options_.page() == kLimiterPage &&
+               options_.reverb_selected()) {
+      const Leds::Color clouds = { 0, 255, 255 };
+      leds_.set_media(options_.clouds_preview() ? clouds : colors[0],
+          !options_.clouds_preview() || phase < 120 ? 1.0f : 0.0f);
     } else {
       leds_.set_media(colors[value], pulse ? 1.0f : 0.0f);
     }
@@ -536,16 +545,14 @@ void Ui::OnSwitchReleased(const Event& e) {
   }
 }
 
-OutputLimiterMode Ui::output_limiter_mode() const {
-  return output_limiter_mode_;
-}
-
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
     if (options_.preview() != settings_->output_limiter_mode() ||
-        options_.self_play_preview() != settings_->self_play_on_request()) {
+        options_.self_play_preview() != settings_->self_play_on_request() ||
+        options_.clouds_preview() != settings_->clouds_style()) {
       settings_->set_output_limiter_mode(options_.preview());
       settings_->set_self_play_on_request(options_.self_play_preview());
+      settings_->set_clouds_style(options_.clouds_preview());
       settings_->SaveState();
     }
     options_.ClearCommit();

@@ -41,6 +41,7 @@ TARGET         = beads
 PACKAGES       = beads \
 		beads/drivers \
 		beads/dsp \
+		beads/dsp/fx \
 		stmlib/dsp \
 		stmlib/utils \
 		stmlib/ui \

@@ -980,6 +980,93 @@ void TestSelfPlayStorage() {
   CHECK(loaded.state().padding[1] == 0);
 }
 
+void TestCloudsStorage() {
+  test_checker.Start("TestCloudsStorage");
+  Rig r;
+  for (int value = 0; value < 256; ++value) {
+    r.settings.mutable_state()->padding[3] = value;
+    CHECK(r.settings.clouds_style() == (value == 0xa2));
+    r.settings.mutable_state()->padding[2] = 0x6c;
+    r.settings.mutable_state()->padding[13] = 0xff;
+    r.settings.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.clouds_style() == (value == 0xa2));
+    CHECK(loaded.state().padding[3] == (value == 0xa2 ? 0xa2 : 0));
+    CHECK(loaded.state().padding[2] == 0x6c);
+    CHECK(loaded.state().padding[13] == 0);
+    // Bypass SaveState normalization to exercise load normalization too.
+    loaded.mutable_state()->padding[3] = value;
+    loaded.chunk_storage_.SaveState();
+    CHECK(loaded.Init(false));
+    CHECK(loaded.state().padding[3] == (value == 0xa2 ? 0xa2 : 0));
+    CHECK(r.settings.Init(false));
+  }
+}
+
+void TestCloudsOptions() {
+  test_checker.Start("TestCloudsOptions");
+  Rig r;
+  r.Enter();
+  CHECK(r.ui.options_.page() == kLimiterPage);
+  r.reverb = 0.55f;
+  r.Tick(1);
+  CHECK(!r.ui.clouds_style());  // Pickup still locked.
+  r.reverb = 0.8f;
+  r.Tick(1);
+  CHECK(r.ui.clouds_style());
+  r.reverb = 0.49f;
+  r.Tick(1);
+  CHECK(r.ui.clouds_style());
+  r.reverb = 0.46f;
+  r.Tick(1);
+  CHECK(!r.ui.clouds_style());
+  r.reverb = 0.51f;
+  r.Tick(1);
+  CHECK(!r.ui.clouds_style());
+  r.reverb = 0.9f;
+  for (int i = 0; i < 1200; ++i) {
+    r.Tick(1);
+    const bool pulse = stmlib::system_clock.milliseconds() % 1200 < 120;
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 0);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (pulse ? 255 : 0));
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (pulse ? 255 : 0));
+  }
+  CHECK(!r.settings.clouds_style());
+  r.pot = 0.9f;
+  r.Tick(1);
+  CHECK(!r.ui.options_.reverb_selected());
+  CHECK(r.ui.options_.preview() == OUTPUT_LIMITER_OFF);
+  CHECK(r.ui.clouds_style());
+  r.pot = 0.1f;
+  r.Tick(1);
+  CHECK(r.ui.options_.preview() == OUTPUT_LIMITER_STOCK);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(r.settings.clouds_style());
+  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.clouds_style());
+  r.Tick(30);
+  r.Enter();
+  r.reverb = 0.1f;
+  r.Tick(1);
+  CHECK(!r.ui.clouds_style());
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.clouds_style() && r.ui.clouds_style());
+  r.Tick(30);
+  r.Enter();
+  r.reverb = 0.9f;
+  r.Tick(1);
+  r.reverb = 0.1f;
+  r.Tick(5001);
+  CHECK(!r.settings.clouds_style());
+  CHECK(loaded.Init(false) && !loaded.clouds_style());
+}
+
 void TestSelfPlayHold() {
   test_checker.Start("TestSelfPlayHold");
   for (int mode = 0; mode < 2; ++mode) {
@@ -1024,6 +1111,8 @@ int main() {
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestCloudsStorage();
+  TestCloudsOptions();
   TestSelfPlayOptions();
   TestSelfPlayStorage();
   TestSelfPlayHold();

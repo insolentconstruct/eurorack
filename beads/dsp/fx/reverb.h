@@ -32,6 +32,7 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
+#include "beads/dsp/frame.h"
 #include "beads/dsp/fx/fx_engine.h"
 
 namespace beads {
@@ -161,6 +162,15 @@ class Reverb {
     }
   }
   
+  void ProcessClouds(FloatFrame* in_out, size_t size);
+
+  void SetCloudsStyle(bool clouds, float sample_rate, bool clear = true) {
+    if (clear) {
+      Clear();
+    }
+    Reset(clouds ? 32000.0f : sample_rate);
+  }
+
   inline void set_mix(float mix) {
     mix_ = mix;
   }

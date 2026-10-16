@@ -36,6 +36,7 @@ using namespace std;
 using namespace stmlib;
 
 void Synth::Init(uint16_t* reverb_buffer) {
+  clouds_style_ = false;
   output_limiter_mode_ = OUTPUT_LIMITER_STOCK;
   const float sr = 48000.0f;
   
@@ -84,16 +85,14 @@ void Synth::Render(
   const int continuous_wavetable_bit_shift[4] = { 4, 16, 7, 16 };
   const int wavetable_bit_shift[4] = { 4, 6, 7, 16 };
   
-  FloatFrame zero;
-  zero = 0.0f;
-  fill(&out[0], &out[size], zero);
   wavetable_voice_.Render(
       bank,
       continuous_wavetable_bit_shift[resolution],
       freeze,
       p,
       out,
-      size);
+      size,
+      false);
 
   // Dry/wet balance.
   const float post_gain_dry = 0.5f; // To get a 10Vpp output for the dry osc.
@@ -129,7 +128,11 @@ void Synth::Render(
   reverb_.set_mix(reverb_mix);
   reverb_.set_time(0.3f + 0.6f * reverb_time);
   reverb_.set_lp(0.6f);
-  reverb_.Process(out, size);
+  if (clouds_style_) {
+    reverb_.ProcessClouds(out, size);
+  } else {
+    reverb_.Process(out, size);
+  }
 
   // Final clipping/limiting
   output_limiter_.ProcessOutput(
