@@ -42,6 +42,10 @@ out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
     'beads/test/.runs/mutations').resolve()
 out.mkdir(parents=True, exist_ok=True)
 cases = [
+  ('TestOptionsEntry', 'options', 'beads/options.h',
+    'page_ = kPitchScalePage;', 'page_ = kLimiterPage;'),
+  ('TestOptionsEntry', 'options', 'beads/options.h',
+    'ResetPot(feedback);', 'ResetPot(pot);'),
   ('TestPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
     '0.0000f, 2.0004f, 3.9996f, 6.9996f, 9.0000f,',
     '0.0000f, 2.0004f, 5.0004f, 6.9996f, 9.0000f,'),

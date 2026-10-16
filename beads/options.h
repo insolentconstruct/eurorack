@@ -225,8 +225,8 @@ class Options {
       ResetReverb(reverb);
       pitch_preview_ = pitch;
       scale_ = pitch >= PITCH_SCALE_FIFTHS ? pitch : PITCH_SCALE_FIFTHS;
-      page_ = kLimiterPage;
-      ResetPot(pot);
+      page_ = kPitchScalePage;
+      ResetPot(feedback);
       last_action_ = now;
       eligible_ = false;
     }

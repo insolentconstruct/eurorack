@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **In numbers:** 145 tests in 13 host test programs (874 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 147 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 146 tests in 13 host test programs (892 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 149 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
@@ -46,12 +46,12 @@ execute more than once. The manual-coverage totals below are unchanged.
 | gain | 5 | 21 |
 | granular | 21 | 92 |
 | mix | 7 | 28 |
-| options | 32 | 318 |
+| options | 33 | 336 |
 | pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **145** | **874** |
+| **Total** | **146** | **892** |
 
 The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
 

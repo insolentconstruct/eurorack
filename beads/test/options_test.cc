@@ -126,6 +126,11 @@ struct Rig {
     Up(SWITCH_ASSIGN);
     CHECK(ui.options_.stage() == Options::STAGE_EDITING);
   }
+  void EnterLimiter() {
+    Enter();
+    Tap();
+    Tap();
+  }
   void Tap() {
     Down(SWITCH_ASSIGN);
     Up(SWITCH_ASSIGN);
@@ -163,7 +168,7 @@ void TestTrimGesture() {
   CHECK(reverse.ui.freeze_button_state_);
   CHECK(reverse.settings.state().media == (media + 3) % 4);
   Rig page;
-  page.Enter();
+  page.EnterLimiter();
   const uint8_t page_media = page.settings.state().media;
   test_down[SWITCH_MEDIA] = true;
   page.Tick(8, false);
@@ -233,12 +238,53 @@ void TestMonophonicGesture() {
   CHECK(!reverse.ui.seed_button_state_);
   CHECK(reverse.settings.state().media == (media + 3) % 4);
   Rig page;
-  page.Enter();
+  page.EnterLimiter();
   page.Down(SWITCH_MEDIA);
   page.Down(SWITCH_SEED);
   page.Up(SWITCH_SEED);
   page.Up(SWITCH_MEDIA);
   CHECK(!page.settings.state().monophonic_mode);
+}
+
+void TestOptionsEntry() {
+  test_checker.Start("TestOptionsEntry");
+  Rig r;
+  r.pot = 0.1f;
+  r.feedback = 0.8f;
+  r.Tick(30);
+  r.Enter();
+  CHECK(r.ui.options_.page() == kPitchScalePage);
+  CHECK(!r.ui.options_.reverb_selected());
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] == 0);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + 1] == 0);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + 2] != 0);
+  r.pot = 0.9f;
+  r.feedback = 0.74f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
+  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  r.feedback = 0.95f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.Tap();
+  CHECK(r.ui.options_.page() == kSelfPlayPage);
+  r.Tap();
+  CHECK(r.ui.options_.page() == kLimiterPage);
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  r.Tick(30);
+  r.Enter();
+  CHECK(r.ui.options_.page() == kPitchScalePage);
+  r.Tap();
+  CHECK(r.ui.options_.page() == kSelfPlayPage);
+  r.Tap();
+  CHECK(r.ui.options_.page() == kLimiterPage);
+  r.Tap();
+  CHECK(r.ui.options_.page() == kPitchScalePage);
 }
 
 void TestUi() {
@@ -251,6 +297,8 @@ void TestUi() {
   r.Tick(8);
   r.Up(SWITCH_ASSIGN);
   CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
+  r.Tap();
+  r.Tap();
   // Deliberate movement below qualification refreshes inactivity only.
   r.Tick(4000);
   r.pot = .54f;
@@ -272,7 +320,7 @@ void TestUi() {
   CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
   CHECK(test_writes == writes + 1);
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   r.pot = .1f;
   r.Tick(10);
   r.Tick(5000);
@@ -280,13 +328,13 @@ void TestUi() {
   CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
   CHECK(test_writes == writes + 2);  // Timeout saves a changed value.
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   r.Tick(5010);
   CHECK(!r.ui.options_.active());
   CHECK(test_writes == writes + 2);  // Timeout without a change writes nothing.
   r.Tick(30);
-  r.Enter();
-  CHECK(r.ui.options_.page() == kLimiterPage);  // Opens on dry/wet.
+  r.EnterLimiter();
+  CHECK(r.ui.options_.page() == kLimiterPage);
   r.Tap();
   CHECK(r.ui.options_.page() == 2);
   r.pot = .9f;
@@ -335,7 +383,7 @@ void TestOptionsDispatchInterrupt() {
 void TestQueueRace() {
   test_checker.Start("TestQueueRace");
   Rig r;
-  r.Enter();
+  r.EnterLimiter();
   r.Down(SWITCH_MEDIA);  // Cancellation enters DRAIN with MEDIA down.
   CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
   test_down[SWITCH_MEDIA] = false;
@@ -486,7 +534,7 @@ void TestStockAssignRouting() {
     CHECK(r.settings.state().assignable_cv_destination == i % 3);
   }
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   for (int i = 0; i < 4; ++i) {
     r.Tap();
     CHECK(r.settings.state().assignable_cv_destination == 0);
@@ -939,7 +987,7 @@ void TestCorruptCalibrationRewritesOnce() {
 void TestSelfPlayOptions() {
   test_checker.Start("TestSelfPlayOptions");
   Rig r;
-  r.Enter();
+  r.EnterLimiter();
   r.Tap();
   r.Tap();
   CHECK(r.ui.options_.page() == kSelfPlayPage);
@@ -974,7 +1022,7 @@ void TestSelfPlayOptions() {
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.self_play_on_request());
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   r.Tap();
   r.Tap();
   r.feedback = 0.1f;
@@ -985,7 +1033,7 @@ void TestSelfPlayOptions() {
   CHECK(r.settings.self_play_on_request());
   CHECK(r.gain.restarts == 0 && !r.ui.self_play_requested());
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   r.Tap();
   r.Tap();
   r.feedback = 0.9f;
@@ -1055,7 +1103,7 @@ void TestCloudsStorage() {
 void TestCloudsOptions() {
   test_checker.Start("TestCloudsOptions");
   Rig r;
-  r.Enter();
+  r.EnterLimiter();
   CHECK(r.ui.options_.page() == kLimiterPage);
   r.reverb = 0.55f;
   r.Tick(1);
@@ -1098,7 +1146,7 @@ void TestCloudsOptions() {
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.clouds_style());
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   r.reverb = 0.1f;
   r.Tick(1);
   CHECK(!r.ui.clouds_style());
@@ -1106,7 +1154,7 @@ void TestCloudsOptions() {
   r.Up(SWITCH_MEDIA);
   CHECK(r.settings.clouds_style() && r.ui.clouds_style());
   r.Tick(30);
-  r.Enter();
+  r.EnterLimiter();
   r.reverb = 0.9f;
   r.Tick(1);
   r.reverb = 0.1f;
@@ -1188,7 +1236,6 @@ void TestPitchOptions() {
   test_checker.Start("TestPitchOptions");
   Rig r;
   r.Enter();
-  r.Tap();
   CHECK(r.ui.options_.page() == kPitchScalePage);
   r.feedback = 0.58f;
   r.Tick(1);
@@ -1249,7 +1296,6 @@ void TestPitchOptions() {
   CHECK(loaded.Init(false) && loaded.pitch_scale() == PITCH_SCALE_MAJOR);
   r.Tick(30);
   r.Enter();
-  r.Tap();
   r.feedback = 0.1f;
   r.Tick(1);
   CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
@@ -1259,7 +1305,6 @@ void TestPitchOptions() {
   CHECK(r.settings.state().media == 3);
   r.Tick(30);
   r.Enter();
-  r.Tap();
   r.Down(SWITCH_SEED);
   r.Down(SWITCH_ASSIGN);
   r.Up(SWITCH_SEED);
@@ -1272,7 +1317,6 @@ void TestPitchSeedCancelAndCommit() {
   test_checker.Start("TestPitchSeedCancelAndCommit");
   Rig r;
   r.Enter();
-  r.Tap();
   r.feedback = 0.9f;
   r.Tick(1);
   r.Down(SWITCH_SEED);
@@ -1334,6 +1378,7 @@ int main() {
   TestLimiterLinkedGainAndModeSwitch();
   TestQueueRace();
   TestStorage();
+  TestOptionsEntry();
   TestUi();
   TestDsp();
   return test_checker.failures() ? 1 : 0;

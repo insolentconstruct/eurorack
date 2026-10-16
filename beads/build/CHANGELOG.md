@@ -4,6 +4,8 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+
+- Options always opens on Reverb, with pitch scale on FEEDBACK.
 - Buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
 - Pitch scale: Off (default), Chromatic or eight scales. Reverb category, FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
 - Saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 14–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.

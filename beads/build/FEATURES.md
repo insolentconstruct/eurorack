@@ -35,7 +35,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry/wet category; tap ASSIGN cycles three categories (feedback/dry-wet/reverb LEDs); in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter and pitch thirds, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Always opens on Reverb (pitch scale on FEEDBACK); tap ASSIGN cycles Reverb → Feedback → Dry/wet → Reverb; in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter and pitch thirds, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
@@ -46,8 +46,8 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Opens on the dry
 | Dry/wet LED category, FEEDBACK | Reserved | Planned: mix law (#21, #48) |
 | Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle eight scales |
 | Reverb LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET LED brightness (#40); REVERB grain starts on recorded attacks (#58, #47) |
-| Assignment LEDs | All pulse at entry; only selected category pulses when editing | No extra category LED <!-- beads/ui.cc:283-289 --> |
-| MEDIA RGB | Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; Dry/wet REVERB shows Stock steady green or Clouds-style one cyan pulse, following the last knob moved; Reverb shows pitch scale <!-- beads/ui.cc:290-299 --> |
+| Assignment LEDs | All pulse during the entry hold; Reverb pulses after release, then the selected category | No extra category LED <!-- beads/ui.cc:283-289 --> |
+| MEDIA RGB | Entry shows the pitch scale colour (Off: white); Dry/wet limiter: Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; Dry/wet REVERB shows Stock steady green or Clouds-style one cyan pulse, following the last knob moved; Reverb shows pitch scale <!-- beads/ui.cc:290-299 --> |
 | Mix knobs | All three normal values locked while editing; FEEDBACK, DRY/WET or REVERB selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
 
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones

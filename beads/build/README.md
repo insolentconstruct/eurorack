@@ -59,7 +59,9 @@ If FREEZE is released during self-play, the minute starts when self-play ends.
 
 Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
 The assignment LEDs pulse together on entry.
-The feedback, dry/wet and reverb LEDs mark three categories; the open one's LED pulses slowly. The page opens on dry/wet. Tap ASSIGN to cycle categories.
+The feedback, dry/wet and reverb LEDs mark three categories; the open one's LED pulses slowly. The page always opens on Reverb (pitch scale on FEEDBACK).
+Tap ASSIGN to cycle Reverb → Feedback → Dry/wet → Reverb.
+On entry, the quality LED shows the saved pitch scale (Off: white).
 In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three settings.
 Move a knob more than one tenth of its travel to start selecting; its zones pick the value, shown on the quality LED (next to MEDIA).
 
