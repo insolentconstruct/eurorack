@@ -98,6 +98,12 @@ struct TrimmedLine {
   }
 };
 
+const float kTrimSampleRate = 48000.0f;
+const float kTrimDuration = 4000.0f;
+// Attack <= 2 ms, release 10 ms, sustain >= 2 samples.
+// Allow four samples for phase rounding at these durations.
+const float kTrimEnvelopeExtra = 0.012f * kTrimSampleRate + 2.0f + 4.0f;
+
 const int kTrimLengths[] = { 0, 1, 3, 16, 128, 512, 1024, 4096, 200000 };
 const float kTrimPitches[] = { -4.0f, -1.7f, -0.5f, 0.12345f, 0.5f,
     0.9999f, 1.0f, 1.0001f, 1.7f, 4.0f };
@@ -114,23 +120,20 @@ void TestTrimGrainBounds() {
         line.freeze = frozen;
         line.age = 0.0f;
         DelayGrain grain;
-        grain.Init(48000.0f);
+        grain.Init(kTrimSampleRate);
         const float consumption = kTrimPitches[pitch] - (frozen ? 0.0f : 1.0f);
-        const float intended = consumption == 0.0f ? 4000.0f :
-            std::min(4000.0f, line.length / fabsf(consumption));
+        const float intended = consumption == 0.0f ? kTrimDuration :
+            std::min(kTrimDuration, line.length / fabsf(consumption));
         grain.Start(&line, float(line.length) * 0.5f, kTrimPitches[pitch],
-            4000.0f, 0.5f, 1.0f, 0.5f, 0.0f);
+            kTrimDuration, 0.5f, 1.0f, 0.5f, 0.0f);
         const float start = float(grain.initial_delay_) / 1024.0f;
         const float end = start - intended * consumption;
         CHECK(start >= 0.0f && start <= line.length);
         CHECK(end >= -0.001f && end <= line.length + 0.001f);
         CHECK(grain.remaining_samples() == int(intended));
-        // Attack <= 2 ms, release 10 ms, sustain >= 2 samples.
-        // Allow four samples for phase rounding at this test's durations.
-        const float extra = 0.012f * 48000.0f + 2.0f + 4.0f;
-        const float margin = extra * fabsf(consumption) + 6.0f;
+        const float margin = kTrimEnvelopeExtra * fabsf(consumption) + 6.0f;
         int elapsed = 0;
-        while (elapsed < int(intended + extra) && !grain.done()) {
+        while (elapsed < int(intended + kTrimEnvelopeExtra) && !grain.done()) {
           FloatFrame out;
           out.l = out.r = 0.0f;
           grain.Render<HEAD_CROSSING_POLICY_STOP, true>(&line, &out);

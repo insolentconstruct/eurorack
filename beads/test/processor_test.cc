@@ -274,8 +274,7 @@ void TestTrimDispatch() {
       durations[3] =
           rig.processor.processor_clean_tape_.mutable_delay_duration(true);
       durations[4] =
-          rig.processor.processor_vintage_digital_.mutable_delay_duration(
-              false);
+          rig.processor.processor_vintage_digital_.mutable_delay_duration(false);
       durations[5] =
           rig.processor.processor_vintage_digital_.mutable_delay_duration(true);
       durations[6] =

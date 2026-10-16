@@ -38,7 +38,6 @@
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
-
 namespace beads {
 
 class BackgroundBufferBackup;
