@@ -661,9 +661,69 @@ void TestCvChannelIsolation() {
   }
 }
 
+void ProcessQuantizedBlock(bool trigger) {
+  bool freeze[4];
+  stmlib::GateFlags gates[4];
+  FloatFrame in[4];
+  FloatFrame out[4];
+  for (int i = 0; i < 4; ++i) {
+    freeze[i] = true;
+    gates[i] = trigger && i == 0
+        ? stmlib::GateFlags(stmlib::GATE_FLAG_RISING | stmlib::GATE_FLAG_HIGH)
+        : stmlib::GATE_FLAG_LOW;
+    in[i].l = 0.0f;
+    in[i].r = 0.0f;
+  }
+  ModulatedParameter density;
+  density.base = 0.48f;
+  density.cv = 0.0f;
+  Processor::MixParameters mix;
+  mix.feedback = 0.0f;
+  mix.dry_wet = 1.0f;
+  mix.reverb_amount = 0.0f;
+  mix.output_gate = false;
+  processor.Process(SEED_BUTTON_STATE_OFF, gates, freeze, density,
+      parameters, mix, in, out, 4);
+}
+
+void TestQuantizedGrainPitch() {
+  test_checker.Start("TestQuantizedGrainPitch");
+  for (int quality = 0; quality < 4; ++quality) {
+    for (int mono = 0; mono < 2; ++mono) {
+      for (int reverse = 0; reverse < 2; ++reverse) {
+        InitProcessor();
+        processor.Configure(Processor::Media(quality), mono);
+        parameters.size.base = reverse ? 0.2f : 0.8f;
+        parameters.pitch.base = 1.4f;
+        parameters.pitch.cv = 3.0f;
+        parameters.pitch.has_cv = true;
+        parameters.pitch.attenuverter = 1.0f;
+        processor.set_pitch_scale(PITCH_SCALE_FIFTHS);
+        ProcessQuantizedBlock(true);
+        DelayGranularPlayer* player = quality == 0
+            ? &processor.processor_dirty_tape_.granular_player_
+            : quality == 1 ? &processor.processor_clean_tape_.granular_player_
+            : quality == 2 ? &processor.processor_vintage_digital_.granular_player_
+            : &processor.processor_digital_.granular_player_;
+        DelayGrain& grain = player->grain_[0];
+        const int speed = grain.speed_;
+        const int expected = int(stmlib::SemitonesToRatio(7.0f) * 1024.0f);
+        CHECK(abs(abs(speed) - expected) <= 1);
+        CHECK((speed < 0) == bool(reverse));
+        processor.set_pitch_scale(PITCH_SCALE_CHROMATIC);
+        for (int i = 0; i < 20; ++i) {
+          ProcessQuantizedBlock(false);
+          CHECK(grain.speed_ == speed);
+        }
+      }
+    }
+  }
+}
+
 int main() {
   TestMonophonicGrains();
   TestProcessorGrainLatch();
+  TestQuantizedGrainPitch();
   TestProcessorEnvelopeCompletion();
   TestProcessorVoiceRelease();
   TestProcessorVoiceSaturation();

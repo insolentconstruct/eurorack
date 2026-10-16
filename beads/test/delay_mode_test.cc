@@ -236,9 +236,44 @@ void TestDelayBandwidthAndCv() {
       < 0.00001f);
 }
 
+void TestQuantizerDelayBypass() {
+  test_checker.Start("TestQuantizerDelayBypass");
+  for (int quality = 0; quality < 4; ++quality) {
+    for (int mono = 0; mono < 2; ++mono) {
+      Rig off;
+      Rig on;
+      off.processor.Configure(Processor::Media(quality), mono);
+      on.processor.Configure(Processor::Media(quality), mono);
+      off.parameters.pitch.base = 3.4f;
+      on.parameters.pitch.base = 3.4f;
+      off.parameters.pitch.attenuverter = 0.8f;
+      on.parameters.pitch.attenuverter = 0.8f;
+      stmlib::Random::Seed(123);
+      off.Run(16000);
+      stmlib::Random::Seed(123);
+      on.Run(16000);
+      CHECK(off.processor.delay_mode_transition_ > 1.49f);
+      CHECK(on.processor.delay_mode_transition_ > 1.49f);
+      on.processor.set_pitch_scale(PITCH_SCALE_PELOG);
+      std::vector<float> expected;
+      std::vector<float> actual;
+      stmlib::Random::Seed(123);
+      for (int i = 0; i < 1200; ++i) {
+        off.Block(&expected);
+      }
+      stmlib::Random::Seed(123);
+      for (int i = 0; i < 1200; ++i) {
+        on.Block(&actual);
+      }
+      CHECK(expected == actual);
+    }
+  }
+}
+
 int main() {
   setvbuf(stdout, NULL, _IONBF, 0);
   TestContinuousDelayPlayback();
+  TestQuantizerDelayBypass();
   TestDelayModeFade();
   TestDelayRotaryPitch();
   TestDelayBandwidthAndCv();

@@ -75,8 +75,23 @@ only the reverb character changes. Switching briefly fades the sound out and
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
-The remaining knobs and categories are reserved for later options.
-Hold ASSIGN for three seconds to save and exit. After five seconds without changes the page also exits and saves any change. Another button cancels.
+Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
+select Off (white), Chromatic (green), or Scale. In Scale,
+tap SEED briefly to cycle Fifths and octaves (red), Major (orange), Minor
+(yellow), Pentatonic (cyan), Pelog (azure), Raag Bhairav (violet), and
+Raag Shri (pink). Holds do not cycle. SEED taps here do not trigger or latch
+grains; other buttons cancel as usual. The setting is saved; default is Off.
+
+Each grain's PITCH knob, CV and random offset snap together at its start.
+The grid has a fixed root at unity (0 semitones); +1 V remains one octave.
+Playing grains keep their pitch. Synth grains snap too; the continuous
+synth oscillator and delay mode keep their existing pitch behaviour.
+Scales use Mutable Instruments Marbles' tunings and notes with weight at
+least 64, including its C–D–F–G–A pentatonic and four-note Pelog.
+Pelog and the raags are microtonal.
+
+The remaining knobs are reserved for later options.
+Hold ASSIGN for three seconds to save and exit. After five seconds without changes the page also exits and saves any change. Another button cancels, except SEED taps while selecting a scale.
 While you edit, the mix settings keep their values; after exit they catch up smoothly with the knobs.
 
 ## Updating your module

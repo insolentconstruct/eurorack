@@ -212,6 +212,10 @@ class GranularProcessor {
     }
   }
   
+  inline void set_pitch_scale(PitchScale scale) {
+    granular_player_.set_pitch_scale(scale);
+  }
+
  private:
   inline void DownsampleGate(const bool* in, bool* out, size_t size) {
     for (size_t i = 0; i < size / ratio; ++i) {

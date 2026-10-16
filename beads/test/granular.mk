@@ -15,6 +15,7 @@ CC_FILES       = 		granular_test.cc \
 		mu_law.cc \
 		resources.cc \
 		units.cc \
+		pitch_quantizer.cc \
 		random.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)

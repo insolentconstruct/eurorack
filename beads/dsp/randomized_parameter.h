@@ -37,6 +37,7 @@
 #include "stmlib/utils/random.h"
 
 #include "beads/resources.h"
+#include "beads/dsp/pitch_quantizer.h"
 
 namespace beads {
 
@@ -158,6 +159,14 @@ struct RandomizedParameter {
     return value(NULL, 0, 1.0f, true);
   }
   
+  inline float pitch_value(PitchScale scale) const {
+    float pitch = value(NULL, 0, 24.0f, false);
+    if (scale != PITCH_SCALE_OFF) {
+      pitch = QuantizePitch(pitch, scale);
+    }
+    return stmlib::SemitonesToRatio(pitch);
+  }
+
   inline float pitch_value() const {
     return stmlib::SemitonesToRatio(value(NULL, 0, 24.0f, false));
   }

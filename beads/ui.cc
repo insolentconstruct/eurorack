@@ -42,6 +42,11 @@
 namespace beads {
 
 const Leds::Color kCloudsStyleColor = { 0, 255, 255 };
+const Leds::Color kPitchScaleColors[] = {
+  { 255, 255, 255 }, { 0, 255, 0 },
+  { 255, 0, 0 }, { 255, 96, 0 }, { 255, 255, 0 },
+  { 0, 255, 255 }, { 0, 96, 255 }, { 128, 0, 255 }, { 255, 0, 128 }
+};
 
 using namespace std;
 using namespace stmlib;
@@ -96,6 +101,7 @@ void Ui::Init(
 void Ui::LoadOptions() {
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
+  pitch_scale_ = settings_->pitch_scale();
 }
 
 void Ui::Poll() {
@@ -110,7 +116,9 @@ void Ui::Poll() {
   for (int i = 0; i < SWITCH_LAST; ++i) {
     const Switch s = Switch(i);
     const bool down = switches_.pressed_immediate(s);
-    other = other || (s != SWITCH_ASSIGN && down);
+    const bool scale_seed = s == SWITCH_SEED && options_.seed_allowed() &&
+        !switches_.pressed_immediate(SWITCH_ASSIGN);
+    other = other || (s != SWITCH_ASSIGN && !scale_seed && down);
     all_up = all_up && !down && switches_.up(s);
   }
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
@@ -126,7 +134,10 @@ void Ui::Poll() {
       mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode(),
       mix_pot_value_[MIX_PARAMETER_FEEDBACK],
       settings_->self_play_on_request(),
-      mix_pot_value_[MIX_PARAMETER_REVERB], settings_->clouds_style());
+      mix_pot_value_[MIX_PARAMETER_REVERB], settings_->clouds_style(),
+      settings_->pitch_scale(),
+      !switches_.up(SWITCH_SEED) && !switches_.released(SWITCH_SEED),
+      switches_.just_pressed(SWITCH_SEED));
   if (!was_active && options_.active()) {
     flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
@@ -192,6 +203,8 @@ void Ui::Poll() {
   
   clouds_style_ = options_.active()
       ? options_.clouds_preview() : settings_->clouds_style();
+  pitch_scale_ = options_.active()
+      ? options_.pitch_preview() : settings_->pitch_scale();
   output_limiter_mode_ = options_.active()
       ? options_.preview() : settings_->output_limiter_mode();
   UpdateLeds();
@@ -305,7 +318,9 @@ void Ui::UpdateLeds() {
     const bool pulse = value == OUTPUT_LIMITER_STOCK ||
         phase < 120 || (value == OUTPUT_LIMITER_OFF &&
         phase >= 240 && phase < 360);
-    if (options_.page() == kSelfPlayPage) {
+    if (options_.page() == kPitchScalePage) {
+      leds_.set_media(kPitchScaleColors[options_.pitch_preview()], 1.0f);
+    } else if (options_.page() == kSelfPlayPage) {
       const Leds::Color automatic = { 0, 255, 255 };
       const Leds::Color on_request = { 255, 0, 255 };
       leds_.set_media(options_.self_play_preview() ? on_request : automatic,
@@ -554,10 +569,12 @@ void Ui::DoEvents() {
   if (options_.commit_requested()) {
     if (options_.preview() != settings_->output_limiter_mode() ||
         options_.self_play_preview() != settings_->self_play_on_request() ||
-        options_.clouds_preview() != settings_->clouds_style()) {
+        options_.clouds_preview() != settings_->clouds_style() ||
+        options_.pitch_preview() != settings_->pitch_scale()) {
       settings_->set_output_limiter_mode(options_.preview());
       settings_->set_self_play_on_request(options_.self_play_preview());
       settings_->set_clouds_style(options_.clouds_preview());
+      settings_->set_pitch_scale(options_.pitch_preview());
       settings_->SaveState();
     }
     options_.ClearCommit();

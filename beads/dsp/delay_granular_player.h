@@ -60,7 +60,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       new_grain()->Start(
           delay_line,
           p.time.value() * float(max_delay) + float(safety),
-          (reverse ? -1.0f : 1.0f) * p.pitch.pitch_value(),
+          (reverse ? -1.0f : 1.0f) * p.pitch.pitch_value(pitch_scale_),
           ComputeGrainDuration(duration),
           p.shape.value(),
           amplitude, pan,

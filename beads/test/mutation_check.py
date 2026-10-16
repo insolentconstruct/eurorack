@@ -60,6 +60,26 @@ cases = [
   ('TestCloudsSwitch', 'firmware', 'beads/beads.cc',
     'if (reverb_style_previous_gain == 0.0f) {',
     'if (true) {'),
+  ('TestQuantizedPitchChain', 'firmware', 'beads/beads.cc',
+    'processor.set_pitch_scale(ui.pitch_scale());',
+    'processor.set_pitch_scale(PITCH_SCALE_OFF);'),
+  ('TestPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
+    'floorf(pitch / 12.0f)', 'ceilf(pitch / 12.0f)'),
+  ('TestRandomizedPitchGrid', 'pitch_quantizer',
+    'beads/dsp/randomized_parameter.h',
+    'pitch = QuantizePitch(pitch, scale);',
+    'pitch = pitch;'),
+  ('TestQuantizedGrainPitch', 'granular',
+    'beads/dsp/delay_granular_player.h',
+    'p.pitch.pitch_value(pitch_scale_)', 'p.pitch.pitch_value()'),
+  ('TestQuantizedSynthGrains', 'wavetable',
+    'beads/dsp/wavetable_granular_player.h',
+    'p.pitch.pitch_value(pitch_scale_)', 'p.pitch.pitch_value()'),
+  ('TestPitchOptions', 'options', 'beads/ui.cc',
+    'const bool accept_switch_events = !was_active && !options_.active();',
+    'const bool accept_switch_events = true;'),
+  ('TestPitchStorage', 'options', 'beads/settings.cc',
+    'fill(&state_.padding[4],', 'fill(&state_.padding[2],'),
   ('TestStockAssignRouting', 'options', 'beads/ui.cc',
     '(state->assignable_cv_destination + 1) % 3',
     '(state->assignable_cv_destination + 2) % 3'),
@@ -437,7 +457,7 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
             ['nice', '-n', '10', 'make', '-s', '-f',
                 'beads/test/' + suite + '.mk', 'test'],
             cwd=work, stdout=stream, stderr=subprocess.STDOUT,
-            timeout=240 if suite in ('firmware', 'clouds') else 60)
+            timeout=240 if suite in ('firmware', 'clouds', 'granular') else 60)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestFinalBankRendering':

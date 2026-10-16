@@ -634,6 +634,7 @@ void TestCallbackCvRouting() {
         parameters[i]->cv = cv_reader.cv(cvs[i]);
       }
       p.monophonic_mode = false;
+      expected.set_pitch_scale(ui.pitch_scale());
       ModulatedParameter d;
       d.base = cv_reader.pot(POTS_ADC_CHANNEL_DENSITY);
       d.cv = cv_reader.cv(CV_ADC_CHANNEL_DENSITY);
@@ -750,6 +751,26 @@ void TestPitchChain() {
     // Phase subtraction introduces rounding; this is <0.01 semitone.
     CHECK(fabsf(12.0f * log2f(shifted / delta) - 12.0f) < 0.01f);
   }
+}
+
+void TestQuantizedPitchChain() {
+  test_checker.Start("TestQuantizedPitchChain");
+  Rig r(false, true);
+  r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 65535;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+  settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+  r.Settle();
+  CHECK(ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.cv[CV_ADC_CHANNEL_PITCH] = 30365;  // About 0.367 V, or 4.4 st.
+  r.Tick(30);
+  const float speed = NextGrainSpeed(&r);
+  const float expected = stmlib::SemitonesToRatio(7.0f);
+  CHECK(fabsf(speed - expected) < 2.0f / 1024.0f);
+  settings.SaveState();
+  r.Reboot();
+  CHECK(settings.pitch_scale() == PITCH_SCALE_FIFTHS);
+  CHECK(ui.pitch_scale() == PITCH_SCALE_FIFTHS);
 }
 
 void TestSelfPlayFrozenBackup() {
@@ -870,6 +891,7 @@ int main() {
   TestStartupBranches();
   TestCallbackCvRouting();
   TestPitchChain();
+  TestQuantizedPitchChain();
   TestSelfPlayFrozenBackup();
   return test_checker.failures() ? 1 : 0;
 }

@@ -67,6 +67,7 @@ class GranularPlayer {
     preemptive_crossfade_time_ = int(sample_rate * kPreemptiveCrossfadeTime);
     simple_scheduler_threshold_ = int(sample_rate * kSimpleSchedulerThreshold);
     
+    pitch_scale_ = PITCH_SCALE_OFF;
     grain_interval_ = 1;
     
     max_grain_duration_ = sample_rate * 4.0f;
@@ -75,6 +76,8 @@ class GranularPlayer {
     Reset();
   }
   
+  inline void set_pitch_scale(PitchScale scale) { pitch_scale_ = scale; }
+
   inline void Reset() {
     for (int i = 0; i < num_grains; ++i) {
       grain_[i].Init(sample_rate_);
@@ -215,6 +218,8 @@ class GranularPlayer {
   
   int grain_interval_;
   
+  PitchScale pitch_scale_;
+
   DISALLOW_COPY_AND_ASSIGN(GranularPlayer);
 };
 

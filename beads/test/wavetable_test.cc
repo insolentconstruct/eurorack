@@ -371,9 +371,45 @@ void TestSynthAmplitudeSweep() {
   }
 }
 
+void TestQuantizedSynthGrains() {
+  test_checker.Start("TestQuantizedSynthGrains");
+  static SynthHarness h;
+  for (int quality = 0; quality < 4; ++quality) {
+    h.Init();
+    h.resolution = Synth::Resolution(quality);
+    h.parameters.pitch.base = 4.4f;
+    h.synth.set_pitch_scale(PITCH_SCALE_FIFTHS);
+    h.Tick(true, false);
+    WavetableGrain& grain = h.synth.wavetable_granular_player_.grain_[0];
+    const float frequency = grain.frequency_;
+    CHECK(fabsf(frequency - stmlib::SemitonesToRatio(7.0f) *
+        kWavetableRootNote / 48000.0f) < 0.000001f);
+    h.synth.set_pitch_scale(PITCH_SCALE_CHROMATIC);
+    for (int i = 0; i < 20; ++i) {
+      h.Tick(false, false);
+      CHECK(grain.frequency_ == frequency);
+    }
+    float dry[128];
+    h.Init();
+    h.resolution = Synth::Resolution(quality);
+    h.parameters.pitch.base = 4.4f;
+    for (int i = 0; i < 128; ++i) {
+      dry[i] = h.Tick(false, false).l;
+    }
+    h.Init();
+    h.resolution = Synth::Resolution(quality);
+    h.parameters.pitch.base = 4.4f;
+    h.synth.set_pitch_scale(PITCH_SCALE_PELOG);
+    for (int i = 0; i < 128; ++i) {
+      CHECK(h.Tick(false, false).l == dry[i]);
+    }
+  }
+}
+
 int main() {
   TestSynthMixEndpoints();
   TestSynthFreeze();
+  TestQuantizedSynthGrains();
   TestSynthResolution();
   TestSynthPitchCvAndSpread();
   TestSynthAmplitudeSweep();

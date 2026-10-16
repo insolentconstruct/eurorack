@@ -6,6 +6,7 @@ TARGET         = clouds_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = clouds_test.cc \
+		pitch_quantizer.cc \
 		synth.cc \
 		processor.cc \
 		diffuser.cc \

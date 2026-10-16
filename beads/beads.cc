@@ -262,6 +262,7 @@ void Process(
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
   if (synth_mode) {
+    synth.set_pitch_scale(ui.pitch_scale());
     synth.Render(
         seed_button_state,
         seed_input,
@@ -270,6 +271,7 @@ void Process(
         d, p, m,
         float_out, size);
   } else {
+    processor.set_pitch_scale(ui.pitch_scale());
     processor.Process(
         seed_button_state,
         seed_input,

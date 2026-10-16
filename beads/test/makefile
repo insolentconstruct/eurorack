@@ -14,6 +14,7 @@ CC_FILES       = 		processor.cc \
 		delay_clock.cc \
 		delay_controller.cc \
 		trigger_generator.cc \
+		pitch_quantizer.cc \
 		units.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)

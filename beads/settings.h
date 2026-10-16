@@ -34,6 +34,7 @@
 
 #include "beads/drivers/cv_adc.h"
 #include "beads/dsp/limiter.h"
+#include "beads/dsp/pitch_quantizer.h"
 
 namespace beads {
 
@@ -99,6 +100,17 @@ class Settings {
 
   inline void set_clouds_style(bool clouds) {
     state_.padding[3] = clouds ? 0xa2 : 0;
+  }
+
+  inline PitchScale pitch_scale() const {
+    const uint8_t value = state_.padding[2];
+    return value >= 0xa1 && value <= 0xa8
+        ? PitchScale(value - 0xa0) : PITCH_SCALE_OFF;
+  }
+
+  inline void set_pitch_scale(PitchScale scale) {
+    state_.padding[2] = scale > PITCH_SCALE_OFF && scale < PITCH_SCALE_LAST
+        ? 0xa0 + scale : 0;
   }
 
   inline State* mutable_state() {

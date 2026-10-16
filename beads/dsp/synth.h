@@ -76,6 +76,10 @@ class Synth {
     output_limiter_mode_ = mode;
   }
 
+  inline void set_pitch_scale(PitchScale scale) {
+    wavetable_granular_player_.set_pitch_scale(scale);
+  }
+
  private:
   TriggerGenerator trigger_generator_;
   

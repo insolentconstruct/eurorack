@@ -169,6 +169,13 @@ class Processor {
     output_limiter_mode_ = mode;
   }
 
+  inline void set_pitch_scale(PitchScale scale) {
+    processor_digital_.set_pitch_scale(scale);
+    processor_vintage_digital_.set_pitch_scale(scale);
+    processor_clean_tape_.set_pitch_scale(scale);
+    processor_dirty_tape_.set_pitch_scale(scale);
+  }
+
  private:
   GranularProcessor<
       RESOLUTION_16_BIT,

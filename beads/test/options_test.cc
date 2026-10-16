@@ -986,14 +986,15 @@ void TestCloudsStorage() {
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->padding[3] = value;
     CHECK(r.settings.clouds_style() == (value == 0xa2));
-    r.settings.mutable_state()->padding[2] = 0x6c;
+    r.settings.mutable_state()->padding[2] = 0xa6;
     r.settings.mutable_state()->padding[13] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.clouds_style() == (value == 0xa2));
     CHECK(loaded.state().padding[3] == (value == 0xa2 ? 0xa2 : 0));
-    CHECK(loaded.state().padding[2] == 0x6c);
+    CHECK(loaded.state().padding[2] == 0xa6);
+    CHECK(loaded.pitch_scale() == PITCH_SCALE_PELOG);
     CHECK(loaded.state().padding[13] == 0);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->padding[3] = value;
@@ -1105,6 +1106,151 @@ void TestSelfPlayHold() {
   }
 }
 
+void TestPitchStorage() {
+  test_checker.Start("TestPitchStorage");
+  Rig r;
+  r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+  r.settings.set_self_play_on_request(true);
+  for (int i = 0; i < 256; ++i) {
+    const PitchScale expected = i >= 0xa1 && i <= 0xa8
+        ? PitchScale(i - 0xa0) : PITCH_SCALE_OFF;
+    r.settings.mutable_state()->padding[2] = i;
+    CHECK(r.settings.pitch_scale() == expected);
+    // Read unnormalized data from flash, then save it canonically.
+    r.settings.chunk_storage_.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.pitch_scale() == expected);
+    CHECK(loaded.state().padding[2] == (expected ? i : 0));
+    loaded.mutable_state()->padding[13] = 0xff;
+    loaded.SaveState();
+    CHECK(r.settings.Init(false));
+    CHECK(r.settings.pitch_scale() == expected);
+    CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+    CHECK(r.settings.self_play_on_request());
+    CHECK(r.settings.state().padding[13] == 0);
+  }
+}
+
+const uint8_t kTestScaleColors[7][3] = {
+  { 255, 0, 0 }, { 255, 96, 0 }, { 255, 255, 0 }, { 0, 255, 255 },
+  { 0, 96, 255 }, { 128, 0, 255 }, { 255, 0, 128 }
+};
+
+void TestPitchOptions() {
+  test_checker.Start("TestPitchOptions");
+  Rig r;
+  r.Enter();
+  r.Tap();
+  CHECK(r.ui.options_.page() == kPitchScalePage);
+  r.feedback = 0.58f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
+  r.feedback = 0.9f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  const bool seed = r.ui.seed_button_state_;
+  const bool locked = r.ui.seed_button_locked_;
+  const unsigned writes = test_writes;
+  for (int i = 0; i < 7; ++i) {
+    CHECK(r.ui.pitch_scale() == PitchScale(PITCH_SCALE_FIFTHS + i));
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == kTestScaleColors[i][0]);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == kTestScaleColors[i][1]);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == kTestScaleColors[i][2]);
+    test_down[SWITCH_SEED] = true;
+    r.Tick(8, false);
+    CHECK(!r.ui.queue_.available());
+    test_down[SWITCH_SEED] = false;
+    r.Tick(8, false);
+    CHECK(!r.ui.queue_.available());
+    r.ui.DoEvents();
+    CHECK(r.ui.seed_button_state_ == seed);
+    CHECK(r.ui.seed_button_locked_ == locked);
+    CHECK(!r.ui.seed_button_state_ || seed);
+    CHECK(test_writes == writes);
+  }
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.Down(SWITCH_SEED);
+  r.Tick(5100);
+  r.Up(SWITCH_SEED);
+  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.feedback = 0.65f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.feedback = 0.63f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  r.feedback = 0.34f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  r.feedback = 0.30f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
+  r.feedback = 0.1f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
+  r.feedback = 0.9f;
+  r.Tick(1);
+  r.Down(SWITCH_SEED);
+  r.Up(SWITCH_SEED);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
+  r.Tick(5001);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+  CHECK(test_writes == writes + 1);
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.pitch_scale() == PITCH_SCALE_MAJOR);
+  r.Tick(30);
+  r.Enter();
+  r.Tap();
+  r.feedback = 0.1f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
+  CHECK(r.settings.state().media == 3);
+  r.Tick(30);
+  r.Enter();
+  r.Tap();
+  r.Down(SWITCH_SEED);
+  r.Down(SWITCH_ASSIGN);
+  r.Up(SWITCH_SEED);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+  CHECK(!r.settings.state().gate_output_mode);
+}
+
+void TestPitchSeedCancelAndCommit() {
+  test_checker.Start("TestPitchSeedCancelAndCommit");
+  Rig r;
+  r.Enter();
+  r.Tap();
+  r.feedback = 0.9f;
+  r.Tick(1);
+  r.Down(SWITCH_SEED);
+  r.feedback = 0.1f;
+  r.Tick(1);
+  r.Up(SWITCH_SEED);
+  r.feedback = 0.9f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.Down(SWITCH_SEED);
+  r.Up(SWITCH_SEED);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
+  r.feedback = 0.1f;
+  r.Tick(1);
+  r.feedback = 0.9f;
+  r.Tick(1);
+  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
+  const unsigned writes = test_writes;
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+  CHECK(test_writes == writes + 1);
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -1114,6 +1260,9 @@ int main() {
   TestCloudsStorage();
   TestCloudsOptions();
   TestSelfPlayOptions();
+  TestPitchStorage();
+  TestPitchOptions();
+  TestPitchSeedCancelAndCommit();
   TestSelfPlayStorage();
   TestSelfPlayHold();
   TestMonophonicGesture();
