@@ -24,7 +24,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 | Hold ASSIGN, press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | ASSIGN + MEDIA, either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold MEDIA, press SEED | TAKEN: toggle monophonic grains; consumes both releases; MEDIA first | Yes <!-- beads/ui.cc:358-369 --> |
-| MEDIA + FREEZE | FREE dedicated action in this build; reserved by disabled trim feature. Planned: buffer trim (#31), parked until a saved buffer keeps its trimmed length | Would trim/unfreeze, not save directly <!-- beads/ui.cc:372-384; beads/ui.h:44 --> |
+| MEDIA + FREEZE | FREE dedicated action in this build; reserved by disabled trim feature. Planned for alpha 3: buffer trim (#31), once a saved buffer keeps its trimmed length | Would trim/unfreeze, not save directly <!-- beads/ui.cc:372-384; beads/ui.h:44 --> |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + ASSIGN | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration | Rewrites settings sector <!-- beads/beads.cc:329-330; beads/settings.cc:60-76; stmlib/system/sector_storage_h7xx.h:126-130 --> |
