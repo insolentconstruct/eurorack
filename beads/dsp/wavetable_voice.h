@@ -69,8 +69,7 @@ class WavetableVoice {
       const bool* freeze,
       const Parameters& p,
       FloatFrame* out,
-      size_t size,
-      bool add = true) {
+      size_t size) {
     const float scale_up = float(1 << bit_shift);
     const float scale_down = 1.0f / scale_up;
     const float gain = scale_down * 2.0f / float(xfade_duration_);
@@ -135,8 +134,8 @@ class WavetableVoice {
       
       out_sample = float(int(out_sample * scale_up)) * xfade_gain * gain;
       CONSTRAIN(out_sample, -1.0f, +1.0f)
-      out->l = (add ? out->l : 0.0f) + out_sample;
-      out->r = (add ? out->r : 0.0f) + out_sample;
+      out->l += out_sample;
+      out->r += out_sample;
       
       ++out;
       ++freeze;

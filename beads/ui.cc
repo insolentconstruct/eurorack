@@ -545,6 +545,10 @@ void Ui::OnSwitchReleased(const Event& e) {
   }
 }
 
+OutputLimiterMode Ui::output_limiter_mode() const {
+  return output_limiter_mode_;
+}
+
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
     if (options_.preview() != settings_->output_limiter_mode() ||

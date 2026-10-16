@@ -85,14 +85,16 @@ void Synth::Render(
   const int continuous_wavetable_bit_shift[4] = { 4, 16, 7, 16 };
   const int wavetable_bit_shift[4] = { 4, 6, 7, 16 };
   
+  FloatFrame zero;
+  zero = 0.0f;
+  fill(&out[0], &out[size], zero);
   wavetable_voice_.Render(
       bank,
       continuous_wavetable_bit_shift[resolution],
       freeze,
       p,
       out,
-      size,
-      false);
+      size);
 
   // Dry/wet balance.
   const float post_gain_dry = 0.5f; // To get a 10Vpp output for the dry osc.

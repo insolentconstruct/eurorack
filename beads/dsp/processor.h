@@ -79,20 +79,20 @@ class Processor {
   
   inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
-    static const float kSampleRates[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
+    float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
 #else
-    static const float kSampleRates[4] = { 48000.0f, 48000.0f, 32000.0f, 48000.0f };
+    float sr[4] = { 48000.0f, 48000.0f, 32000.0f, 48000.0f };
 #endif  // ENABLE_HARDWARE_24K
-    return kSampleRates[media_];
+    return sr[media_];
   }
   
   inline int ratio() const {
 #ifdef ENABLE_HARDWARE_24K
-    static const int kRatios[4] = { 1, 2, 1, 1 };
+    int ratio[4] = { 1, 2, 1, 1 };
 #else
-    static const int kRatios[4] = { 2, 2, 1, 1 };
+    int ratio[4] = { 2, 2, 1, 1 };
 #endif  // ENABLE_HARDWARE_24K
-    return kRatios[media_];
+    return ratio[media_];
   }
   
   inline uint8_t* delay_buffer_raw_bytes(size_t offset) {

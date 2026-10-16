@@ -259,9 +259,9 @@ void Process(
   } else if (reverb_style_gain < 1.0f) {
     reverb_style_gain = min(1.0f, reverb_style_gain + kReverbStyleFadeStep);
   }
-  const OutputLimiterMode limiter = ui.output_limiter_mode();
+  processor.set_output_limiter_mode(ui.output_limiter_mode());
+  synth.set_output_limiter_mode(ui.output_limiter_mode());
   if (synth_mode) {
-    synth.set_output_limiter_mode(limiter);
     synth.Render(
         seed_button_state,
         seed_input,
@@ -270,7 +270,6 @@ void Process(
         d, p, m,
         float_out, size);
   } else {
-    processor.set_output_limiter_mode(limiter);
     processor.Process(
         seed_button_state,
         seed_input,

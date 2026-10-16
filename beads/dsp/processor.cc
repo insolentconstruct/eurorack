@@ -134,6 +134,7 @@ void Processor::Process(
 
   TriggerGenerator::Output triggers_buffer[size];
   DelayController::Output taps_buffer[size];
+  bool gate_out[size];
 
   TriggerGenerator::Output* triggers = &triggers_buffer[0];
   DelayController::Output* taps = &taps_buffer[0];
@@ -152,6 +153,9 @@ void Processor::Process(
         parameters.shape,
         taps,
         size);
+    for (size_t i = 0; i < size; ++i) {
+      gate_out[i] = taps[i].gate;
+    }
   } else {
     taps = NULL;
     trigger_generator_.Render(
@@ -162,6 +166,9 @@ void Processor::Process(
         expo_fm_amount * density.cv,
         triggers,
         size);
+    for (size_t i = 0; i < size; ++i) {
+      gate_out[i] = triggers[i].gate;
+    }
   }
   
   FloatFrame dry_signal[size];
@@ -261,7 +268,7 @@ void Processor::Process(
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {
       out[i].l = (out[i].l + out[i].r) * 0.5f;
-      out[i].r = (delay_mode ? taps[i].gate : triggers[i].gate) ? -0.8f : 0.0f;
+      out[i].r = gate_out[i] ? -0.8f : 0.0f;
     }
   }
 }
