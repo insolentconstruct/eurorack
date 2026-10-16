@@ -4,10 +4,11 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
+- **In numbers:** 125 tests in 11 host test programs (693 assertions) covering 110 of 117 manual behaviours (3 only in part), 112 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
-  - an emulator comparison against the previous release found identical audio in 44 of 44 scenarios.
+  - emulator comparisons found identical audio in 44 of 44 scenarios against the previous release (2026.10.14), and in 20 of 20 between GCC 9 and GCC 4.9.3 builds (2026.10.16).
 - **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle fix, flash wear from a modulated FREEZE, monophonic grains and self-play, using oscilloscope captures and the debug probe.
 - **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
 
@@ -62,7 +63,8 @@ Run by the developers; these scripts and results are not in this repository.
 |---|---|
 | Frozen delay with negative FM (#33), host build with AddressSanitizer and UBSan | Previous code: out-of-bounds read. Fixed code: clean; output at FM 0 and +0.5 identical |
 | Wavetable interpolation past the last wave (#35) | Previous code: out-of-bounds read. Fixed code: clean; normal output identical |
-| Emulator comparison against the previous release | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, self-play (synth), freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
+| Emulator comparison, GCC 9 against GCC 4.9.3 builds of the released source (2026.10.16) | 20 of 20 scenarios bit-identical |
+| Emulator comparison against the previous release (2026.10.14) | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, self-play (synth), freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
 | Instruction counts | No audio-path function grew |
 | Code review | Five rounds by a second AI model; the first four led to fixes (three of them real bugs in the frozen-buffer save) |
 

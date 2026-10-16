@@ -7,7 +7,7 @@ heading; a release turns it into a dated heading.
 - Self-play option (options page, FEEDBACK): Automatic (stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).
 - Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, up to 320 s, reset by a completed save or a minute unfrozen (#56).
 - Monophonic grains, Mutable Instruments' original code: hold MEDIA and press SEED to toggle; use square or decay SHAPE, and turn it off before downgrading (#31).
-- App built with GCC 9 instead of 4.9.3; all 44 emulated scenarios give bit-identical audio.
+- App built with GCC 9 instead of 4.9.3; 20 of 20 emulated scenarios give bit-identical audio.
 - Delay mode: no tempo glitch on the first clock after about 12 hours without one (#57).
 - Clocked frozen delay: very fast SEED edges no longer silence the play heads (#33).
 
