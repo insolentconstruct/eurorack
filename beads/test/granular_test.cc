@@ -703,7 +703,8 @@ void TestQuantizedGrainPitch() {
         DelayGranularPlayer* player = quality == 0
             ? &processor.processor_dirty_tape_.granular_player_
             : quality == 1 ? &processor.processor_clean_tape_.granular_player_
-            : quality == 2 ? &processor.processor_vintage_digital_.granular_player_
+            : quality == 2
+                ? &processor.processor_vintage_digital_.granular_player_
             : &processor.processor_digital_.granular_player_;
         DelayGrain& grain = player->grain_[0];
         const int speed = grain.speed_;

@@ -29,7 +29,6 @@
 #ifndef BEADS_DSP_PITCH_QUANTIZER_H_
 #define BEADS_DSP_PITCH_QUANTIZER_H_
 
-#include <math.h>
 #include "stmlib/stmlib.h"
 
 namespace beads {

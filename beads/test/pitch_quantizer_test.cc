@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cmath>
+
 #include "beads/dsp/randomized_parameter.h"
 #include "beads/test/test_checker.h"
 

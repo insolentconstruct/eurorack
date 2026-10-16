@@ -1,11 +1,11 @@
-PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
+PACKAGES       = beads/dsp beads/test stmlib/utils stmlib/dsp beads
 
 VPATH          = $(PACKAGES)
 
 TARGET         = pitch_quantizer_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
-CC_FILES       = 		pitch_quantizer_test.cc \
+CC_FILES       = pitch_quantizer_test.cc \
 		resources.cc \
 		units.cc \
 		pitch_quantizer.cc \

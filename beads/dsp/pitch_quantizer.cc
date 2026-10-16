@@ -1,5 +1,7 @@
+// Copyright 2015 Emilie Gillet.
 // Copyright 2026 Insolent Construct.
 //
+// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 // Author: Insolent Construct (insolentconstruct@gmail.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,6 +29,8 @@
 // Fixed-root grain pitch quantization.
 
 #include "beads/dsp/pitch_quantizer.h"
+
+#include <cmath>
 
 namespace beads {
 
@@ -74,6 +78,5 @@ float QuantizePitch(float pitch, PitchScale scale) {
   }
   return lower;
 }
-
 
 }  // namespace beads
