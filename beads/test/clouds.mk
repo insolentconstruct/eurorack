@@ -34,7 +34,8 @@ $(BUILD_DIR)%.o: %.cc
 		-fno-sanitize-recover=all -fno-pie $< -o $@
 
 $(BUILD_DIR)%.d: %.cc
-	g++ -MM -DTEST -include cstdio $(EXTRA) -I. -fsanitize=address,undefined,integer-divide-by-zero \
+	g++ -MM -DTEST -include cstdio $(EXTRA) -I. \
+		-fsanitize=address,undefined,integer-divide-by-zero \
 		-fno-sanitize-recover=all -fno-pie $< -MF $@ -MT $(@:.d=.o)
 
 clouds_test:  $(OBJS)

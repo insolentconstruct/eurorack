@@ -30,6 +30,8 @@
 
 namespace beads {
 
+const float kAllPassCoefficient = 0.625f;
+
 void Diffuser::Process(FloatFrame* in_out, size_t size) {
   typedef E::Reserve<126,
     E::Reserve<180,
@@ -48,32 +50,31 @@ void Diffuser::Process(FloatFrame* in_out, size_t size) {
   E::DelayLine<Memory, 6> apr3;
   E::DelayLine<Memory, 7> apr4;
   E::Context c;
-  const float kap = 0.625f;
   while (size--) {
     engine_.Start(&c);
 
     float wet = 0.0f;
     c.Read(in_out->l);
-    c.Read(apl1 TAIL, kap);
-    c.WriteAllPass(apl1, -kap);
-    c.Read(apl2 TAIL, kap);
-    c.WriteAllPass(apl2, -kap);
-    c.Read(apl3 TAIL, kap);
-    c.WriteAllPass(apl3, -kap);
-    c.Read(apl4 TAIL, kap);
-    c.WriteAllPass(apl4, -kap);
+    c.Read(apl1 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apl1, -kAllPassCoefficient);
+    c.Read(apl2 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apl2, -kAllPassCoefficient);
+    c.Read(apl3 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apl3, -kAllPassCoefficient);
+    c.Read(apl4 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apl4, -kAllPassCoefficient);
     c.Write(wet, 0.0f);
     in_out->l += amount_ * (wet - in_out->l);
 
     c.Read(in_out->r);
-    c.Read(apr1 TAIL, kap);
-    c.WriteAllPass(apr1, -kap);
-    c.Read(apr2 TAIL, kap);
-    c.WriteAllPass(apr2, -kap);
-    c.Read(apr3 TAIL, kap);
-    c.WriteAllPass(apr3, -kap);
-    c.Read(apr4 TAIL, kap);
-    c.WriteAllPass(apr4, -kap);
+    c.Read(apr1 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apr1, -kAllPassCoefficient);
+    c.Read(apr2 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apr2, -kAllPassCoefficient);
+    c.Read(apr3 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apr3, -kAllPassCoefficient);
+    c.Read(apr4 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(apr4, -kAllPassCoefficient);
     c.Write(wet, 0.0f);
     in_out->r += amount_ * (wet - in_out->r);
 

@@ -30,15 +30,33 @@
 #include <cstdio>
 #include <cstring>
 
-#include "beads/test/test_checker.h"
+#include "stmlib/utils/random.h"
+
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #ifndef REFERENCE_CAPTURE
 #include "beads/dsp/fx/diffuser.h"
 #endif
-#include "stmlib/utils/random.h"
+#include "beads/test/test_checker.h"
 
 using namespace beads;
+
+// Captured from da792fd, GCC host build with contraction disabled.
+const uint32_t kStockHashes[4][3] = {
+  { 0x6eac02c8, 0x72c5604b, 0x27adc2e7 },
+  { 0x79a67055, 0x2d9eb3b9, 0x0e6f80d8 },
+  { 0x4d4af04d, 0xe5c6ff67, 0x971a869b },
+  { 0x88735508, 0x780972b3, 0xf0642700 }
+};
+
+
+const uint32_t kCloudsHashes[4][3] = {
+  { 0x9ef8ffbf, 0x585619e3, 0xd04954b1 },
+  { 0x455c8d06, 0x6246c9f2, 0x6c42e900 },
+  { 0x1ba970f7, 0x85b58047, 0x750dd32f },
+  { 0xa8f5e418, 0xa612bb0c, 0x3bcf8e5c }
+};
+
 
 static Processor processor;
 static Synth synth;
@@ -115,13 +133,6 @@ uint32_t Render(int quality, int mode, bool clouds) {
   return hash;
 }
 
-  // Captured from da792fd, GCC host build with contraction disabled.
-const uint32_t kStockHashes[4][3] = {
-  { 0x6eac02c8, 0x72c5604b, 0x27adc2e7 },
-  { 0x79a67055, 0x2d9eb3b9, 0x0e6f80d8 },
-  { 0x4d4af04d, 0xe5c6ff67, 0x971a869b },
-  { 0x88735508, 0x780972b3, 0xf0642700 }
-};
 
 void TestStockHashes() {
   test_checker.Start("TestStockHashes");
@@ -136,12 +147,6 @@ void TestStockHashes() {
   }
 }
 
-const uint32_t kCloudsHashes[4][3] = {
-  { 0x9ef8ffbf, 0x585619e3, 0xd04954b1 },
-  { 0x455c8d06, 0x6246c9f2, 0x6c42e900 },
-  { 0x1ba970f7, 0x85b58047, 0x750dd32f },
-  { 0xa8f5e418, 0xa612bb0c, 0x3bcf8e5c }
-};
 
 void TestCloudsOutput() {
   test_checker.Start("TestCloudsOutput");

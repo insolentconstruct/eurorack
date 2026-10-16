@@ -26,10 +26,13 @@
 //
 // Reverb.
 
-#include "beads/dsp/frame.h"
 #include "beads/dsp/fx/reverb.h"
 
+#include "beads/dsp/frame.h"
+
 namespace beads {
+
+const float kAllPassCoefficient = 0.625f;
 
 void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
   // This is the Griesinger topology described in the Dattorro paper
@@ -58,15 +61,11 @@ void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
   E::DelayLine<Memory, 9> del2;
   E::Context c;
 
-  const float kap = 0.625f;
   const float klp = lp_;
   const float krt = reverb_time_;
 
   const float input_gain = 0.2f * (1.0f - 0.333f * reverb_time_);
   const float output_gain = 0.4f / input_gain;
-
-  // const float send_amount = 1.0f;
-  // const float wet = mix_ * (2.0f - mix_) * output_gain;
 
   const float send_amount_sqrt = mix_ * (2.0f - mix_);
   const float send_amount = send_amount_sqrt * (2.0f - send_amount_sqrt);
@@ -96,24 +95,24 @@ void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
     c.Read(in_out->l + in_out->r, send_amount);
 
     // Diffuse through 4 allpasses.
-    c.Read(ap1 TAIL, kap);
-    c.WriteAllPass(ap1, -kap);
-    c.Read(ap2 TAIL, kap);
-    c.WriteAllPass(ap2, -kap);
-    c.Read(ap3 TAIL, kap);
-    c.WriteAllPass(ap3, -kap);
-    c.Read(ap4 TAIL, kap);
-    c.WriteAllPass(ap4, -kap);
+    c.Read(ap1 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(ap1, -kAllPassCoefficient);
+    c.Read(ap2 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(ap2, -kAllPassCoefficient);
+    c.Read(ap3 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(ap3, -kAllPassCoefficient);
+    c.Read(ap4 TAIL, kAllPassCoefficient);
+    c.WriteAllPass(ap4, -kAllPassCoefficient);
     c.Write(apout);
 
     // Main reverb loop.
     c.Load(apout);
     c.Interpolate(del2, 4680.0f, LFO_2, 100.0f, krt);
     c.Lp(lp_1_, klp);
-    c.Read(dap1a TAIL, -kap);
-    c.WriteAllPass(dap1a, kap);
-    c.Read(dap1b TAIL, kap);
-    c.WriteAllPass(dap1b, -kap);
+    c.Read(dap1a TAIL, -kAllPassCoefficient);
+    c.WriteAllPass(dap1a, kAllPassCoefficient);
+    c.Read(dap1b TAIL, kAllPassCoefficient);
+    c.WriteAllPass(dap1b, -kAllPassCoefficient);
     c.Write(del1, 2.0f);
     c.Write(wet, 0.0f);
 
@@ -122,10 +121,10 @@ void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
     c.Load(apout);
     c.Read(del1 TAIL, krt);
     c.Lp(lp_2_, klp);
-    c.Read(dap2a TAIL, kap);
-    c.WriteAllPass(dap2a, -kap);
-    c.Read(dap2b TAIL, -kap);
-    c.WriteAllPass(dap2b, kap);
+    c.Read(dap2a TAIL, kAllPassCoefficient);
+    c.WriteAllPass(dap2a, -kAllPassCoefficient);
+    c.Read(dap2b TAIL, -kAllPassCoefficient);
+    c.WriteAllPass(dap2b, kAllPassCoefficient);
     c.Write(del2, 2.0f);
     c.Write(wet, 0.0f);
 

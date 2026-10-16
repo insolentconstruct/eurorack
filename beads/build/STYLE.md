@@ -31,7 +31,7 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 
 - Types and methods: `PascalCase` (`Process`, `Init`). Accessors, locals and parameters: `lower_case`.
 - Private members end in `_` (`peak_lp_`); public struct fields usually don't.
-- Constants: `kPascalCase`. Named enum values and macros: `ALL_CAPS`, enum values with a common prefix (`MEDIA_DIGITAL`).
+- Put new named constants at namespace scope, using `kPascalCase`. Named enum values and macros: `ALL_CAPS`, enum values with a common prefix (`MEDIA_DIGITAL`).
 
 ## Classes
 
@@ -69,6 +69,8 @@ Code changes should read like the existing Mutable Instruments code. When in dou
 - Preserve the file's licence. For new host files, use the Beads/Clouds MIT
   header, separator and brief description. Upstream Plaits, Marbles and Stages
   tests instead retain GPL headers without a separator; do not replace them.
+- Upstream tests may use GPL headers and system includes before module headers
+  (Plaits); the new host tests here use the MIT header above.
 - Use one Beads-style makefile per program; run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
 - CI runs every `beads/test/*.mk` as its own job, and `mutation_check.py` weekly; a new program needs no workflow change.
 - Make recipes use tabs, as in upstream test makefiles.

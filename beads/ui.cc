@@ -41,6 +41,8 @@
 
 namespace beads {
 
+const Leds::Color kCloudsStyleColor = { 0, 255, 255 };
+
 using namespace std;
 using namespace stmlib;
 
@@ -310,8 +312,7 @@ void Ui::UpdateLeds() {
           !options_.self_play_preview() || phase < 120 ? 1.0f : 0.0f);
     } else if (options_.page() == kLimiterPage &&
                options_.reverb_selected()) {
-      const Leds::Color clouds = { 0, 255, 255 };
-      leds_.set_media(options_.clouds_preview() ? clouds : colors[0],
+      leds_.set_media(options_.clouds_preview() ? kCloudsStyleColor : colors[0],
           !options_.clouds_preview() || phase < 120 ? 1.0f : 0.0f);
     } else {
       leds_.set_media(colors[value], pulse ? 1.0f : 0.0f);

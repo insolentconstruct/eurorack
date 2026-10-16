@@ -73,7 +73,7 @@ class Options {
       uint32_t now, bool assign, bool other, bool all_up,
       bool just_pressed, bool normal, bool pot_touched, float pot,
       OutputLimiterMode committed, float feedback, bool self_play,
-      float reverb = 0.5f, bool clouds = false) {
+      float reverb, bool clouds) {
     const float dry_wet = pot;
     if (stage_ != STAGE_INACTIVE && page_ == kSelfPlayPage) {
       pot = feedback;
@@ -214,6 +214,7 @@ class Options {
     reverb_qualified_ = false;
     reverb_selected_ = false;
   }
+
   void ResetPot(float pot) {
     origin_ = previous_ = pot;
     qualified_ = false;

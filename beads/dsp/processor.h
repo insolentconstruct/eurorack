@@ -33,8 +33,8 @@
 
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
-#include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/fx/diffuser.h"
+#include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/fx/wow_and_flutter.h"
 
 // Setting this flag slows down the codec to 24kHz for the MEDIA_DIRTY_TAPE
