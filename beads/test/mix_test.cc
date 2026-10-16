@@ -30,6 +30,9 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#if defined(__SSE__)
+#include <xmmintrin.h>
+#endif
 
 #define private public
 #include "beads/dsp/processor.h"
@@ -371,7 +374,14 @@ void TestFeedbackDelayReturn() {
 
 int main() {
   // Match the firmware FPU setup in drivers/system.cc.
+#if defined(__SSE__)
   _mm_setcsr(_mm_getcsr() | 0x8040);
+#elif defined(__aarch64__)
+  uint64_t fpcr;
+  __asm__ volatile("mrs %0, fpcr" : "=r" (fpcr));
+  fpcr |= uint64_t(1) << 24;
+  __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
+#endif
   TestFeedbackRecording();
   TestDryWetEndpoints();
   TestMonoRecordingStereoOutput();
