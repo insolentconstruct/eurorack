@@ -1,5 +1,7 @@
 # Feature allocation
 
+The [options guide](OPTIONS.md) explains the controls, zones and LED patterns.
+
 **TL;DR:** which buttons, gestures, settings bytes, flash and CPU Drizzlet already uses (TAKEN) and what is still free (FREE), with the rules for adding options.
 
 The `drizzlet` branch, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. Planned uses come from the tentative roadmap in [#32](https://github.com/insolentconstruct/eurorack/issues/32); they can change until built. <!-- source: git trees fc549d7, d8f4739 -->

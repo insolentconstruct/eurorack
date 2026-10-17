@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Add generated printable and phone options guides, a text guide, and release ZIP copies.
 - Delay filter resonance ramps when changing Wide detent, avoiding a mode-switch click.
 - Width ignores small stationary knob noise. SEED scale taps survive a pending save, and leaving options restores normal controls while the final change settles and saves.
 - Options reorganized across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Reserved knobs are inert. Reopening remembers the last page until power-off.

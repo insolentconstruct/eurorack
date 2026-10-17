@@ -51,3 +51,10 @@ The name "Mutable Instruments" should not be used on any of the derivative works
 We do not recommend you to keep the original name of the Mutable Instruments module for your derivative works.
 
 For example, your 5U adaptation of Mutable Instruments Clouds can be called "Foobar Modular - Particle Generator".
+
+## Options page
+
+See the [options guide](beads/build/OPTIONS.md) or
+[printable guide](beads/build/options-guide.svg).
+
+![Options page phone guide](beads/build/options-guide-mobile.svg)

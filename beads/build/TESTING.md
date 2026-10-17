@@ -190,3 +190,17 @@ save settles. Exit restores the normal MEDIA indication immediately.
 The delay
 mode test compares the maximum wet-output step when switching Auto to Wide with
 an identical no-switch render at the clockwise filter endpoint.
+
+Generate the options guides with Python 3 (standard library only):
+
+```sh
+make -f beads/test/options_tables.mk build/options_tables
+./build/options_tables | python3 beads/build/tools/options_guide.py
+make -f beads/test/options_tables.mk test
+```
+
+The check regenerates all three files in a small temporary directory and
+compares bytes, checks the Markdown values against the firmware TSV and
+README.txt, and exercises release ZIP packaging with tiny placeholder assets.
+The printable SVG uses a 190 mm wide page area within both A4 and Letter;
+print at actual size, centred, with browser headers and footers disabled.

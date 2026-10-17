@@ -59,6 +59,10 @@ If FREEZE is released during self-play, the minute starts when self-play ends.
 
 Options page
 ------------
+Visual and text guides: OPTIONS.md, options-guide.svg (printable), and
+options-guide-mobile.svg (phone). Find them beside this README in release
+zips, or beside the build documentation in the source download.
+
 Hold ASSIGN alone for three seconds with the mix knobs still; then release.
 Tap ASSIGN to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
 (DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
@@ -86,6 +90,7 @@ The page LED flashes for 100 ms on entry, exit and after a changed batch is
 written. MEDIA keeps showing the value. See the reference for every value.
 
 On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
+Leave Stock above 13%; return below 7%.
 Above this zone it sets a continuous saved width: zero displacement at 13%
 to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes

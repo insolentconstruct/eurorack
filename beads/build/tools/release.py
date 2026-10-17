@@ -172,11 +172,13 @@ def write_zip(path, names):
 
 
 def package(out):
-  (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
-  write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'])
+  guides = ['OPTIONS.md', 'options-guide.svg', 'options-guide-mobile.svg']
+  for name in ['README.txt'] + guides:
+    (out/name).write_bytes((HERE/name).read_bytes())
+  write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'] + guides)
   # Combo image, named after the release.
   (out/COMBO).write_bytes((out/'combo.bin').read_bytes())
-  write_zip(out/COMBO_ZIP, [COMBO, 'README.txt', 'NOTICE.txt'])
+  write_zip(out/COMBO_ZIP, [COMBO, 'README.txt', 'NOTICE.txt'] + guides)
   (out/'SHA256SUMS').write_text(''.join(sha(out/name)+'  '+name+'\n' for name in ASSETS))
   subprocess.run(['sha256sum','-c','SHA256SUMS'],cwd=out,check=True)
 

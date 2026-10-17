@@ -10,11 +10,19 @@ From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eu
 
 Install at your own risk. Please do not contact Mutable Instruments about it; report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
 
+## Options page
+
+Hold ASSIGN for three seconds and release to enter. Tap ASSIGN to change
+page; move a mix knob and rest it for one second to save.
+See the [text guide](OPTIONS.md) and [printable guide](options-guide.svg).
+
+![Options page phone guide](options-guide-mobile.svg)
+
 ## Downloads
 
 Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases).
 
-- `<tag>-wav.zip`: audio update, with `README.txt` and `NOTICE.txt`.
+- `<tag>-wav.zip`: audio update, with `README.txt`, `NOTICE.txt` and the options guides.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
 For the module itself, read the [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the [Beads development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/).
