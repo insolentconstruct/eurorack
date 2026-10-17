@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- More CPU headroom for the grain engine: about 6,900 fewer cycles per audio block in the heaviest stock case (measured on a test board), from three small changes in Mutable Instruments' own style. The sound is bit-identical.
 - Options page: always opens on the Reverb category, where FEEDBACK sets the pitch scale.
 - Buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
 - Pitch scale: Off (default), Chromatic or eight scales. Reverb category, FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
