@@ -162,19 +162,19 @@ void Process(
       event_delay.Write(events[i]);
       // Delay the seed input by 2.5ms.
       Codec::Event delayed_event = event_delay.Read(size * 10);
-      bool has_seed = delayed_event & Codec::EVENT_SEED;
+      bool has_seed = (delayed_event & Codec::EVENT_SEED) || (attack_gate && i == 0);
       previous_seed = seed[i] = ExtractGateFlags(previous_seed, has_seed);
       seed_block |= has_seed;
     }
     seed_input = seed;
   } else if (processor.attack_input()->mode() == 2) {
-    for (size_t i = 0; i < size; ++i) seed[i] = GATE_FLAG_LOW;
+    for (size_t i = 0; i < size; ++i) {
+      previous_seed = seed[i] = ExtractGateFlags(previous_seed, attack_gate && i == 0);
+    }
     seed_input = seed;
-    previous_seed = GATE_FLAG_LOW;
   } else {
     previous_seed = GATE_FLAG_LOW;
   }
-  AttackInput::MergeSeed(attack_gate, seed, size);
   seed_block |= attack_gate;
   ui.set_seed_led_state(seed_block && !codec_transition_frames);
   ui.set_overwrite_reserve(synth_mode ? 1.0f : processor.overwrite_reserve());
