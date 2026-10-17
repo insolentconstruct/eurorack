@@ -220,13 +220,14 @@ void Process(
     d.cv = 0.0f;
   }
 
+  const bool width_assigned = settings.width_assigned();
   float mix_parameter[Ui::MIX_PARAMETER_LAST];
   for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
     float base = ui.mix_parameter(Ui::MixParameter(i)) * 1.005f;
-    float amount = !settings.width_assigned() &&
+    float amount = !width_assigned &&
         settings.state().assignable_cv_destination == 3
         ? float(settings.state().assignable_cv_amount[i]) / 256.0f
-        : (!settings.width_assigned() &&
+        : (!width_assigned &&
             settings.state().assignable_cv_destination == i ? 1.0f : 0.0f);
     mix_parameter[i] = base + \
         (cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f) * amount;
@@ -234,7 +235,7 @@ void Process(
   }
 
   const float stereo_width = ModulatedStereoWidth(ui.stereo_width(),
-      settings.width_assigned()
+      width_assigned
           ? cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f : 0.0f);
 
   Processor::MixParameters m;

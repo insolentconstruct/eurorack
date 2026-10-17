@@ -29,8 +29,6 @@
 #ifndef BEADS_DSP_GRANULAR_PROCESSOR_H_
 #define BEADS_DSP_GRANULAR_PROCESSOR_H_
 
-#include <cstring>
-
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -323,8 +321,8 @@ class GranularProcessor {
       FloatFrame* out,
       size_t size) {
     const bool wide_detent = filter_mode_.wide_detent;
-    float q_offset = wide_detent ? 0.70710678f : 1.0f;
-    float q_scale = wide_detent ? 0.0f : 16.0f;
+    float q_offset = wide_detent ? kWideDetentQOffset : kStockDelayQOffset;
+    float q_scale = wide_detent ? 0.0f : kStockDelayQScale;
     const float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
@@ -332,11 +330,8 @@ class GranularProcessor {
         (parameters.size.has_cv ? parameters.size.cv : 0.0f);
     CONSTRAIN(bandwidth, 0.0f, 1.0f)
 
-    // Target and ramp position share the old mode flag's padding. A single
-    // zero check keeps coefficient work out of untouched Auto playback.
-    uint32_t filter_mode;
-    memcpy(&filter_mode, &filter_mode_, sizeof(filter_mode));
-    if (filter_mode) {
+    // Update coefficients while wide detent or its transition is active.
+    if (filter_mode_.wide_detent || filter_mode_.position) {
       const DelayFilterQ q = SmoothDelayFilterQ(
           &filter_mode_, q_offset, q_scale);
       q_offset = q.offset;

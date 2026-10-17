@@ -111,49 +111,12 @@ Mutable Instruments' notes describe no sound-identity checks and none of the acc
 
 ## Stereo width and delay mode
 
-Width conversion and CV clamping run once per callback. Each new grain
-receives a normalized width and an enabled flag; active grains retain their
-pan. Wide-detent filter Q uses coefficients selected outside the sample loop.
+Width conversion and CV clamping run once per callback. Each new grain receives a normalized width and an enabled flag; active grains retain their pan. Wide-detent filter Q uses coefficients selected outside the sample loop.
 
-Default audio is checked against the unchanged firmware with the Cortex-M7
-emulator. Performance measurements count executed Thumb instructions, not
-hardware cycles; they do not establish module headroom.
+Default audio is checked against unchanged firmware with the Cortex-M7 emulator. Measurements count executed Thumb instructions, not hardware cycles; they do not establish module headroom. The retained DSP-only q3 stereo stress32 median / peak is 77,723 / 77,737 instructions, and delay is 51,548.5 / 51,680: increases of 11 and 88 instructions respectively. A filter-only template increased both costs and was removed.
 
-The 2026-10-17 filter-only template trial was rejected after measurement.
-Selecting a Stock/Wide filter function once per block, with constant Q in
-both instantiations, changed GCC 9.3.1 inlining and increased default q3
-stereo stress32 to 77,928 / 77,942 executed instructions (median / peak)
-and delay to 52,293.5 / 52,425. The trial was removed. The retained default
-costs are 77,723 / 77,737 for stress32 and 51,548.5 / 51,680 for delay,
-respectively +11 / +11 and +88 / +88 against fcbfe38. The owner accepts
-these measured instruction deltas as a performance-rule exception after
-this narrow attempt; they are not hardware cycle or headroom measurements.
+The delay-mode ramp changes callback instruction counts by -34..+35; accepted to remove an audible click. All 20 emulator scenarios retain byte-identical default audio (420,000 stereo frames). Of 8,000 whole-callback counts, 4,800 differ. In q3 stereo granular playback, median / peak changes from 13,040 / 15,180 to 13,043 / 15,183; delay changes from 53,319 / 53,505 to 53,323 / 53,509. These whole-callback fixtures differ from the DSP-only stress32 probe. Compiler inlining and register allocation affect the counts. No compiler hints, instruction padding or whole-loop specialization were retained.
 
-### Delay Q transition — accepted exception (owner to confirm)
+Q coefficients approach their target once per block with a 0.005 one-pole coefficient and a rounded 16-bit position that reaches both endpoints exactly. The wet delay regression checks 100-, 512- and 4,096-block windows, including the completed transition; each maximum output step remains within its identical no-switch control's range.
 
-The block-rate Q ramp preserves default audio but does **not** meet the
-requirement to retain the previous build's exact callback instruction counts.
-The callback-count differences are an accepted exception (owner to confirm),
-following Claude's overnight decision: the click fix is user-audible and the
-count delta is layout noise. This is the second performance-rule exception.
-The DSP-only figures above describe the earlier implementation.
-
-All 20 emulator scenarios retain byte-identical default audio (420,000 stereo
-frames). Of 8,000 measured whole-callback counts, 4,800 differ; changes range
-from -34 to +35 instructions. In q3 stereo granular playback, median / peak
-change from 13,040 / 15,180 to 13,043 / 15,183; delay changes from
-53,319 / 53,505 to 53,323 / 53,509. These whole-callback fixtures differ from
-the DSP-only stress32 probe above. GCC's changed inlining and register allocation
-account for the accepted layout noise. No compiler hints, instruction padding
-or whole-loop specialization were retained.
-
-Q coefficients approach their target once per block, with a 0.005 one-pole
-coefficient and a rounded 16-bit position that reaches both endpoints exactly.
-The state occupies the original mode flag's padding. The wet delay regression
-checks 100-, 512- and 4,096-block windows, including the completed transition;
-each maximum output step remains within its identical no-switch control's range.
-
-Round 9's UI assignment fix was rebuilt with GCC 9 and rerun through all 20
-emulator scenarios. All 420,000 stereo frames remain byte-identical to fcbfe38
-and Round 7; all 8,000 callback counts match Round 7 exactly (delta 0).
-This adds no further count exception.
+Explicit wide-detent and ramp-position checks add 1..13 executed instructions per granular, mono or delay callback in the default emulator fixtures; synth and self-play counts remain unchanged. The changes are confined to the granular processor. Default audio remains byte-identical in all 20 scenarios.

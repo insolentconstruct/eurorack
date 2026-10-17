@@ -44,19 +44,37 @@ enum OptionSetting {
 };
 
 struct OptionPage {
-  const char* led;
+  const char* led_name;
   int led_index;
   OptionSetting knobs[3];  // FEEDBACK, DRY/WET, REVERB.
 };
 const int kPitchScalePage = 0;
+const uint32_t kOptionsHoldTime = 3000;
+const uint32_t kOptionsTapTime = 500;
+const uint32_t kOptionsArmTime = 20;
+const float kOptionsPickupThreshold = 0.10f;
+const float kOptionsMovementThreshold = 0.005f;
+const float kWidthStockThreshold = 0.07f;
+const float kWidthEnabledThreshold = 0.13f;
+const float kWidthRange = 0.87f;
+const float kOptionsHalfLow = 0.47f;
+const float kOptionsHalfHigh = 0.53f;
+const float kOptionsZoneLow = 1.0f / 3.0f;
+const float kOptionsZoneHigh = 2.0f / 3.0f;
+const float kOptionsZoneBand = 0.03f;
 const uint32_t kOptionsSettleTime = 1000;
+const uint32_t kOptionsFlashTime = 100;
+const uint32_t kOptionsSlowPeriod = 1024;
+const uint32_t kOptionsFastPeriod = 256;
+const uint32_t kOptionsPulsePeriod = 2048;
+const uint32_t kSelfPlayHoldTime = 1500;
 const OptionPage kOptionPages[3] = {
   { "REVERB", 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
   { "FEEDBACK", 0, { OPTION_RESERVED, OPTION_DELAY, OPTION_RESERVED } },
   { "DRY/WET", 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED } }
 };
 const char* const kOptionNames[] = {
-  "Reserved", "Pitch scale", "Stereo width", "Reverb character",
+  "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
   "Delay mode", "Self-play", "Limiter"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
@@ -67,10 +85,10 @@ struct OptionValue {
   const char* name;
   const char* color;
   uint8_t r, g, b;
-  int pulses;  // 0 steady, 1 slow, 2 fast, 3 yellow double pulse.
+  int pulses;  // 0 steady, 1 slow, 2 fast, 3 double pulse.
 };
 const OptionValue kOptionValues[] = {
-  { OPTION_RESERVED, 0, "Reserved", "unchanged", 0, 0, 0, 0 },
+  { OPTION_RESERVED, 0, "Not used yet", "unchanged", 0, 0, 0, 0 },
   { OPTION_PITCH, 0, "Off", "green", 0, 255, 0, 0 },
   { OPTION_PITCH, 1, "Chromatic", "yellow", 255, 255, 0, 0 },
   { OPTION_PITCH, 2, "Fifths and octaves", "red", 255, 0, 0, 0 },
@@ -82,7 +100,7 @@ const OptionValue kOptionValues[] = {
   { OPTION_PITCH, 8, "Raag Bhairav", "red", 255, 0, 0, 2 },
   { OPTION_PITCH, 9, "Raag Shri", "yellow", 255, 255, 0, 3 },
   { OPTION_WIDTH, 0, "Stock", "green", 0, 255, 0, 0 },
-  { OPTION_WIDTH, 1, "Enabled (1..255)", "meter", 255, 255, 0, 1 },
+  { OPTION_WIDTH, 1, "Width (wider →)", "meter", 255, 255, 0, 1 },
   { OPTION_REVERB, 0, "Stock", "green", 0, 255, 0, 0 },
   { OPTION_REVERB, 1, "Clouds-style", "yellow", 255, 255, 0, 0 },
   { OPTION_DELAY, 0, "Auto (Stock)", "green", 0, 255, 0, 0 },
@@ -94,7 +112,8 @@ const OptionValue kOptionValues[] = {
   { OPTION_LIMITER, 1, "Fast release", "yellow", 255, 255, 0, 0 },
   { OPTION_LIMITER, 2, "Off", "red", 255, 0, 0, 0 }
 };
-const size_t kNumOptionValues = sizeof(kOptionValues) / sizeof(kOptionValues[0]);
+const size_t kNumOptionValues =
+    sizeof(kOptionValues) / sizeof(kOptionValues[0]);
 
 class Options {
  public:
@@ -176,7 +195,8 @@ class Options {
         press_time_ = now;
       }
 
-      if (holding_ && assign && uint32_t(now - press_time_) >= 3000) {
+      if (holding_ && assign &&
+          uint32_t(now - press_time_) >= kOptionsHoldTime) {
         Finish();
         RequestCommit(now);
         return;
@@ -196,7 +216,7 @@ class Options {
         }
 
         if (!seed && seed_held_) {
-          if (uint32_t(now - seed_time_) < 500) {
+          if (uint32_t(now - seed_time_) < kOptionsTapTime) {
             ++seed_taps_;
             seed_action_time_ = now;
           }
@@ -222,10 +242,11 @@ class Options {
 
         const float pot = pots[i];
         bool moved = false;
-        if (!qualified_[i] && fabsf(pot - origin_[i]) > 0.10f) {
+        if (!qualified_[i] &&
+            fabsf(pot - origin_[i]) > kOptionsPickupThreshold) {
           moved = true;
           qualified_[i] = true;
-          zone_[i] = pot < 1.0f / 3.0f ? 0 : pot < 2.0f / 3.0f ? 1 : 2;
+          zone_[i] = pot < kOptionsZoneLow ? 0 : pot < kOptionsZoneHigh ? 1 : 2;
           selected_ = setting;
         }
 
@@ -233,7 +254,7 @@ class Options {
           continue;
         }
 
-        if (fabsf(pot - previous_[i]) > 0.005f) {
+        if (fabsf(pot - previous_[i]) > kOptionsMovementThreshold) {
           moved = true;
           previous_[i] = pot;
           selected_ = setting;
@@ -251,25 +272,25 @@ class Options {
               break;
             }
 
-            int enabled = width_preview_ != 0;
-            if (pot < 0.07f) {
-              enabled = 0;
+            bool enabled = width_preview_ != 0;
+            if (pot < kWidthStockThreshold) {
+              enabled = false;
             }
 
-            if (pot > 0.13f) {
-              enabled = 1;
+            if (pot > kWidthEnabledThreshold) {
+              enabled = true;
             }
 
-            float amount = (pot - 0.13f) / 0.87f;
+            float amount = (pot - kWidthEnabledThreshold) / kWidthRange;
             CONSTRAIN(amount, 0.0f, 1.0f);
             width_preview_ = enabled ? 1 + int(amount * 254.0f + 0.5f) : 0;
           } break;
           case OPTION_REVERB:
-            if (pot < 0.47f) {
+            if (pot < kOptionsHalfLow) {
               clouds_preview_ = false;
             }
 
-            if (pot > 0.53f) {
+            if (pot > kOptionsHalfHigh) {
               clouds_preview_ = true;
             }
 
@@ -278,11 +299,11 @@ class Options {
             delay_preview_ = DelayMode(zone_[i]);
             break;
           case OPTION_SELF_PLAY:
-            if (pot < 0.47f) {
+            if (pot < kOptionsHalfLow) {
               self_play_preview_ = false;
             }
 
-            if (pot > 0.53f) {
+            if (pot > kOptionsHalfHigh) {
               self_play_preview_ = true;
             }
 
@@ -305,7 +326,7 @@ class Options {
     }
 
     if (all_up) {
-      if (uint32_t(now - all_up_time_) >= 20) {
+      if (uint32_t(now - all_up_time_) >= kOptionsArmTime) {
         armed_ = true;
       }
 
@@ -324,7 +345,8 @@ class Options {
       eligible_ = false;
     }
 
-    if (eligible_ && assign && uint32_t(now - press_time_) >= 3000) {
+    if (eligible_ && assign &&
+        uint32_t(now - press_time_) >= kOptionsHoldTime) {
       preview_ = committed;
       self_play_preview_ = self_play;
       clouds_preview_ = clouds;
@@ -422,7 +444,8 @@ class Options {
   }
 
   void RequestCommit(uint32_t now) {
-    if (!commit_ && dirty_ && uint32_t(now - last_action_) >= kOptionsSettleTime) {
+    if (!commit_ && dirty_ &&
+        uint32_t(now - last_action_) >= kOptionsSettleTime) {
       commit_ = true;
     }
   }
@@ -444,12 +467,12 @@ class Options {
   }
 
   void UpdateZone(float pot, int* zone) {
-    if (pot < 1.0f / 3.0f - 0.03f) {
+    if (pot < kOptionsZoneLow - kOptionsZoneBand) {
       *zone = 0;
-    } else if (pot > 2.0f / 3.0f + 0.03f) {
+    } else if (pot > kOptionsZoneHigh + kOptionsZoneBand) {
       *zone = 2;
-    } else if ((*zone == 0 && pot > 1.0f / 3.0f + 0.03f) ||
-               (*zone == 2 && pot < 2.0f / 3.0f - 0.03f)) {
+    } else if ((*zone == 0 && pot > kOptionsZoneLow + kOptionsZoneBand) ||
+               (*zone == 2 && pot < kOptionsZoneHigh - kOptionsZoneBand)) {
       *zone = 1;
     }
   }

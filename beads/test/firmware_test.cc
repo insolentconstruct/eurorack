@@ -652,13 +652,15 @@ void TestCallbackCvRouting() {
         CHECK(processor.processor_clean_tape_.filter_mode_.wide_detent);
         CHECK(processor.processor_dirty_tape_.filter_mode_.wide_detent);
         CHECK(processor.processor_digital_.granular_player_.width_enabled_);
-        CHECK(processor.processor_vintage_digital_.granular_player_.width_enabled_);
+        CHECK(processor.processor_vintage_digital_.
+            granular_player_.width_enabled_);
         CHECK(processor.processor_clean_tape_.granular_player_.width_enabled_);
         CHECK(processor.processor_dirty_tape_.granular_player_.width_enabled_);
         CHECK(processor.processor_digital_.granular_player_.stereo_width_ ==
             expected.processor_digital_.granular_player_.stereo_width_);
-        CHECK(processor.processor_vintage_digital_.granular_player_.stereo_width_
-            == expected.processor_digital_.granular_player_.stereo_width_);
+        CHECK(processor.processor_vintage_digital_.
+            granular_player_.stereo_width_ ==
+            expected.processor_digital_.granular_player_.stereo_width_);
         CHECK(processor.processor_clean_tape_.granular_player_.stereo_width_
             == expected.processor_digital_.granular_player_.stereo_width_);
         CHECK(processor.processor_dirty_tape_.granular_player_.stereo_width_

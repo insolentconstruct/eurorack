@@ -38,9 +38,6 @@ import time
 
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
-out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
-    'beads/test/.runs/mutations').resolve()
-out.mkdir(parents=True, exist_ok=True)
 cases = [
   ('TestOptionsWidthAndSeed', 'options', 'beads/options.h',
     'return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&',
@@ -64,11 +61,15 @@ cases = [
   ('TestOptionsWidthAndSeed', 'options', 'beads/options.h',
     'scale_ == PITCH_SCALE_SHRI', 'scale_ == PITCH_SCALE_BHAIRAV'),
   ('TestOptionsPalette', 'options', 'beads/options.h',
-    '"lime", 128, 255, 0', '"lime", 0, 255, 255'),
+    '"yellow", 255, 255, 0, 1 },\n'
+    '  { OPTION_PITCH, 5', '"yellow", 0, 255, 255, 1 },\n'
+    '  { OPTION_PITCH, 5'),
   ('TestCloudsStorage', 'options', 'beads/settings.h',
     'state_.padding[3] == 0xa2', 'state_.padding[3] != 0'),
   ('TestOptionsZonesAndSaveBatch', 'options', 'beads/options.h',
-    'pot > 0.53f) clouds_preview_', 'pot > 0.93f) clouds_preview_'),
+    'if (pot > kOptionsHalfHigh) {\n'
+    '              clouds_preview_ = true;', 'if (pot > 0.93f) {\n'
+    '              clouds_preview_ = true;'),
   ('TestStockHashes', 'clouds', 'beads/dsp/processor.cc',
     'const float post_gain_wet = 1.5f;', 'const float post_gain_wet = 1.4f;'),
   ('TestCloudsOutput', 'clouds', 'beads/dsp/processor.cc',
@@ -99,12 +100,14 @@ cases = [
     'beads/dsp/wavetable_granular_player.h',
     'p.pitch.pitch_value(pitch_scale_)', 'p.pitch.pitch_value()'),
   ('TestOptionsWidthAndSeed', 'options', 'beads/ui.cc',
-    'const bool accept_switch_events = !was_active && !options_.active();',
+    'const bool accept_switch_events = !was_active && !options_.active() &&\n'
+    '      options_.stage() != Options::STAGE_DRAIN;',
     'const bool accept_switch_events = true;'),
   ('TestPitchStorage', 'options', 'beads/settings.cc',
     'fill(&state_.padding[7],', 'fill(&state_.padding[2],'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
-    'const bool accept_switch_events = !was_active && !options_.active();',
+    'const bool accept_switch_events = !was_active && !options_.active() &&\n'
+    '      options_.stage() != Options::STAGE_DRAIN;',
     'const bool accept_switch_events = true;'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
     '    ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_FREEZE] = true;',
@@ -155,9 +158,9 @@ cases = [
     'state->disable_autosave = !state->disable_autosave;',
     'state->disable_autosave = state->disable_autosave;'),
   ('TestSeedLatchGestures', 'options', 'beads/ui.cc',
-    '4000, 4000, 1500,', '4000, 4100, 1500,'),
+    '4000, 4000, kSelfPlayHoldTime,', '4000, 4100, kSelfPlayHoldTime,'),
   ('TestGainHoldThresholdAndReload', 'options', 'beads/ui.cc',
-    '4000, 4000, 1500,', '4000, 4000, 1600,'),
+    '4000, 4000, kSelfPlayHoldTime,', '4000, 4000, 1600,'),
   ('TestFreezeDeadlineAndCancel', 'backup',
     'beads/background_buffer_backup.cc', 'kBackupDelay = 10000;',
     'kBackupDelay = 9999;'),
@@ -356,7 +359,8 @@ cases = [
     'const float max_feedback_gain = taps ? 1.5f : 3.0f;',
     'const float max_feedback_gain = taps ? 0.0f : 3.0f;'),
   ('TestContinuousDelayPlayback', 'delay_mode', 'beads/dsp/processor.cc',
-    'const float direction = parameters.size.base > threshold ? 1.0f : -1.0f;',
+    'const float direction = delay_mode_ != DELAY_MODE_NEVER &&\n'
+    '      parameters.size.base > threshold ? 1.0f : -1.0f;',
     'const float direction = '
     'parameters.size.base > threshold ? -1.0f : -1.0f;'),
   ('TestDelayModeFade', 'delay_mode', 'beads/dsp/processor.cc',
@@ -404,7 +408,9 @@ cases = [
   ('TestMonophonicGrains', 'granular', 'beads/dsp/granular_player.h',
     'if (monophonic_mode) {', 'if (false && monophonic_mode) {'),
   ('TestOptionsKnobsAndSettling', 'options', 'beads/options.h',
-    'pot > 0.53f) self_play_preview_', 'pot > 0.93f) self_play_preview_'),
+    'if (pot > kOptionsHalfHigh) {\n'
+    '              self_play_preview_ = true;', 'if (pot > 0.93f) {\n'
+    '              self_play_preview_ = true;'),
   ('TestSelfPlayStorage', 'options', 'beads/settings.h',
     'state_.padding[1] == 0xa1', 'state_.padding[1] != 0'),
   ('TestSelfPlayHold', 'options', 'beads/ui.cc',
@@ -470,6 +476,18 @@ cases = [
     'if (previous_freeze_state_) {',
     'if (false) {'),
 ]
+# Validate every replacement before creating a disposable source tree.
+for name, suite, source, before, after in cases:
+  pattern = before if before is not None else (
+      'const int16_t wav_integrated_waves[] = {')
+  assert (root / source).read_text().count(pattern) == 1, (name, pattern)
+if '--patterns-only' in sys.argv:
+  print('All %d mutation patterns occur exactly once' % len(cases))
+  raise SystemExit(0)
+
+out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
+    'beads/test/.runs/mutations').resolve()
+out.mkdir(parents=True, exist_ok=True)
 started = time.monotonic()
 results = []
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:

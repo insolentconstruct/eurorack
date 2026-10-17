@@ -338,19 +338,20 @@ void TestDelayFilterRamp() {
   test_checker.Start("TestDelayFilterRamp");
   CHECK(sizeof(DelayFilterMode) == 4);
   DelayFilterMode mode = { true, 0, 0 };
-  DelayFilterQ previous = { 1.0f, 16.0f };
+  DelayFilterQ previous = { kStockDelayQOffset, kStockDelayQScale };
   for (int direction = 0; direction < 2; ++direction) {
     mode.wide_detent = direction == 0;
     for (int block = 0; block < 3000; ++block) {
       const DelayFilterQ q = SmoothDelayFilterQ(&mode,
-          mode.wide_detent ? 0.70710678f : 1.0f,
-          mode.wide_detent ? 0.0f : 16.0f);
+          mode.wide_detent ? kWideDetentQOffset : kStockDelayQOffset,
+          mode.wide_detent ? 0.0f : kStockDelayQScale);
       CHECK(fabsf(q.offset - previous.offset) < 0.0015f);
       CHECK(fabsf(q.scale - previous.scale) < 0.081f);
       previous = q;
     }
-    CHECK(previous.offset == (direction ? 1.0f : 0.70710678f));
-    CHECK(previous.scale == (direction ? 16.0f : 0.0f));
+    CHECK(previous.offset == (direction
+      ? kStockDelayQOffset : kWideDetentQOffset));
+    CHECK(previous.scale == (direction ? kStockDelayQScale : 0.0f));
   }
 }
 

@@ -38,15 +38,49 @@ int main() {
       for (size_t i = 0; i < kNumOptionValues; ++i) {
         const OptionValue& value = kOptionValues[i];
         if (value.setting != setting) continue;
-        const char* pulse = value.pulses == 0 ? "steady"
-            : value.pulses == 1 ? "slow (0.98 Hz)"
-            : value.pulses == 2 ? "fast (3.91 Hz)"
-            : "2 yellow pulses / 2.048 s";
+        char pulse[64];
+        if (!value.pulses) {
+          snprintf(pulse, sizeof(pulse), "steady");
+        } else if (value.pulses < 3) {
+          snprintf(pulse, sizeof(pulse), "%s (%.2f Hz)",
+              value.pulses == 1 ? "slow" : "fast",
+              1000.0 / (value.pulses == 1
+                  ? kOptionsSlowPeriod : kOptionsFastPeriod));
+        } else {
+          snprintf(pulse, sizeof(pulse), "2 yellow pulses / %.3f s",
+              kOptionsPulsePeriod / 1000.0);
+        }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
-            kOptionPages[page].led, kOptionKnobNames[knob],
+            kOptionPages[page].led_name, kOptionKnobNames[knob],
             kOptionNames[setting], value.name, value.color, pulse);
       }
     }
   }
+  puts("\nconstant\tname\tvalue");
+  printf("constant\tkOptionsHoldTime\t%.9g\n", double(kOptionsHoldTime));
+  printf("constant\tkOptionsTapTime\t%.9g\n", double(kOptionsTapTime));
+  printf("constant\tkOptionsArmTime\t%.9g\n", double(kOptionsArmTime));
+  printf("constant\tkOptionsPickupThreshold\t%.9g\n",
+      double(kOptionsPickupThreshold));
+  printf("constant\tkOptionsMovementThreshold\t%.9g\n",
+      double(kOptionsMovementThreshold));
+  printf("constant\tkWidthStockThreshold\t%.9g\n",
+      double(kWidthStockThreshold));
+  printf("constant\tkWidthEnabledThreshold\t%.9g\n",
+      double(kWidthEnabledThreshold));
+  printf("constant\tkWidthRange\t%.9g\n", double(kWidthRange));
+  printf("constant\tkOptionsHalfLow\t%.9g\n", double(kOptionsHalfLow));
+  printf("constant\tkOptionsHalfHigh\t%.9g\n", double(kOptionsHalfHigh));
+  printf("constant\tkOptionsZoneBand\t%.9g\n", double(kOptionsZoneBand));
+  printf("constant\tkOptionsSettleTime\t%.9g\n", double(kOptionsSettleTime));
+  printf("constant\tkOptionsFlashTime\t%.9g\n", double(kOptionsFlashTime));
+  printf("constant\tkOptionsSlowPeriod\t%.9g\n", double(kOptionsSlowPeriod));
+  printf("constant\tkOptionsFastPeriod\t%.9g\n", double(kOptionsFastPeriod));
+  printf("constant\tkOptionsPulsePeriod\t%.9g\n", double(kOptionsPulsePeriod));
+  printf("constant\tkSelfPlayHoldTime\t%.9g\n", double(kSelfPlayHoldTime));
+  printf("constant\tkDelayDetentLow\t%.9g\n", double(kDelayDetentLow));
+  printf("constant\tkDelayDetentHigh\t%.9g\n", double(kDelayDetentHigh));
+  printf("constant\tkOptionsZoneLow\t%.9g\n", double(kOptionsZoneLow));
+  printf("constant\tkOptionsZoneHigh\t%.9g\n", double(kOptionsZoneHigh));
   return 0;
 }

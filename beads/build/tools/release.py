@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Check the WAV with the vendor decoder, collect notices, package the release."""
-import hashlib
 import os
 import json
 import re
@@ -9,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 import wave
-import zipfile
+from release_package import package, sha
 from pathlib import Path
 
 import numpy as np
@@ -25,10 +24,6 @@ ZIP = NAME + '-wav.zip'
 COMBO = NAME + '-combo.bin'
 COMBO_ZIP = NAME + '-combo.zip'
 ASSETS = [ZIP, COMBO_ZIP, 'NOTICE.txt']
-
-
-def sha(path):
-  return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def wav_read(path):
@@ -161,27 +156,5 @@ def notices(out):
   (out/'notice-inventory.json').write_text(json.dumps(sorted(files),indent=2)+'\n')
 
 
-def write_zip(path, names):
-  # Reproducible zip.
-  with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_STORED) as z:
-    for name in sorted(names):
-      info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0))
-      info.create_system=0; info.external_attr=0; info.internal_attr=0; info.extra=b''
-      z.writestr(info,(path.parent/name).read_bytes())
-      info.external_attr=0  # writestr defaults Unix permissions; the central directory is written on close
-
-
-def package(out):
-  guides = ['OPTIONS.md', 'options-guide.svg', 'options-guide-mobile.svg']
-  for name in ['README.txt'] + guides:
-    (out/name).write_bytes((HERE/name).read_bytes())
-  write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'] + guides)
-  # Combo image, named after the release.
-  (out/COMBO).write_bytes((out/'combo.bin').read_bytes())
-  write_zip(out/COMBO_ZIP, [COMBO, 'README.txt', 'NOTICE.txt'] + guides)
-  (out/'SHA256SUMS').write_text(''.join(sha(out/name)+'  '+name+'\n' for name in ASSETS))
-  subprocess.run(['sha256sum','-c','SHA256SUMS'],cwd=out,check=True)
-
-
 if __name__ == '__main__':
-  out=Path(sys.argv[1]); proof(out); notices(out); package(out)
+  out=Path(sys.argv[1]); proof(out); notices(out); package(out, HERE, WAV, ZIP, COMBO, COMBO_ZIP)

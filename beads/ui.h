@@ -163,6 +163,8 @@ class Ui {
   }
   
  private:
+  void FlashOptionsPage();
+
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
 

@@ -890,7 +890,7 @@ void TestStereoWidth() {
   mono_grain.Start(&mono, 5000.0f, 1.0f, 100.0f,
       0.5f, 1.0f, 0.5f, 0.0f);
   CHECK(mono_grain.gain_[0][0] == mono_grain.gain_[1][0]);
-  float amplitude, stock, narrow, wide;
+  float amplitude, stock, centred, wide;
   for (int i = 1; i <= 1000; ++i) {
     p.time.attenuverter = float(i % 100) / 100.0f;
     player.set_stereo_width(0.0f, false);
@@ -904,8 +904,8 @@ void TestStereoWidth() {
     CHECK(stmlib::Random::GetWord() == after);
     player.set_stereo_width(0.0f, true);
     stmlib::Random::Seed(i);
-    player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &narrow);
-    CHECK(narrow == 0.5f);
+    player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &centred);
+    CHECK(centred == 0.5f);
     CHECK(stmlib::Random::GetWord() == after);
     player.set_stereo_width(1.0f, true);
     stmlib::Random::Seed(i);

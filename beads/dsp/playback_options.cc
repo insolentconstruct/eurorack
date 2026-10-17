@@ -35,16 +35,20 @@ namespace beads {
 DelayFilterQ SmoothDelayFilterQ(
     DelayFilterMode* mode, float offset, float scale) {
   if (mode->wide_detent) {
-    mode->position += (65535 - mode->position + 199) / 200;
+    mode->position +=
+        (kDelayQPositionMax - mode->position + kDelayQRampSteps - 1)
+        / kDelayQRampSteps;
   } else {
-    mode->position -= (mode->position + 199) / 200;
+    mode->position -=
+        (mode->position + kDelayQRampSteps - 1) / kDelayQRampSteps;
   }
-  float blend = float(mode->position) * (1.0f / 65535.0f);
+  float blend = float(mode->position) * (1.0f / float(kDelayQPositionMax));
   if (mode->wide_detent) {
     blend = 1.0f - blend;
   }
-  const float previous_offset = mode->wide_detent ? 1.0f : 0.70710678f;
-  const float previous_scale = mode->wide_detent ? 16.0f : 0.0f;
+  const float previous_offset = mode->wide_detent
+      ? kStockDelayQOffset : kWideDetentQOffset;
+  const float previous_scale = mode->wide_detent ? kStockDelayQScale : 0.0f;
   DelayFilterQ q;
   q.offset = offset + (previous_offset - offset) * blend;
   q.scale = scale + (previous_scale - scale) * blend;

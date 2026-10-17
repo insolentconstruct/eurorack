@@ -29,17 +29,26 @@
 #ifndef BEADS_DSP_PLAYBACK_OPTIONS_H_
 #define BEADS_DSP_PLAYBACK_OPTIONS_H_
 
+#include "stmlib/stmlib.h"
+
 namespace beads {
 
+const float kDelayDetentLow = 0.4f;
+const float kDelayDetentHigh = 0.6f;
+const float kStockDelayQOffset = 1.0f;
+const float kStockDelayQScale = 16.0f;
+const float kWideDetentQOffset = 0.70710678f;
+const int kDelayQRampSteps = 200;
+const int kDelayQPositionMax = 65535;
+
 // Saved byte: zero is stock, 1..255 spans zero to full displacement.
-typedef unsigned char StereoWidth;
-const StereoWidth STEREO_WIDTH_STOCK = 0;
+typedef uint8_t StereoWidth;
+const StereoWidth kStereoWidthStock = 0;
 
 inline float ModulatedStereoWidth(StereoWidth width, float cv) {
   if (!width) return 0.0f;
   float amount = float(width - 1) / 254.0f + cv;
-  if (amount < 0.0f) amount = 0.0f;
-  if (amount > 1.0f) amount = 1.0f;
+  CONSTRAIN(amount, 0.0f, 1.0f);
   return amount;
 }
 
@@ -51,8 +60,8 @@ enum DelayMode {
 
 struct DelayFilterMode {
   bool wide_detent;
-  unsigned char reserved;
-  unsigned short position;
+  uint8_t reserved;
+  uint16_t position;
 };
 
 struct DelayFilterQ {
@@ -64,10 +73,10 @@ DelayFilterQ SmoothDelayFilterQ(
     DelayFilterMode* mode, float offset, float scale);
 
 inline float DelayFilterDetent(float bandwidth) {
-  if (bandwidth < 0.4f) {
+  if (bandwidth < kDelayDetentLow) {
     return bandwidth * 1.25f;
-  } else if (bandwidth > 0.6f) {
-    return 0.5f + (bandwidth - 0.6f) * 1.25f;
+  } else if (bandwidth > kDelayDetentHigh) {
+    return 0.5f + (bandwidth - kDelayDetentHigh) * 1.25f;
   }
   return 0.5f;
 }

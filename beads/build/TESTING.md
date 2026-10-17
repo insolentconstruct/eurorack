@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **In numbers:** 158 tests in 13 host test programs (1013 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 160 tests in 13 host test programs (962 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
@@ -22,7 +22,7 @@ execute more than once. The manual-coverage totals below are unchanged.
 | Check | What it covers |
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
-| `beads/test/options.mk` | Options page entry, categories, knob zones, one-second save-on-settle, no idle exit, explicit exits and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds; the monophonic grain gesture, its LED cue and saving; the self-play setting, its storage and the MEDIA hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate |
+| `beads/test/options.mk` | Options page entry, pages, knob zones, one-second save-on-settle, no idle close, explicit close gestures and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds; the monophonic grain gesture, its LED cue and saving; the self-play setting, its storage and the MEDIA hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate |
 | `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
@@ -41,21 +41,21 @@ execute more than once. The manual-coverage totals below are unchanged.
 | backup | 16 | 106 |
 | clouds | 3 | 9 |
 | delay | 10 | 45 |
-| delay_mode | 6 | 33 |
+| delay_mode | 8 | 40 |
 | firmware | 15 | 118 |
 | gain | 5 | 21 |
 | granular | 23 | 113 |
 | mix | 7 | 28 |
-| options | 34 | 305 |
+| options | 41 | 354 |
 | pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **151** | **906** |
+| **Total** | **160** | **962** |
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
-The table lists the current tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
+The table lists the tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
 
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
 
@@ -66,10 +66,9 @@ and unchanged bytes 12/13. Callback tests check WIDTH CV routing, processor
 and synth propagation, and rendered grain pan retention. Saved assignments
 are also checked through the stock destination clamp.
 
-Delay mode adds host checks for all stored byte values, preview and settled saving
-and saving, Never at SIZE fully clockwise in every quality and channel mode,
+Delay mode adds host checks for all stored byte values, preview and settled saving, Never at SIZE fully clockwise in every quality and channel mode,
 returning from delay to granular, detent boundaries and neutral playback within 1e-7 FS
-with SIZE CV inside the detent. Auto remains the default.
+with SIZE CV inside the detent. Auto (Stock) remains the default.
 
 ## Coverage of the manual
 
@@ -87,7 +86,7 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 | Delay and slicer | 19 | 19 | |
 | Synth mode | 15 | 14 | 1 untestable |
 | Calibration and recovery | 3 | 2 | 1 untestable |
-| **Total** | **151** | **906** | **3 module, 4 untestable** |
+| **Total** | **117** | **110** | **3 module, 4 untestable** |
 
 - **Only in part (3):** audio-rate FM and 1 V/octave pitch (granular and synth) are checked through the real CV input path with the default calibration. How closely a given module tracks depends on its own stored calibration.
 - **Module:** the left-channel crackle report (checked on a module since, below), and audio and triggers summed into OUT L when OUT R is unpatched.
@@ -137,7 +136,7 @@ Control voltages and gates from the Bela; OUT L on the oscilloscope; flash activ
 | 3 | 20 s LFO into FREEZE, autosave on (#56) | Flash activity in the first cycle only (11–15 s), none in the next 77 s; the 2021 firmware showed it every cycle |
 | 4 | Frozen-buffer save from the FREEZE gate, then the same image re-flashed by the debug probe while still frozen | Flash activity for 7 s, ending before the restart; after it FREEZE was back on and the restored audio played (1.4 V RMS, inputs silent, grains from a DENSITY CV) |
 | 5 | Monophonic grains (#31): SEED pulsed 10 times a second into long grains | MEDIA LED at half brightness. Between triggers the envelope dips to 23 % of its peak (81 % with monophonic grains off); 48 % of its power is at 10 Hz and harmonics (5 % off) |
-| 6 | Self-play, Automatic (the default): both inputs unplugged, SEED pulsed 10 times a second | Plays (1.4 V RMS); silent without the pulses, since a patched, unlatched SEED jack is the only grain trigger |
+| 6 | Self-play, Automatic (Stock) (the default): both inputs unplugged, SEED pulsed 10 times a second | Plays (1.4 V RMS); silent without the pulses, since a patched, unlatched SEED jack is the only grain trigger |
 
 Self-play On request, the delay clock fix (#57) and the frozen-delay slice fix (#33) were checked by host tests only.
 
@@ -172,12 +171,12 @@ TSV exporter and compares README.txt's Options reference with the firmware.
 `./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.
 The UI host checks all nine page/knob slots, cycling, RAM page memory,
 reserved-knob inertia, qualification, a sweep with one settled save, unchanged
-idle pages, hold/button exits, pending saves after leaving, width hysteresis,
+idle pages, hold/button close gestures, pending saves after closing, width hysteresis,
 SEED scale cycling, all-stock steady-green palette consistency, ladder colours
 and distinct colour/pattern combinations within each setting. Renderer checks
 cover the full 2.048-second pattern and all 255 enabled width amounts against
-Beads’ meter, including green/red endpoints and the slow dark phase. Entry,
-exit and completed-save confirmations last 100 ms; idle controls do not
+Beads' meter, including green/red endpoints and the slow dark phase. Entry,
+close and completed-save confirmations last 100 ms; idle controls do not
 repeat the save flash. The exported reference also checks the allowed
 colours and patterns. Physical LED colour separation and audio during flash
 writes still need module checks.
@@ -185,10 +184,9 @@ writes still need module checks.
 Options regressions cover 10 s of ±0.002 width noise at an encoded step boundary
 (one save and one confirmation), short SEED taps and long holds during a pending
 save, volatile commit publication, and a second FREEZE press before the pending
-save settles. Exit restores the normal MEDIA indication immediately.
+save settles. Closing restores the normal MEDIA indication immediately.
 
-The delay
-mode test compares the maximum wet-output step when switching Auto to Wide with
+The delay mode test compares the maximum wet-output step when switching Auto (Stock) to Wide with
 an identical no-switch render at the clockwise filter endpoint.
 
 Generate the options guides with Python 3 (standard library only):

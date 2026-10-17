@@ -50,7 +50,7 @@ class MultitapDelay {
       filter_[i].Init();
     }
   }
-
+  
   inline void Reset() {
     for (int i = 0; i < DelayController::NUM_TAPS; ++i) {
       tap_[i].Init();

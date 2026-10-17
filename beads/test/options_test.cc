@@ -1005,6 +1005,13 @@ void TestPitchStorage() {
 
 void TestPlaybackStorage() {
   test_checker.Start("TestPlaybackStorage");
+  for (int raw = 0; raw < 256; ++raw) {
+    Rig r;
+    r.settings.set_stereo_width(128);
+    r.settings.mutable_state()->padding[6] = raw;
+    CHECK(r.settings.width_assigned() == (raw == 0xa1));
+  }
+
   Rig r;
   for (int width = 0; width < 256; ++width) {
     for (int delay = 0; delay < 3; ++delay) {
@@ -1019,6 +1026,7 @@ void TestPlaybackStorage() {
       CHECK(loaded.stereo_width() == StereoWidth(width));
       CHECK(loaded.state().assignable_cv_destination == 0);
       CHECK(loaded.width_assigned() == (width != 0));
+      CHECK(loaded.state().padding[6] == (width ? 0xa1 : 0));
       State stock_view = loaded.state();
       CONSTRAIN(stock_view.assignable_cv_destination, 0, 3);
       CHECK(stock_view.assignable_cv_destination == 0);
@@ -1172,7 +1180,8 @@ void TestOptionsKnobsAndSettling() {
           ? int(r.settings.pitch_scale()) : setting == OPTION_DELAY
           ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
           ? r.settings.clouds_style() : setting == OPTION_SELF_PLAY
-          ? r.settings.self_play_on_request() : int(r.settings.output_limiter_mode())));
+          ? r.settings.self_play_on_request()
+          : int(r.settings.output_limiter_mode())));
       r.Tick(5000);
       CHECK(test_writes == writes + 1);
       CHECK(r.ui.options_.active());
@@ -1241,7 +1250,8 @@ void TestOptionsWidthAndSeed() {
     r.ui.DoEvents();
     CHECK(r.ui.seed_button_state_ == seed_state);
     CHECK(r.ui.seed_button_locked_ == seed_locked);
-    CHECK(r.ui.options_.pitch_preview() == PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 8));
+    CHECK(r.ui.options_.pitch_preview() ==
+        PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 8));
     CHECK(r.ui.options_.active());
   }
   r.Down(SWITCH_SEED);
@@ -1335,12 +1345,16 @@ void TestOptionsPalette() {
     const OptionValue& v = kOptionValues[i];
     r.ui.options_.selected_ = v.setting;
     switch (v.setting) {
-      case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value); break;
-      case OPTION_WIDTH: r.ui.options_.width_preview_ = v.value ? 255 : 0; break;
+      case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value);
+        break;
+      case OPTION_WIDTH: r.ui.options_.width_preview_ = v.value ? 255 : 0;
+        break;
       case OPTION_REVERB: r.ui.options_.clouds_preview_ = v.value; break;
-      case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value); break;
+      case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value);
+        break;
       case OPTION_SELF_PLAY: r.ui.options_.self_play_preview_ = v.value; break;
-      case OPTION_LIMITER: r.ui.options_.preview_ = OutputLimiterMode(v.value); break;
+      case OPTION_LIMITER: r.ui.options_.preview_ = OutputLimiterMode(v.value);
+        break;
       default: break;
     }
     CHECK(&r.ui.options_.indication() == &kOptionValues[i]);

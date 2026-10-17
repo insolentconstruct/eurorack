@@ -9,21 +9,21 @@
 
 1. Open: hold ASSIGN 3 s, release.
 2. Change page: tap ASSIGN. The pulsing mix LED marks the page (F / D/W / R).
-3. Change a setting: turn its knob; it saves when you let go (the page LED flashes).
+3. Change a setting: turn its knob; it saves one second after you stop (the page LED flashes).
 4. Close: hold ASSIGN 3 s, or press any other button.
 
-Turn a knob a little before it responds.
-Wait a second before powering off.
+Move a knob more than 10% of its travel before it responds.
+Wait one second before powering off.
 
-MEDIA shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
+MEDIA shows the setting value: steady, slow blink, fast blink or two pulses;colours are named below.
 
 ## Page 1 — REVERB LED pulsing
 
 | Knob | Setting | Values left to right | MEDIA LED per value |
 |---|---|---|---|
 | FEEDBACK | Pitch scale | Off / Chromatic / Scale | green; steady / yellow; steady / see scale list |
-| DRY/WET | Stereo width | Stock / wider → | green; steady / green → yellow → red; slow blink |
-| REVERB | Reverb character | Stock / Clouds | green; steady / yellow; steady |
+| DRY/WET | Stereo width | Stock / Width (wider →) | green; steady / green → yellow → red; slow blink |
+| REVERB | Reverb character | Stock / Clouds-style | green; steady / yellow; steady |
 
 Scale (tap SEED to step through):
 
@@ -40,34 +40,34 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | MEDIA LED per value |
 |---|---|---|---|
-| FEEDBACK | not used yet | — | — |
-| DRY/WET | Delay mode | Auto / Never / Wide | green; steady / yellow; steady / red; steady |
-| REVERB | not used yet | — | — |
+| FEEDBACK | Not used yet | — | — |
+| DRY/WET | Delay mode | Auto (Stock) / Never / Wide detent | green; steady / yellow; steady / red; steady |
+| REVERB | Not used yet | — | — |
 
 ## Page 3 — DRY/WET LED pulsing
 
 | Knob | Setting | Values left to right | MEDIA LED per value |
 |---|---|---|---|
-| FEEDBACK | Self-play | Automatic / On request | green; steady / yellow; steady |
-| DRY/WET | Limiter | Stock / Fast / Off | green; steady / yellow; steady / red; steady |
-| REVERB | not used yet | — | — |
+| FEEDBACK | Self-play | Automatic (Stock) / On request | green; steady / yellow; steady |
+| DRY/WET | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
+| REVERB | Not used yet | — | — |
 
 ## Details
 
 Hold ASSIGN alone for 3 seconds with the mix knobs still, then release. Pages cycle 1 → 2 → 3 → 1; reopening remembers the page until power-off.
 
-Move more than 10% of knob travel to begin editing. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch and Delay mode use thirds; Reverb character and Self-play use halves; Limiter uses thirds.
+Move a knob more than 10% of its travel to begin editing. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch, Delay mode and Limiter use thirds; Reverb character and Self-play use halves.
 
 Width: Stock below 10%; leave Stock above 13%, return below 7%. Enabled width goes from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Changes affect new grains; zero spread preserves stereo position, with mono centred. When enabled, ASSIGN adds WIDTH after the three mix destinations; all three LEDs pulse. ASSIGN CV adds to saved width, clamped to zero and full spread.
 
-Changes save after 1 second without knob movement that changes the setting or passes the movement threshold. Pending changes save after leaving too. The page LED flashes for 100 ms on entry, exit and saving. All three mix LEDs pulse on entry; one then pulses to mark the page. There is no idle exit or cancel.
+Changes save after 1 second without knob movement that changes the setting or passes the movement threshold. Pending changes save after closing too. The page LED flashes for 100 ms on entry, close and saving. All three mix LEDs pulse on entry; one then pulses to mark the page. There is no idle close or cancel.
 
 Slow blink is 0.98 Hz; fast blink is 3.91 Hz. Two yellow pulses repeat as a 2.048 s group. MEDIA shows the first available setting on entry, then the last knob moved past its threshold. Unused knobs leave it unchanged.
 
 Scale: short SEED taps cycle the eight scales instead of closing options; holds do not cycle; taps do not play grains. Pitch snaps new grains, including synth grains; playing grains, the continuous synth oscillator and delay pitch keep their pitch. The root is unity (0 semitones); +1 V is one octave. Pelog and the raags are microtonal.
 
-Delay Auto switches at SIZE fully clockwise; Never stays granular. Wide keeps the switch and adds an unfiltered 40–60% zone to SIZE attenurandomizer plus SIZE CV, with no resonant boost. Synth is unaffected.
+Delay mode Auto (Stock) switches at SIZE fully clockwise; Never stays granular. Wide detent keeps the switch and adds an unfiltered 40–60% zone to SIZE attenurandomizer plus SIZE CV, with no resonant boost. Synth is unaffected.
 
-Clouds uses Clouds-style reverb. Switching briefly fades and clears the tail.
+Clouds-style changes the reverb character and adds grain diffusion. Switching briefly fades and clears the tail.
 
 Self-play On request needs both inputs unpatched and FREEZE off: hold MEDIA 1.5 s to start or stop. Patching an input stops it once FREEZE is off. Limiter Off allows loud peaks to hard-clip.

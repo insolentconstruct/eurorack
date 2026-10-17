@@ -124,13 +124,6 @@ class Settings {
     if (!width) set_width_assigned(false);
   }
 
-  // Byte 16 overlays WIDTH on a stock-safe FEEDBACK assignment.
-  inline bool width_assigned() const { return state_.padding[6] == 1; }
-  inline void set_width_assigned(bool assigned) {
-    state_.padding[6] = assigned && stereo_width() ? 1 : 0;
-    if (assigned) state_.assignable_cv_destination = 0;
-  }
-
   // Byte 15: the automatic SIZE transition is the default.
   inline DelayMode delay_mode() const {
     const uint8_t value = state_.padding[5];
@@ -141,6 +134,14 @@ class Settings {
   inline void set_delay_mode(DelayMode mode) {
     state_.padding[5] = mode == DELAY_MODE_NEVER ? 0xa1
         : mode == DELAY_MODE_WIDE_DETENT ? 0xa2 : 0;
+  }
+
+  // Byte 16 overlays WIDTH while FEEDBACK remains the saved destination.
+  inline bool width_assigned() const { return state_.padding[6] == 0xa1; }
+
+  inline void set_width_assigned(bool assigned) {
+    state_.padding[6] = assigned && stereo_width() ? 0xa1 : 0;
+    if (assigned) state_.assignable_cv_destination = 0;
   }
 
   inline State* mutable_state() {

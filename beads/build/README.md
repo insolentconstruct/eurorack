@@ -10,7 +10,7 @@ From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eu
 
 Install at your own risk. Please do not contact Mutable Instruments about it; report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
 
-## Options page
+## Quick start
 
 Hold ASSIGN for three seconds and release to enter. Tap ASSIGN to change
 page; move a mix knob and rest it for one second to save.
@@ -36,39 +36,37 @@ delay mode are new since alpha 2. The new settings default to stock behaviour.
 
 ## Delay mode
 
-In the options page's Feedback category, DRY/WET selects Auto / Never /
-Wide detent in thirds. Auto keeps the usual switch to delay at SIZE fully
+On page 2 (FEEDBACK LED), DRY/WET selects Auto (Stock) / Never /
+Wide detent in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
 clockwise. Never keeps granular playback there. Wide detent keeps automatic
 switching and makes the delay filter neutral from 40% to 60% of its range,
 with no resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
 neutral zone the remaining travel reaches the usual low-pass and high-pass
 ends. The MEDIA LED shows steady green / yellow / red.
-The setting is saved and defaults to Auto. It does not affect synth mode.
+The setting is saved and defaults to Auto (Stock). It does not affect synth mode.
 
 ## Stereo width
 
 On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
+Move out of Stock above 13%; return below 7%.
 Above this zone it sets a continuous saved width: zero displacement at 13%
 to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes
 every grain, including at DENSITY fully clockwise with no other randomness.
 Pan is fixed at grain start; changes affect new grains only, including synth.
 The MEDIA LED is steady green for Stock. Enabled width blinks slowly, using
-Beads’ green through yellow to red meter colour for the amount; adjacent saved
+Beads' green through yellow to red meter colour for the amount; adjacent saved
 amounts can share a colour.
 When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
-to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
-0 is Stock; 1..255 encode enabled width from zero to full.
-WIDTH assignment uses extension byte 16. Stock firmware sees FEEDBACK
-and ignores the extension settings; saving in stock firmware clears them.
+to 0..1. Stock keeps the stock cycle and pan rounding.
 
 ## Monophonic grains
 
 Hold MEDIA first, then press SEED to toggle monophonic grains; the setting
-is saved and defaults off. The MEDIA/quality LED is half as bright when on
+is saved and defaults off. The MEDIA/MEDIA LED is half as bright when on
 (the recording reserve can dim it further). This enables Mutable Instruments'
 original code and gesture. Each new grain fades the previous grains out.
 It suits the square and decay SHAPE settings. Slower shapes can go nearly
@@ -96,86 +94,87 @@ If FREEZE is released during self-play, the minute starts when self-play ends.
 
 ## Options page
 
+Visual and text guides: OPTIONS.md, options-guide.svg (printable), and
+options-guide-mobile.svg (phone). Find them beside this README in release
+zips, or beside the build documentation in the source download.
+
 Hold ASSIGN alone for three seconds with the mix knobs still; then release.
 Tap ASSIGN to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
 (DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
 on entry. Reopening remembers the last page until power-off; power-up
 starts on page 1. MEDIA shows the first available setting on each page,
 then the last qualified knob moved. Move a knob more than 10% of its travel
-before it edits. Reserved knobs do nothing, including to MEDIA and saving.
+before it edits. Knobs marked Not used yet do nothing, including to MEDIA and saving.
 
-Page / pulsing LED  FEEDBACK       DRY/WET          REVERB
-1 / REVERB          Pitch scale    Stereo width    Reverb character
-2 / FEEDBACK        Reserved       Delay mode      Reserved
-3 / DRY/WET         Self-play      Limiter         Reserved
-Reserved slots are attacks, mix law and LED brightness respectively.
+Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
+1 / REVERB          Pitch scale   Stereo width  Reverb character
+2 / FEEDBACK        Not used yet  Delay mode    Not used yet
+3 / DRY/WET         Self-play     Limiter       Not used yet
 
 Changes are saved after one second without qualified knob movement or a
-value change. A sweep through zones saves once when it settles. Leave by
+value change. A sweep through zones saves once when it settles. Close by
 holding ASSIGN for three seconds or pressing another button; there is no
-idle exit or cancel. Short SEED taps on Scale cycle the pitch scale instead
-of leaving. A pending change still saves after leaving: wait one second
-before powering off. Mix controls resume with smooth catch-up after exit.
+idle close or cancel. Short SEED taps on Scale cycle the pitch scale instead
+of closing options. A pending change still saves after closing: wait one second
+before powering off. Mix controls resume with smooth catch-up after closing.
 Every first value, including Pitch Off, is steady green. Other values follow
 yellow, red, then green/yellow/red slow and fast blinking. Slow is about 1 Hz;
 fast is about 4 Hz. Raag Shri uses two yellow pulses then a pause.
-The page LED flashes for 100 ms on entry, exit and after a changed batch is
+The page LED flashes for 100 ms on entry, close and after a changed batch is
 written. MEDIA keeps showing the value. See the reference for every value.
 
 On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
+Move out of Stock above 13%; return below 7%.
 Above this zone it sets a continuous saved width: zero displacement at 13%
 to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes
 every grain, including at DENSITY fully clockwise with no other randomness.
 Pan is fixed at grain start; changes affect new grains only, including synth.
 The MEDIA LED is steady green for Stock. Enabled width blinks slowly, using
-Beads’ green through yellow to red meter colour for the amount; adjacent saved
+Beads' green through yellow to red meter colour for the amount; adjacent saved
 amounts can share a colour.
 When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
-to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
-0 is Stock; 1..255 encode enabled width from zero to full.
-WIDTH assignment uses extension byte 16. Stock firmware sees FEEDBACK
-and ignores the extension settings; saving in stock firmware clears them.
-Delay mode: Auto keeps the usual delay switch at SIZE fully clockwise.
+to 0..1. Stock keeps the stock cycle and pan rounding.
+Delay mode: Auto (Stock) keeps the usual delay switch at SIZE fully clockwise.
 Never keeps granular playback there. Wide detent keeps the switch, with
 an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer
 plus SIZE CV) and no resonant boost. It does not affect synth mode.
-For delay mode, the quality LED shows steady green / yellow / red
-for Auto / Never / Wide detent.
+For delay mode, the MEDIA LED shows steady green / yellow / red
+for Auto (Stock) / Never / Wide detent.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
-Self-play: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects Automatic
-(stock, steady green); upper half selects On request (steady yellow).
-Move more than one tenth of the travel to begin; the midpoint
+Self-play: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects Automatic (Stock)
+(steady green); upper half selects On request (steady yellow).
+Move more than 10% of its travel to begin; the midpoint
 has a small dead band to prevent flicker.
 With On request, self-play never starts by itself. With both audio inputs
 unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
 hold again to stop. Patching either input also stops it (once FREEZE is off).
 With an input patched, the hold restarts automatic gain as usual.
-Automatic keeps stock behaviour.
+Automatic (Stock) keeps stock behaviour.
 The setting is saved. Stock firmware ignores it; saving after a downgrade
-resets it to Automatic.
+resets it to Automatic (Stock).
 
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (steady yellow).
-Move more than one tenth of the travel to begin; the midpoint
-has a small dead band. The quality LED shows the last knob moved on this page.
+Move more than 10% of its travel to begin; the midpoint
+has a small dead band. The MEDIA LED shows the last knob moved on this page.
 Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
 plus fixed diffusion on the grain wet output. In delay and self-play modes,
 only the reverb character changes. Switching briefly fades the sound out and
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
-Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
+Pitch quantization: Reverb LED page, FEEDBACK knob. Three equal zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
 Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
 Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
-then a pause). Holds do not cycle. SEED taps here do not trigger or latch grains; other buttons leave the page. The
-setting is saved; default is Off.
+then a pause). Holds do not cycle. SEED taps here do not trigger or latch
+grains; other buttons close the page. The setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start.
 The grid has a fixed root at unity (0 semitones); +1 V remains one octave.
@@ -185,7 +184,6 @@ Scales use Mutable Instruments Marbles' tunings and notes with weight at
 least 64, including four-note Pelog. Major and Minor pentatonic are subsets
 of its Major and Minor scales.
 Pelog and the raags are microtonal.
-
 
 ## Updating your module
 
@@ -223,20 +221,27 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 ## Saved data
 
 The settings and frozen-buffer format below are frozen for Beta 1. Off,
-Automatic and Stock keep the stock behaviour; zero and unknown option values
+Automatic (Stock) and Stock keep the stock behaviour; zero and unknown option values
 select those defaults.
 
 Byte 12/13 values are frozen at Beta 1. Future options use a free byte
-14–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
+17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
+
+Width uses byte 14: 0 is Stock; 1..255 encode enabled width from zero to full.
+WIDTH assignment uses byte 16: 0 is unassigned, 0xa1 is assigned; other values
+are unassigned. Stock sees FEEDBACK and clears these extensions on save.
 
 Settings offsets are bytes in the 24-byte State payload:
 
 | Byte | Setting | Saved values | Stock firmware |
 |---|---|---|---|
 | 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown → Stock | Ignores; clears to 0 on save |
-| 11 | Self-play | 0 Automatic, 0xA1 On request; unknown → Automatic | Ignores; clears to 0 on save |
+| 11 | Self-play | 0 Automatic (Stock), 0xA1 On request; unknown → Automatic (Stock) | Ignores; clears to 0 on save |
 | 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Major pentatonic, 0xA6 Minor pentatonic, 0xA7 Pelog, 0xA8 Raag Bhairav, 0xA9 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
 | 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
+| 14 | Stereo width | 0 Stock; 1..255 enabled width, zero to full spread | Ignores; clears to 0 on save |
+| 15 | Delay mode | 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown → Auto (Stock) | Ignores; clears to 0 on save |
+| 16 | WIDTH assignment | 0 unassigned, 0xA1 assigned; unknown → unassigned | Sees FEEDBACK; clears extension on save |
 
 Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
 byte but compiles out the gesture, so turn mono off before downgrading.

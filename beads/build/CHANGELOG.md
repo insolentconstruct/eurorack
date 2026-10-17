@@ -4,25 +4,22 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
-- ASSIGN uses the pending width setting immediately after leaving options, including when disabling an assigned WIDTH.
 - Add generated printable and phone options guides, a text guide, and release ZIP copies.
-- Delay filter resonance ramps when changing Wide detent, avoiding a mode-switch click.
-- Width ignores small stationary knob noise. SEED scale taps survive a pending save, and leaving options restores normal controls while the final change settles and saves.
-- Options reorganized across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Reserved knobs are inert. Reopening remembers the last page until power-off.
-- Options save after one second of settled controls. Hold ASSIGN 3 s or another button leaves; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, exit and completed saves flash the page LED for 100 ms.
-- Enabled width uses the green/yellow/red meter with a slow blink. Pitch follows the same ladder across steady, slow and fast; Raag Shri uses two yellow pulses followed by a pause.
-- Added a firmware-table TSV exporter and a check against the plain-text Options reference.
-- Delay mode: Feedback category, DRY/WET knob, Auto / Never / Wide detent in thirds. Never keeps SIZE fully clockwise granular; Wide detent gives the SIZE attenurandomizer/CV filter a 40–60% neutral zone and removes resonant boost (#9, #26).
-- Stereo width: continuous saved resting width above the Stock zone; enabled width randomizes every grain. Optional fourth ASSIGN destination adds CV to width, clamped to 0..1 (#5).
-- More CPU headroom for the grain engine: about 6,900 fewer cycles per audio block in the heaviest stock case (measured on a test board), from three small changes in Mutable Instruments' own style. The sound is bit-identical.
-- Options page: starts at power-up on the Reverb page, where FEEDBACK sets the pitch scale.
-- Buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
-- Pitch scale: Off (default), Chromatic or eight scales. Reverb category, FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
-- Saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 14–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.
-- Clouds-style reverb: Reverb page, REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail.
+- Reorganize options across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Knobs marked Not used yet are inert. Reopening remembers the last page until power-off.
+- Save options after one second of settled controls. Hold ASSIGN 3 s or press another button to close; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, close and completed saves flash the page LED for 100 ms.
+- Show enabled width with the green/yellow/red meter with a slow blink. Pitch follows the same ladder across steady, slow and fast; Raag Shri uses two yellow pulses followed by a pause.
+- Add delay mode: page 2 (FEEDBACK LED), DRY/WET knob, Auto (Stock) / Never / Wide detent in thirds. Never keeps SIZE fully clockwise granular; Wide detent gives the SIZE attenurandomizer/CV filter a 40–60% neutral zone and removes resonant boost (#9, #26). Filter resonance ramps between modes to avoid a click.
+- Add stereo width: continuous saved resting width above the Stock zone; enabled width randomizes every grain. Optional fourth ASSIGN destination adds CV to width, clamped to 0..1 (#5). Width ignores stationary knob noise, and ASSIGN uses pending width changes immediately after closing options.
+- Increase CPU headroom for the grain engine: about 6,900 fewer cycles per audio block in the heaviest stock case (measured on a test board), from three small changes in Mutable Instruments' own style. The sound is bit-identical.
+- Start the options page at power-up on page 1 (REVERB LED), where FEEDBACK sets the pitch scale.
+- Add buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
+- Add pitch scale: Off (default), Chromatic or eight scales. Page 1 (REVERB LED), FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
+- Preserve saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 17–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.
+- Add Clouds-style reverb: page 1 (REVERB LED), REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail.
+- Keep SEED scale taps through a pending save; closing options restores normal controls while the final change settles.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)
-- Self-play option (options page, FEEDBACK): Automatic (stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).
+- Self-play option (options page, FEEDBACK): Automatic (Stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).
 - Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, up to 320 s, reset by a completed save or a minute unfrozen (#56).
 - Monophonic grains (Mutable Instruments' original code): hold MEDIA and press SEED to toggle; as Mutable Instruments noted, this works well only with the first two SHAPE envelopes (square and decay), and should be turned off before downgrading (#31).
 - App built with GCC 9 instead of 4.9.3; 20 of 20 emulated scenarios give bit-identical audio.
