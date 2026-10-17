@@ -853,6 +853,16 @@ void TestQuantizedGrainPitch() {
 
 void TestStereoWidth() {
   test_checker.Start("TestStereoWidth");
+  CHECK(ModulatedStereoWidth(0, 1.0f) == 0.0f);
+  CHECK(ModulatedStereoWidth(1, -1.0f) == 1.0f);
+  CHECK(ModulatedStereoWidth(255, 1.0f) == 255.0f);
+  CHECK(ModulatedStereoWidth(128, 0.25f) == 191.5f);
+  for (int i = -200; i <= 200; ++i) {
+    float amount = 0.5f + float(i) / 100.0f;
+    CONSTRAIN(amount, 0.0f, 1.0f);
+    CHECK(fabsf(ModulatedStereoWidth(128, float(i) / 100.0f)
+        - (1.0f + 254.0f * amount)) < 1e-5f);
+  }
   DelayGranularPlayer player;
   player.Init(48000.0f);
   Parameters p;
@@ -860,6 +870,26 @@ void TestStereoWidth() {
   TriggerGenerator::Output trigger;
   memset(&trigger, 0, sizeof(trigger));
   trigger.regularity = 1.0f;
+  // At centre the stereo matrix is identity, mono has equal gains.
+  TrimmedLine line;
+  line.length = 10000;
+  line.freeze = false;
+  DelayGrain grain;
+  grain.Init(48000.0f);
+  grain.Start(&line, 5000.0f, 1.0f, 100.0f, 0.5f, 1.0f, 0.5f, 0.0f);
+  CHECK(grain.gain_[0][0] == 1.0f);
+  CHECK(grain.gain_[1][1] == 1.0f);
+  CHECK(grain.gain_[0][1] == 0.0f);
+  CHECK(grain.gain_[1][0] == 0.0f);
+  struct MonoLine : TrimmedLine { enum { NUM_CHANNELS = 1 }; };
+  MonoLine mono;
+  mono.length = 10000;
+  mono.freeze = false;
+  DelayGrain mono_grain;
+  mono_grain.Init(48000.0f);
+  mono_grain.Start(&mono, 5000.0f, 1.0f, 100.0f,
+      0.5f, 1.0f, 0.5f, 0.0f);
+  CHECK(mono_grain.gain_[0][0] == mono_grain.gain_[1][0]);
   float amplitude, stock, narrow, wide;
   for (int i = 1; i <= 1000; ++i) {
     p.time.attenuverter = float(i % 100) / 100.0f;
@@ -872,23 +902,35 @@ void TestStereoWidth() {
         0.5f * player.ComputeSpread(trigger, p));
     CHECK(stock == expected);
     CHECK(stmlib::Random::GetWord() == after);
-    player.set_stereo_width(STEREO_WIDTH_NARROW);
+    player.set_stereo_width(1);
     stmlib::Random::Seed(i);
     player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &narrow);
-    CHECK(narrow == 0.5f + 0.25f * (stock - 0.5f));
+    CHECK(narrow == 0.5f);
     CHECK(stmlib::Random::GetWord() == after);
-    player.set_stereo_width(STEREO_WIDTH_WIDE);
+    player.set_stereo_width(255);
     stmlib::Random::Seed(i);
     const float full_pan = stmlib::Random::GetFloat();
     stmlib::Random::Seed(i);
     player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &wide);
-    CHECK(wide == full_pan);
+    CHECK(fabsf(wide - full_pan) < 1e-7f);
     CHECK(stmlib::Random::GetWord() == after);
     p.time.attenuverter = 0.0f;
     stmlib::Random::Seed(i);
     player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &wide);
-    CHECK(wide == full_pan);
+    CHECK(fabsf(wide - full_pan) < 1e-7f);
   }
+  DelayGrain* active = player.new_grain();
+  active->Init(48000.0f);
+  active->Start(&line, 5000.0f, 1.0f, 100.0f,
+      0.5f, 1.0f, 0.2f, 0.0f);
+  float gains[2][2];
+  memcpy(gains, active->gain_, sizeof(gains));
+  player.set_stereo_width(1);
+  player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &wide);
+  CHECK(memcmp(gains, active->gain_, sizeof(gains)) == 0);
+  player.set_stereo_width(255);
+  player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &wide);
+  CHECK(memcmp(gains, active->gain_, sizeof(gains)) == 0);
 }
 
 int main() {

@@ -78,7 +78,7 @@ class GranularPlayer {
     Reset();
   }
   
-  inline void set_stereo_width(StereoWidth width) { stereo_width_ = width; }
+  inline void set_stereo_width(float width) { stereo_width_ = width; }
 
   inline void set_pitch_scale(PitchScale scale) { pitch_scale_ = scale; }
 
@@ -128,18 +128,17 @@ class GranularPlayer {
     const float num_active_grains = float(CountActiveGrains() + 1);
     *amplitude = 1.0f / stmlib::Sqrt(num_active_grains);
 
-    const float total_spread = ComputeSpread(trigger, p);
-    const float pan_spread = 0.5f * num_active_grains * total_spread;
-    if (stereo_width_ == STEREO_WIDTH_WIDE) {
-      *pan = stmlib::Random::GetFloat();
+    if (stereo_width_ != 0.0f) {
+      const float random_pan = stmlib::Random::GetFloat();
       // Preserve the shared random sequence: stock pan takes two draws.
       stmlib::Random::GetFloat();
+      const float width = (stereo_width_ - 1.0f) / 254.0f;
+      *pan = 0.5f + width * (random_pan - 0.5f);
       return;
     }
+    const float total_spread = ComputeSpread(trigger, p);
+    const float pan_spread = 0.5f * num_active_grains * total_spread;
     *pan = BoundedRandomFloat(pan_spread);
-    if (stereo_width_ == STEREO_WIDTH_NARROW) {
-      *pan = 0.5f + 0.25f * (*pan - 0.5f);
-    }
   }
   
   inline T* new_grain() { return grain_priority_list_[0]; }
@@ -253,7 +252,7 @@ class GranularPlayer {
   int grain_interval_;
   
   PitchScale pitch_scale_;
-  StereoWidth stereo_width_;
+  float stereo_width_;
 
   DISALLOW_COPY_AND_ASSIGN(GranularPlayer);
 };

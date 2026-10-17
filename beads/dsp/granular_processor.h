@@ -224,7 +224,7 @@ class GranularProcessor {
     multitap_delay_.set_wide_detent(wide_detent_);
   }
 
-  inline void set_stereo_width(StereoWidth width) {
+  inline void set_stereo_width(float width) {
     granular_player_.set_stereo_width(width);
   }
 

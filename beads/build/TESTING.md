@@ -59,8 +59,9 @@ The table lists the tests on the `drizzlet` branch now; several were added after
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
 
 Stereo width adds host checks for the unchanged Stock calculation and RNG
-sequence, Narrow's quarter excursion, Wide with zero randomness, every stored
-byte value, options preview and saving, and unchanged bytes 12/13.
+sequence, zero displacement, full spread with zero randomness, CV clamping,
+stock/enabled ASSIGN cycles, every saved width byte, preview and saving,
+and unchanged bytes 12/13. Round 2 evidence is recorded in the lane REPORT.md.
 
 Delay mode adds host checks for all stored byte values, preview, cancellation
 and saving, Never at SIZE fully clockwise in every quality and channel mode,

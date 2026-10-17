@@ -78,7 +78,10 @@ bool Settings::Init(bool recovery_mode) {
   if (success) {
     // Sanitize settings read from flash.
     CONSTRAIN(state_.media, 0, 3);
-    CONSTRAIN(state_.assignable_cv_destination, 0, 3);
+    CONSTRAIN(state_.assignable_cv_destination, 0, 4);
+    if (!stereo_width() && state_.assignable_cv_destination == 4) {
+      state_.assignable_cv_destination = 0;
+    }
   }
   
   set_output_limiter_mode(output_limiter_mode());

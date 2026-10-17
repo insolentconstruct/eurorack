@@ -134,3 +134,23 @@ The compile-time [frozen-feedback experiment](FROZEN_FEEDBACK.md) adds
 It adds another 840 B flash and 4,152 B BSS. Its per-sample calls to the
 existing diffuser are included. It is absent from normal firmware and is
 not an optimization or a production setting.
+
+### Round 2: continuous stereo width
+
+The continuous width replacement was measured with the same GCC 9.3.1,
+Cortex-M7 Unicorn DSP probe: 4,000 warm blocks, 256 counted blocks, q3 stereo,
+12 frames/block. Executed instructions, not hardware cycles:
+
+| Fixture | Original fcbfe38 median / peak | Round 2 defaults |
+|---|---:|---:|
+| stress32 | 77,712 / 77,726 | 77,730 / 77,744 |
+| Clouds stress32 | 79,320 / 79,348 | 79,338 / 79,366 |
+| Delay | 51,460.5 / 51,592 | 51,540.5 / 51,672 |
+| Frozen delay | 38,891 / 39,089 | 38,971 / 39,169 |
+
+Enabled width at zero displacement: 77,693 / 77,706; full spread:
+77,692 / 77,706 in stress32. Existing voices are primed identically; width
+only affects subsequently started grains. All four default DSP captures
+match the original float audio byte for byte. These counts exclude UI/CV
+and codec work; the whole callback comparison includes those paths.
+Raw evidence: lane `round2-cost-*.json` and `.f32`. No hardware was accessed.

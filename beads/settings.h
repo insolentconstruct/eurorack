@@ -114,16 +114,13 @@ class Settings {
         ? 0xa0 + scale : 0;
   }
 
-  // Byte 14: unknown values retain stock playback.
+  // Byte 14: zero is stock; 1..255 is enabled width.
   inline StereoWidth stereo_width() const {
-    const uint8_t value = state_.padding[4];
-    return value == 0xa1 ? STEREO_WIDTH_NARROW
-        : value == 0xa2 ? STEREO_WIDTH_WIDE : STEREO_WIDTH_STOCK;
+    return state_.padding[4];
   }
 
   inline void set_stereo_width(StereoWidth width) {
-    state_.padding[4] = width == STEREO_WIDTH_NARROW ? 0xa1
-        : width == STEREO_WIDTH_WIDE ? 0xa2 : 0;
+    state_.padding[4] = width;
   }
 
   // Byte 15: the automatic SIZE transition is the default.

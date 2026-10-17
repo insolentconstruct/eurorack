@@ -31,11 +31,17 @@
 
 namespace beads {
 
-enum StereoWidth {
-  STEREO_WIDTH_STOCK,
-  STEREO_WIDTH_NARROW,
-  STEREO_WIDTH_WIDE
-};
+// Saved byte: zero is stock, 1..255 spans zero to full displacement.
+typedef unsigned char StereoWidth;
+const StereoWidth STEREO_WIDTH_STOCK = 0;
+
+inline float ModulatedStereoWidth(StereoWidth width, float cv) {
+  if (!width) return 0.0f;
+  float amount = float(width - 1) / 254.0f + cv;
+  if (amount < 0.0f) amount = 0.0f;
+  if (amount > 1.0f) amount = 1.0f;
+  return 1.0f + 254.0f * amount;
+}
 
 enum DelayMode {
   DELAY_MODE_AUTO,

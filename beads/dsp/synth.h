@@ -76,7 +76,7 @@ class Synth {
     output_limiter_mode_ = mode;
   }
 
-  inline void set_stereo_width(StereoWidth width) {
+  inline void set_stereo_width(float width) {
     wavetable_granular_player_.set_stereo_width(width);
   }
 

@@ -35,14 +35,14 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Always opens on Reverb (pitch scale on FEEDBACK); tap ASSIGN cycles Reverb → Feedback → Dry/wet → Reverb; in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter, pitch, width and delay mode thirds, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Always opens on Reverb (pitch scale on FEEDBACK); tap ASSIGN cycles Reverb → Feedback → Dry/wet → Reverb; in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter, pitch and delay mode thirds; width continuous above Stock, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
 | Dry/wet LED category, REVERB | Reverb character: lower half Stock (default), upper half Clouds-style; midpoint hysteresis ±3% | Steady green / one cyan pulse per 1.2 s; quality LED follows last knob moved |
 | Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
 | Feedback LED category, DRY/WET | Delay mode: Auto / Never / Wide detent in thirds; ±3% hysteresis | Steady green / one blue pulse / two amber pulses |
-| Feedback LED category, REVERB | Stereo width: Stock / Narrow / Wide in thirds; ±3% hysteresis | Steady green / one blue pulse / two amber pulses |
+| Feedback LED category, REVERB | Stereo width: Stock below 10%, ±3% hysteresis; continuous 0..1 above 13% | Green Stock / amber brightness for width |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK | Reserved | Planned: mix law (#21, #48) |
 | Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle eight scales |
@@ -117,7 +117,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 11 | `padding[1]` | Self-play: 0xA1 = On request; 0 and all unknown values = Automatic; canonicalized on load/save |
 | 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
-| 14 | `padding[4]` | Stereo width: 0 Stock, 0xA1 Narrow, 0xA2 Wide; unknown values read Stock |
+| 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
 | 15 | `padding[5]` | Delay mode: 0 Auto, 0xA1 Never, 0xA2 Wide detent; unknown values read Auto |
 | 16–22, individually | `padding[6]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
@@ -240,3 +240,17 @@ slot. [FROZEN_FEEDBACK.md](FROZEN_FEEDBACK.md) compares a separate wet loop
 with diffusion in the recording feedback path and records possible homes.
 Its extra 4 KiB buffer and processing exist only with
 `BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER` defined.
+
+In Feedback options, REVERB selects Stock below 10% (3% dead band).
+Above this zone it sets a continuous saved width: zero displacement at 13%
+to full random spread at fully clockwise. At zero width the input stereo
+positioning passes through and mono stays centred. Enabled width randomizes
+every grain, including at DENSITY fully clockwise with no other randomness.
+Pan is fixed at grain start; changes affect new grains only, including synth.
+The MEDIA LED is green for Stock and amber with brightness showing width.
+When enabled, short ASSIGN presses cycle the three stock destinations then
+WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
+mix assignment remains available. ASSIGN CV adds to resting width and clamps
+to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
+0 is Stock; 1..255 encode enabled width from zero to full. Old experimental
+Narrow/Wide bytes now represent amounts; reselect width after upgrading.

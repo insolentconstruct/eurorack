@@ -43,13 +43,19 @@ The setting is saved and defaults to Auto. It does not affect synth mode.
 
 ## Stereo width
 
-In the options page's Feedback category, REVERB selects Stock / Narrow /
-Wide in thirds. Stock is unchanged. Narrow keeps one-quarter of the stock
-pan excursion around centre, preserving more of a stereo recording's image.
-Wide gives every grain the full random pan range, even with no parameter
-randomness and every trigger accepted. It also applies to synth grains.
-The MEDIA LED shows steady green / one blue pulse / two amber pulses.
-The setting is saved and defaults to Stock.
+In Feedback options, REVERB selects Stock below 10% (3% dead band).
+Above this zone it sets a continuous saved width: zero displacement at 13%
+to full random spread at fully clockwise. At zero width the input stereo
+positioning passes through and mono stays centred. Enabled width randomizes
+every grain, including at DENSITY fully clockwise with no other randomness.
+Pan is fixed at grain start; changes affect new grains only, including synth.
+The MEDIA LED is green for Stock and amber with brightness showing width.
+When enabled, short ASSIGN presses cycle the three stock destinations then
+WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
+mix assignment remains available. ASSIGN CV adds to resting width and clamps
+to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
+0 is Stock; 1..255 encode enabled width from zero to full. Old experimental
+Narrow/Wide bytes now represent amounts; reselect width after upgrading.
 
 ## Monophonic grains
 
@@ -94,7 +100,7 @@ Move a knob more than one tenth of its travel to start selecting; its zones pick
 |---|---|---|
 | Feedback LED (page 0) | FEEDBACK | Self-play: Automatic / On request (halves) |
 | Feedback LED (page 0) | DRY/WET | Delay mode: Auto / Never / Wide detent (thirds) |
-| Feedback LED (page 0) | REVERB | Stereo width: Stock / Narrow / Wide (thirds) |
+| Feedback LED (page 0) | REVERB | Stereo width: Stock / continuous width |
 | Dry/wet LED (page 1) | DRY/WET | Limiter: Stock / Fast release / Off (thirds) |
 | Dry/wet LED (page 1) | REVERB | Reverb: Stock / Clouds-style (halves) |
 | Reverb LED (page 2) | FEEDBACK | Pitch scale: Off / Chromatic / Scale (thirds); tap SEED on Scale to cycle |

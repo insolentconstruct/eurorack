@@ -1422,8 +1422,7 @@ void TestWidthOption() {
     Settings settings;
     memset(settings.mutable_state(), 0, sizeof(State));
     settings.mutable_state()->padding[4] = value;
-    CHECK(settings.stereo_width() == (value == 0xa1 ? STEREO_WIDTH_NARROW
-        : value == 0xa2 ? STEREO_WIDTH_WIDE : STEREO_WIDTH_STOCK));
+    CHECK(settings.stereo_width() == value);
   }
   for (int zone = 0; zone < 3; ++zone) {
     Rig r;
@@ -1432,12 +1431,12 @@ void TestWidthOption() {
     CHECK(r.ui.options_.page() == kSelfPlayPage);
     r.reverb = zone == 1 ? 0.0f : 0.5f;
     r.Tick(20);
-    r.reverb = (float(zone) + 0.5f) / 3.0f;
+    r.reverb = zone == 0 ? 0.0f : zone == 1 ? 0.14f : 1.0f;
     r.Tick(20);
-    CHECK(r.ui.stereo_width() == StereoWidth(zone));
+    CHECK(r.ui.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 3 : 255));
     CHECK(r.settings.stereo_width() == STEREO_WIDTH_STOCK);
     r.Tick(5100);
-    CHECK(r.settings.stereo_width() == StereoWidth(zone));
+    CHECK(r.settings.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 3 : 255));
     CHECK(r.settings.state().padding[2] == 0);
     CHECK(r.settings.state().padding[3] == 0);
   }
@@ -1484,20 +1483,22 @@ void TestDelayOption() {
 void TestPlaybackStorage() {
   test_checker.Start("TestPlaybackStorage");
   Rig r;
-  for (int width = 0; width < 3; ++width) {
+  for (int width = 0; width < 256; ++width) {
     for (int delay = 0; delay < 3; ++delay) {
       r.settings.set_pitch_scale(PITCH_SCALE_SHRI);
       r.settings.set_clouds_style(true);
       r.settings.set_stereo_width(StereoWidth(width));
+      r.settings.mutable_state()->assignable_cv_destination = width ? 4 : 0;
       r.settings.set_delay_mode(DelayMode(delay));
       r.settings.SaveState();
       Settings loaded;
       loaded.Init(false);
       CHECK(loaded.stereo_width() == StereoWidth(width));
+      CHECK(loaded.state().assignable_cv_destination == (width ? 4 : 0));
       CHECK(loaded.delay_mode() == DelayMode(delay));
       CHECK(loaded.state().padding[2] == 0xa9);
       CHECK(loaded.state().padding[3] == 0xa2);
-      CHECK(loaded.state().padding[4] == (width ? 0xa0 + width : 0));
+      CHECK(loaded.state().padding[4] == width);
       CHECK(loaded.state().padding[5] == (delay ? 0xa0 + delay : 0));
       for (int byte = 6; byte < 14; ++byte) {
         CHECK(loaded.state().padding[byte] == 0);
@@ -1518,11 +1519,52 @@ void TestFeedbackOptionZones() {
     r.pot = positions[i];
     r.reverb = positions[i];
     r.Tick(20);
-    CHECK(r.ui.stereo_width() == StereoWidth(zones[i]));
+    CHECK((r.ui.stereo_width() != 0) == (positions[i] > 0.13f));
     CHECK(r.ui.delay_mode() == DelayMode(zones[i]));
     CHECK(!r.ui.options_.self_play_preview());
     CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
     CHECK(!r.ui.options_.clouds_preview());
+  }
+}
+
+void TestWidthDeadBand() {
+  test_checker.Start("TestWidthDeadBand");
+  Rig r;
+  r.Enter();
+  r.Tap();
+  r.reverb = 0.0f;
+  r.Tick(20);
+  r.reverb = 0.12f;
+  r.Tick(20);
+  CHECK(r.ui.stereo_width() == 0);
+  r.reverb = 0.14f;
+  r.Tick(20);
+  CHECK(r.ui.stereo_width() > 1);
+  r.reverb = 0.10f;
+  r.Tick(20);
+  CHECK(r.ui.stereo_width() == 1);
+  r.reverb = 0.08f;
+  r.Tick(20);
+  CHECK(r.ui.stereo_width() == 1);
+  r.reverb = 0.06f;
+  r.Tick(20);
+  CHECK(r.ui.stereo_width() == 0);
+}
+
+void TestWidthAssignCycle() {
+  test_checker.Start("TestWidthAssignCycle");
+  Rig r;
+  for (int enabled = 0; enabled < 2; ++enabled) {
+    r.settings.set_stereo_width(enabled ? 128 : 0);
+    r.settings.mutable_state()->assignable_cv_destination = 0;
+    r.Tick(20);
+    const int expected[] = { 1, 2, 4, 0 };
+    for (int i = 0; i < (enabled ? 4 : 3); ++i) {
+      r.Down(SWITCH_ASSIGN);
+      r.Up(SWITCH_ASSIGN);
+      CHECK(r.settings.state().assignable_cv_destination ==
+          (enabled ? expected[i] : (i + 1) % 3));
+    }
   }
 }
 
@@ -1532,6 +1574,8 @@ int main() {
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestWidthDeadBand();
+  TestWidthAssignCycle();
   TestFeedbackOptionZones();
   TestPlaybackStorage();
   TestDelayOption();

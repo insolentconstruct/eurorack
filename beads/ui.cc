@@ -211,6 +211,10 @@ void Ui::Poll() {
       ? options_.delay_preview() : settings_->delay_mode();
   stereo_width_ = options_.active()
       ? options_.width_preview() : settings_->stereo_width();
+  if (!options_.active() && !stereo_width_ &&
+      settings_->mutable_state()->assignable_cv_destination == 4) {
+    settings_->mutable_state()->assignable_cv_destination = 0;
+  }
   pitch_scale_ = options_.active()
       ? options_.pitch_preview() : settings_->pitch_scale();
   output_limiter_mode_ = options_.active()
@@ -292,7 +296,11 @@ void Ui::UpdateLeds() {
               (seed_button_state_ || seed_led_state_) ? 255 : 0);
         }
         
-        if (state.assignable_cv_destination == 3) {
+        if (state.assignable_cv_destination == 4) {
+          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+            leds_.set(Led(LED_ASSIGN_1 + i), triangle);
+          }
+        } else if (state.assignable_cv_destination == 3) {
           for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
             leds_.set(
                 Led(LED_ASSIGN_1 + i),
@@ -336,8 +344,8 @@ void Ui::UpdateLeds() {
     } else if (options_.page() == kSelfPlayPage &&
                options_.reverb_selected()) {
       const int width = options_.width_preview();
-      leds_.set_media(colors[width], width == 0 || phase < 120 ||
-          (width == 2 && phase >= 240 && phase < 360) ? 1.0f : 0.0f);
+      leds_.set_media(colors[width ? 2 : 0],
+          width ? 0.2f + 0.8f * float(width) / 255.0f : 1.0f);
     } else if (options_.page() == kSelfPlayPage) {
       const Leds::Color automatic = { 0, 255, 255 };
       const Leds::Color on_request = { 255, 0, 255 };
@@ -566,7 +574,9 @@ void Ui::OnSwitchReleased(const Event& e) {
           state->assignable_cv_destination = \
               state->assignable_cv_destination == 3
                   ? 0
-                  : ((state->assignable_cv_destination + 1) % 3);
+                  : (state->assignable_cv_destination == 4 ? 0
+                      : (state->assignable_cv_destination == 2 && stereo_width_
+                          ? 4 : (state->assignable_cv_destination + 1) % 3));
         }
         settings_->SaveState();
       }

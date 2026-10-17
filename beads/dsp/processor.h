@@ -198,7 +198,7 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
-  inline void set_stereo_width(StereoWidth width) {
+  inline void set_stereo_width(float width) {
     processor_digital_.set_stereo_width(width);
     processor_vintage_digital_.set_stereo_width(width);
     processor_clean_tape_.set_stereo_width(width);

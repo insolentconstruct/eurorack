@@ -72,16 +72,25 @@ zones pick the value, shown on the quality LED.
 Category (page)   Knob       Choices
 Feedback (0)      FEEDBACK   Self-play: Automatic / On request (halves)
 Feedback (0)      DRY/WET    Delay mode: Auto / Never / Wide detent (thirds)
-Feedback (0)      REVERB     Stereo width: Stock / Narrow / Wide (thirds)
+Feedback (0)      REVERB     Stereo width: Stock / continuous width
 Dry/wet (1)       DRY/WET    Limiter: Stock / Fast release / Off (thirds)
 Dry/wet (1)       REVERB     Reverb: Stock / Clouds-style (halves)
 Reverb (2)        FEEDBACK   Pitch scale: Off / Chromatic / Scale (thirds);
                             tap SEED on Scale to cycle
 
-Stereo width: Narrow keeps one-quarter of the stock random pan excursion
-around centre, preserving more of the input stereo image. Wide pans every
-grain across the full range, independent of parameter randomness and trigger
-acceptance. This also applies to synth grains. Stock is unchanged.
+In Feedback options, REVERB selects Stock below 10% (3% dead band).
+Above this zone it sets a continuous saved width: zero displacement at 13%
+to full random spread at fully clockwise. At zero width the input stereo
+positioning passes through and mono stays centred. Enabled width randomizes
+every grain, including at DENSITY fully clockwise with no other randomness.
+Pan is fixed at grain start; changes affect new grains only, including synth.
+The MEDIA LED is green for Stock and amber with brightness showing width.
+When enabled, short ASSIGN presses cycle the three stock destinations then
+WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
+mix assignment remains available. ASSIGN CV adds to resting width and clamps
+to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
+0 is Stock; 1..255 encode enabled width from zero to full. Old experimental
+Narrow/Wide bytes now represent amounts; reselect width after upgrading.
 Delay mode: Auto keeps the usual delay switch at SIZE fully clockwise.
 Never keeps granular playback there. Wide detent keeps the switch, with
 an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer

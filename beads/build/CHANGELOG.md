@@ -6,7 +6,7 @@ heading; a release turns it into a dated heading.
 ## Unreleased
 - Frozen feedback: design notes and an all-pass wet-loop prototype behind `BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER`, off in normal builds; no options-page setting (#4).
 - Delay mode: Feedback category, DRY/WET knob, Auto / Never / Wide detent in thirds. Never keeps SIZE fully clockwise granular; Wide detent gives the SIZE attenurandomizer/CV filter a 40–60% neutral zone and removes resonant boost (#9, #26).
-- Stereo width: Feedback category, REVERB knob, Stock / Narrow / Wide in thirds. Narrow keeps one-quarter of the stock pan excursion; Wide pans every grain across the full range independently of parameter randomness (#5).
+- Stereo width reworked: continuous saved resting width above the Stock zone; enabled width randomizes every grain. Optional fourth ASSIGN destination adds CV to width, clamped to 0..1 (#5).
 - More CPU headroom for the grain engine: about 6,900 fewer cycles per audio block in the heaviest stock case (measured on a test board), from three small changes in Mutable Instruments' own style. The sound is bit-identical.
 - Options page: always opens on the Reverb category, where FEEDBACK sets the pitch scale.
 - Buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
