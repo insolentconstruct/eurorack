@@ -29,6 +29,8 @@
 #ifndef BEADS_DSP_GRANULAR_PROCESSOR_H_
 #define BEADS_DSP_GRANULAR_PROCESSOR_H_
 
+#include <cstring>
+
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -56,7 +58,9 @@ class GranularProcessor {
     dummy_granular_player_.Init(sample_rate);
     granular_player_.Init(sample_rate);
     multitap_delay_.Init(sample_rate);
-    wide_detent_ = false;
+    filter_mode_.wide_detent = false;
+    filter_mode_.reserved = 0;
+    filter_mode_.position = 0;
     
     feedback_ = 0.0f;
     shape_ = 0.0f;
@@ -220,7 +224,7 @@ class GranularProcessor {
   }
   
   inline void set_delay_mode(DelayMode mode) {
-    wide_detent_ = mode == DELAY_MODE_WIDE_DETENT;
+    filter_mode_.wide_detent = mode == DELAY_MODE_WIDE_DETENT;
   }
 
   inline void set_stereo_width(float width, bool enabled) {
@@ -318,8 +322,9 @@ class GranularProcessor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) {
-    const float q_offset = wide_detent_ ? 0.70710678f : 1.0f;
-    const float q_scale = wide_detent_ ? 0.0f : 16.0f;
+    const bool wide_detent = filter_mode_.wide_detent;
+    float q_offset = wide_detent ? 0.70710678f : 1.0f;
+    float q_scale = wide_detent ? 0.0f : 16.0f;
     const float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
@@ -327,8 +332,18 @@ class GranularProcessor {
         (parameters.size.has_cv ? parameters.size.cv : 0.0f);
     CONSTRAIN(bandwidth, 0.0f, 1.0f)
 
-    if (wide_detent_) {
-      bandwidth = DelayFilterDetent(bandwidth);
+    // Target and ramp position share the old mode flag's padding. A single
+    // zero check keeps coefficient work out of untouched Auto playback.
+    uint32_t filter_mode;
+    memcpy(&filter_mode, &filter_mode_, sizeof(filter_mode));
+    if (filter_mode) {
+      const DelayFilterQ q = SmoothDelayFilterQ(
+          &filter_mode_, q_offset, q_scale);
+      q_offset = q.offset;
+      q_scale = q.scale;
+      if (wide_detent) {
+        bandwidth = DelayFilterDetent(bandwidth);
+      }
     }
     stmlib::ParameterInterpolator bandwidth_modulation(
         &bandwidth_, bandwidth, size);
@@ -431,7 +446,7 @@ class GranularProcessor {
   DelayGranularPlayer dummy_granular_player_;
   DelayGranularPlayer granular_player_;
   MultitapDelay multitap_delay_;
-  bool wide_detent_;
+  DelayFilterMode filter_mode_;
   
   DelayLine<resolution, max_delay, 2> stereo_delay_line_;
   DelayLine<resolution, max_delay * 2, 1> mono_delay_line_;

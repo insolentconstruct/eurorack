@@ -303,7 +303,7 @@ void TestDelayOptions() {
     r.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
     r.parameters.size.attenuverter = end ? 1.0f : -1.0f;
     r.processor.delay_mode_transition_ = 1.5f;
-    r.Run(100);
+    r.Run(3000);
     CHECK(fabsf(r.processor.processor_digital_.multitap_delay_.filter_[0].r()
         - 1.41421356f) < 0.000001f);
   }
@@ -334,8 +334,67 @@ void TestDelayOptions() {
   }
 }
 
+void TestDelayFilterRamp() {
+  test_checker.Start("TestDelayFilterRamp");
+  CHECK(sizeof(DelayFilterMode) == 4);
+  DelayFilterMode mode = { true, 0, 0 };
+  DelayFilterQ previous = { 1.0f, 16.0f };
+  for (int direction = 0; direction < 2; ++direction) {
+    mode.wide_detent = direction == 0;
+    for (int block = 0; block < 3000; ++block) {
+      const DelayFilterQ q = SmoothDelayFilterQ(&mode,
+          mode.wide_detent ? 0.70710678f : 1.0f,
+          mode.wide_detent ? 0.0f : 16.0f);
+      CHECK(fabsf(q.offset - previous.offset) < 0.0015f);
+      CHECK(fabsf(q.scale - previous.scale) < 0.081f);
+      previous = q;
+    }
+    CHECK(previous.offset == (direction ? 1.0f : 0.70710678f));
+    CHECK(previous.scale == (direction ? 16.0f : 0.0f));
+  }
+}
+
+float MaximumStep(const std::vector<float>& audio, size_t size) {
+  float step = 0.0f;
+  for (size_t i = 1; i < size; ++i) {
+    step = std::max(step, fabsf(audio[i] - audio[i - 1]));
+  }
+  return step;
+}
+
+void TestDelayModeSwitchClick() {
+  test_checker.Start("TestDelayModeSwitchClick");
+  Rig r;
+  r.frequency = 750.0f;
+  r.parameters.size.attenuverter = 1.0f;
+  r.processor.delay_mode_transition_ = 1.5f;
+  r.Run(14000);
+  std::vector<uint8_t> saved(sizeof(r));
+  memcpy(&saved[0], &r, sizeof(r));
+  std::vector<float> control;
+  for (int i = 0; i < 4096; ++i) r.Block(&control);
+  memcpy(static_cast<void*>(&r), &saved[0], sizeof(r));
+  std::vector<float> switched;
+  r.Block(&switched);
+  r.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+  for (int i = 0; i < 4095; ++i) r.Block(&switched);
+  const size_t checkpoints[] = { 100, 512, 4096 };
+  const size_t block_size = int(r.processor.sample_rate()) / 4000;
+  CHECK(switched.size() == control.size());
+  for (int i = 0; i < 3; ++i) {
+    const size_t frames = checkpoints[i] * block_size;
+    const float switched_step = MaximumStep(switched, frames);
+    const float control_step = MaximumStep(control, frames);
+    printf("%u blocks, switch/control steps: %.9g / %.9g\n",
+        static_cast<unsigned>(checkpoints[i]), switched_step, control_step);
+    CHECK(switched_step <= control_step);
+  }
+}
+
 int main() {
   setvbuf(stdout, NULL, _IONBF, 0);
+  TestDelayFilterRamp();
+  TestDelayModeSwitchClick();
   TestDelayOptions();
   TestContinuousDelayPlayback();
   TestQuantizerDelayBypass();

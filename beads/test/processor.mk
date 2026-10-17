@@ -8,6 +8,7 @@ BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = 		processor_test.cc \
 		processor.cc \
+		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
 		mu_law.cc \

@@ -9,6 +9,7 @@ CC_FILES       = clouds_test.cc \
 		pitch_quantizer.cc \
 		synth.cc \
 		processor.cc \
+		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
 		mu_law.cc \

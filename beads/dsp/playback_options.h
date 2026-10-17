@@ -49,6 +49,20 @@ enum DelayMode {
   DELAY_MODE_WIDE_DETENT
 };
 
+struct DelayFilterMode {
+  bool wide_detent;
+  unsigned char reserved;
+  unsigned short position;
+};
+
+struct DelayFilterQ {
+  float offset;
+  float scale;
+};
+
+DelayFilterQ SmoothDelayFilterQ(
+    DelayFilterMode* mode, float offset, float scale);
+
 inline float DelayFilterDetent(float bandwidth) {
   if (bandwidth < 0.4f) {
     return bandwidth * 1.25f;

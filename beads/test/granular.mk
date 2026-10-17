@@ -7,6 +7,7 @@ BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 CC_FILES       = 		granular_test.cc \
 		processor.cc \
+		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
 		delay_clock.cc \

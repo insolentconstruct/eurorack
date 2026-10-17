@@ -15,6 +15,7 @@ CC_FILES       = 		firmware_test.cc \
 		factory_test.cc \
 		synth.cc \
 		processor.cc \
+		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
 		mu_law.cc \

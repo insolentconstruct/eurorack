@@ -186,3 +186,7 @@ Options regressions cover 10 s of ±0.002 width noise at an encoded step boundar
 (one save and one confirmation), short SEED taps and long holds during a pending
 save, volatile commit publication, and a second FREEZE press before the pending
 save settles. Exit restores the normal MEDIA indication immediately.
+
+The delay
+mode test compares the maximum wet-output step when switching Auto to Wide with
+an identical no-switch render at the clockwise filter endpoint.

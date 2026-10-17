@@ -647,10 +647,10 @@ void TestCallbackCvRouting() {
           width);
       if (width) {
         CHECK(processor.delay_mode_ == DELAY_MODE_WIDE_DETENT);
-        CHECK(processor.processor_digital_.wide_detent_);
-        CHECK(processor.processor_vintage_digital_.wide_detent_);
-        CHECK(processor.processor_clean_tape_.wide_detent_);
-        CHECK(processor.processor_dirty_tape_.wide_detent_);
+        CHECK(processor.processor_digital_.filter_mode_.wide_detent);
+        CHECK(processor.processor_vintage_digital_.filter_mode_.wide_detent);
+        CHECK(processor.processor_clean_tape_.filter_mode_.wide_detent);
+        CHECK(processor.processor_dirty_tape_.filter_mode_.wide_detent);
         CHECK(processor.processor_digital_.granular_player_.width_enabled_);
         CHECK(processor.processor_vintage_digital_.granular_player_.width_enabled_);
         CHECK(processor.processor_clean_tape_.granular_player_.width_enabled_);
