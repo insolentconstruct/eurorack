@@ -4,7 +4,7 @@ set -euo pipefail
 out=${1:?usage: beads/test/storage_compat.sh OUTPUT_DIR [STOCK_SOURCE_DIR]}
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
-stock=${2:-$out/stock}
+stock=${2:-$out/stock-source}
 if [[ $# == 1 ]]; then
   mkdir -p "$stock/beads"
   for file in background_buffer_backup.cc background_buffer_backup.h settings.cc settings.h; do
