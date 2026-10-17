@@ -155,6 +155,7 @@ void Process(
     processor.SetAttackOnset(attack_onset);
   }
   const bool attack_gate = attack_onset && processor.attack_input()->mode() == 2;
+  const GateFlags seed_at_block_start = previous_seed;
   bool seed_block = false;
   GateFlags* seed_input = NULL;
   if (!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED)) {
@@ -162,7 +163,7 @@ void Process(
       event_delay.Write(events[i]);
       // Delay the seed input by 2.5ms.
       Codec::Event delayed_event = event_delay.Read(size * 10);
-      bool has_seed = (delayed_event & Codec::EVENT_SEED) || (attack_gate && i == 0);
+      bool has_seed = delayed_event & Codec::EVENT_SEED;
       previous_seed = seed[i] = ExtractGateFlags(previous_seed, has_seed);
       seed_block |= has_seed;
     }
@@ -175,7 +176,14 @@ void Process(
   } else {
     previous_seed = GATE_FLAG_LOW;
   }
-  seed_block |= attack_gate;
+  if (attack_gate && seed_input) {
+    // OR one onset sample into SEED. Only its first two edges can change;
+    // keep the original physical-input sample loop untouched in Off.
+    seed[0] = ExtractGateFlags(seed_at_block_start, true);
+    if (size > 1) seed[1] = ExtractGateFlags(seed[0], seed[1] & GATE_FLAG_HIGH);
+    previous_seed = seed[size - 1];
+    seed_block = true;
+  }
   ui.set_seed_led_state(seed_block && !codec_transition_frames);
   ui.set_overwrite_reserve(synth_mode ? 1.0f : processor.overwrite_reserve());
   
