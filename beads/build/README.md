@@ -35,7 +35,7 @@ switching and makes the delay filter neutral from 40% to 60% of its range,
 with no resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
 neutral zone the remaining travel reaches the usual low-pass and high-pass
-ends. The MEDIA LED shows steady green / steady white / two amber pulses.
+ends. The MEDIA LED shows steady green / yellow / red.
 The setting is saved and defaults to Auto. It does not affect synth mode.
 
 ## Stereo width
@@ -46,8 +46,9 @@ to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes
 every grain, including at DENSITY fully clockwise with no other randomness.
 Pan is fixed at grain start; changes affect new grains only, including synth.
-The MEDIA LED is green for Stock and amber with approximate brightness showing
-width; adjacent saved amounts can share an LED brightness.
+The MEDIA LED is steady green for Stock. Enabled width blinks slowly, using
+Beads’ green through yellow to red meter colour for the amount; adjacent saved
+amounts can share a colour.
 When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
@@ -107,8 +108,11 @@ holding ASSIGN for three seconds or pressing another button; there is no
 idle exit or cancel. Short SEED taps on Scale cycle the pitch scale instead
 of leaving. A pending change still saves after leaving: wait one second
 before powering off. Mix controls resume with smooth catch-up after exit.
-Stock, Auto and Automatic are steady green; Off and Never are steady white.
-Pulse counts repeat every 1.2 seconds. See the reference below for every value.
+Every first value, including Pitch Off, is steady green. Other values follow
+yellow, red, then green/yellow/red slow and fast blinking. Slow is about 1 Hz;
+fast is about 4 Hz. Raag Shri uses two yellow pulses then a pause.
+The page LED flashes for 100 ms on entry, exit and after a changed batch is
+written. MEDIA keeps showing the value. See the reference for every value.
 
 On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
 Above this zone it sets a continuous saved width: zero displacement at 13%
@@ -116,8 +120,9 @@ to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes
 every grain, including at DENSITY fully clockwise with no other randomness.
 Pan is fixed at grain start; changes affect new grains only, including synth.
-The MEDIA LED is green for Stock and amber with approximate brightness showing
-width; adjacent saved amounts can share an LED brightness.
+The MEDIA LED is steady green for Stock. Enabled width blinks slowly, using
+Beads’ green through yellow to red meter colour for the amount; adjacent saved
+amounts can share a colour.
 When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
@@ -129,14 +134,14 @@ Delay mode: Auto keeps the usual delay switch at SIZE fully clockwise.
 Never keeps granular playback there. Wide detent keeps the switch, with
 an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer
 plus SIZE CV) and no resonant boost. It does not affect synth mode.
-For delay mode, the quality LED shows steady green / steady white /
-two amber pulses for Auto / Never / Wide detent.
+For delay mode, the quality LED shows steady green / yellow / red
+for Auto / Never / Wide detent.
 
-Output limiter: Stock is steady green; Fast release is one blue pulse;
-Off is steady white. With Off, loud peaks can hard-clip.
+Output limiter: Stock is steady green; Fast release is steady yellow;
+Off is steady red. With Off, loud peaks can hard-clip.
 Self-play: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects Automatic
-(stock, steady green); upper half selects On request (one magenta pulse per
-1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
+(stock, steady green); upper half selects On request (steady yellow).
+Move more than one tenth of the travel to begin; the midpoint
 has a small dead band to prevent flicker.
 With On request, self-play never starts by itself. With both audio inputs
 unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
@@ -147,8 +152,8 @@ The setting is saved. Stock firmware ignores it; saving after a downgrade
 resets it to Automatic.
 
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
-Stock (default, steady green); upper half selects Clouds-style (one cyan pulse
-per 1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
+Stock (default, steady green); upper half selects Clouds-style (steady yellow).
+Move more than one tenth of the travel to begin; the midpoint
 has a small dead band. The quality LED shows the last knob moved on this page.
 Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
 plus fixed diffusion on the grain wet output. In delay and self-play modes,
@@ -157,11 +162,11 @@ back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
-select Off (white), Chromatic (one blue pulse), or Scale. In Scale,
-tap SEED briefly to cycle Fifths and octaves (red), Major (amber), Minor
-(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (steady blue),
-Raag Bhairav (violet), and Raag Shri (pink). Holds do not cycle. SEED taps
-here do not trigger or latch grains; other buttons leave the page. The
+select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
+tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
+Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
+Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
+then a pause). Holds do not cycle. SEED taps here do not trigger or latch grains; other buttons leave the page. The
 setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start.

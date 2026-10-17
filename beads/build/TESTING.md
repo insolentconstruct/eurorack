@@ -173,5 +173,11 @@ TSV exporter and compares README.txt's Options reference with the firmware.
 The UI host checks all nine page/knob slots, cycling, RAM page memory,
 reserved-knob inertia, qualification, a sweep with one settled save, unchanged
 idle pages, hold/button exits, pending saves after leaving, width hysteresis,
-SEED scale cycling, and Stock/Off palette consistency. Physical LED colour
-separation and audio during flash writes still need module checks.
+SEED scale cycling, all-stock steady-green palette consistency, ladder colours
+and distinct colour/pattern combinations within each setting. Renderer checks
+cover the full 2.048-second pattern and all 255 enabled width amounts against
+Beads’ meter, including green/red endpoints and the slow dark phase. Entry,
+exit and completed-save confirmations last 100 ms; idle controls do not
+repeat the save flash. The exported reference also checks the allowed
+colours and patterns. Physical LED colour separation and audio during flash
+writes still need module checks.

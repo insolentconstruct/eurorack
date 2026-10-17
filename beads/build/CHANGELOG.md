@@ -5,7 +5,8 @@ heading; a release turns it into a dated heading.
 
 ## Unreleased
 - Options reorganized across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Reserved knobs are inert. Reopening remembers the last page until power-off.
-- Options save after one second of settled controls. Hold ASSIGN 3 s or another button leaves; idle pages stay open. Stock/Auto/Automatic use green, Off/Never white; Chromatic uses a blue pulse.
+- Options save after one second of settled controls. Hold ASSIGN 3 s or another button leaves; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, exit and completed saves flash the page LED for 100 ms.
+- Enabled width uses the green/yellow/red meter with a slow blink. Pitch follows the same ladder across steady, slow and fast; Raag Shri uses two yellow pulses followed by a pause.
 - Added a firmware-table TSV exporter and a check against the plain-text Options reference.
 - Delay mode: Feedback category, DRY/WET knob, Auto / Never / Wide detent in thirds. Never keeps SIZE fully clockwise granular; Wide detent gives the SIZE attenurandomizer/CV filter a 40–60% neutral zone and removes resonant boost (#9, #26).
 - Stereo width: continuous saved resting width above the Stock zone; enabled width randomizes every grain. Optional fourth ASSIGN destination adds CV to width, clamped to 0..1 (#5).

@@ -38,9 +38,10 @@ int main() {
       for (size_t i = 0; i < kNumOptionValues; ++i) {
         const OptionValue& value = kOptionValues[i];
         if (value.setting != setting) continue;
-        const char* pulse = value.pulses == -1 ? "amount brightness"
-            : value.pulses == 0 ? "steady"
-            : value.pulses == 1 ? "1 / 1.2 s" : "2 / 1.2 s";
+        const char* pulse = value.pulses == 0 ? "steady"
+            : value.pulses == 1 ? "slow (0.98 Hz)"
+            : value.pulses == 2 ? "fast (3.91 Hz)"
+            : "2 yellow pulses / 2.048 s";
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
             kOptionPages[page].led, kOptionKnobNames[knob],
             kOptionNames[setting], value.name, value.colour, pulse);

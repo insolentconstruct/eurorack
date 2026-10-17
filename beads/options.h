@@ -66,32 +66,32 @@ struct OptionValue {
   const char* name;
   const char* colour;
   uint8_t r, g, b;
-  int pulses;  // 0 steady, -1 amount brightness; otherwise per 1.2 seconds.
+  int pulses;  // 0 steady, 1 slow, 2 fast, 3 yellow double pulse.
 };
 const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0, "Reserved", "unchanged", 0, 0, 0, 0 },
-  { OPTION_PITCH, 0, "Off", "white", 255, 255, 255, 0 },
-  { OPTION_PITCH, 1, "Chromatic", "blue", 0, 96, 255, 1 },
+  { OPTION_PITCH, 0, "Off", "green", 0, 255, 0, 0 },
+  { OPTION_PITCH, 1, "Chromatic", "yellow", 255, 255, 0, 0 },
   { OPTION_PITCH, 2, "Fifths and octaves", "red", 255, 0, 0, 0 },
-  { OPTION_PITCH, 3, "Major", "amber", 255, 144, 0, 0 },
-  { OPTION_PITCH, 4, "Minor", "yellow", 255, 255, 0, 0 },
-  { OPTION_PITCH, 5, "Major pentatonic", "cyan", 0, 255, 255, 0 },
-  { OPTION_PITCH, 6, "Minor pentatonic", "lime", 128, 255, 0, 0 },
-  { OPTION_PITCH, 7, "Pelog", "blue", 0, 96, 255, 0 },
-  { OPTION_PITCH, 8, "Raag Bhairav", "violet", 128, 0, 255, 0 },
-  { OPTION_PITCH, 9, "Raag Shri", "pink", 255, 0, 128, 0 },
+  { OPTION_PITCH, 3, "Major", "green", 0, 255, 0, 1 },
+  { OPTION_PITCH, 4, "Minor", "yellow", 255, 255, 0, 1 },
+  { OPTION_PITCH, 5, "Major pentatonic", "red", 255, 0, 0, 1 },
+  { OPTION_PITCH, 6, "Minor pentatonic", "green", 0, 255, 0, 2 },
+  { OPTION_PITCH, 7, "Pelog", "yellow", 255, 255, 0, 2 },
+  { OPTION_PITCH, 8, "Raag Bhairav", "red", 255, 0, 0, 2 },
+  { OPTION_PITCH, 9, "Raag Shri", "yellow", 255, 255, 0, 3 },
   { OPTION_WIDTH, 0, "Stock", "green", 0, 255, 0, 0 },
-  { OPTION_WIDTH, 1, "Enabled (1..255)", "amber", 255, 144, 0, -1 },
+  { OPTION_WIDTH, 1, "Enabled (1..255)", "meter", 255, 255, 0, 1 },
   { OPTION_REVERB, 0, "Stock", "green", 0, 255, 0, 0 },
-  { OPTION_REVERB, 1, "Clouds-style", "cyan", 0, 255, 255, 1 },
+  { OPTION_REVERB, 1, "Clouds-style", "yellow", 255, 255, 0, 0 },
   { OPTION_DELAY, 0, "Auto (Stock)", "green", 0, 255, 0, 0 },
-  { OPTION_DELAY, 1, "Never", "white", 255, 255, 255, 0 },
-  { OPTION_DELAY, 2, "Wide detent", "amber", 255, 144, 0, 2 },
+  { OPTION_DELAY, 1, "Never", "yellow", 255, 255, 0, 0 },
+  { OPTION_DELAY, 2, "Wide detent", "red", 255, 0, 0, 0 },
   { OPTION_SELF_PLAY, 0, "Automatic (Stock)", "green", 0, 255, 0, 0 },
-  { OPTION_SELF_PLAY, 1, "On request", "magenta", 255, 0, 255, 1 },
+  { OPTION_SELF_PLAY, 1, "On request", "yellow", 255, 255, 0, 0 },
   { OPTION_LIMITER, 0, "Stock", "green", 0, 255, 0, 0 },
-  { OPTION_LIMITER, 1, "Fast release", "blue", 0, 96, 255, 1 },
-  { OPTION_LIMITER, 2, "Off", "white", 255, 255, 255, 0 }
+  { OPTION_LIMITER, 1, "Fast release", "yellow", 255, 255, 0, 0 },
+  { OPTION_LIMITER, 2, "Off", "red", 255, 0, 0, 0 }
 };
 const size_t kNumOptionValues = sizeof(kOptionValues) / sizeof(kOptionValues[0]);
 

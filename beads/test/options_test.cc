@@ -1066,6 +1066,7 @@ void TestOptionsTablesAndLifetime() {
   };
   Rig r;
   r.Enter();
+  r.Tick(100);  // Entry confirmation has ended.
   for (int page = 0; page < 3; ++page) {
     CHECK(r.ui.options_.page() == page);
     const int expected_leds[3] = { 2, 0, 1 };
@@ -1286,12 +1287,12 @@ void TestOptionsPalette() {
   for (size_t i = 1; i < kNumOptionValues; ++i) {
     const OptionValue& v = kOptionValues[i];
     CHECK(v.r || v.g || v.b);
-    if (strstr(v.name, "Stock")) {
+    if (v.value == 0) {
       CHECK(v.r == 0 && v.g == 255 && v.b == 0 && v.pulses == 0);
     }
-    if (!strcmp(v.name, "Off") || !strcmp(v.name, "Never")) {
-      CHECK(v.r == 255 && v.g == 255 && v.b == 255 && v.pulses == 0);
-    }
+    CHECK(v.b == 0);
+    CHECK((v.r == 0 && v.g == 255) ||
+        (v.r == 255 && (v.g == 0 || v.g == 255)));
     for (size_t j = i + 1; j < kNumOptionValues; ++j) {
       const OptionValue& w = kOptionValues[j];
       if (v.setting == w.setting) {
@@ -1315,17 +1316,83 @@ void TestOptionsPalette() {
       default: break;
     }
     CHECK(&r.ui.options_.indication() == &kOptionValues[i]);
-    for (int tick = 0; tick < 1200; ++tick) {
+    for (int tick = 0; tick < 2048; ++tick) {
       stmlib::system_clock.Tick();
       r.ui.UpdateLeds();
-      const uint32_t phase = stmlib::system_clock.milliseconds() % 1200;
-      const bool lit = v.pulses <= 0 || phase < 120 ||
-          (v.pulses == 2 && phase >= 240 && phase < 360);
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (lit ? v.r : 0));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (lit ? v.g : 0));
+      const uint32_t now = stmlib::system_clock.milliseconds();
+      const uint32_t phase = now % 2048;
+      const bool lit = v.pulses == 0 ||
+          (v.pulses == 1 && now % 1024 < 512) ||
+          (v.pulses == 2 && now % 256 < 128) ||
+          (v.pulses == 3 && (phase < 128 || (phase >= 256 && phase < 384)));
+      const int red = v.setting == OPTION_WIDTH && v.value ? 255 : v.r;
+      const int green = v.setting == OPTION_WIDTH && v.value ? 0 : v.g;
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (lit ? red : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (lit ? green : 0));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (lit ? v.b : 0));
     }
   }
+}
+
+void TestOptionsWidthMeter() {
+  test_checker.Start("TestOptionsWidthMeter");
+  Rig r;
+  r.Enter();
+  r.ui.options_.selected_ = OPTION_WIDTH;
+  for (int width = 1; width <= 255; ++width) {
+    r.ui.options_.width_preview_ = width;
+    // Compare every code with Beads' meter, independently of the renderer.
+    Leds meter;
+    meter.Init();
+    const float amount = 0.25f + 0.749f * float(width - 1) / 254.0f;
+    meter.set_meter(amount);
+    for (int tick = 0; tick < 1024; ++tick) {
+      stmlib::system_clock.Tick();
+      r.ui.UpdateLeds();
+      const bool lit = stmlib::system_clock.milliseconds() % 1024 < 512;
+      for (int channel = LED_MEDIA_R; channel <= LED_MEDIA_B; ++channel) {
+        CHECK(r.ui.leds_.intensity_[channel] ==
+            (lit ? meter.intensity_[channel] : 0));
+      }
+    }
+    CHECK(meter.intensity_[LED_MEDIA_B] == 0);
+    if (width == 1) {
+      CHECK(meter.intensity_[LED_MEDIA_R] == 0);
+      CHECK(meter.intensity_[LED_MEDIA_G] == 255);
+    }
+    if (width == 255) {
+      CHECK(meter.intensity_[LED_MEDIA_R] == 255);
+      CHECK(meter.intensity_[LED_MEDIA_G] == 0);
+    }
+  }
+}
+
+void TestOptionsConfirmations() {
+  test_checker.Start("TestOptionsConfirmations");
+  Rig r;
+  r.Enter();
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 255);
+  const uint32_t entry = r.ui.options_flash_time_;
+  r.Tick(100);
+  CHECK(stmlib::system_clock.milliseconds() - entry >= 100);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] < 255);
+  const unsigned writes = test_writes;
+  r.reverb = .9f;
+  r.Tick(1010);
+  CHECK(test_writes == writes + 1);
+  CHECK(r.ui.options_flash_time_ != entry);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 255);
+  const uint32_t saved = r.ui.options_flash_time_;
+  r.Tick(1100);
+  CHECK(r.ui.options_flash_time_ == saved);  // No write, no confirmation.
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] < 255);
+  r.Down(SWITCH_FREEZE);
+  CHECK(r.ui.options_flash_time_ != saved);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 255);
+  r.Up(SWITCH_FREEZE);
+  r.Tick(100);
+  CHECK(stmlib::system_clock.milliseconds() - r.ui.options_flash_time_ >= 100);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 0);
 }
 
 int main() {
@@ -1338,6 +1405,8 @@ int main() {
   TestOptionsKnobsAndSettling();
   TestOptionsWidthAndSeed();
   TestOptionsPalette();
+  TestOptionsConfirmations();
+  TestOptionsWidthMeter();
   TestOptionsZonesAndSaveBatch();
   TestWidthAssignCycle();
   TestPlaybackStorage();

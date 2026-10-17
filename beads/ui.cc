@@ -67,6 +67,8 @@ void Ui::Init(
   mode_ = MODE_NORMAL;
   options_.Init();
   flush_options_events_ = false;
+  options_flash_time_ = 0;
+  options_flash_led_ = LED_ASSIGN_1;
   LoadOptions();
   fill(&mix_pot_value_[0], &mix_pot_value_[MIX_PARAMETER_LAST], 0.0f);
   
@@ -135,6 +137,8 @@ void Ui::Poll() {
       switches_.just_pressed(SWITCH_SEED), settings_->stereo_width(),
       settings_->delay_mode());
   if (!was_active && options_.active()) {
+    options_flash_time_ = system_clock.milliseconds();
+    options_flash_led_ = Led(LED_ASSIGN_1 + kOptionPages[options_.page()].led_index);
     flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
@@ -143,6 +147,8 @@ void Ui::Poll() {
   }
   if (options_.stage() == Options::STAGE_DRAIN &&
       previous_stage != Options::STAGE_DRAIN) {
+    options_flash_time_ = system_clock.milliseconds();
+    options_flash_led_ = Led(LED_ASSIGN_1 + kOptionPages[options_.page()].led_index);
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
@@ -317,13 +323,28 @@ void Ui::UpdateLeds() {
     }
     const OptionValue& indication = options_.indication();
     const Leds::Color colour = { indication.r, indication.g, indication.b };
-    const uint32_t phase = system_clock.milliseconds() % 1200;
-    const bool lit = indication.pulses <= 0 || phase < 120 ||
-        (indication.pulses == 2 && phase >= 240 && phase < 360);
-    const float brightness = indication.pulses == -1
-        ? 0.2f + 0.8f * float(options_.width_preview()) / 255.0f
-        : lit ? 1.0f : 0.0f;
-    leds_.set_media(colour, brightness);
+    // SysTick refreshes at 1 kHz: Marbles' 4:1 slow/fast ratio,
+    // stretched to 1.024 s / 256 ms periods (0.98 / 3.91 Hz).
+    const uint32_t now = system_clock.milliseconds();
+    const uint32_t phase = now % 2048;
+    const bool lit = indication.pulses == 0 ||
+        (indication.pulses == 1 && (now & 1023) < 512) ||
+        (indication.pulses == 2 && (now & 255) < 128) ||
+        (indication.pulses == 3 && (phase < 128 ||
+            (phase >= 256 && phase < 384)));
+    if (indication.setting == OPTION_WIDTH && options_.width_preview()) {
+      // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
+      leds_.set_meter(lit
+          ? 0.25f + 0.749f * float(options_.width_preview() - 1) / 254.0f
+          : 0.0f);
+    } else {
+      leds_.set_media(colour, lit ? 1.0f : 0.0f);
+    }
+  }
+
+  if (options_flash_time_ &&
+      uint32_t(system_clock.milliseconds() - options_flash_time_) < 100) {
+    leds_.set(options_flash_led_, 255);
   }
 
   if (mode_ != MODE_FACTORY_TEST) {
@@ -575,6 +596,9 @@ void Ui::DoEvents() {
       settings_->set_stereo_width(options_.width_preview());
       settings_->set_delay_mode(options_.delay_preview());
       settings_->SaveState();
+      options_flash_led_ = Led(LED_ASSIGN_1 +
+          kOptionPages[options_.page()].led_index);
+      options_flash_time_ = system_clock.milliseconds();
     }
     options_.ClearCommit();
   }

@@ -43,14 +43,15 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Entry needs norm
 | 2 / FEEDBACK | Reserved: attacks | Delay mode | Reserved: mix law |
 | 3 / DRY/WET | Self-play | Limiter | Reserved: LED brightness |
 
-Reserved knobs have no effect on MEDIA or saving. MEDIA shows the first available setting on page entry, then the last qualified knob moved. Stock/Auto/Automatic are steady green; Off/Never steady white. Other colours and pulses are listed in README.txt's firmware-checked Options reference. Saved byte positions are unchanged. `make -f beads/test/options_tables.mk test` checks the reference; `./build/options_tables` prints its TSV directly from firmware tables.
+Reserved knobs have no effect on MEDIA or saving. MEDIA shows the first available setting on page entry, then the last qualified knob moved. Every first value, including Pitch Off, is steady green. Other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, exit and after a changed batch is written. Other colours and pulses are listed in README.txt's firmware-checked Options reference. Saved byte positions are unchanged. `make -f beads/test/options_tables.mk test` checks the reference; `./build/options_tables` prints its TSV directly from firmware tables.
 
 
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
-select Off (white), Chromatic (one blue pulse), or Scale. In Scale,
-tap SEED briefly to cycle Fifths and octaves (red), Major (amber), Minor
-(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (steady blue),
-Raag Bhairav (violet), and Raag Shri (pink). Holds do not cycle. SEED taps
+select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
+tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
+Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
+Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
+then a pause). Holds do not cycle. SEED taps
 here do not trigger or latch grains; other buttons leave the page. The
 setting is saved; default is Off.
 
@@ -238,7 +239,8 @@ to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes
 every grain, including at DENSITY fully clockwise with no other randomness.
 Pan is fixed at grain start; changes affect new grains only, including synth.
-The MEDIA LED is green for Stock and amber with brightness showing width.
+The MEDIA LED is steady green for Stock; enabled width blinks slowly with
+Beads’ green through yellow to red meter colour showing the amount.
 When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
