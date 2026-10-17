@@ -121,6 +121,14 @@ class Settings {
 
   inline void set_stereo_width(StereoWidth width) {
     state_.padding[4] = width;
+    if (!width) set_width_assigned(false);
+  }
+
+  // Byte 16 overlays WIDTH on a stock-safe FEEDBACK assignment.
+  inline bool width_assigned() const { return state_.padding[6] == 1; }
+  inline void set_width_assigned(bool assigned) {
+    state_.padding[6] = assigned && stereo_width() ? 1 : 0;
+    if (assigned) state_.assignable_cv_destination = 0;
   }
 
   // Byte 15: the automatic SIZE transition is the default.

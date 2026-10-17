@@ -1,6 +1,6 @@
-// Copyright 2026 OpenAI.
+// Copyright 2026 Insolent Construct.
 //
-// Author: OpenAI
+// Author: Insolent Construct (insolentconstruct@gmail.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ inline float ModulatedStereoWidth(StereoWidth width, float cv) {
   float amount = float(width - 1) / 254.0f + cv;
   if (amount < 0.0f) amount = 0.0f;
   if (amount > 1.0f) amount = 1.0f;
-  return 1.0f + 254.0f * amount;
+  return amount;
 }
 
 enum DelayMode {

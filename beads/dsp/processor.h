@@ -195,11 +195,11 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
-  inline void set_stereo_width(float width) {
-    processor_digital_.set_stereo_width(width);
-    processor_vintage_digital_.set_stereo_width(width);
-    processor_clean_tape_.set_stereo_width(width);
-    processor_dirty_tape_.set_stereo_width(width);
+  inline void set_stereo_width(float width, bool enabled) {
+    processor_digital_.set_stereo_width(width, enabled);
+    processor_vintage_digital_.set_stereo_width(width, enabled);
+    processor_clean_tape_.set_stereo_width(width, enabled);
+    processor_dirty_tape_.set_stereo_width(width, enabled);
   }
 
   inline void set_pitch_scale(PitchScale scale) {

@@ -51,8 +51,9 @@ When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
 to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
-0 is Stock; 1..255 encode enabled width from zero to full. Old experimental
-Narrow/Wide bytes now represent amounts; reselect width after upgrading.
+0 is Stock; 1..255 encode enabled width from zero to full.
+WIDTH assignment uses extension byte 16. Stock firmware sees FEEDBACK
+and ignores the extension settings; saving in stock firmware clears them.
 
 ## Monophonic grains
 

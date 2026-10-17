@@ -78,10 +78,7 @@ bool Settings::Init(bool recovery_mode) {
   if (success) {
     // Sanitize settings read from flash.
     CONSTRAIN(state_.media, 0, 3);
-    CONSTRAIN(state_.assignable_cv_destination, 0, 4);
-    if (!stereo_width() && state_.assignable_cv_destination == 4) {
-      state_.assignable_cv_destination = 0;
-    }
+    CONSTRAIN(state_.assignable_cv_destination, 0, 3);
   }
   
   set_output_limiter_mode(output_limiter_mode());
@@ -90,6 +87,7 @@ bool Settings::Init(bool recovery_mode) {
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
   set_delay_mode(delay_mode());
+  set_width_assigned(width_assigned());
   return success;
 }
 
@@ -108,7 +106,8 @@ void Settings::SaveState() {
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
   set_delay_mode(delay_mode());
-  fill(&state_.padding[6], &state_.padding[sizeof(state_.padding)], 0);
+  set_width_assigned(width_assigned());
+  fill(&state_.padding[7], &state_.padding[sizeof(state_.padding)], 0);
   chunk_storage_.SaveState();
 }
 

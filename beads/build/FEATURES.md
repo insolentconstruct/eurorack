@@ -74,8 +74,9 @@ The settings and frozen-buffer format below are frozen for Beta 1. Off,
 Automatic and Stock keep the stock behaviour; zero and unknown option values
 select those defaults.
 
-Byte 12/13 values are frozen at Beta 1. Future options use a free byte
-14–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
+Byte 12/13 values are frozen at Beta 1. Width, delay mode and WIDTH assignment
+occupy bytes 14–16. Future options use a free byte 17–22, with 0 meaning the
+Beta 1 behaviour so existing saves stay valid.
 
 Settings offsets are bytes in the 24-byte State payload:
 
@@ -119,12 +120,13 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
 | 15 | `padding[5]` | Delay mode: 0 Auto, 0xA1 Never, 0xA2 Wide detent; unknown values read Auto |
-| 16–22, individually | `padding[6]` … `padding[12]` | FREE; zeroed on every save |
+| 16 | `padding[6]` | WIDTH assignment: 0 off, 1 on; stock destination stays FEEDBACK |
+| 17–22, individually | `padding[7]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright MEDIA cue, but plays grains polyphonically. Turn monophonic grains off before downgrading. Drizzlet uses byte 9 without changing the settings layout. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10–15 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Bytes 16–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10–16 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Bytes 17–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 | Flash area | TAKEN | FREE / limit |
@@ -218,7 +220,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Byte 12 stores pitch scale (0 Off, 0xA1–0xA9); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Byte 12/13 values are frozen at Beta 1. Future options take a free byte 14–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic). Byte 12 stores pitch scale (0 Off, 0xA1–0xA9); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Byte 12/13 values are frozen at Beta 1. Width, delay mode and WIDTH assignment use bytes 14–16. Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
@@ -232,3 +234,20 @@ TEXTURE 0.925. Delay and self-play use the reverb character without the grain
 diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
 changes, including canceled previews. Actual module listening and timing
 remain to be verified.
+
+## Stereo width
+
+In Feedback options, REVERB selects Stock below 10% (3% dead band).
+Above this zone it sets a continuous saved width: zero displacement at 13%
+to full random spread at fully clockwise. At zero width the input stereo
+positioning passes through and mono stays centred. Enabled width randomizes
+every grain, including at DENSITY fully clockwise with no other randomness.
+Pan is fixed at grain start; changes affect new grains only, including synth.
+The MEDIA LED is green for Stock and amber with brightness showing width.
+When enabled, short ASSIGN presses cycle the three stock destinations then
+WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
+mix assignment remains available. ASSIGN CV adds to resting width and clamps
+to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
+0 is Stock; 1..255 encode enabled width from zero to full.
+WIDTH assignment uses extension byte 16. Stock firmware sees FEEDBACK
+and ignores the extension settings; saving in stock firmware clears them.

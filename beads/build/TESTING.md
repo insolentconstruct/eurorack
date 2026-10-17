@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **In numbers:** 147 tests in 13 host test programs (916 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 158 tests in 13 host test programs (1013 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
@@ -42,26 +42,27 @@ execute more than once. The manual-coverage totals below are unchanged.
 | clouds | 3 | 9 |
 | delay | 10 | 45 |
 | delay_mode | 6 | 33 |
-| feedback_diffuser | 2 | 8 |
-| firmware | 14 | 102 |
+| firmware | 15 | 118 |
 | gain | 5 | 21 |
-| granular | 22 | 99 |
+| granular | 23 | 113 |
 | mix | 7 | 28 |
-| options | 38 | 390 |
+| options | 41 | 412 |
 | pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **155** | **969** |
+| **Total** | **158** | **1013** |
 
-The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
+The table lists the current tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
 
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
 
 Stereo width adds host checks for the unchanged Stock calculation and RNG
 sequence, zero displacement, full spread with zero randomness, CV clamping,
 stock/enabled ASSIGN cycles, every saved width byte, preview and saving,
-and unchanged bytes 12/13. Round 2 evidence is recorded in the lane REPORT.md.
+and unchanged bytes 12/13. Callback tests check WIDTH CV routing, processor
+and synth propagation, and rendered grain pan retention. Saved assignments
+are also checked through the stock destination clamp.
 
 Delay mode adds host checks for all stored byte values, preview, cancellation
 and saving, Never at SIZE fully clockwise in every quality and channel mode,

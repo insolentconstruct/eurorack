@@ -223,16 +223,18 @@ void Process(
   float mix_parameter[Ui::MIX_PARAMETER_LAST];
   for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
     float base = ui.mix_parameter(Ui::MixParameter(i)) * 1.005f;
-    float amount = settings.state().assignable_cv_destination == 3
+    float amount = !settings.width_assigned() &&
+        settings.state().assignable_cv_destination == 3
         ? float(settings.state().assignable_cv_amount[i]) / 256.0f
-        : (settings.state().assignable_cv_destination == i ? 1.0f : 0.0f);
+        : (!settings.width_assigned() &&
+            settings.state().assignable_cv_destination == i ? 1.0f : 0.0f);
     mix_parameter[i] = base + \
         (cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f) * amount;
     CONSTRAIN(mix_parameter[i], 0.0f, 1.0f);
   }
 
   const float stereo_width = ModulatedStereoWidth(ui.stereo_width(),
-      settings.state().assignable_cv_destination == 4
+      settings.width_assigned()
           ? cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f : 0.0f);
 
   Processor::MixParameters m;
@@ -280,7 +282,7 @@ void Process(
   synth.set_output_limiter_mode(ui.output_limiter_mode());
   if (synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
-    synth.set_stereo_width(stereo_width);
+    synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
@@ -296,7 +298,7 @@ void Process(
 #endif  // DWT_CALIBRATION
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
-    processor.set_stereo_width(stereo_width);
+    processor.set_stereo_width(stereo_width, ui.stereo_width() != 0);
     processor.set_delay_mode(ui.delay_mode());
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();

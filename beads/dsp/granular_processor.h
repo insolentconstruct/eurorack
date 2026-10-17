@@ -221,11 +221,10 @@ class GranularProcessor {
   
   inline void set_delay_mode(DelayMode mode) {
     wide_detent_ = mode == DELAY_MODE_WIDE_DETENT;
-    multitap_delay_.set_wide_detent(wide_detent_);
   }
 
-  inline void set_stereo_width(float width) {
-    granular_player_.set_stereo_width(width);
+  inline void set_stereo_width(float width, bool enabled) {
+    granular_player_.set_stereo_width(width, enabled);
   }
 
   inline void set_pitch_scale(PitchScale scale) {
@@ -319,6 +318,8 @@ class GranularProcessor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) {
+    const float q_offset = wide_detent_ ? 0.70710678f : 1.0f;
+    const float q_scale = wide_detent_ ? 0.0f : 16.0f;
     const float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
@@ -380,6 +381,7 @@ class GranularProcessor {
               *taps,
               speed_modulation.Next(),
               bandwidth_modulation.Next(),
+              q_offset, q_scale,
               out);
         }
       } else {
@@ -397,6 +399,7 @@ class GranularProcessor {
               *taps,
               speed_modulation.Next(),
               bandwidth_modulation.Next(),
+              q_offset, q_scale,
               out);
         }
       }

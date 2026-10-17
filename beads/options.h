@@ -158,7 +158,7 @@ class Options {
       if (page_ == kLimiterPage || page_ == kSelfPlayPage) {
         if (!reverb_qualified_ && fabsf(reverb - reverb_origin_) > 0.10f) {
           reverb_qualified_ = true;
-          width_zone_ = reverb >= 0.10f ? 1 : 0;
+          width_zone_ = width_preview_ != 0 ? 1 : 0;
         }
         if (fabsf(reverb - reverb_previous_) > 0.01f) {
           last_action_ = now;
@@ -171,7 +171,7 @@ class Options {
           if (reverb > 0.13f) width_zone_ = 1;
           float amount = (reverb - 0.13f) / 0.87f;
           CONSTRAIN(amount, 0.0f, 1.0f);
-          width_preview_ = width_zone_ ? 1 + int(amount * 254.0f) : 0;
+          width_preview_ = width_zone_ ? 1 + int(amount * 254.0f + 0.5f) : 0;
         }
         if (reverb_qualified_ && page_ == kLimiterPage) {
           if (reverb < 0.5f - 0.03f) {

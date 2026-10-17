@@ -199,6 +199,7 @@ void Ui::Poll() {
         press_time_[SWITCH_MEDIA] = system_clock.milliseconds();
         state->gain = 1.0f + p->hidden_parameter() * 255.0f;
       } else if (switches_.pressed(SWITCH_ASSIGN)) {
+        settings_->set_width_assigned(false);
         state->assignable_cv_destination = 3;
         state->assignable_cv_amount[i] = p->hidden_parameter() * 256.0f;
       }
@@ -211,10 +212,6 @@ void Ui::Poll() {
       ? options_.delay_preview() : settings_->delay_mode();
   stereo_width_ = options_.active()
       ? options_.width_preview() : settings_->stereo_width();
-  if (!options_.active() && !stereo_width_ &&
-      settings_->mutable_state()->assignable_cv_destination == 4) {
-    settings_->mutable_state()->assignable_cv_destination = 0;
-  }
   pitch_scale_ = options_.active()
       ? options_.pitch_preview() : settings_->pitch_scale();
   output_limiter_mode_ = options_.active()
@@ -296,7 +293,7 @@ void Ui::UpdateLeds() {
               (seed_button_state_ || seed_led_state_) ? 255 : 0);
         }
         
-        if (state.assignable_cv_destination == 4) {
+        if (settings_->width_assigned()) {
           for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
             leds_.set(Led(LED_ASSIGN_1 + i), triangle);
           }
@@ -571,12 +568,15 @@ void Ui::OnSwitchReleased(const Event& e) {
         }
         if (!pot_touched) {
           State* state = settings_->mutable_state();
-          state->assignable_cv_destination = \
-              state->assignable_cv_destination == 3
-                  ? 0
-                  : (state->assignable_cv_destination == 4 ? 0
-                      : (state->assignable_cv_destination == 2 && stereo_width_
-                          ? 4 : (state->assignable_cv_destination + 1) % 3));
+          if (settings_->width_assigned()) {
+            settings_->set_width_assigned(false);
+          } else if (state->assignable_cv_destination == 2 && stereo_width_) {
+            settings_->set_width_assigned(true);
+          } else {
+            state->assignable_cv_destination =
+                state->assignable_cv_destination == 3 ? 0
+                    : (state->assignable_cv_destination + 1) % 3;
+          }
         }
         settings_->SaveState();
       }

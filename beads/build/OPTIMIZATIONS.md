@@ -109,54 +109,12 @@ Mutable Instruments' notes describe no sound-identity checks and none of the acc
 5. Reject changes that spend RAM or ITCM for a small gain, or that help one quality and hurt the one that sets the peak.
 6. No compiler change without the same comparison: a faster compiler that changes the sound is not an optimization. The app uses GCC 9, where Mutable Instruments used 4.9.3; the bootloader stays on 4.9.3.
 
-## Beta 1 width and delay additions
+## Stereo width and delay mode
 
-No hardware was accessed for this change. GCC 9.3.1 / Cortex-M7 emulator
-counts around `Processor::Process`, 4,000 warm and 256 measured blocks:
+Width conversion and CV clamping run once per callback. Each new grain
+receives a normalized width and an enabled flag; active grains retain their
+pan. Wide-detent filter Q uses coefficients selected outside the sample loop.
 
-| q3 stereo fixture | fcbfe38 median / max instructions | New defaults | Other setting |
-|---|---:|---:|---|
-| stress32 | 77,712 / 77,726 | 77,755 / 77,769 | Narrow 77,758 / 77,772; Wide 77,740 / 77,754; Never 77,751 / 77,765 |
-| Clouds-style stress32 | 79,320 / 79,348 | 79,363 / 79,391 | — |
-| Delay | 51,460.5 / 51,592 | 51,529.5 / 51,661 | Wide detent 51,491.5 / 51,623 |
-| Frozen delay | 38,891 / 39,089 | 38,960 / 39,158 | — |
-
-The defaults match float audio byte for byte in these fixtures and all 20
-settled-panel firmware scenarios (420,000 stereo frames). Normal firmware
-adds 1,552 B flash and 64 B BSS. These executed-instruction measurements
-include the new branches, but do not measure H7 cycles, cache effects or
-whole-callback headroom. DWT timing remains to be done before a cycle-budget
-claim. They do not replace the earlier Seed3 results above.
-
-The compile-time [frozen-feedback experiment](FROZEN_FEEDBACK.md) adds
-2,409 / 2,421 instructions at median / peak in stress32 against new defaults,
-2,407 / 2,419 in Clouds-style stress32, and 2,409 / 2,419 in frozen delay.
-It adds another 840 B flash and 4,152 B BSS. Its per-sample calls to the
-existing diffuser are included. It is absent from normal firmware and is
-not an optimization or a production setting.
-
-### Round 2: continuous stereo width
-
-The continuous width replacement was measured with the same GCC 9.3.1,
-Cortex-M7 Unicorn DSP probe: 4,000 warm blocks, 256 counted blocks, q3 stereo,
-12 frames/block. Executed instructions, not hardware cycles:
-
-| Fixture | Original fcbfe38 median / peak | Round 2 defaults |
-|---|---:|---:|
-| stress32 | 77,712 / 77,726 | 77,730 / 77,744 |
-| Clouds stress32 | 79,320 / 79,348 | 79,338 / 79,366 |
-| Delay | 51,460.5 / 51,592 | 51,540.5 / 51,672 |
-| Frozen delay | 38,891 / 39,089 | 38,971 / 39,169 |
-
-Enabled width at zero displacement: 77,693 / 77,706; full spread:
-77,692 / 77,706 in stress32. Existing voices are primed identically; width
-only affects subsequently started grains. All four default DSP captures
-match the original float audio byte for byte. These counts exclude UI/CV
-and codec work; the whole callback comparison includes those paths.
-Raw evidence: lane `round2-cost-*.json` and `.f32`. No hardware was accessed.
-
-Unchanged settings remeasured in Round 2: Never stress32 77,726 / 77,740;
-Wide detent delay 51,502.5 / 51,634. With the experimental feedback diffuser
-flag, stock stress32 is 80,159 / 80,185, Clouds stress32 81,765 / 81,805,
-and frozen delay 41,380 / 41,588. The three flag-enabled captures match
-Round 1 byte for byte; the prototype itself was not modified.
+Default audio is checked against the unchanged firmware with the Cortex-M7
+emulator. Performance measurements count executed Thumb instructions, not
+hardware cycles; they do not establish module headroom.

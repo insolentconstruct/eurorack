@@ -587,8 +587,14 @@ void TestCallbackCvRouting() {
   extern uint8_t delay_buffer_1[];
   extern uint8_t delay_buffer_2[];
   extern uint16_t reverb_buffer[];
-  for (int channel = 0; channel < CV_ADC_CHANNEL_LAST; ++channel) {
+  for (int channel = 0; channel <= CV_ADC_CHANNEL_LAST; ++channel) {
+    const bool width = channel == CV_ADC_CHANNEL_LAST;
     Rig r(false, false);
+    if (width) {
+      settings.set_stereo_width(128);
+      settings.set_width_assigned(true);
+      settings.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+    }
     for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
       r.cv_patched[i] = true;
     }
@@ -613,7 +619,7 @@ void TestCallbackCvRouting() {
       *processor.delay_buffer_raw_bytes(i) = sample;
       *expected.delay_buffer_raw_bytes(i) = sample;
     }
-    r.cv[channel] = 30000;
+    r.cv[width ? CV_ADC_CHANNEL_ASSIGN : channel] = 30000;
     bool nonzero = false;
     for (int block = 0; block < 500; ++block) {
       const uint32_t random = Random::state();
@@ -635,6 +641,29 @@ void TestCallbackCvRouting() {
       }
       p.monophonic_mode = false;
       expected.set_pitch_scale(ui.pitch_scale());
+      expected.set_delay_mode(ui.delay_mode());
+      expected.set_stereo_width(ModulatedStereoWidth(ui.stereo_width(),
+          width ? cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f : 0.0f),
+          width);
+      if (width) {
+        CHECK(processor.delay_mode_ == DELAY_MODE_WIDE_DETENT);
+        CHECK(processor.processor_digital_.wide_detent_);
+        CHECK(processor.processor_vintage_digital_.wide_detent_);
+        CHECK(processor.processor_clean_tape_.wide_detent_);
+        CHECK(processor.processor_dirty_tape_.wide_detent_);
+        CHECK(processor.processor_digital_.granular_player_.width_enabled_);
+        CHECK(processor.processor_vintage_digital_.granular_player_.width_enabled_);
+        CHECK(processor.processor_clean_tape_.granular_player_.width_enabled_);
+        CHECK(processor.processor_dirty_tape_.granular_player_.width_enabled_);
+        CHECK(processor.processor_digital_.granular_player_.stereo_width_ ==
+            expected.processor_digital_.granular_player_.stereo_width_);
+        CHECK(processor.processor_vintage_digital_.granular_player_.stereo_width_
+            == expected.processor_digital_.granular_player_.stereo_width_);
+        CHECK(processor.processor_clean_tape_.granular_player_.stereo_width_
+            == expected.processor_digital_.granular_player_.stereo_width_);
+        CHECK(processor.processor_dirty_tape_.granular_player_.stereo_width_
+            == expected.processor_digital_.granular_player_.stereo_width_);
+      }
       ModulatedParameter d;
       d.base = cv_reader.pot(POTS_ADC_CHANNEL_DENSITY);
       d.cv = cv_reader.cv(CV_ADC_CHANNEL_DENSITY);
@@ -642,7 +671,7 @@ void TestCallbackCvRouting() {
       float mix[3];
       for (int i = 0; i < 3; ++i) {
         mix[i] = ui.mix_parameter(Ui::MixParameter(i)) * 1.005f;
-        if (i == 0) {
+        if (i == 0 && !width) {
           mix[i] += cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
         }
         CONSTRAIN(mix[i], 0.0f, 1.0f);
@@ -818,6 +847,22 @@ void TestSelfPlayFrozenBackup() {
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
 }
 
+void TestSynthWidthCallback() {
+  test_checker.Start("TestSynthWidthCallback");
+  Rig r;
+  settings.set_stereo_width(128);
+  settings.set_width_assigned(true);
+  r.StartAutomatic();
+  CHECK(synth_mode);
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 30000;
+  r.Settle();
+  CHECK(synth.wavetable_granular_player_.width_enabled_);
+  CHECK(synth.wavetable_granular_player_.stereo_width_ ==
+      ModulatedStereoWidth(128,
+          cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f));
+}
+
 void TestCloudsSwitch() {
   test_checker.Start("TestCloudsSwitch");
   extern bool clouds_style;
@@ -879,6 +924,7 @@ int main() {
   if (flash == MAP_FAILED) {
     return 2;
   }
+  TestSynthWidthCallback();
   TestCloudsSwitch();
   TestMainLoopMatchesHarness();
   TestAutomaticSelfPlay();

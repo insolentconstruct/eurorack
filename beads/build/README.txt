@@ -89,15 +89,15 @@ When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
 to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
-0 is Stock; 1..255 encode enabled width from zero to full. Old experimental
-Narrow/Wide bytes now represent amounts; reselect width after upgrading.
+0 is Stock; 1..255 encode enabled width from zero to full.
+WIDTH assignment uses extension byte 16. Stock firmware sees FEEDBACK
+and ignores the extension settings; saving in stock firmware clears them.
 Delay mode: Auto keeps the usual delay switch at SIZE fully clockwise.
 Never keeps granular playback there. Wide detent keeps the switch, with
 an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer
 plus SIZE CV) and no resonant boost. It does not affect synth mode.
-For both settings, the quality LED shows steady green / one blue pulse /
-two amber pulses. Both are saved; stock firmware ignores them and resets
-them to stock behaviour when saving after a downgrade.
+For delay mode, the quality LED shows steady green / one blue pulse /
+two amber pulses for Auto / Never / Wide detent.
 
 Output limiter: Stock is steady green; Fast release is one blue pulse;
 Off is two amber pulses. With Off, loud peaks can hard-clip.

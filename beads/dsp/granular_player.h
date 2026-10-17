@@ -69,7 +69,8 @@ class GranularPlayer {
     simple_scheduler_threshold_ = int(sample_rate * kSimpleSchedulerThreshold);
     
     pitch_scale_ = PITCH_SCALE_OFF;
-    stereo_width_ = STEREO_WIDTH_STOCK;
+    stereo_width_ = 0.0f;
+    width_enabled_ = false;
     grain_interval_ = 1;
     
     max_grain_duration_ = sample_rate * 4.0f;
@@ -78,7 +79,10 @@ class GranularPlayer {
     Reset();
   }
   
-  inline void set_stereo_width(float width) { stereo_width_ = width; }
+  inline void set_stereo_width(float width, bool enabled) {
+    stereo_width_ = width;
+    width_enabled_ = enabled;
+  }
 
   inline void set_pitch_scale(PitchScale scale) { pitch_scale_ = scale; }
 
@@ -128,12 +132,11 @@ class GranularPlayer {
     const float num_active_grains = float(CountActiveGrains() + 1);
     *amplitude = 1.0f / stmlib::Sqrt(num_active_grains);
 
-    if (stereo_width_ != 0.0f) {
+    if (width_enabled_) {
       const float random_pan = stmlib::Random::GetFloat();
       // Preserve the shared random sequence: stock pan takes two draws.
       stmlib::Random::GetFloat();
-      const float width = (stereo_width_ - 1.0f) / 254.0f;
-      *pan = 0.5f + width * (random_pan - 0.5f);
+      *pan = 0.5f + stereo_width_ * (random_pan - 0.5f);
       return;
     }
     const float total_spread = ComputeSpread(trigger, p);
@@ -253,6 +256,7 @@ class GranularPlayer {
   
   PitchScale pitch_scale_;
   float stereo_width_;
+  bool width_enabled_;
 
   DISALLOW_COPY_AND_ASSIGN(GranularPlayer);
 };

@@ -619,6 +619,8 @@ void TestStockAssignAmounts() {
   test_checker.Start("TestStockAssignAmounts");
   for (int i = 0; i < 3; ++i) {
     Rig r;
+    r.settings.set_stereo_width(128);
+    r.settings.set_width_assigned(true);
     const State before = r.settings.state();
     unsigned writes = test_writes;
     r.Down(SWITCH_ASSIGN);
@@ -645,6 +647,7 @@ void TestStockAssignAmounts() {
           (i == j ? expected[i] : before.assignable_cv_amount[j]));
     }
     CHECK(loaded.state().assignable_cv_destination == 3);
+    CHECK(!loaded.width_assigned());
     CHECK(!r.ui.options_.active());
   }
 }
@@ -1433,10 +1436,10 @@ void TestWidthOption() {
     r.Tick(20);
     r.reverb = zone == 0 ? 0.0f : zone == 1 ? 0.14f : 1.0f;
     r.Tick(20);
-    CHECK(r.ui.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 3 : 255));
+    CHECK(r.ui.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 4 : 255));
     CHECK(r.settings.stereo_width() == STEREO_WIDTH_STOCK);
     r.Tick(5100);
-    CHECK(r.settings.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 3 : 255));
+    CHECK(r.settings.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 4 : 255));
     CHECK(r.settings.state().padding[2] == 0);
     CHECK(r.settings.state().padding[3] == 0);
   }
@@ -1488,19 +1491,23 @@ void TestPlaybackStorage() {
       r.settings.set_pitch_scale(PITCH_SCALE_SHRI);
       r.settings.set_clouds_style(true);
       r.settings.set_stereo_width(StereoWidth(width));
-      r.settings.mutable_state()->assignable_cv_destination = width ? 4 : 0;
+      r.settings.set_width_assigned(width != 0);
       r.settings.set_delay_mode(DelayMode(delay));
       r.settings.SaveState();
       Settings loaded;
       loaded.Init(false);
       CHECK(loaded.stereo_width() == StereoWidth(width));
-      CHECK(loaded.state().assignable_cv_destination == (width ? 4 : 0));
+      CHECK(loaded.state().assignable_cv_destination == 0);
+      CHECK(loaded.width_assigned() == (width != 0));
+      State stock_view = loaded.state();
+      CONSTRAIN(stock_view.assignable_cv_destination, 0, 3);
+      CHECK(stock_view.assignable_cv_destination == 0);
       CHECK(loaded.delay_mode() == DelayMode(delay));
       CHECK(loaded.state().padding[2] == 0xa9);
       CHECK(loaded.state().padding[3] == 0xa2);
       CHECK(loaded.state().padding[4] == width);
       CHECK(loaded.state().padding[5] == (delay ? 0xa0 + delay : 0));
-      for (int byte = 6; byte < 14; ++byte) {
+      for (int byte = 7; byte < 14; ++byte) {
         CHECK(loaded.state().padding[byte] == 0);
       }
     }
@@ -1551,9 +1558,59 @@ void TestWidthDeadBand() {
   CHECK(r.ui.stereo_width() == 0);
 }
 
+void TestWidthFirstQualification() {
+  test_checker.Start("TestWidthFirstQualification");
+  for (int enabled = 0; enabled < 2; ++enabled) {
+    Rig r;
+    r.settings.set_stereo_width(enabled ? 128 : 0);
+    r.settings.set_width_assigned(enabled != 0);
+    r.settings.SaveState();
+    r.reverb = 0.22f;
+    r.Tick(20);
+    r.Enter();
+    r.Tap();
+    r.reverb = 0.11f;
+    r.Tick(20);
+    CHECK(r.ui.stereo_width() == (enabled ? 1 : 0));
+    r.reverb = 0.9999f;
+    r.Tick(20);
+    CHECK(r.ui.stereo_width() == 255);
+    r.reverb = 0.0f;
+    r.Tick(20);
+    CHECK(r.ui.stereo_width() == 0);
+    if (enabled) {
+      r.Down(SWITCH_FREEZE);
+      r.Up(SWITCH_FREEZE);
+      CHECK(r.settings.width_assigned());
+      Settings cancelled;
+      cancelled.Init(false);
+      CHECK(cancelled.width_assigned());
+      CHECK(cancelled.stereo_width() == 128);
+      CHECK(cancelled.state().assignable_cv_destination == 0);
+      r.Tick(40);
+      r.Enter();
+      r.Tap();
+      r.reverb = 1.0f;
+      r.Tick(20);
+      r.reverb = 0.0f;
+      r.Tick(20);
+    }
+    r.Tick(5100);
+    Settings loaded;
+    loaded.Init(false);
+    CHECK(!loaded.width_assigned());
+    CHECK(loaded.state().assignable_cv_destination == 0);
+    CHECK(loaded.stereo_width() == 0);
+  }
+}
+
 void TestWidthAssignCycle() {
   test_checker.Start("TestWidthAssignCycle");
   Rig r;
+  r.settings.mutable_state()->assignable_cv_destination = 3;
+  r.Down(SWITCH_ASSIGN);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(r.settings.state().assignable_cv_destination == 0);
   for (int enabled = 0; enabled < 2; ++enabled) {
     r.settings.set_stereo_width(enabled ? 128 : 0);
     r.settings.mutable_state()->assignable_cv_destination = 0;
@@ -1562,7 +1619,9 @@ void TestWidthAssignCycle() {
     for (int i = 0; i < (enabled ? 4 : 3); ++i) {
       r.Down(SWITCH_ASSIGN);
       r.Up(SWITCH_ASSIGN);
-      CHECK(r.settings.state().assignable_cv_destination ==
+      CHECK(r.settings.state().assignable_cv_destination <= 3);
+      CHECK((r.settings.width_assigned() ? 4 :
+          r.settings.state().assignable_cv_destination) ==
           (enabled ? expected[i] : (i + 1) % 3));
     }
   }
@@ -1574,6 +1633,7 @@ int main() {
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestWidthFirstQualification();
   TestWidthDeadBand();
   TestWidthAssignCycle();
   TestFeedbackOptionZones();
