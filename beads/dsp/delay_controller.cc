@@ -274,7 +274,7 @@ void DelayController::RenderInternal(
         if (new_head) {
           int slice_duration = int(
               clock_.interval(interval) * tap_ratio[ratio]);
-          if (slice_duration > max_delay_) slice_duration = max_delay_;
+          CONSTRAIN(slice_duration, 1, max_delay_);
           const int num_slices = max_delay_ / slice_duration;
           if (numerator_quantizer_[i].num_steps() != num_slices) {
             numerator_quantizer_[i].Init(
