@@ -163,6 +163,9 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
         !previous_freeze_state_ && !settings_->state().disable_autosave) {
       previous_freeze_state_ = true;
       remaining_sectors_ = 6;
+      if (settings_->state().frozen) {
+        SaveState(false);  // Stale: its backup was not loaded at boot.
+      }
     }
   }
   EraseSector();
