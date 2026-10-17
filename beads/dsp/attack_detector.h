@@ -90,13 +90,19 @@ class AttackDetector {
   }
   void EndBlock(unsigned writes) { clock_ += writes; }
   float Snap(float delay, float max_delay, int write_ptr) const {
+    if (!count_ || delay < 0.0f || max_delay < delay) return delay;
     int delta = start_ptr_ - write_ptr;
     if (delta < 0) delta += capacity_;
-    const float limit = std::min(delay + sample_rate_ * 0.100f, max_delay);
+    const uint32_t now = clock_ + unsigned(delta);
+    // The oldest mark bounds all others: reject a wholly younger ring in O(1).
+    if (float(now - marks_[(head_ + 64 - count_) & 63]) < delay) return delay;
+    unsigned first = unsigned(delay);
+    if (float(first) < delay) ++first;
+    const unsigned limit = unsigned(std::min(delay + sample_rate_ * 0.100f, max_delay));
     for (unsigned i = 0; i < count_; ++i) {
-      float age = float(clock_ - marks_[(head_ + 63 - i) & 63] + unsigned(delta));
+      const unsigned age = now - marks_[(head_ + 63 - i) & 63];
       if (age > limit) break;
-      if (age >= delay) return age;
+      if (age >= first) return float(age);
     }
     return delay;
   }
