@@ -563,6 +563,9 @@ void Ui::OnSwitchReleased(const Event& e) {
           assignable_cv_pot_[i].Unlock();
         }
         if (!pot_touched) {
+          // Publish the effective width before cycling or saving assignment.
+          // An exited options batch can still be waiting for its settle time.
+          settings_->set_stereo_width(stereo_width_);
           State* state = settings_->mutable_state();
           if (settings_->width_assigned()) {
             settings_->set_width_assigned(false);

@@ -1057,6 +1057,34 @@ void TestWidthAssignCycle() {
   }
 }
 
+void TestPendingWidthAssign() {
+  test_checker.Start("TestPendingWidthAssign");
+  for (int enabled = 0; enabled < 2; ++enabled) {
+    Rig r;
+    r.settings.set_stereo_width(enabled ? 0 : 128);
+    r.settings.mutable_state()->assignable_cv_destination = 2;
+    r.settings.set_width_assigned(!enabled);
+    r.settings.SaveState();
+    r.Tick(30);
+    r.Enter();
+    r.pot = enabled ? 0.9f : 0.06f;
+    r.Tick(10);
+    r.Down(SWITCH_MEDIA);
+    r.Up(SWITCH_MEDIA);
+    CHECK(!r.ui.options_.active());
+    CHECK(r.settings.stereo_width() == (enabled ? 0 : 128));
+    r.Tap();
+    CHECK(r.settings.width_assigned() == bool(enabled));
+    CHECK(r.settings.state().assignable_cv_destination == (enabled ? 0 : 1));
+    r.Tick(1100);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK((loaded.stereo_width() != 0) == bool(enabled));
+    CHECK(loaded.width_assigned() == bool(enabled));
+    CHECK(loaded.state().assignable_cv_destination == (enabled ? 0 : 1));
+  }
+}
+
 void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
   const OptionSetting expected[3][3] = {
@@ -1518,6 +1546,7 @@ int main() {
   TestOptionsWidthMeter();
   TestOptionsZonesAndSaveBatch();
   TestWidthAssignCycle();
+  TestPendingWidthAssign();
   TestPlaybackStorage();
   TestCloudsStorage();
   TestPitchStorage();

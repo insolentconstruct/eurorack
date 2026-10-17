@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- ASSIGN uses the pending width setting immediately after leaving options, including when disabling an assigned WIDTH.
 - Add generated printable and phone options guides, a text guide, and release ZIP copies.
 - Delay filter resonance ramps when changing Wide detent, avoiding a mode-switch click.
 - Width ignores small stationary knob noise. SEED scale taps survive a pending save, and leaving options restores normal controls while the final change settles and saves.
