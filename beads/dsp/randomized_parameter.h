@@ -29,6 +29,8 @@
 #ifndef BEADS_DSP_RANDOMIZED_PARAMETER_H_
 #define BEADS_DSP_RANDOMIZED_PARAMETER_H_
 
+#include <math.h>
+
 #include "stmlib/stmlib.h"
 
 #include "stmlib/dsp/units.h"
@@ -37,6 +39,10 @@
 #include "beads/resources.h"
 
 namespace beads {
+
+inline float MulAdd(float a, float b, float c) {
+  return fmaf(a, b, c);
+}
 
 inline float CenteredUniform() {
   return 2.0f * stmlib::Random::GetFloat() - 1.0f;
@@ -50,7 +56,8 @@ inline float PseudoGaussian() {
 inline float BoundedRandomFloat(float spread) {
   const float u = stmlib::Random::GetFloat();
   const float v = stmlib::Random::GetFloat();
-  return 0.5f + (u - 0.5f) * std::min(spread * v, 1.0f);
+  // Keep rounding identical across compilers.
+  return MulAdd(u - 0.5f, std::min(spread * v, 1.0f), 0.5f);
 }
 
 
