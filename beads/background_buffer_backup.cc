@@ -111,6 +111,7 @@ void BackgroundBufferBackup::EraseSector() {
 
 void BackgroundBufferBackup::WriteBlock() {
   if (remaining_bytes_) {
+    HAL_FLASH_Unlock();  // A settings save may have locked it.
     uint8_t* source = processor_->delay_buffer_raw_bytes(write_offset_);
     uint8_t buffer[kFlashWordSize];
     copy(&source[0], &source[kFlashWordSize], &buffer[0]);
