@@ -68,9 +68,15 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       SortGrainList(p.monophonic_mode);
     }
 
+    // Sum the grains in a local frame, which the compiler can keep in
+    // registers.
+    FloatFrame sum;
+    sum.l = 0.0f;
+    sum.r = 0.0f;
     for (int i = 0; i < NUM_GRAINS; ++i) {
-      grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(delay_line, out);
+      grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(delay_line, &sum);
     }
+    *out += sum;
 
     Tick();  // Required to estimate the timing between grains.
   }
