@@ -334,7 +334,9 @@ class DelayLine {
     if (interpolation == INTERPOLATION_HERMITE) {
       delay_integral += max_delay - 1; // Fix latency.
     }
-    int i = (write_ptr_ + delay_integral) % max_delay;
+    // Callers never read ahead of the write head, so the index is never
+    // negative and an unsigned modulo will do.
+    int i = size_t(write_ptr_ + delay_integral) % max_delay;
     
     FloatFrame value;
     
