@@ -154,3 +154,9 @@ only affects subsequently started grains. All four default DSP captures
 match the original float audio byte for byte. These counts exclude UI/CV
 and codec work; the whole callback comparison includes those paths.
 Raw evidence: lane `round2-cost-*.json` and `.f32`. No hardware was accessed.
+
+Unchanged settings remeasured in Round 2: Never stress32 77,726 / 77,740;
+Wide detent delay 51,502.5 / 51,634. With the experimental feedback diffuser
+flag, stock stress32 is 80,159 / 80,185, Clouds stress32 81,765 / 81,805,
+and frozen delay 41,380 / 41,588. The three flag-enabled captures match
+Round 1 byte for byte; the prototype itself was not modified.
