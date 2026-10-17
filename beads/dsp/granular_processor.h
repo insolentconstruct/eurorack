@@ -402,11 +402,13 @@ class GranularProcessor {
       if (mono) {
         mono_delay_line_.Write(s, *freeze);
         if (triggers) {
-          granular_player_.Render(
-              &mono_delay_line_,
-              *triggers,
-              parameters,
-              out, attacks);
+          if (attacks_enabled) {
+            granular_player_.Render(
+                &mono_delay_line_, *triggers, parameters, out, attacks);
+          } else {
+            granular_player_.Render(
+                &mono_delay_line_, *triggers, parameters, out);
+          }
         }
         if (taps) {
           multitap_delay_.Render(
@@ -420,11 +422,13 @@ class GranularProcessor {
       } else {
         stereo_delay_line_.Write(s, *freeze);
         if (triggers) {
-          granular_player_.Render(
-              &stereo_delay_line_,
-              *triggers,
-              parameters,
-              out, attacks);
+          if (attacks_enabled) {
+            granular_player_.Render(
+                &stereo_delay_line_, *triggers, parameters, out, attacks);
+          } else {
+            granular_player_.Render(
+                &stereo_delay_line_, *triggers, parameters, out);
+          }
         }
         if (taps) {
           multitap_delay_.Render(
