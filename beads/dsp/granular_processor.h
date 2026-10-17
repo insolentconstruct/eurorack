@@ -62,6 +62,7 @@ class GranularProcessor {
     filter_mode_.reserved = 0;
     filter_mode_.position = 0;
     
+    attacks_.Init(sample_rate);
     feedback_ = 0.0f;
     shape_ = 0.0f;
     speed_ = 0.0f;
@@ -81,7 +82,11 @@ class GranularProcessor {
     input_limiter_.Init(1.0f / sample_rate, 0.95f);
   }
   
+  void SetAttacks(int mode) { attacks_.Configure(mode); }
+  void SetAttackOnset(bool onset) { attacks_.SetOnset(onset); }
+
   inline void Reset() {
+    attacks_.Reset();
     mono_delay_line_.Reset();
     stereo_delay_line_.Reset();
     granular_player_.Reset();
@@ -304,15 +309,19 @@ class GranularProcessor {
       FloatFrame* out,
       size_t size) {
     if (mono) {
-      ProcessInternal<true>(
+      if (attacks_.mode()) ProcessInternal<true, true>(
+          triggers, taps, freeze, parameters, feedback, in, out, size);
+      else ProcessInternal<true, false>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     } else {
-      ProcessInternal<false>(
+      if (attacks_.mode()) ProcessInternal<false, true>(
+          triggers, taps, freeze, parameters, feedback, in, out, size);
+      else ProcessInternal<false, false>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     }
   }
 
-  template<bool mono>
+  template<bool mono, bool attacks_enabled>
   inline void ProcessInternal(
       const TriggerGenerator::Output* triggers,
       const DelayController::Output* taps,
@@ -361,6 +370,13 @@ class GranularProcessor {
     const float lp_coefficient = lp_coefficients[resolution];
     const float soft_limit_gain = soft_limit_gains[resolution];
     
+    AttackDetector* attacks = attacks_enabled ? &attacks_ : NULL;
+    unsigned writes = 0;
+    if (attacks) {
+      for (size_t i = 0; i < size; ++i) writes += !freeze[i];
+      attacks->BeginBlock(mono ? mono_delay_line_.write_ptr() : stereo_delay_line_.write_ptr(),
+          mono ? max_delay * 2 : max_delay, triggers != NULL, freeze[0]);
+    }
     while (size--) {
       const float feedback = feedback_modulation.Next();
       FloatFrame input = *in;
@@ -390,7 +406,7 @@ class GranularProcessor {
               &mono_delay_line_,
               *triggers,
               parameters,
-              out);
+              out, attacks);
         }
         if (taps) {
           multitap_delay_.Render(
@@ -408,7 +424,7 @@ class GranularProcessor {
               &stereo_delay_line_,
               *triggers,
               parameters,
-              out);
+              out, attacks);
         }
         if (taps) {
           multitap_delay_.Render(
@@ -443,8 +459,10 @@ class GranularProcessor {
       ++in;
       ++out;
     }
+    if (attacks) attacks->EndBlock(writes);
   }
       
+  AttackDetector attacks_;
   DelayGranularPlayer dummy_granular_player_;
   DelayGranularPlayer granular_player_;
   MultitapDelay multitap_delay_;

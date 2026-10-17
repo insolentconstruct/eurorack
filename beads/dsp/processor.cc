@@ -44,6 +44,7 @@ using namespace stmlib;
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
+  attack_input_.Init();
   clouds_style_ = false;
   diffuser_.Init(diffuser_buffer_);
   diffuser_.set_amount(kCloudsDiffusion);
@@ -79,6 +80,7 @@ void Processor::SetCloudsStyle(bool clouds) {
 }
 
 void Processor::Configure(Media media, bool mono) {
+  attack_input_.Reset();
   media_ = media;
   mono_ = mono;
   

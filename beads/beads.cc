@@ -145,6 +145,16 @@ void Process(
   }
   ui.set_freeze_led_state(freeze_block);
   
+  bool attack_onset = false;
+  if (processor.attack_input()->mode() && !codec_transition_frames) {
+    attack_onset = processor.attack_input()->Process(in, size,
+        1.0f / 2147483648.0f, gain_control.peak(), processor.sample_rate(),
+        normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
+        normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT));
+    attack_onset &= !freeze_block && !synth_mode && processor.AttackRecording();
+    processor.SetAttackOnset(attack_onset);
+  }
+  const bool attack_gate = attack_onset && processor.attack_input()->mode() == 2;
   bool seed_block = false;
   GateFlags* seed_input = NULL;
   if (!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED)) {
@@ -157,9 +167,15 @@ void Process(
       seed_block |= has_seed;
     }
     seed_input = seed;
+  } else if (processor.attack_input()->mode() == 2) {
+    for (size_t i = 0; i < size; ++i) seed[i] = GATE_FLAG_LOW;
+    seed_input = seed;
+    previous_seed = GATE_FLAG_LOW;
   } else {
     previous_seed = GATE_FLAG_LOW;
   }
+  AttackInput::MergeSeed(attack_gate, seed, size);
+  seed_block |= attack_gate;
   ui.set_seed_led_state(seed_block && !codec_transition_frames);
   ui.set_overwrite_reserve(synth_mode ? 1.0f : processor.overwrite_reserve());
   
