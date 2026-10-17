@@ -10,7 +10,7 @@ What to know when building Drizzlet's DSP (`beads/dsp`) somewhere other than the
 
 ## What a port should know
 
-1. **Pinned rounding.** `MulAdd()` in `dsp/randomized_parameter.h` is a standard C `fmaf()` (fused multiply-add). It makes one pan calculation round the same way everywhere. On a CPU without hardware FMA it is a slower library call, made once per grain start. Build the rest with `-ffp-contract=off`, as the host tests do, so the compiler does not fuse other expressions differently from the module.
+1. **Pinned rounding.** `MulAdd()` in `dsp/randomized_parameter.h` is a standard C `fmaf()` (fused multiply-add). It makes one pan calculation round the same way everywhere. On a CPU without hardware FMA it is a slower library call, made once per grain start. Build the rest with `-ffp-contract=off` (some host tests already do) so the compiler does not fuse other expressions differently from the module.
 2. **Delay-line reads stay behind the write head.** `DelayLine::Read()` in `dsp/delay_line.h` uses an unsigned modulo for its index, which assumes no caller reads ahead of the write head. Grains (which stop at the heads) and delay taps satisfy this. A new kind of reader must too.
 3. **Memory and rates.** The Clouds-style reverb needs a larger reverb memory, and `Processor` holds a 2,048-sample diffuser buffer. Like Mutable Instruments' own code, the engine runs at fixed internal rates (48, 32 and 24 kHz by recording quality); a host at another rate resamples around it.
 4. **Calibration hooks.** The DWT timing hooks in the DSP headers compile to nothing unless `DWT_CALIBRATION` is defined.
