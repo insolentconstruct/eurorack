@@ -132,6 +132,7 @@ class GranularPlayer {
     const float pan_spread = 0.5f * num_active_grains * total_spread;
     if (stereo_width_ == STEREO_WIDTH_WIDE) {
       *pan = stmlib::Random::GetFloat();
+      // Preserve the shared random sequence: stock pan takes two draws.
       stmlib::Random::GetFloat();
       return;
     }

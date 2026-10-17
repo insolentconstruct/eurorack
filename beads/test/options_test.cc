@@ -1481,12 +1481,59 @@ void TestDelayOption() {
   CHECK(r.ui.stereo_width() == STEREO_WIDTH_STOCK);
 }
 
+void TestPlaybackStorage() {
+  test_checker.Start("TestPlaybackStorage");
+  Rig r;
+  for (int width = 0; width < 3; ++width) {
+    for (int delay = 0; delay < 3; ++delay) {
+      r.settings.set_pitch_scale(PITCH_SCALE_SHRI);
+      r.settings.set_clouds_style(true);
+      r.settings.set_stereo_width(StereoWidth(width));
+      r.settings.set_delay_mode(DelayMode(delay));
+      r.settings.SaveState();
+      Settings loaded;
+      loaded.Init(false);
+      CHECK(loaded.stereo_width() == StereoWidth(width));
+      CHECK(loaded.delay_mode() == DelayMode(delay));
+      CHECK(loaded.state().padding[2] == 0xa9);
+      CHECK(loaded.state().padding[3] == 0xa2);
+      CHECK(loaded.state().padding[4] == (width ? 0xa0 + width : 0));
+      CHECK(loaded.state().padding[5] == (delay ? 0xa0 + delay : 0));
+      for (int byte = 6; byte < 14; ++byte) {
+        CHECK(loaded.state().padding[byte] == 0);
+      }
+    }
+  }
+}
+
+void TestFeedbackOptionZones() {
+  test_checker.Start("TestFeedbackOptionZones");
+  Rig r;
+  r.Enter();
+  r.Tap();
+  const float positions[] = { 0.0f, 0.34f, 0.38f, 0.64f, 0.71f,
+      0.65f, 0.62f, 0.32f, 0.29f };
+  const int zones[] = { 0, 0, 1, 1, 2, 2, 1, 1, 0 };
+  for (size_t i = 0; i < sizeof(zones) / sizeof(zones[0]); ++i) {
+    r.pot = positions[i];
+    r.reverb = positions[i];
+    r.Tick(20);
+    CHECK(r.ui.stereo_width() == StereoWidth(zones[i]));
+    CHECK(r.ui.delay_mode() == DelayMode(zones[i]));
+    CHECK(!r.ui.options_.self_play_preview());
+    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+    CHECK(!r.ui.options_.clouds_preview());
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestFeedbackOptionZones();
+  TestPlaybackStorage();
   TestDelayOption();
   TestWidthOption();
   TestCloudsStorage();

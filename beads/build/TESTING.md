@@ -41,17 +41,18 @@ execute more than once. The manual-coverage totals below are unchanged.
 | backup | 16 | 106 |
 | clouds | 3 | 9 |
 | delay | 10 | 45 |
-| delay_mode | 5 | 25 |
+| delay_mode | 6 | 33 |
+| feedback_diffuser | 2 | 8 |
 | firmware | 14 | 102 |
 | gain | 5 | 21 |
-| granular | 21 | 92 |
+| granular | 22 | 99 |
 | mix | 7 | 28 |
-| options | 33 | 336 |
+| options | 38 | 390 |
 | pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **146** | **892** |
+| **Total** | **155** | **969** |
 
 The table lists the tests on the `drizzlet` branch now; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
 
@@ -63,13 +64,21 @@ byte value, options preview and saving, and unchanged bytes 12/13.
 
 Delay mode adds host checks for all stored byte values, preview, cancellation
 and saving, Never at SIZE fully clockwise in every quality and channel mode,
-returning from delay to granular, detent boundaries and unfiltered playback
+returning from delay to granular, detent boundaries and neutral playback within 1e-7 FS
 with SIZE CV inside the detent. Auto remains the default.
 
 The compile-time frozen-feedback experiment has its own sanitizer target,
 `beads/test/feedback_diffuser.mk`: impulse tail, channel isolation, finite
 bounded output, zero-feedback bypass, and unchanged frozen recording banks
 at maximum feedback in every quality, mono and stereo.
+
+Default regression for stereo width and delay mode: GCC 9.3.1 builds of
+`fcbfe38` and the additions matched in all 20 settled-panel emulator scenarios
+(four qualities × granular, mono, delay, synth and self-play): 420,000 stereo
+frames, maximum error 0. The prototype flag was undefined. A separate q3
+stereo stress32 fixture, Clouds-style stress32 and frozen delay also match
+at defaults. No hardware was accessed for these additions; performance
+numbers below are instruction counts, not DWT cycles.
 
 ## Coverage of the manual
 

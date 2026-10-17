@@ -108,3 +108,29 @@ Mutable Instruments' notes describe no sound-identity checks and none of the acc
 4. Any difference is flagged with its largest error and whether it drifts. It is accepted only if the error stays strictly below -90 dBFS (0.0000316 FS) with no drift, and is documented here.
 5. Reject changes that spend RAM or ITCM for a small gain, or that help one quality and hurt the one that sets the peak.
 6. No compiler change without the same comparison: a faster compiler that changes the sound is not an optimization. The app uses GCC 9, where Mutable Instruments used 4.9.3; the bootloader stays on 4.9.3.
+
+## Beta 1 width and delay additions
+
+No hardware was accessed for this change. GCC 9.3.1 / Cortex-M7 emulator
+counts around `Processor::Process`, 4,000 warm and 256 measured blocks:
+
+| q3 stereo fixture | fcbfe38 median / max instructions | New defaults | Other setting |
+|---|---:|---:|---|
+| stress32 | 77,712 / 77,726 | 77,755 / 77,769 | Narrow 77,758 / 77,772; Wide 77,740 / 77,754; Never 77,751 / 77,765 |
+| Clouds-style stress32 | 79,320 / 79,348 | 79,363 / 79,391 | — |
+| Delay | 51,460.5 / 51,592 | 51,529.5 / 51,661 | Wide detent 51,491.5 / 51,623 |
+| Frozen delay | 38,891 / 39,089 | 38,960 / 39,158 | — |
+
+The defaults match float audio byte for byte in these fixtures and all 20
+settled-panel firmware scenarios (420,000 stereo frames). Normal firmware
+adds 1,552 B flash and 64 B BSS. These executed-instruction measurements
+include the new branches, but do not measure H7 cycles, cache effects or
+whole-callback headroom. DWT timing remains to be done before a cycle-budget
+claim. They do not replace the earlier Seed3 results above.
+
+The compile-time [frozen-feedback experiment](FROZEN_FEEDBACK.md) adds
+2,409 / 2,421 instructions at median / peak in stress32 against new defaults,
+2,407 / 2,419 in Clouds-style stress32, and 2,409 / 2,419 in frozen delay.
+It adds another 840 B flash and 4,152 B BSS. Its per-sample calls to the
+existing diffuser are included. It is absent from normal firmware and is
+not an optimization or a production setting.

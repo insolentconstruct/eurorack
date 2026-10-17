@@ -23,8 +23,8 @@ Where the Beads manual and the firmware disagree, see [MANUAL_ERRATA.md](MANUAL_
 
 Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run faster, and how to propose more: [OPTIMIZATIONS.md](OPTIMIZATIONS.md). Building the DSP elsewhere: [PORTING.md](PORTING.md). Before adding a feature, check [FEATURES.md](FEATURES.md) for which buttons, settings bytes, flash and RAM are already taken.
 
-**TL;DR:** buffer trim, pitch scales and a Clouds-style reverb setting are new
-since alpha 2. Pitch scale defaults to Off and reverb to Stock.
+**TL;DR:** buffer trim, pitch scales, Clouds-style reverb, stereo width and
+delay mode are new since alpha 2. The new settings default to stock behaviour.
 
 The frozen-feedback all-pass work is a [design and compile-time experiment](FROZEN_FEEDBACK.md),
 not an options-page setting.
@@ -93,6 +93,8 @@ Move a knob more than one tenth of its travel to start selecting; its zones pick
 | Category | Knob | Choices |
 |---|---|---|
 | Feedback LED (page 0) | FEEDBACK | Self-play: Automatic / On request (halves) |
+| Feedback LED (page 0) | DRY/WET | Delay mode: Auto / Never / Wide detent (thirds) |
+| Feedback LED (page 0) | REVERB | Stereo width: Stock / Narrow / Wide (thirds) |
 | Dry/wet LED (page 1) | DRY/WET | Limiter: Stock / Fast release / Off (thirds) |
 | Dry/wet LED (page 1) | REVERB | Reverb: Stock / Clouds-style (halves) |
 | Reverb LED (page 2) | FEEDBACK | Pitch scale: Off / Chromatic / Scale (thirds); tap SEED on Scale to cycle |

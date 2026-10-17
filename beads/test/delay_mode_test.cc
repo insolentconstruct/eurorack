@@ -282,22 +282,40 @@ void TestDelayOptions() {
       Rig r;
       r.processor.Configure(Processor::Media(quality), mono);
       r.processor.set_delay_mode(DELAY_MODE_NEVER);
-      r.Run(14000);
+      r.Run(64);
       CHECK(r.processor.delay_mode_transition_ < -1.49f);
+      // Full fade timing is covered by TestDelayModeFade. Exercise both
+      // directions at the mode boundary for each quality/channel pair.
+      r.processor.delay_mode_transition_ = -0.001f;
       r.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
-      r.Run(14000);
-      CHECK(r.processor.delay_mode_transition_ > 1.49f);
+      r.Run(64);
+      CHECK(r.processor.delay_mode_transition_ > 0.0f);
+      r.processor.delay_mode_transition_ = 0.001f;
       r.processor.set_delay_mode(DELAY_MODE_NEVER);
-      r.Run(14000);
-      CHECK(r.processor.delay_mode_transition_ < -1.49f);
+      r.Run(64);
+      CHECK(r.processor.delay_mode_transition_ < 0.0f);
     }
   }
-  // The detent is a true bypass, including additive SIZE CV.
+  // Q is Butterworth at both ends, rather than the stock resonant boost.
+  for (int end = 0; end < 2; ++end) {
+    Rig r;
+    r.processor.Configure(Processor::MEDIA_DIGITAL, false);
+    r.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+    r.parameters.size.attenuverter = end ? 1.0f : -1.0f;
+    r.processor.delay_mode_transition_ = 1.5f;
+    r.Run(100);
+    CHECK(fabsf(r.processor.processor_digital_.multitap_delay_.filter_[0].r()
+        - 1.41421356f) < 0.000001f);
+  }
+  // The neutral target bypasses the filter, including additive SIZE CV.
   Rig a;
   Rig b;
   a.processor.Configure(Processor::MEDIA_DIGITAL, false);
   b.processor.Configure(Processor::MEDIA_DIGITAL, false);
   b.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+  // Start in delay so SIZE randomness cannot change the warm-up grains.
+  a.processor.delay_mode_transition_ = 1.5f;
+  b.processor.delay_mode_transition_ = 1.5f;
   b.parameters.size.attenuverter = 0.1f;
   b.parameters.size.has_cv = true;
   b.parameters.size.cv = 0.04f;
@@ -309,7 +327,11 @@ void TestDelayOptions() {
     a.Block(&stock);
     b.Block(&detent);
   }
-  CHECK(stock == detent);
+  // MI's interpolator can settle one float step away from 0.5. Changing Q
+  // must leave the neutral result within that rounding noise (-140 dBFS).
+  for (size_t i = 0; i < stock.size(); ++i) {
+    CHECK(fabsf(stock[i] - detent[i]) < 0.0000001f);
+  }
 }
 
 int main() {

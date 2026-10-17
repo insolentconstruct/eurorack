@@ -18,9 +18,10 @@ https://github.com/insolentconstruct/eurorack/issues
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
 change to grain stealing, as in the released source. In a test on one
 module, the 2021 and 2024 firmware clicked with DENSITY and PITCH near
-fully clockwise; builds with this change did not. New since alpha 2: buffer trim, pitch scales and a Clouds-style reverb
-setting. Pitch scale defaults to Off and reverb to Stock. Details are in
-CHANGELOG.md in the repository.
+fully clockwise; builds with this change did not. New since alpha 2:
+buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode.
+The new settings default to stock behaviour. Details are in CHANGELOG.md
+in the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/
@@ -70,10 +71,24 @@ zones pick the value, shown on the quality LED.
 
 Category (page)   Knob       Choices
 Feedback (0)      FEEDBACK   Self-play: Automatic / On request (halves)
+Feedback (0)      DRY/WET    Delay mode: Auto / Never / Wide detent (thirds)
+Feedback (0)      REVERB     Stereo width: Stock / Narrow / Wide (thirds)
 Dry/wet (1)       DRY/WET    Limiter: Stock / Fast release / Off (thirds)
 Dry/wet (1)       REVERB     Reverb: Stock / Clouds-style (halves)
 Reverb (2)        FEEDBACK   Pitch scale: Off / Chromatic / Scale (thirds);
                             tap SEED on Scale to cycle
+
+Stereo width: Narrow keeps one-quarter of the stock random pan excursion
+around centre, preserving more of the input stereo image. Wide pans every
+grain across the full range, independent of parameter randomness and trigger
+acceptance. This also applies to synth grains. Stock is unchanged.
+Delay mode: Auto keeps the usual delay switch at SIZE fully clockwise.
+Never keeps granular playback there. Wide detent keeps the switch, with
+an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer
+plus SIZE CV) and no resonant boost. It does not affect synth mode.
+For both settings, the quality LED shows steady green / one blue pulse /
+two amber pulses. Both are saved; stock firmware ignores them and resets
+them to stock behaviour when saving after a downgrade.
 
 Output limiter: Stock is steady green; Fast release is one blue pulse;
 Off is two amber pulses. With Off, loud peaks can hard-clip.
