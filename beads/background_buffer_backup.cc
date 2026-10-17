@@ -41,6 +41,8 @@ using namespace stmlib;
 
 const size_t kFlashWordSize = 32;
 const uint32_t kBackupDelay = 10000; // milliseconds
+const uint32_t kMaxBackupDelay = 320000;
+const uint32_t kBackupResetDelay = 60000;
 const size_t kNumSectors = 6;
 const uint32_t kCrcTag = 0x31435243;  // CRC1
 
@@ -57,6 +59,10 @@ void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
   processor_ = processor;
   settings_ = settings;
   
+  backup_delay_ = kBackupDelay;
+  thaw_start_time_ = system_clock.milliseconds();
+  freeze_state_ = false;
+  save_started_ = false;
   previous_freeze_state_ = false;
   remaining_sectors_ = 0;
   remaining_bytes_ = 0;
@@ -90,6 +96,7 @@ bool BackgroundBufferBackup::Load() {
   }
   freeze_start_time_ = system_clock.milliseconds();
   previous_freeze_state_ = frozen;
+  freeze_state_ = frozen;
   return frozen;
 }
 
@@ -120,6 +127,7 @@ void BackgroundBufferBackup::SaveState(bool frozen) {
 
 void BackgroundBufferBackup::EraseSector() {
   if (remaining_sectors_) {
+    save_started_ = true;
     HAL_FLASH_Unlock();
     FLASH_EraseInitTypeDef erase_params;
     erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
@@ -183,13 +191,26 @@ void BackgroundBufferBackup::WriteBlock() {
       }
       // We've saved everything, we are now sure that we can restart with
       // the FREEZE button enabled!
+      save_started_ = false;
+      backup_delay_ = kBackupDelay;
       SaveState(true);
     }
   }
 }
 
 void BackgroundBufferBackup::Process(bool freeze_state) {
+  const uint32_t now = system_clock.milliseconds();
   if (!freeze_state) {
+    if (freeze_state_) {
+      thaw_start_time_ = now;
+    }
+    if (save_started_) {
+      backup_delay_ = min(backup_delay_ * 2, kMaxBackupDelay);
+      save_started_ = false;
+    }
+    if (now - thaw_start_time_ >= kBackupResetDelay) {
+      backup_delay_ = kBackupDelay;
+    }
     if (previous_freeze_state_) {
       // Abort current save op.
       remaining_sectors_ = remaining_bytes_ = 0;
@@ -198,7 +219,7 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
     freeze_start_time_ = system_clock.milliseconds();
     previous_freeze_state_ = false;
   } else {
-    if ((system_clock.milliseconds() - freeze_start_time_) >= kBackupDelay &&
+    if ((now - freeze_start_time_) >= backup_delay_ &&
         !previous_freeze_state_ && !settings_->state().disable_autosave) {
       previous_freeze_state_ = true;
       remaining_sectors_ = kNumSectors;
@@ -207,6 +228,7 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
       }
     }
   }
+  freeze_state_ = freeze_state;
   EraseSector();
   WriteBlock();
 }
