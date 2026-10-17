@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Width ignores small stationary knob noise. SEED scale taps survive a pending save, and leaving options restores normal controls while the final change settles and saves.
 - Options reorganized across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Reserved knobs are inert. Reopening remembers the last page until power-off.
 - Options save after one second of settled controls. Hold ASSIGN 3 s or another button leaves; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, exit and completed saves flash the page LED for 100 ms.
 - Enabled width uses the green/yellow/red meter with a slow blink. Pitch follows the same ladder across steady, slow and fast; Raag Shri uses two yellow pulses followed by a pause.

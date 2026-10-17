@@ -44,7 +44,7 @@ int main() {
             : "2 yellow pulses / 2.048 s";
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
             kOptionPages[page].led, kOptionKnobNames[knob],
-            kOptionNames[setting], value.name, value.colour, pulse);
+            kOptionNames[setting], value.name, value.color, pulse);
       }
     }
   }

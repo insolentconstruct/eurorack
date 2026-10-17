@@ -132,7 +132,7 @@ only the reverb character changes. Switching briefly fades the sound out and
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
-Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
+Pitch quantization: Reverb LED page, FEEDBACK knob. Three equal zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
 Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),

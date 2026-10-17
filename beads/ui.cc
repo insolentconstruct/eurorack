@@ -149,22 +149,28 @@ void Ui::Poll() {
       previous_stage != Options::STAGE_DRAIN) {
     options_flash_time_ = system_clock.milliseconds();
     options_flash_led_ = Led(LED_ASSIGN_1 + kOptionPages[options_.page()].led_index);
+    for (int i = 0; i < SWITCH_LAST; ++i) {
+      if (switches_.pressed_immediate(Switch(i))) {
+        ignore_release_[i] = true;
+      }
+    }
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
   }
 
   // Options transitions and event acceptance both run in SysTick. Suppress
-  // events on entry, while editing or draining, and on exit, but keep the
+  // events on entry, while editing and until the exit buttons are up. Keep the
   // stock debounce bookkeeping.
-  const bool accept_switch_events = !was_active && !options_.active();
+  const bool accept_switch_events = !was_active && !options_.active() &&
+      options_.stage() != Options::STAGE_DRAIN;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
     if (switches_.just_pressed(s)) {
       if (accept_switch_events) queue_.AddEvent(CONTROL_SWITCH, i, 0);
       press_time_[i] = system_clock.milliseconds();
-      ignore_release_[i] = false;
+      ignore_release_[i] = !accept_switch_events;
     }
 
     if (switches_.pressed(s) && !ignore_release_[i]) {
@@ -204,15 +210,15 @@ void Ui::Poll() {
     }
   }
   
-  clouds_style_ = options_.active()
+  clouds_style_ = options_.stage() != Options::STAGE_INACTIVE
       ? options_.clouds_preview() : settings_->clouds_style();
-  delay_mode_ = options_.active()
+  delay_mode_ = options_.stage() != Options::STAGE_INACTIVE
       ? options_.delay_preview() : settings_->delay_mode();
-  stereo_width_ = options_.active()
+  stereo_width_ = options_.stage() != Options::STAGE_INACTIVE
       ? options_.width_preview() : settings_->stereo_width();
-  pitch_scale_ = options_.active()
+  pitch_scale_ = options_.stage() != Options::STAGE_INACTIVE
       ? options_.pitch_preview() : settings_->pitch_scale();
-  output_limiter_mode_ = options_.active()
+  output_limiter_mode_ = options_.stage() != Options::STAGE_INACTIVE
       ? options_.preview() : settings_->output_limiter_mode();
   UpdateLeds();
 }
@@ -322,7 +328,7 @@ void Ui::UpdateLeds() {
               i == kOptionPages[options_.page()].led_index ? triangle : 0);
     }
     const OptionValue& indication = options_.indication();
-    const Leds::Color colour = { indication.r, indication.g, indication.b };
+    const Leds::Color color = { indication.r, indication.g, indication.b };
     // SysTick refreshes at 1 kHz: Marbles' 4:1 slow/fast ratio,
     // stretched to 1.024 s / 256 ms periods (0.98 / 3.91 Hz).
     const uint32_t now = system_clock.milliseconds();
@@ -338,7 +344,7 @@ void Ui::UpdateLeds() {
           ? 0.25f + 0.749f * float(options_.width_preview() - 1) / 254.0f
           : 0.0f);
     } else {
-      leds_.set_media(colour, lit ? 1.0f : 0.0f);
+      leds_.set_media(color, lit ? 1.0f : 0.0f);
     }
   }
 

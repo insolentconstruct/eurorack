@@ -29,6 +29,8 @@
 #ifndef BEADS_DSP_LIMITER_H_
 #define BEADS_DSP_LIMITER_H_
 
+#include <algorithm>
+
 #include "stmlib/stmlib.h"
 
 #include "stmlib/dsp/dsp.h"

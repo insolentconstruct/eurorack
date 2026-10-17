@@ -181,3 +181,8 @@ exit and completed-save confirmations last 100 ms; idle controls do not
 repeat the save flash. The exported reference also checks the allowed
 colours and patterns. Physical LED colour separation and audio during flash
 writes still need module checks.
+
+Options regressions cover 10 s of ±0.002 width noise at an encoded step boundary
+(one save and one confirmation), short SEED taps and long holds during a pending
+save, volatile commit publication, and a second FREEZE press before the pending
+save settles. Exit restores the normal MEDIA indication immediately.

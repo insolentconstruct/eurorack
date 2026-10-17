@@ -47,19 +47,28 @@ for (page, led), knobs in pages.items():
 # Validate the exported indication vocabulary as well as matching the prose.
 values = {}
 for row in rows:
-    _, _, _, setting, value, colour, pulse = row.split("\t")
+    _, _, _, setting, value, color, pulse = row.split("\t")
     if setting == "Reserved":
-        assert colour == "unchanged" and pulse == "steady"
+        assert color == "unchanged" and pulse == "steady"
         continue
-    assert colour in {"green", "yellow", "red", "meter"}
+    assert color in {"green", "yellow", "red", "meter"}
     assert pulse in {"steady", "slow (0.98 Hz)", "fast (3.91 Hz)",
                      "2 yellow pulses / 2.048 s"}
     seen = values.setdefault(setting, set())
     if not seen:
-        assert (colour, pulse) == ("green", "steady"), setting
-    assert (colour, pulse) not in seen, (setting, value)
-    seen.add((colour, pulse))
+        assert (color, pulse) == ("green", "steady"), setting
+    assert (color, pulse) not in seen, (setting, value)
+    seen.add((color, pulse))
 assert len(values["Pitch scale"]) == 10
 assert ("meter", "slow (0.98 Hz)") in values["Stereo width"]
 
 print("Options page map and TSV match firmware tables: PASS")
+
+# Keep page terminology and C++ naming aligned with the public API.
+options = Path("beads/options.h").read_text()
+ui = Path("beads/ui.cc").read_text()
+assert "Reverb LED category" not in readme
+assert "#include <algorithm>" not in options
+assert "const char* color;" in options
+assert "Leds::Color colour" not in ui
+assert "}\n  void " not in options, "Separate methods with a blank line"

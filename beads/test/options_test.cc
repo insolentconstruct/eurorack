@@ -1160,7 +1160,7 @@ void TestOptionsKnobsAndSettling() {
     r.Tick(10);
     r.Down(Switch(button));
     r.Up(Switch(button));
-    CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
+    CHECK(!r.ui.options_.active());
     r.Tick(1000);
     CHECK(!r.ui.options_.active());
     CHECK(r.settings.clouds_style());
@@ -1395,12 +1395,121 @@ void TestOptionsConfirmations() {
   CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 0);
 }
 
+bool IsVolatile(bool*) { return false; }
+bool IsVolatile(volatile bool*) { return true; }
+
+void TestCommitPublication() {
+  test_checker.Start("TestCommitPublication");
+  Rig r;
+  CHECK(IsVolatile(&r.ui.options_.dirty_));
+  CHECK(IsVolatile(&r.ui.options_.commit_));
+}
+
+void TestWidthNoise() {
+  test_checker.Start("TestWidthNoise");
+  Rig r;
+  r.pot = .1f;
+  r.Tick(1);
+  r.Enter();
+  const unsigned writes = test_writes;
+  const float boundary = 0.13f + 100.5f * 0.87f / 254.0f;
+  r.pot = boundary + 0.002f;
+  r.Tick(1);
+  uint32_t last_flash = r.ui.options_flash_time_;
+  int confirmations = 0;
+  for (int i = 0; i < 10000; ++i) {
+    r.pot = boundary + (i & 1 ? 0.002f : -0.002f);
+    r.Tick(1);
+    if (r.ui.options_flash_time_ != last_flash) {
+      ++confirmations;
+      last_flash = r.ui.options_flash_time_;
+    }
+  }
+  CHECK(confirmations == 1);
+  CHECK(test_writes == writes + 1);
+  const uint32_t flash = r.ui.options_flash_time_;
+  r.Tick(2000);
+  CHECK(test_writes == writes + 1);
+  CHECK(r.ui.options_flash_time_ == flash);
+}
+
+void TestPendingSeed() {
+  test_checker.Start("TestPendingSeed");
+  for (int hold = 0; hold < 3; ++hold) {
+    Rig r;
+    r.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+    r.Enter();
+    r.reverb = .9f;
+    r.Tick(1001, false);
+    CHECK(r.ui.options_.commit_requested());
+    test_down[SWITCH_SEED] = true;
+    r.Tick(hold ? 600 : 20, false);
+    if (hold == 2) r.ui.DoEvents();
+    test_down[SWITCH_SEED] = false;
+    r.Tick(20, false);
+    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+    r.ui.DoEvents();
+    r.Tick(1);
+    CHECK(r.ui.options_.pitch_preview() ==
+        (hold ? PITCH_SCALE_FIFTHS : PITCH_SCALE_MAJOR));
+    r.Tick(1001);
+    CHECK(r.settings.pitch_scale() ==
+        (hold ? PITCH_SCALE_FIFTHS : PITCH_SCALE_MAJOR));
+  }
+  // Press before publication; release during it, then delay main long enough
+  // that using the consumption time would misclassify this as a long hold.
+  Rig before;
+  before.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+  before.Enter();
+  before.reverb = .9f;
+  before.Tick(990, false);
+  test_down[SWITCH_SEED] = true;
+  before.Tick(20, false);
+  CHECK(before.ui.options_.commit_requested());
+  test_down[SWITCH_SEED] = false;
+  before.Tick(620, false);
+  before.ui.DoEvents();
+  before.Tick(1);
+  CHECK(before.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  before.Tick(1001);
+  CHECK(before.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+}
+
+void TestPendingExitButtons() {
+  test_checker.Start("TestPendingExitButtons");
+  Rig r;
+  r.Enter();
+  const unsigned writes = test_writes;
+  r.reverb = .9f;
+  r.Tick(10);
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(!r.ui.options_.active());
+  r.ui.set_overwrite_reserve(1.0f);
+  r.Tick(1);
+  const Leds::Color normal = r.ui.media_palette_[r.settings.state().media];
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == normal.r);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == normal.g);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == normal.b);
+  const bool frozen = r.ui.freeze_button_state_;
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(r.ui.freeze_button_state_ != frozen);
+  r.Tick(1001);
+  CHECK(r.settings.clouds_style());
+  CHECK(test_writes == writes + 1);
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestCommitPublication();
+  TestWidthNoise();
+  TestPendingSeed();
+  TestPendingExitButtons();
   TestOptionsTablesAndLifetime();
   TestOptionsKnobsAndSettling();
   TestOptionsWidthAndSeed();
