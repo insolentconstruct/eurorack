@@ -39,7 +39,7 @@ rules come after those sources; leave unrelated existing code alone.
 
 - Most stateful classes have empty constructors, set up in `Init()`, and end with `DISALLOW_COPY_AND_ASSIGN(Name);`.
 - Small DSP classes usually live in the header. Follow how nearby files are split.
-- Templates are used for fixed DSP variants (sample resolution, buffer size).
+- Templates are used for fixed DSP variants (sample resolution, buffer size, channel count).
 
 ## Code
 
@@ -52,6 +52,15 @@ rules come after those sources; leave unrelated existing code alone.
 - New float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
 - Initialize struct fields one by one, as in Beads codec frames.
 - Name a constant when it has meaning; small obvious numbers can stay inline.
+
+## Performance
+
+- Follow Mutable Instruments' [STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/) note: specialize hot DSP on configuration values with template parameters (Clouds' grain renderer, stmlib's filter), and measure, because it can be slower.
+- Do control work once per block and audio work per sample (`ParameterInterpolator`, lookup tables).
+- Keep loop state in locals so it stays in registers.
+- Prefer a data-format fix (for example fixed-point delay addresses) over micro-tuning.
+- Mutable Instruments design for 80 to 95% of the CPU, with 99% of the block as the hard ceiling.
+- An audio-path change needs a measured cycle count and the sound check in [OPTIMIZATIONS.md](OPTIMIZATIONS.md).
 
 ## Comments
 
