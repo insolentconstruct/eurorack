@@ -41,14 +41,6 @@
 
 namespace beads {
 
-const Leds::Color kCloudsStyleColor = { 0, 255, 255 };
-const Leds::Color kPitchScaleColors[] = {
-  { 255, 255, 255 }, { 0, 255, 0 },
-  { 255, 0, 0 }, { 255, 96, 0 }, { 255, 255, 0 },
-  { 0, 255, 255 }, { 128, 255, 0 }, { 0, 96, 255 },
-  { 128, 0, 255 }, { 255, 0, 128 }
-};
-
 using namespace std;
 using namespace stmlib;
 
@@ -321,40 +313,17 @@ void Ui::UpdateLeds() {
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       leds_.set(Led(LED_ASSIGN_1 + i),
           options_.stage() == Options::STAGE_WAIT_RELEASE ||
-              i == options_.page() ? triangle : 0);
+              i == kOptionPages[options_.page()].led_index ? triangle : 0);
     }
-    const Leds::Color colors[3] = {
-      { 0, 255, 0 }, { 0, 96, 255 }, { 255, 144, 0 }
-    };
-    const OutputLimiterMode value = options_.preview();
+    const OptionValue& indication = options_.indication();
+    const Leds::Color colour = { indication.r, indication.g, indication.b };
     const uint32_t phase = system_clock.milliseconds() % 1200;
-    const bool pulse = value == OUTPUT_LIMITER_STOCK ||
-        phase < 120 || (value == OUTPUT_LIMITER_OFF &&
-        phase >= 240 && phase < 360);
-    if (options_.page() == kPitchScalePage) {
-      leds_.set_media(kPitchScaleColors[options_.pitch_preview()], 1.0f);
-    } else if (options_.page() == kSelfPlayPage &&
-               options_.delay_selected()) {
-      const int delay = options_.delay_preview();
-      leds_.set_media(colors[delay], delay == 0 || phase < 120 ||
-          (delay == 2 && phase >= 240 && phase < 360) ? 1.0f : 0.0f);
-    } else if (options_.page() == kSelfPlayPage &&
-               options_.reverb_selected()) {
-      const int width = options_.width_preview();
-      leds_.set_media(colors[width ? 2 : 0],
-          width ? 0.2f + 0.8f * float(width) / 255.0f : 1.0f);
-    } else if (options_.page() == kSelfPlayPage) {
-      const Leds::Color automatic = { 0, 255, 255 };
-      const Leds::Color on_request = { 255, 0, 255 };
-      leds_.set_media(options_.self_play_preview() ? on_request : automatic,
-          !options_.self_play_preview() || phase < 120 ? 1.0f : 0.0f);
-    } else if (options_.page() == kLimiterPage &&
-               options_.reverb_selected()) {
-      leds_.set_media(options_.clouds_preview() ? kCloudsStyleColor : colors[0],
-          !options_.clouds_preview() || phase < 120 ? 1.0f : 0.0f);
-    } else {
-      leds_.set_media(colors[value], pulse ? 1.0f : 0.0f);
-    }
+    const bool lit = indication.pulses <= 0 || phase < 120 ||
+        (indication.pulses == 2 && phase >= 240 && phase < 360);
+    const float brightness = indication.pulses == -1
+        ? 0.2f + 0.8f * float(options_.width_preview()) / 255.0f
+        : lit ? 1.0f : 0.0f;
+    leds_.set_media(colour, brightness);
   }
 
   if (mode_ != MODE_FACTORY_TEST) {

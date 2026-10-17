@@ -246,192 +246,6 @@ void TestMonophonicGesture() {
   CHECK(!page.settings.state().monophonic_mode);
 }
 
-void TestOptionsEntry() {
-  test_checker.Start("TestOptionsEntry");
-  Rig r;
-  r.pot = 0.1f;
-  r.feedback = 0.8f;
-  r.Tick(30);
-  r.Enter();
-  CHECK(r.ui.options_.page() == kPitchScalePage);
-  CHECK(!r.ui.options_.reverb_selected());
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
-  CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
-  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
-  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 255);
-  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] == 0);
-  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + 1] == 0);
-  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + 2] != 0);
-  r.pot = 0.9f;
-  r.feedback = 0.74f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.feedback = 0.95f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
-  r.Tap();
-  CHECK(r.ui.options_.page() == kSelfPlayPage);
-  r.Tap();
-  CHECK(r.ui.options_.page() == kLimiterPage);
-  r.Down(SWITCH_MEDIA);
-  r.Up(SWITCH_MEDIA);
-  r.Tick(30);
-  r.Enter();
-  CHECK(r.ui.options_.page() == kPitchScalePage);
-  r.Tap();
-  CHECK(r.ui.options_.page() == kSelfPlayPage);
-  r.Tap();
-  CHECK(r.ui.options_.page() == kLimiterPage);
-  r.Tap();
-  CHECK(r.ui.options_.page() == kPitchScalePage);
-}
-
-void TestOptionsEntryButtons() {
-  test_checker.Start("TestOptionsEntryButtons");
-  const PitchScale saved[] = {
-    PITCH_SCALE_OFF, PITCH_SCALE_CHROMATIC, PITCH_SCALE_MINOR
-  };
-  const uint8_t colors[][3] = {
-    { 255, 255, 255 }, { 0, 255, 0 }, { 255, 255, 0 }
-  };
-  for (int i = 0; i < 3; ++i) {
-    for (int action = 0; action < 3; ++action) {
-      Rig r;
-      r.settings.set_pitch_scale(saved[i]);
-      r.settings.set_output_limiter_mode(OUTPUT_LIMITER_FAST);
-      r.settings.set_clouds_style(true);
-      r.settings.SaveState();
-      if (action == 1) {
-        r.Down(SWITCH_SEED);
-        r.Up(SWITCH_SEED);
-      }
-      const State state = r.settings.state();
-      const unsigned writes = test_writes;
-      const bool seed = r.ui.seed_button_state();
-      const bool locked = r.ui.seed_button_locked();
-      r.Enter();
-      // Neither direction may select the Clouds-style control on entry.
-      for (int direction = 0; action == 2 && direction < 2; ++direction) {
-        r.reverb = direction ? 0.9f : 0.1f;
-        r.Tick(1);
-        CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
-        CHECK(r.ui.options_.page() == kPitchScalePage);
-        CHECK(!r.ui.options_.reverb_selected());
-        CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-        CHECK(r.ui.clouds_style());
-        CHECK(r.ui.pitch_scale() == saved[i]);
-        CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == colors[i][0]);
-        CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == colors[i][1]);
-        CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == colors[i][2]);
-      }
-      if (action == 2) {
-        CHECK(!memcmp(&r.settings.state(), &state, sizeof(State)));
-        CHECK(test_writes == writes);
-        continue;
-      }
-      // FEEDBACK stays at its entry position, including through scale wrap.
-      const int taps = i == 2 ? 8 : 1;
-      for (int tap = 0; tap < taps; ++tap) {
-        test_down[SWITCH_SEED] = true;
-        r.Tick(8, false);
-        CHECK(!r.ui.queue_.available());
-        CHECK(r.ui.options_.stage() == (i == 2
-            ? Options::STAGE_EDITING : Options::STAGE_DRAIN));
-        r.ui.DoEvents();
-        CHECK(r.ui.seed_button_state() == seed);
-        CHECK(r.ui.seed_button_locked() == locked);
-        test_down[SWITCH_SEED] = false;
-        r.Tick(8, false);
-        CHECK(!r.ui.queue_.available());
-        r.ui.DoEvents();
-        CHECK(r.ui.seed_button_state() == seed);
-        CHECK(r.ui.seed_button_locked() == locked);
-        CHECK(r.ui.options_.active() == (i == 2));
-        const int scale = (PITCH_SCALE_MINOR - PITCH_SCALE_FIFTHS +
-            tap + 1) % 8;
-        CHECK(r.ui.pitch_scale() == (i == 2
-            ? PitchScale(PITCH_SCALE_FIFTHS + scale) : saved[i]));
-        CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-        CHECK(r.ui.clouds_style());
-        CHECK(!memcmp(&r.settings.state(), &state, sizeof(State)));
-        CHECK(test_writes == writes);
-      }
-    }
-  }
-}
-
-void TestUi() {
-  test_checker.Start("TestUi");
-  Rig r;
-  unsigned writes = test_writes;
-  r.Down(SWITCH_ASSIGN);
-  r.Tick(2992);
-  CHECK(!r.ui.options_.active());
-  r.Tick(8);
-  r.Up(SWITCH_ASSIGN);
-  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
-  r.Tap();
-  r.Tap();
-  // Deliberate movement below qualification refreshes inactivity only.
-  r.Tick(4000);
-  r.pot = .54f;
-  r.Tick(1500);
-  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.pot = .9f;
-  r.Tick(10);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  r.settings.SaveState();
-  ++writes;  // Preview must not leak into unrelated saves.
-  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.Down(SWITCH_ASSIGN);
-  r.Tick(3000, false);
-  CHECK(r.ui.options_.commit_requested());
-  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  r.ui.DoEvents();
-  r.Up(SWITCH_ASSIGN);
-  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  CHECK(test_writes == writes + 1);
-  r.Tick(30);
-  r.EnterLimiter();
-  r.pot = .1f;
-  r.Tick(10);
-  r.Tick(5000);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  CHECK(test_writes == writes + 2);  // Timeout saves a changed value.
-  r.Tick(30);
-  r.EnterLimiter();
-  r.Tick(5010);
-  CHECK(!r.ui.options_.active());
-  CHECK(test_writes == writes + 2);  // Timeout without a change writes nothing.
-  r.Tick(30);
-  r.EnterLimiter();
-  CHECK(r.ui.options_.page() == kLimiterPage);
-  r.Tap();
-  CHECK(r.ui.options_.page() == 2);
-  r.pot = .9f;
-  r.Tick(10);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_STOCK);  // Reserved.
-  r.Tap();
-  r.Tap();
-  CHECK(r.ui.options_.page() == kLimiterPage);
-  r.pot = .5f;
-  r.Tick(10);
-  CHECK(r.ui.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-  r.Down(SWITCH_MEDIA);
-  CHECK(r.calibration.starts == 0);  // Active page consumes stock chords.
-  Rig startup(true);
-  startup.Tick(3500);
-  CHECK(!startup.ui.options_.active());
-  Rig chord;
-  chord.Down(SWITCH_ASSIGN);
-  chord.Down(SWITCH_MEDIA);
-  CHECK(chord.calibration.starts == 1);
-  puts("gesture/preview/commit: PASS");
-}
-
 static Rig* interrupted_rig;
 static bool interrupt_session;
 namespace beads {
@@ -445,7 +259,11 @@ void TestOptionsDispatchInterrupt() {
       r->Tick(3010, false);
       CHECK(r->ui.options_.active());
       test_down[SWITCH_ASSIGN] = false;
-      r->Tick(5010, false);
+      r->Tick(10, false);
+      test_down[SWITCH_MEDIA] = true;
+      r->Tick(8, false);
+      test_down[SWITCH_MEDIA] = false;
+      r->Tick(8, false);
     } else {
       r->Tick(1, false);  // After flush check, before options_.active().
     }
@@ -494,7 +312,11 @@ void TestQueueRace() {
   delayed.Tick(3010, false);
   CHECK(delayed.ui.options_.active());
   test_down[SWITCH_ASSIGN] = false;
-  delayed.Tick(5010, false);  // Release, inactivity cancellation, drain exit.
+  delayed.Tick(10, false);
+  test_down[SWITCH_MEDIA] = true;
+  delayed.Tick(8, false);
+  test_down[SWITCH_MEDIA] = false;
+  delayed.Tick(8, false);
   CHECK(!delayed.ui.options_.active());
   media = delayed.settings.state().media;
   writes = test_writes;
@@ -1061,66 +883,6 @@ void TestCorruptCalibrationRewritesOnce() {
   }
 }
 
-void TestSelfPlayOptions() {
-  test_checker.Start("TestSelfPlayOptions");
-  Rig r;
-  r.EnterLimiter();
-  r.Tap();
-  r.Tap();
-  CHECK(r.ui.options_.page() == kSelfPlayPage);
-  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
-  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 255);
-  r.feedback = 0.8f;
-  r.Tick(1);
-  CHECK(r.ui.options_.self_play_preview());
-  r.feedback = 0.49f;
-  r.Tick(1);
-  CHECK(r.ui.options_.self_play_preview());
-  r.feedback = 0.46f;
-  r.Tick(1);
-  CHECK(!r.ui.options_.self_play_preview());
-  r.feedback = 0.51f;
-  r.Tick(1);
-  CHECK(!r.ui.options_.self_play_preview());
-  r.feedback = 0.8f;
-  for (int i = 0; i < 1200; ++i) {
-    r.Tick(1);
-    bool pulse = stmlib::system_clock.milliseconds() % 1200 < 120;
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (pulse ? 255 : 0));
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 0);
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (pulse ? 255 : 0));
-  }
-  CHECK(!r.settings.self_play_on_request());
-  r.Down(SWITCH_ASSIGN);
-  r.Tick(3000);
-  r.Up(SWITCH_ASSIGN);
-  CHECK(r.settings.self_play_on_request());
-  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  Settings loaded;
-  CHECK(loaded.Init(false) && loaded.self_play_on_request());
-  r.Tick(30);
-  r.EnterLimiter();
-  r.Tap();
-  r.Tap();
-  r.feedback = 0.1f;
-  r.Tick(1);
-  CHECK(!r.ui.options_.self_play_preview());
-  r.Down(SWITCH_MEDIA);
-  r.Up(SWITCH_MEDIA);
-  CHECK(r.settings.self_play_on_request());
-  CHECK(r.gain.restarts == 0 && !r.ui.self_play_requested());
-  r.Tick(30);
-  r.EnterLimiter();
-  r.Tap();
-  r.Tap();
-  r.feedback = 0.9f;
-  r.Tick(1);
-  r.feedback = 0.1f;
-  r.Tick(5001);
-  CHECK(!r.settings.self_play_on_request());
-  CHECK(loaded.Init(false) && !loaded.self_play_on_request());
-}
-
 void TestSelfPlayStorage() {
   test_checker.Start("TestSelfPlayStorage");
   Rig r;
@@ -1175,69 +937,6 @@ void TestCloudsStorage() {
     CHECK(loaded.state().padding[3] == (value == 0xa2 ? 0xa2 : 0));
     CHECK(r.settings.Init(false));
   }
-}
-
-void TestCloudsOptions() {
-  test_checker.Start("TestCloudsOptions");
-  Rig r;
-  r.EnterLimiter();
-  CHECK(r.ui.options_.page() == kLimiterPage);
-  r.reverb = 0.55f;
-  r.Tick(1);
-  CHECK(!r.ui.clouds_style());  // Pickup still locked.
-  r.reverb = 0.8f;
-  r.Tick(1);
-  CHECK(r.ui.clouds_style());
-  r.reverb = 0.49f;
-  r.Tick(1);
-  CHECK(r.ui.clouds_style());
-  r.reverb = 0.46f;
-  r.Tick(1);
-  CHECK(!r.ui.clouds_style());
-  r.reverb = 0.51f;
-  r.Tick(1);
-  CHECK(!r.ui.clouds_style());
-  r.reverb = 0.9f;
-  for (int i = 0; i < 1200; ++i) {
-    r.Tick(1);
-    const bool pulse = stmlib::system_clock.milliseconds() % 1200 < 120;
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 0);
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (pulse ? 255 : 0));
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (pulse ? 255 : 0));
-  }
-  CHECK(!r.settings.clouds_style());
-  r.pot = 0.9f;
-  r.Tick(1);
-  CHECK(!r.ui.options_.reverb_selected());
-  CHECK(r.ui.options_.preview() == OUTPUT_LIMITER_OFF);
-  CHECK(r.ui.clouds_style());
-  r.pot = 0.1f;
-  r.Tick(1);
-  CHECK(r.ui.options_.preview() == OUTPUT_LIMITER_STOCK);
-  CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
-  r.Down(SWITCH_ASSIGN);
-  r.Tick(3000);
-  r.Up(SWITCH_ASSIGN);
-  CHECK(r.settings.clouds_style());
-  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  Settings loaded;
-  CHECK(loaded.Init(false) && loaded.clouds_style());
-  r.Tick(30);
-  r.EnterLimiter();
-  r.reverb = 0.1f;
-  r.Tick(1);
-  CHECK(!r.ui.clouds_style());
-  r.Down(SWITCH_MEDIA);
-  r.Up(SWITCH_MEDIA);
-  CHECK(r.settings.clouds_style() && r.ui.clouds_style());
-  r.Tick(30);
-  r.EnterLimiter();
-  r.reverb = 0.9f;
-  r.Tick(1);
-  r.reverb = 0.1f;
-  r.Tick(5001);
-  CHECK(!r.settings.clouds_style());
-  CHECK(loaded.Init(false) && !loaded.clouds_style());
 }
 
 void TestSelfPlayHold() {
@@ -1304,185 +1003,6 @@ void TestPitchStorage() {
   }
 }
 
-const uint8_t kTestScaleColors[8][3] = {
-  { 255, 0, 0 }, { 255, 96, 0 }, { 255, 255, 0 }, { 0, 255, 255 },
-  { 128, 255, 0 }, { 0, 96, 255 }, { 128, 0, 255 }, { 255, 0, 128 }
-};
-
-void TestPitchOptions() {
-  test_checker.Start("TestPitchOptions");
-  Rig r;
-  r.Enter();
-  CHECK(r.ui.options_.page() == kPitchScalePage);
-  r.feedback = 0.58f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
-  r.feedback = 0.9f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
-  const bool seed = r.ui.seed_button_state_;
-  const bool locked = r.ui.seed_button_locked_;
-  const unsigned writes = test_writes;
-  for (int i = 0; i < 8; ++i) {
-    CHECK(r.ui.pitch_scale() == PitchScale(PITCH_SCALE_FIFTHS + i));
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == kTestScaleColors[i][0]);
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == kTestScaleColors[i][1]);
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == kTestScaleColors[i][2]);
-    test_down[SWITCH_SEED] = true;
-    r.Tick(8, false);
-    CHECK(!r.ui.queue_.available());
-    test_down[SWITCH_SEED] = false;
-    r.Tick(8, false);
-    CHECK(!r.ui.queue_.available());
-    r.ui.DoEvents();
-    CHECK(r.ui.seed_button_state_ == seed);
-    CHECK(r.ui.seed_button_locked_ == locked);
-    CHECK(!r.ui.seed_button_state_ || seed);
-    CHECK(test_writes == writes);
-  }
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
-  r.Down(SWITCH_SEED);
-  r.Tick(5100);
-  r.Up(SWITCH_SEED);
-  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
-  r.feedback = 0.65f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
-  r.feedback = 0.63f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_CHROMATIC);
-  r.feedback = 0.34f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_CHROMATIC);
-  r.feedback = 0.30f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
-  r.feedback = 0.1f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
-  r.feedback = 0.9f;
-  r.Tick(1);
-  r.Down(SWITCH_SEED);
-  r.Up(SWITCH_SEED);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
-  r.Tick(5001);
-  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
-  CHECK(test_writes == writes + 1);
-  Settings loaded;
-  CHECK(loaded.Init(false) && loaded.pitch_scale() == PITCH_SCALE_MAJOR);
-  r.Tick(30);
-  r.Enter();
-  r.feedback = 0.1f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_OFF);
-  r.Down(SWITCH_MEDIA);
-  r.Up(SWITCH_MEDIA);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
-  CHECK(r.settings.state().media == 3);
-  r.Tick(30);
-  r.Enter();
-  r.Down(SWITCH_SEED);
-  r.Down(SWITCH_ASSIGN);
-  r.Up(SWITCH_SEED);
-  r.Up(SWITCH_ASSIGN);
-  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
-  CHECK(!r.settings.state().gate_output_mode);
-}
-
-void TestPitchSeedCancelAndCommit() {
-  test_checker.Start("TestPitchSeedCancelAndCommit");
-  Rig r;
-  r.Enter();
-  r.feedback = 0.9f;
-  r.Tick(1);
-  r.Down(SWITCH_SEED);
-  r.feedback = 0.1f;
-  r.Tick(1);
-  r.Up(SWITCH_SEED);
-  r.feedback = 0.9f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_FIFTHS);
-  r.Down(SWITCH_SEED);
-  r.Up(SWITCH_SEED);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
-  r.feedback = 0.1f;
-  r.Tick(1);
-  r.feedback = 0.9f;
-  r.Tick(1);
-  CHECK(r.ui.pitch_scale() == PITCH_SCALE_MAJOR);
-  const unsigned writes = test_writes;
-  r.Down(SWITCH_ASSIGN);
-  r.Tick(3000);
-  r.Up(SWITCH_ASSIGN);
-  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
-  CHECK(test_writes == writes + 1);
-}
-
-void TestWidthOption() {
-  test_checker.Start("TestWidthOption");
-  for (int value = 0; value < 256; ++value) {
-    Settings settings;
-    memset(settings.mutable_state(), 0, sizeof(State));
-    settings.mutable_state()->padding[4] = value;
-    CHECK(settings.stereo_width() == value);
-  }
-  for (int zone = 0; zone < 3; ++zone) {
-    Rig r;
-    r.Enter();
-    r.Tap();
-    CHECK(r.ui.options_.page() == kSelfPlayPage);
-    r.reverb = zone == 1 ? 0.0f : 0.5f;
-    r.Tick(20);
-    r.reverb = zone == 0 ? 0.0f : zone == 1 ? 0.14f : 1.0f;
-    r.Tick(20);
-    CHECK(r.ui.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 4 : 255));
-    CHECK(r.settings.stereo_width() == STEREO_WIDTH_STOCK);
-    r.Tick(5100);
-    CHECK(r.settings.stereo_width() == (zone == 0 ? 0 : zone == 1 ? 4 : 255));
-    CHECK(r.settings.state().padding[2] == 0);
-    CHECK(r.settings.state().padding[3] == 0);
-  }
-}
-
-void TestDelayOption() {
-  test_checker.Start("TestDelayOption");
-  for (int value = 0; value < 256; ++value) {
-    Settings settings;
-    memset(settings.mutable_state(), 0, sizeof(State));
-    settings.mutable_state()->padding[5] = value;
-    CHECK(settings.delay_mode() == (value == 0xa1 ? DELAY_MODE_NEVER
-        : value == 0xa2 ? DELAY_MODE_WIDE_DETENT : DELAY_MODE_AUTO));
-  }
-  for (int zone = 0; zone < 3; ++zone) {
-    Rig r;
-    r.Enter();
-    r.Tap();
-    r.pot = zone == 1 ? 0.0f : 0.5f;
-    r.Tick(20);
-    r.pot = (float(zone) + 0.5f) / 3.0f;
-    r.Tick(20);
-    CHECK(r.ui.delay_mode() == DelayMode(zone));
-    CHECK(r.ui.options_.delay_selected());
-    CHECK(r.settings.delay_mode() == DELAY_MODE_AUTO);
-    r.Tick(5100);
-    CHECK(r.settings.delay_mode() == DelayMode(zone));
-    CHECK(r.settings.state().padding[2] == 0);
-    CHECK(r.settings.state().padding[3] == 0);
-  }
-  Rig r;
-  r.Enter();
-  r.Tap();
-  r.pot = r.reverb = 1.0f;
-  r.Tick(20);
-  r.Down(SWITCH_FREEZE);
-  r.Up(SWITCH_FREEZE);
-  CHECK(r.settings.delay_mode() == DELAY_MODE_AUTO);
-  CHECK(r.settings.stereo_width() == STEREO_WIDTH_STOCK);
-  CHECK(r.ui.delay_mode() == DELAY_MODE_AUTO);
-  CHECK(r.ui.stereo_width() == STEREO_WIDTH_STOCK);
-}
-
 void TestPlaybackStorage() {
   test_checker.Start("TestPlaybackStorage");
   Rig r;
@@ -1514,96 +1034,6 @@ void TestPlaybackStorage() {
   }
 }
 
-void TestFeedbackOptionZones() {
-  test_checker.Start("TestFeedbackOptionZones");
-  Rig r;
-  r.Enter();
-  r.Tap();
-  const float positions[] = { 0.0f, 0.34f, 0.38f, 0.64f, 0.71f,
-      0.65f, 0.62f, 0.32f, 0.29f };
-  const int zones[] = { 0, 0, 1, 1, 2, 2, 1, 1, 0 };
-  for (size_t i = 0; i < sizeof(zones) / sizeof(zones[0]); ++i) {
-    r.pot = positions[i];
-    r.reverb = positions[i];
-    r.Tick(20);
-    CHECK((r.ui.stereo_width() != 0) == (positions[i] > 0.13f));
-    CHECK(r.ui.delay_mode() == DelayMode(zones[i]));
-    CHECK(!r.ui.options_.self_play_preview());
-    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
-    CHECK(!r.ui.options_.clouds_preview());
-  }
-}
-
-void TestWidthDeadBand() {
-  test_checker.Start("TestWidthDeadBand");
-  Rig r;
-  r.Enter();
-  r.Tap();
-  r.reverb = 0.0f;
-  r.Tick(20);
-  r.reverb = 0.12f;
-  r.Tick(20);
-  CHECK(r.ui.stereo_width() == 0);
-  r.reverb = 0.14f;
-  r.Tick(20);
-  CHECK(r.ui.stereo_width() > 1);
-  r.reverb = 0.10f;
-  r.Tick(20);
-  CHECK(r.ui.stereo_width() == 1);
-  r.reverb = 0.08f;
-  r.Tick(20);
-  CHECK(r.ui.stereo_width() == 1);
-  r.reverb = 0.06f;
-  r.Tick(20);
-  CHECK(r.ui.stereo_width() == 0);
-}
-
-void TestWidthFirstQualification() {
-  test_checker.Start("TestWidthFirstQualification");
-  for (int enabled = 0; enabled < 2; ++enabled) {
-    Rig r;
-    r.settings.set_stereo_width(enabled ? 128 : 0);
-    r.settings.set_width_assigned(enabled != 0);
-    r.settings.SaveState();
-    r.reverb = 0.22f;
-    r.Tick(20);
-    r.Enter();
-    r.Tap();
-    r.reverb = 0.11f;
-    r.Tick(20);
-    CHECK(r.ui.stereo_width() == (enabled ? 1 : 0));
-    r.reverb = 0.9999f;
-    r.Tick(20);
-    CHECK(r.ui.stereo_width() == 255);
-    r.reverb = 0.0f;
-    r.Tick(20);
-    CHECK(r.ui.stereo_width() == 0);
-    if (enabled) {
-      r.Down(SWITCH_FREEZE);
-      r.Up(SWITCH_FREEZE);
-      CHECK(r.settings.width_assigned());
-      Settings cancelled;
-      cancelled.Init(false);
-      CHECK(cancelled.width_assigned());
-      CHECK(cancelled.stereo_width() == 128);
-      CHECK(cancelled.state().assignable_cv_destination == 0);
-      r.Tick(40);
-      r.Enter();
-      r.Tap();
-      r.reverb = 1.0f;
-      r.Tick(20);
-      r.reverb = 0.0f;
-      r.Tick(20);
-    }
-    r.Tick(5100);
-    Settings loaded;
-    loaded.Init(false);
-    CHECK(!loaded.width_assigned());
-    CHECK(loaded.state().assignable_cv_destination == 0);
-    CHECK(loaded.stereo_width() == 0);
-  }
-}
-
 void TestWidthAssignCycle() {
   test_checker.Start("TestWidthAssignCycle");
   Rig r;
@@ -1627,25 +1057,292 @@ void TestWidthAssignCycle() {
   }
 }
 
+void TestOptionsTablesAndLifetime() {
+  test_checker.Start("TestOptionsTablesAndLifetime");
+  const OptionSetting expected[3][3] = {
+    { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB },
+    { OPTION_RESERVED, OPTION_DELAY, OPTION_RESERVED },
+    { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED }
+  };
+  Rig r;
+  r.Enter();
+  for (int page = 0; page < 3; ++page) {
+    CHECK(r.ui.options_.page() == page);
+    const int expected_leds[3] = { 2, 0, 1 };
+    CHECK(kOptionPages[page].led_index == expected_leds[page]);
+    for (int knob = 0; knob < 3; ++knob) {
+      CHECK(kOptionPages[page].knobs[knob] == expected[page][knob]);
+      const int led = LED_ASSIGN_1 + kOptionPages[page].led_index;
+      for (int i = LED_ASSIGN_1; i < LED_ASSIGN_1 + 3; ++i) {
+        if (i != led) CHECK(r.ui.leds_.intensity_[i] == 0);
+      }
+    }
+    r.Tap();
+  }
+  CHECK(r.ui.options_.page() == 0);
+  r.Tap();
+  r.Tick(60000);
+  CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  r.Tick(30);
+  r.Enter();
+  CHECK(r.ui.options_.page() == 1);
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(!r.ui.options_.active());
+  r.Tick(30);
+  r.Enter();
+  CHECK(r.ui.options_.page() == 1);
+  Rig startup(true);
+  startup.Tick(3500);
+  CHECK(!startup.ui.options_.active());
+}
+
+void TestOptionsKnobsAndSettling() {
+  test_checker.Start("TestOptionsKnobsAndSettling");
+  // Every physical knob, including all three reserved positions.
+  for (int page = 0; page < 3; ++page) {
+    for (int knob = 0; knob < 3; ++knob) {
+      Rig r;
+      r.Enter();
+      for (int i = 0; i < page; ++i) r.Tap();
+      float* pot = knob == 0 ? &r.feedback : knob == 1 ? &r.pot : &r.reverb;
+      const OptionSetting setting = kOptionPages[page].knobs[knob];
+      const OptionSetting selected = r.ui.options_.selected_;
+      const State state = r.settings.state();
+      const unsigned writes = test_writes;
+      *pot = 0.59f;
+      r.Tick(1500);
+      CHECK(!r.ui.options_.qualified_[knob]);
+      CHECK(test_writes == writes);
+      *pot = 0.9f;
+      r.Tick(100);
+      if (setting == OPTION_RESERVED) {
+        CHECK(r.ui.options_.selected_ == selected);
+        CHECK(!memcmp(&state, &r.settings.state(), sizeof(state)));
+        r.Tick(2000);
+        CHECK(test_writes == writes);
+        continue;
+      }
+      CHECK(r.ui.options_.selected_ == setting);
+      CHECK(r.ui.options_.qualified_[knob]);
+      for (int step = 0; step < 20; ++step) {
+        *pot = 0.95f - 0.045f * step;
+        r.Tick(100);
+      }
+      *pot = 0.9f;
+      r.Tick(999);
+      CHECK(test_writes == writes);
+      r.Tick(2);
+      CHECK(test_writes == writes + 1);
+      CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
+      CHECK(r.ui.options_.Value(setting) == (setting == OPTION_WIDTH
+          ? r.settings.stereo_width() : setting == OPTION_PITCH
+          ? int(r.settings.pitch_scale()) : setting == OPTION_DELAY
+          ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
+          ? r.settings.clouds_style() : setting == OPTION_SELF_PLAY
+          ? r.settings.self_play_on_request() : int(r.settings.output_limiter_mode())));
+      r.Tick(5000);
+      CHECK(test_writes == writes + 1);
+      CHECK(r.ui.options_.active());
+    }
+  }
+  // A leave button keeps a pending change and waits for its one settled save.
+  for (int button = 0; button < SWITCH_LAST; ++button) {
+    if (button == SWITCH_ASSIGN) continue;
+    Rig r;
+    r.Enter();
+    const unsigned writes = test_writes;
+    r.reverb = .9f;
+    r.Tick(10);
+    r.Down(Switch(button));
+    r.Up(Switch(button));
+    CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
+    r.Tick(1000);
+    CHECK(!r.ui.options_.active());
+    CHECK(r.settings.clouds_style());
+    CHECK(test_writes == writes + 1);
+  }
+}
+
+void TestOptionsWidthAndSeed() {
+  test_checker.Start("TestOptionsWidthAndSeed");
+  for (int enabled = 0; enabled < 2; ++enabled) {
+    Rig r;
+    r.settings.set_stereo_width(enabled ? 180 : 0);
+    r.pot = .22f;
+    r.Tick(30);
+    r.Enter();
+    r.pot = .11f;
+    r.Tick(1);
+    CHECK((r.ui.options_.width_preview() != 0) == bool(enabled));
+    r.pot = .14f;
+    r.Tick(1);
+    CHECK(r.ui.options_.width_preview() != 0);
+    r.pot = .9999f;
+    r.Tick(1);
+    CHECK(r.ui.options_.width_preview() == 255);
+    r.pot = .06f;
+    r.Tick(1001);
+    CHECK(r.settings.stereo_width() == 0);
+  }
+  Rig saved;
+  saved.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+  saved.Enter();
+  saved.Down(SWITCH_SEED);
+  saved.Up(SWITCH_SEED);
+  CHECK(saved.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(!saved.ui.options_.qualified_[0]);
+  Rig r;
+  r.Enter();
+  r.feedback = .9f;
+  r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  const bool seed_state = r.ui.seed_button_state_;
+  const bool seed_locked = r.ui.seed_button_locked_;
+  for (int i = 0; i < 8; ++i) {
+    test_down[SWITCH_SEED] = true;
+    r.Tick(8, false);
+    CHECK(!r.ui.queue_.available());
+    test_down[SWITCH_SEED] = false;
+    r.Tick(8, false);
+    CHECK(!r.ui.queue_.available());
+    r.ui.DoEvents();
+    CHECK(r.ui.seed_button_state_ == seed_state);
+    CHECK(r.ui.seed_button_locked_ == seed_locked);
+    CHECK(r.ui.options_.pitch_preview() == PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 8));
+    CHECK(r.ui.options_.active());
+  }
+  r.Down(SWITCH_SEED);
+  r.Tick(600);
+  r.Up(SWITCH_SEED);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  r.Tick(1001);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_FIFTHS);
+}
+
+void TestOptionsZonesAndSaveBatch() {
+  test_checker.Start("TestOptionsZonesAndSaveBatch");
+  Rig r;
+  r.Enter();
+  // Pitch thirds, including hysteresis around both boundaries.
+  r.feedback = .1f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  r.feedback = .35f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  r.feedback = .38f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  r.feedback = .68f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  r.feedback = .71f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  r.feedback = .65f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  r.feedback = .62f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  r.feedback = .29f; r.Tick(1);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  // Reverb halves retain a value inside the midpoint dead band.
+  r.reverb = .9f; r.Tick(1);
+  r.reverb = .5f; r.Tick(1);
+  CHECK(r.ui.options_.clouds_preview());
+  r.reverb = .46f; r.Tick(1);
+  CHECK(!r.ui.options_.clouds_preview());
+  r.reverb = .54f; r.Tick(1);
+  const unsigned writes = test_writes;
+  r.pot = .9f; r.Tick(1001);
+  CHECK(test_writes == writes + 1);  // One batch for both knobs.
+  CHECK(r.settings.clouds_style());
+  CHECK(r.settings.stereo_width() != 0);
+  r.settings.set_width_assigned(true);
+  r.pot = .01f; r.Tick(1001);
+  CHECK(r.settings.stereo_width() == 0);
+  CHECK(!r.settings.width_assigned());
+  Settings loaded;
+  loaded.Init(false);
+  CHECK(!loaded.width_assigned());
+  CHECK(loaded.clouds_style());
+  // Main may be delayed: published batch must stay stable until consumed.
+  r.feedback = .9f; r.Tick(1001, false);
+  CHECK(r.ui.options_.commit_requested());
+  r.feedback = .1f; r.Tick(2000, false);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  // Exit remains responsive even if main is delayed by a flash operation.
+  test_down[SWITCH_MEDIA] = true;
+  r.Tick(8, false);
+  CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
+  test_down[SWITCH_MEDIA] = false;
+  r.Tick(8, false);
+  r.ui.DoEvents();
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_FIFTHS);
+  r.Tick(10);
+  CHECK(!r.ui.options_.active());
+}
+
+void TestOptionsPalette() {
+  test_checker.Start("TestOptionsPalette");
+  for (size_t i = 1; i < kNumOptionValues; ++i) {
+    const OptionValue& v = kOptionValues[i];
+    CHECK(v.r || v.g || v.b);
+    if (strstr(v.name, "Stock")) {
+      CHECK(v.r == 0 && v.g == 255 && v.b == 0 && v.pulses == 0);
+    }
+    if (!strcmp(v.name, "Off") || !strcmp(v.name, "Never")) {
+      CHECK(v.r == 255 && v.g == 255 && v.b == 255 && v.pulses == 0);
+    }
+    for (size_t j = i + 1; j < kNumOptionValues; ++j) {
+      const OptionValue& w = kOptionValues[j];
+      if (v.setting == w.setting) {
+        CHECK(v.r != w.r || v.g != w.g || v.b != w.b || v.pulses != w.pulses);
+      }
+    }
+  }
+  // Renderer consumes the table at every phase of its pulse period.
+  Rig r;
+  r.Enter();
+  for (size_t i = 1; i < kNumOptionValues; ++i) {
+    const OptionValue& v = kOptionValues[i];
+    r.ui.options_.selected_ = v.setting;
+    switch (v.setting) {
+      case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value); break;
+      case OPTION_WIDTH: r.ui.options_.width_preview_ = v.value ? 255 : 0; break;
+      case OPTION_REVERB: r.ui.options_.clouds_preview_ = v.value; break;
+      case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value); break;
+      case OPTION_SELF_PLAY: r.ui.options_.self_play_preview_ = v.value; break;
+      case OPTION_LIMITER: r.ui.options_.preview_ = OutputLimiterMode(v.value); break;
+      default: break;
+    }
+    CHECK(&r.ui.options_.indication() == &kOptionValues[i]);
+    for (int tick = 0; tick < 1200; ++tick) {
+      stmlib::system_clock.Tick();
+      r.ui.UpdateLeds();
+      const uint32_t phase = stmlib::system_clock.milliseconds() % 1200;
+      const bool lit = v.pulses <= 0 || phase < 120 ||
+          (v.pulses == 2 && phase >= 240 && phase < 360);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (lit ? v.r : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (lit ? v.g : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (lit ? v.b : 0));
+    }
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
-  TestWidthFirstQualification();
-  TestWidthDeadBand();
+  TestOptionsTablesAndLifetime();
+  TestOptionsKnobsAndSettling();
+  TestOptionsWidthAndSeed();
+  TestOptionsPalette();
+  TestOptionsZonesAndSaveBatch();
   TestWidthAssignCycle();
-  TestFeedbackOptionZones();
   TestPlaybackStorage();
-  TestDelayOption();
-  TestWidthOption();
   TestCloudsStorage();
-  TestCloudsOptions();
-  TestSelfPlayOptions();
   TestPitchStorage();
-  TestPitchOptions();
-  TestPitchSeedCancelAndCommit();
   TestSelfPlayStorage();
   TestSelfPlayHold();
   TestTrimGesture();
@@ -1670,9 +1367,6 @@ int main() {
   TestLimiterLinkedGainAndModeSwitch();
   TestQueueRace();
   TestStorage();
-  TestOptionsEntry();
-  TestOptionsEntryButtons();
-  TestUi();
   TestDsp();
   return test_checker.failures() ? 1 : 0;
 }

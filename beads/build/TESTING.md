@@ -22,7 +22,7 @@ execute more than once. The manual-coverage totals below are unchanged.
 | Check | What it covers |
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
-| `beads/test/options.mk` | Options page entry, categories, knob zones, idle save, cancel and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds; the monophonic grain gesture, its LED cue and saving; the self-play setting, its storage and the MEDIA hold; pitch and reverb option storage, zones, scale cycling and cancellation; trim gesture and FREEZE gate |
+| `beads/test/options.mk` | Options page entry, categories, knob zones, one-second save-on-settle, no idle exit, explicit exits and settings format; stock ASSIGN routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the MEDIA gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds; the monophonic grain gesture, its LED cue and saving; the self-play setting, its storage and the MEDIA hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate |
 | `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
@@ -46,12 +46,14 @@ execute more than once. The manual-coverage totals below are unchanged.
 | gain | 5 | 21 |
 | granular | 23 | 113 |
 | mix | 7 | 28 |
-| options | 41 | 412 |
+| options | 34 | 305 |
 | pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **158** | **1013** |
+| **Total** | **151** | **906** |
+
+The separate TSV/documentation check is not included in the C++ assertion counts.
 
 The table lists the current tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
 
@@ -64,7 +66,7 @@ and unchanged bytes 12/13. Callback tests check WIDTH CV routing, processor
 and synth propagation, and rendered grain pan retention. Saved assignments
 are also checked through the stock destination clamp.
 
-Delay mode adds host checks for all stored byte values, preview, cancellation
+Delay mode adds host checks for all stored byte values, preview and settled saving
 and saving, Never at SIZE fully clockwise in every quality and channel mode,
 returning from delay to granular, detent boundaries and neutral playback within 1e-7 FS
 with SIZE CV inside the detent. Auto remains the default.
@@ -85,7 +87,7 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 | Delay and slicer | 19 | 19 | |
 | Synth mode | 15 | 14 | 1 untestable |
 | Calibration and recovery | 3 | 2 | 1 untestable |
-| **Total** | **117** | **110** | **3 module, 4 untestable** |
+| **Total** | **151** | **906** | **3 module, 4 untestable** |
 
 - **Only in part (3):** audio-rate FM and 1 V/octave pitch (granular and synth) are checked through the real CV input path with the default calibration. How closely a given module tracks depends on its own stored calibration.
 - **Module:** the left-channel crackle report (checked on a module since, below), and audio and triggers summed into OUT L when OUT R is unpatched.
@@ -118,7 +120,7 @@ Run by the developers; these scripts and results are not in this repository.
 |---|---|---|
 | 1 | Install with the release update file, over the stock 2021 firmware | Decoded first time; new firmware running |
 | 2 | Settings from an earlier Drizzlet survive the update | Yes |
-| 3 | Options page: change the limiter, idle save, power cycle | Saved and kept |
+| 3 | Options page: change the limiter, wait one second, power cycle | Saved and kept |
 | 4 | Frozen-buffer save and restore across a power cycle | Restored audio plays, stereo |
 | 5 | A setting saved while the buffer is being saved | Restore still complete (the recorded tone plays back) |
 | 6 | Frozen delay, FM swept negative with SEED low, held and pulsed | No faults in 1,200 samples of the program counter |
@@ -164,3 +166,12 @@ No new module results are claimed here.
 - The full bench suite was not rerun on 2026.10.16.
 
 Report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
+
+Options table checks: `make -f beads/test/options_tables.mk test` builds the
+TSV exporter and compares README.txt's Options reference with the firmware.
+`./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.
+The UI host checks all nine page/knob slots, cycling, RAM page memory,
+reserved-knob inertia, qualification, a sweep with one settled save, unchanged
+idle pages, hold/button exits, pending saves after leaving, width hysteresis,
+SEED scale cycling, and Stock/Off palette consistency. Physical LED colour
+separation and audio during flash writes still need module checks.

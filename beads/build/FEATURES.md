@@ -35,28 +35,23 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Always opens on Reverb (pitch scale on FEEDBACK); tap ASSIGN cycles Reverb → Feedback → Dry/wet → Reverb; in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter, pitch and delay mode thirds; width continuous above Stock, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Entry needs normal mode and 20 ms with all buttons up. Tap ASSIGN cycles pages 1 → 2 → 3 → 1; reopening remembers the last page in RAM, with page 1 at power-up. Move a knob >10% before it edits. Save after one second without qualified movement or value changes; no idle exit. Hold ASSIGN 3 s or another button leaves, retaining changes. Short SEED taps on Scale cycle scales.
 
-| Resource | TAKEN | FREE / reserved |
-|---|---|---|
-| Dry/wet LED category, REVERB | Reverb character: lower half Stock (default), upper half Clouds-style; midpoint hysteresis ±3% | Steady green / one cyan pulse per 1.2 s; quality LED follows last knob moved |
-| Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
-| Feedback LED category, DRY/WET | Delay mode: Auto / Never / Wide detent in thirds; ±3% hysteresis | Steady green / one blue pulse / two amber pulses |
-| Feedback LED category, REVERB | Stereo width: Stock below 10%, ±3% hysteresis; continuous 0..1 above 13% | Green Stock / amber brightness for width |
-| Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
-| Dry/wet LED category, FEEDBACK | Reserved | Planned: mix law (#21, #48) |
-| Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle eight scales |
-| Reverb LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET LED brightness (#40); REVERB grain starts on recorded attacks (#58, #47) |
-| Assignment LEDs | All pulse during the entry hold; Reverb pulses after release, then the selected category | No extra category LED <!-- beads/ui.cc:283-289 --> |
-| MEDIA RGB | Entry shows the pitch scale colour (Off: white); Dry/wet limiter: Stock steady green; Fast one blue pulse; Off two amber pulses per 1.2 s | Other colours/patterns unassigned in options only; Feedback shows self-play: Automatic steady cyan, On request one magenta pulse; Dry/wet REVERB shows Stock steady green or Clouds-style one cyan pulse, following the last knob moved; Reverb shows pitch scale <!-- beads/ui.cc:290-299 --> |
-| Mix knobs | All three normal values locked while editing; FEEDBACK, DRY/WET or REVERB selects; smooth catch-up after movement/exit | No untouched mix-knob slot to assume <!-- beads/ui.cc:123-134; beads/pot_controller.h:72-93,106-140 --> |
+| Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
+|---|---|---|---|
+| 1 / REVERB | Pitch scale | Stereo width | Reverb character |
+| 2 / FEEDBACK | Reserved: attacks | Delay mode | Reserved: mix law |
+| 3 / DRY/WET | Self-play | Limiter | Reserved: LED brightness |
+
+Reserved knobs have no effect on MEDIA or saving. MEDIA shows the first available setting on page entry, then the last qualified knob moved. Stock/Auto/Automatic are steady green; Off/Never steady white. Other colours and pulses are listed in README.txt's firmware-checked Options reference. Saved byte positions are unchanged. `make -f beads/test/options_tables.mk test` checks the reference; `./build/options_tables` prints its TSV directly from firmware tables.
+
 
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
-select Off (white), Chromatic (green), or Scale. In Scale,
-tap SEED briefly to cycle Fifths and octaves (red), Major (orange), Minor
-(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (azure),
+select Off (white), Chromatic (one blue pulse), or Scale. In Scale,
+tap SEED briefly to cycle Fifths and octaves (red), Major (amber), Minor
+(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (steady blue),
 Raag Bhairav (violet), and Raag Shri (pink). Holds do not cycle. SEED taps
-here do not trigger or latch grains; other buttons cancel as usual. The
+here do not trigger or latch grains; other buttons leave the page. The
 setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start.
@@ -232,12 +227,12 @@ four 16-bit allpasses per channel (4 KiB buffer), coefficient 0.625, amount 0.7.
 Clouds' granular TEXTURE maps 0.75–1 to diffusion 0–1; amount 0.7 corresponds to
 TEXTURE 0.925. Delay and self-play use the reverb character without the grain
 diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
-changes, including canceled previews. Actual module listening and timing
+changes, including settled option changes. Actual module listening and timing
 remain to be verified.
 
 ## Stereo width
 
-In Feedback options, REVERB selects Stock below 10% (3% dead band).
+On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
 Above this zone it sets a continuous saved width: zero displacement at 13%
 to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes

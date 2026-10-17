@@ -4,14 +4,17 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Options reorganized across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Reserved knobs are inert. Reopening remembers the last page until power-off.
+- Options save after one second of settled controls. Hold ASSIGN 3 s or another button leaves; idle pages stay open. Stock/Auto/Automatic use green, Off/Never white; Chromatic uses a blue pulse.
+- Added a firmware-table TSV exporter and a check against the plain-text Options reference.
 - Delay mode: Feedback category, DRY/WET knob, Auto / Never / Wide detent in thirds. Never keeps SIZE fully clockwise granular; Wide detent gives the SIZE attenurandomizer/CV filter a 40–60% neutral zone and removes resonant boost (#9, #26).
 - Stereo width: continuous saved resting width above the Stock zone; enabled width randomizes every grain. Optional fourth ASSIGN destination adds CV to width, clamped to 0..1 (#5).
 - More CPU headroom for the grain engine: about 6,900 fewer cycles per audio block in the heaviest stock case (measured on a test board), from three small changes in Mutable Instruments' own style. The sound is bit-identical.
-- Options page: always opens on the Reverb category, where FEEDBACK sets the pitch scale.
+- Options page: starts at power-up on the Reverb page, where FEEDBACK sets the pitch scale.
 - Buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
 - Pitch scale: Off (default), Chromatic or eight scales. Reverb category, FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
 - Saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 14–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.
-- Clouds-style reverb: Dry/wet category, REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail.
+- Clouds-style reverb: Reverb page, REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)
 - Self-play option (options page, FEEDBACK): Automatic (stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).

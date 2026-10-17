@@ -35,18 +35,19 @@ switching and makes the delay filter neutral from 40% to 60% of its range,
 with no resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
 neutral zone the remaining travel reaches the usual low-pass and high-pass
-ends. The MEDIA LED shows steady green / one blue pulse / two amber pulses.
+ends. The MEDIA LED shows steady green / steady white / two amber pulses.
 The setting is saved and defaults to Auto. It does not affect synth mode.
 
 ## Stereo width
 
-In Feedback options, REVERB selects Stock below 10% (3% dead band).
+On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
 Above this zone it sets a continuous saved width: zero displacement at 13%
 to full random spread at fully clockwise. At zero width the input stereo
 positioning passes through and mono stays centred. Enabled width randomizes
 every grain, including at DENSITY fully clockwise with no other randomness.
 Pan is fixed at grain start; changes affect new grains only, including synth.
-The MEDIA LED is green for Stock and amber with brightness showing width.
+The MEDIA LED is green for Stock and amber with approximate brightness showing
+width; adjacent saved amounts can share an LED brightness.
 When enabled, short ASSIGN presses cycle the three stock destinations then
 WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
 mix assignment remains available. ASSIGN CV adds to resting width and clamps
@@ -86,38 +87,66 @@ If FREEZE is released during self-play, the minute starts when self-play ends.
 
 ## Options page
 
-Hold ASSIGN alone for three seconds, keeping the mix knobs still; then release.
-The assignment LEDs pulse together on entry.
-The feedback, dry/wet and reverb LEDs mark three categories; the open one's LED pulses slowly. The page always opens on Reverb (pitch scale on FEEDBACK).
-Tap ASSIGN to cycle Reverb → Feedback → Dry/wet → Reverb.
-On entry, the quality LED shows the saved pitch scale (Off: white).
-In each category, the three mix knobs (FEEDBACK, DRY/WET, REVERB) are its three settings.
-Move a knob more than one tenth of its travel to start selecting; its zones pick the value, shown on the quality LED (next to MEDIA).
+Hold ASSIGN alone for three seconds with the mix knobs still; then release.
+Tap ASSIGN to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
+(DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
+on entry. Reopening remembers the last page until power-off; power-up
+starts on page 1. MEDIA shows the first available setting on each page,
+then the last qualified knob moved. Move a knob more than 10% of its travel
+before it edits. Reserved knobs do nothing, including to MEDIA and saving.
 
-| Category | Knob | Choices |
-|---|---|---|
-| Feedback LED (page 0) | FEEDBACK | Self-play: Automatic / On request (halves) |
-| Feedback LED (page 0) | DRY/WET | Delay mode: Auto / Never / Wide detent (thirds) |
-| Feedback LED (page 0) | REVERB | Stereo width: Stock / continuous width |
-| Dry/wet LED (page 1) | DRY/WET | Limiter: Stock / Fast release / Off (thirds) |
-| Dry/wet LED (page 1) | REVERB | Reverb: Stock / Clouds-style (halves) |
-| Reverb LED (page 2) | FEEDBACK | Pitch scale: Off / Chromatic / Scale (thirds); tap SEED on Scale to cycle |
+Page / pulsing LED  FEEDBACK       DRY/WET          REVERB
+1 / REVERB          Pitch scale    Stereo width    Reverb character
+2 / FEEDBACK        Reserved       Delay mode      Reserved
+3 / DRY/WET         Self-play      Limiter         Reserved
+Reserved slots are attacks, mix law and LED brightness respectively.
+
+Changes are saved after one second without qualified knob movement or a
+value change. A sweep through zones saves once when it settles. Leave by
+holding ASSIGN for three seconds or pressing another button; there is no
+idle exit or cancel. Short SEED taps on Scale cycle the pitch scale instead
+of leaving. A pending change still saves after leaving: wait one second
+before powering off. Mix controls resume with smooth catch-up after exit.
+Stock, Auto and Automatic are steady green; Off and Never are steady white.
+Pulse counts repeat every 1.2 seconds. See the reference below for every value.
+
+On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
+Above this zone it sets a continuous saved width: zero displacement at 13%
+to full random spread at fully clockwise. At zero width the input stereo
+positioning passes through and mono stays centred. Enabled width randomizes
+every grain, including at DENSITY fully clockwise with no other randomness.
+Pan is fixed at grain start; changes affect new grains only, including synth.
+The MEDIA LED is green for Stock and amber with approximate brightness showing
+width; adjacent saved amounts can share an LED brightness.
+When enabled, short ASSIGN presses cycle the three stock destinations then
+WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
+mix assignment remains available. ASSIGN CV adds to resting width and clamps
+to 0..1. Stock keeps the stock cycle and pan rounding. Width uses byte 14:
+0 is Stock; 1..255 encode enabled width from zero to full.
+WIDTH assignment uses extension byte 16. Stock firmware sees FEEDBACK
+and ignores the extension settings; saving in stock firmware clears them.
+Delay mode: Auto keeps the usual delay switch at SIZE fully clockwise.
+Never keeps granular playback there. Wide detent keeps the switch, with
+an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer
+plus SIZE CV) and no resonant boost. It does not affect synth mode.
+For delay mode, the quality LED shows steady green / steady white /
+two amber pulses for Auto / Never / Wide detent.
 
 Output limiter: Stock is steady green; Fast release is one blue pulse;
-Off is two amber pulses. With Off, loud peaks can hard-clip.
-
-Self-play: Feedback LED category, FEEDBACK knob. Lower half selects Automatic
-(stock, steady cyan); upper half selects On request (one magenta pulse per
+Off is steady white. With Off, loud peaks can hard-clip.
+Self-play: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects Automatic
+(stock, steady green); upper half selects On request (one magenta pulse per
 1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
 has a small dead band to prevent flicker.
 With On request, self-play never starts by itself. With both audio inputs
 unpatched and FREEZE off, hold MEDIA for 1.5 seconds to start self-play;
 hold again to stop. Patching either input also stops it (once FREEZE is off).
-With an input patched, the hold restarts automatic gain as usual. Automatic keeps stock behaviour.
+With an input patched, the hold restarts automatic gain as usual.
+Automatic keeps stock behaviour.
 The setting is saved. Stock firmware ignores it; saving after a downgrade
 resets it to Automatic.
 
-Reverb character: Dry/wet LED category, REVERB knob. Lower half selects
+Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (one cyan pulse
 per 1.2 seconds). Move more than one tenth of the travel to begin; the midpoint
 has a small dead band. The quality LED shows the last knob moved on this page.
@@ -128,11 +157,11 @@ back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
 Pitch quantization: Reverb LED category, FEEDBACK knob. Three equal zones
-select Off (white), Chromatic (green), or Scale. In Scale,
-tap SEED briefly to cycle Fifths and octaves (red), Major (orange), Minor
-(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (azure),
+select Off (white), Chromatic (one blue pulse), or Scale. In Scale,
+tap SEED briefly to cycle Fifths and octaves (red), Major (amber), Minor
+(yellow), Major pentatonic (cyan), Minor pentatonic (lime), Pelog (steady blue),
 Raag Bhairav (violet), and Raag Shri (pink). Holds do not cycle. SEED taps
-here do not trigger or latch grains; other buttons cancel as usual. The
+here do not trigger or latch grains; other buttons leave the page. The
 setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start.
@@ -144,9 +173,6 @@ least 64, including four-note Pelog. Major and Minor pentatonic are subsets
 of its Major and Minor scales.
 Pelog and the raags are microtonal.
 
-The remaining knobs are reserved for later options.
-Hold ASSIGN for three seconds to save and exit. After five seconds without changes the page also exits and saves any change. Another button cancels, except SEED taps while selecting a scale.
-While you edit, the mix settings keep their values; after exit they catch up smoothly with the knobs.
 
 ## Updating your module
 
