@@ -351,7 +351,10 @@ void TestDelayFilterRamp() {
     }
     CHECK(previous.offset == (direction
       ? kStockDelayQOffset : kWideDetentQOffset));
-    CHECK(previous.scale == (direction ? kStockDelayQScale : 0.0f));
+    CHECK(mode.position == (direction ? 0 : kDelayQPositionMax));
+    // Fused arithmetic can retain a few billionths at the zero endpoint.
+    CHECK(fabsf(previous.scale - (direction ? kStockDelayQScale : 0.0f))
+        < 1e-8f);
   }
 }
 
