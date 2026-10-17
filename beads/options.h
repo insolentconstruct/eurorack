@@ -76,6 +76,10 @@ class Options {
     seed_time_ = 0;
     width_preview_ = STEREO_WIDTH_STOCK;
     width_zone_ = 0;
+    delay_preview_ = DELAY_MODE_AUTO;
+    delay_zone_ = 0;
+    delay_origin_ = delay_previous_ = 0.0f;
+    delay_qualified_ = delay_selected_ = false;
   }
 
   void Poll(
@@ -83,7 +87,7 @@ class Options {
       bool just_pressed, bool normal, bool pot_touched, float pot,
       OutputLimiterMode committed, float feedback, bool self_play,
       float reverb, bool clouds, PitchScale pitch, bool seed,
-      bool seed_pressed, StereoWidth width) {
+      bool seed_pressed, StereoWidth width, DelayMode delay) {
     const float dry_wet = pot;
     if (stage_ != STAGE_INACTIVE && page_ != kLimiterPage) {
       pot = feedback;
@@ -98,15 +102,15 @@ class Options {
     }
     if (stage_ != STAGE_INACTIVE) {
       if (other || !normal) {
-        Finish(false, committed, self_play, clouds, pitch, width);
+        Finish(false, committed, self_play, clouds, pitch, width, delay);
         return;
       }
       if (uint32_t(now - last_action_) >= 5000) {
         // Idle exit keeps a changed value, like the hold exit.
         Finish(preview_ != committed || self_play_preview_ != self_play ||
             clouds_preview_ != clouds || pitch_preview_ != pitch ||
-            width_preview_ != width,
-            committed, self_play, clouds, pitch, width);
+            width_preview_ != width || delay_preview_ != delay,
+            committed, self_play, clouds, pitch, width, delay);
         return;
       }
       if (stage_ == STAGE_WAIT_RELEASE) {
@@ -122,7 +126,7 @@ class Options {
         press_time_ = last_action_ = now;
       }
       if (holding_ && assign && uint32_t(now - press_time_) >= 3000) {
-        Finish(true, committed, self_play, clouds, pitch, width);
+        Finish(true, committed, self_play, clouds, pitch, width, delay);
         return;
       }
       if (holding_ && all_up) {
@@ -131,7 +135,25 @@ class Options {
         pot = page_ != kLimiterPage ? feedback : dry_wet;
         ResetPot(pot);
         ResetReverb(reverb);
+        ResetDelay(dry_wet);
         last_action_ = now;
+      }
+      if (page_ == kSelfPlayPage) {
+        if (!delay_qualified_ && fabsf(dry_wet - delay_origin_) > 0.10f) {
+          delay_qualified_ = true;
+          delay_zone_ = dry_wet < 1.0f / 3.0f ? 0
+              : dry_wet < 2.0f / 3.0f ? 1 : 2;
+        }
+        if (fabsf(dry_wet - delay_previous_) > 0.01f) {
+          last_action_ = now;
+          delay_previous_ = dry_wet;
+          delay_selected_ = true;
+          reverb_selected_ = false;
+        }
+        if (delay_qualified_) {
+          UpdateZone(dry_wet, &delay_zone_);
+          delay_preview_ = DelayMode(delay_zone_);
+        }
       }
       if (page_ == kLimiterPage || page_ == kSelfPlayPage) {
         if (!reverb_qualified_ && fabsf(reverb - reverb_origin_) > 0.10f) {
@@ -143,6 +165,7 @@ class Options {
           last_action_ = now;
           reverb_previous_ = reverb;
           reverb_selected_ = true;
+          delay_selected_ = false;
         }
         if (reverb_qualified_ && page_ == kSelfPlayPage) {
           UpdateZone(reverb, &width_zone_);
@@ -164,6 +187,7 @@ class Options {
         last_action_ = now;
         previous_ = pot;
         reverb_selected_ = false;
+        delay_selected_ = false;
       }
       if (qualified_ && page_ == kSelfPlayPage) {
         if (pot < 0.5f - 0.03f) {
@@ -233,7 +257,9 @@ class Options {
       self_play_preview_ = self_play;
       clouds_preview_ = clouds;
       width_preview_ = width;
+      delay_preview_ = delay;
       ResetReverb(reverb);
+      ResetDelay(dry_wet);
       pitch_preview_ = pitch;
       scale_ = pitch >= PITCH_SCALE_FIFTHS ? pitch : PITCH_SCALE_FIFTHS;
       page_ = kPitchScalePage;
@@ -243,6 +269,8 @@ class Options {
     }
   }
 
+  inline DelayMode delay_preview() const { return delay_preview_; }
+  inline bool delay_selected() const { return delay_selected_; }
   inline StereoWidth width_preview() const { return width_preview_; }
   inline PitchScale pitch_preview() const { return pitch_preview_; }
   inline bool seed_allowed() const {
@@ -271,6 +299,11 @@ class Options {
     }
   }
 
+  void ResetDelay(float pot) {
+    delay_origin_ = delay_previous_ = pot;
+    delay_qualified_ = delay_selected_ = false;
+  }
+
   void ResetReverb(float reverb) {
     reverb_origin_ = reverb;
     reverb_previous_ = reverb;
@@ -285,12 +318,13 @@ class Options {
   }
   void Finish(
       bool commit, OutputLimiterMode committed, bool self_play,
-      bool clouds, PitchScale pitch, StereoWidth width) {
+      bool clouds, PitchScale pitch, StereoWidth width, DelayMode delay) {
     if (!commit) {
       preview_ = committed;
       self_play_preview_ = self_play;
       clouds_preview_ = clouds;
       width_preview_ = width;
+      delay_preview_ = delay;
       pitch_preview_ = pitch;
       scale_ = pitch >= PITCH_SCALE_FIFTHS ? pitch : PITCH_SCALE_FIFTHS;
     }
@@ -317,6 +351,12 @@ class Options {
   bool self_play_preview_;
   bool clouds_preview_;
   StereoWidth width_preview_;
+  DelayMode delay_preview_;
+  int delay_zone_;
+  float delay_origin_;
+  float delay_previous_;
+  bool delay_qualified_;
+  bool delay_selected_;
   int width_zone_;
   bool reverb_qualified_;
   bool reverb_selected_;

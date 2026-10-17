@@ -187,6 +187,14 @@ class Processor {
     output_limiter_mode_ = mode;
   }
 
+  inline void set_delay_mode(DelayMode mode) {
+    delay_mode_ = mode;
+    processor_digital_.set_delay_mode(mode);
+    processor_vintage_digital_.set_delay_mode(mode);
+    processor_clean_tape_.set_delay_mode(mode);
+    processor_dirty_tape_.set_delay_mode(mode);
+  }
+
   inline void set_stereo_width(StereoWidth width) {
     processor_digital_.set_stereo_width(width);
     processor_vintage_digital_.set_stereo_width(width);
@@ -240,6 +248,7 @@ class Processor {
   bool mono_;
   
   float delay_mode_transition_;
+  DelayMode delay_mode_;
 
   float dry_;
   float wet_;

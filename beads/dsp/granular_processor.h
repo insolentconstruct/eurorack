@@ -56,6 +56,7 @@ class GranularProcessor {
     dummy_granular_player_.Init(sample_rate);
     granular_player_.Init(sample_rate);
     multitap_delay_.Init(sample_rate);
+    wide_detent_ = false;
     
     feedback_ = 0.0f;
     shape_ = 0.0f;
@@ -218,6 +219,11 @@ class GranularProcessor {
     }
   }
   
+  inline void set_delay_mode(DelayMode mode) {
+    wide_detent_ = mode == DELAY_MODE_WIDE_DETENT;
+    multitap_delay_.set_wide_detent(wide_detent_);
+  }
+
   inline void set_stereo_width(StereoWidth width) {
     granular_player_.set_stereo_width(width);
   }
@@ -320,6 +326,9 @@ class GranularProcessor {
         (parameters.size.has_cv ? parameters.size.cv : 0.0f);
     CONSTRAIN(bandwidth, 0.0f, 1.0f)
 
+    if (wide_detent_) {
+      bandwidth = DelayFilterDetent(bandwidth);
+    }
     stmlib::ParameterInterpolator bandwidth_modulation(
         &bandwidth_, bandwidth, size);
     stmlib::ParameterInterpolator feedback_modulation(
@@ -419,6 +428,7 @@ class GranularProcessor {
   DelayGranularPlayer dummy_granular_player_;
   DelayGranularPlayer granular_player_;
   MultitapDelay multitap_delay_;
+  bool wide_detent_;
   
   DelayLine<resolution, max_delay, 2> stereo_delay_line_;
   DelayLine<resolution, max_delay * 2, 1> mono_delay_line_;

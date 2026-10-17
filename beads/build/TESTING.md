@@ -61,6 +61,11 @@ Stereo width adds host checks for the unchanged Stock calculation and RNG
 sequence, Narrow's quarter excursion, Wide with zero randomness, every stored
 byte value, options preview and saving, and unchanged bytes 12/13.
 
+Delay mode adds host checks for all stored byte values, preview, cancellation
+and saving, Never at SIZE fully clockwise in every quality and channel mode,
+returning from delay to granular, detent boundaries and unfiltered playback
+with SIZE CV inside the detent. Auto remains the default.
+
 ## Coverage of the manual
 
 The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 110 of them.

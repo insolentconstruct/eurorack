@@ -293,6 +293,7 @@ void Process(
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
     processor.set_stereo_width(ui.stereo_width());
+    processor.set_delay_mode(ui.delay_mode());
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION

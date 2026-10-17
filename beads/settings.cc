@@ -86,6 +86,7 @@ bool Settings::Init(bool recovery_mode) {
   set_clouds_style(clouds_style());
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
+  set_delay_mode(delay_mode());
   return success;
 }
 
@@ -103,7 +104,8 @@ void Settings::SaveState() {
   set_clouds_style(clouds_style());
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
-  fill(&state_.padding[5], &state_.padding[sizeof(state_.padding)], 0);
+  set_delay_mode(delay_mode());
+  fill(&state_.padding[6], &state_.padding[sizeof(state_.padding)], 0);
   chunk_storage_.SaveState();
 }
 

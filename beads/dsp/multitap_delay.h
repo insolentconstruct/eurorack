@@ -46,11 +46,14 @@ class MultitapDelay {
   
   inline void Init(float sample_rate) {
     Reset();
+    wide_detent_ = false;
     for (int i = 0; i < 2; ++i) {
       filter_[i].Init();
     }
   }
   
+  inline void set_wide_detent(bool wide) { wide_detent_ = wide; }
+
   inline void Reset() {
     for (int i = 0; i < DelayController::NUM_TAPS; ++i) {
       tap_[i].Init();
@@ -96,7 +99,8 @@ class MultitapDelay {
         ? -7.0f + bandwidth * 10.0f
         : -8.0f + (bandwidth - 0.5f) * 10.0f;
     const float f = 0.49f * stmlib::SemitonesToRatio(12.0f * octave);
-    const float q = 1.0f + 16.0f * amount * f;
+    const float q = wide_detent_ ? 0.70710678f
+        : 1.0f + 16.0f * amount * f;
     const float wet_amount_sqrt = amount * (2.0f - amount);
     const float wet_amount = wet_amount_sqrt * (2.0f - wet_amount_sqrt);
     
@@ -121,6 +125,7 @@ class MultitapDelay {
   Tap<2048> tap_[DelayController::NUM_TAPS];
   Tap<1> no_latency_tap_[DelayController::NUM_TAPS];
   stmlib::Svf filter_[2];
+  bool wide_detent_;
 
   DISALLOW_COPY_AND_ASSIGN(MultitapDelay);
 };

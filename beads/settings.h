@@ -126,6 +126,18 @@ class Settings {
         : width == STEREO_WIDTH_WIDE ? 0xa2 : 0;
   }
 
+  // Byte 15: the automatic SIZE transition is the default.
+  inline DelayMode delay_mode() const {
+    const uint8_t value = state_.padding[5];
+    return value == 0xa1 ? DELAY_MODE_NEVER
+        : value == 0xa2 ? DELAY_MODE_WIDE_DETENT : DELAY_MODE_AUTO;
+  }
+
+  inline void set_delay_mode(DelayMode mode) {
+    state_.padding[5] = mode == DELAY_MODE_NEVER ? 0xa1
+        : mode == DELAY_MODE_WIDE_DETENT ? 0xa2 : 0;
+  }
+
   inline State* mutable_state() {
     return &state_;
   }

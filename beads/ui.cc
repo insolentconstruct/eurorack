@@ -104,6 +104,7 @@ void Ui::LoadOptions() {
   clouds_style_ = settings_->clouds_style();
   pitch_scale_ = settings_->pitch_scale();
   stereo_width_ = settings_->stereo_width();
+  delay_mode_ = settings_->delay_mode();
 }
 
 void Ui::Poll() {
@@ -139,7 +140,8 @@ void Ui::Poll() {
       mix_pot_value_[MIX_PARAMETER_REVERB], settings_->clouds_style(),
       settings_->pitch_scale(),
       !switches_.up(SWITCH_SEED) && !switches_.released(SWITCH_SEED),
-      switches_.just_pressed(SWITCH_SEED), settings_->stereo_width());
+      switches_.just_pressed(SWITCH_SEED), settings_->stereo_width(),
+      settings_->delay_mode());
   if (!was_active && options_.active()) {
     flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
@@ -205,6 +207,8 @@ void Ui::Poll() {
   
   clouds_style_ = options_.active()
       ? options_.clouds_preview() : settings_->clouds_style();
+  delay_mode_ = options_.active()
+      ? options_.delay_preview() : settings_->delay_mode();
   stereo_width_ = options_.active()
       ? options_.width_preview() : settings_->stereo_width();
   pitch_scale_ = options_.active()
@@ -324,6 +328,11 @@ void Ui::UpdateLeds() {
         phase >= 240 && phase < 360);
     if (options_.page() == kPitchScalePage) {
       leds_.set_media(kPitchScaleColors[options_.pitch_preview()], 1.0f);
+    } else if (options_.page() == kSelfPlayPage &&
+               options_.delay_selected()) {
+      const int delay = options_.delay_preview();
+      leds_.set_media(colors[delay], delay == 0 || phase < 120 ||
+          (delay == 2 && phase >= 240 && phase < 360) ? 1.0f : 0.0f);
     } else if (options_.page() == kSelfPlayPage &&
                options_.reverb_selected()) {
       const int width = options_.width_preview();
@@ -578,12 +587,14 @@ void Ui::DoEvents() {
         options_.self_play_preview() != settings_->self_play_on_request() ||
         options_.clouds_preview() != settings_->clouds_style() ||
         options_.pitch_preview() != settings_->pitch_scale() ||
-        options_.width_preview() != settings_->stereo_width()) {
+        options_.width_preview() != settings_->stereo_width() ||
+        options_.delay_preview() != settings_->delay_mode()) {
       settings_->set_output_limiter_mode(options_.preview());
       settings_->set_self_play_on_request(options_.self_play_preview());
       settings_->set_clouds_style(options_.clouds_preview());
       settings_->set_pitch_scale(options_.pitch_preview());
       settings_->set_stereo_width(options_.width_preview());
+      settings_->set_delay_mode(options_.delay_preview());
       settings_->SaveState();
     }
     options_.ClearCommit();

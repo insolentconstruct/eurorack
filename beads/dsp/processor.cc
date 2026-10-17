@@ -69,6 +69,7 @@ void Processor::Init(
   
   // Used for the timing of the delay to granular transition.
   delay_mode_transition_ = -kDelayModeTransitionTime;
+  delay_mode_ = DELAY_MODE_AUTO;
 }
 
 void Processor::SetCloudsStyle(bool clouds) {
@@ -122,7 +123,8 @@ void Processor::Process(
     size_t size) {
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
-  const float direction = parameters.size.base > threshold ? 1.0f : -1.0f;
+  const float direction = delay_mode_ != DELAY_MODE_NEVER &&
+      parameters.size.base > threshold ? 1.0f : -1.0f;
   delay_mode_transition_ += direction * float(size) / sample_rate();
   
   CONSTRAIN(delay_mode_transition_,

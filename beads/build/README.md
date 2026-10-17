@@ -26,6 +26,18 @@ Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run fa
 **TL;DR:** buffer trim, pitch scales and a Clouds-style reverb setting are new
 since alpha 2. Pitch scale defaults to Off and reverb to Stock.
 
+## Delay mode
+
+In the options page's Feedback category, DRY/WET selects Auto / Never /
+Wide detent in thirds. Auto keeps the usual switch to delay at SIZE fully
+clockwise. Never keeps granular playback there. Wide detent keeps automatic
+switching and makes the delay filter neutral from 40% to 60% of its range,
+with no resonant boost at either end. The filter is controlled by the SIZE
+attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
+neutral zone the remaining travel reaches the usual low-pass and high-pass
+ends. The MEDIA LED shows steady green / one blue pulse / two amber pulses.
+The setting is saved and defaults to Auto. It does not affect synth mode.
+
 ## Stereo width
 
 In the options page's Feedback category, REVERB selects Stock / Narrow /

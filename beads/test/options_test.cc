@@ -1443,12 +1443,51 @@ void TestWidthOption() {
   }
 }
 
+void TestDelayOption() {
+  test_checker.Start("TestDelayOption");
+  for (int value = 0; value < 256; ++value) {
+    Settings settings;
+    memset(settings.mutable_state(), 0, sizeof(State));
+    settings.mutable_state()->padding[5] = value;
+    CHECK(settings.delay_mode() == (value == 0xa1 ? DELAY_MODE_NEVER
+        : value == 0xa2 ? DELAY_MODE_WIDE_DETENT : DELAY_MODE_AUTO));
+  }
+  for (int zone = 0; zone < 3; ++zone) {
+    Rig r;
+    r.Enter();
+    r.Tap();
+    r.pot = zone == 1 ? 0.0f : 0.5f;
+    r.Tick(20);
+    r.pot = (float(zone) + 0.5f) / 3.0f;
+    r.Tick(20);
+    CHECK(r.ui.delay_mode() == DelayMode(zone));
+    CHECK(r.ui.options_.delay_selected());
+    CHECK(r.settings.delay_mode() == DELAY_MODE_AUTO);
+    r.Tick(5100);
+    CHECK(r.settings.delay_mode() == DelayMode(zone));
+    CHECK(r.settings.state().padding[2] == 0);
+    CHECK(r.settings.state().padding[3] == 0);
+  }
+  Rig r;
+  r.Enter();
+  r.Tap();
+  r.pot = r.reverb = 1.0f;
+  r.Tick(20);
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(r.settings.delay_mode() == DELAY_MODE_AUTO);
+  CHECK(r.settings.stereo_width() == STEREO_WIDTH_STOCK);
+  CHECK(r.ui.delay_mode() == DELAY_MODE_AUTO);
+  CHECK(r.ui.stereo_width() == STEREO_WIDTH_STOCK);
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestDelayOption();
   TestWidthOption();
   TestCloudsStorage();
   TestCloudsOptions();

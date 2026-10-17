@@ -37,6 +37,21 @@ enum StereoWidth {
   STEREO_WIDTH_WIDE
 };
 
+enum DelayMode {
+  DELAY_MODE_AUTO,
+  DELAY_MODE_NEVER,
+  DELAY_MODE_WIDE_DETENT
+};
+
+inline float DelayFilterDetent(float bandwidth) {
+  if (bandwidth < 0.4f) {
+    return bandwidth * 1.25f;
+  } else if (bandwidth > 0.6f) {
+    return 0.5f + (bandwidth - 0.6f) * 1.25f;
+  }
+  return 0.5f;
+}
+
 }  // namespace beads
 
 #endif  // BEADS_DSP_PLAYBACK_OPTIONS_H_

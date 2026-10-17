@@ -270,8 +270,51 @@ void TestQuantizerDelayBypass() {
   }
 }
 
+void TestDelayOptions() {
+  test_checker.Start("TestDelayOptions");
+  CHECK(DelayFilterDetent(0.0f) == 0.0f);
+  CHECK(fabsf(DelayFilterDetent(1.0f) - 1.0f) < 0.000001f);
+  for (int i = 400; i <= 600; ++i) {
+    CHECK(DelayFilterDetent(float(i) / 1000.0f) == 0.5f);
+  }
+  for (int quality = 0; quality < 4; ++quality) {
+    for (int mono = 0; mono < 2; ++mono) {
+      Rig r;
+      r.processor.Configure(Processor::Media(quality), mono);
+      r.processor.set_delay_mode(DELAY_MODE_NEVER);
+      r.Run(14000);
+      CHECK(r.processor.delay_mode_transition_ < -1.49f);
+      r.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+      r.Run(14000);
+      CHECK(r.processor.delay_mode_transition_ > 1.49f);
+      r.processor.set_delay_mode(DELAY_MODE_NEVER);
+      r.Run(14000);
+      CHECK(r.processor.delay_mode_transition_ < -1.49f);
+    }
+  }
+  // The detent is a true bypass, including additive SIZE CV.
+  Rig a;
+  Rig b;
+  a.processor.Configure(Processor::MEDIA_DIGITAL, false);
+  b.processor.Configure(Processor::MEDIA_DIGITAL, false);
+  b.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+  b.parameters.size.attenuverter = 0.1f;
+  b.parameters.size.has_cv = true;
+  b.parameters.size.cv = 0.04f;
+  a.Run(14000);
+  b.Run(14000);
+  std::vector<float> stock;
+  std::vector<float> detent;
+  for (int i = 0; i < 1000; ++i) {
+    a.Block(&stock);
+    b.Block(&detent);
+  }
+  CHECK(stock == detent);
+}
+
 int main() {
   setvbuf(stdout, NULL, _IONBF, 0);
+  TestDelayOptions();
   TestContinuousDelayPlayback();
   TestQuantizerDelayBypass();
   TestDelayModeFade();

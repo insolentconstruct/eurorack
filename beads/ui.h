@@ -133,6 +133,7 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
+  inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
 
@@ -203,6 +204,7 @@ class Ui {
   volatile bool clouds_style_;
   volatile PitchScale pitch_scale_;
   volatile StereoWidth stereo_width_;
+  volatile DelayMode delay_mode_;
 
   static const Leds::Color media_palette_[4];
   
