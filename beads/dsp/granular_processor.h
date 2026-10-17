@@ -290,6 +290,25 @@ class GranularProcessor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) {
+    if (mono) {
+      ProcessInternal<true>(
+          triggers, taps, freeze, parameters, feedback, in, out, size);
+    } else {
+      ProcessInternal<false>(
+          triggers, taps, freeze, parameters, feedback, in, out, size);
+    }
+  }
+
+  template<bool mono>
+  inline void ProcessInternal(
+      const TriggerGenerator::Output* triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& parameters,
+      const float feedback,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) {
     const float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
