@@ -118,3 +118,13 @@ pan. Wide-detent filter Q uses coefficients selected outside the sample loop.
 Default audio is checked against the unchanged firmware with the Cortex-M7
 emulator. Performance measurements count executed Thumb instructions, not
 hardware cycles; they do not establish module headroom.
+
+The 2026-10-17 filter-only template trial was rejected after measurement.
+Selecting a Stock/Wide filter function once per block, with constant Q in
+both instantiations, changed GCC 9.3.1 inlining and increased default q3
+stereo stress32 to 77,928 / 77,942 executed instructions (median / peak)
+and delay to 52,293.5 / 52,425. The trial was removed. The retained default
+costs are 77,723 / 77,737 for stress32 and 51,548.5 / 51,680 for delay,
+respectively +11 / +11 and +88 / +88 against fcbfe38. The owner accepts
+these measured instruction deltas as a performance-rule exception after
+this narrow attempt; they are not hardware cycle or headroom measurements.
