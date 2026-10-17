@@ -92,7 +92,7 @@ void BackgroundBufferBackup::EraseSector() {
     FLASH_EraseInitTypeDef erase_params;
     erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
     erase_params.Banks = FLASH_BANK_2;
-    erase_params.Sector = 8 + remaining_sectors_ - 1;
+    erase_params.Sector = 8 + 6 - remaining_sectors_;
     erase_params.NbSectors = 1;
     erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
     uint32_t sector_error;
@@ -103,21 +103,6 @@ void BackgroundBufferBackup::EraseSector() {
     --remaining_sectors_;
   
     if (!remaining_sectors_) {
-      BufferBackupHeader header;
-      header.tag = 0x5a5a5246;  // FRZZ
-      header.write_ptr = *processor_->mutable_delay_write_ptr();
-      header.media = processor_->media();
-      header.mono = processor_->mono();
-  
-      uint32_t flash_address = Sector<8>::start;
-      if (HAL_FLASH_Program(
-          FLASH_TYPEPROGRAM_FLASHWORD,
-          flash_address,
-          (uint64_t)(&header)) != HAL_OK) {
-        remaining_sectors_ = remaining_bytes_ = 0;
-        return;
-      }
-
       write_offset_ = 0;
       remaining_bytes_ = kDelayBufferSizeBits / 8;
     }
@@ -143,6 +128,20 @@ void BackgroundBufferBackup::WriteBlock() {
     remaining_bytes_ -= kFlashWordSize;
     
     if (!remaining_bytes_) {
+      BufferBackupHeader header;
+      header.tag = 0x5a5a5246;  // FRZZ
+      header.write_ptr = *processor_->mutable_delay_write_ptr();
+      header.media = processor_->media();
+      header.mono = processor_->mono();
+  
+      uint32_t flash_address = Sector<8>::start;
+      if (HAL_FLASH_Program(
+          FLASH_TYPEPROGRAM_FLASHWORD,
+          flash_address,
+          (uint64_t)(&header)) != HAL_OK) {
+        return;
+      }
+
       // We've saved everything, we are now sure that we can restart with
       // the FREEZE button enabled!
       SaveState(true);
