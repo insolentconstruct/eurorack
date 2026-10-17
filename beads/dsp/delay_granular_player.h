@@ -42,7 +42,8 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   DelayGranularPlayer() { }
   ~DelayGranularPlayer() { }
   
-  // Preserve the original Off ABI: no extra argument on each sample call.
+  void SetAttacks(const AttackDetector* attacks) { attacks_ = attacks; }
+
   template<typename DelayLineType>
   inline void Render(
       const DelayLineType* delay_line,
@@ -55,54 +56,13 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
       float amplitude, pan;
       ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &pan);
-
-      const int safety = DelayGrain::head_crossing_safety_zone + 1;
-      const int max_delay = delay_line->duration() - 2 * safety;
-
-      new_grain()->Start(
-          delay_line,
-          p.time.value() * float(max_delay) + float(safety),
-          (reverse ? -1.0f : 1.0f) * p.pitch.pitch_value(pitch_scale_),
-          ComputeGrainDuration(duration),
-          p.shape.value(),
-          amplitude, pan,
-          trigger.fractional_sample);
-      SortGrainList(p.monophonic_mode);
-    }
-
-    // Sum the grains in a local frame, which the compiler can keep in
-    // registers.
-    FloatFrame sum;
-    sum.l = 0.0f;
-    sum.r = 0.0f;
-    for (int i = 0; i < NUM_GRAINS; ++i) {
-      grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(delay_line, &sum);
-    }
-    *out += sum;
-
-    Tick();  // Required to estimate the timing between grains.
-  }
-
-  template<typename DelayLineType>
-  inline void Render(
-      const DelayLineType* delay_line,
-      const TriggerGenerator::Output& trigger,
-      const Parameters& p,
-      FloatFrame* out,
-      const AttackDetector* attacks) {
-    if (trigger.trigger) {
-      const float duration = p.size.value();
-      const bool reverse = duration < 0.3333333f;
-
-      float amplitude, pan;
-      ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &pan);
       
       const int safety = DelayGrain::head_crossing_safety_zone + 1;
       const int max_delay = delay_line->duration() - 2 * safety;
 
       new_grain()->Start(
           delay_line,
-          attacks ? attacks->Snap(
+          attacks_ ? attacks_->Snap(
               p.time.value() * float(max_delay) + float(safety),
               float(max_delay + safety), delay_line->write_ptr())
               : p.time.value() * float(max_delay) + float(safety),
@@ -128,6 +88,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   }
 
  private:
+  const AttackDetector* attacks_;
   DISALLOW_COPY_AND_ASSIGN(DelayGranularPlayer);
 };
 

@@ -36,12 +36,12 @@ class AttackInput {
  public:
   void Init() { Configure(0, 1.5f); }
   void Configure(int mode, float threshold) {
-    mode_ = mode; threshold_ = threshold; refractory_ = 0;
+    mode_ = mode; threshold_ = threshold; refractory_ = 0; reference_ = 0.5f;
   }
-  void Reset() { refractory_ = 0; }
+  void Reset() { refractory_ = 0; reference_ = 0.5f; }
   int mode() const { return mode_; }
   // Input and slow peak MUST both be pre-gain, normalized to codec full scale.
-  // This optional pass never runs in Off. No second envelope follower.
+  // Optional block maximum and reference; no additional per-sample follower.
   template<typename Frame> bool Process(const Frame* in, size_t size,
       float scale, float slow, float sample_rate,
       bool left_normalization = false, bool right_normalization = false) {
@@ -55,7 +55,11 @@ class AttackInput {
         peak = std::max(peak, std::max(fabsf(l), fabsf(r)));
       }
     }
-    if (!refractory_ && peak > threshold_ * slow && peak > 0.002f) {
+    const bool onset = !refractory_ && peak > threshold_ * std::max(reference_, slow * 0.5f) && peak > 0.002f;
+    // Fast attack, 20 Hz release at the actual block rate.
+    const float release = 20.0f * float(size) / sample_rate;
+    SLOPE(reference_, peak, 1.0f, release);
+    if (onset) {
       refractory_ = unsigned(sample_rate * 0.030f);
       return true;
     }
@@ -68,7 +72,7 @@ class AttackInput {
   }
  private:
   int mode_;
-  float threshold_;
+  float threshold_, reference_;
   unsigned refractory_;
 };
 class AttackDetector {
@@ -99,10 +103,16 @@ class AttackDetector {
     unsigned first = unsigned(delay);
     if (float(first) < delay) ++first;
     const unsigned limit = unsigned(std::min(delay + sample_rate_ * 0.100f, max_delay));
-    for (unsigned i = 0; i < count_; ++i) {
-      const unsigned age = now - marks_[(head_ + 63 - i) & 63];
-      if (age > limit) break;
-      if (age >= first) return float(age);
+    // Ages increase from newest to oldest even when the uint32 clock wraps.
+    unsigned lo = 0, hi = count_;
+    while (lo < hi) {
+      const unsigned mid = (lo + hi) >> 1;
+      const unsigned age = now - marks_[(head_ + 63 - mid) & 63];
+      if (age < first) lo = mid + 1; else hi = mid;
+    }
+    if (lo < count_) {
+      const unsigned age = now - marks_[(head_ + 63 - lo) & 63];
+      if (age <= limit) return float(age);
     }
     return delay;
   }

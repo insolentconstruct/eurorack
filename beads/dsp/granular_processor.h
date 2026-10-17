@@ -56,6 +56,7 @@ class GranularProcessor {
     stereo_delay_line_.Init(buffers);
 
     dummy_granular_player_.Init(sample_rate);
+    dummy_granular_player_.SetAttacks(NULL);
     granular_player_.Init(sample_rate);
     multitap_delay_.Init(sample_rate);
     filter_mode_.wide_detent = false;
@@ -309,19 +310,15 @@ class GranularProcessor {
       FloatFrame* out,
       size_t size) {
     if (mono) {
-      if (attacks_.mode()) ProcessInternal<true, true>(
-          triggers, taps, freeze, parameters, feedback, in, out, size);
-      else ProcessInternal<true, false>(
+      ProcessInternal<true>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     } else {
-      if (attacks_.mode()) ProcessInternal<false, true>(
-          triggers, taps, freeze, parameters, feedback, in, out, size);
-      else ProcessInternal<false, false>(
+      ProcessInternal<false>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     }
   }
 
-  template<bool mono, bool attacks_enabled>
+  template<bool mono>
   inline void ProcessInternal(
       const TriggerGenerator::Output* triggers,
       const DelayController::Output* taps,
@@ -370,7 +367,8 @@ class GranularProcessor {
     const float lp_coefficient = lp_coefficients[resolution];
     const float soft_limit_gain = soft_limit_gains[resolution];
     
-    AttackDetector* attacks = attacks_enabled ? &attacks_ : NULL;
+    AttackDetector* attacks = attacks_.mode() ? &attacks_ : NULL;
+    granular_player_.SetAttacks(attacks);
     unsigned writes = 0;
     if (attacks) {
       for (size_t i = 0; i < size; ++i) writes += !freeze[i];
@@ -402,13 +400,8 @@ class GranularProcessor {
       if (mono) {
         mono_delay_line_.Write(s, *freeze);
         if (triggers) {
-          if (attacks_enabled) {
-            granular_player_.Render(
-                &mono_delay_line_, *triggers, parameters, out, attacks);
-          } else {
-            granular_player_.Render(
-                &mono_delay_line_, *triggers, parameters, out);
-          }
+          granular_player_.Render(
+              &mono_delay_line_, *triggers, parameters, out);
         }
         if (taps) {
           multitap_delay_.Render(
@@ -422,13 +415,8 @@ class GranularProcessor {
       } else {
         stereo_delay_line_.Write(s, *freeze);
         if (triggers) {
-          if (attacks_enabled) {
-            granular_player_.Render(
-                &stereo_delay_line_, *triggers, parameters, out, attacks);
-          } else {
-            granular_player_.Render(
-                &stereo_delay_line_, *triggers, parameters, out);
-          }
+          granular_player_.Render(
+              &stereo_delay_line_, *triggers, parameters, out);
         }
         if (taps) {
           multitap_delay_.Render(
