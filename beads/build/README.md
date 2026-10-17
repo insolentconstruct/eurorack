@@ -31,6 +31,8 @@ Where the Beads manual and the firmware disagree, see [MANUAL_ERRATA.md](MANUAL_
 
 Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run faster, and how to propose more: [OPTIMIZATIONS.md](OPTIMIZATIONS.md). Building the DSP elsewhere: [PORTING.md](PORTING.md). Before adding a feature, check [FEATURES.md](FEATURES.md) for which buttons, settings bytes, flash and RAM are already taken.
 
+Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is Mutable Instruments' released source plus the bug fixes, the reproducible GCC 9 build kit and the CPU optimizations, without Drizzlet's features. See its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
+
 **TL;DR:** buffer trim, pitch scales, Clouds-style reverb, stereo width and
 delay mode are new since alpha 2. The new settings default to stock behaviour.
 

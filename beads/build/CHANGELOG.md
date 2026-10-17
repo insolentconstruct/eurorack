@@ -24,7 +24,7 @@ heading; a release turns it into a dated heading.
 - Monophonic grains (Mutable Instruments' original code): hold MEDIA and press SEED to toggle; as Mutable Instruments noted, this works well only with the first two SHAPE envelopes (square and decay), and should be turned off before downgrading (#31).
 - App built with GCC 9 instead of 4.9.3; 20 of 20 emulated scenarios give bit-identical audio.
 - Delay mode: no tempo glitch on the first clock after about 12 hours without one (#57).
-- Clocked frozen delay: very fast SEED edges no longer silence the play heads (#33).
+- Clocked frozen delay: very fast SEED edges no longer create a zero-length slice (#33).
 
 ## 2026.10.14 (tag `drizzlet-2026.10.14`, alpha 1)
 - Output limiter option (Stock, Fast release, Off): hold ASSIGN for three seconds to open the options page and set it with DRY/WET.

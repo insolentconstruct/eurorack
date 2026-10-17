@@ -58,3 +58,7 @@ See the [options guide](beads/build/OPTIONS.md) or
 [printable guide](beads/build/options-guide.svg).
 
 ![Options page phone guide](beads/build/options-guide-mobile.svg)
+
+## For firmware modders
+
+The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is a clean base: Mutable Instruments' released Beads source plus the bug fixes, the reproducible GCC 9 build kit and the CPU optimizations, without Drizzlet's features.
