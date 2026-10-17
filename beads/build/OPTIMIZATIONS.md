@@ -64,7 +64,7 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 | All sample loops in ITCM | GCC 9 | -765 / -770 | -270 / -377 | +336 B | +21,440 B ITCM | 28/28 Seed3 | rejected |
 | ITCM on top of the template | template | -611 / -505 | -213 / -277 | +360 B | +23,448 B ITCM | 28/28 Seed3 | rejected |
 | Extra grain/delay template | GCC 9 | -1,693 / -1,812 | -1,406 / -1,627 | -336 B | 0 | 28/28 Seed3 | rejected |
-| Freeze state as a template parameter (vs both pass-2 changes) | 769 / 728 | 343 / 378 | not built | n/a | 28/28 Seed3 | rejected |
+| Freeze state as a template parameter | both pass-2 changes | 769 / 728 | 343 / 378 | not built | n/a | 28/28 Seed3 | rejected |
 
 **Template.** The 2,669 / 2,828 peak savings come from the first paired baseline and template run (94,586 template peak); the Build comparison row shows the second template run (94,719), which gives 2,536 / 2,722 against the first baseline. It is not a gain everywhere: q1 stereo stress32 is 794 to 808 cycles slower at median, and some q1 and q2 cases regress. It improves the q3 and Clouds-style cases that set the peak.
 
@@ -89,14 +89,22 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 ## Rules for future changes
 
+### From Mutable Instruments
+
+These come from Mutable Instruments' code and tech notes ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/), "Timing and processes", the Beads history page).
+
+1. Specialize on configuration with template parameters: Clouds' grain renderer on channel count, quality and interpolation, stmlib's filter on its type, Warps on FIR templates. It is not always faster, as the freeze template shows.
+2. Look at the data format first. Mutable Instruments' own Beads gain was changing delay-line addresses from 47:16 to 21:10 fixed point, which avoids an int64-to-float conversion.
+3. Keep loop state in registers across the block; watch for state reloaded every sample, aliasing through `this`, and calls inside the sample loop.
+4. Judge the worst block, not the mean. Mutable Instruments toggle a pin around the block callback, design for 80 to 95% of the CPU, and treat 99% of the block as the ceiling. DSP-only, Beads is at about 75 to 81% here.
+
+### Drizzlet's own rules
+
+Mutable Instruments' notes describe no sound-identity checks and none of the acceptance gates below; these are Drizzlet's, and stricter.
+
 1. Follow Mutable Instruments style ([STYLE.md](STYLE.md)): their idioms first, no clever constructs that need a comment to justify.
 2. Measure the gain on the worst case (q3 stereo stress32, plus Clouds-style). Report peak and median, flash and RAM, and what got slower.
 3. Prefer bit-identical output; show it with Seed3 hashes, emulator audio and long runs.
 4. Any difference is flagged with its largest error and whether it drifts. It is accepted only if the error stays strictly below -90 dBFS (0.0000316 FS) with no drift, and is documented here.
 5. Reject changes that spend RAM or ITCM for a small gain, or that help one quality and hurt the one that sets the peak.
-6. No compiler change without the same comparison: a faster compiler that changes the sound is not an optimization.
-7. Look at the data format first. Mutable Instruments' own Beads gain was changing delay-line addresses from 47:16 to 21:10 fixed point, which avoids an int64-to-float conversion; hunt for 64-bit arithmetic and integer-to-float conversions on the audio path.
-8. Keep loop state in registers across the block ("Timing and processes" tech note); watch for state reloaded every sample, aliasing through `this`, and calls inside the sample loop.
-9. Judge the worst block, not the mean: the deadline is on the whole block. Mutable Instruments toggle a pin around the block callback and treat 99% of the block as the ceiling.
-
-Precedent: specializing on configuration with template parameters is Mutable Instruments' own approach ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/)): Clouds' grain renderer on channel count, quality and interpolation, stmlib's filter on its type, Warps on FIR templates. It is not always faster, as the freeze template shows. Mutable Instruments design for 80 to 95% of the CPU; DSP-only, Beads is at about 75 to 81% here.
+6. No compiler change without the same comparison: a faster compiler that changes the sound is not an optimization. The app uses GCC 9, where Mutable Instruments used 4.9.3; the bootloader stays on 4.9.3.

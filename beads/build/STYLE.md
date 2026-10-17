@@ -55,12 +55,15 @@ rules come after those sources; leave unrelated existing code alone.
 
 ## Performance
 
-- Follow Mutable Instruments' [STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/) note: specialize hot DSP on configuration values with template parameters (Clouds' grain renderer, stmlib's filter), and measure, because it can be slower.
+From Mutable Instruments ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/) and their code):
+
+- Specialize hot DSP on configuration values with template parameters (Clouds' grain renderer, stmlib's filter), and measure, because it can be slower.
 - Do control work once per block and audio work per sample (`ParameterInterpolator`, lookup tables).
 - Keep loop state in locals so it stays in registers.
 - Prefer a data-format fix (for example fixed-point delay addresses) over micro-tuning.
-- Mutable Instruments design for 80 to 95% of the CPU, with 99% of the block as the hard ceiling.
-- An audio-path change needs a measured cycle count and the sound check in [OPTIMIZATIONS.md](OPTIMIZATIONS.md).
+- Design for 80 to 95% of the CPU, with 99% of the block as the hard ceiling.
+
+Drizzlet adds: an audio-path change needs a measured cycle count and the sound check in [OPTIMIZATIONS.md](OPTIMIZATIONS.md) (bit-identical, or a flagged difference below -90 dBFS).
 
 ## Comments
 
