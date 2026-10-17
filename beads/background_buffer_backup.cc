@@ -96,7 +96,10 @@ void BackgroundBufferBackup::EraseSector() {
     erase_params.NbSectors = 1;
     erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
     uint32_t sector_error;
-    HAL_FLASHEx_Erase(&erase_params, &sector_error);
+    if (HAL_FLASHEx_Erase(&erase_params, &sector_error) != HAL_OK) {
+      remaining_sectors_ = remaining_bytes_ = 0;
+      return;
+    }
     --remaining_sectors_;
   
     if (!remaining_sectors_) {
@@ -107,10 +110,13 @@ void BackgroundBufferBackup::EraseSector() {
       header.mono = processor_->mono();
   
       uint32_t flash_address = Sector<8>::start;
-      HAL_FLASH_Program(
+      if (HAL_FLASH_Program(
           FLASH_TYPEPROGRAM_FLASHWORD,
           flash_address,
-          (uint64_t)(&header));
+          (uint64_t)(&header)) != HAL_OK) {
+        remaining_sectors_ = remaining_bytes_ = 0;
+        return;
+      }
 
       write_offset_ = 0;
       remaining_bytes_ = kDelayBufferSizeBits / 8;
@@ -126,10 +132,13 @@ void BackgroundBufferBackup::WriteBlock() {
         
     uint32_t flash_address = \
         Sector<8>::start + uint32_t(write_offset_) + kFlashWordSize;
-    HAL_FLASH_Program(
+    if (HAL_FLASH_Program(
         FLASH_TYPEPROGRAM_FLASHWORD,
         flash_address,
-        (uint64_t)(&buffer[0]));
+        (uint64_t)(&buffer[0])) != HAL_OK) {
+      remaining_sectors_ = remaining_bytes_ = 0;
+      return;
+    }
     write_offset_ += kFlashWordSize;
     remaining_bytes_ -= kFlashWordSize;
     
