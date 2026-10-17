@@ -79,9 +79,6 @@ void Processor::SetCloudsStyle(bool clouds) {
 }
 
 void Processor::Configure(Media media, bool mono) {
-#ifdef BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER
-  feedback_diffuser_.Init();
-#endif
   media_ = media;
   mono_ = mono;
   
@@ -218,9 +215,6 @@ void Processor::Process(
       break;
   }
   
-#ifdef BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER
-  feedback_diffuser_.Process(out, feedback, size);
-#endif
   if (clouds_style_ && !delay_mode) {
     diffuser_.Process(out, size);
   }
