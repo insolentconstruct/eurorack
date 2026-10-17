@@ -93,12 +93,68 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
             else:
                 assert root.attrib["width"] == "390"
     markdown = Path(directory, "OPTIONS.md").read_text()
+    # Buyer-facing tables retain every live value/indication, with technical
+    # numbers confined to Details. Pitch's eight scales form a separate list.
+    friendly = {"Clouds-style": "Clouds", "Auto (Stock)": "Auto",
+                "Wide detent": "Wide", "Automatic (Stock)": "Automatic",
+                "Fast release": "Fast", "Enabled (1..255)": "wider →"}
+    simple_pulse = {"slow (0.98 Hz)": "slow blink",
+                    "fast (3.91 Hz)": "fast blink",
+                    "2 yellow pulses / 2.048 s": "two pulses"}
+    public, details = markdown.split("## Details", 1)
+    assert public.count("| Knob | Setting |") == 3
+    assert sum(line[:2] in {"1.", "2.", "3.", "4."}
+               for line in public.splitlines()) == 4
     for row in rows:
-        page, _, knob, _, value, color, pulse = row.split("\t")
-        led = "unchanged" if color == "unchanged" else (
-            "green → yellow → red meter" if color == "meter" else color
-        ) + "; " + pulse
-        assert f"| {page} | {knob} | {value} | {led} |" in markdown
+        page, _, knob, setting, value, color, pulse = row.split("\t")
+        if setting == "Reserved":
+            assert f"| {knob} | not used yet | — | — |" in public
+            continue
+        label = friendly.get(value, value)
+        colour = "green → yellow → red" if color == "meter" else color
+        indication = colour + "; " + simple_pulse.get(pulse, pulse)
+        assert label in public and indication in public, row
+    for page in ("1", "2", "3"):
+        page_text = public.split(f"## Page {page} —", 1)[1].split("## Page", 1)[0]
+        for knob in ("FEEDBACK", "DRY/WET", "REVERB"):
+            matching = [row.split("\t") for row in rows
+                        if row.split("\t")[0] == page
+                        and row.split("\t")[2] == knob]
+            setting = matching[0][3]
+            if setting == "Reserved":
+                continue
+            listed = matching[:2] if setting == "Pitch scale" else matching
+            names = [friendly.get(row[4], row[4]) for row in listed]
+            indications = [("green → yellow → red" if row[5] == "meter" else row[5])
+                           + "; " + simple_pulse.get(row[6], row[6]) for row in listed]
+            if setting == "Pitch scale":
+                names.append("Scale")
+                indications.append("see scale list")
+            assert (f"| {knob} | {setting} | {' / '.join(names)} | "
+                    f"{' / '.join(indications)} |") in page_text
+    for phrase in ("13%", "7%", "3%", "0.98 Hz", "3.91 Hz", "2.048 s",
+                   "100 ms", "1.5 s", "40–60%"):
+        assert phrase in details and phrase not in public, phrase
+    for name in ("options-guide.svg", "options-guide-mobile.svg"):
+        root = ET.parse(Path(directory, name)).getroot()
+        texts = list(root.iter("{http://www.w3.org/2000/svg}text"))
+        labels = [node.text for node in texts]
+        assert labels.count("pulsing") == 3
+        assert all(labels.count(label) == 3 for label in ("F", "D/W", "R"))
+        assert labels.count("READ THE MEDIA LED") == 1
+        assert labels.count("REVERB: not used yet") == 2
+        assert labels.count("FEEDBACK: not used yet") == 1
+        assert "Reserved" not in labels
+        assert "Scale (tap SEED to step through):" in labels
+        assert all(float(node.attrib["font-size"]) >= 15 for node in texts)
+        flat = " ".join(labels)
+        for phrase in ("qualified", "dead band", "2.048", "0.98", "3.91", "%"):
+            assert phrase not in flat, phrase
+        assert "MEDIA LED" in labels and "ASSIGN" in labels
+        for row in rows:
+            _, _, _, setting, value, color, pulse = row.split("\t")
+            if setting != "Reserved":
+                assert friendly.get(value, value) in labels, value
     # Check the non-TSV zone descriptions against the shipped reference too.
     for phrase in ("Three equal zones", "Lower half selects", "Above this zone",
                    "13%", "7%", "three seconds", "one second"):
