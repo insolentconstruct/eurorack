@@ -146,12 +146,12 @@ void Process(
   ui.set_freeze_led_state(freeze_block);
   
   bool attack_onset = false;
-  if (processor.attack_input()->mode() && !codec_transition_frames) {
+  if (processor.attack_input()->mode() && !codec_transition_frames
+      && !freeze_block && !synth_mode && processor.AttackRecording()) {
     attack_onset = processor.attack_input()->Process(in, size,
         1.0f / 2147483648.0f, gain_control.peak(), processor.sample_rate(),
         normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
         normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT));
-    attack_onset &= !freeze_block && !synth_mode && processor.AttackRecording();
     processor.SetAttackOnset(attack_onset);
   }
   const bool attack_gate = attack_onset && processor.attack_input()->mode() == 2;
