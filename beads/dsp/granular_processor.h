@@ -29,6 +29,8 @@
 #ifndef BEADS_DSP_GRANULAR_PROCESSOR_H_
 #define BEADS_DSP_GRANULAR_PROCESSOR_H_
 
+#include <cstring>
+
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -330,8 +332,11 @@ class GranularProcessor {
         (parameters.size.has_cv ? parameters.size.cv : 0.0f);
     CONSTRAIN(bandwidth, 0.0f, 1.0f)
 
-    // Update coefficients while wide detent or its transition is active.
-    if (filter_mode_.wide_detent || filter_mode_.position) {
+    // Mode and ramp position share one word; zero means settled Auto, so
+    // stock playback skips coefficient work with a single test.
+    uint32_t filter_mode;
+    memcpy(&filter_mode, &filter_mode_, sizeof(filter_mode));
+    if (filter_mode) {
       const DelayFilterQ q = SmoothDelayFilterQ(
           &filter_mode_, q_offset, q_scale);
       q_offset = q.offset;
