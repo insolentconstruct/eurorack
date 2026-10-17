@@ -51,7 +51,8 @@ STEPS = [
     "D/W / R).",
     "Change a setting: turn its knob; it saves {settle} second after you "
     "stop (the page LED flashes).",
-    "Close: hold ASSIGN {hold} s, or press any other button.",
+    "Close: hold ASSIGN {hold} s, or press any other button except SEED "
+    "on page 1 with Scale selected: short taps step the scale.",
 ]
 NOTES = [
     "Move a knob more than {pickup}% of its travel before it responds.",
@@ -102,13 +103,23 @@ def zones(rows):
         values = [row["value"] for row in rows[:2]] + ["Scale"]
     else:
         values = [SHORT.get(r["value"], r["value"]) for r in rows]
-    if rows[0]["setting"] == "Stereo width":
-        boundary = CONSTANTS["kOptionsPickupThreshold"]
-        return [(0, boundary, values[0]), (boundary, 1, values[1])]
-    return [
-        (i / len(values), (i + 1) / len(values), value)
-        for i, value in enumerate(values)
-    ]
+    bands = zone_bands(rows)
+    starts = [0] + [high for low, high in bands]
+    ends = [low for low, high in bands] + [1]
+    return list(zip(starts, ends, values))
+
+
+def zone_bands(rows):
+    setting = rows[0]["setting"]
+    if setting == "Stereo width":
+        return [(CONSTANTS["kWidthStockThreshold"],
+                 CONSTANTS["kWidthEnabledThreshold"])]
+    if setting in ("Reverb character", "Self-play"):
+        return [(CONSTANTS["kOptionsHalfLow"],
+                 CONSTANTS["kOptionsHalfHigh"])]
+    band = CONSTANTS["kOptionsZoneBand"]
+    return [(CONSTANTS[name] - band, CONSTANTS[name] + band)
+            for name in ("kOptionsZoneLow", "kOptionsZoneHigh")]
 
 
 def indication(row):
@@ -139,7 +150,9 @@ DETAILS = [
     "switch below {half_low}% and above {half_high}%. Pitch, Delay mode "
     "and Limiter use thirds; Reverb character and "
     "Self-play use halves.",
-    "Width: Stock below {pickup}%; leave Stock above {width_high}%, "
+    "Guide arcs and shaded switching bands use the same firmware export "
+    "as these zone boundaries.",
+    "Width: Stock below {width_low}%; leave Stock above {width_high}%, "
     "return below {width_low}%. "
     "Enabled width goes from zero spread at {width_high}% to full "
     "spread at 100%, "
@@ -333,18 +346,19 @@ class Drawing:
             self.circle(x - 4, y, 1, "#222")
             self.circle(x + 4, y, 1, "#222")
 
-    def arc(self, x, y, a, b):
+    def arc(self, x, y, a, b, band=False):
         def point(t):
             angle = math.radians(135 + 270 * t)
             return x + 37 * math.cos(angle), y + 37 * math.sin(angle)
 
-        x1, y1 = point(a + 0.012)
-        x2, y2 = point(b - 0.012)
+        x1, y1 = point(a if band else a + 0.012)
+        x2, y2 = point(b if band else b - 0.012)
         self.items.append(
             (
                 f'<path d="M {x1:.3f} {y1:.3f} A 37 37 0 '
                 f'{int(b - a > .6667)} 1 {x2:.3f} {y2:.3f}" '
-                'fill="none" stroke="#555" stroke-width="3"/>'
+                f'fill="none" stroke="{"#aaa" if band else "#555"}" '
+                f'stroke-width="{8 if band else 3}"/>'
             )
         )
 
@@ -371,6 +385,8 @@ class Drawing:
                 else "start" if lx > cx + 15 else "middle"
             )
             self.text(round(lx, 2), round(ly + 5, 2), value, 15, anchor=anchor)
+        for a, b in zone_bands(rows):
+            self.arc(cx, cy, a, b, True)
         base = y + 145
         pitch = rows[0]["setting"] == "Pitch scale"
         for index, row in enumerate(rows):

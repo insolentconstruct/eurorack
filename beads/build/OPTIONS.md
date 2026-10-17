@@ -10,7 +10,7 @@
 1. Open: hold ASSIGN 3 s, release.
 2. Change page: tap ASSIGN. The pulsing mix LED marks the page (F / D/W / R).
 3. Change a setting: turn its knob; it saves one second after you stop (the page LED flashes).
-4. Close: hold ASSIGN 3 s, or press any other button.
+4. Close: hold ASSIGN 3 s, or press any other button except SEED on page 1 with Scale selected: short taps step the scale.
 
 Move a knob more than 10% of its travel before it responds.
 Wait one second before powering off.
@@ -58,7 +58,9 @@ Hold ASSIGN alone for 3 seconds with the mix knobs still, then release. Pages cy
 
 Move a knob more than 10% of its travel to begin editing. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch, Delay mode and Limiter use thirds; Reverb character and Self-play use halves.
 
-Width: Stock below 10%; leave Stock above 13%, return below 7%. Enabled width goes from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Changes affect new grains; zero spread preserves stereo position, with mono centred. When enabled, ASSIGN adds WIDTH after the three mix destinations; all three LEDs pulse. ASSIGN CV adds to saved width, clamped to zero and full spread.
+Guide arcs and shaded switching bands use the same firmware export as these zone boundaries.
+
+Width: Stock below 7%; leave Stock above 13%, return below 7%. Enabled width goes from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Changes affect new grains; zero spread preserves stereo position, with mono centred. When enabled, ASSIGN adds WIDTH after the three mix destinations; all three LEDs pulse. ASSIGN CV adds to saved width, clamped to zero and full spread.
 
 Changes save after 1 second without knob movement that changes the setting or passes the movement threshold. Pending changes save after closing too. The page LED flashes for 100 ms on entry, close and saving. All three mix LEDs pulse on entry; one then pulses to mark the page. There is no idle close or cancel.
 

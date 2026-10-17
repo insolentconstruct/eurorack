@@ -37,7 +37,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Entry needs normal mode and 20 ms with all buttons up. Tap ASSIGN cycles pages 1 → 2 → 3 → 1; reopening remembers the last page in RAM, with page 1 at power-up. Move a knob >10% before it edits. Save after one second without qualified movement or value changes; no idle close. Hold ASSIGN 3 s or press another button to close, retaining changes. Short SEED taps on Scale cycle scales.
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Entry needs normal mode and 20 ms with all buttons up. Tap ASSIGN cycles pages 1 → 2 → 3 → 1; reopening remembers the last page in RAM, with page 1 at power-up. Move a knob >10% before it edits. Save after one second without qualified movement or value changes; no idle close. Hold ASSIGN 3 s or press another button to close, retaining changes. On page 1 with Scale selected, short SEED taps step the scale instead of closing.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
@@ -226,5 +226,5 @@ remain to be verified.
 |---|---|
 | Page 1, DRY/WET | Continuous grain width; [controls and indications](OPTIONS.md) |
 | Byte 14 | 0 Stock; 1..255 enabled width |
-| Byte 16 | 0 unassigned; 0xa1 WIDTH assigned; all other values unassigned |
+| Byte 16 | 0 unassigned; 1 WIDTH assigned; all other values unassigned |
 | ASSIGN | Optional fourth destination when width is enabled |

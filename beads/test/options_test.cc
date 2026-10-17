@@ -1009,7 +1009,7 @@ void TestPlaybackStorage() {
     Rig r;
     r.settings.set_stereo_width(128);
     r.settings.mutable_state()->padding[6] = raw;
-    CHECK(r.settings.width_assigned() == (raw == 0xa1));
+    CHECK(r.settings.width_assigned() == (raw == 1));
   }
 
   Rig r;
@@ -1026,7 +1026,7 @@ void TestPlaybackStorage() {
       CHECK(loaded.stereo_width() == StereoWidth(width));
       CHECK(loaded.state().assignable_cv_destination == 0);
       CHECK(loaded.width_assigned() == (width != 0));
-      CHECK(loaded.state().padding[6] == (width ? 0xa1 : 0));
+      CHECK(loaded.state().padding[6] == (width ? 1 : 0));
       State stock_view = loaded.state();
       CONSTRAIN(stock_view.assignable_cv_destination, 0, 3);
       CHECK(stock_view.assignable_cv_destination == 0);

@@ -35,7 +35,7 @@ import zipfile
 
 sys.path.insert(0, str(Path("beads/build/tools").resolve()))
 from release_package import package
-from options_guide import SHORT, indication
+from options_guide import SHORT, indication, generate
 
 export = subprocess.check_output(["./build/options_tables"], text=True)
 actual = export.split("\nconstant\tname\tvalue\n")[0]
@@ -205,7 +205,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
                 assert SHORT.get(value, value) in labels, value
     # Check the non-TSV zone descriptions against the shipped reference too.
     for phrase in (
-        "Three equal zones",
+        "Three zones",
         "Lower half selects",
         "Above this zone",
         "13%",
@@ -215,6 +215,30 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     ):
         assert phrase in section, phrase
 print("Generated SVG/Markdown match live tables and README: PASS")
+
+# Mutate a temporary TSV, independently checking every exported boundary.
+with tempfile.TemporaryDirectory(prefix="options-boundary-") as directory:
+    tsv = Path(directory, "options.tsv")
+    original = generate(export)
+    for boundary in (
+        "kWidthStockThreshold", "kWidthEnabledThreshold",
+        "kOptionsHalfLow", "kOptionsHalfHigh", "kOptionsZoneLow",
+        "kOptionsZoneHigh", "kOptionsZoneBand",
+    ):
+        lines = export.splitlines()
+        for i, line in enumerate(lines):
+            fields = line.split("\t")
+            if fields[:2] == ["constant", boundary]:
+                fields[2] = str(float(fields[2]) + 0.01)
+                lines[i] = "\t".join(fields)
+                break
+        else:
+            raise AssertionError(boundary)
+        tsv.write_text("\n".join(lines) + "\n")
+        changed = generate(tsv.read_text())
+        for name in ("options-guide.svg", "options-guide-mobile.svg"):
+            assert changed[name] != original[name], (boundary, name)
+print("Exported boundary mutations change both SVGs: PASS")
 
 # Exercise the real ZIP packager with tiny stand-ins, without firmware builds
 # or importing its audio decoder dependencies.

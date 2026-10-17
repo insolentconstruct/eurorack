@@ -137,10 +137,10 @@ class Settings {
   }
 
   // Byte 16 overlays WIDTH while FEEDBACK remains the saved destination.
-  inline bool width_assigned() const { return state_.padding[6] == 0xa1; }
+  inline bool width_assigned() const { return state_.padding[6] == 1; }
 
   inline void set_width_assigned(bool assigned) {
-    state_.padding[6] = assigned && stereo_width() ? 0xa1 : 0;
+    state_.padding[6] = assigned && stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
   }
 

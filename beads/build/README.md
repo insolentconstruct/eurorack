@@ -114,9 +114,11 @@ Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 Changes are saved after one second without qualified knob movement or a
 value change. A sweep through zones saves once when it settles. Close by
 holding ASSIGN for three seconds or pressing another button; there is no
-idle close or cancel. Short SEED taps on Scale cycle the pitch scale instead
-of closing options. A pending change still saves after closing: wait one second
+idle close or cancel. On page 1 with Scale selected, short SEED taps step
+the scale instead of closing options. A pending change still saves after closing: wait one second
 before powering off. Mix controls resume with smooth catch-up after closing.
+Guide arcs and shaded switching bands are generated from the firmware
+export; the zone descriptions are checked against that same export.
 Every first value, including Pitch Off, is steady green. Other values follow
 yellow, red, then green/yellow/red slow and fast blinking. Slow is about 1 Hz;
 fast is about 4 Hz. Raag Shri uses two yellow pulses then a pause.
@@ -168,7 +170,7 @@ only the reverb character changes. Switching briefly fades the sound out and
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
-Pitch quantization: Reverb LED page, FEEDBACK knob. Three equal zones
+Pitch quantization: Reverb LED page, FEEDBACK knob. Three zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
 Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
@@ -228,7 +230,7 @@ Byte 12/13 values are frozen at Beta 1. Future options use a free byte
 17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
 
 Width uses byte 14: 0 is Stock; 1..255 encode enabled width from zero to full.
-WIDTH assignment uses byte 16: 0 is unassigned, 0xa1 is assigned; other values
+WIDTH assignment uses byte 16: 0 is unassigned, 1 is assigned; other values
 are unassigned. Stock sees FEEDBACK and clears these extensions on save.
 
 Settings offsets are bytes in the 24-byte State payload:
