@@ -232,3 +232,11 @@ TEXTURE 0.925. Delay and self-play use the reverb character without the grain
 diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
 changes, including canceled previews. Actual module listening and timing
 remain to be verified.
+
+## Frozen feedback prototype
+
+#4 is a compile-time experiment only; it consumes no setting or options-page
+slot. [FROZEN_FEEDBACK.md](FROZEN_FEEDBACK.md) compares a separate wet loop
+with diffusion in the recording feedback path and records possible homes.
+Its extra 4 KiB buffer and processing exist only with
+`BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER` defined.

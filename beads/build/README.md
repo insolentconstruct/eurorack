@@ -26,6 +26,9 @@ Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run fa
 **TL;DR:** buffer trim, pitch scales and a Clouds-style reverb setting are new
 since alpha 2. Pitch scale defaults to Off and reverb to Stock.
 
+The frozen-feedback all-pass work is a [design and compile-time experiment](FROZEN_FEEDBACK.md),
+not an options-page setting.
+
 ## Delay mode
 
 In the options page's Feedback category, DRY/WET selects Auto / Never /

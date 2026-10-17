@@ -66,6 +66,11 @@ and saving, Never at SIZE fully clockwise in every quality and channel mode,
 returning from delay to granular, detent boundaries and unfiltered playback
 with SIZE CV inside the detent. Auto remains the default.
 
+The compile-time frozen-feedback experiment has its own sanitizer target,
+`beads/test/feedback_diffuser.mk`: impulse tail, channel isolation, finite
+bounded output, zero-feedback bypass, and unchanged frozen recording banks
+at maximum feedback in every quality, mono and stereo.
+
 ## Coverage of the manual
 
 The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 110 of them.
