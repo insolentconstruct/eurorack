@@ -187,6 +187,13 @@ class Processor {
     output_limiter_mode_ = mode;
   }
 
+  inline void set_stereo_width(StereoWidth width) {
+    processor_digital_.set_stereo_width(width);
+    processor_vintage_digital_.set_stereo_width(width);
+    processor_clean_tape_.set_stereo_width(width);
+    processor_dirty_tape_.set_stereo_width(width);
+  }
+
   inline void set_pitch_scale(PitchScale scale) {
     processor_digital_.set_pitch_scale(scale);
     processor_vintage_digital_.set_pitch_scale(scale);

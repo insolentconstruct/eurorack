@@ -34,6 +34,7 @@
 
 #include "beads/drivers/cv_adc.h"
 #include "beads/dsp/limiter.h"
+#include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
 
 namespace beads {
@@ -111,6 +112,18 @@ class Settings {
   inline void set_pitch_scale(PitchScale scale) {
     state_.padding[2] = scale > PITCH_SCALE_OFF && scale < PITCH_SCALE_LAST
         ? 0xa0 + scale : 0;
+  }
+
+  // Byte 14: unknown values retain stock playback.
+  inline StereoWidth stereo_width() const {
+    const uint8_t value = state_.padding[4];
+    return value == 0xa1 ? STEREO_WIDTH_NARROW
+        : value == 0xa2 ? STEREO_WIDTH_WIDE : STEREO_WIDTH_STOCK;
+  }
+
+  inline void set_stereo_width(StereoWidth width) {
+    state_.padding[4] = width == STEREO_WIDTH_NARROW ? 0xa1
+        : width == STEREO_WIDTH_WIDE ? 0xa2 : 0;
   }
 
   inline State* mutable_state() {

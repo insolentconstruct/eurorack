@@ -32,6 +32,7 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/grain.h"
+#include "beads/dsp/playback_options.h"
 #include "beads/dsp/randomized_parameter.h"
 #include "beads/dsp/trigger_generator.h"
 
@@ -68,6 +69,7 @@ class GranularPlayer {
     simple_scheduler_threshold_ = int(sample_rate * kSimpleSchedulerThreshold);
     
     pitch_scale_ = PITCH_SCALE_OFF;
+    stereo_width_ = STEREO_WIDTH_STOCK;
     grain_interval_ = 1;
     
     max_grain_duration_ = sample_rate * 4.0f;
@@ -76,6 +78,8 @@ class GranularPlayer {
     Reset();
   }
   
+  inline void set_stereo_width(StereoWidth width) { stereo_width_ = width; }
+
   inline void set_pitch_scale(PitchScale scale) { pitch_scale_ = scale; }
 
   inline void Reset() {
@@ -126,7 +130,15 @@ class GranularPlayer {
 
     const float total_spread = ComputeSpread(trigger, p);
     const float pan_spread = 0.5f * num_active_grains * total_spread;
+    if (stereo_width_ == STEREO_WIDTH_WIDE) {
+      *pan = stmlib::Random::GetFloat();
+      stmlib::Random::GetFloat();
+      return;
+    }
     *pan = BoundedRandomFloat(pan_spread);
+    if (stereo_width_ == STEREO_WIDTH_NARROW) {
+      *pan = 0.5f + 0.25f * (*pan - 0.5f);
+    }
   }
   
   inline T* new_grain() { return grain_priority_list_[0]; }
@@ -240,6 +252,7 @@ class GranularPlayer {
   int grain_interval_;
   
   PitchScale pitch_scale_;
+  StereoWidth stereo_width_;
 
   DISALLOW_COPY_AND_ASSIGN(GranularPlayer);
 };

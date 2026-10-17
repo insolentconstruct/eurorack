@@ -218,6 +218,10 @@ class GranularProcessor {
     }
   }
   
+  inline void set_stereo_width(StereoWidth width) {
+    granular_player_.set_stereo_width(width);
+  }
+
   inline void set_pitch_scale(PitchScale scale) {
     granular_player_.set_pitch_scale(scale);
   }

@@ -851,7 +851,48 @@ void TestQuantizedGrainPitch() {
   }
 }
 
+void TestStereoWidth() {
+  test_checker.Start("TestStereoWidth");
+  DelayGranularPlayer player;
+  player.Init(48000.0f);
+  Parameters p;
+  memset(&p, 0, sizeof(p));
+  TriggerGenerator::Output trigger;
+  memset(&trigger, 0, sizeof(trigger));
+  trigger.regularity = 1.0f;
+  float amplitude, stock, narrow, wide;
+  for (int i = 1; i <= 1000; ++i) {
+    p.time.attenuverter = float(i % 100) / 100.0f;
+    player.set_stereo_width(STEREO_WIDTH_STOCK);
+    stmlib::Random::Seed(i);
+    player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &stock);
+    const uint32_t after = stmlib::Random::GetWord();
+    stmlib::Random::Seed(i);
+    const float expected = BoundedRandomFloat(
+        0.5f * player.ComputeSpread(trigger, p));
+    CHECK(stock == expected);
+    CHECK(stmlib::Random::GetWord() == after);
+    player.set_stereo_width(STEREO_WIDTH_NARROW);
+    stmlib::Random::Seed(i);
+    player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &narrow);
+    CHECK(narrow == 0.5f + 0.25f * (stock - 0.5f));
+    CHECK(stmlib::Random::GetWord() == after);
+    player.set_stereo_width(STEREO_WIDTH_WIDE);
+    stmlib::Random::Seed(i);
+    const float full_pan = stmlib::Random::GetFloat();
+    stmlib::Random::Seed(i);
+    player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &wide);
+    CHECK(wide == full_pan);
+    CHECK(stmlib::Random::GetWord() == after);
+    p.time.attenuverter = 0.0f;
+    stmlib::Random::Seed(i);
+    player.ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &wide);
+    CHECK(wide == full_pan);
+  }
+}
+
 int main() {
+  TestStereoWidth();
   TestMonophonicGrains();
   TestProcessorGrainLatch();
   TestQuantizedGrainPitch();

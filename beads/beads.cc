@@ -276,6 +276,7 @@ void Process(
   synth.set_output_limiter_mode(ui.output_limiter_mode());
   if (synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
+    synth.set_stereo_width(ui.stereo_width());
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
@@ -291,6 +292,7 @@ void Process(
 #endif  // DWT_CALIBRATION
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
+    processor.set_stereo_width(ui.stereo_width());
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION

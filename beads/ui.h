@@ -133,6 +133,7 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
+  inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
 
   void ProcessPot(MixParameter parameter, float value) {
@@ -201,6 +202,7 @@ class Ui {
   volatile OutputLimiterMode output_limiter_mode_;
   volatile bool clouds_style_;
   volatile PitchScale pitch_scale_;
+  volatile StereoWidth stereo_width_;
 
   static const Leds::Color media_palette_[4];
   

@@ -35,13 +35,14 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with ASSIGN alone for 3 s, mix knobs still, then release. Always opens on Reverb (pitch scale on FEEDBACK); tap ASSIGN cycles Reverb → Feedback → Dry/wet → Reverb; in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter and pitch thirds, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
+Enter with ASSIGN alone for 3 s, mix knobs still, then release. Always opens on Reverb (pitch scale on FEEDBACK); tap ASSIGN cycles Reverb → Feedback → Dry/wet → Reverb; in each, FEEDBACK, DRY/WET and REVERB are its three settings, each moved >10% then selected by zones (limiter, pitch and width thirds, self-play and reverb character halves). Hold ASSIGN 3 s, or 5 s idle, saves a change and exits; another button cancels except short SEED taps on Scale. Entry needs normal mode and 20 ms with all buttons up. <!-- beads/options.h:63-140; beads/build/README.md:23-30 -->
 
 | Resource | TAKEN | FREE / reserved |
 |---|---|---|
 | Dry/wet LED category, REVERB | Reverb character: lower half Stock (default), upper half Clouds-style; midpoint hysteresis ±3% | Steady green / one cyan pulse per 1.2 s; quality LED follows last knob moved |
 | Feedback LED category, FEEDBACK | Self-play: lower half Automatic (stock), upper half On request; midpoint hysteresis ±3% | Steady cyan / one magenta pulse per 1.2 s |
-| Feedback LED category, DRY/WET and REVERB | Reserved | Planned: DRY/WET delay mode (#26, #9); REVERB stereo width (#5) |
+| Feedback LED category, DRY/WET | Reserved | Planned: delay mode (#26, #9) |
+| Feedback LED category, REVERB | Stereo width: Stock / Narrow / Wide in thirds; ±3% hysteresis | Steady green / one blue pulse / two amber pulses |
 | Dry/wet LED category, DRY/WET | Limiter (`kLimiterPage`); left/middle/right thirds = Stock/Fast/Off | No spare zone <!-- beads/options.h:41,114,139; beads/ui.h:69-73 --> |
 | Dry/wet LED category, FEEDBACK | Reserved | Planned: mix law (#21, #48) |
 | Reverb LED category, FEEDBACK | Pitch quantization: three equal zones Off / Chromatic / Scale; ±3% hysteresis | MEDIA white / green / scale colour; short SEED taps cycle eight scales |
@@ -116,12 +117,13 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 11 | `padding[1]` | Self-play: 0xA1 = On request; 0 and all unknown values = Automatic; canonicalized on load/save |
 | 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
-| 14–22, individually | `padding[4]` … `padding[12]` | FREE; zeroed on every save |
+| 14 | `padding[4]` | Stereo width: 0 Stock, 0xA1 Narrow, 0xA2 Wide; unknown values read Stock |
+| 15–22, individually | `padding[5]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright MEDIA cue, but plays grains polyphonically. Turn monophonic grains off before downgrading. Drizzlet uses byte 9 without changing the settings layout. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10–13 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Bytes 14–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10–14 on load/save. Stock ignores byte 11; a downgrade-and-save resets self-play to Automatic. Bytes 15–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 | Flash area | TAKEN | FREE / limit |

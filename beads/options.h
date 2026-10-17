@@ -34,6 +34,7 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/limiter.h"
+#include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
 
 namespace beads {
@@ -73,6 +74,8 @@ class Options {
     scale_ = PITCH_SCALE_FIFTHS;
     seed_held_ = false;
     seed_time_ = 0;
+    width_preview_ = STEREO_WIDTH_STOCK;
+    width_zone_ = 0;
   }
 
   void Poll(
@@ -80,7 +83,7 @@ class Options {
       bool just_pressed, bool normal, bool pot_touched, float pot,
       OutputLimiterMode committed, float feedback, bool self_play,
       float reverb, bool clouds, PitchScale pitch, bool seed,
-      bool seed_pressed) {
+      bool seed_pressed, StereoWidth width) {
     const float dry_wet = pot;
     if (stage_ != STAGE_INACTIVE && page_ != kLimiterPage) {
       pot = feedback;
@@ -95,14 +98,15 @@ class Options {
     }
     if (stage_ != STAGE_INACTIVE) {
       if (other || !normal) {
-        Finish(false, committed, self_play, clouds, pitch);
+        Finish(false, committed, self_play, clouds, pitch, width);
         return;
       }
       if (uint32_t(now - last_action_) >= 5000) {
         // Idle exit keeps a changed value, like the hold exit.
         Finish(preview_ != committed || self_play_preview_ != self_play ||
-            clouds_preview_ != clouds || pitch_preview_ != pitch,
-            committed, self_play, clouds, pitch);
+            clouds_preview_ != clouds || pitch_preview_ != pitch ||
+            width_preview_ != width,
+            committed, self_play, clouds, pitch, width);
         return;
       }
       if (stage_ == STAGE_WAIT_RELEASE) {
@@ -118,7 +122,7 @@ class Options {
         press_time_ = last_action_ = now;
       }
       if (holding_ && assign && uint32_t(now - press_time_) >= 3000) {
-        Finish(true, committed, self_play, clouds, pitch);
+        Finish(true, committed, self_play, clouds, pitch, width);
         return;
       }
       if (holding_ && all_up) {
@@ -129,16 +133,22 @@ class Options {
         ResetReverb(reverb);
         last_action_ = now;
       }
-      if (page_ == kLimiterPage) {
+      if (page_ == kLimiterPage || page_ == kSelfPlayPage) {
         if (!reverb_qualified_ && fabsf(reverb - reverb_origin_) > 0.10f) {
           reverb_qualified_ = true;
+          width_zone_ = reverb < 1.0f / 3.0f ? 0
+              : reverb < 2.0f / 3.0f ? 1 : 2;
         }
         if (fabsf(reverb - reverb_previous_) > 0.01f) {
           last_action_ = now;
           reverb_previous_ = reverb;
           reverb_selected_ = true;
         }
-        if (reverb_qualified_) {
+        if (reverb_qualified_ && page_ == kSelfPlayPage) {
+          UpdateZone(reverb, &width_zone_);
+          width_preview_ = StereoWidth(width_zone_);
+        }
+        if (reverb_qualified_ && page_ == kLimiterPage) {
           if (reverb < 0.5f - 0.03f) {
             clouds_preview_ = false;
           } else if (reverb > 0.5f + 0.03f) {
@@ -222,6 +232,7 @@ class Options {
       preview_ = committed;
       self_play_preview_ = self_play;
       clouds_preview_ = clouds;
+      width_preview_ = width;
       ResetReverb(reverb);
       pitch_preview_ = pitch;
       scale_ = pitch >= PITCH_SCALE_FIFTHS ? pitch : PITCH_SCALE_FIFTHS;
@@ -232,6 +243,7 @@ class Options {
     }
   }
 
+  inline StereoWidth width_preview() const { return width_preview_; }
   inline PitchScale pitch_preview() const { return pitch_preview_; }
   inline bool seed_allowed() const {
     return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&
@@ -248,6 +260,17 @@ class Options {
   inline void ClearCommit() { commit_ = false; }
 
  private:
+  void UpdateZone(float pot, int* zone) {
+    if (pot < 1.0f / 3.0f - 0.03f) {
+      *zone = 0;
+    } else if (pot > 2.0f / 3.0f + 0.03f) {
+      *zone = 2;
+    } else if ((*zone == 0 && pot > 1.0f / 3.0f + 0.03f) ||
+               (*zone == 2 && pot < 2.0f / 3.0f - 0.03f)) {
+      *zone = 1;
+    }
+  }
+
   void ResetReverb(float reverb) {
     reverb_origin_ = reverb;
     reverb_previous_ = reverb;
@@ -262,11 +285,12 @@ class Options {
   }
   void Finish(
       bool commit, OutputLimiterMode committed, bool self_play,
-      bool clouds, PitchScale pitch) {
+      bool clouds, PitchScale pitch, StereoWidth width) {
     if (!commit) {
       preview_ = committed;
       self_play_preview_ = self_play;
       clouds_preview_ = clouds;
+      width_preview_ = width;
       pitch_preview_ = pitch;
       scale_ = pitch >= PITCH_SCALE_FIFTHS ? pitch : PITCH_SCALE_FIFTHS;
     }
@@ -292,6 +316,8 @@ class Options {
   OutputLimiterMode preview_;
   bool self_play_preview_;
   bool clouds_preview_;
+  StereoWidth width_preview_;
+  int width_zone_;
   bool reverb_qualified_;
   bool reverb_selected_;
   float reverb_origin_;

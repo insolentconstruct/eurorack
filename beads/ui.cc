@@ -103,6 +103,7 @@ void Ui::LoadOptions() {
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
   pitch_scale_ = settings_->pitch_scale();
+  stereo_width_ = settings_->stereo_width();
 }
 
 void Ui::Poll() {
@@ -138,7 +139,7 @@ void Ui::Poll() {
       mix_pot_value_[MIX_PARAMETER_REVERB], settings_->clouds_style(),
       settings_->pitch_scale(),
       !switches_.up(SWITCH_SEED) && !switches_.released(SWITCH_SEED),
-      switches_.just_pressed(SWITCH_SEED));
+      switches_.just_pressed(SWITCH_SEED), settings_->stereo_width());
   if (!was_active && options_.active()) {
     flush_options_events_ = true;
     ignore_release_[SWITCH_ASSIGN] = true;
@@ -204,6 +205,8 @@ void Ui::Poll() {
   
   clouds_style_ = options_.active()
       ? options_.clouds_preview() : settings_->clouds_style();
+  stereo_width_ = options_.active()
+      ? options_.width_preview() : settings_->stereo_width();
   pitch_scale_ = options_.active()
       ? options_.pitch_preview() : settings_->pitch_scale();
   output_limiter_mode_ = options_.active()
@@ -321,6 +324,11 @@ void Ui::UpdateLeds() {
         phase >= 240 && phase < 360);
     if (options_.page() == kPitchScalePage) {
       leds_.set_media(kPitchScaleColors[options_.pitch_preview()], 1.0f);
+    } else if (options_.page() == kSelfPlayPage &&
+               options_.reverb_selected()) {
+      const int width = options_.width_preview();
+      leds_.set_media(colors[width], width == 0 || phase < 120 ||
+          (width == 2 && phase >= 240 && phase < 360) ? 1.0f : 0.0f);
     } else if (options_.page() == kSelfPlayPage) {
       const Leds::Color automatic = { 0, 255, 255 };
       const Leds::Color on_request = { 255, 0, 255 };
@@ -569,11 +577,13 @@ void Ui::DoEvents() {
     if (options_.preview() != settings_->output_limiter_mode() ||
         options_.self_play_preview() != settings_->self_play_on_request() ||
         options_.clouds_preview() != settings_->clouds_style() ||
-        options_.pitch_preview() != settings_->pitch_scale()) {
+        options_.pitch_preview() != settings_->pitch_scale() ||
+        options_.width_preview() != settings_->stereo_width()) {
       settings_->set_output_limiter_mode(options_.preview());
       settings_->set_self_play_on_request(options_.self_play_preview());
       settings_->set_clouds_style(options_.clouds_preview());
       settings_->set_pitch_scale(options_.pitch_preview());
+      settings_->set_stereo_width(options_.width_preview());
       settings_->SaveState();
     }
     options_.ClearCommit();

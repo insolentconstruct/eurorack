@@ -57,6 +57,10 @@ The table lists the tests on the `drizzlet` branch now; several were added after
 
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
 
+Stereo width adds host checks for the unchanged Stock calculation and RNG
+sequence, Narrow's quarter excursion, Wide with zero randomness, every stored
+byte value, options preview and saving, and unchanged bytes 12/13.
+
 ## Coverage of the manual
 
 The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 110 of them.

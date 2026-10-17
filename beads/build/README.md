@@ -26,6 +26,16 @@ Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run fa
 **TL;DR:** buffer trim, pitch scales and a Clouds-style reverb setting are new
 since alpha 2. Pitch scale defaults to Off and reverb to Stock.
 
+## Stereo width
+
+In the options page's Feedback category, REVERB selects Stock / Narrow /
+Wide in thirds. Stock is unchanged. Narrow keeps one-quarter of the stock
+pan excursion around centre, preserving more of a stereo recording's image.
+Wide gives every grain the full random pan range, even with no parameter
+randomness and every trigger accepted. It also applies to synth grains.
+The MEDIA LED shows steady green / one blue pulse / two amber pulses.
+The setting is saved and defaults to Stock.
+
 ## Monophonic grains
 
 Hold MEDIA first, then press SEED to toggle monophonic grains; the setting

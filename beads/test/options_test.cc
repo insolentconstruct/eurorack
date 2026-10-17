@@ -1416,12 +1416,40 @@ void TestPitchSeedCancelAndCommit() {
   CHECK(test_writes == writes + 1);
 }
 
+void TestWidthOption() {
+  test_checker.Start("TestWidthOption");
+  for (int value = 0; value < 256; ++value) {
+    Settings settings;
+    memset(settings.mutable_state(), 0, sizeof(State));
+    settings.mutable_state()->padding[4] = value;
+    CHECK(settings.stereo_width() == (value == 0xa1 ? STEREO_WIDTH_NARROW
+        : value == 0xa2 ? STEREO_WIDTH_WIDE : STEREO_WIDTH_STOCK));
+  }
+  for (int zone = 0; zone < 3; ++zone) {
+    Rig r;
+    r.Enter();
+    r.Tap();
+    CHECK(r.ui.options_.page() == kSelfPlayPage);
+    r.reverb = zone == 1 ? 0.0f : 0.5f;
+    r.Tick(20);
+    r.reverb = (float(zone) + 0.5f) / 3.0f;
+    r.Tick(20);
+    CHECK(r.ui.stereo_width() == StereoWidth(zone));
+    CHECK(r.settings.stereo_width() == STEREO_WIDTH_STOCK);
+    r.Tick(5100);
+    CHECK(r.settings.stereo_width() == StereoWidth(zone));
+    CHECK(r.settings.state().padding[2] == 0);
+    CHECK(r.settings.state().padding[3] == 0);
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
     return 1;
   }
+  TestWidthOption();
   TestCloudsStorage();
   TestCloudsOptions();
   TestSelfPlayOptions();
