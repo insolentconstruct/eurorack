@@ -54,17 +54,17 @@ Seed3 re-measure of the same source, worst / median: GCC 4.9.3 101,773 / 96,818;
 
 Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / median, against the build in the "Against" column. Run 1 is the figure used; run 2 is a repeat. Negative is a slowdown.
 
-| Change | Against | Stock | Clouds-style | Flash | RAM | Sound | Verdict |
-|---|---|---|---|---:|---|---|---|
-| GCC 9 instead of 4.9.3 | GCC 4.9.3 | about 2% in the worst block | not measured | about -2% | n/a | 20/20 emulator | kept |
-| Mono/stereo chosen once per block (19-line template) | GCC 9 | 2,669 / 2,499 | 2,828 / 2,756 | -640 B | 0 | 28/28 Seed3, 20/20 emulator, 13/13 long, error 0 | kept |
-| Sum delay grains in a local frame | template | 3,630 / 3,725 (run 2: 3,826 / 3,732) | 3,805 / 3,904 (run 2: 3,788 / 3,907) | +1,648 B | 0 | same gates | kept |
-| Unsigned modulo for the delay-line read index | local frame | 739 / 556 (run 2: 636 / 550) | 832 / 626 (run 2: 871 / 628) | -272 B | 0 | gates run on the combined tree | kept |
-| Both pass-2 changes together | template | 4,369 / 4,281 | 4,637 / 4,530 | +1,376 B | 0 | 28/28, 20/20, 13/13, error 0 | kept |
-| All sample loops in ITCM | GCC 9 | -765 / -770 | -270 / -377 | +336 B | +21,440 B ITCM | 28/28 Seed3 | rejected |
-| ITCM on top of the template | template | -611 / -505 | -213 / -277 | +360 B | +23,448 B ITCM | 28/28 Seed3 | rejected |
-| Extra grain/delay template | GCC 9 | -1,693 / -1,812 | -1,406 / -1,627 | -336 B | 0 | 28/28 Seed3 | rejected |
-| Freeze state as a template parameter | both pass-2 changes | 769 / 728 | 343 / 378 | not built | n/a | 28/28 Seed3 | rejected |
+| Change | Based on | Against | Stock | Clouds-style | Flash | RAM | Sound | Verdict |
+|---|---|---|---|---|---:|---|---|---|
+| GCC 9 instead of 4.9.3 | Drizzlet: compiler choice; a `MulAdd` helper pins one pan line so the arithmetic stays Mutable Instruments' | GCC 4.9.3 | about 2% in the worst block | not measured | about -2% | n/a | 20/20 emulator | kept |
+| Mono/stereo chosen once per block (19-line template) | Mutable Instruments: template specialization on configuration (STM32 miscellania; Clouds' grain renderer) | GCC 9 | 2,669 / 2,499 | 2,828 / 2,756 | -640 B | 0 | 28/28 Seed3, 20/20 emulator, 13/13 long, error 0 | kept |
+| Sum delay grains in a local frame | Mutable Instruments: keep loop state in locals across the block (Timing and processes) | template | 3,630 / 3,725 (run 2: 3,826 / 3,732) | 3,805 / 3,904 (run 2: 3,788 / 3,907) | +1,648 B | 0 | same gates | kept |
+| Unsigned modulo for the delay-line read index | Mutable Instruments: the same file's `LoadQuad` already uses `size_t(i) % items_per_bank()` | local frame | 739 / 556 (run 2: 636 / 550) | 832 / 626 (run 2: 871 / 628) | -272 B | 0 | gates run on the combined tree | kept |
+| Both pass-2 changes together | the two rows above | template | 4,369 / 4,281 | 4,637 / 4,530 | +1,376 B | 0 | 28/28, 20/20, 13/13, error 0 | kept |
+| All sample loops in ITCM | Mutable Instruments: stmlib's `IN_RAM` placement | GCC 9 | -765 / -770 | -270 / -377 | +336 B | +21,440 B ITCM | 28/28 Seed3 | rejected |
+| ITCM on top of the template | Mutable Instruments: stmlib's `IN_RAM` placement | template | -611 / -505 | -213 / -277 | +360 B | +23,448 B ITCM | 28/28 Seed3 | rejected |
+| Extra grain/delay template | Mutable Instruments: template specialization | GCC 9 | -1,693 / -1,812 | -1,406 / -1,627 | -336 B | 0 | 28/28 Seed3 | rejected |
+| Freeze state as a template parameter | Mutable Instruments: template specialization | both pass-2 changes | 769 / 728 | 343 / 378 | not built | n/a | 28/28 Seed3 | rejected |
 
 **Template.** The 2,669 / 2,828 peak savings come from the first paired baseline and template run (94,586 template peak); the Build comparison row shows the second template run (94,719), which gives 2,536 / 2,722 against the first baseline. It is not a gain everywhere: q1 stereo stress32 is 794 to 808 cycles slower at median, and some q1 and q2 cases regress. It improves the q3 and Clouds-style cases that set the peak.
 
