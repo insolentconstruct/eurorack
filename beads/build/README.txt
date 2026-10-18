@@ -19,7 +19,7 @@ Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one change
 to grain stealing, as in the released source. On our module, the 2021 and 2024
 firmware clicked with DENSITY and PITCH near fully clockwise and the released
 source / Drizzlet did not. A desktop run of both grain schedulers produced no
-clicks, so the clicks are not a DSP-logic artefact. CPU timing is the current
+clicks, so that test found no click in the DSP itself. CPU timing is the current
 hypothesis: the 2024 scheduler costs more in that range, but module CPU timing
 there has not yet been measured. New since alpha 2: buffer trim, pitch scales,
 Clouds-style reverb, stereo width and delay mode. The new settings default to

@@ -62,7 +62,7 @@ The “freeze gate” and “gated density” bench tests reached the changed ra
 
 On our module, the 2021 and 2024 firmware clicked and the released source /
 Drizzlet did not. A desktop run of both grain schedulers produced no clicks, so
-the clicks are not a DSP-logic artefact. CPU timing is the current hypothesis:
+that test found no click in the DSP itself. CPU timing is the current hypothesis:
 the 2024 scheduler costs more in that range, but module CPU timing there has not
 yet been measured. Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just
 below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and
