@@ -29,7 +29,7 @@ From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 
 Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
 
-Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is the released source plus bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
+Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? The [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) branch is the released source plus bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-tuneup/README-BASE.md).
 
 ## Delay mode
 
