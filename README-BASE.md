@@ -59,7 +59,7 @@ Most suites use address and undefined-behaviour sanitizers. The backup suite
 uses a mapped flash model with injected failures. No module is needed.
 See [Adding or changing a test](beads/test/README.md#adding-or-changing-a-test)
 for suite registration, stubs and audio re-baselining.
-See `beads/build/OPTIMIZATIONS.md` and `beads/build/PORTING.md` for DSP notes.
+See [OPTIMIZATIONS.md](beads/build/docs/OPTIMIZATIONS.md) and [PORTING.md](beads/build/docs/PORTING.md) for DSP notes, and [STYLE.md](beads/build/docs/STYLE.md) for code style.
 
 ## Storage and licences
 
