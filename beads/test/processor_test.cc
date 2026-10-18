@@ -25,6 +25,8 @@
 //
 // Recording quality and freeze tests through the audio processor.
 
+#include "beads/test/test_fpu.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -51,12 +53,6 @@ namespace stmlib {
 SystemClock system_clock;
 }  // namespace stmlib
 namespace beads {
-bool Leds::Init() {
-  Clear();
-  return true;
-}
-void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
-void Leds::Write() { }
 }  // namespace beads
 
 struct Rig {
@@ -258,6 +254,7 @@ void TestUnfreezeCrossfade() {
 }
 
 int main() {
+  InitTestFpu();
   if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x081e0000))) {

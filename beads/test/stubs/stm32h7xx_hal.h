@@ -52,8 +52,13 @@ inline int HAL_GPIO_ReadPin(GPIO_TypeDef*, uint16_t pin) {
 inline void HAL_GPIO_Init(GPIO_TypeDef*, GPIO_InitTypeDef*) { }
 inline void HAL_FLASH_Unlock() { }
 inline void HAL_FLASH_Lock() { }
-inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef*, uint32_t*) {
+inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
+#ifdef TEST_FIRMWARE_FLASH
+  memset(reinterpret_cast<void*>(0x08100000 + (e->Sector - 8) * 0x20000),
+      255, 0x20000 * e->NbSectors);
+#else
   memset(reinterpret_cast<void*>(0x081e0000), 255, 0x20000);
+#endif
   return 0;
 }
 inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
@@ -65,6 +70,8 @@ inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
   }
   return 0;
 }
+inline void HAL_IncTick() { }
+#define HAL_OK 0
 #define GPIO_MODE_INPUT 0
 #define GPIO_PULLUP 0
 #define FLASH_TYPEERASE_SECTORS 0

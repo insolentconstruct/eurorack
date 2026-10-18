@@ -25,6 +25,8 @@
 //
 // The firmware entry point, driven by host hardware.
 
+#include "beads/test/test_fpu.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cctype>
@@ -70,9 +72,6 @@ bool test_freeze_input;
 bool test_seed_input;
 uint16_t CvAdc::values_[CV_ADC_CHANNEL_LAST];
 uint16_t PotsAdc::values_[POTS_ADC_CHANNEL_LAST];
-bool Leds::Init() { Clear(); return true; }
-void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
-void Leds::Write() { }
 }  // namespace beads
 
 extern BackgroundBufferBackup background_buffer_backup;
@@ -645,6 +644,7 @@ void TestPitchChain() {
 
 
 int main() {
+  InitTestFpu();
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);

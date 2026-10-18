@@ -23,19 +23,16 @@
 //
 // -----------------------------------------------------------------------------
 //
-// ADC channels used by settings.
+// LED state for host tests.
 
-#ifndef BEADS_TEST_BACKUP_STUBS_BEADS_DRIVERS_CV_ADC_H_
-#define BEADS_TEST_BACKUP_STUBS_BEADS_DRIVERS_CV_ADC_H_
+#include <algorithm>
+#include "beads/drivers/leds.h"
 
 namespace beads {
-
-enum CvAdcChannel {
-  CV_ADC_CHANNEL_ASSIGN, CV_ADC_CHANNEL_DENSITY, CV_ADC_CHANNEL_PITCH,
-  CV_ADC_CHANNEL_TIME, CV_ADC_CHANNEL_SIZE, CV_ADC_CHANNEL_SHAPE,
-  CV_ADC_CHANNEL_LAST
-};
-
+bool Leds::Init() {
+  Clear();
+  return true;
+}
+void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
+void Leds::Write() { }
 }  // namespace beads
-
-#endif  // BEADS_TEST_BACKUP_STUBS_BEADS_DRIVERS_CV_ADC_H_

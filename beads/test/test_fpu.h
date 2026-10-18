@@ -23,20 +23,25 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Switch pins for UI tests.
+// Match the firmware floating point mode in host tests.
 
-#ifndef BEADS_TEST_FIRMWARE_STUBS_BEADS_DRIVERS_PINS_H_
-#define BEADS_TEST_FIRMWARE_STUBS_BEADS_DRIVERS_PINS_H_
+#ifndef BEADS_TEST_TEST_FPU_H_
+#define BEADS_TEST_TEST_FPU_H_
+#include <cstdint>
+#if defined(__SSE__)
+#include <xmmintrin.h>
+#endif
 
-#include <stm32h7xx_hal.h>
+inline void InitTestFpu() {
+  // Match the firmware FPU setup in drivers/system.cc.
+#if defined(__SSE__)
+  _mm_setcsr(_mm_getcsr() | 0x8040);
+#elif defined(__aarch64__)
+  uint64_t fpcr;
+  __asm__ volatile("mrs %0, fpcr" : "=r" (fpcr));
+  fpcr |= uint64_t(1) << 24;
+  __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
+#endif
+}
 
-#define FREEZE_SW_GPIO_PORT NULL
-#define SEED_SW_GPIO_PORT NULL
-#define MEDIA_SW_GPIO_PORT NULL
-#define ASSIGN_SW_GPIO_PORT NULL
-#define FREEZE_SW_GPIO_PIN 0
-#define SEED_SW_GPIO_PIN 1
-#define MEDIA_SW_GPIO_PIN 2
-#define ASSIGN_SW_GPIO_PIN 3
-
-#endif  // BEADS_TEST_FIRMWARE_STUBS_BEADS_DRIVERS_PINS_H_
+#endif  // BEADS_TEST_TEST_FPU_H_

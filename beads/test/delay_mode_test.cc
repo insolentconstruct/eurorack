@@ -25,6 +25,8 @@
 //
 // Processor delay playback, transitions, pitch and bandwidth tests.
 
+#include "beads/test/test_fpu.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -236,6 +238,7 @@ void TestDelayBandwidthAndCv() {
 }
 
 int main() {
+  InitTestFpu();
   setvbuf(stdout, NULL, _IONBF, 0);
   TestContinuousDelayPlayback();
   TestDelayModeFade();

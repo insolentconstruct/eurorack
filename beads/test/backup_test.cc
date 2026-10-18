@@ -25,6 +25,8 @@
 //
 // Frozen buffer backup tests.
 
+#include "beads/test/test_fpu.h"
+
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -181,7 +183,6 @@ void TestFormat() {
       CHECK(Restored(uint8_t(media * 2 + mono)));
     }
   }
-  printf("PASS format, all media, mono and stereo\n");
 }
 
 // A backup written by the stock firmware: bytes 10-31 are stack leftovers.
@@ -223,7 +224,6 @@ void TestStock() {
   WriteStock(0, 1, 767999, 3);
   Rig edge;
   CHECK(edge.Boot() && Restored(3));
-  printf("PASS stock backups load; out-of-range headers are refused\n");
 }
 
 void TestCorruption() {
@@ -243,7 +243,6 @@ void TestCorruption() {
   memset(kFlash + 3 * 0x20000, 255, 0x10000);
   Rig rig;
   CHECK(!rig.Boot());
-  printf("PASS corrupted audio or header is refused\n");
 }
 
 // An old, complete backup is on flash and the frozen flag is set but stale
@@ -288,10 +287,6 @@ void CheckPowerLoss(bool half, bool stock) {
     }
     ++checked;
   }
-  printf("PASS power loss at %d points%s%s: never restores a partial backup "
-         "(old %d, new %d, none %d)\n", checked,
-         half ? ", half-erased sectors" : "", stock ? ", stock old backup" : "",
-         loaded[1], loaded[2], loaded[0]);
 }
 
 void TestFlashErrors() {
@@ -323,8 +318,6 @@ void TestFlashErrors() {
     CHECK(again.Boot() && Restored(4));
     ++checked;
   }
-  printf("PASS flash errors at %d points abandon the backup cleanly\n",
-      checked);
 }
 
 void TestSettingsSaves() {
@@ -339,7 +332,6 @@ void TestSettingsSaves() {
   CHECK(rig.settings.state().frozen);
   Rig after;
   CHECK(after.Boot() && Restored(6));
-  printf("PASS settings saves during a backup\n");
 }
 
 void TestFreezeDeadlineAndCancel() {
@@ -563,6 +555,7 @@ void TestPowerLoss() {
 }
 
 int main() {
+  InitTestFpu();
   setvbuf(stdout, NULL, _IONBF, 0);
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,

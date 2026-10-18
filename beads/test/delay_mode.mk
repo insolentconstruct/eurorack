@@ -1,53 +1,5 @@
-PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
-
-VPATH          = $(PACKAGES)
-
-TARGET         = delay_mode_test
-BUILD_ROOT     = build/
-BUILD_DIR      = $(BUILD_ROOT)$(notdir $(TARGET))/
-CC_FILES       = 		delay_mode_test.cc \
-		processor.cc \
-		mu_law.cc \
-		delay_clock.cc \
-		delay_controller.cc \
-		trigger_generator.cc \
-		resources.cc \
-		units.cc \
-		random.cc
-OBJ_FILES      = $(CC_FILES:.cc=.o)
-OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
-DEPS           = $(OBJS:.o=.d)
-DEP_FILE       = $(BUILD_DIR)depends.mk
-
-all:  $(TARGET)
-
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
-
-$(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -include cstdio -Os -g -Wall -Werror -Wno-unused-local-typedef \
-		-Wno-unused-local-typedefs -Ibeads/test/delay_mode_stubs -I. \
-		-fsanitize=address,undefined,integer-divide-by-zero \
-		-fno-sanitize-recover=all -fno-pie $< -o $@
-
-$(BUILD_DIR)%.d: %.cc
-	g++ -MM -DTEST -include cstdio \
-		-Ibeads/test/delay_mode_stubs -I. \
-		-fsanitize=address,undefined,integer-divide-by-zero \
-		-fno-sanitize-recover=all -fno-pie $< -MF $@ -MT $(@:.d=.o)
-
-$(TARGET):  $(OBJS)
-	g++ -o $(TARGET) $(OBJS) \
-		-fsanitize=address,undefined,integer-divide-by-zero -no-pie
-
-depends:  $(DEPS)
-	cat $(DEPS) > $(DEP_FILE)
-
-$(DEP_FILE):  $(BUILD_DIR) $(DEPS)
-	cat $(DEPS) > $(DEP_FILE)
-
-.PHONY: test
-test:  $(TARGET)
-	ASAN_OPTIONS=detect_leaks=0 $(abspath $(TARGET))
-
-include $(DEP_FILE)
+TARGET = delay_mode_test
+CC_FILES = delay_mode_test.cc processor.cc mu_law.cc delay_clock.cc delay_controller.cc trigger_generator.cc resources.cc units.cc random.cc
+STUBS = beads/test/delay_mode_stubs
+SUITE_FLAGS = -include cstdio
+include beads/test/suite.mk

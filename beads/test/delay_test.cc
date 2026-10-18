@@ -25,6 +25,8 @@
 //
 // Frozen delay slice tests.
 
+#include "beads/test/test_fpu.h"
+
 #include <stdint.h>
 #include <cstdio>
 #include <cmath>
@@ -213,14 +215,12 @@ void TestDelayIntervals() {
     CheckValidSlices(periods[i], 0, 0, 0.0f, 0.0f);
     CHECK(CheckValidSlices(periods[i], 1000, 50000, 0.0f, 0.0f) > 0);
   }
-  printf("PASS clocked delay: short and start-up clock intervals\n");
   // Negative exponential FM made a slice longer than the buffer.
   const float fms[] = { -0.3f, -0.7f, 0.0f, 0.5f };
   for (size_t i = 0; i < sizeof(fms) / sizeof(fms[0]); ++i) {
     CHECK(CheckValidSlices(0, 0, 50000, 0.76f, fms[i]) > 0);
     CheckValidSlices(0, 0, 0, 0.76f, fms[i]);
   }
-  printf("PASS free-running delay: FM from -0.7 to +0.5\n");
 }
 
 void TestClockIdleCounter() {
@@ -239,7 +239,6 @@ void TestClockIdleCounter() {
   clock.Process(true, false);
   CHECK(clock.next_interval_ == 0);
   CHECK(clock.interval(0) == interval_0 && clock.interval(1) == interval_1);
-  printf("PASS clock: idle counter stops at the limit\n");
 }
 
 void RenderFree(DelayController* controller, float density, float cv,
@@ -444,6 +443,7 @@ void TestDelayRandomModulation() {
 }
 
 int main() {
+  InitTestFpu();
   TestFrozenSliceBoundarySelection();
   TestClockDividerTable();
   TestDelayIntervals();

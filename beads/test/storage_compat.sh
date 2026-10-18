@@ -4,8 +4,8 @@ set -euo pipefail
 out=${1:?usage: beads/test/storage_compat.sh OUTPUT_DIR [STOCK_SOURCE_DIR]}
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
-stock=${2:-$out/stock-source}
-if [[ $# == 1 ]]; then
+stock=${2:-${STOCK_SOURCE_DIR:-$out/stock-source}}
+if [[ $# == 1 && -z ${STOCK_SOURCE_DIR:-} ]]; then
   mkdir -p "$stock/beads"
   for file in background_buffer_backup.cc background_buffer_backup.h settings.cc settings.h; do
     git -c safe.directory="$PWD" show "f4cfa76:beads/$file" > "$stock/beads/$file"
@@ -19,7 +19,7 @@ for variant in base stock; do
     includes=(-I"$stock")
   fi
   g++ -DTEST -DSTM32H7XX -Os -Wno-int-to-pointer-cast \
-    "${includes[@]}" -Ibeads/test/backup_stubs -I. \
+    "${includes[@]}" -Ibeads/test/backup_stubs -Ibeads/test/stubs -I. \
     beads/test/storage_compat_test.cc "$sources/background_buffer_backup.cc" \
     "$sources/settings.cc" -o "$out/$variant"
 done

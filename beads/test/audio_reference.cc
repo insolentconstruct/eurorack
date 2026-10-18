@@ -23,15 +23,15 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Recording quality and freeze tests through the audio processor.
+// Bit-exact capture of default audio for comparison.
+
+#include "beads/test/test_fpu.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <sys/mman.h>
-
-#include "beads/test/test_checker.h"
 
 #define private public
 #include "beads/dsp/processor.h"
@@ -51,29 +51,31 @@ unsigned test_writes = 0;
 namespace stmlib {
 SystemClock system_clock;
 }  // namespace stmlib
-namespace beads {
-bool Leds::Init() {
-  Clear();
-  return true;
-}
-void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
-void Leds::Write() { }
-}  // namespace beads
 
 // Compare these native-host samples byte for byte against the preserved
 // pre-optimization DSP, compiled with the same compiler and floating point flags.
-// This is independent of linked-ARM emulator evidence.
 static Processor processor;
 static Synth synth;
 static uint8_t banks[3][262144];
 static uint16_t reverb[32768];
 
+enum Mode {
+  kStereoGrains, kMonoGrains, kDelay, kSynth, kSynthUnpatched, kNumModes
+};
+
+int CaptureError(int media, int mode, int block, const char* message) {
+  fprintf(stderr, "ERROR: audio media=%d mode=%d block=%d: %s\n",
+      media, mode, block, message);
+  return 1;
+}
+
 int main(int argc, char** argv) {
-  if (argc != 2) return 2;
+  InitTestFpu();
+  if (argc != 2) return CaptureError(-1, -1, -1, "expected output path");
   FILE* file = fopen(argv[1], "wb");
-  if (!file) return 2;
+  if (!file) return CaptureError(-1, -1, -1, "cannot open output");
   for (int media = 0; media < 4; ++media) {
-    for (int mode = 0; mode < 5; ++mode) {
+    for (int mode = kStereoGrains; mode < kNumModes; ++mode) {
       memset(banks, 0, sizeof(banks));
       memset(reverb, 0, sizeof(reverb));
       memset(static_cast<void*>(&processor), 0, sizeof(processor));
@@ -82,11 +84,11 @@ int main(int argc, char** argv) {
       processor.Init(buffers, reverb);
       memset(static_cast<void*>(&synth), 0, sizeof(synth));
       synth.Init(reverb);
-      processor.Configure(static_cast<Processor::Media>(media), mode == 1);
+      processor.Configure(static_cast<Processor::Media>(media), mode == kMonoGrains);
       Parameters p = { };
       p.time.base = 0.37f;
       p.time.attenuverter = 0.17f;
-      p.size.base = mode == 2 ? 1.0f : mode >= 3 ? 0.0f : 0.48f;
+      p.size.base = mode == kDelay ? 1.0f : mode >= kSynth ? 0.0f : 0.48f;
       p.shape.base = 0.61f;
       p.shape.attenuverter = 0.13f;
       p.pitch.attenuverter = 0.21f;
@@ -102,7 +104,7 @@ int main(int argc, char** argv) {
         FloatFrame input[12], output[12];
         bool freeze[12];
         stmlib::GateFlags seed[12];
-        const int size = mode >= 3 ? 12 : int(processor.sample_rate()) / 4000;
+        const int size = mode >= kSynth ? 12 : int(processor.sample_rate()) / 4000;
         for (int i = 0; i < size; ++i, ++sample) {
           // Integer-generated stereo input is stable across compilers.
           input[i].l = float(int((sample * 73) % 8192) - 4096) / 16384.0f;
@@ -110,9 +112,9 @@ int main(int argc, char** argv) {
           freeze[i] = block > 1800 && block < 3300;
           seed[i] = sample % 401 == 0 ? stmlib::GATE_FLAG_RISING : stmlib::GATE_FLAG_LOW;
         }
-        if (mode >= 3) {
-          synth.Render(mode == 4 ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_ON,
-              mode == 4 ? NULL : seed, freeze, static_cast<Synth::Resolution>(media),
+        if (mode >= kSynth) {
+          synth.Render(mode == kSynthUnpatched ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_ON,
+              mode == kSynthUnpatched ? NULL : seed, freeze, static_cast<Synth::Resolution>(media),
               density, p, mix, output, size);
         } else {
           processor.Process(SEED_BUTTON_STATE_ON, seed, freeze, density, p, mix,
@@ -120,13 +122,17 @@ int main(int argc, char** argv) {
         }
         if (block < 2400) continue;
         for (int i = 0; i < size; ++i) {
-          if (!std::isfinite(output[i].l) || !std::isfinite(output[i].r)) return 1;
+          if (!std::isfinite(output[i].l) || !std::isfinite(output[i].r)) {
+            return CaptureError(media, mode, block, "non-finite output");
+          }
           nonzero |= output[i].l != 0.0f || output[i].r != 0.0f;
         }
-        if (fwrite(output, sizeof(FloatFrame), size, file) != size_t(size)) return 1;
+        if (fwrite(output, sizeof(FloatFrame), size, file) != size_t(size)) {
+          return CaptureError(media, mode, block, "write failed");
+        }
       }
-      if (!nonzero) return 1;
+      if (!nonzero) return CaptureError(media, mode, 4400, "silent output");
     }
   }
-  return fclose(file) ? 1 : 0;
+  return fclose(file) ? CaptureError(-1, -1, -1, "close failed") : 0;
 }

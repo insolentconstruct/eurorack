@@ -25,6 +25,8 @@
 //
 // Grain controls and seeded attenurandomizers.
 
+#include "beads/test/test_fpu.h"
+
 #include <algorithm>
 #include <cmath>
 #include <stdint.h>
@@ -661,6 +663,7 @@ void TestCvChannelIsolation() {
 }
 
 int main() {
+  InitTestFpu();
   TestMonophonicGrains();
   TestProcessorGrainLatch();
   TestProcessorEnvelopeCompletion();

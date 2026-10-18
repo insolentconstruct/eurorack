@@ -22,7 +22,10 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
+//
 // Grain trigger modes and timing.
+
+#include "beads/test/test_fpu.h"
 
 #include <cmath>
 
@@ -254,6 +257,7 @@ void TestExponentialTriggerFm() {
 }
 
 int main() {
+  InitTestFpu();
   TestDensityModulation();
   TestLatchedNoonSilence();
   TestRegularDensityRate();

@@ -25,6 +25,8 @@
 //
 // Input gain DSP tests.
 
+#include "beads/test/test_fpu.h"
+
 #include <cmath>
 
 #include "beads/gain_control.h"
@@ -137,6 +139,7 @@ void TestGainNoiseAmplification() {
 }
 
 int main() {
+  InitTestFpu();
   TestGainLearningWindow();
   TestGainHeadroomAndRise();
   TestGainDigitalClipping();

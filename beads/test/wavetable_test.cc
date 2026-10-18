@@ -25,6 +25,8 @@
 //
 // Wavetable interpolation and synth signal path tests.
 
+#include "beads/test/test_fpu.h"
+
 #include <cmath>
 #include <cstring>
 
@@ -371,6 +373,7 @@ void TestSynthAmplitudeSweep() {
 }
 
 int main() {
+  InitTestFpu();
   TestSynthMixEndpoints();
   TestSynthFreeze();
   TestSynthResolution();
