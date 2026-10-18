@@ -5,7 +5,9 @@ description = """Attenurandomizers fully counter-clockwise, SIZE at 0.75. 24 iso
 grains (a trigger every second); SIZE randomization depth CV -0.6, 0,\
 +0.015, +0.03 in four blocks of six, the other depths zero. Spread of\
 pitch, timing and size per depth is reported, not judged against a\
-waveform."""
+waveform. The tone is continuous: its phase is that of a tone begun 17 s\
+before the scenario starts, as on the bench, which plays 17 s of history\
+first."""
 seconds = 30
 tiers = ["emulator", "module"]
 behaviours = ["random-side"]
@@ -24,6 +26,8 @@ generator = "layers"
 kind = "sine"
 freq = 261.625565
 amp = 0.12
+fade_s = 0.0
+phase_s = 17.0
 
 [[events]]
 kind = "trigger"

@@ -119,8 +119,10 @@ def _gate_track(n, sr, events):
 # Primitive builders. Frame arguments are in samples at `sr`; the layer
 # renderer below converts a scenario's seconds.
 # ---------------------------------------------------------------------------
-def sine(n, sr, f, amp, start=0, stop=None, fade_s=0.01):
-    """A sine from frame `start` to `stop`, with linear fades at both ends."""
+def sine(n, sr, f, amp, start=0, stop=None, fade_s=0.01, phase_s=0.0):
+    """A sine from frame `start` to `stop`, with linear fades at both ends.
+    `phase_s` advances the oscillator, as if it had started that many seconds
+    before frame `start` (the steady state of a tone begun earlier)."""
     out = np.zeros(n)
     stop = n if stop is None else min(n, stop)
     k = np.arange(stop - start)
@@ -129,7 +131,8 @@ def sine(n, sr, f, amp, start=0, stop=None, fade_s=0.01):
     if fd:
         w[:fd] = np.linspace(0, 1, fd)
         w[-fd:] = np.linspace(1, 0, fd)
-    out[start:stop] = amp * w * np.sin(2 * np.pi * f * k / sr)
+    out[start:stop] = amp * w * np.sin(
+        2 * np.pi * f * k / sr + 2 * np.pi * f * phase_s)
     return out
 
 
@@ -177,7 +180,7 @@ def _repeats(layer):
 
 def render_layers(layers, n, sr, seed):
     """Sum of the layers, (n, 2). Kinds: sine (optional `every`/`count`
-    repeats, `stop`, `fade_s`), steps (`seg_s`, `freqs`, optional `stop`),
+    repeats, `stop`, `fade_s`, `phase_s`), steps (`seg_s`, `freqs`, optional `stop`),
     chirp (one or repeated every `every` s, `dur_s`), cyclic_chirp (a chirp
     that restarts every `period_s`, whose clock starts at `phase_s`), noise
     (uniform, `amp`, `seed` or the scenario seed, `stop`, `fade_s`, `stereo`).
@@ -194,7 +197,8 @@ def render_layers(layers, n, sr, seed):
                 if stop is None and "dur_s" in layer:
                     stop = t0 + layer["dur_s"]
                 sig += sine(n, sr, layer["freq"], amp, frames_of(t0, sr),
-                            None if stop is None else frames_of(stop, sr), fade)
+                            None if stop is None else frames_of(stop, sr), fade,
+                            layer.get("phase_s", 0.0))
         elif kind == "steps":
             sig = steps(n, sr, layer["seg_s"], tones(layer["freqs"]), amp,
                         layer.get("start", 0.0))

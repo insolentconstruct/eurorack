@@ -5,7 +5,8 @@ description = """Pitch quantized to the major scale (root C). PITCH attenurandom
 fully counter-clockwise, SIZE at 0.75; 24 isolated grains from a C4 tone\
 with the pitch randomization depth stepped through four blocks. Each\
 grain must sit within 15 cents of a scale degree and the grains must not\
-all be the same note."""
+all be the same note. The tone is continuous: its phase is that of a\
+tone begun 17 s before the scenario starts, as on the bench."""
 seconds = 30
 tiers = ["emulator", "module"]
 behaviours = ["pitch-scale"]
@@ -25,6 +26,8 @@ generator = "layers"
 kind = "sine"
 freq = 261.625565
 amp = 0.12
+fade_s = 0.0
+phase_s = 17.0
 
 [[events]]
 kind = "trigger"

@@ -317,6 +317,13 @@ class Builders(unittest.TestCase):
         self.assertLessEqual(float(np.abs(x).max()), 0.5)
         self.assertLess(abs(x[SR // 4 + 1]), 0.01)  # fading in
 
+    def test_phase_shifts_the_oscillator_not_the_window(self):
+        a = stimulus.sine(2 * SR, SR, 1000.0, 0.5, SR // 2, None, 0.0, 0.25)
+        b = stimulus.sine(2 * SR, SR, 1000.0, 0.5, 0, None, 0.0)
+        k = SR // 2
+        self.assertTrue(np.allclose(a[k:k + 100], b[SR // 4:SR // 4 + 100],
+                                    atol=1e-9))
+
     def test_steps_cycle_through_the_frequencies(self):
         x = stimulus.steps(4 * SR, SR, 1.0, [220.0, 330.0], 0.3)
         self.assertAlmostEqual(rules.dominant(x[:SR], SR), 220.0, delta=2)
