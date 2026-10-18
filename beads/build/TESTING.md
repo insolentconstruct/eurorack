@@ -9,7 +9,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - emulator comparisons found identical audio in 44 of 44 scenarios against the previous release (2026.10.14), and in 20 of 20 between GCC 9 and GCC 4.9.3 builds (2026.10.16).
-- **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle recipe, flash wear from a modulated FREEZE, monophonic grains and self-play, using oscilloscope captures and the debug probe.
+- **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle recipe, flash wear from a modulated FREEZE, monophonic grains and wavetable synth, using oscilloscope captures and the debug probe.
 - **Beta 1 on a module:** a recorded run of 28 scenarios on release candidate 3 and the same 22 shared scenarios on the released source, with no difference traced to the firmware; a shorter run on release candidate 5; every pitch scale on scale; CPU load 60–90.5% of the audio budget with no underruns.
 - **Module totals:** 48 firmware installs on the test module, none of which failed to boot, and about 13 hours of automated test runs.
 - **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
@@ -57,13 +57,13 @@ execute more than once.
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
-The table lists the tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; the host checks run in eight balanced jobs on every push.
+The table lists the tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the [M] (ASSIGN) LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; the host checks run in eight balanced jobs on every push.
 
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
 
 Stereo width adds host checks for the unchanged Stock calculation and RNG
 sequence, zero displacement, full spread with zero randomness, CV clamping,
-stock/enabled ASSIGN cycles, every saved width byte, preview and saving,
+stock/enabled [M] cycles, every saved width byte, preview and saving,
 and unchanged bytes 12/13. Callback tests check WIDTH CV routing, processor
 and synth propagation, and rendered grain pan retention. Saved assignments
 are also checked through the stock destination clamp.
@@ -103,7 +103,7 @@ Run by the developers; these scripts and results are not in this repository.
 | Frozen delay with negative FM (#33), host build with AddressSanitizer and UBSan | Previous code: out-of-bounds read. Fixed code: clean; output at FM 0 and +0.5 identical |
 | Wavetable interpolation past the last wave (#35) | Previous code: out-of-bounds read. Fixed code: clean; normal output identical |
 | Emulator comparison, GCC 9 against GCC 4.9.3 builds of the released source (2026.10.16) | 20 of 20 scenarios bit-identical |
-| Emulator comparison against the previous release (2026.10.14) | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, self-play (synth), freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
+| Emulator comparison against the previous release (2026.10.14) | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, wavetable synth, freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
 | Instruction counts | No audio-path function grew |
 | Code review | Five rounds by a second AI model; the first four led to fixes (three of them real bugs in the frozen-buffer save) |
 
@@ -137,10 +137,10 @@ Control voltages and gates from the Bela; OUT L on the oscilloscope; flash activ
 | 2 | Crackle recipe (#1), below | No clicks in 83 s (2021 firmware: 145 in 21 s) |
 | 3 | 20 s LFO into FREEZE, autosave on (#56) | Flash activity in the first cycle only (11–15 s), none in the next 77 s; the 2021 firmware showed it every cycle |
 | 4 | Frozen-buffer save from the FREEZE gate, then the same image re-flashed by the debug probe while still frozen | Flash activity for 7 s, ending before the restart; after it FREEZE was back on and the restored audio played (1.4 V RMS, inputs silent, grains from a DENSITY CV) |
-| 5 | Monophonic grains (#31): SEED pulsed 10 times a second into long grains | MEDIA LED at half brightness. Between triggers the envelope dips to 23 % of its peak (81 % with monophonic grains off); 48 % of its power is at 10 Hz and harmonics (5 % off) |
-| 6 | Self-play, Automatic (Stock) (the default): both inputs unplugged, SEED pulsed 10 times a second | Plays (1.4 V RMS); silent without the pulses, since a patched, unlatched SEED jack is the only grain trigger |
+| 5 | Monophonic grains (#31): SEED pulsed 10 times a second into long grains | [A] (MEDIA) LED at half brightness. Between triggers the envelope dips to 23 % of its peak (81 % with monophonic grains off); 48 % of its power is at 10 Hz and harmonics (5 % off) |
+| 6 | Wavetable synth, Automatic (Stock) (the default): both inputs unplugged, SEED pulsed 10 times a second | Plays (1.4 V RMS); silent without the pulses, since a patched, unlatched SEED jack is the only grain trigger |
 
-Self-play On request, the delay clock fix (#57) and the frozen-delay slice fix (#33) were checked by host tests only.
+Wavetable synth Manual, the delay clock fix (#57) and the frozen-delay slice fix (#33) were checked by host tests only.
 
 **Crackle (#1).** Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L went to a scope with OUT R unplugged, so it carried L+R. A detector counted clicks on the scope captures:
 
@@ -176,15 +176,15 @@ threshold.
 | Dry output, first quality; three delay scenarios | Inconclusive (measurement limits) | Inconclusive, same reasons |
 | Input gain and limiter, delay echoes | Measured | Measured |
 | Random amounts for PITCH, TIME, SIZE and SHAPE | Measured | Measured |
-| Self-play, inputs unplugged | Pass | Pass |
-| Drizzlet only: limiter Fast and Off, three ASSIGN destinations | | Measured |
+| Wavetable synth, inputs unplugged | Pass | Pass |
+| Drizzlet only: limiter Fast and Off, three [M] destinations | | Measured |
 | Drizzlet only: Clouds-style switching | | Inconclusive here, pass on release candidate 5 |
 | Drizzlet only: all nine pitch scales | | Measured, see below |
 
 Measured values were compared with the released source. Every difference
 traced back to the test rather than the firmware, and those tests were fixed.
 No recording had dropouts or digital clipping. The click candidates found came
-from the audio itself (music on the dry path, delay echoes, self-play), at
+from the audio itself (music on the dry path, delay echoes, wavetable synth), at
 similar counts on the released source.
 
 **Pitch scales.** With PITCH randomness turned up, 222 grains were detected
@@ -219,11 +219,11 @@ audio in every scenario with default options. A short run checked them on the mo
 | Clouds-style switching, A/B/A | Pass |
 | PITCH CV, gated DENSITY | Pass |
 | Clouds-style CPU | 105,764 cycles (88.1%), no underruns, same as release candidate 3 |
-| Self-play | Inconclusive: the noise rule expects a quiet start, which self-play never has |
+| Wavetable synth | Inconclusive: the noise rule expects a quiet start, which wavetable synth never has |
 | Dry path | Inconclusive: weak alignment, as before |
 | Delay | Inconclusive at first: the alignment check fell 0.13 s short. Reduced again with the check corrected: loop period pass, pitch shift and echo levels measured |
 | Dropouts, clipping | None |
-| Click candidates | None in Clouds-style, PITCH, DENSITY or CPU recordings; dry path, delay and self-play at the counts seen before |
+| Click candidates | None in Clouds-style, PITCH, DENSITY or CPU recordings; dry path, delay and wavetable synth at the counts seen before |
 
 **Test module totals** (2026-10-11 to 2026-10-18). Firmware installs:
 
@@ -276,7 +276,7 @@ writes still need module checks.
 Options regressions cover 10 s of ±0.002 width noise at an encoded step boundary
 (one save and one confirmation), short SEED taps and long holds during a pending
 save, volatile commit publication, and a second FREEZE press before the pending
-save settles. Closing restores the normal MEDIA indication immediately.
+save settles. Closing restores the normal [A] indication immediately.
 
 The delay mode test compares the maximum wet-output step when switching Auto (Stock) to Wide with
 an identical no-switch render at the clockwise filter endpoint.

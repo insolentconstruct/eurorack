@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Export the firmware options layout and MEDIA indications as TSV.
+// Export the firmware options layout and [A] (MEDIA) LED indications as TSV.
 
 #include <cstdio>
 #include "beads/options.h"
@@ -34,7 +34,7 @@ namespace {
 const char* const kPageNames[] = { "REVERB", "FEEDBACK", "DRY/WET" };
 const char* const kOptionNames[] = {
   "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
-  "Delay mode", "Self-play", "Limiter"
+  "Delay mode", "Wavetable synth", "Limiter"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 struct ValueNames {
@@ -61,7 +61,7 @@ const ValueNames kValueNames[] = {
   { "Never", "yellow" },
   { "Wide detent", "red" },
   { "Automatic (Stock)", "green" },
-  { "On request", "yellow" },
+  { "Manual", "yellow" },
   { "Stock", "green" },
   { "Fast release", "yellow" },
   { "Off", "red" },

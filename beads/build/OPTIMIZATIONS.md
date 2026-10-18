@@ -8,7 +8,7 @@ What Drizzlet changed to run faster or smaller, what was measured and rejected, 
 - **Code:** three small bit-identical changes ship in Beta 1: mono/stereo chosen once per block (template), grain output summed in a local frame, and an unsigned modulo for the delay-line read index. The stock worst case (q3 stereo, 32 grains held active) goes from 97,255 to 90,333 cycles per block (75.3% of the 120,000 budget); the worst block of all 28 scenarios is 92,486 (77.1%).
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulated scenarios. The code changes matched in 28 of 28 Seed3 hashes, 20 of 20 emulator scenarios and 13 of 13 long runs (max error 0).
 - **Rejected:** GCC 10.3 to 15.x, ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
-- **Caveat:** timings are DSP-only, measured on a separate development board (the same processor die and clock rate as the module), not on the module. On the module, the whole callback (codec and controls included) peaks at 72,472 cycles (60%) in delay mode, 102,009–103,223 (85–86%) in the heaviest grain case with default options, 105,764 (88.1%) with Clouds-style and 108,590 (90.5%) in synth mode, with no underruns; see [TESTING.md](TESTING.md).
+- **Caveat:** timings are DSP-only, measured on a separate development board (the same processor die and clock rate as the module), not on the module. On the module, the whole callback (codec and controls included) peaks at 72,472 cycles (60%) in delay mode, 102,009–103,223 (85–86%) in the heaviest grain case with default options, 105,764 (88.1%) with Clouds-style and 108,590 (90.5%) in wavetable synth mode, with no underruns; see [TESTING.md](TESTING.md).
 
 ## Build comparison
 
@@ -84,7 +84,7 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 ## Method
 
 - **Seed3 probe.** The real `Processor::Process` at 480 MHz with caches on and memory placed as in the firmware (state and stack in DTCM, delay buffers in AXI and D2 SRAM, reverb in D3 SRAM). 16,000 warm blocks, then 4,096 measured; median is the upper middle. 28 scenarios: q0 to q3, stereo and mono, dense, stress32 and delay, Clouds-style and pitch-scale cases. Stress32 holds all 32 grains active at +4x speed. Peaks are finite-sample maxima, not proven bounds.
-- **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb, output limiter. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, synth mode. The full callback on the module is higher ([TESTING.md](TESTING.md)).
+- **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb, output limiter. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, wavetable synth mode. The full callback on the module is higher ([TESTING.md](TESTING.md)).
 - **Module calibration.** A calibration build adds DWT cycle counters around `Process` and the whole callback; it ran the same stress32 fixture and the panel settings in [TESTING.md](TESTING.md) on the module. The 90,000-cycle reserve target applies to the DSP-only Seed3 figures above, not to the whole callback.
 - **Bit-identical checks.** Seed3 output and buffer hashes; 20 short and 13 long emulator scenarios (272,000 blocks in all) compared sample by sample; host tests with sanitizers. Counts are in [TESTING.md](TESTING.md).
 
@@ -120,4 +120,4 @@ The delay-mode ramp changes callback instruction counts by -34..+35; accepted to
 
 Q coefficients approach their target once per block with a 0.005 one-pole coefficient and a rounded 16-bit position that reaches both endpoints exactly. The wet delay regression checks 100-, 512- and 4,096-block windows, including the completed transition; each maximum output step remains within its identical no-switch control's range.
 
-Explicit wide-detent and ramp-position checks add 1..13 executed instructions per granular, mono or delay callback in the default emulator fixtures; synth and self-play counts remain unchanged. The changes are confined to the granular processor. Default audio remains byte-identical in all 20 scenarios.
+Explicit wide-detent and ramp-position checks add 1..13 executed instructions per granular, mono or delay callback in the default emulator fixtures; wavetable synth counts remain unchanged. The changes are confined to the granular processor. Default audio remains byte-identical in all 20 scenarios.

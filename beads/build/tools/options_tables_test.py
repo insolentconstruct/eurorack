@@ -118,7 +118,7 @@ assert " ".join(plain_options[width_start:delay_start].split()) == " ".join(
 plain_delay = plain_options[delay_start:limiter_start]
 rich_delay = markdown_readme.split("## Delay mode\n", 1)[1].split("\n## ", 1)[0]
 for fact in ("Auto (Stock)", "Never", "Wide detent", "40%", "60%", "SIZE CV",
-             "green / yellow / red", "does not affect synth mode"):
+             "green / yellow / red", "does not affect wavetable synth mode"):
     assert fact in " ".join(plain_delay.split()), fact
     assert fact in " ".join(rich_delay.split()), fact
 plain_options = plain_options[:width_start] + plain_options[limiter_start:]
@@ -246,7 +246,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         labels = [node.text for node in texts]
         assert labels.count("pulsing") == 3
         assert all(labels.count(label) == 3 for label in ("F", "D/W", "R"))
-        assert labels.count("READ THE MEDIA LED") == 1
+        assert labels.count("READ THE [A] LED") == 1
         assert labels.count("REVERB: Not used yet") == 2
         assert labels.count("FEEDBACK: Not used yet") == 1
         assert "Reserved" not in labels
@@ -255,7 +255,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         flat = " ".join(labels)
         for phrase in ("qualified", "dead band", "2.048", "0.98", "3.91"):
             assert phrase not in flat, phrase
-        assert "MEDIA LED" in labels and "ASSIGN" in labels
+        assert "[A] (MEDIA) LED" in labels and "[M] (ASSIGN)" in labels
         for row in rows:
             _, _, _, setting, value, color, pulse = row.split("\t")
             if setting != "Not used yet":
