@@ -1,0 +1,5 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+[sets.p0]
+description = "Desktop tier: the three phase-0 behaviour scenarios"
+scenarios = ["b-seed-trigger", "b-density-gated", "b-size-cv"]

@@ -2,7 +2,7 @@
 # Author: Insolent Construct
 # Shared native test rules; program makefiles retain their sanitizer flags.
 
-PACKAGES = beads/drivers beads/dsp beads/test stmlib/utils stmlib/dsp beads
+PACKAGES += beads/drivers beads/dsp beads/test stmlib/utils stmlib/dsp beads
 VPATH = $(PACKAGES) beads/dsp/fx
 BUILD_ROOT ?= build/
 BUILD_DIR = $(BUILD_ROOT)$(TARGET)/

@@ -1,0 +1,48 @@
+name: Beads repro kit
+on:
+  push:
+    paths:
+      - 'beads/repro/**'
+      - 'beads/dsp/**'
+      - 'beads/test/host.mk'
+      - '.github/workflows/beads-repro.yml'
+  pull_request:
+    paths:
+      - 'beads/repro/**'
+      - 'beads/dsp/**'
+      - 'beads/test/host.mk'
+      - '.github/workflows/beads-repro.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Initialize stmlib
+        run: git submodule update --init stmlib
+      - name: Unit tests and the jobs-1-versus-4 determinism test
+        run: |
+          docker build -q -t drizzlet-repro beads/repro
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD:/src" -w /src/beads/repro drizzlet-repro \
+            python3 -m unittest discover -s tests -t . -v
+      - name: Desktop scenarios
+        run: beads/repro/repro.sh run p0 --tier desktop --out repro-out
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: repro-desktop
+          if-no-files-found: warn
+          path: |
+            repro-out/p0/desktop/merged.json
+            repro-out/p0/desktop/merged.tsv
+            repro-out/p0/desktop/*/verdict.json
+            repro-out/p0/desktop/*/provenance.json

@@ -1,0 +1,71 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-seed-trigger"
+description = """Unlatched SEED: no gate means no grains; one grain per trigger \
+at DENSITY noon (12 irregular triggers); a held gate at noon gives one grain; \
+DENSITY CV +0.3 under a held gate repeats."""
+seconds = 19
+tiers = ["desktop"]
+behaviours = ["no-gate-silent", "one-grain-per-trigger", "gate-grain-rate"]
+
+[stimulus]
+generator = "sine"
+freq = 330
+amp = 0.12
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [3.0, 3.45, 4.2, 4.5, 5.3, 5.65, 6.4, 7.1, 7.35, 8.2, 8.6, 9.5]
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 11.0
+t1 = 13.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 14.0
+level = 0.3
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 14.5
+t1 = 16.5
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 17.0
+level = 0.0
+
+[[rules]]
+rule = "silent"
+behaviours = ["no-gate-silent"]
+win = [1.5, 2.9]
+
+[[rules]]
+rule = "onsets_match_triggers"
+behaviours = ["one-grain-per-trigger"]
+win = [2.9, 10.6]
+triggers = [3.0, 3.45, 4.2, 4.5, 5.3, 5.65, 6.4, 7.1, 7.35, 8.2, 8.6, 9.5]
+
+[[rules]]
+rule = "onset_count"
+behaviours = ["one-grain-per-trigger"]
+win = [10.9, 13.9]
+expect = 1
+
+[[rules]]
+rule = "onset_count_min"
+behaviours = ["gate-grain-rate"]
+win = [14.4, 16.6]
+minimum = 3
+
+[[rules]]
+rule = "silent"
+behaviours = ["no-gate-silent"]
+win = [18.0, 18.9]

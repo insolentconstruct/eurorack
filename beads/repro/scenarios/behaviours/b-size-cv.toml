@@ -1,0 +1,101 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-size-cv"
+description = """Rising chirps; three triggers at each SIZE CV level -0.5 to \
++0.5. The SIZE knob stays at noon: CV cannot reach delay mode, and the guard \
+fails the run if the processor enters it (SIZE knob fully clockwise)."""
+seconds = 23
+tiers = ["desktop"]
+behaviours = ["size-cv-longer-grains", "size-cv-reverse"]
+
+[guard]
+delay_mode = "never"
+
+[stimulus]
+generator = "chirps"
+f0 = 250
+f1 = 2000
+amp = 0.12
+period_s = 6.0
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 2.0
+level = -0.5
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [3.0, 4.0, 5.0]
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 6.0
+level = -0.25
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [7.0, 8.0, 9.0]
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 10.0
+level = 0.0
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [11.0, 12.0, 13.0]
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 14.0
+level = 0.25
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [15.0, 16.0, 17.0]
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 18.0
+level = 0.5
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [19.0, 20.0, 21.0]
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 22.0
+level = 0.0
+
+[[rules]]
+rule = "duration_monotonic"
+behaviours = ["size-cv-longer-grains"]
+wins = [[10.9, 13.9], [14.9, 17.9], [18.9, 21.9]]
+
+# Per trigger slope: at CV -0.5 reverse grains last about 2 s and overlap, so a
+# whole window would measure drifting start points, not one grain's direction.
+[[rules]]
+rule = "direction"
+behaviours = ["size-cv-reverse"]
+win = [2.9, 5.9]
+expect = "reverse"
+triggers = [3.0, 4.0, 5.0]
+
+[[rules]]
+rule = "direction"
+behaviours = ["size-cv-longer-grains"]
+win = [14.9, 17.9]
+expect = "forward"
+triggers = [15.0, 16.0, 17.0]

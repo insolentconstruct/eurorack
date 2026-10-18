@@ -1,0 +1,50 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-density-gated"
+description = """SEED gate held 2-17 s while DENSITY CV ramps 0 to +0.5 over \
+12 s: the grain rate rises. The knob is at noon, so DENSITY clamps at 1.0 once \
+the CV passes +0.5; a ramp to +1.0 flattens the last windows and the rule \
+(correctly) fails on them."""
+seconds = 19
+tiers = ["desktop"]
+behaviours = ["gate-grain-rate", "density-cv-rate"]
+
+[stimulus]
+generator = "sine"
+freq = 262
+amp = 0.12
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 2.0
+t1 = 17.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 2.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 3.0
+level = 0.5
+ramp = 12.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 17.5
+level = 0.0
+
+[[rules]]
+rule = "rate_increasing"
+behaviours = ["gate-grain-rate"]
+wins = [[3.0, 6.0], [6.0, 9.0], [9.0, 12.0], [12.0, 15.0]]
+
+[[rules]]
+rule = "silent"
+behaviours = ["no-gate-silent"]
+win = [18.0, 18.9]
