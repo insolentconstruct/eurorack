@@ -291,7 +291,8 @@ class GranularProcessor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) {
-    const float speed = stmlib::SemitonesToRatio(
+    // Rounded separately: identical results on every GCC version.
+    const volatile float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
     float bandwidth = 0.5f * (1.0f + parameters.size.attenuverter) + \

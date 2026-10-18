@@ -170,10 +170,10 @@ void DelayController::RenderInternal(
       size,
       1.0f,
       true);
-  ParameterInterpolator modulated_shape(
-      &shape_,
-      shape.value(&shape_modulation_, size, 1.0f, true) * 0.995f,
-      size);
+  // Rounded separately: identical results on every GCC version.
+  const volatile float shape_target =
+      shape.value(&shape_modulation_, size, 1.0f, true) * 0.995f;
+  ParameterInterpolator modulated_shape(&shape_, shape_target, size);
   ParameterInterpolator modulated_fm(
       &fm_,
       SemitonesToRatio(-fm_filter_.Process(exponential_fm) * 60.0f),

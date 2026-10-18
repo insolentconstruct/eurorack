@@ -214,8 +214,8 @@ class DelayGrain : public Grain {
     
     sample *= envelope_.Render() * voice_stealing_envelope_.Render();
 
-    in_out->l += sample.l * gain_[0][0] + sample.r * gain_[0][1];
-    in_out->r += sample.l * gain_[1][0] + sample.r * gain_[1][1];
+    in_out->l += fmaf(sample.l, gain_[0][0], sample.r * gain_[0][1]);
+    in_out->r += fmaf(sample.l, gain_[1][0], sample.r * gain_[1][1]);
 
     --remaining_samples_;
     if (done()) {
