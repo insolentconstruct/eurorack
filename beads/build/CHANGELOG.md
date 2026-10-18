@@ -46,7 +46,7 @@ One change: grain stealing in polyphonic mode (`beads/dsp/granular_player.h`). N
 
 In emulation with identical input and state, outputs are bit-identical at intervals of 25 ms or more and differ from 5 to <25 ms. Below 5 ms both run the same code, though differences can persist briefly if earlier intervals in the 5–25 ms range changed grain history. The "freeze gate" and "gated density" bench tests reached the changed range.
 
-On our module the 2021 and 2024 firmware clicked at DENSITY 0.98 and PITCH +24 semitones; the released source and Drizzlet did not (145 and 164 clicks against 0; recipe and counts in TESTING.md). A desktop run of both schedulers produced no clicks, so the DSP logic is not the cause. CPU timing is the working hypothesis: the 2024 scheduler costs more in that range, but it has not been timed on the module.
+On our module the 2021 and 2024 firmware clicked at DENSITY 0.98 and PITCH +24 semitones; the released source and Drizzlet did not (145 and 164 clicks against 0; recipe and counts in TESTING.md). A desktop run of both schedulers produced no clicks, so that test found no click in the DSP itself. CPU timing is the working hypothesis: the 2024 scheduler costs more in that range, but it has not been timed on the module.
 
 Monophonic mode is compiled out in these older builds (`ENABLE_ADVANCED_FEATURES` is commented out).
 

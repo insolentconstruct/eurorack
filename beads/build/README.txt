@@ -61,7 +61,7 @@ Options page
 ------------
 Visual and text guides: OPTIONS.md, options-guide.svg (printable) and
 options-guide-mobile.svg (phone). They sit beside this README in the release
-zips and the source download.
+zips, and in docs/ in the source download.
 
 Hold the CV-assign button [M] alone for three seconds with the mix knobs still; then release.
 Tap [M] to change page: page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
