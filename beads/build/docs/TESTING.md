@@ -219,7 +219,7 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 
 ## Not tested
 
-Everything above used one module. Also done on it for release candidate 3 (2026-10-17): trim, freeze, power cycle and stock downgrade with a trimmed save. The options page's green/yellow/red LED colours have not been checked by eye.
+Everything above used one module. Also done on it for release candidate 3 (2026-10-17): trim, freeze, power cycle and stock downgrade with a trimmed save. Options page LED colours were checked by eye for all pitch scales, the limiter and a few other settings, not yet for every value.
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
