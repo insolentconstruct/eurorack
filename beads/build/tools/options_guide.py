@@ -34,7 +34,6 @@ from pathlib import Path
 import sys
 import textwrap
 from html import escape
-from fractions import Fraction
 
 KNOBS = ()
 CONSTANTS = {}
@@ -46,17 +45,17 @@ COLOURS = {
     "unchanged": "#777",
 }
 STEPS = [
-    "Open: hold [M] (ASSIGN) {hold} s, release.",
+    "Open: hold [M] (ASSIGN) {hold}, release.",
     "Change page: tap [M]. The pulsing mix LED marks the page "
     "(REVERB [L], FEEDBACK [J], DRY/WET [K] for pages 1-3).",
-    "Change a setting: turn its knob; it saves {settle} second after you "
-    "stop (the page LED flashes).",
-    "Close: hold [M] {hold} s, or press any other button except SEED [C] "
+    "Change a setting: turn its knob. It saves by itself (the page LED "
+    "flashes).",
+    "Close: hold [M] {hold}, or press any other button except SEED [C] "
     "on page 1 with Scale selected: short taps step the scale.",
 ]
 NOTES = [
-    "Move a knob more than {pickup}% of its travel before it responds.",
-    "Wait {settle} second before powering off.",
+    "Move a knob a little before it responds.",
+    "Wait a moment before powering off.",
 ]
 SHORT = {
     "Clouds-style": "Clouds",
@@ -139,75 +138,52 @@ def indication(row):
 
 
 DETAILS = [
-    "Hold [M] (ASSIGN) alone for {hold} seconds with the mix knobs "
-    "still, "
-    "then release. "
-    "Pages cycle 1 → 2 → 3 → 1; reopening remembers the page until power-off.",
-    "Move a knob more than {pickup}% of its travel to begin editing. Zone "
-    "boundaries have "
-    "a {band}% dead band: thirds switch at {zone_low} ± {band}% "
-    "and {zone_high} ± "
-    "{band}%; halves "
-    "switch below {half_low}% and above {half_high}%. Pitch, Delay mode "
-    "and Limiter use thirds; Reverb character and "
-    "Wavetable synth use halves.",
-    "Guide arcs and shaded switching bands use the same firmware export "
-    "as these zone boundaries.",
-    "Width: Stock below {width_low}%; leave Stock above {width_high}%, "
-    "return below {width_low}%. "
-    "Enabled width goes from zero spread at {width_high}% to full "
-    "spread at 100%, "
-    "saved as 1..255 (0 = Stock). Changes affect new grains; zero spread "
-    "preserves stereo position, with mono centred. When enabled, [M] "
-    "adds WIDTH after the three mix destinations; all three LEDs pulse. "
-    "The assignable CV input (7) adds to saved width, clamped to zero and "
-    "full spread.",
-    "Changes save after {settle} second without knob movement that "
-    "changes the setting "
-    "or passes the movement threshold. Pending changes save after "
-    "closing too. "
-    "The page LED flashes for {flash} ms on entry, close and saving. "
-    "All three mix "
-    "LEDs pulse on entry; one then pulses to mark the page. There is no "
-    "idle close or cancel.",
-    "Slow blink is {slow} Hz; fast blink is {fast} Hz. Two yellow "
-    "pulses repeat "
-    "as a {pulse} s group. The [A] (MEDIA) LED shows the first available "
-    "setting on entry, then the last knob moved past its threshold. Unused "
-    "knobs leave it unchanged.",
-    "Scale: short SEED taps cycle the eight scales instead of closing "
-    "options; "
-    "holds do not cycle; taps do not play grains. Pitch snaps new "
-    "grains, including wavetable synth "
-    "grains; playing grains, the continuous wavetable oscillator and delay "
-    "pitch "
-    "keep their pitch. The root is unity (0 semitones); +1 V is one octave. "
-    "Pelog and the raags are microtonal.",
-    "Delay mode Auto (Stock) switches at SIZE fully clockwise; Never "
-    "stays granular. Wide detent "
-    "keeps the switch and adds an unfiltered "
-    "{detent_low}–{detent_high}% zone to SIZE "
-    "attenurandomizer plus SIZE CV, with no resonant boost. The wavetable "
-    "synth is unaffected.",
-    "Clouds-style changes the reverb character and adds grain "
-    "diffusion. Switching briefly fades and clears the tail.",
-    "Wavetable synth Manual needs both inputs unpatched and FREEZE off: "
-    "hold [A] {self_hold} s to start or stop. Patching an input stops it "
-    "once FREEZE is off. "
-    "Limiter Off allows loud peaks to hard-clip.",
+    "Hold [M] (ASSIGN) for three seconds, with the mix knobs still, then "
+    "release. Tap [M] to move between the pages; Beads remembers the last "
+    "page until it is powered off. Hold [M] again, or press another "
+    "button, to close.",
+    "A knob must be moved a little before it takes over, so a knob you "
+    "bump never changes a setting. Pitch scale, Delay mode and Limiter "
+    "use the knob's three thirds; Reverb character and Wavetable synth "
+    "use its two halves. Near a boundary, turn a little past it to "
+    "switch.",
+    "Stereo width is Stock at the bottom of the knob. Turn clockwise to "
+    "spread the grains wider, up to a full random spread fully CW. Only "
+    "new grains are affected. When width is on, short presses of [M] add "
+    "WIDTH after the three mix destinations of the assignable CV input "
+    "(7); all three mix LEDs pulse together for WIDTH.",
+    "Settings save by themselves about a second after you stop turning. "
+    "Closing keeps your changes, and there is no timeout or cancel. The "
+    "page LED flashes when you open, close, and when a change is saved.",
+    "The [A] (MEDIA) LED shows the value of the last knob you moved. The "
+    "first value of every setting is steady green. Other values follow in "
+    "yellow and red, then as slow blinks, then as fast blinks. Raag Shri "
+    "is two yellow pulses and a pause. Unused knobs leave the LED alone.",
+    "Scale: on page 1, tap SEED [C] to step through the eight scales "
+    "instead of closing; a long press does not step, and the taps do not "
+    "play grains. The scale snaps the pitch of new grains, including "
+    "wavetable synth grains. Grains already playing, the continuous "
+    "wavetable oscillator and delay pitch keep their pitch. The root is "
+    "the unshifted pitch, and +1 V is still one octave. Pelog and the "
+    "raags are microtonal.",
+    "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
+    "Never stays granular. Wide detent keeps the switch and adds a "
+    "neutral, unfiltered zone around the middle of the delay filter "
+    "(SIZE attenurandomizer plus SIZE CV), with no resonant boost. The "
+    "wavetable synth is unaffected.",
+    "Clouds-style changes the reverb character and adds grain diffusion. "
+    "Switching briefly fades the sound and clears the tail.",
+    "Wavetable synth Manual needs both audio inputs unpatched and FREEZE "
+    "off: hold [A] (MEDIA) for about a second and a half to start or stop "
+    "it. Patching an input stops it once FREEZE is off.",
+    "Limiter Off lets loud peaks clip.",
 ]
 
 
 def instructions(lines):
-    settle = CONSTANTS["kOptionsSettleTime"] / 1000
-    return [
-        line.format(
-            hold=format(CONSTANTS["kOptionsHoldTime"] / 1000, "g"),
-            settle="one" if settle == 1 else format(settle, "g"),
-            pickup=format(CONSTANTS["kOptionsPickupThreshold"] * 100, ".0f"),
-        )
-        for line in lines
-    ]
+    hold = CONSTANTS["kOptionsHoldTime"] / 1000
+    assert hold == 3, "Update the spoken hold time"
+    return [line.format(hold="3 seconds") for line in lines]
 
 
 def markdown(rows, pages):
@@ -264,44 +240,7 @@ def markdown(rows, pages):
                 for r in knobs["FEEDBACK"][2:]
             ]
     out += ["", "## Details", ""]
-
-    def value(name, scale=1, digits=6):
-        return format(round(CONSTANTS[name] * scale, digits), "g")
-
-    details = dict(
-        hold=value("kOptionsHoldTime", 0.001),
-        pickup=value("kOptionsPickupThreshold", 100),
-        band=value("kOptionsZoneBand", 100),
-        zone_low=str(
-            Fraction(CONSTANTS["kOptionsZoneLow"]).limit_denominator(100)
-        ),
-        zone_high=str(
-            Fraction(CONSTANTS["kOptionsZoneHigh"]).limit_denominator(100)
-        ),
-        width_end=format(
-            round(
-                (
-                    CONSTANTS["kWidthEnabledThreshold"]
-                    + CONSTANTS["kWidthRange"]
-                )
-                * 100
-            ),
-            "g",
-        ),
-        half_low=value("kOptionsHalfLow", 100),
-        half_high=value("kOptionsHalfHigh", 100),
-        width_high=value("kWidthEnabledThreshold", 100),
-        width_low=value("kWidthStockThreshold", 100),
-        settle=value("kOptionsSettleTime", 0.001),
-        flash=value("kOptionsFlashTime"),
-        slow=format(1000 / CONSTANTS["kOptionsSlowPeriod"], ".2f"),
-        fast=format(1000 / CONSTANTS["kOptionsFastPeriod"], ".2f"),
-        pulse=value("kOptionsPulsePeriod", 0.001),
-        detent_low=value("kDelayDetentLow", 100),
-        detent_high=value("kDelayDetentHigh", 100),
-        self_hold=value("kSelfPlayHoldTime", 0.001),
-    )
-    out += [paragraph.format(**details) + "\n" for paragraph in DETAILS]
+    out += [paragraph + "\n" for paragraph in DETAILS]
     return "\n".join(out)
 
 

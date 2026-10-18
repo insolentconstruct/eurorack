@@ -7,13 +7,13 @@
 
 ## Steps
 
-1. Open: hold [M] (ASSIGN) 3 s, release.
+1. Open: hold [M] (ASSIGN) 3 seconds, release.
 2. Change page: tap [M]. The pulsing mix LED marks the page (REVERB [L], FEEDBACK [J], DRY/WET [K] for pages 1-3).
-3. Change a setting: turn its knob; it saves one second after you stop (the page LED flashes).
-4. Close: hold [M] 3 s, or press any other button except SEED [C] on page 1 with Scale selected: short taps step the scale.
+3. Change a setting: turn its knob. It saves by itself (the page LED flashes).
+4. Close: hold [M] 3 seconds, or press any other button except SEED [C] on page 1 with Scale selected: short taps step the scale.
 
-Move a knob more than 10% of its travel before it responds.
-Wait one second before powering off.
+Move a knob a little before it responds.
+Wait a moment before powering off.
 
 The [A] (MEDIA) LED shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
@@ -54,22 +54,22 @@ Scale (tap SEED to step through):
 
 ## Details
 
-Hold [M] (ASSIGN) alone for 3 seconds with the mix knobs still, then release. Pages cycle 1 → 2 → 3 → 1; reopening remembers the page until power-off.
+Hold [M] (ASSIGN) for three seconds, with the mix knobs still, then release. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close.
 
-Move a knob more than 10% of its travel to begin editing. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch, Delay mode and Limiter use thirds; Reverb character and Wavetable synth use halves.
+A knob must be moved a little before it takes over, so a knob you bump never changes a setting. Pitch scale, Delay mode and Limiter use the knob's three thirds; Reverb character and Wavetable synth use its two halves. Near a boundary, turn a little past it to switch.
 
-Guide arcs and shaded switching bands use the same firmware export as these zone boundaries.
+Stereo width is Stock at the bottom of the knob. Turn clockwise to spread the grains wider, up to a full random spread fully CW. Only new grains are affected. When width is on, short presses of [M] add WIDTH after the three mix destinations of the assignable CV input (7); all three mix LEDs pulse together for WIDTH.
 
-Width: Stock below 7%; leave Stock above 13%, return below 7%. Enabled width goes from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Changes affect new grains; zero spread preserves stereo position, with mono centred. When enabled, [M] adds WIDTH after the three mix destinations; all three LEDs pulse. The assignable CV input (7) adds to saved width, clamped to zero and full spread.
+Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
 
-Changes save after 1 second without knob movement that changes the setting or passes the movement threshold. Pending changes save after closing too. The page LED flashes for 100 ms on entry, close and saving. All three mix LEDs pulse on entry; one then pulses to mark the page. There is no idle close or cancel.
+The [A] (MEDIA) LED shows the value of the last knob you moved. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
 
-Slow blink is 0.98 Hz; fast blink is 3.91 Hz. Two yellow pulses repeat as a 2.048 s group. The [A] (MEDIA) LED shows the first available setting on entry, then the last knob moved past its threshold. Unused knobs leave it unchanged.
+Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
-Scale: short SEED taps cycle the eight scales instead of closing options; holds do not cycle; taps do not play grains. Pitch snaps new grains, including wavetable synth grains; playing grains, the continuous wavetable oscillator and delay pitch keep their pitch. The root is unity (0 semitones); +1 V is one octave. Pelog and the raags are microtonal.
+Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Never stays granular. Wide detent keeps the switch and adds a neutral, unfiltered zone around the middle of the delay filter (SIZE attenurandomizer plus SIZE CV), with no resonant boost. The wavetable synth is unaffected.
 
-Delay mode Auto (Stock) switches at SIZE fully clockwise; Never stays granular. Wide detent keeps the switch and adds an unfiltered 40–60% zone to SIZE attenurandomizer plus SIZE CV, with no resonant boost. The wavetable synth is unaffected.
+Clouds-style changes the reverb character and adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
-Clouds-style changes the reverb character and adds grain diffusion. Switching briefly fades and clears the tail.
+Wavetable synth Manual needs both audio inputs unpatched and FREEZE off: hold [A] (MEDIA) for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
 
-Wavetable synth Manual needs both inputs unpatched and FREEZE off: hold [A] 1.5 s to start or stop. Patching an input stops it once FREEZE is off. Limiter Off allows loud peaks to hard-clip.
+Limiter Off lets loud peaks clip.

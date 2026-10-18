@@ -37,6 +37,10 @@ sys.path.insert(0, str(Path("beads/build/tools").resolve()))
 from release_package import package
 from options_guide import SHORT, indication, generate
 
+# Words and units that belong in FEATURES.md, not in text a musician reads.
+STYLE_BANNED = ("%", " Hz", " ms", "dead band", "threshold", "qualified")
+
+
 def body(source, signature, opening):
     start = source.index(opening, source.index(signature)) + len(opening)
     depth = 1
@@ -108,16 +112,29 @@ rich_options = markdown_readme.split("## Options page\n", 1)[1]
 rich_options = rich_options.split("\n## ", 1)[0]
 # Markdown keeps width and delay in their own sections instead of repeating
 # them under Options. Compare the relocated width prose and shared delay facts.
-width_start = plain_options.index("On page 1 (REVERB LED), DRY/WET selects Stock")
+width_start = plain_options.index("On page 1 (REVERB LED), DRY/WET sets the stereo width")
 delay_start = plain_options.index("Delay mode: Auto (Stock)", width_start)
 limiter_start = plain_options.index("Output limiter:", delay_start)
+user_sections = [
+    markdown_readme.split(f"## {name}\n", 1)[1].split("\n## ", 1)[0]
+    for name in ("Delay mode", "Stereo width", "Monophonic grains",
+                 "Buffer trim", "Frozen-buffer autosave", "Options page")
+]
+user_sections.append(
+    readme.split("Buffer trim\n-----------\n", 1)[1].split(
+        "Options reference (TSV)", 1
+    )[0]
+)
+for text in user_sections:
+    for banned in STYLE_BANNED:
+        assert banned not in text, banned
 rich_width = markdown_readme.split("## Stereo width\n", 1)[1].split("\n## ", 1)[0]
 assert " ".join(plain_options[width_start:delay_start].split()) == " ".join(
     rich_width.split()
 ), "README.md and README.txt Stereo width prose differ"
 plain_delay = plain_options[delay_start:limiter_start]
 rich_delay = markdown_readme.split("## Delay mode\n", 1)[1].split("\n## ", 1)[0]
-for fact in ("Auto (Stock)", "Never", "Wide detent", "40%", "60%", "SIZE CV",
+for fact in ("Auto (Stock)", "Never", "Wide detent", "middle", "SIZE CV",
              "green / yellow / red", "does not affect wavetable synth mode"):
     assert fact in " ".join(plain_delay.split()), fact
     assert fact in " ".join(rich_delay.split()), fact
@@ -228,18 +245,11 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
                 f"| {knob} | {setting} | {' / '.join(names)} | "
                 f"{' / '.join(indications)} |"
             ) in page_text
-    for phrase in (
-        "13%",
-        "7%",
-        "3%",
-        "0.98 Hz",
-        "3.91 Hz",
-        "2.048 s",
-        "100 ms",
-        "1.5 s",
-        "40–60%",
-    ):
-        assert phrase in details and phrase not in public, phrase
+    # User-facing prose carries no exact numbers; those live in FEATURES.md.
+    for banned in STYLE_BANNED:
+        assert banned not in markdown, ("OPTIONS.md", banned)
+    for phrase in ("Wide detent", "Raag Shri", "about a second and a half"):
+        assert phrase in details, phrase
     for name in ("options-guide.svg", "options-guide-mobile.svg"):
         root = ET.parse(Path(directory, name)).getroot()
         texts = list(root.iter("{http://www.w3.org/2000/svg}text"))
@@ -253,8 +263,8 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         assert "Scale (tap SEED to step through):" in labels
         assert all(float(node.attrib["font-size"]) >= 15 for node in texts)
         flat = " ".join(labels)
-        for phrase in ("qualified", "dead band", "2.048", "0.98", "3.91"):
-            assert phrase not in flat, phrase
+        for phrase in STYLE_BANNED:
+            assert phrase not in flat, (name, phrase)
         assert "[A] (MEDIA) LED" in labels and "[M] (ASSIGN)" in labels
         for row in rows:
             _, _, _, setting, value, color, pulse = row.split("\t")
@@ -265,13 +275,42 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     for phrase in (
         "Three zones",
         "Lower half selects",
-        "Above this zone",
-        "13%",
-        "7%",
+        "At the bottom of the knob",
         "three seconds",
-        "one second",
+        "a second",
     ):
         assert phrase in section, phrase
+    # The exact constants belong in FEATURES.md, built from the same export.
+    constants = {}
+    for line in export.split("\nconstant\tname\tvalue\n")[1].splitlines():
+        _, name, number = line.split("\t")
+        constants[name] = float(number)
+    pct = lambda name: format(round(constants[name] * 100, 6), "g")
+    seconds = lambda name: format(constants[name] / 1000, "g")
+    band = pct("kOptionsZoneBand")
+    features = Path("beads/build/FEATURES.md").read_text()
+    features = features.split("## Exact option values", 1)[1]
+    flat_features = " ".join(features.split())
+    for phrase in (
+        f"hold [M] {seconds('kOptionsHoldTime')} s",
+        f"more than {pct('kOptionsPickupThreshold')}% of its travel",
+        f"{band}% dead band",
+        f"1/3 ± {band}% and 2/3 ± {band}%",
+        f"below {pct('kOptionsHalfLow')}% and above {pct('kOptionsHalfHigh')}%",
+        f"Stock below {pct('kWidthStockThreshold')}%",
+        f"above {pct('kWidthEnabledThreshold')}%",
+        f"returns below {pct('kWidthStockThreshold')}%",
+        f"zero spread at {pct('kWidthEnabledThreshold')}%",
+        f"after {seconds('kOptionsSettleTime')} second",
+        f"{constants['kOptionsFlashTime']:g} ms",
+        f"{1000 / constants['kOptionsSlowPeriod']:.2f} Hz",
+        f"{1000 / constants['kOptionsFastPeriod']:.2f} Hz",
+        f"{seconds('kOptionsPulsePeriod')} s group",
+        f"from {pct('kDelayDetentLow')}% to {pct('kDelayDetentHigh')}%",
+        f"{seconds('kSelfPlayHoldTime')} s",
+    ):
+        assert phrase in flat_features, phrase
+    assert constants["kWidthRange"] == 1 - constants["kWidthEnabledThreshold"]
 print("Generated SVG/Markdown match live tables and README: PASS")
 
 # Mutate a temporary TSV, independently checking every exported boundary.

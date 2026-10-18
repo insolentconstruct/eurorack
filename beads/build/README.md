@@ -45,7 +45,7 @@ This is the manual's delay or beat slicer, which turns on at SIZE fully clockwis
 On page 2 (FEEDBACK LED), DRY/WET selects Auto (Stock) / Never /
 Wide detent in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
 clockwise. Never keeps granular playback there. Wide detent keeps automatic
-switching and makes the delay filter neutral from 40% to 60% of its range,
+switching and makes the delay filter neutral in the middle of its range,
 with no resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
 neutral zone the remaining travel reaches the usual low-pass and high-pass
@@ -54,26 +54,24 @@ The setting is saved and defaults to Auto (Stock). It does not affect wavetable 
 
 ## Stereo width
 
-On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
-Move out of Stock above 13%; return below 7%.
-Above this zone it sets a continuous saved width: zero displacement at 13%
-to full random spread at fully clockwise. At zero width the input stereo
-positioning passes through and mono stays centred. Enabled width randomizes
-every grain, including at DENSITY fully clockwise with no other randomness.
-Pan is fixed at grain start; changes affect new grains only, including synth.
-The [A] LED is steady green for Stock. Enabled width blinks slowly, using
-Beads' green through yellow to red meter colour for the amount; adjacent saved
-amounts can share a colour.
-When enabled, short [M] presses cycle the three stock destinations then
+On page 1 (REVERB LED), DRY/WET sets the stereo width of the grains.
+At the bottom of the knob it is Stock. Turn clockwise from there and the
+grains spread wider, up to a full random spread fully clockwise. With the
+lowest width the input stereo positioning passes through and mono stays
+centred. Width randomizes every grain, even at DENSITY fully clockwise with no
+other randomness. Pan is fixed when a grain starts, so changes affect new
+grains only, including synth.
+The [A] LED is steady green for Stock. Width blinks slowly, using
+Beads' green through yellow to red meter colour for the amount.
+When width is on, short [M] presses cycle the three stock destinations then
 WIDTH; all three mix LEDs pulse together for WIDTH. The existing custom
-mix assignment remains available. assignable CV adds to resting width and clamps
-to 0..1. Stock keeps the stock cycle and pan rounding.
+mix assignment remains available. The assignable CV input (7) adds to the
+set width. Stock keeps the stock cycle and pan rounding.
 
 ## Monophonic grains
 
 Hold [A] first, then press SEED to toggle monophonic grains; the setting
-is saved and defaults off. The [A] LED is half as bright when on
-(the recording reserve can dim it further). This enables Mutable Instruments'
+is saved and defaults off. The [A] LED is dimmed when on. This enables Mutable Instruments'
 original code and gesture. Each new grain fades the previous grains out.
 It suits the square and decay SHAPE settings. Slower shapes can go nearly
 silent because each new grain cuts the previous one's attack. To recover
@@ -93,9 +91,9 @@ buffer-trim code.
 
 ## Frozen-buffer autosave
 
-Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
-short after erasing doubles the next wait, up to 320 seconds, until a save
-completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
+Autosave normally starts after FREEZE has been on for ten seconds. A save cut
+short (by powering off, for example) makes the next wait longer, until a save
+completes or FREEZE has been off for a minute; power-up starts at ten seconds.
 If FREEZE is released during wavetable synth, the minute starts when wavetable synth ends.
 
 ## Options page
@@ -109,37 +107,33 @@ Tap [M] to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
 (DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
 on entry. Reopening remembers the last page until power-off; power-up
 starts on page 1. [A] shows the first available setting on each page,
-then the last qualified knob moved. Move a knob more than 10% of its travel
-before it edits. Knobs marked Not used yet do nothing, including to [A] and saving.
+then the last knob you moved. A knob must be moved a little before it
+edits, so a bumped knob changes nothing. Knobs marked Not used yet do nothing, including to [A] and saving.
 
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
 2 / FEEDBACK        Not used yet  Delay mode    Not used yet
 3 / DRY/WET         Wavetable synth     Limiter       Not used yet
 
-Changes are saved after one second without qualified knob movement or a
-value change. A sweep through zones saves once when it settles. Close by
-holding [M] for three seconds or pressing another button; there is no
+Changes are saved by themselves about a second after you stop turning.
+Close by holding [M] for three seconds or pressing another button; there is no
 idle close or cancel. On page 1 with Scale selected, short SEED taps step
 the scale instead of closing options. A pending change still saves after closing: wait one second
 before powering off. Mix controls resume with smooth catch-up after closing.
-Guide arcs and shaded switching bands are generated from the firmware
-export; the zone descriptions are checked against that same export.
 Every first value, including Pitch Off, is steady green. Other values follow
-yellow, red, then green/yellow/red slow and fast blinking. Slow is about 1 Hz;
-fast is about 4 Hz. Raag Shri uses two yellow pulses then a pause.
-The page LED flashes for 100 ms on entry, close and after a changed batch is
+yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
+The page LED flashes briefly on entry, close and after a changed batch is
 written. [A] keeps showing the value. See [OPTIONS.md](OPTIONS.md) for every value.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
 Wavetable synth: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects
 Automatic (Stock) (steady green); upper half selects Manual (steady yellow).
-Move more than 10% of its travel to begin; the midpoint
-has a small dead band to prevent flicker.
+The knob must be moved a little before it switches, so a bumped knob
+changes nothing.
 Automatic (Stock) starts Beads as a granular wavetable synth after 10 s with both
 audio inputs unpatched, as the Beads manual describes. With Manual, it never starts by itself. With both audio inputs
-unpatched and FREEZE off, hold [A] for 1.5 seconds to start the wavetable synth;
+unpatched and FREEZE off, hold [A] for about a second and a half to start the wavetable synth;
 hold again to stop. Patching either input also stops it (once FREEZE is off).
 With an input patched, the hold restarts automatic gain as usual.
 Automatic (Stock) keeps stock behaviour.
@@ -148,8 +142,7 @@ resets it to Automatic (Stock).
 
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (steady yellow).
-Move more than 10% of its travel to begin; the midpoint
-has a small dead band. The [A] LED shows the last knob moved on this page.
+The knob must be moved a little before it switches. The [A] LED shows the last knob moved on this page.
 Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
 plus fixed diffusion on the grain wet output. In delay and wavetable synth modes,
 only the reverb character changes. Switching briefly fades the sound out and
@@ -165,7 +158,7 @@ then a pause). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons close the page. The setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start.
-The grid has a fixed root at unity (0 semitones); +1 V remains one octave.
+The grid has a fixed root at the unshifted pitch; +1 V remains one octave.
 Playing grains keep their pitch. Synth grains snap too; the continuous
 synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at

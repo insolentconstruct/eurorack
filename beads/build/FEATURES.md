@@ -229,3 +229,15 @@ Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality
 | Byte 14 | 0 Stock; 1..255 enabled width |
 | Byte 16 | 0 unassigned; 1 WIDTH assigned; all other values unassigned |
 | [M] | Optional fourth destination when width is enabled |
+
+## Exact option values
+
+The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
+
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch scale, Delay mode and Limiter use thirds; Reverb character and Wavetable synth use halves.
+- **Stereo width:** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
+- **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
+- **Delay mode, Wide detent:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
+- **Wavetable synth, Manual:** hold [A] 1.5 s to start or stop (the manual says 1 s).
+- **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
+- **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
