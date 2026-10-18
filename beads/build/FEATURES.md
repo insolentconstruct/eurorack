@@ -219,6 +219,8 @@ TEXTURE 0.925. Delay and self-play use the reverb character without the grain
 diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
 changes, including settled option changes. Module listening done; module timing remains to be measured.
 
+Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality; delay lengths remain in samples.
+
 ## Stereo width
 
 | Allocation | Use |

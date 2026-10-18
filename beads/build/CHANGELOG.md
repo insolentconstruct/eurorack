@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Clouds-style reverb modulation uses nominal 0.5/0.3 Hz rates in every recording quality.
 - Add generated printable and phone options guides, a text guide, and release ZIP copies.
 - Reorganize options across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Knobs marked Not used yet are inert. Reopening remembers the last page until power-off.
 - Save options after one second of settled controls. Hold ASSIGN 3 s or press another button to close; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, close and completed saves flash the page LED for 100 ms.

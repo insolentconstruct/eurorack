@@ -108,7 +108,7 @@ void Processor::Configure(Media media, bool mono) {
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
-  reverb_.Reset(clouds_style_ ? 32000.0f : sr);
+  reverb_.Reset(sr);
 }
 
 void Processor::Process(
