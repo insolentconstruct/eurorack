@@ -325,7 +325,8 @@ class GranularProcessor {
     const bool wide_detent = filter_mode_.wide_detent;
     float q_offset = wide_detent ? kWideDetentQOffset : kStockDelayQOffset;
     float q_scale = wide_detent ? 0.0f : kStockDelayQScale;
-    const float speed = stmlib::SemitonesToRatio(
+    // Rounded separately: identical results on every GCC version.
+    const volatile float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
     float bandwidth = 0.5f * (1.0f + parameters.size.attenuverter) + \
