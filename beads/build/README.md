@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
 
-**Beta 1, a call for testers:** tested on one module so far. Please report any problems you find, and what works. [TESTING.md](TESTING.md) shows how it was tested.
+**Beta 1 "Mist", a call for testers:** tested on one module so far. Please report any problems you find, and what works. [TESTING.md](TESTING.md) shows how it was tested.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 

@@ -3,7 +3,7 @@
 Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
-## Unreleased
+## 2026.10.18 (tag `drizzlet-2026.10.18`, beta 1 "Mist")
 - New options page layout on three pages. Page 1 (REVERB LED): pitch scale, stereo width, reverb character. Page 2 (FEEDBACK LED): delay mode. Page 3 (DRY/WET LED): wavetable synth (formerly self-play) and limiter. Changes save by themselves about a second after you stop turning; close by holding [M] for three seconds or pressing another button. Values show on the quality LED [A] in green, yellow and red, steady or blinking; stock values are steady green.
 - Printable, phone and text guides to the options page, also in the release zip.
 - Add pitch scale (page 1, FEEDBACK): Off, Chromatic, or one of eight scales from Marbles, chosen by tapping SEED. Each grain's pitch, including randomness, snaps to the scale when the grain starts (#6, #8).

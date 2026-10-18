@@ -3,7 +3,7 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-Beta 1, a call for testers: tested on one module so far.
+Beta 1 "Mist", a call for testers: tested on one module so far.
 Please report any problems you find. TESTING.md in the repository
 shows how it was tested.
 
