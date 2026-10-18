@@ -120,7 +120,7 @@ def _silent(x, sr, p):
 def _onsets_match_triggers(x, sr, p):
     on = onsets(seg(x, sr, p["win"]), sr) + p["win"][0]
     pending, lat = list(on), []
-    for t in p["triggers"]:  # each onset answers at most one trigger
+    for t in sorted(p["triggers"]):  # each onset answers at most one trigger
         match = next((o for o in pending if 0 <= o - t < 0.2), None)
         lat.append(None if match is None else match - t)
         if match is not None:

@@ -63,6 +63,13 @@ class Rules(unittest.TestCase):
                                  triggers=[1.0, 1.02])], x, SR)[0]
         self.assertEqual(r["verdict"], "FAIL")
 
+    def test_trigger_order_does_not_change_the_verdict(self):
+        x = bursts([1.1, 1.25])
+        got = [rules.evaluate([dict(rule="onsets_match_triggers", win=[0.5, 2.0],
+                                    triggers=ts)], x, SR)[0]["verdict"]
+               for ts in ([1.0, 1.08], [1.08, 1.0])]
+        self.assertEqual(got[0], got[1])
+
     def test_opposite_channels_are_not_silence(self):
         x = np.stack([0.2 * np.ones(SR), -0.2 * np.ones(SR)], 1)
         r = rules.evaluate([dict(rule="silent", win=[0.1, 0.5])], x, SR)[0]
