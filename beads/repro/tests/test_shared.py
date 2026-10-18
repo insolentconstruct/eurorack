@@ -86,6 +86,17 @@ class Level(unittest.TestCase):
         self.assertEqual(r["verdict"], "MEASURE")
         self.assertAlmostEqual(r["step_db"], 20 * np.log10(5), delta=0.2)
 
+    def test_offset_does_not_change_the_rate_denominator(self):
+        # (0.3 + 0.1) - (0.1 + 0.1) is 0.19999999999999998, not 0.2: the
+        # divisor is the scenario's window length whatever the offset.
+        x = np.concatenate([np.zeros(SR // 10),
+                            burst_train([0.2, 0.25], total=2.0)])
+        r = rules.evaluate([dict(rule="rate_order", wins=[[0.0, 0.2], [0.2, 0.4]],
+                                 clock_hz=8.0)], x, SR, offset_s=0.1)[0]
+        counts = [len(rules.onsets(rules.seg(x, SR, w), SR))
+                  for w in ((0.1, 0.3), (0.3, 0.5))]
+        self.assertEqual(r["rates_hz"], [c / 0.2 for c in counts])
+
     def test_offset_shifts_every_window(self):
         x = np.concatenate([np.zeros(SR), tone(440, 1.0)])
         self.assertEqual(one("not_silent", x, win=[0.2, 0.8])["verdict"], "FAIL")

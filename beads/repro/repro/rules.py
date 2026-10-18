@@ -179,7 +179,7 @@ def _level_step(x, sr, p, offset_s=0.0, ctx=None):
 def _dry_passes(x, sr, p, offset_s=0.0, ctx=None):
     s = mono(seg(x, sr, _shift(p["win"], offset_s)))
     f = dominant(s, sr)
-    if rms_db(s) < -60:  # a silent window has no dominant frequency to speak of
+    if rms_db(s) < -120:  # digital silence has no dominant frequency to speak of
         return dict(dominant_hz=f, verdict=FAIL, reason="window is silent")
     return dict(dominant_hz=f, verdict=_verdict(abs(f / p["freq"] - 1) < 0.01))
 
@@ -230,8 +230,8 @@ def _onset_count_min(x, sr, p, offset_s=0.0, ctx=None):
 
 
 def _rates(x, sr, p, offset_s):
-    return [len(onsets(seg(x, sr, _shift(w, offset_s)), sr)) /
-            ((w[1] + offset_s) - (w[0] + offset_s)) for w in p["wins"]]
+    return [len(onsets(seg(x, sr, _shift(w, offset_s)), sr)) / (w[1] - w[0])
+            for w in p["wins"]]
 
 
 def _rate_increasing(x, sr, p, offset_s=0.0, ctx=None):
