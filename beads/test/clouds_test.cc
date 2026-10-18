@@ -41,8 +41,8 @@
 
 using namespace beads;
 
-// Stock captures from da792fd and 1366739; Clouds captures use rate-aware
-// reverb modulation. All captures have contraction disabled.
+// Captures use explicit grain-pan FMA and rate-aware Clouds modulation.
+// Implicit contraction is disabled.
 #if defined(__aarch64__)
 const uint32_t kStockSynthHashes[4] = {
   0xe67ef064, 0xdde6451f, 0xde7f8524, 0x1777a760
@@ -63,13 +63,13 @@ const uint32_t kStockHashes[4][2] = {
   { 0x6eac02c8, 0x72c5604b },
   { 0x79a67055, 0x2d9eb3b9 },
   { 0x4d4af04d, 0xe5c6ff67 },
-  { 0x88735508, 0x780972b3 }
+  { 0xb7c98055, 0x780972b3 }
 };
 const uint32_t kCloudsHashes[4][2] = {
   { 0xebf12137, 0x3df5b30e },
   { 0xd01041dd, 0x5791b19d },
   { 0x1ba970f7, 0x85b58047 },
-  { 0x0063c890, 0x8955f0ae }
+  { 0x9cad2330, 0x8955f0ae }
 };
 
 static Processor processor;
