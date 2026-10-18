@@ -13,7 +13,7 @@ if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
     git show "f4cfa76:beads/$file" > "$stock/beads/$file"
   done
   docker run --rm --platform linux/amd64 --network none \
-    -e BEADS_TEST_CONTAINER=1 -e JOBS="${JOBS:-8}" -e UPDATE="${UPDATE:-0}" \
+    -e BEADS_TEST_CONTAINER=1 -e JOBS="${JOBS:-$(n=$(nproc); echo $(( n < 4 ? n : 4 )))}" -e UPDATE="${UPDATE:-0}" \
     -e STOCK_SOURCE_DIR=/stock-source -v "$stock:/stock-source:ro" \
     -v "$root:/src:$( [[ ${UPDATE:-0} == 1 ]] && echo rw || echo ro )" \
     -v "$out:/out" "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" \
@@ -27,7 +27,7 @@ for suite in beads/test/*.mk; do
   test=${suite##*/}
   test=${test%.mk}
   case "$test" in suite|audio_reference) continue ;; esac
-  make -j"${JOBS:-8}" -f "$suite" "BUILD_ROOT=$out/objects/" "TARGET=$out/${test}_test" test
+  make -j"${JOBS:-$(n=$(nproc); echo $(( n < 4 ? n : 4 )))}" -f "$suite" "BUILD_ROOT=$out/objects/" "TARGET=$out/${test}_test" test
   echo "PASS $test"
 done
 bash beads/test/storage_compat.sh "$out/storage"

@@ -55,7 +55,7 @@ One suite, from the repository root (inside the image):
 
 ```sh
 docker run --rm --network none -v "$PWD:/src:ro" beads-build-kit:gcc9 \
-  make -j8 -f beads/test/mix.mk BUILD_ROOT=/tmp/t/ TARGET=/tmp/t/mix_test test
+  make -j4 -f beads/test/mix.mk BUILD_ROOT=/tmp/t/ TARGET=/tmp/t/mix_test test
 ```
 
 A failure prints the test name and failing condition:

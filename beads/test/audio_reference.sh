@@ -10,7 +10,7 @@ variants=(current)
 for variant in "${variants[@]}"; do
   include=()
   [[ "$variant" != reference ]] || include+=(REFERENCE_INCLUDE=-Ibeads/test/reference)
-  make -j"${JOBS:-8}" -f beads/test/audio_reference.mk "BUILD_ROOT=$out/objects/" \
+  make -j"${JOBS:-$(n=$(nproc); echo $(( n < 4 ? n : 4 )))}" -f beads/test/audio_reference.mk "BUILD_ROOT=$out/objects/" \
     "TARGET=$out/audio-$variant" "${include[@]}"
   ASAN_OPTIONS=detect_leaks=0 "$out/audio-$variant" "$out/$variant.f32"
 done
