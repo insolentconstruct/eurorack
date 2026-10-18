@@ -265,7 +265,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         flat = " ".join(labels)
         for phrase in STYLE_BANNED:
             assert phrase not in flat, (name, phrase)
-        assert "[A] (MEDIA) LED" in labels and "[M] (ASSIGN)" in labels
+        assert "Quality LED [A]" in labels and "[M] CV assign" in labels
         for row in rows:
             _, _, _, setting, value, color, pulse = row.split("\t")
             if setting != "Not used yet":

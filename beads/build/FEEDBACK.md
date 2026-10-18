@@ -3,7 +3,7 @@
 # Options feedback
 
 The options page follows the three-page control map in [README.txt](README.txt).
-Report which page LED was pulsing, which knob moved, the [A] (MEDIA) colour/pulse,
+Report which page LED was pulsing, which knob moved, the quality button [A] colour/pulse,
 and the setting expected. Changes save after one second of settled controls;
 closing retains them. There is no idle close. Knobs marked Not used yet are inert.
 

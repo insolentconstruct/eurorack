@@ -120,7 +120,7 @@ cycles for rows 1/4/5/6 (callback) and Stock fixture (callback minus fixture).
 Report Clouds and combined-option margins separately; no hardware result
 is implied by offline checks.
 
-Options open on page 1 (REVERB LED): hold [M] (ASSIGN) alone for 3 s, then
+Options open on page 1 (REVERB LED): hold the CV-assign button [M] alone for 3 s, then
 release. On page 1, FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in
 Scale, short SEED taps cycle the scales through Shri), and REVERB selects
 Stock/Clouds-style reverb (lower/upper half). Two [M] taps reach page 3

@@ -1,6 +1,6 @@
 # Beads manual errata
 
-**TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s [A] (MEDIA) hold for automatic gain and 12 synth banks rather than 8.
+**TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s the quality button [A] hold for automatic gain and 12 synth banks rather than 8.
 
 Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the module page differ from the released firmware source. Everything here was checked against the source; Drizzlet keeps all of it unless noted. Drizzlet's own additions are in [README.md](README.md) and [FEATURES.md](FEATURES.md).
 
@@ -19,7 +19,7 @@ Several differences come from the April 2021 firmware update, which the manual p
 - **Unfreezing:** recording resumes with a short crossfade from audio received just after FREEZE was engaged into the current input. It does not replay the old buffer tail. <!-- manual.md:47; beads/dsp/delay_line.h:180,296-322; release notes post 1 -->
 - **Synth banks:** FEEDBACK (and its assigned CV) selects **12 banks** of 16 waveforms, not 8; four FM banks were added. <!-- manual.md:182; beads/dsp/synth.h:43; beads/dsp/synth.cc:82; release notes post 1 -->
 - **Shortest grains:** grains near the reverse/forward point of SIZE (about 10:30) can be much shorter than 30 ms, down to about 8 ms requested (10–20 ms heard, depending on SHAPE). <!-- manual.md:91; index.md:51; beads/dsp/granular_player.h:97-104; beads/dsp/grain_envelope.h -->
-- **Autosave toggle:** hold [M] (ASSIGN) and press FREEZE to turn buffer autosave on or off. FREEZE lights dim for off, brighter for on. With it off, a saved buffer is also not loaded at power-up. <!-- manual.md:49; beads/ui.cc:195-196,276-285; beads/background_buffer_backup.cc:54-56,154-158 -->
+- **Autosave toggle:** hold the CV-assign button [M] and press FREEZE to turn buffer autosave on or off. FREEZE lights dim for off, brighter for on. With it off, a saved buffer is also not loaded at power-up. <!-- manual.md:49; beads/ui.cc:195-196,276-285; beads/background_buffer_backup.cc:54-56,154-158 -->
 - **Delay bandwidth:** in delay and slice mode, the SIZE attenurandomizer is a filter: counterclockwise darker, centre unfiltered, clockwise thinner. SIZE CV also moves it, even with the attenurandomizer at noon. <!-- manual.md:93,102,174; beads/dsp/granular_processor.h:280-282,329-351; beads/dsp/multitap_delay.h:38; release notes post 1 -->
 - **Overwrite indicator:** while recording, the quality LED fades as the record head approaches the point where FREEZE was last released, then brightens once past it. Not in wavetable synth mode. <!-- manual.md:32; beads/beads.cc:156; beads/dsp/processor.h:116-119; beads/ui.cc:189-192 -->
 - **Manual gain display:** while setting manual gain ([A] + FEEDBACK), the quality LED becomes a green-to-red gain indicator. <!-- manual.md:44; beads/ui.cc:152-153,186-192 -->

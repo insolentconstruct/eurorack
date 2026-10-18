@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Export the firmware options layout and [A] (MEDIA) LED indications as TSV.
+// Export the firmware options layout and quality LED [A] indications as TSV.
 
 #include <cstdio>
 #include "beads/options.h"

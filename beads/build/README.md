@@ -12,7 +12,10 @@ Install at your own risk. Please do not contact Mutable Instruments about it; re
 
 ## Quick start
 
-Hold [M] (ASSIGN) for three seconds and release to enter. Tap [M] to change
+Controls use the letters from the Beads manual: [A] is the quality button, which
+selects the recording quality, and [M] is the button that assigns the CV input (7).
+
+Hold the CV-assign button [M] for three seconds and release to enter. Tap [M] to change
 page; move a mix knob and rest it for one second to save.
 See the [text guide](OPTIONS.md) and [printable guide](options-guide.svg).
 
@@ -49,7 +52,7 @@ switching and makes the delay filter neutral in the middle of its range,
 with no resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
 neutral zone the remaining travel reaches the usual low-pass and high-pass
-ends. The [A] (MEDIA) LED shows steady green / yellow / red.
+ends. The quality LED [A] shows steady green / yellow / red.
 The setting is saved and defaults to Auto (Stock). It does not affect wavetable synth mode.
 
 ## Stereo width
@@ -103,7 +106,7 @@ Visual and text guides: OPTIONS.md, options-guide.svg (printable), and
 options-guide-mobile.svg (phone). Find them beside this README in release
 zips, or beside the build documentation in the source download.
 
-Hold [M] (ASSIGN) alone for three seconds with the mix knobs still; then release.
+Hold the CV-assign button [M] alone for three seconds with the mix knobs still; then release.
 Tap [M] to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
 (DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
 on entry. Reopening remembers the last page until power-off; power-up
