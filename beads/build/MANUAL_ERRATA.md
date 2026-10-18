@@ -1,6 +1,6 @@
 # Beads manual errata
 
-**TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s the quality button [A] hold for automatic gain and 12 synth banks rather than 8.
+**TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s hold of the quality button [A] for automatic gain and 12 synth banks rather than 8.
 
 Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the module page differ from the released firmware source. Everything here was checked against the source; Drizzlet keeps all of it unless noted. Drizzlet's own additions are in [README.md](README.md) and [FEATURES.md](FEATURES.md).
 

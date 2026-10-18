@@ -84,7 +84,7 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 | Grain generation: SEED, DENSITY | 16 | 16 | |
 | Grain playback: TIME, PITCH, SIZE, SHAPE | 13 | 12 | 1 untestable |
 | Attenurandomizers | 9 | 9 | |
-| Mixing, output, ASSIGN | 14 | 11 | 2 need a module, 1 untestable |
+| Mixing, output, CV assignment | 14 | 11 | 2 need a module, 1 untestable |
 | Delay and slicer | 19 | 19 | |
 | Synth mode | 15 | 14 | 1 untestable |
 | Calibration and recovery | 3 | 2 | 1 untestable |
