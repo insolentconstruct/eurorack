@@ -66,8 +66,7 @@ jobs:
       - name: List test programs
         id: list
         run: |
-          echo "programs=$(find beads/test -maxdepth 1 -name '*.mk' ! -name host.mk -printf '%f\n' \
-            | sed 's/\.mk$//' | sort | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          echo "programs=$(jq -c . beads/test/ci-jobs.json)" >> "$GITHUB_OUTPUT"
   host-tests:
     needs: list-host-tests
     runs-on: ubuntu-24.04
@@ -75,8 +74,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        program: ${{ fromJSON(needs.list-host-tests.outputs.programs) }}
-    name: host test (${{ matrix.program }})
+        include: ${{ fromJSON(needs.list-host-tests.outputs.programs) }}
+    name: host test (${{ matrix.name }})
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -84,10 +83,11 @@ jobs:
           persist-credentials: false
       - name: Initialize stmlib
         run: git submodule update --init stmlib
-      - name: Run ${{ matrix.program }}
+      - name: Run ${{ matrix.name }}
         env:
-          PROGRAM: ${{ matrix.program }}
-        run: make -f "beads/test/$PROGRAM.mk" test
+          COMMANDS: ${{ matrix.run }}
+        run: bash -euo pipefail -c "$COMMANDS"
+
   options-guide:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -99,4 +99,4 @@ jobs:
       - name: Initialize stmlib
         run: git submodule update --init stmlib
       - name: Check exported tables and generated guides
-        run: make -f beads/build/tools/options_tables.mk test
+        run: make -j"$(nproc)" -f beads/build/tools/options_tables.mk test

@@ -7,7 +7,8 @@ VPATH = $(PACKAGES) beads/dsp/fx
 BUILD_ROOT ?= build/
 BUILD_DIR = $(BUILD_ROOT)$(TARGET)/
 HOST_SANITIZERS ?= 1
-HOST_FLAGS += -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedefs \
+# Favor sanitizer runtime over code size in native tests (not firmware builds).
+HOST_FLAGS += -DTEST -O1 -g -Wall -Werror -Wno-unused-local-typedefs \
 	$(addprefix -I,$(STUBS)) -I.
 ifeq ($(HOST_SANITIZERS),1)
 HOST_FLAGS += -fsanitize=address,undefined,integer-divide-by-zero \
@@ -46,6 +47,6 @@ $(DEP_FILE): $(BUILD_DIR) $(DEPS)
 test: run-test
 .PHONY: run-test
 run-test: $(TARGET)
-	ASAN_OPTIONS=detect_leaks=0 ./$(TARGET)
+	ASAN_OPTIONS=detect_leaks=0 ./$(TARGET) $(TEST_ARGS)
 
 include $(DEP_FILE)

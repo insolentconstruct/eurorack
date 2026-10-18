@@ -55,7 +55,7 @@ execute more than once. The manual-coverage totals below are unchanged.
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
-The table lists the tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; each test program also runs as its own job on every push.
+The table lists the tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the ASSIGN LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; the host checks run in eight balanced jobs on every push.
 
 Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
 
@@ -211,3 +211,18 @@ that both SVGs change, and exercises release ZIP packaging with tiny
 placeholder assets.
 The printable SVG uses a 190 mm wide page area within both A4 and Letter;
 print at actual size, centred, with browser headers and footers disabled.
+
+## Host CI groups
+
+`beads/test/ci-jobs.json` is the single list of host jobs and their commands.
+The workflow's `list-host-tests` job reads it into the matrix. Short suites
+share three jobs; delay mode uses three jobs and Clouds uses two. Each make
+invocation uses `-j$(nproc)` and retains its existing sanitizer flags. Native
+tests use `-O1` rather than `-Os`: size optimization made sanitized DSP renders
+particularly slow with the Ubuntu 24.04 compiler. Firmware flags are unchanged.
+
+See [the host test README](../test/README.md) for selection and local commands.
+The quantizer delay comparison warms each quality/channel processor once and
+restores that state for the comparison, instead of rendering the same warmup
+twice. All eight quality/channel cases, the 16000-block warmup duration and
+1200 comparison blocks per output are retained.

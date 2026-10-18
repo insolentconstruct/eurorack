@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "beads/test/test_checker.h"
+#include "beads/test/test_runner.h"
 
 #define private public
 #include "beads/dsp/processor.h"
@@ -236,38 +237,45 @@ void TestDelayBandwidthAndCv() {
       < 0.00001f);
 }
 
-void TestQuantizerDelayBypass() {
-  test_checker.Start("TestQuantizerDelayBypass");
-  for (int quality = 0; quality < 4; ++quality) {
-    for (int mono = 0; mono < 2; ++mono) {
-      Rig off;
-      Rig on;
-      off.processor.Configure(Processor::Media(quality), mono);
-      on.processor.Configure(Processor::Media(quality), mono);
-      off.parameters.pitch.base = 3.4f;
-      on.parameters.pitch.base = 3.4f;
-      off.parameters.pitch.attenuverter = 0.8f;
-      on.parameters.pitch.attenuverter = 0.8f;
-      stmlib::Random::Seed(123);
-      off.Run(16000);
-      stmlib::Random::Seed(123);
-      on.Run(16000);
-      CHECK(off.processor.delay_mode_transition_ > 1.49f);
-      CHECK(on.processor.delay_mode_transition_ > 1.49f);
-      on.processor.set_pitch_scale(PITCH_SCALE_PELOG);
-      std::vector<float> expected;
-      std::vector<float> actual;
-      stmlib::Random::Seed(123);
-      for (int i = 0; i < 1200; ++i) {
-        off.Block(&expected);
-      }
-      stmlib::Random::Seed(123);
-      for (int i = 0; i < 1200; ++i) {
-        on.Block(&actual);
-      }
-      CHECK(expected == actual);
+void CheckQuantizerDelayBypass(int quality) {
+  for (int mono = 0; mono < 2; ++mono) {
+    Rig r;
+    r.processor.Configure(Processor::Media(quality), mono);
+    r.parameters.pitch.base = 3.4f;
+    r.parameters.pitch.attenuverter = 0.8f;
+    stmlib::Random::Seed(123);
+    r.Run(16000);
+    CHECK(r.processor.delay_mode_transition_ > 1.49f);
+    // Both comparisons start from exactly the same warmed processor. Restore
+    // into the same Rig so its internal buffer pointers remain valid.
+    std::vector<uint8_t> saved(sizeof(r));
+    memcpy(&saved[0], &r, sizeof(r));
+    std::vector<float> expected;
+    std::vector<float> actual;
+    stmlib::Random::Seed(123);
+    for (int i = 0; i < 1200; ++i) {
+      r.Block(&expected);
     }
+    memcpy(static_cast<void*>(&r), &saved[0], sizeof(r));
+    r.processor.set_pitch_scale(PITCH_SCALE_PELOG);
+    stmlib::Random::Seed(123);
+    for (int i = 0; i < 1200; ++i) {
+      r.Block(&actual);
+    }
+    CHECK(expected == actual);
   }
+}
+
+void TestQuantizerDelayBypassDigital() {
+  test_checker.Start("TestQuantizerDelayBypassDigital");
+  CheckQuantizerDelayBypass(0);
+  CheckQuantizerDelayBypass(1);
+}
+
+void TestQuantizerDelayBypassTape() {
+  test_checker.Start("TestQuantizerDelayBypassTape");
+  CheckQuantizerDelayBypass(2);
+  CheckQuantizerDelayBypass(3);
 }
 
 void TestDelayOptions() {
@@ -395,15 +403,20 @@ void TestDelayModeSwitchClick() {
   }
 }
 
-int main() {
-  setvbuf(stdout, NULL, _IONBF, 0);
-  TestDelayFilterRamp();
-  TestDelayModeSwitchClick();
-  TestDelayOptions();
-  TestContinuousDelayPlayback();
-  TestQuantizerDelayBypass();
-  TestDelayModeFade();
-  TestDelayRotaryPitch();
-  TestDelayBandwidthAndCv();
-  return test_checker.failures() ? 1 : 0;
+int main(int argc, char** argv) {
+  setbuf(stdout, NULL);
+  const HostTest tests[] = {
+    { "TestDelayFilterRamp", TestDelayFilterRamp },
+    { "TestDelayModeSwitchClick", TestDelayModeSwitchClick },
+    { "TestDelayOptions", TestDelayOptions },
+    { "TestContinuousDelayPlayback", TestContinuousDelayPlayback },
+    { "TestQuantizerDelayBypassDigital", TestQuantizerDelayBypassDigital },
+    { "TestQuantizerDelayBypassTape", TestQuantizerDelayBypassTape },
+    { "TestDelayModeFade", TestDelayModeFade },
+    { "TestDelayRotaryPitch", TestDelayRotaryPitch },
+    { "TestDelayBandwidthAndCv", TestDelayBandwidthAndCv },
+  };
+  const int result = RunHostTests(argc, argv, tests,
+      sizeof(tests) / sizeof(tests[0]));
+  return result ? result : (test_checker.failures() ? 1 : 0);
 }

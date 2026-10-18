@@ -38,6 +38,7 @@
 #include "beads/dsp/fx/diffuser.h"
 #endif
 #include "beads/test/test_checker.h"
+#include "beads/test/test_runner.h"
 
 using namespace beads;
 
@@ -242,11 +243,15 @@ void TestDiffuserImpulse() {
 #endif
 }
 
-int main() {
+int main(int argc, char** argv) {
   setbuf(stdout, NULL);
-  TestStockHashes();
-  TestCloudsOutput();
-  TestReverbRates();
-  TestDiffuserImpulse();
-  return test_checker.failures() ? 1 : 0;
+  const HostTest tests[] = {
+    { "TestStockHashes", TestStockHashes },
+    { "TestCloudsOutput", TestCloudsOutput },
+    { "TestReverbRates", TestReverbRates },
+    { "TestDiffuserImpulse", TestDiffuserImpulse },
+  };
+  const int result = RunHostTests(argc, argv, tests,
+      sizeof(tests) / sizeof(tests[0]));
+  return result ? result : (test_checker.failures() ? 1 : 0);
 }

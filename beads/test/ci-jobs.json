@@ -1,0 +1,34 @@
+[
+  {
+    "name": "delay-digital",
+    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestQuantizerDelayBypassDigital'"
+  },
+  {
+    "name": "delay-tape",
+    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestQuantizerDelayBypassTape'"
+  },
+  {
+    "name": "delay-playback",
+    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestDelayFilterRamp TestDelayModeSwitchClick TestDelayOptions TestContinuousDelayPlayback TestDelayModeFade TestDelayRotaryPitch TestDelayBandwidthAndCv'"
+  },
+  {
+    "name": "clouds-stock",
+    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestReverbRates TestDiffuserImpulse'"
+  },
+  {
+    "name": "clouds-style",
+    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestCloudsOutput'"
+  },
+  {
+    "name": "firmware-controls",
+    "run": "make -j\"$(nproc)\" -f beads/test/firmware.mk test\nmake -j\"$(nproc)\" -f beads/test/options.mk test\nmake -j\"$(nproc)\" -f beads/test/gain.mk test\nmake -j\"$(nproc)\" -f beads/test/pitch_quantizer.mk test\nmake -j\"$(nproc)\" -f beads/test/trigger.mk test"
+  },
+  {
+    "name": "delay-grains",
+    "run": "make -j\"$(nproc)\" -f beads/test/delay.mk test\nmake -j\"$(nproc)\" -f beads/test/granular.mk test"
+  },
+  {
+    "name": "processor-audio",
+    "run": "make -j\"$(nproc)\" -f beads/test/backup.mk test\nmake -j\"$(nproc)\" -f beads/test/processor.mk test\nmake -j\"$(nproc)\" -f beads/test/mix.mk test\nmake -j\"$(nproc)\" -f beads/test/wavetable.mk test"
+  }
+]
