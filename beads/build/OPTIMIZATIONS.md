@@ -102,7 +102,7 @@ These come from Mutable Instruments' code and tech notes ([STM32 miscellania](ht
 
 Mutable Instruments' notes describe no sound-identity checks and none of the acceptance gates below; these are Drizzlet's, and stricter.
 
-1. Follow Mutable Instruments style ([STYLE.md](STYLE.md)): their idioms first, no clever constructs that need a comment to justify.
+1. Follow [STYLE.md](STYLE.md): upstream master conventions win, Beads first; keep compatible Drizzlet policies marked `(Drizzlet)`.
 2. Measure the gain on the worst case (q3 stereo stress32, plus Clouds-style). Report peak and median, flash and RAM, and what got slower.
 3. Prefer bit-identical output; show it with Seed3 hashes, emulator audio and long runs.
 4. Any difference is flagged with its largest error and whether it drifts. It is accepted only if the error stays strictly below -90 dBFS (0.0000316 FS) with no drift, and is documented here.

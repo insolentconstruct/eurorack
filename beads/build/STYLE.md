@@ -8,12 +8,12 @@ rules come after those sources; leave unrelated existing code alone.
 
 - 2-space indent, no tabs in C/C++. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
 - Put firmware code in `namespace beads` and close it with `}  // namespace beads`. Host test functions may be global, as in MI tests.
-- New headers use `BEADS_<PATH>_H_` guards, e.g. `BEADS_DSP_LIMITER_H_`.
-- Includes, usually: the file's own header, then `<system>`, `stmlib/...`, `beads/...`.
+- New headers use `BEADS_<PATH>_H_` guards, closed by `#endif  // BEADS_<PATH>_H_`.
+- Includes, usually: the file's own header, then `<system>`, `stmlib/...`, `beads/...`, with blank lines between groups. Imports such as `using namespace std;` or `using namespace stmlib;` appear inside the module namespace where needed, usually in `.cc` files; some headers also use them.
 
 ## File and folder structure
 
-- Follow the [released Beads source](https://github.com/pichenettes/eurorack/tree/d8f4739/beads) first. Keep the entry point (`beads.cc`), UI, settings and module coordination at the top level; hardware access in `drivers/`, audio processing in `dsp/`, effects in `dsp/fx/`.
+- Follow the Beads source on upstream master first. Keep the entry point (`beads.cc`), UI, settings and module coordination at the top level; hardware access in `drivers/`, audio processing in `dsp/`, effects in `dsp/fx/`.
 - Keep resource generators and inputs in `resources/`, host tests in `test/`, boot code in `bootloader/`, board and panel files in `hardware_design/`, and standalone generators in `tools/`. Keep makefiles at the module root, `bootloader/makefile` and `test/makefile`.
 - Follow the module's existing folders. Plaits has `dsp/engine/`, `dsp/oscillator/` and other DSP groups; Stages keeps processing classes at the top level, Marbles uses `random/` and `ramp/`, and Tides 2 uses `ramp/`. Don't impose Beads' tree on them.
 - Use `lower_snake_case.h` / `.cc` matching the main class (`DelayClock` in `dsp/delay_clock.*`). Pair declarations with out-of-line definitions; small inline DSP helpers and templates stay header-only (`dsp/delay_line.h`), as do module helpers (`pot_controller.h`). Don't add a `.cc` just for symmetry.
@@ -25,66 +25,71 @@ rules come after those sources; leave unrelated existing code alone.
 
 ### Drizzlet test exceptions
 
-- Keep several focused test programs with their own `<name>.mk` files so sanitizer builds, UI variants and hardware replacements can use separate flags, sources and object directories. Share small helpers in headers such as `test_checker.h`.
-- Keep `test/*_stubs/` for host tests only; programs may share them (the granular and processor tests use the options stubs). Their nested paths mirror firmware includes so an earlier `-I` can replace hardware headers without changing firmware code.
-- Keep `test/mutation_check.py` beside the tests; it checks that deliberate faults fail in disposable copies. This tooling and the build kit in `build/` are Drizzlet additions, not MI folder conventions.
+- (Drizzlet) Keep several focused test programs with their own `<name>.mk` files so sanitizer builds, UI variants and hardware replacements can use separate flags, sources and object directories. Share small helpers in headers such as `test_checker.h`.
+- (Drizzlet) Keep `test/*_stubs/` for host tests only; programs may share them (the granular and processor tests use the options stubs). Their nested paths mirror firmware includes so an earlier `-I` can replace hardware headers without changing firmware code.
+- (Drizzlet) Keep `test/mutation_check.py` beside the tests; it checks that deliberate faults fail in disposable copies. This tooling and the build kit in `build/` are Drizzlet additions, not MI folder conventions.
 
 ## Names
 
-- Types and methods: `PascalCase` (`Process`, `Init`). Accessors, locals and parameters: `lower_case`.
+- Types and methods: `PascalCase` (`Process`, `Init`). Accessors, locals and parameters: `lower_case`. Common accessors are `inline T name() const`, setters `set_name(...)`, and mutable storage access `mutable_name()`; some getters omit `const`.
 - Private members end in `_` (`peak_lp_`); public struct fields usually don't.
-- Put new named constants at namespace scope, using `kPascalCase`. Named enum values and macros: `ALL_CAPS`, enum values with a common prefix (`MEDIA_DIGITAL`).
+- Named constants use `kPascalCase`, at namespace scope or as class-local `static const`. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`.
 
 ## Classes
 
 - Most stateful classes have empty constructors, set up in `Init()`, and end with `DISALLOW_COPY_AND_ASSIGN(Name);`.
 - Small DSP classes usually live in the header. Follow how nearby files are split.
-- Templates are used for fixed DSP variants (sample resolution, buffer size, channel count).
+- Templates configure fixed DSP variants (sample resolution, buffer size, channel count) at compile time, rather than providing compiler hints.
+- Plain settings/frame structs commonly have public fields, no constructor and no `DISALLOW_COPY_AND_ASSIGN`; persistent records use `enum { tag = 0x... };`.
+- Out-of-line static member definitions commonly have `/* static */` on the preceding line.
+- Firmware uses global or class-static buffers, with section placement where needed, passed to `Init()`; no heap in firmware. Host tests may allocate dynamically.
 
 ## Code
 
-- Pass new arguments explicitly rather than adding default arguments.
-- C++98-era syntax: no `auto`, `nullptr`, lambdas or `constexpr`.
+- (Drizzlet) Pass new arguments explicitly rather than adding default arguments.
+- C++98-era subset: no `auto`, `nullptr`, lambdas or `constexpr`; no exceptions or RTTI, and no STL or virtual dispatch in per-sample code.
 - Prefer `const` for locals that don't change, and `bool` for flags.
 - Loops: `while (size--)` with a pointer, or an indexed `for`; indices are usually `size_t` or `int`.
 - Use the stmlib helpers: `CONSTRAIN`, `ONE_POLE`, `SLOPE`, `ParameterInterpolator`, the `Interpolate*` functions and lookup tables.
-- Numeric casts: `float(x)` or `static_cast<T>(x)`.
-- New float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
+- Numeric casts commonly use `T(x)` or `static_cast<T>(x)`. Drivers also use C casts for register and DMA addresses.
+- (Drizzlet) New float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
 - Initialize struct fields one by one, as in Beads codec frames.
 - Name a constant when it has meaning; small obvious numbers can stay inline.
 
 ## Performance
 
-From Mutable Instruments ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/) and their code):
+Observed upstream DSP conventions and design principles:
 
-- Specialize hot DSP on configuration values with template parameters (Clouds' grain renderer, stmlib's filter), and measure, because it can be slower.
-- Do control work once per block and audio work per sample (`ParameterInterpolator`, lookup tables).
-- Keep loop state in locals so it stays in registers.
+- Use float on FPU parts; use lookup tables where measurement shows they are faster.
+- Specialize configuration with template parameters and measure; specialization can be slower.
+- Process audio in blocks, do control work once per block, and keep loop state in locals so it can stay in registers.
+- Keep interrupt `Poll()` work constant-time; put deferred work in `DoEvents()` or the main loop.
 - Prefer a data-format fix (for example fixed-point delay addresses) over micro-tuning.
-- Design for 80 to 95% of the CPU, with 99% of the block as the hard ceiling.
-
-Drizzlet adds: an audio-path change needs a measured cycle count and the sound check in [OPTIMIZATIONS.md](OPTIMIZATIONS.md) (bit-identical, or a flagged difference below -90 dBFS).
+- Spend spare CPU on audio-rate quality; measure the worst-case block cost and leave deadline headroom.
+- Keep DSP portable and test it on the desktop.
+- (Drizzlet) An audio-path change needs a measured cycle count and the sound check in [OPTIMIZATIONS.md](OPTIMIZATIONS.md) (bit-identical, or a flagged difference below -90 dBFS).
 
 ## Comments
 
-- Brief `//` comments that explain intent. Short labels and units are fine.
-- New files use the existing header format with your own name: `// Copyright YEAR Your Name.`, `// Author: Your Name (email)`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
+- Brief `//` comments explain intent; trailing comments usually have two spaces before `//`. Short labels and units are fine. Measured-cost comments, honest hack labels, owned `TODO(...)` notes and retained commented profiling switches are useful upstream idioms, not required boilerplate.
+- (Drizzlet) New files use the existing header format with Insolent Construct attribution: `// Copyright YEAR Insolent Construct.`, `// Author: Insolent Construct`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
 
 ## Project policy
 
 - Don't edit the copyright headers of existing files.
-- Keep stock behaviour unchanged unless the change is the point. New options default to stock.
-- No compiler hints such as `__builtin_expect`, `noinline` or `flatten`.
-- Behaviour changes get a line in CHANGELOG.md.
+- (Drizzlet) Keep stock behaviour unchanged unless the change is the point. New options default to stock.
+- MI uses `packed`, `aligned`, section placement (`IN_RAM`, `.ramd*`, `.dma`) and `always_inline` on a separate declaration. MI module code never uses `__builtin_expect`, `noinline` or `flatten`; keep that restriction.
+- (Drizzlet) Behaviour changes get a line in CHANGELOG.md.
 
 ## Tests
 
-- Use `void TestXxx()` functions called from `main()`.
-- Print `ERROR: <test>: <condition>` and count failures; return non-zero on failure.
-- Keep compile-time layout checks and sanitizer coverage.
+- MI host programs commonly render WAVs or print values for listening/plotting; checks include assertions and printed errors. Beads comments out its test calls in `main()`; other modules run tests actively.
+- (Drizzlet) CI programs use `void TestXxx()` functions, print `ERROR: <test>: <condition>`, count failures and return non-zero; this adapts the printed-error checker idiom.
+- (Drizzlet) Keep compile-time layout checks and sanitizer coverage.
 - Preserve the file's licence. For new host files, use the Beads/Clouds MIT
   header, separator and brief description. Upstream Plaits, Marbles and Stages
   tests instead retain GPL headers without a separator; do not replace them.
-- Use one Beads-style makefile per program; run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
-- CI runs every `beads/test/*.mk` as its own job, and `mutation_check.py` weekly; a new program needs no workflow change.
+- (Drizzlet) Use one makefile per program, following the host `beads/test/makefile` structure (`PACKAGES`, `VPATH`, explicit `CC_FILES`, `-DTEST -Wall -Werror`); run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
+- (Drizzlet) CI runs every `beads/test/*.mk` as its own job, and `mutation_check.py` weekly; a new program needs no workflow change.
 - Make recipes use tabs, as in upstream test makefiles.
+- Firmware makefiles commonly keep the MIT header, aligned assignments, `PACKAGES` and `include stmlib/makefile.inc`; Beads gives an overridable `TOOLCHAIN_PATH ?=` default with compiler comparison comments. Host makefiles list sources explicitly and need not have the firmware header, toolchain default or include.

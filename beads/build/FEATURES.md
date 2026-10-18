@@ -198,7 +198,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 - Give zero/unknown settings the stock default; preserve the 24-byte State layout and accept that stock saves erase extension bytes. <!-- derived: beads/settings.h:74-85; stock:beads/settings.cc:94-96; stmlib/system/sector_storage_h7xx.h:168-175 -->
 - Change load/save clearing when assigning padding; do not claim byte 9 or flash journal/backup tails as free. <!-- derived: beads/settings.cc:84,96-99; beads/settings.h:59; beads/background_buffer_backup.cc:95-116,157 -->
 - Check button order, long holds, startup and disabled-feature collisions; keep calibration/reset/update chords reserved. <!-- derived: beads/ui.cc:315-399; beads/bootloader/bootloader.cc:315-322; beads/beads.cc:329 -->
-- Keep new options stock by default; account for both processor and synth, and restore borrowed controls/LEDs after editing. <!-- beads/build/STYLE.md:42; derived: beads/beads.cc:244-261; beads/ui.cc:123-134,198-308 -->
+- Keep new options stock by default; account for both processor and synth, and restore borrowed controls/LEDs after editing. <!-- beads/build/STYLE.md:80; derived: beads/beads.cc:244-261; beads/ui.cc:123-134,198-308 -->
 - Reserve flash by erase sector; measure CPU and stack on the actual build before spending static size headroom. <!-- derived: stmlib/system/sector_storage_h7xx.h:43-59,149-164; linker script:29-42; measurement: CI 38491527444 app.elf -->
 
 ## Decisions
