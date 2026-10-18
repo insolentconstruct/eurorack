@@ -1,0 +1,44 @@
+# Panel geometry for the options guides, in mm from the top-left of the panel.
+# Source: hardware_design/panel/beads.ai (PDF-compatible Illustrator file), the 1:1
+# red hole/outline layer: each stroked square is the bounding box of one cut-out.
+# Centres and diameters only; no artwork. Letters/numbers follow the Beads manual.
+# hardware licence: CC BY-SA 3.0 (repository README).
+letter	kind	name	x_mm	y_mm	diameter_mm
+	mount		7.50	125.50	3.21
+	mount		7.50	3.02	3.21
+	mount		63.38	125.50	3.21
+	mount		63.38	3.02	3.21
+I	attenurandomizer	TIME	18.22	80.59	6.81
+I	attenurandomizer	SIZE	29.69	80.59	6.81
+I	attenurandomizer	SHAPE	41.12	80.59	6.81
+I	attenurandomizer	PITCH	52.58	80.59	6.81
+G	knob	SIZE	24.29	60.59	7.51
+E	knob	TIME	11.59	38.40	7.51
+F	knob	PITCH	59.25	38.40	7.51
+A	button	quality selector	35.40	45.03	5.19
+A	led	quality LED	29.02	45.03	3.14
+(7)	jack	assign CV	6.77	96.48	6.49
+(6)	jack	TIME CV	18.24	96.48	6.49
+(6)	jack	SIZE CV	29.67	96.48	6.49
+(6)	jack	SHAPE CV	41.13	96.48	6.49
+(6)	jack	PITCH CV	52.56	96.48	6.49
+(5)	jack	DENSITY CV	64.03	96.48	6.49
+(1)	jack	IN L	6.77	111.09	6.49
+(1)	jack	IN R	18.24	111.09	6.49
+(3)	jack	FREEZE gate	29.67	111.09	6.49
+(4)	jack	SEED	41.13	111.09	6.49
+(8)	jack	OUT L	52.56	111.09	6.49
+(8)	jack	OUT R	64.03	111.09	6.49
+2	led	input level LED	12.52	104.74	3.10
+M	button	CV assign	6.76	76.78	5.19
+H	knob	SHAPE	46.55	60.59	7.51
+J	knob	FEEDBACK	6.79	60.59	6.81
+K	knob	DRY/WET	64.05	60.59	6.81
+L	knob	REVERB	64.05	76.82	6.81
+D	knob	DENSITY	35.40	24.11	7.51
+B	button	FREEZE	8.73	17.76	8.01
+C	button	SEED	62.07	17.76	8.01
+J	led	FEEDBACK LED	6.77	69.81	3.10
+K	led	DRY/WET LED	64.03	69.81	3.10
+L	led	REVERB LED	64.03	86.01	3.10
+	outline	panel	0	0	70.80x128.52

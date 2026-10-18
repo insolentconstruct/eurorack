@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="252.01mm"
- viewBox="0 0 1100 1459" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="252.87mm"
+ viewBox="0 0 1100 1464" role="img" aria-labelledby="title desc">
 <title id="title">Drizzlet hidden options guide</title>
 <desc id="desc">Three pages of mix knob settings with quality LED [A] colour and blink
 indications. Full text version in OPTIONS.md.</desc>
@@ -19,44 +19,73 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="35" y="268" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Scale selected: short taps step the scale.</text>
 <text x="35" y="292" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Move a knob a little before it responds.</text>
 <text x="35" y="313" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wait a moment before powering off.</text>
-<text x="400" y="70" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FIND THE CONTROLS</text>
-<rect x="400" y="84" width="310" height="250" rx="12" fill="#f6f5f0" stroke="#aaa"/>
-<circle cx="448" cy="115" r="10" fill="white" stroke="#333" stroke-width="2"/>
-<text x="448" y="144" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">FREEZE [B]</text>
-<circle cx="665" cy="115" r="10" fill="white" stroke="#333" stroke-width="2"/>
-<text x="665" y="144" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">SEED [C]</text>
-<circle cx="531" cy="175" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="531" y="202" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Quality LED [A]</text>
-<circle cx="442" cy="225" r="14" fill="white" stroke="#333" stroke-width="2"/>
-<circle cx="442" cy="249" r="5" fill="white" stroke="#333" stroke-width="2"/>
-<text x="468" y="224" font-size="15" font-weight="normal" fill="#222" text-anchor="start">FEEDBACK</text>
-<text x="468" y="242" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[J]</text>
-<circle cx="665" cy="225" r="14" fill="white" stroke="#333" stroke-width="2"/>
-<circle cx="665" cy="249" r="5" fill="white" stroke="#333" stroke-width="2"/>
-<text x="639" y="224" font-size="15" font-weight="normal" fill="#222" text-anchor="end">DRY/WET</text>
-<text x="639" y="242" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[K]</text>
-<circle cx="665" cy="285" r="14" fill="white" stroke="#333" stroke-width="2"/>
-<circle cx="665" cy="309" r="5" fill="white" stroke="#333" stroke-width="2"/>
-<text x="639" y="284" font-size="15" font-weight="normal" fill="#222" text-anchor="end">REVERB</text>
-<text x="639" y="302" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[L]</text>
-<circle cx="442" cy="285" r="9" fill="white" stroke="#333" stroke-width="2"/>
-<text x="468" y="290" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[M] CV assign</text>
-<text x="745" y="70" font-size="17" font-weight="bold" fill="#222" text-anchor="start">READ THE [A] LED</text>
-<circle cx="758" cy="100" r="12" fill="white" stroke="#333" stroke-width="2"/>
-<text x="781" y="105" font-size="16" font-weight="normal" fill="#222" text-anchor="start">steady</text>
-<circle cx="758" cy="137" r="12" fill="white" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="781" y="142" font-size="16" font-weight="normal" fill="#222" text-anchor="start">slow blink</text>
-<circle cx="758" cy="174" r="12" fill="white" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
-<text x="781" y="179" font-size="16" font-weight="normal" fill="#222" text-anchor="start">fast blink</text>
-<circle cx="758" cy="211" r="12" fill="white" stroke="#333" stroke-width="2"/>
-<circle cx="754" cy="211" r="1" fill="#222" stroke="#333" stroke-width="2"/>
-<circle cx="762" cy="211" r="1" fill="#222" stroke="#333" stroke-width="2"/>
-<text x="781" y="216" font-size="16" font-weight="normal" fill="#222" text-anchor="start">two pulses</text>
-<text x="745" y="258" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Colours: green / yellow / red</text>
-<rect x="737" y="280" width="326" height="75" rx="6" fill="#fdf0f0" stroke="#bd3030" stroke-width="3"/>
-<text x="745" y="302" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">Don&#x27;t hold SEED while powering on:</text>
-<text x="745" y="323" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">it resets all settings to defaults</text>
-<text x="745" y="344" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">(calibration is kept).</text>
+<text x="405" y="70" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FIND THE CONTROLS</text>
+<text x="610" y="70" font-size="15" font-weight="normal" fill="#555" text-anchor="start">to scale</text>
+<rect x="490.0" y="94.0" width="200.7" height="221.1" fill="#f6f5f0"/>
+<line x1="486.0" y1="94.0" x2="694.7" y2="94.0" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5 4"/>
+<line x1="486.0" y1="315.1" x2="694.7" y2="315.1" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5 4"/>
+<line x1="490.0" y1="94.0" x2="490.0" y2="315.1" stroke="#aaa" stroke-width="2"/>
+<line x1="690.7" y1="94.0" x2="690.7" y2="315.1" stroke="#aaa" stroke-width="2"/>
+<circle cx="541.6" cy="291.3" r="9.7" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="541.6" y="296.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
+<circle cx="574.2" cy="291.3" r="9.7" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="574.2" y="296.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
+<circle cx="606.6" cy="291.3" r="9.7" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="606.6" y="296.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
+<circle cx="639.0" cy="291.3" r="9.7" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="639.0" y="296.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
+<circle cx="558.9" cy="234.6" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="558.9" y="239.6" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">G</text>
+<circle cx="522.9" cy="171.7" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="522.9" y="176.7" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">E</text>
+<circle cx="658.0" cy="171.7" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="658.0" y="176.7" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">F</text>
+<rect x="583.0" y="183.1" width="14.7" height="14.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
+<circle cx="572.3" cy="190.5" r="4.5" fill="#222" stroke="#222" stroke-width="2"/>
+<rect x="501.8" y="273.1" width="14.7" height="14.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
+<circle cx="622.0" cy="234.6" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="622.0" y="239.6" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">H</text>
+<circle cx="509.2" cy="234.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
+<circle cx="671.6" cy="234.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
+<circle cx="671.6" cy="280.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
+<circle cx="590.3" cy="131.2" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<text x="590.3" y="136.2" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">D</text>
+<rect x="503.4" y="101.8" width="22.7" height="22.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
+<rect x="654.6" y="101.8" width="22.7" height="22.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
+<circle cx="509.2" cy="260.7" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
+<circle cx="671.5" cy="260.7" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
+<circle cx="671.5" cy="306.6" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
+<text x="514.7" y="141.5" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">FREEZE [B]</text>
+<text x="665.9" y="141.5" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">SEED [C]</text>
+<text x="590.3" y="214.8" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">[A] button + LED</text>
+<text x="482.0" y="232.6" font-size="15" font-weight="normal" fill="#222" text-anchor="end">FEEDBACK</text>
+<text x="482.0" y="249.6" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[J]</text>
+<line x1="485.0" y1="234.6" x2="499.6" y2="234.6" stroke="#222" stroke-width="1"/>
+<text x="482.0" y="278.5" font-size="15" font-weight="normal" fill="#222" text-anchor="end">CV assign</text>
+<text x="482.0" y="295.5" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[M]</text>
+<line x1="485.0" y1="280.5" x2="501.8" y2="280.5" stroke="#222" stroke-width="1"/>
+<text x="698.7" y="232.6" font-size="15" font-weight="normal" fill="#222" text-anchor="start">DRY/WET</text>
+<text x="698.7" y="249.6" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[K]</text>
+<line x1="695.7" y1="234.6" x2="681.2" y2="234.6" stroke="#222" stroke-width="1"/>
+<text x="698.7" y="278.6" font-size="15" font-weight="normal" fill="#222" text-anchor="start">REVERB</text>
+<text x="698.7" y="295.6" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[L]</text>
+<line x1="695.7" y1="280.6" x2="681.2" y2="280.6" stroke="#222" stroke-width="1"/>
+<text x="780" y="70" font-size="17" font-weight="bold" fill="#222" text-anchor="start">READ THE [A] LED</text>
+<circle cx="793" cy="100" r="12" fill="white" stroke="#333" stroke-width="2"/>
+<text x="816" y="105" font-size="16" font-weight="normal" fill="#222" text-anchor="start">steady</text>
+<circle cx="793" cy="137" r="12" fill="white" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="816" y="142" font-size="16" font-weight="normal" fill="#222" text-anchor="start">slow blink</text>
+<circle cx="793" cy="174" r="12" fill="white" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="816" y="179" font-size="16" font-weight="normal" fill="#222" text-anchor="start">fast blink</text>
+<circle cx="793" cy="211" r="12" fill="white" stroke="#333" stroke-width="2"/>
+<circle cx="789" cy="211" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<circle cx="797" cy="211" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<text x="816" y="216" font-size="16" font-weight="normal" fill="#222" text-anchor="start">two pulses</text>
+<text x="780" y="258" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Colours: green / yellow / red</text>
+<rect x="772" y="280" width="301" height="75" rx="6" fill="#fdf0f0" stroke="#bd3030" stroke-width="3"/>
+<text x="780" y="302" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">Don&#x27;t hold SEED while powering</text>
+<text x="780" y="323" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">on: it resets all settings to</text>
+<text x="780" y="344" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">defaults (calibration is kept).</text>
 <text x="35" y="349" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 1</text>
 <text x="215" y="337" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">F</text>
 <circle cx="215" cy="354" r="7" fill="white" stroke="#333" stroke-width="2"/>
@@ -235,6 +264,6 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="390" y="1382" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Off</text>
 <text x="677" y="1382" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
 <text x="695" y="1193" font-size="15" font-weight="normal" fill="#737373" text-anchor="start">REVERB: Not used yet</text>
-<text x="35" y="1434" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch</text>
+<text x="35" y="1434" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch • Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).</text>
 </g>
 </svg>

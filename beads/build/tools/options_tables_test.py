@@ -262,7 +262,8 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         texts = list(root.iter("{http://www.w3.org/2000/svg}text"))
         labels = [node.text for node in texts]
         assert labels.count("pulsing") == 3
-        assert all(labels.count(label) == 3 for label in ("F", "D/W", "R"))
+        assert all(labels.count(label) == 3 for label in ("D/W", "R"))
+        assert labels.count("F") == 4  # three page markers + panel knob F
         assert labels.count("READ THE [A] LED") == 1
         assert labels.count("OTHER GESTURES") == 1
         for title in ("Monophonic grains", "Buffer trim",
@@ -277,7 +278,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         flat = " ".join(labels)
         for phrase in STYLE_BANNED:
             assert phrase not in flat, (name, phrase)
-        assert "Quality LED [A]" in labels and "[M] CV assign" in labels
+        assert {"[A] button + LED", "CV assign", "[M]"} <= set(labels)
         for row in rows:
             _, _, _, setting, value, color, pulse = row.split("\t")
             if setting != "Not used yet":
