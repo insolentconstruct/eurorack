@@ -26,8 +26,8 @@ Clouds-style reverb, stereo width and delay mode. The new settings default to
 stock behaviour. Details are in CHANGELOG.md in the repository.
 
 Controls use the letters from the Beads manual: [A] is the quality
-button, which selects the recording quality, and [M] is the button that
-assigns the CV input (7).
+button, which selects the recording quality, and [M] is the button below
+the FEEDBACK [J] knob that assigns the CV input (7).
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-

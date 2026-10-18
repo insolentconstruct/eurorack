@@ -13,7 +13,7 @@ Install at your own risk. Please do not contact Mutable Instruments about it; re
 ## Quick start
 
 Controls use the letters from the Beads manual: [A] is the quality button, which
-selects the recording quality, and [M] is the button that assigns the CV input (7).
+selects the recording quality, and [M] is the button below the FEEDBACK [J] knob that assigns the CV input (7).
 
 Hold the CV-assign button [M] for three seconds and release to enter. Tap [M] to change
 page; move a mix knob and rest it for one second to save.
