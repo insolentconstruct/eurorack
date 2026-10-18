@@ -34,30 +34,34 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="606.6" y="296.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
 <circle cx="639.0" cy="291.3" r="9.7" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="639.0" y="296.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
-<circle cx="558.9" cy="234.6" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="558.9" cy="234.6" r="20.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="558.9" y="239.6" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">G</text>
-<circle cx="522.9" cy="171.7" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="522.9" cy="171.7" r="26.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="522.9" y="176.7" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">E</text>
-<circle cx="658.0" cy="171.7" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="658.0" cy="171.7" r="26.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="658.0" y="176.7" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">F</text>
 <rect x="583.0" y="183.1" width="14.7" height="14.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="572.3" cy="190.5" r="4.5" fill="#222" stroke="#222" stroke-width="2"/>
 <rect x="501.8" y="273.1" width="14.7" height="14.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
-<circle cx="622.0" cy="234.6" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="622.0" cy="234.6" r="20.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="622.0" y="239.6" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">H</text>
 <circle cx="509.2" cy="234.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="671.6" cy="234.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="671.6" cy="280.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
-<circle cx="590.3" cy="131.2" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="590.3" cy="131.2" r="26.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="590.3" y="136.2" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">D</text>
 <rect x="503.4" y="101.8" width="22.7" height="22.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
 <rect x="654.6" y="101.8" width="22.7" height="22.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="509.2" cy="260.7" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
 <circle cx="671.5" cy="260.7" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
 <circle cx="671.5" cy="306.6" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
-<text x="514.7" y="141.5" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">FREEZE [B]</text>
-<text x="665.9" y="141.5" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">SEED [C]</text>
-<text x="590.3" y="214.8" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">[A] button + LED</text>
+<text x="482.0" y="111.2" font-size="15" font-weight="normal" fill="#222" text-anchor="end">FREEZE</text>
+<text x="482.0" y="128.2" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[B]</text>
+<line x1="485.0" y1="113.2" x2="503.4" y2="113.2" stroke="#222" stroke-width="1"/>
+<text x="698.7" y="111.2" font-size="15" font-weight="normal" fill="#222" text-anchor="start">SEED</text>
+<text x="698.7" y="128.2" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[C]</text>
+<line x1="695.7" y1="113.2" x2="677.3" y2="113.2" stroke="#222" stroke-width="1"/>
+<text x="590.3" y="214.8" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">[A]</text>
 <text x="482.0" y="232.6" font-size="15" font-weight="normal" fill="#222" text-anchor="end">FEEDBACK</text>
 <text x="482.0" y="249.6" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[J]</text>
 <line x1="485.0" y1="234.6" x2="499.6" y2="234.6" stroke="#222" stroke-width="1"/>

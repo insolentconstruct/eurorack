@@ -278,7 +278,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         flat = " ".join(labels)
         for phrase in STYLE_BANNED:
             assert phrase not in flat, (name, phrase)
-        assert {"[A] button + LED", "CV assign", "[M]"} <= set(labels)
+        assert {"[A]", "CV assign", "[M]"} <= set(labels)
         for row in rows:
             _, _, _, setting, value, color, pulse = row.split("\t")
             if setting != "Not used yet":

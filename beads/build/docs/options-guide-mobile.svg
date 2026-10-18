@@ -34,30 +34,34 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="223.6" y="575.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
 <circle cx="256.0" cy="570.3" r="9.7" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="256.0" y="575.3" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">I</text>
-<circle cx="175.9" cy="513.6" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="175.9" cy="513.6" r="20.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="175.9" y="518.6" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">G</text>
-<circle cx="139.9" cy="450.7" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="139.9" cy="450.7" r="26.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="139.9" y="455.7" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">E</text>
-<circle cx="275.0" cy="450.7" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="275.0" cy="450.7" r="26.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="275.0" y="455.7" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">F</text>
 <rect x="200.0" y="462.1" width="14.7" height="14.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="189.3" cy="469.5" r="4.5" fill="#222" stroke="#222" stroke-width="2"/>
 <rect x="118.8" y="552.1" width="14.7" height="14.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
-<circle cx="239.0" cy="513.6" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="239.0" cy="513.6" r="20.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="239.0" y="518.6" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">H</text>
 <circle cx="126.2" cy="513.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="288.6" cy="513.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="288.6" cy="559.6" r="9.7" fill="white" stroke="#222" stroke-width="2"/>
-<circle cx="207.3" cy="410.2" r="10.6" fill="none" stroke="#aaa" stroke-width="1.5"/>
+<circle cx="207.3" cy="410.2" r="26.1" fill="none" stroke="#aaa" stroke-width="1.5"/>
 <text x="207.3" y="415.2" font-size="15" font-weight="normal" fill="#666" text-anchor="middle">D</text>
 <rect x="120.4" y="380.8" width="22.7" height="22.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
 <rect x="271.6" y="380.8" width="22.7" height="22.7" rx="4" fill="white" stroke="#222" stroke-width="2"/>
 <circle cx="126.2" cy="539.7" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
 <circle cx="288.5" cy="539.7" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
 <circle cx="288.5" cy="585.6" r="4.4" fill="#222" stroke="#222" stroke-width="2"/>
-<text x="131.7" y="420.5" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">FREEZE [B]</text>
-<text x="282.9" y="420.5" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">SEED [C]</text>
-<text x="207.3" y="493.8" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">[A] button + LED</text>
+<text x="99.0" y="390.2" font-size="15" font-weight="normal" fill="#222" text-anchor="end">FREEZE</text>
+<text x="99.0" y="407.2" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[B]</text>
+<line x1="102.0" y1="392.2" x2="120.4" y2="392.2" stroke="#222" stroke-width="1"/>
+<text x="315.7" y="390.2" font-size="15" font-weight="normal" fill="#222" text-anchor="start">SEED</text>
+<text x="315.7" y="407.2" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[C]</text>
+<line x1="312.7" y1="392.2" x2="294.3" y2="392.2" stroke="#222" stroke-width="1"/>
+<text x="207.3" y="493.8" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">[A]</text>
 <text x="99.0" y="511.6" font-size="15" font-weight="normal" fill="#222" text-anchor="end">FEEDBACK</text>
 <text x="99.0" y="528.6" font-size="15" font-weight="normal" fill="#222" text-anchor="end">[J]</text>
 <line x1="102.0" y1="513.6" x2="116.6" y2="513.6" stroke="#222" stroke-width="1"/>

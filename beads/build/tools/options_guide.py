@@ -39,13 +39,13 @@ KNOBS = ()
 
 
 def load_panel_geometry():
-    """Read panel_geometry.tsv: letter, kind, name, x/y centre, hole size."""
+    """Read panel_geometry.tsv: x/y centre and drawn size (knob cap or real)."""
     rows = []
     path = Path(__file__).with_name("panel_geometry.tsv")
     for line in path.read_text().splitlines():
         if line.startswith("#") or line.startswith("letter\t"):
             continue
-        letter, kind, name, x, y, d = line.split("\t")
+        letter, kind, name, x, y, d, cap = line.split("\t")
         if kind == "outline":
             size = tuple(float(v) for v in d.split("x"))
             continue
@@ -56,7 +56,7 @@ def load_panel_geometry():
                 name=name,
                 x=float(x),
                 y=float(y),
-                d=float(d),
+                d=float(cap or d),
                 key=f"{letter}:{kind}:{name}",
             )
         )
@@ -73,9 +73,9 @@ PANEL_USED = {
 }
 # (geometry key, label lines, side): names follow the manual.
 PANEL_LABELS = (
-    ("B:button:FREEZE", ("FREEZE [B]",), "below"),
-    ("C:button:SEED", ("SEED [C]",), "below"),
-    ("A:button:quality selector", ("[A] button + LED",), "below"),
+    ("B:button:FREEZE", ("FREEZE", "[B]"), "left"),
+    ("C:button:SEED", ("SEED", "[C]"), "right"),
+    ("A:button:quality selector", ("[A]",), "below"),
     ("J:knob:FEEDBACK", ("FEEDBACK", "[J]"), "left"),
     ("M:button:CV assign", ("CV assign", "[M]"), "left"),
     ("K:knob:DRY/WET", ("DRY/WET", "[K]"), "right"),
