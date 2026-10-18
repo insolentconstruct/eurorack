@@ -4,24 +4,14 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
-- Rename the Self-play option to Wavetable synth, and its On request value to Manual, after the Beads manual's "granular wavetable synth". The saved values are unchanged, so alpha settings carry over. Automatic (Stock) starts after 10 s with both inputs unpatched; Manual never starts by itself, and with both inputs unplugged and FREEZE off a 1.5 s hold of the quality button [A] starts or stops it.
-- Use the Beads manual's button letters in the documentation and options guides: the quality button [A], the CV-assign button [M].
-- Add generated printable and phone options guides, a text guide, and release ZIP copies.
-- Reorganize options across three pages: pitch/width/reverb, delay mode, then wavetable synth/limiter. Knobs marked Not used yet are inert. Reopening remembers the last page until power-off.
-- Save options after one second of settled controls. Hold the CV-assign button [M] 3 s or press another button to close; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, close and completed saves flash the page LED for 100 ms.
-- Show enabled width with the green/yellow/red meter with a slow blink. Pitch follows the same ladder across steady, slow and fast; Raag Shri uses two yellow pulses followed by a pause.
-- Add delay mode: page 2 (FEEDBACK LED), DRY/WET knob, Auto (Stock) / Never / Wide detent in thirds. Never keeps SIZE fully clockwise granular; Wide detent gives the SIZE attenurandomizer/CV filter a 40–60% neutral zone and removes resonant boost (#9, #26). Filter resonance ramps between modes to avoid a click.
-- Add stereo width: continuous saved resting width above the Stock zone; enabled width randomizes every grain. Optional fourth [M] destination adds CV to width, clamped to 0..1 (#5). Width ignores stationary knob noise, and [M] uses pending width changes immediately after closing options.
-- Increase CPU headroom for the grain engine: about 6,900 fewer cycles per audio block in the heaviest stock case (measured on a test board), from three small changes in Mutable Instruments' own style. The sound is bit-identical.
-- Start the options page at power-up on page 1 (REVERB LED), where FEEDBACK sets the pitch scale.
-- Add buffer trim: hold the quality button [A], then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
-- Add pitch scale: Off (default), Chromatic or eight scales. Page 1 (REVERB LED), FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
-- Preserve saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 17–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.
-- Add Clouds-style reverb: page 1 (REVERB LED), REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail. The reverb modulation runs at 0.5/0.3 Hz in every recording quality.
-- Explicit rounding in the grain pan and the shape and speed targets: the sound is identical with GCC 9 through 16.
-- Add a calibration build that times the audio callback on a module with the DWT cycle counter.
-- Add PORTING.md and OPTIMIZATIONS.md; align STYLE.md with Mutable Instruments' code; MANUAL_ERRATA.md notes that the outputs are inverted by the hardware.
-- Keep SEED scale taps through a pending save; closing options restores normal controls while the final change settles.
+- New options page layout on three pages. Page 1 (REVERB LED): pitch scale, stereo width, reverb character. Page 2 (FEEDBACK LED): delay mode. Page 3 (DRY/WET LED): wavetable synth (formerly self-play) and limiter. Changes save by themselves about a second after you stop turning; close by holding [M] for three seconds or pressing another button. Values show on the quality LED [A] in green, yellow and red, steady or blinking; stock values are steady green.
+- Printable, phone and text guides to the options page, also in the release zip.
+- Add pitch scale (page 1, FEEDBACK): Off, Chromatic, or one of eight scales from Marbles, chosen by tapping SEED. Each grain's pitch, including randomness, snaps to the scale when the grain starts (#6, #8).
+- Add Clouds-style reverb (page 1, REVERB): the Clouds reverb's character, plus diffusion on the grains (#2, #22).
+- Add stereo width (page 1, DRY/WET): spreads grains randomly across the stereo field, and can be a fourth [M] destination for CV (#5).
+- Add delay mode (page 2, DRY/WET): Auto (Stock), Never (SIZE fully clockwise stays granular) or Wide detent (a neutral zone in the middle of the delay filter, without the resonant boost) (#9, #26).
+- Add buffer trim: hold [A], then press FREEZE to start a fresh recording window; the next freeze keeps only what was recorded since. Saved buffers keep the trimmed length (#31).
+- More CPU headroom: about 6,900 fewer cycles per audio block in the heaviest stock case, with the same sound.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)
 - Self-play option (options page, FEEDBACK): Automatic (Stock) or On request, started and stopped by holding MEDIA 1.5 s with no inputs and FREEZE off (#17).
