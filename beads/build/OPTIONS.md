@@ -56,13 +56,13 @@ Scale (tap SEED to step through):
 
 Hold [M] (ASSIGN) for three seconds, with the mix knobs still, then release. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close.
 
-A knob must be moved a little before it takes over, so a knob you bump never changes a setting. Pitch scale, Delay mode and Limiter use the knob's three thirds; Reverb character and Wavetable synth use its two halves. Near a boundary, turn a little past it to switch.
+Move a knob far enough to take it over; small bumps before that are ignored. Pitch scale, Delay mode and Limiter use the knob's three thirds; Reverb character and Wavetable synth use its two halves. Near a boundary, turn a little past it to switch.
 
 Stereo width is Stock at the bottom of the knob. Turn clockwise to spread the grains wider, up to a full random spread fully CW. Only new grains are affected. When width is on, short presses of [M] add WIDTH after the three mix destinations of the assignable CV input (7); all three mix LEDs pulse together for WIDTH.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
 
-The [A] (MEDIA) LED shows the value of the last knob you moved. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
+The [A] (MEDIA) LED shows the value of the last knob that took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 

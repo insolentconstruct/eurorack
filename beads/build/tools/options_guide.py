@@ -142,8 +142,8 @@ DETAILS = [
     "release. Tap [M] to move between the pages; Beads remembers the last "
     "page until it is powered off. Hold [M] again, or press another "
     "button, to close.",
-    "A knob must be moved a little before it takes over, so a knob you "
-    "bump never changes a setting. Pitch scale, Delay mode and Limiter "
+    "Move a knob far enough to take it over; small bumps before that are "
+    "ignored. Pitch scale, Delay mode and Limiter "
     "use the knob's three thirds; Reverb character and Wavetable synth "
     "use its two halves. Near a boundary, turn a little past it to "
     "switch.",
@@ -155,7 +155,7 @@ DETAILS = [
     "Settings save by themselves about a second after you stop turning. "
     "Closing keeps your changes, and there is no timeout or cancel. The "
     "page LED flashes when you open, close, and when a change is saved.",
-    "The [A] (MEDIA) LED shows the value of the last knob you moved. The "
+    "The [A] (MEDIA) LED shows the value of the last knob that took over. The "
     "first value of every setting is steady green. Other values follow in "
     "yellow and red, then as slow blinks, then as fast blinks. Raag Shri "
     "is two yellow pulses and a pause. Unused knobs leave the LED alone.",

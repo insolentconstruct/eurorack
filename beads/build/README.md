@@ -92,8 +92,9 @@ buffer-trim code.
 ## Frozen-buffer autosave
 
 Autosave normally starts after FREEZE has been on for ten seconds. A save cut
-short (by powering off, for example) makes the next wait longer, until a save
-completes or FREEZE has been off for a minute; power-up starts at ten seconds.
+short after erasing (by releasing FREEZE during a save, for example) doubles
+the next wait, up to a cap, until a save completes or FREEZE has been off for
+a minute; power-up starts at the normal ten seconds.
 If FREEZE is released during wavetable synth, the minute starts when wavetable synth ends.
 
 ## Options page
@@ -107,8 +108,8 @@ Tap [M] to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
 (DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
 on entry. Reopening remembers the last page until power-off; power-up
 starts on page 1. [A] shows the first available setting on each page,
-then the last knob you moved. A knob must be moved a little before it
-edits, so a bumped knob changes nothing. Knobs marked Not used yet do nothing, including to [A] and saving.
+then the last knob that took over. A knob must be moved far enough to take
+it over; small bumps before that are ignored. Knobs marked Not used yet do nothing, including to [A] and saving.
 
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
@@ -129,8 +130,8 @@ Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
 Wavetable synth: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects
 Automatic (Stock) (steady green); upper half selects Manual (steady yellow).
-The knob must be moved a little before it switches, so a bumped knob
-changes nothing.
+The knob must be moved far enough to take it over; small bumps before
+that are ignored.
 Automatic (Stock) starts Beads as a granular wavetable synth after 10 s with both
 audio inputs unpatched, as the Beads manual describes. With Manual, it never starts by itself. With both audio inputs
 unpatched and FREEZE off, hold [A] for about a second and a half to start the wavetable synth;
@@ -142,7 +143,7 @@ resets it to Automatic (Stock).
 
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (steady yellow).
-The knob must be moved a little before it switches. The [A] LED shows the last knob moved on this page.
+The knob must be moved a little before it switches. The [A] LED shows the last knob that took over on this page.
 Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
 plus fixed diffusion on the grain wet output. In delay and wavetable synth modes,
 only the reverb character changes. Switching briefly fades the sound out and

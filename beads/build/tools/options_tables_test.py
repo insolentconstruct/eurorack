@@ -310,6 +310,14 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         f"{seconds('kSelfPlayHoldTime')} s",
     ):
         assert phrase in flat_features, phrase
+    # Wording assumptions: thirds, halves, "a second", "a second and a half".
+    assert abs(constants["kOptionsZoneLow"] - 1 / 3) < 0.005
+    assert abs(constants["kOptionsZoneHigh"] - 2 / 3) < 0.005
+    assert abs(constants["kOptionsHalfLow"] + constants["kOptionsHalfHigh"]
+               - 1) < 1e-6 and abs(constants["kOptionsHalfLow"] - 0.5) < 0.05
+    assert constants["kOptionsSettleTime"] == 1000
+    assert constants["kSelfPlayHoldTime"] == 1500
+    assert constants["kOptionsHoldTime"] == 3000
     assert constants["kWidthRange"] == 1 - constants["kWidthEnabledThreshold"]
 print("Generated SVG/Markdown match live tables and README: PASS")
 
