@@ -35,8 +35,8 @@ Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md)
 
 This is the manual's delay or beat slicer, which turns on at SIZE fully clockwise.
 On page 2 (FEEDBACK LED), DRY/WET selects Auto (Stock) / Never /
-Wide detent in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
-clockwise. Never keeps granular playback there. Wide detent keeps the switch
+Wide/smooth filter in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
+clockwise. Never keeps granular playback there. Wide/smooth filter keeps the switch
 and makes the delay filter neutral in the middle of its range, with no
 resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV. The quality LED [A] shows steady green / yellow / red.

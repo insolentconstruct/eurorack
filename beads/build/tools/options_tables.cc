@@ -59,7 +59,7 @@ const ValueNames kValueNames[] = {
   { "Clouds-style", "yellow" },
   { "Auto (Stock)", "green" },
   { "Never", "yellow" },
-  { "Wide detent", "red" },
+  { "Wide/smooth filter", "red" },
   { "Automatic (Stock)", "green" },
   { "Manual", "yellow" },
   { "Stock", "green" },

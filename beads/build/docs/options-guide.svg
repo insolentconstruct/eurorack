@@ -164,7 +164,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="390" y="1042" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Never</text>
 <text x="677" y="1042" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
 <circle cx="374" cy="1059" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="390" y="1064" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide detent</text>
+<text x="390" y="1064" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide/smooth filter</text>
 <text x="677" y="1064" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
 <text x="695" y="875" font-size="15" font-weight="normal" fill="#737373" text-anchor="start">REVERB: Not used yet</text>
 <text x="35" y="1121" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 3</text>

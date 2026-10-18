@@ -60,7 +60,7 @@ NOTES = [
 SHORT = {
     "Clouds-style": "Clouds",
     "Auto (Stock)": "Auto",
-    "Wide detent": "Wide",
+    "Wide/smooth filter": "Wide",
     "Automatic (Stock)": "Automatic",
     "Fast release": "Fast",
     "Width (wider →)": "wider →",
@@ -167,7 +167,7 @@ DETAILS = [
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
-    "Never stays granular. Wide detent keeps the switch and adds a "
+    "Never stays granular. Wide/smooth filter keeps the switch and adds a "
     "neutral, unfiltered zone around the middle of the delay filter "
     "(SIZE attenurandomizer plus SIZE CV), with no resonant boost. The "
     "wavetable synth is unaffected.",

@@ -70,7 +70,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
-| 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown values read Auto (Stock) |
+| 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Never, 0xA2 Wide/smooth filter; unknown values read Auto (Stock) |
 | 16 | `padding[6]` | WIDTH assignment: 0 off, 1 on; other values read off; stock destination stays FEEDBACK |
 | 17–22, individually | `padding[7]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
@@ -196,7 +196,7 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 - **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch scale, Delay mode and Limiter use thirds; Reverb character and Wavetable synth use halves.
 - **Stereo width:** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
-- **Delay mode, Wide detent:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
+- **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
 - **Wavetable synth, Manual:** hold [A] 1.5 s to start or stop (the manual says 1 s).
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
