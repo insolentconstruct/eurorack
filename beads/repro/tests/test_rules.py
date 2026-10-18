@@ -83,10 +83,16 @@ class Rules(unittest.TestCase):
         self.assertEqual([r["verdict"] for r in res], ["PASS", "FAIL", "INVALID"])
 
     def test_rate_increasing(self):
-        x = bursts([0.5, 2.0, 3.0, 3.5, 4.0, 4.3, 4.6, 4.9, 5.2, 5.5])
-        r = rules.evaluate([dict(rule="rate_increasing",
-                                 wins=[[0, 2], [2, 4], [4, 6]])], x, SR)[0]
-        self.assertEqual(r["verdict"], "PASS")
+        x = bursts([0.5, 2.5, 3.2, 4.2, 4.6, 5.0, 6.0, 6.4, 6.8, 7.2, 7.6],
+                   total=10.0)
+        wins = [[0, 2], [2, 4], [4, 6], [6, 8]]
+        r = rules.evaluate([dict(rule="rate_increasing", wins=wins)], x, SR)[0]
+        self.assertEqual(r["verdict"], "PASS", r)
+        # The last window must hold within 85% of the best earlier one.
+        r = rules.evaluate([dict(rule="rate_increasing", wins=wins)],
+                           bursts([0.5, 2.5, 3.2, 4.2, 4.6, 5.0], total=10.0),
+                           SR)[0]
+        self.assertEqual(r["verdict"], "FAIL")
 
     def test_direction_reads_chirp_slope(self):
         k = np.arange(int(0.8 * SR)) / SR
@@ -114,7 +120,8 @@ class Seeds(unittest.TestCase):
 
     def test_noise_follows_the_seed(self):
         s = scenario.parse((helpers.HERE / "scenarios/behaviours/b-seed-trigger.toml").read_text()
-                           .replace("amp = 0.12", "amp = 0.12\nnoise = 0.01"))
+                           .replace("amp = 0.12\n", "amp = 0.12\n\n[[stimulus.layers]]\n"
+                                   "kind = \"noise\"\namp = 0.01\n", 1))
         one = stimulus.build(s, SR, 1).sha256()
         self.assertEqual(one, stimulus.build(s, SR, 1).sha256())
         self.assertNotEqual(one, stimulus.build(s, SR, 2).sha256())

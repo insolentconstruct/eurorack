@@ -1,0 +1,51 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-time-cv"
+description = """The input steps through 32 quarter tones, one every 0.25 s, so a tone's\
+frequency is its age modulo 8 s (longer than the 4 s stereo buffer).\
+Triggers every 0.5 s; TIME CV 0, +0.5, +1.0: grains replay older audio."""
+seconds = 18
+tiers = ["desktop", "emulator", "module"]
+behaviours = ["time-cv-older-audio"]
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "steps"
+seg_s = 0.25
+freqs = { start = 200.0, per_octave = 24, count = 32 }
+amp = 0.12
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = { start = 2.0, step = 0.5, count = 30 }
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 2.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 7.0
+level = 0.5
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 12.0
+level = 1.0
+
+# The digital medium holds 4 s of stereo audio, so the age saturates there: a
+# plateau at the capacity is not a failure.
+[[rules]]
+rule = "age_increasing"
+behaviours = ["time-cv-older-audio"]
+wins = [[2.5, 6.9], [7.5, 11.9], [12.5, 16.9]]
+tones = { start = 200.0, per_octave = 24, count = 32 }
+step_s = 0.25
+capacity_s = 4.0

@@ -1,0 +1,75 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-shape-cv"
+description = """SIZE CV +0.25 for longer grains so the envelope is visible; three\
+triggers at each SHAPE CV level -0.5, 0, +0.5. The attack fraction of\
+the bell setting is compared with the slow-attack setting."""
+seconds = 15
+tiers = ["desktop", "emulator", "module"]
+behaviours = ["shape-cv-attack"]
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 330.0
+amp = 0.12
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 0.0
+level = 0.25
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 2.0
+level = -0.5
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [2.8, 3.8, 4.8]
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 6.0
+level = 0.0
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [6.8, 7.8, 8.8]
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 10.0
+level = 0.5
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = [10.8, 11.8, 12.8]
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 14.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 14.0
+level = 0.0
+
+# Compares bell to slow attack: the rectangular time to maximum depends on the
+# noise, so it cannot establish strict monotonicity.
+[[rules]]
+rule = "attack_slow_vs_bell"
+behaviours = ["shape-cv-attack"]
+wins = [[2.7, 5.9], [6.7, 9.9], [10.7, 13.9]]

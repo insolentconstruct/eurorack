@@ -1,0 +1,61 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-random-shape"
+description = """Attenurandomizers fully counter-clockwise, SIZE at 0.75. 24 isolated\
+grains (a trigger every second); SHAPE randomization depth CV -0.6, 0,\
++0.15, +0.3 in four blocks of six, the other depths zero. Spread of\
+pitch, timing and size per depth is reported, not judged against a\
+waveform."""
+seconds = 30
+tiers = ["emulator", "module"]
+behaviours = ["random-side"]
+
+[panel]
+size = 0.75
+size_att = 0.0
+shape_att = 0.0
+time_att = 0.0
+pitch_att = 0.0
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 261.625565
+amp = 0.12
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = { start = 3.0, step = 1.0, count = 24 }
+width = 0.45
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 2.9
+level = -0.6
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 8.9
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 14.9
+level = 0.15
+
+[[events]]
+kind = "cv"
+channel = "shape"
+t = 20.9
+level = 0.3
+
+[[rules]]
+rule = "random_side_statistics"
+behaviours = ["random-side"]
+control = "shape"

@@ -1,0 +1,67 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-scale-shri"
+description = """Pitch quantized to the shri scale (root C). PITCH attenurandomizer fully\
+counter-clockwise, SIZE at 0.75; 24 isolated grains from a C4 tone with\
+the pitch randomization depth stepped through four blocks. Each grain\
+must sit within 15 cents of a scale degree and the grains must not all\
+be the same note."""
+seconds = 30
+tiers = ["emulator", "module"]
+behaviours = ["pitch-scale"]
+
+[panel]
+size = 0.75
+size_att = 0.0
+shape_att = 0.0
+time_att = 0.0
+pitch_att = 0.0
+pitch_scale = "shri"
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 261.625565
+amp = 0.12
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = { start = 3.0, step = 1.0, count = 24 }
+width = 0.45
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 2.9
+level = -0.6
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 8.9
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 14.9
+level = 0.15
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 20.9
+level = 0.3
+
+[[rules]]
+rule = "random_side_statistics"
+behaviours = ["pitch-scale"]
+control = "pitch"
+
+[[rules]]
+rule = "grain_pitch_scale"
+behaviours = ["pitch-scale"]
+scale = "shri"

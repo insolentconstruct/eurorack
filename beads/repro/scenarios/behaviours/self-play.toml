@@ -1,0 +1,32 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "self-play"
+description = """Wavetable self-play: both audio inputs unplugged, DRY/WET fully\
+clockwise, SEED unlatched, the gate held from 2 to 28 s with DENSITY CV\
++0.4. The module must make sound."""
+seconds = 30
+tiers = ["emulator", "module"]
+behaviours = ["self-play-sounds"]
+
+[panel]
+inputs_patched = false
+
+[stimulus]
+generator = "silence"
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 1.0
+level = 0.4
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 2.0
+t1 = 28.0
+
+[[rules]]
+rule = "not_silent"
+behaviours = ["self-play-sounds"]
+win = [2.0, 29.0]

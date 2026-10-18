@@ -1,0 +1,61 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-freeze-gate"
+description = """Grains run throughout (gate held, DENSITY +0.4). The input is 220/330 Hz\
+until 7 s and 494/587 Hz after. FREEZE is held 6-13 s: the new tones\
+must not reach the output until the gate falls."""
+seconds = 20
+tiers = ["desktop", "emulator", "module"]
+behaviours = ["freeze-holds-buffer", "freeze-blocks-new-input"]
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "steps"
+seg_s = 1.0
+freqs = [220.0, 330.0]
+amp = 0.12
+start = 0.0
+stop = 7.0
+
+[[stimulus.layers]]
+kind = "steps"
+seg_s = 1.0
+freqs = [494.0, 587.0]
+amp = 0.12
+start = 7.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 1.5
+level = 0.4
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 2.0
+t1 = 19.0
+
+[[events]]
+kind = "hold"
+channel = "freeze"
+t0 = 6.0
+t1 = 13.0
+
+[[rules]]
+rule = "band_ratio"
+behaviours = ["freeze-holds-buffer", "freeze-blocks-new-input"]
+win = [8.0, 12.8]
+present = [220.0, 330.0]
+absent = [494.0, 587.0]
+min_db = 10.0
+
+[[rules]]
+rule = "band_ratio"
+behaviours = ["freeze-holds-buffer"]
+win = [16.0, 18.9]
+present = [494.0, 587.0]
+absent = [220.0, 330.0]
+min_db = 6.0

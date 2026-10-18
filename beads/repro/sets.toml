@@ -3,3 +3,30 @@
 [sets.p0]
 description = "Desktop tier: the three phase-0 behaviour scenarios"
 scenarios = ["b-seed-trigger", "b-density-gated", "b-size-cv"]
+
+[sets.desktop]
+description = "Every scenario the desktop tier runs"
+scenarios = ["b-seed-trigger", "b-density-gated", "b-freeze-gate", "b-time-cv",
+             "b-pitch-cv", "b-size-cv", "b-shape-cv"]
+
+[sets.behaviours]
+description = "The documented-behaviour scenarios, on every tier that can run them"
+scenarios = ["cal-dry", "b-agc-limiter", "b-seed-trigger", "b-density-gated",
+             "b-freeze-gate", "b-time-cv", "b-pitch-cv", "b-size-cv",
+             "b-shape-cv", "b-assign-cv", "u-delay", "u-latched-clocked",
+             "self-play"]
+
+[sets.beta]
+description = "The Beta feature scenarios: media, mono, limiter, ASSIGN, random side effects, scales, crosstalk, quality switching"
+scenarios = [
+  "beta-dry-crosstalk", "beta-clouds-ab", "beta-mono-grains",
+  "beta-media0-dry", "beta-media0-wet", "beta-media0-delay",
+  "beta-media1-dry", "beta-media1-wet", "beta-media1-delay",
+  "beta-media2-dry", "beta-media2-wet", "beta-media2-delay",
+  "beta-limiter-fast", "beta-limiter-off",
+  "beta-assign-feedback", "beta-assign-dry-wet", "beta-assign-reverb",
+  "beta-random-pitch", "beta-random-time", "beta-random-size", "beta-random-shape",
+  "beta-scale-chromatic", "beta-scale-fifths", "beta-scale-major",
+  "beta-scale-minor", "beta-scale-major-pentatonic", "beta-scale-minor-pentatonic",
+  "beta-scale-pelog", "beta-scale-bhairav", "beta-scale-shri",
+]

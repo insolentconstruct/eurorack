@@ -1,0 +1,65 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-random-time"
+description = """Attenurandomizers fully counter-clockwise, SIZE at 0.75. 24 isolated\
+grains (a trigger every second); TIME randomization depth CV -0.6, 0,\
++0.15, +0.3 in four blocks of six, the other depths zero. Spread of\
+pitch, timing and size per depth is reported, not judged against a\
+waveform. The input is a 16 s cyclic chirp, so a grain's frequency gives\
+its read age."""
+seconds = 30
+tiers = ["emulator", "module"]
+behaviours = ["random-side"]
+
+[panel]
+size = 0.75
+size_att = 0.0
+shape_att = 0.0
+time_att = 0.0
+pitch_att = 0.0
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "cyclic_chirp"
+f0 = 200.0
+rate_hz_per_s = 37.5
+period_s = 16.0
+phase_s = 17.0
+amp = 0.12
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = { start = 3.0, step = 1.0, count = 24 }
+width = 0.45
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 2.9
+level = -0.6
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 8.9
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 14.9
+level = 0.15
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 20.9
+level = 0.3
+
+[[rules]]
+rule = "random_side_statistics"
+behaviours = ["random-side"]
+control = "time"

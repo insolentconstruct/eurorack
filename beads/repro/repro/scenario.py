@@ -59,11 +59,34 @@ ANALOG_DEFAULTS = {"pitch": 60.0, "density": 1.0, "size": 1.0, "shape": 1.0,
 DELAY_MODE_SIZE = 0.99
 
 
+# Panel settings a scenario may add; a tier that cannot honour one refuses the
+# scenario. Absent means the tier's own default.
+OPTIONAL_PANEL = {
+    "limiter": ("stock", "fast", "off"),
+    "pitch_scale": ("off", "chromatic", "fifths", "major", "minor",
+                    "major-pentatonic", "minor-pentatonic", "pelog",
+                    "bhairav", "shri"),
+    "assign_destination": ("feedback", "dry_wet", "reverb"),
+    "inputs_patched": (True, False),
+}
+LAYER_KINDS = ("sine", "steps", "chirp", "cyclic_chirp", "noise")
+
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 class ScenarioError(ValueError):
     pass
+
+
+def series(spec):
+    """A list of times, written out or as {start, step, count}."""
+    if isinstance(spec, dict):
+        try:
+            return [spec["start"] + spec["step"] * i
+                    for i in range(spec["count"])]
+        except (KeyError, TypeError) as exc:
+            raise ScenarioError(f"bad time series {spec!r}: {exc!r}") from exc
+    return list(spec)
 
 
 @dataclass
@@ -104,9 +127,12 @@ def parse(text, path="<memory>"):
            f"tiers must be a non-empty subset of {TIERS}")
 
     panel = dict(PANEL_DEFAULTS)
-    extra = set(data.get("panel", {})) - set(PANEL_DEFAULTS)
+    extra = set(data.get("panel", {})) - set(PANEL_DEFAULTS) - set(OPTIONAL_PANEL)
     _check(not extra, name, f"unknown panel keys {sorted(extra)}")
     panel.update(data.get("panel", {}))
+    for key, allowed in OPTIONAL_PANEL.items():
+        _check(key not in panel or panel[key] in allowed, name,
+               f"panel.{key} must be one of {allowed}")
     _check(panel["media"] in MEDIA, name, f"media must be one of {MEDIA}")
     _check(panel["seed_button"] in SEED_BUTTON, name,
            f"seed_button must be one of {SEED_BUTTON}")
@@ -123,8 +149,18 @@ def parse(text, path="<memory>"):
                f"{DELAY_MODE_SIZE}")
 
     generator = dict(data.get("stimulus", {}))
-    _check(generator.get("generator") in ("sine", "chirps", "silence"), name,
-           "stimulus.generator must be sine, chirps or silence")
+    _check(generator.get("generator") in ("sine", "chirps", "silence", "layers"),
+           name, "stimulus.generator must be sine, chirps, silence or layers")
+    if generator["generator"] == "layers":
+        layers = generator.get("layers", ())
+        _check(layers, name, "generator \"layers\" needs [[stimulus.layers]]")
+        for layer in layers:
+            _check(layer.get("kind") in LAYER_KINDS, name,
+                   f"layer kind {layer.get('kind')!r} must be one of {LAYER_KINDS}")
+            _check(isinstance(layer.get("amp"), (int, float)), name,
+                   "a layer needs a numeric amp")
+            _check(layer.get("channel", "both") in (0, 1, "both"), name,
+                   "layer channel must be 0, 1 or \"both\"")
 
     events = list(data.get("events", ()))
     for ev in events:
@@ -134,7 +170,7 @@ def parse(text, path="<memory>"):
         valid = CV_CHANNELS if kind == "cv" else GATE_CHANNELS
         _check(channel in valid, name,
                f"{kind} event channel {channel!r} must be one of {valid}")
-        times = list(ev.get("times", ())) if kind == "trigger" else [
+        times = series(ev.get("times", ())) if kind == "trigger" else [
             ev.get(k) for k in (("t0", "t1") if kind == "hold" else ("t",))]
         _check(times and all(isinstance(t, (int, float)) and math.isfinite(t)
                              and 0 <= t <= seconds for t in times), name,

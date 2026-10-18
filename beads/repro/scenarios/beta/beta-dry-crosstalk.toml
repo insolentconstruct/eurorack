@@ -1,0 +1,37 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-dry-crosstalk"
+description = """Dry path, no grains: a 997 Hz tone on the left input only from 2 to 8 s,\
+then on the right only from 10 to 16 s. The other channel must stay at\
+least 50 dB down, counting the interface noise floor. It stays on the\
+module because it measures analog crosstalk."""
+seconds = 20
+tiers = ["module"]
+behaviours = ["dry-crosstalk"]
+
+[panel]
+dry_wet = 0.0
+media = "digital"
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 997.0
+amp = 0.12
+start = 2.0
+stop = 8.0
+channel = 0
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 997.0
+amp = 0.12
+start = 10.0
+stop = 16.0
+channel = 1
+
+[[rules]]
+rule = "dry_crosstalk"
+behaviours = ["dry-crosstalk"]

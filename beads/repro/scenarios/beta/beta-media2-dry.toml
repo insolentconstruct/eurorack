@@ -1,0 +1,25 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-media2-dry"
+description = """The cal-dry scenario with the vintage digital medium stored."""
+seconds = 20
+tiers = ["module"]
+behaviours = ["dry-path-passes"]
+
+[panel]
+dry_wet = 0.0
+media = "vintage_digital"
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 440.0
+amp = 0.12
+
+[[rules]]
+rule = "dry_passes"
+behaviours = ["dry-path-passes"]
+win = [2.0, 6.0]
+freq = 440.0

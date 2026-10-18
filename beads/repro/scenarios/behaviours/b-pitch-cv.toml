@@ -1,0 +1,81 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-pitch-cv"
+description = """A 220 Hz sine with triggers at 4 Hz; PITCH CV 0, +0.2, +0.4, -0.2. With\
+level 0.2 = 1 V the ratio rule tests 1 V/octave tracking: x2, x4, x0.5."""
+seconds = 18
+tiers = ["desktop", "emulator", "module"]
+behaviours = ["pitch-cv-one-volt-per-octave"]
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 220.0
+amp = 0.12
+
+[[events]]
+kind = "trigger"
+channel = "seed"
+times = { start = 2.2, step = 0.25, count = 48 }
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 2.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 5.0
+level = 0.2
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 8.0
+level = 0.4
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 11.0
+level = -0.2
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 14.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "pitch"
+t = 17.0
+level = 0.0
+
+[[rules]]
+rule = "pitch_ratio"
+behaviours = ["pitch-cv-one-volt-per-octave"]
+base = [2.4, 4.9]
+test = [5.4, 7.9]
+ratio = 2.0
+tol = 0.03
+
+[[rules]]
+rule = "pitch_ratio"
+behaviours = ["pitch-cv-one-volt-per-octave"]
+base = [2.4, 4.9]
+test = [8.4, 10.9]
+ratio = 4.0
+tol = 0.03
+
+[[rules]]
+rule = "pitch_ratio"
+behaviours = ["pitch-cv-one-volt-per-octave"]
+base = [2.4, 4.9]
+test = [11.4, 13.9]
+ratio = 0.5
+tol = 0.03

@@ -1,0 +1,53 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-media2-wet"
+description = """The b-density-gated scenario with the vintage digital medium stored."""
+seconds = 19
+tiers = ["emulator", "module"]
+behaviours = ["gate-grain-rate", "density-cv-rate", "no-gate-silent"]
+
+[panel]
+media = "vintage_digital"
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 262.0
+amp = 0.12
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 2.0
+t1 = 17.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 2.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 3.0
+level = 1.0
+ramp = 12.0
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 17.5
+level = 0.0
+
+[[rules]]
+rule = "rate_increasing"
+behaviours = ["gate-grain-rate"]
+wins = [[3.0, 6.0], [6.0, 9.0], [9.0, 12.0], [12.0, 15.0]]
+
+[[rules]]
+rule = "silent"
+behaviours = ["no-gate-silent"]
+win = [18.0, 18.9]

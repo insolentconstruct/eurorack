@@ -1,0 +1,50 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-agc-limiter"
+description = """Dry: a quiet 440 Hz tone, a sudden +20 dB step for 2 s, quiet again. A\
+limiter shows as an output step smaller than the input step. It stays on\
+the module because the input level control belongs to the analog path."""
+seconds = 15
+tiers = ["module"]
+behaviours = ["level-step-limiter", "dry-path-passes"]
+
+[panel]
+dry_wet = 0.0
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 440.0
+amp = 0.02
+start = 2.0
+stop = 8.0
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 440.0
+amp = 0.2
+start = 8.0
+stop = 10.0
+fade_s = 0.001
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 440.0
+amp = 0.02
+start = 10.0
+stop = 13.0
+
+[[rules]]
+rule = "level_step"
+behaviours = ["level-step-limiter"]
+quiet = [3.0, 7.5]
+loud = [8.05, 9.95]
+step_db = 20.0
+
+[[rules]]
+rule = "dry_passes"
+behaviours = ["dry-path-passes"]
+win = [3.0, 7.5]
+freq = 440.0

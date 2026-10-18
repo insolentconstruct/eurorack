@@ -1,0 +1,83 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-assign-dry-wet"
+description = """ASSIGN routed to dry/wet. Identical 0.2 s bursts at 3, 11 and 19 s with\
+grains held; ASSIGN CV -0.5, 0, +0.5 in three blocks. Expected: dry/wet\
+changes the burst energy. The effect is reported, not judged."""
+seconds = 27
+tiers = ["emulator", "module"]
+behaviours = ["assign-destination"]
+
+[panel]
+assign_destination = "dry_wet"
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 261.625565
+amp = 0.12
+start = 3.0
+dur_s = 0.2
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 261.625565
+amp = 0.12
+start = 11.0
+dur_s = 0.2
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 261.625565
+amp = 0.12
+start = 19.0
+dur_s = 0.2
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 0.0
+level = 0.15
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 0.0
+t1 = 27.0
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 0.0
+level = -0.51
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 0.0
+level = 0.25
+
+[[events]]
+kind = "cv"
+channel = "assign"
+t = 0.0
+level = -0.5
+
+[[events]]
+kind = "cv"
+channel = "assign"
+t = 9.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "assign"
+t = 17.0
+level = 0.5
+
+[[rules]]
+rule = "assign_cv_effect"
+behaviours = ["assign-destination"]
+destination = "dry_wet"

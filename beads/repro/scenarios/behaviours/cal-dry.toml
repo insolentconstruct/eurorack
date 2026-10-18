@@ -1,0 +1,26 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "cal-dry"
+description = """Dry calibration: a 440 Hz sine through the dry path must come out at 440\
+Hz. It stays on the module because it measures the analog path and the\
+codec."""
+seconds = 20
+tiers = ["module"]
+behaviours = ["dry-path-passes"]
+
+[panel]
+dry_wet = 0.0
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 440.0
+amp = 0.12
+
+[[rules]]
+rule = "dry_passes"
+behaviours = ["dry-path-passes"]
+win = [2.0, 6.0]
+freq = 440.0

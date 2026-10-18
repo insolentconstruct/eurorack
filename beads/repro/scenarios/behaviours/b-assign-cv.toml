@@ -1,0 +1,54 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "b-assign-cv"
+description = """Short bursts every second, grains running (gate held, DENSITY +0.5);\
+ASSIGN CV +0.5 at 10 s. The tail change is measured, not judged: nothing\
+documents a minimum increase. The ASSIGN destination is the firmware\
+default."""
+seconds = 19
+tiers = ["emulator", "module"]
+behaviours = ["assign-cv-tail"]
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 440.0
+amp = 0.15
+start = 0.0
+every = 1.0
+count = 19
+dur_s = 0.05
+fade_s = 0.003
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 1.0
+level = 0.5
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 1.5
+t1 = 18.5
+
+[[events]]
+kind = "cv"
+channel = "assign"
+t = 10.0
+level = 0.5
+
+[[events]]
+kind = "cv"
+channel = "assign"
+t = 18.0
+level = 0.0
+
+[[rules]]
+rule = "tail_increase"
+behaviours = ["assign-cv-tail"]
+base = [3.0, 9.9]
+test = [11.0, 17.9]
+measure_only = true

@@ -42,6 +42,7 @@ import tempfile
 import numpy as np
 
 from repro import jobs
+from repro.scenario import OPTIONAL_PANEL
 from repro.stimulus import BLOCK
 
 SAMPLE_RATE = 48000
@@ -101,6 +102,11 @@ class DesktopTier:
             raise RuntimeError(
                 f"{scenario.name}: the desktop driver does not route the "
                 "ASSIGN CV; use another tier for it")
+        unsupported = sorted(set(scenario.panel) & set(OPTIONAL_PANEL))
+        if unsupported:
+            raise RuntimeError(
+                f"{scenario.name}: the desktop driver has no panel setting "
+                f"for {', '.join(unsupported)}; use another tier")
         panel = dict(scenario.panel)
         args = [f"{k}={v}" for k, v in (
             ("media", MEDIA[panel.pop("media")]),

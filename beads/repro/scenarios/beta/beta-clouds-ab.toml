@@ -1,0 +1,56 @@
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+name = "beta-clouds-ab"
+description = """Seeded stereo noise through held grains (DENSITY +0.4, SIZE -0.2, ASSIGN\
+on reverb). The tier switches the quality from A to B and back; the\
+switch must fade without a click, move the high band down, and recover\
+on return. The tier supplies the switch times."""
+seconds = 150
+tiers = ["emulator", "module"]
+behaviours = ["quality-switch"]
+
+[panel]
+assign_destination = "reverb"
+
+[stimulus]
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "noise"
+amp = 0.08
+seed = 181810
+stereo = true
+
+[[events]]
+kind = "cv"
+channel = "density"
+t = 0.0
+level = 0.4
+
+[[events]]
+kind = "hold"
+channel = "seed"
+t0 = 0.0
+t1 = 150.0
+
+[[events]]
+kind = "cv"
+channel = "size"
+t = 0.0
+level = -0.2
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 0.0
+level = 0.0
+
+[[events]]
+kind = "cv"
+channel = "assign"
+t = 0.0
+level = 0.7
+
+[[rules]]
+rule = "clouds_ab"
+behaviours = ["quality-switch"]

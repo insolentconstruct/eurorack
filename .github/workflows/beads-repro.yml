@@ -35,14 +35,14 @@ jobs:
             -v "$PWD:/src" -w /src/beads/repro drizzlet-repro \
             python3 -m unittest discover -s tests -t . -v
       - name: Desktop scenarios
-        run: beads/repro/repro.sh run p0 --tier desktop --out repro-out
+        run: beads/repro/repro.sh run desktop --tier desktop --out repro-out
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: repro-desktop
           if-no-files-found: warn
           path: |
-            repro-out/p0/desktop/merged.json
-            repro-out/p0/desktop/merged.tsv
-            repro-out/p0/desktop/*/verdict.json
-            repro-out/p0/desktop/*/provenance.json
+            repro-out/desktop/desktop/merged.json
+            repro-out/desktop/desktop/merged.tsv
+            repro-out/desktop/desktop/*/verdict.json
+            repro-out/desktop/desktop/*/provenance.json

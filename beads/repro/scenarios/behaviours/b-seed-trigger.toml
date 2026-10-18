@@ -1,16 +1,19 @@
 # Copyright 2026 Insolent Construct.
 # Author: Insolent Construct
 name = "b-seed-trigger"
-description = """Unlatched SEED: no gate means no grains; one grain per trigger \
-at DENSITY noon (12 irregular triggers); a held gate at noon gives one grain; \
-DENSITY CV +0.3 under a held gate repeats."""
+description = """Unlatched SEED: no gate means no grains; one grain per trigger at\
+DENSITY noon (12 irregular triggers); a held gate at noon gives one\
+grain; DENSITY CV +0.3 under a held gate repeats."""
 seconds = 19
-tiers = ["desktop"]
+tiers = ["desktop", "emulator", "module"]
 behaviours = ["no-gate-silent", "one-grain-per-trigger", "gate-grain-rate"]
 
 [stimulus]
-generator = "sine"
-freq = 330
+generator = "layers"
+
+[[stimulus.layers]]
+kind = "sine"
+freq = 330.0
 amp = 0.12
 
 [[events]]
