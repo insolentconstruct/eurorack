@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="253.56mm"
  viewBox="0 0 1100 1468" role="img" aria-labelledby="title desc">
-<title id="title">Options page control guide</title>
+<title id="title">Drizzlet hidden options guide</title>
 <desc id="desc">Three pages of mix knob settings with [A] (MEDIA) LED colour and blink
 indications. Full text version in OPTIONS.md.</desc>
 <metadata>Author: Insolent Construct</metadata>
 <rect width="100%" height="100%" fill="white"/>
 <g font-family="sans-serif" fill="#222">
-<text x="35" y="35" font-size="24" font-weight="bold" fill="#222" text-anchor="start">YOUR OPTIONS</text>
+<text x="35" y="35" font-size="24" font-weight="bold" fill="#222" text-anchor="start">Drizzlet Hidden Options</text>
 <text x="35" y="70" font-size="15" font-weight="normal" fill="#222" text-anchor="start">1. Open: hold [M] (ASSIGN) 3 s, release.</text>
 <text x="35" y="94" font-size="15" font-weight="normal" fill="#222" text-anchor="start">2. Change page: tap [M]. The pulsing mix</text>
 <text x="35" y="115" font-size="15" font-weight="normal" fill="#222" text-anchor="start">LED marks the page (REVERB [L], FEEDBACK</text>
