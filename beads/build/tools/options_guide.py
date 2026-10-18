@@ -443,7 +443,7 @@ class Drawing:
             f'<rect x="{x}" y="{y + 14}" width="310" height="250" '
             'rx="12" fill="#f6f5f0" stroke="#aaa"/>'
         )
-        for dx, dy, name in ((42, 45, "FREEZE [B]"), (265, 45, "SEED [C]")):
+        for dx, dy, name in ((48, 45, "FREEZE [B]"), (265, 45, "SEED [C]")):
             self.circle(x + dx, y + dy, 10)
             self.text(x + dx, y + dy + 29, name, 15, anchor="middle")
         self.circle(x + 131, y + 105, 8, COLOURS["green"])

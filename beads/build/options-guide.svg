@@ -22,8 +22,8 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="35" y="334" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wait one second before powering off.</text>
 <text x="400" y="70" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FIND THE CONTROLS</text>
 <rect x="400" y="84" width="310" height="250" rx="12" fill="#f6f5f0" stroke="#aaa"/>
-<circle cx="442" cy="115" r="10" fill="white" stroke="#333" stroke-width="2"/>
-<text x="442" y="144" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">FREEZE [B]</text>
+<circle cx="448" cy="115" r="10" fill="white" stroke="#333" stroke-width="2"/>
+<text x="448" y="144" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">FREEZE [B]</text>
 <circle cx="665" cy="115" r="10" fill="white" stroke="#333" stroke-width="2"/>
 <text x="665" y="144" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">SEED [C]</text>
 <circle cx="531" cy="175" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
