@@ -173,7 +173,7 @@ checked on a module yet.
 
 Report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
 
-Options table checks: `make -f beads/test/options_tables.mk test` builds the
+Options table checks: `make -f beads/build/tools/options_tables.mk test` builds the
 TSV exporter and compares README.txt's Options reference with the firmware.
 `./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.
 The UI host checks all nine page/knob slots, cycling, RAM page memory,
@@ -199,9 +199,9 @@ an identical no-switch render at the clockwise filter endpoint.
 Generate the options guides with Python 3 (standard library only):
 
 ```sh
-make -f beads/test/options_tables.mk build/options_tables
+make -f beads/build/tools/options_tables.mk build/options_tables
 ./build/options_tables | python3 beads/build/tools/options_guide.py
-make -f beads/test/options_tables.mk test
+make -f beads/build/tools/options_tables.mk test
 ```
 
 The check regenerates all three files in a small temporary directory and

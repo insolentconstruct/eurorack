@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+
 # Released-source golden app.
 set -euo pipefail
 export LC_ALL=C

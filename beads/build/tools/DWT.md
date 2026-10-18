@@ -16,10 +16,10 @@ bash beads/build/tools/build_dwt.sh "$PWD/dwt-output"
 ```
 
 `BUILD_CONTEXT` is optional; plain local Docker works too. The build image is
-`beads-build-kit:gcc9`. Flash the calibration application with your usual
+`${BEADS_BUILD_IMAGE:-beads-build-kit}`. Flash the calibration application with your usual
 application-only programmer procedure at 0x08020000, preserving bootloader,
-settings and calibration. Verify the binary SHA256 against `BUILD_SHA` in
-`dwt.py`. Flashing and reset requests require an operator at the bench.
+settings and calibration. Verify the binary SHA256 against `calibration.bin` in
+`expected-hashes.sha256`. Flashing and reset requests require an operator at the bench.
 
 Start OpenOCD with an ST-LINK and a board-appropriate configuration that
 attaches without resetting or halting the running core, for example:

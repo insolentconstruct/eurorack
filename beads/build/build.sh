@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+
 # Run from the repository root.
 set -euo pipefail
 export LC_ALL=C
@@ -51,7 +54,7 @@ for spec in 'beads/makefile beads' 'beads/bootloader/makefile beads_bootloader';
   fi
   nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
     "KIT_MAKEFILE=$mf" "BUILD_ROOT=$out/objects/" \
-    "TOOLCHAIN_PATH=$tc" "KIT_GCC9=$gcc9" -j2 bin hex kit-info notice-deps \
+    "TOOLCHAIN_PATH=$tc" "KIT_GCC9=$gcc9" -j"$(nproc)" bin hex kit-info notice-deps \
     > "$out/$target.log" 2>&1 || { tail -40 "$out/$target.log" >&2; exit 1; }
 done
 cp "$out/objects/beads/beads.bin" "$out/app.bin"
@@ -80,6 +83,6 @@ padded = b + bytes(0x20000-len(b))
 if (p/'objects/beads/beads_bootloader_combo.bin').read_bytes() != padded+a:
     raise SystemExit('Combo disagrees with upstream HEX merge')
 PYCODE
-(cd "$out" && sha256sum -c "$OLDPWD/beads/build/expected-hashes.sha256") || { echo "FATAL: branch firmware hash mismatch" >&2; exit 1; }
+(cd "$out" && grep -v "  calibration.bin$" "$OLDPWD/beads/build/expected-hashes.sha256" | sha256sum -c -) || { echo "FATAL: branch firmware hash mismatch" >&2; exit 1; }
 (cd "$out" && sha256sum bootloader.bin bootloader-padded.bin app.bin app.elf combo.bin > SHA256SUMS
  sha256sum -c SHA256SUMS)

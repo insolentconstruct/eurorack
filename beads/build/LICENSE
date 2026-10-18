@@ -5,7 +5,7 @@ The files in this directory (beads/build/) are the build kit: scripts and
 configuration for building and packaging the firmware. They are released
 under the MIT license:
 
-Copyright 2026 the Beads build kit contributors.
+Copyright 2026 Insolent Construct.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

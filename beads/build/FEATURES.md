@@ -45,7 +45,7 @@ Enter with ASSIGN alone for 3 s, mix knobs still, then release. Entry needs norm
 | 2 / FEEDBACK | Reserved: attacks | Delay mode | Reserved: mix law |
 | 3 / DRY/WET | Self-play | Limiter | Reserved: LED brightness |
 
-Reserved knobs have no effect on MEDIA or saving. MEDIA shows the first available setting on page entry, then the last qualified knob moved. Every first value, including Pitch Off, is steady green. Other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. Other colours and pulses are listed in README.txt's firmware-checked Options reference. Saved byte positions are unchanged. `make -f beads/test/options_tables.mk test` checks the reference; `./build/options_tables` prints its TSV directly from firmware tables.
+Reserved knobs have no effect on MEDIA or saving. MEDIA shows the first available setting on page entry, then the last qualified knob moved. Every first value, including Pitch Off, is steady green. Other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. Other colours and pulses are listed in README.txt's firmware-checked Options reference. Saved byte positions are unchanged. `make -f beads/build/tools/options_tables.mk test` checks the reference; `./build/options_tables` prints its TSV directly from firmware tables.
 
 
 Pitch scale values and grain behaviour are described in the [options guide](OPTIONS.md).

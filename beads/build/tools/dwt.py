@@ -14,7 +14,10 @@ SIZE = 1112
 VERSION = 1
 HISTOGRAM_BIN_WIDTH = 2000
 MAGIC = 0x44575443
-BUILD_SHA = "2a7cad727dac3c59af2d7e5326832a8be1ceb224e6f5135221d1d42a2d7320eb"
+BLOCK_BUDGET_CYCLES = 120000
+PINS = Path(__file__).resolve().parents[1] / "expected-hashes.sha256"
+BUILD_SHA = next(line.split()[0] for line in PINS.read_text().splitlines()
+                 if line.split()[-1] == "calibration.bin")
 
 
 def decode(data):
@@ -53,7 +56,7 @@ def decode(data):
         median = quantile(1, 2)
         tail = quantile(999, 1000)
         percent = lambda bounds: (
-            [x / 1200 if x is not None else None for x in bounds]
+            [x / (BLOCK_BUDGET_CYCLES / 100) if x is not None else None for x in bounds]
             if bounds
             else None
         )
@@ -67,9 +70,9 @@ def decode(data):
                 )[b],
                 count=count,
                 maximum=maximum,
-                maximum_budget_percent=maximum / 1200,
+                maximum_budget_percent=maximum / (BLOCK_BUDGET_CYCLES / 100),
                 mean=total / count if count else None,
-                mean_budget_percent=total / count / 1200 if count else None,
+                mean_budget_percent=total / count / (BLOCK_BUDGET_CYCLES / 100) if count else None,
                 median_interval=median,
                 p999_interval=tail,
                 median_budget_percent_interval=percent(median),
@@ -83,18 +86,34 @@ def openocd(action):
     if action == "sai":
         return "mdw 0x4001581c 1\nmdw 0x4001583c 1\n"
     if action == "reset":
-        return "# WARNING: writes RAM; calibration firmware must be running.\n# Use 3 instead of 1 for the synthetic fixture.\nmwb 0x3004100c 1\nmdw 0x30041010 1\n"
-    return """# Run after capture has frozen. No halt or reset.
-if {[mrw 0x30041000] != 0x44575443 || [mrw 0x30041004] != 1} {error "wrong calibration firmware"}
-set first [mrw 0x30041008]
+        return (
+            "# WARNING: writes RAM; calibration firmware must be running.\n"
+            "# Use 3 instead of 1 for the synthetic fixture.\n"
+            f"mwb 0x{BASE + 12:08x} 1\nmdw 0x{BASE + 16:08x} 1\n"
+        )
+    template = """# Run after capture has frozen. No halt or reset.
+if {[mrw @BASE@] != @MAGIC@ || [mrw @VERSION_ADDRESS@] != @VERSION@} {error "wrong calibration firmware"}
+set first [mrw @SEQUENCE@]
 if {$first & 1} {error "update in progress; retry"}
-# mdw displays all 278 words (1112 bytes) in the console.
-mdw 0x30041000 278
+# mdw displays all @WORDS@ words (@SIZE@ bytes) in the console.
+mdw @BASE@ @WORDS@
 # dump_image emits the binary consumed by decode.
-dump_image capture.bin 0x30041000 1112
-set last [mrw 0x30041008]
+dump_image capture.bin @BASE@ @SIZE@
+set last [mrw @SEQUENCE@]
 if {$first != $last || ($last & 1)} {error "discard capture.bin; retry"}
 """
+    values = {
+        "BASE": f"0x{BASE:08x}",
+        "MAGIC": f"0x{MAGIC:08x}",
+        "VERSION_ADDRESS": f"0x{BASE + 4:08x}",
+        "VERSION": str(VERSION),
+        "SEQUENCE": f"0x{BASE + 8:08x}",
+        "WORDS": str(SIZE // 4),
+        "SIZE": str(SIZE),
+    }
+    for name, value in values.items():
+        template = template.replace("@" + name + "@", value)
+    return template
 
 
 def main():

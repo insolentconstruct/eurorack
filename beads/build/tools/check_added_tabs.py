@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+
 """Reject tabs in C/C++ lines added since BASE (env). Existing code is never checked."""
 import os
 import subprocess

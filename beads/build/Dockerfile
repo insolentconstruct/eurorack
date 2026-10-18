@@ -35,7 +35,6 @@ ARG GCC9_LOCAL=
 # Verified Arm archive.
 RUN if [ -n "$GCC9_LOCAL" ]; then cp "/kit-context/$GCC9_LOCAL" /tmp/gcc9.tar.bz2; else curl -fsSL -o /tmp/gcc9.tar.bz2 "$GCC9_URL"; fi \
  && echo "$GCC9_SHA256  /tmp/gcc9.tar.bz2" | sha256sum -c - \
- && echo "2b9eeccc33470f9d3cda26983b9d2dc6  /tmp/gcc9.tar.bz2" | md5sum -c - \
  && tar -xjf /tmp/gcc9.tar.bz2 -C /opt \
  && rm -f /tmp/gcc9.tar.bz2
 

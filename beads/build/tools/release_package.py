@@ -45,8 +45,6 @@ def write_zip(path, names):
             info.internal_attr = 0
             info.extra = b""
             z.writestr(info, (path.parent / name).read_bytes())
-            # writestr supplies Unix permissions; reset before close.
-            info.external_attr = 0
 
 
 def package(out, here, wav, wav_zip, combo, combo_zip):
