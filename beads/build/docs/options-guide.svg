@@ -152,7 +152,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <path d="M 494.900 994.642 A 37 37 0 0 1 491.703 949.492" fill="none" stroke="#555" stroke-width="3"/>
 <text x="469.63" y="978.74" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Auto</text>
 <path d="M 501.992 939.203 A 37 37 0 0 1 543.008 939.203" fill="none" stroke="#555" stroke-width="3"/>
-<text x="522.5" y="922.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Never</text>
+<text x="522.5" y="922.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Disabled</text>
 <path d="M 553.297 949.492 A 37 37 0 0 1 550.100 994.642" fill="none" stroke="#555" stroke-width="3"/>
 <text x="575.37" y="978.74" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide</text>
 <path d="M 492.912 947.784 A 37 37 0 0 1 500.284 940.412" fill="none" stroke="#aaa" stroke-width="8"/>
@@ -161,7 +161,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="390" y="1020" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Auto (Stock)</text>
 <text x="677" y="1020" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
 <circle cx="374" cy="1037" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="390" y="1042" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Never</text>
+<text x="390" y="1042" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Disabled</text>
 <text x="677" y="1042" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
 <circle cx="374" cy="1059" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
 <text x="390" y="1064" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide/smooth filter</text>

@@ -134,7 +134,7 @@ assert " ".join(plain_options[width_start:delay_start].split()) == " ".join(
 ), "README.md and README.txt Stereo width prose differ"
 plain_delay = plain_options[delay_start:limiter_start]
 rich_delay = markdown_readme.split("## Delay mode\n", 1)[1].split("\n## ", 1)[0]
-for fact in ("Auto (Stock)", "Never", "Wide/smooth filter", "middle", "SIZE CV",
+for fact in ("Auto (Stock)", "Disabled", "Wide/smooth filter", "middle", "SIZE CV",
              "green / yellow / red", "does not affect wavetable synth mode"):
     assert fact in " ".join(plain_delay.split()), fact
     assert fact in " ".join(rich_delay.split()), fact

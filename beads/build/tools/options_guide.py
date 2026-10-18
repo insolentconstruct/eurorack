@@ -167,7 +167,7 @@ DETAILS = [
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
-    "Never stays granular. Wide/smooth filter keeps the switch and adds a "
+    "Disabled stays granular. Wide/smooth filter keeps the switch and adds a "
     "neutral, unfiltered zone around the middle of the delay filter "
     "(SIZE attenurandomizer plus SIZE CV), with no resonant boost. The "
     "wavetable synth is unaffected.",

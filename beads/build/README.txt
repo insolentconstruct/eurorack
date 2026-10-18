@@ -96,10 +96,10 @@ WIDTH; all three mix LEDs pulse together for WIDTH. Custom mix assignment
 still works. The assignable CV input (7) adds to the width. Stock keeps the
 stock cycle and pan rounding.
 Delay mode: Auto (Stock) keeps the usual switch to delay at SIZE fully clockwise.
-Never keeps granular playback there. Wide/smooth filter keeps the switch and makes the
+Disabled keeps granular playback there. Wide/smooth filter keeps the switch and makes the
 delay filter (SIZE attenurandomizer plus SIZE CV) neutral in the middle, with no
 resonant boost. The [A] LED shows steady green / yellow / red for Auto (Stock) /
-Never / Wide/smooth filter. It does not affect wavetable synth mode.
+Disabled / Wide/smooth filter. It does not affect wavetable synth mode.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
@@ -156,7 +156,7 @@ page	LED	knob	setting	value	colour	pulse
 1	REVERB	REVERB	Reverb character	Clouds-style	yellow	steady
 2	FEEDBACK	FEEDBACK	Not used yet	Not used yet	unchanged	steady
 2	FEEDBACK	DRY/WET	Delay mode	Auto (Stock)	green	steady
-2	FEEDBACK	DRY/WET	Delay mode	Never	yellow	steady
+2	FEEDBACK	DRY/WET	Delay mode	Disabled	yellow	steady
 2	FEEDBACK	DRY/WET	Delay mode	Wide/smooth filter	red	steady
 2	FEEDBACK	REVERB	Not used yet	Not used yet	unchanged	steady
 3	DRY/WET	FEEDBACK	Wavetable synth	Automatic (Stock)	green	steady
