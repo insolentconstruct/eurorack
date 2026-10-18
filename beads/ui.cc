@@ -136,15 +136,9 @@ void Ui::Poll() {
       system_clock.milliseconds(), switches_.pressed(SWITCH_ASSIGN) &&
       switches_.pressed_immediate(SWITCH_ASSIGN),
       other, all_up, switches_.just_pressed(SWITCH_ASSIGN),
-      mode_ == MODE_NORMAL, pot_touched,
-      mix_pot_value_[MIX_PARAMETER_DRY_WET], settings_->output_limiter_mode(),
-      mix_pot_value_[MIX_PARAMETER_FEEDBACK],
-      settings_->self_play_on_request(),
-      mix_pot_value_[MIX_PARAMETER_REVERB], settings_->clouds_style(),
-      settings_->pitch_scale(),
+      mode_ == MODE_NORMAL, pot_touched, mix_pot_value_,
       !switches_.up(SWITCH_SEED) && !switches_.released(SWITCH_SEED),
-      switches_.just_pressed(SWITCH_SEED), settings_->stereo_width(),
-      settings_->delay_mode());
+      switches_.just_pressed(SWITCH_SEED), *settings_);
   if (!was_active && options_.active()) {
     FlashOptionsPage();
     flush_options_events_ = true;
@@ -166,9 +160,7 @@ void Ui::Poll() {
     }
   }
 
-  // Options transitions and event acceptance both run in SysTick. Suppress
-  // events on entry, while editing and until the exit buttons are up. Keep the
-  // stock debounce bookkeeping.
+  // Ignore switch events while options are open or draining.
   const bool accept_switch_events = !was_active && !options_.active() &&
       options_.stage() != Options::STAGE_DRAIN;
   for (int i = 0; i < SWITCH_LAST; ++i) {
@@ -217,16 +209,17 @@ void Ui::Poll() {
     }
   }
   
-  clouds_style_ = options_.stage() != Options::STAGE_INACTIVE
+  const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
+  clouds_style_ = previewing
       ? options_.clouds_preview() : settings_->clouds_style();
-  delay_mode_ = options_.stage() != Options::STAGE_INACTIVE
+  delay_mode_ = previewing
       ? options_.delay_preview() : settings_->delay_mode();
-  stereo_width_ = options_.stage() != Options::STAGE_INACTIVE
+  stereo_width_ = previewing
       ? options_.width_preview() : settings_->stereo_width();
-  pitch_scale_ = options_.stage() != Options::STAGE_INACTIVE
+  pitch_scale_ = previewing
       ? options_.pitch_preview() : settings_->pitch_scale();
-  output_limiter_mode_ = options_.stage() != Options::STAGE_INACTIVE
-      ? options_.preview() : settings_->output_limiter_mode();
+  output_limiter_mode_ = previewing
+      ? options_.limiter_preview() : settings_->output_limiter_mode();
   UpdateLeds();
 }
 
@@ -335,22 +328,22 @@ void Ui::UpdateLeds() {
               i == kOptionPages[options_.page()].led_index ? triangle : 0);
     }
     const OptionValue& indication = options_.indication();
-    const Leds::Color color = { indication.r, indication.g, indication.b };
-    // SysTick refreshes at 1 kHz: Marbles' 4:1 slow/fast ratio,
-    // stretched to 1.024 s / 256 ms periods (0.98 / 3.91 Hz).
+    const Leds::Color color = indication.color;
+    // Marbles' 4:1 slow/fast blink ratio.
     const uint32_t now = system_clock.milliseconds();
     const uint32_t phase = now % kOptionsPulsePeriod;
-    const bool lit = indication.pulses == 0 ||
-        (indication.pulses == 1 &&
+    const bool lit = indication.pulses == PULSE_STEADY ||
+        (indication.pulses == PULSE_SLOW &&
             (now % kOptionsSlowPeriod) < kOptionsSlowPeriod / 2) ||
-        (indication.pulses == 2 &&
+        (indication.pulses == PULSE_FAST &&
             (now % kOptionsFastPeriod) < kOptionsFastPeriod / 2) ||
-        (indication.pulses == 3 && (phase < 128 ||
-            (phase >= 256 && phase < 384)));
+        (indication.pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
+            (phase >= kOptionsFastPeriod &&
+            phase < kOptionsFastPeriod * 3 / 2)));
     if (indication.setting == OPTION_WIDTH && options_.width_preview()) {
       // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
       leds_.set_meter(lit
-          ? 0.25f + kWidthMeterSpan * float(options_.width_preview() - 1) / 254.0f
+          ? 0.25f + kWidthMeterSpan * float(options_.width_preview() - 1) / float(kStereoWidthMax - 1)
           : 0.0f);
     } else {
       leds_.set_media(color, lit ? 1.0f : 0.0f);
@@ -596,19 +589,15 @@ void Ui::OnSwitchReleased(const Event& e) {
   }
 }
 
-OutputLimiterMode Ui::output_limiter_mode() const {
-  return output_limiter_mode_;
-}
-
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
-    if (options_.preview() != settings_->output_limiter_mode() ||
+    if (options_.limiter_preview() != settings_->output_limiter_mode() ||
         options_.self_play_preview() != settings_->self_play_on_request() ||
         options_.clouds_preview() != settings_->clouds_style() ||
         options_.pitch_preview() != settings_->pitch_scale() ||
         options_.width_preview() != settings_->stereo_width() ||
         options_.delay_preview() != settings_->delay_mode()) {
-      settings_->set_output_limiter_mode(options_.preview());
+      settings_->set_output_limiter_mode(options_.limiter_preview());
       settings_->set_self_play_on_request(options_.self_play_preview());
       settings_->set_clouds_style(options_.clouds_preview());
       settings_->set_pitch_scale(options_.pitch_preview());
@@ -619,8 +608,7 @@ void Ui::DoEvents() {
     }
     options_.ClearCommit();
   }
-  // Only main owns the read pointer. Clear before flushing so an ISR request
-  // arriving during Flush remains pending for the next iteration.
+  // Clear before Flush so a request arriving during Flush stays pending.
   while (true) {
     if (flush_options_events_) {
       flush_options_events_ = false;
@@ -628,12 +616,7 @@ void Ui::DoEvents() {
     }
     if (!queue_.available()) break;
     Event e = queue_.PullEvent();
-    // No options-era events enter the queue. The entry request also rejects
-    // a pre-entry event pulled before an entire options session interrupts main.
-#ifdef TEST
-    extern void TestOptionsDispatchInterrupt();
-    TestOptionsDispatchInterrupt();
-#endif
+    // Drop events queued before options entry.
     if (!options_.active() && !flush_options_events_ &&
         e.control_type == CONTROL_SWITCH) {
       if (e.data == 0) {

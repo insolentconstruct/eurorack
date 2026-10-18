@@ -75,7 +75,7 @@ void Processor::Init(
 void Processor::SetCloudsStyle(bool clouds) {
   clouds_style_ = clouds;
   diffuser_.Init(diffuser_buffer_);
-  reverb_.SetCloudsStyle(clouds, sample_rate(), true);
+  reverb_.Reset(sample_rate(), true);
 }
 
 void Processor::Configure(Media media, bool mono) {
@@ -105,7 +105,7 @@ void Processor::Configure(Media media, bool mono) {
   
   float sr = sample_rate();
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
-  output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
+  output_limiter_.InitOutput(1.0f / (sr * 6.0f), 0.9f, sr);
   trigger_generator_.Init(sr);
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
   reverb_.Reset(sr);
@@ -265,7 +265,7 @@ void Processor::Process(
   
   // Final clipping/limiting
   output_limiter_.ProcessOutput(
-      out, size, output_limiter_mode_, sample_rate());
+      out, size, output_limiter_mode_);
   
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {

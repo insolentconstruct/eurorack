@@ -110,6 +110,12 @@ class PlayHead {
     phase_ += phase_increment_;
   }
 
+#ifdef TEST
+  inline int test_start() const { return start_; }
+  inline int test_remaining() const { return remaining_; }
+  inline float test_phase_increment() const { return phase_increment_; }
+#endif
+
  private:
   int start_;
   int remaining_;
@@ -198,6 +204,14 @@ class DelayController {
       Output* out,
       size_t size);
   
+#ifdef TEST
+  inline const DelayClock& test_clock() const { return clock_; }
+  inline float test_density() const { return density_; }
+  inline float test_multiplier() const { return multiplier_lp_; }
+  inline PlayHead* test_play_heads() { return play_head_; }
+  inline PlayHead* test_slave_play_heads() { return slave_play_head_; }
+#endif
+
  private:
   template<bool synchronized>
   void RenderInternal(

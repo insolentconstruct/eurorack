@@ -67,6 +67,13 @@ bool Settings::Init(bool recovery_mode) {
   state_.frozen = 0;
   state_.disable_autosave = 0;
   state_.monophonic_mode = 0;
+  state_.output_limiter_mode = 0;
+  state_.self_play = 0;
+  state_.pitch_scale = 0;
+  state_.reverb_style = 0;
+  state_.stereo_width = 0;
+  state_.delay_mode = 0;
+  state_.width_assigned = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   
   if (recovery_mode) {
@@ -81,13 +88,7 @@ bool Settings::Init(bool recovery_mode) {
     CONSTRAIN(state_.assignable_cv_destination, 0, 3);
   }
   
-  set_output_limiter_mode(output_limiter_mode());
-  set_self_play_on_request(self_play_on_request());
-  set_clouds_style(clouds_style());
-  set_pitch_scale(pitch_scale());
-  set_stereo_width(stereo_width());
-  set_delay_mode(delay_mode());
-  set_width_assigned(width_assigned());
+  NormalizeOptions();
   return success;
 }
 
@@ -99,7 +100,7 @@ void Settings::SavePersistentData() {
   chunk_storage_.SavePersistentData();
 }
 
-void Settings::SaveState() {
+void Settings::NormalizeOptions() {
   set_output_limiter_mode(output_limiter_mode());
   set_self_play_on_request(self_play_on_request());
   set_clouds_style(clouds_style());
@@ -107,7 +108,11 @@ void Settings::SaveState() {
   set_stereo_width(stereo_width());
   set_delay_mode(delay_mode());
   set_width_assigned(width_assigned());
-  fill(&state_.padding[7], &state_.padding[sizeof(state_.padding)], 0);
+}
+
+void Settings::SaveState() {
+  NormalizeOptions();
+  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   chunk_storage_.SaveState();
 }
 

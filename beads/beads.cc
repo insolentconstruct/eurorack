@@ -115,7 +115,7 @@ void Process(
   ScopedDebugPinToggler toggler;
 #endif  // PROFILE_INTERRUPT
 #ifdef DWT_CALIBRATION
-  dwt_calibration::Callback calibration_callback;
+  dwt_calibration::ScopedBlockTimer calibration_callback;
 #endif  // DWT_CALIBRATION
   FloatFrame float_in[kMaxCodecBlockSize];
   FloatFrame float_out[kMaxCodecBlockSize];
@@ -221,6 +221,7 @@ void Process(
   }
 
   const bool width_assigned = settings.width_assigned();
+  const float assign_cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
   float mix_parameter[Ui::MIX_PARAMETER_LAST];
   for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
     float base = ui.mix_parameter(Ui::MixParameter(i)) * 1.005f;
@@ -230,13 +231,13 @@ void Process(
         : (!width_assigned &&
             settings.state().assignable_cv_destination == i ? 1.0f : 0.0f);
     mix_parameter[i] = base + \
-        (cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f) * amount;
+        assign_cv * amount;
     CONSTRAIN(mix_parameter[i], 0.0f, 1.0f);
   }
 
   const float stereo_width = ModulatedStereoWidth(ui.stereo_width(),
       width_assigned
-          ? cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f : 0.0f);
+          ? assign_cv : 0.0f);
 
   Processor::MixParameters m;
   m.feedback = mix_parameter[Ui::MIX_PARAMETER_FEEDBACK];
@@ -260,7 +261,7 @@ void Process(
     if (reverb_style_previous_gain == 0.0f) {
       clouds_style = requested_style;
       processor.SetCloudsStyle(clouds_style);
-      synth.SetCloudsStyle(clouds_style, false);
+      synth.SetCloudsStyle(clouds_style);
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
@@ -273,10 +274,11 @@ void Process(
 #ifdef DWT_CALIBRATION
   if (dwt_calibration::stats.synthetic) {
     dwt_calibration::PrepareSynthetic(
-        processor, delay_buffer_1, sizeof(delay_buffer_1),
+        &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
-        clouds_style, synth_mode, p, d, m, seed_button_state,
-        seed_input, seed, freeze, float_in, size, calibration_callback);
+        sizeof(reverb_buffer) / sizeof(reverb_buffer[0]),
+        clouds_style, &synth_mode, &p, &d, &m, &seed_button_state,
+        &seed_input, seed, freeze, float_in, size, &calibration_callback);
   }
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
@@ -295,7 +297,7 @@ void Process(
         d, p, m,
         float_out, size);
 #ifdef DWT_CALIBRATION
-    dwt_calibration::Record(1, dwt_calibration::Read() - calibration_start);
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER, dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
@@ -312,7 +314,7 @@ void Process(
         float_in,
         float_out, size);
 #ifdef DWT_CALIBRATION
-    dwt_calibration::Record(1, dwt_calibration::Read() - calibration_start);
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER, dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
   }
   

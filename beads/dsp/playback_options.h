@@ -44,10 +44,11 @@ const int kDelayQPositionMax = 65535;
 // Saved byte: zero is stock, 1..255 spans zero to full displacement.
 typedef uint8_t StereoWidth;
 const StereoWidth kStereoWidthStock = 0;
+const int kStereoWidthMax = 255;
 
 inline float ModulatedStereoWidth(StereoWidth width, float cv) {
   if (!width) return 0.0f;
-  float amount = float(width - 1) / 254.0f + cv;
+  float amount = float(width - 1) / float(kStereoWidthMax - 1) + cv;
   CONSTRAIN(amount, 0.0f, 1.0f);
   return amount;
 }
@@ -62,6 +63,10 @@ struct DelayFilterMode {
   bool wide_detent;
   uint8_t reserved;
   uint16_t position;
+};
+
+struct DelayFilterModeLayoutAssertions {
+  STATIC_ASSERT(sizeof(DelayFilterMode) == 4, delay_filter_mode_size);
 };
 
 struct DelayFilterQ {

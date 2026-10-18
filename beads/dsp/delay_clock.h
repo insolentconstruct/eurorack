@@ -72,6 +72,11 @@ class DelayClock {
     return (rotate_ + 1) % 2;
   }
   
+#ifdef TEST
+  inline int& test_next_interval() { return next_interval_; }
+  inline int test_max_interval() const { return max_interval_; }
+#endif
+
  private:
   float interval_[2];
   float average_interval_;

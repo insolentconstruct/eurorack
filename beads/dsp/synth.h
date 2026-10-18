@@ -40,6 +40,8 @@
 
 namespace beads {
 
+const float kSynthSampleRate = 48000.0f;
+
 const size_t kNumBanks = 12;
 
 class Synth {
@@ -56,9 +58,9 @@ class Synth {
   
   void Init(uint16_t* reverb_buffer);
   void Reset();
-  void SetCloudsStyle(bool clouds, bool clear) {
+  void SetCloudsStyle(bool clouds) {
     clouds_style_ = clouds;
-    reverb_.SetCloudsStyle(clouds, 48000.0f, clear);
+    reverb_.Reset(kSynthSampleRate, true);
   }
   
   void Render(

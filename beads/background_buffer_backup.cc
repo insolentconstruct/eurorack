@@ -36,6 +36,8 @@
 
 namespace beads {
 
+const uint32_t kFreezeTag = 0x5a5a5246;  // FRZZ
+
 using namespace std;
 using namespace stmlib;
 
@@ -105,7 +107,7 @@ bool BackgroundBufferBackup::Load() {
 }
 
 bool BackgroundBufferBackup::Valid(const BufferBackupHeader& header) const {
-  if (header.tag != 0x5a5a5246 ||  // FRZZ
+  if (header.tag != kFreezeTag ||
       header.media > Processor::MEDIA_DIGITAL ||
       header.mono > 1 ||
       header.write_ptr < 0 ||
@@ -182,7 +184,7 @@ void BackgroundBufferBackup::WriteBlock() {
     if (!remaining_bytes_) {
       // The header goes last, once all the audio is in.
       BufferBackupHeader header;
-      header.tag = 0x5a5a5246;  // FRZZ
+      header.tag = kFreezeTag;
       header.write_ptr = *processor_->mutable_delay_write_ptr();
       header.media = processor_->media();
       header.mono = processor_->mono();

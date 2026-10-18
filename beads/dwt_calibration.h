@@ -33,6 +33,8 @@
 #include <algorithm>
 #include <stdint.h>
 
+#include "stm32h7xx.h"
+
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/processor.h"
@@ -40,11 +42,12 @@
 namespace beads {
 namespace dwt_calibration {
 
-const uint32_t kDemcr = 0xe000edfc;
-const uint32_t kDwtLar = 0xe0001fb0;
-const uint32_t kDwtCyccnt = 0xe0001004;
-const uint32_t kDwtCtrl = 0xe0001000;
 const uint32_t kDwtUnlock = 0xc5acce55;
+enum BracketIndex {
+  BRACKET_CALLBACK, BRACKET_INNER, BRACKET_PREPARATION,
+  BRACKET_CALLBACK_MINUS_PREPARATION, BRACKET_LAST
+};
+
 const uint8_t kResetPanel = 1;
 const uint8_t kResetSynthetic = 3;
 const uint32_t kMagic = 0x44575443;
@@ -77,18 +80,18 @@ struct Stats {
   uint8_t reserved[2];
   uint32_t generation;
   uint32_t block;
-  Bracket bracket[4];
+  Bracket bracket[BRACKET_LAST];
 };
 
-volatile Stats stats __attribute__((section(".dwt_calibration"), aligned(8)));
+extern volatile Stats stats;
 
 inline uint32_t Read() {
   __asm volatile("dsb\n\tisb" ::: "memory");
-  return *reinterpret_cast<volatile uint32_t*>(kDwtCyccnt);
+  return DWT->CYCCNT;
 }
 
 inline void Clear() {
-  for (unsigned b = 0; b < 4; ++b) {
+  for (unsigned b = 0; b < BRACKET_LAST; ++b) {
     stats.bracket[b].maximum = 0;
     stats.bracket[b].count = 0;
     stats.bracket[b].sum = 0;
@@ -103,10 +106,10 @@ inline void Clear() {
 }
 
 inline void Init() {
-  *reinterpret_cast<volatile uint32_t*>(kDemcr) |= 1U << 24;
-  *reinterpret_cast<volatile uint32_t*>(kDwtLar) = kDwtUnlock;
-  *reinterpret_cast<volatile uint32_t*>(kDwtCyccnt) = 0;
-  *reinterpret_cast<volatile uint32_t*>(kDwtCtrl) |= 1;
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->LAR = kDwtUnlock;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   stats.magic = kMagic;
   stats.version = kVersion;
   stats.sequence = 1;
@@ -124,7 +127,7 @@ inline void Record(unsigned b, uint32_t elapsed) {
   if (stats.synthetic && stats.block < kWarmupBlocks) {
     return;
   }
-  if (stats.bracket[0].count >=
+  if (stats.bracket[BRACKET_CALLBACK].count >=
       (stats.synthetic ? kSyntheticBlocks : kPanelBlocks)) {
     return;
   }
@@ -138,13 +141,13 @@ inline void Record(unsigned b, uint32_t elapsed) {
   ++s.histogram[bin < kHistogramBins - 1 ? bin : kHistogramBins - 1];
 }
 
-class Callback {
+class ScopedBlockTimer {
  public:
-  Callback() {
+  ScopedBlockTimer() {
     const bool reset = stats.reset_request == kResetPanel ||
         stats.reset_request == kResetSynthetic;
     active_ = reset ||
-        stats.bracket[0].count <
+        stats.bracket[BRACKET_CALLBACK].count <
             (stats.synthetic ? kSyntheticBlocks : kPanelBlocks);
     if (!active_) {
       return;
@@ -156,13 +159,13 @@ class Callback {
     preparation_ = 0;
     start_ = Read();
   }
-  ~Callback() {
+  ~ScopedBlockTimer() {
     if (!active_) {
       return;
     }
     const uint32_t elapsed = Read() - start_;
-    Record(3, elapsed - preparation_);
-    Record(0, elapsed);
+    Record(BRACKET_CALLBACK_MINUS_PREPARATION, elapsed - preparation_);
+    Record(BRACKET_CALLBACK, elapsed);
     ++stats.block;
     __asm volatile("dmb" ::: "memory");
     ++stats.sequence;
@@ -170,18 +173,15 @@ class Callback {
 
   void Preparation(uint32_t elapsed) {
     preparation_ = elapsed;
-    Record(2, elapsed);
+    Record(BRACKET_PREPARATION, elapsed);
   }
  private:
   uint32_t preparation_;
   uint32_t start_;
   bool active_;
 
-  DISALLOW_COPY_AND_ASSIGN(Callback);
+  DISALLOW_COPY_AND_ASSIGN(ScopedBlockTimer);
 };
-
-const unsigned kDelayBufferHalf = 262144;
-const unsigned kReverbBufferSize = 32768;
 
 const float kSyntheticMidpoint = 0.5f;
 const float kSyntheticSize = 0.85f;
@@ -191,41 +191,41 @@ const float kSyntheticMix = 0.8f;
 const float kSyntheticReverb = 0.7f;
 
 inline void PrepareSynthetic(
-    Processor& processor, uint8_t* delay_buffer_1, size_t delay_buffer_1_size,
+    Processor* processor, uint8_t* delay_buffer_1, size_t delay_buffer_1_size,
     uint8_t* delay_buffer_2, size_t delay_buffer_2_size,
-    uint16_t* reverb_buffer,
-    bool clouds_style, bool& synth_mode, Parameters& p, ModulatedParameter& d,
-    Processor::MixParameters& m, SeedButtonState& seed_button_state,
-    stmlib::GateFlags*& seed_input, stmlib::GateFlags* seed, bool* freeze,
-    FloatFrame* float_in, size_t size, Callback& callback) {
+    uint16_t* reverb_buffer, size_t reverb_buffer_size,
+    bool clouds_style, bool* synth_mode, Parameters* p, ModulatedParameter* d,
+    Processor::MixParameters* m, SeedButtonState* seed_button_state,
+    stmlib::GateFlags** seed_input, stmlib::GateFlags* seed, bool* freeze,
+    FloatFrame* float_in, size_t size, ScopedBlockTimer* callback) {
   const uint32_t preparation_start = Read();
   const unsigned block = stats.block;
   if (block == 0) {
     uint8_t* buffers[] = {
-      delay_buffer_1, delay_buffer_1 + kDelayBufferHalf, delay_buffer_2
+      delay_buffer_1, delay_buffer_1 + delay_buffer_1_size / 2, delay_buffer_2
     };
     std::fill(delay_buffer_1, delay_buffer_1 + delay_buffer_1_size, 0);
     std::fill(delay_buffer_2, delay_buffer_2 + delay_buffer_2_size, 0);
-    std::fill(reverb_buffer, reverb_buffer + kReverbBufferSize, 0);
-    processor.Init(buffers, reverb_buffer);
-    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    std::fill(reverb_buffer, reverb_buffer + reverb_buffer_size, 0);
+    processor->Init(buffers, reverb_buffer);
+    processor->Configure(Processor::MEDIA_DIGITAL, false);
     stmlib::Random::Seed(kStimulusSeed);
-    processor.SetCloudsStyle(clouds_style);
+    processor->SetCloudsStyle(clouds_style);
   }
-  synth_mode = false;
-  p = Parameters();
-  p.time.base = kSyntheticMidpoint;
-  p.size.base = kSyntheticSize;
-  p.shape.base = kSyntheticMidpoint;
-  p.pitch.base = kSyntheticPitch;
-  d.base = kSyntheticDensity;
-  d.cv = 0.0f;
-  m.feedback = kSyntheticMix;
-  m.dry_wet = kSyntheticMix;
-  m.reverb_amount = kSyntheticReverb;
-  m.output_gate = false;
-  seed_button_state = SEED_BUTTON_STATE_OFF;
-  seed_input = seed;
+  *synth_mode = false;
+  *p = Parameters();
+  p->time.base = kSyntheticMidpoint;
+  p->size.base = kSyntheticSize;
+  p->shape.base = kSyntheticMidpoint;
+  p->pitch.base = kSyntheticPitch;
+  d->base = kSyntheticDensity;
+  d->cv = 0.0f;
+  m->feedback = kSyntheticMix;
+  m->dry_wet = kSyntheticMix;
+  m->reverb_amount = kSyntheticReverb;
+  m->output_gate = false;
+  *seed_button_state = SEED_BUTTON_STATE_OFF;
+  *seed_input = seed;
   for (unsigned i = 0; i < size; ++i) {
     float_in[i].l = float(int((block * size + i) * kLeftMultiplier
         % kStimulusPeriod) - kStimulusOffset) / kStimulusScale;
@@ -236,8 +236,8 @@ inline void PrepareSynthetic(
         : stmlib::GATE_FLAG_LOW;
     freeze[i] = false;
   }
-  processor.PrepareCalibration(block);
-  callback.Preparation(Read() - preparation_start);
+  processor->PrepareCalibration(block);
+  callback->Preparation(Read() - preparation_start);
 }
 
 }  // namespace dwt_calibration

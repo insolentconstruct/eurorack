@@ -164,7 +164,7 @@ class Reverb {
   
   void ProcessClouds(FloatFrame* in_out, size_t size);
 
-  void SetCloudsStyle(bool /* clouds */, float sample_rate, bool clear) {
+  void Reset(float sample_rate, bool clear) {
     if (clear) {
       Clear();
     }

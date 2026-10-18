@@ -36,6 +36,8 @@
 
 namespace beads {
 
+const size_t kDiffuserBufferSize = 2048;
+
 class Diffuser {
  public:
   Diffuser() { }
@@ -52,7 +54,7 @@ class Diffuser {
   }
 
  private:
-  typedef FxEngine<2048, FORMAT_16_BIT> E;
+  typedef FxEngine<kDiffuserBufferSize, FORMAT_16_BIT> E;
   E engine_;
 
   float amount_;

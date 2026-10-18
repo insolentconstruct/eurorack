@@ -325,7 +325,7 @@ class GranularProcessor {
     const bool wide_detent = filter_mode_.wide_detent;
     float q_offset = wide_detent ? kWideDetentQOffset : kStockDelayQOffset;
     float q_scale = wide_detent ? 0.0f : kStockDelayQScale;
-    // Rounded separately: identical results on every GCC version.
+    // fmaf rounds incorrectly here; -ffp-contract=off changes GCC 9's other choices (see compiler investigation).
     const volatile float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 

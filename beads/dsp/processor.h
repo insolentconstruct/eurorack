@@ -259,7 +259,7 @@ class Processor {
   Limiter output_limiter_;
   OutputLimiterMode output_limiter_mode_;
   Diffuser diffuser_;
-  uint16_t diffuser_buffer_[2048];
+  uint16_t diffuser_buffer_[kDiffuserBufferSize];
   bool clouds_style_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);

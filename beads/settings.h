@@ -29,6 +29,8 @@
 #ifndef BEADS_SETTINGS_H_
 #define BEADS_SETTINGS_H_
 
+#include <stddef.h>
+
 #include "stmlib/stmlib.h"
 #include "stmlib/system/storage.h"
 
@@ -59,9 +61,45 @@ struct State {
   uint8_t frozen;
   uint8_t disable_autosave;
   uint8_t monophonic_mode;
-  uint8_t padding[14];
+  uint8_t output_limiter_mode;
+  uint8_t self_play;
+  uint8_t pitch_scale;
+  uint8_t reverb_style;
+  uint8_t stereo_width;
+  uint8_t delay_mode;
+  uint8_t width_assigned;
+  uint8_t padding[7];
   enum { tag = 0x54415453 };  // STAT
 };
+
+struct StateLayoutAssertions {
+  STATIC_ASSERT(sizeof(State) == 24, state_size);
+  STATIC_ASSERT(offsetof(State, media) == 0, state_media_offset);
+  STATIC_ASSERT(
+      offsetof(State, assignable_cv_destination) == 1, state_assignable_cv_destination_offset);
+  STATIC_ASSERT(
+      offsetof(State, assignable_cv_amount) == 2, state_assignable_cv_amount_offset);
+  STATIC_ASSERT(offsetof(State, gain) == 5, state_gain_offset);
+  STATIC_ASSERT(
+      offsetof(State, gate_output_mode) == 6, state_gate_output_mode_offset);
+  STATIC_ASSERT(offsetof(State, frozen) == 7, state_frozen_offset);
+  STATIC_ASSERT(
+      offsetof(State, disable_autosave) == 8, state_disable_autosave_offset);
+  STATIC_ASSERT(
+      offsetof(State, monophonic_mode) == 9, state_monophonic_mode_offset);
+  STATIC_ASSERT(
+      offsetof(State, output_limiter_mode) == 10, state_output_limiter_mode_offset);
+  STATIC_ASSERT(offsetof(State, self_play) == 11, state_self_play_offset);
+  STATIC_ASSERT(offsetof(State, pitch_scale) == 12, state_pitch_scale_offset);
+  STATIC_ASSERT(offsetof(State, reverb_style) == 13, state_reverb_style_offset);
+  STATIC_ASSERT(offsetof(State, stereo_width) == 14, state_stereo_width_offset);
+  STATIC_ASSERT(offsetof(State, delay_mode) == 15, state_delay_mode_offset);
+  STATIC_ASSERT(
+      offsetof(State, width_assigned) == 16, state_width_assigned_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 17, state_padding_offset);
+};
+
+const uint8_t kOptionTag = 0xa0;
 
 class Settings {
  public:
@@ -73,74 +111,69 @@ class Settings {
   void SavePersistentData();
   void SaveState();
 
-  // Stored in the first padding byte. Unknown values, including the zero
-  // left by stock firmware, read as Stock.
+  // Unknown values, including stock firmware's zero, read as Stock.
   inline OutputLimiterMode output_limiter_mode() const {
-    const uint8_t value = state_.padding[0];
-    return value == 0xa1 ? OUTPUT_LIMITER_FAST
-        : value == 0xa2 ? OUTPUT_LIMITER_OFF : OUTPUT_LIMITER_STOCK;
+    const uint8_t value = state_.output_limiter_mode;
+    return value == (kOptionTag + 1) ? OUTPUT_LIMITER_FAST
+        : value == (kOptionTag + 2) ? OUTPUT_LIMITER_OFF : OUTPUT_LIMITER_STOCK;
   }
 
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
-    state_.padding[0] = mode == OUTPUT_LIMITER_FAST ? 0xa1
-        : mode == OUTPUT_LIMITER_OFF ? 0xa2 : 0;
+    state_.output_limiter_mode = mode == OUTPUT_LIMITER_FAST ? (kOptionTag + 1)
+        : mode == OUTPUT_LIMITER_OFF ? (kOptionTag + 2) : 0;
   }
   
   inline bool self_play_on_request() const {
-    return state_.padding[1] == 0xa1;
+    return state_.self_play == (kOptionTag + 1);
   }
 
   inline void set_self_play_on_request(bool on_request) {
-    state_.padding[1] = on_request ? 0xa1 : 0;
+    state_.self_play = on_request ? (kOptionTag + 1) : 0;
   }
 
-  // Byte 12 belongs to pitch scale; 0xa1 in byte 13 is reserved.
   inline bool clouds_style() const {
-    return state_.padding[3] == 0xa2;
+    return state_.reverb_style == (kOptionTag + 2);
   }
 
   inline void set_clouds_style(bool clouds) {
-    state_.padding[3] = clouds ? 0xa2 : 0;
+    state_.reverb_style = clouds ? (kOptionTag + 2) : 0;
   }
 
   inline PitchScale pitch_scale() const {
-    const uint8_t value = state_.padding[2];
-    return value >= 0xa1 && value <= 0xa9
-        ? PitchScale(value - 0xa0) : PITCH_SCALE_OFF;
+    const uint8_t value = state_.pitch_scale;
+    return value >= (kOptionTag + 1) && value <= (kOptionTag + 9)
+        ? PitchScale(value - kOptionTag) : PITCH_SCALE_OFF;
   }
 
   inline void set_pitch_scale(PitchScale scale) {
-    state_.padding[2] = scale > PITCH_SCALE_OFF && scale < PITCH_SCALE_LAST
-        ? 0xa0 + scale : 0;
+    state_.pitch_scale = scale > PITCH_SCALE_OFF && scale < PITCH_SCALE_LAST
+        ? kOptionTag + scale : 0;
   }
 
-  // Byte 14: zero is stock; 1..255 is enabled width.
   inline StereoWidth stereo_width() const {
-    return state_.padding[4];
+    return state_.stereo_width;
   }
 
   inline void set_stereo_width(StereoWidth width) {
-    state_.padding[4] = width;
+    state_.stereo_width = width;
     if (!width) set_width_assigned(false);
   }
 
-  // Byte 15: the automatic SIZE transition is the default.
   inline DelayMode delay_mode() const {
-    const uint8_t value = state_.padding[5];
-    return value == 0xa1 ? DELAY_MODE_NEVER
-        : value == 0xa2 ? DELAY_MODE_WIDE_DETENT : DELAY_MODE_AUTO;
+    const uint8_t value = state_.delay_mode;
+    return value == (kOptionTag + 1) ? DELAY_MODE_NEVER
+        : value == (kOptionTag + 2) ? DELAY_MODE_WIDE_DETENT : DELAY_MODE_AUTO;
   }
 
   inline void set_delay_mode(DelayMode mode) {
-    state_.padding[5] = mode == DELAY_MODE_NEVER ? 0xa1
-        : mode == DELAY_MODE_WIDE_DETENT ? 0xa2 : 0;
+    state_.delay_mode = mode == DELAY_MODE_NEVER ? (kOptionTag + 1)
+        : mode == DELAY_MODE_WIDE_DETENT ? (kOptionTag + 2) : 0;
   }
 
-  // Byte 16 overlays WIDTH while FEEDBACK remains the saved destination.
-  inline bool width_assigned() const { return state_.padding[6] == 1; }
+  inline bool width_assigned() const { return state_.width_assigned == 1; }
 
   inline void set_width_assigned(bool assigned) {
-    state_.padding[6] = assigned && stereo_width() ? 1 : 0;
+    state_.width_assigned = assigned && stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
   }
 
@@ -161,6 +194,8 @@ class Settings {
   }
 
  private:
+  void NormalizeOptions();
+
   PersistentData persistent_data_;
   State state_;
   stmlib::ChunkStorage<15, PersistentData, State> chunk_storage_;

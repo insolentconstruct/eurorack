@@ -29,6 +29,10 @@
 #ifndef BEADS_DSP_WAVETABLE_GRANULAR_PLAYER_H_
 #define BEADS_DSP_WAVETABLE_GRANULAR_PLAYER_H_
 
+#include <cstdio>
+
+#include <cstdio>
+
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/granular_player.h"

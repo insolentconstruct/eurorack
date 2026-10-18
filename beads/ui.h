@@ -65,7 +65,7 @@ class Ui {
     MIX_PARAMETER_FEEDBACK,
     MIX_PARAMETER_DRY_WET,
     MIX_PARAMETER_REVERB,
-    MIX_PARAMETER_LAST,
+    MIX_PARAMETER_LAST = beads::MIX_PARAMETER_LAST,
   };
   
   void Init(
@@ -131,7 +131,9 @@ class Ui {
     overwrite_reserve_ = overwrite_reserve;
   }
   
-  OutputLimiterMode output_limiter_mode() const;
+  inline OutputLimiterMode output_limiter_mode() const {
+    return output_limiter_mode_;
+  }
   inline bool clouds_style() const { return clouds_style_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
