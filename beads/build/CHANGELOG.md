@@ -4,7 +4,6 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
-- Clouds-style reverb modulation uses nominal 0.5/0.3 Hz rates in every recording quality.
 - Add generated printable and phone options guides, a text guide, and release ZIP copies.
 - Reorganize options across three pages: pitch/width/reverb, delay mode, then self-play/limiter. Knobs marked Not used yet are inert. Reopening remembers the last page until power-off.
 - Save options after one second of settled controls. Hold ASSIGN 3 s or press another button to close; idle pages stay open. All stock values use steady green. Other values use the green/yellow/red ladder with slow or fast blinking where needed; entry, close and completed saves flash the page LED for 100 ms.
@@ -16,7 +15,10 @@ heading; a release turns it into a dated heading.
 - Add buffer trim: hold MEDIA, then press FREEZE to start a recording window from zero; the next freeze holds only what was recorded since. Saved buffers keep the trimmed length; stock firmware loads them at full length.
 - Add pitch scale: Off (default), Chromatic or eight scales. Page 1 (REVERB LED), FEEDBACK knob; on Scale, tap SEED to cycle Fifths and octaves, then Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri, tuned as in Marbles. Each grain's final pitch, including randomness, snaps when it starts. Delay and the continuous synth oscillator keep their existing pitch behaviour.
 - Preserve saved options: byte 12/13 values are frozen at Beta 1. Future options use a free byte 17–22 with 0 preserving the Beta 1 behaviour, so existing saves stay valid.
-- Add Clouds-style reverb: page 1 (REVERB LED), REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail.
+- Add Clouds-style reverb: page 1 (REVERB LED), REVERB knob, lower half Stock (default), upper half Clouds-style. Clouds reverb character in every mode, plus fixed diffusion on grain wet output. Switching briefly fades and clears the old tail. The reverb modulation runs at 0.5/0.3 Hz in every recording quality.
+- Explicit rounding in the grain pan and the shape and speed targets: the sound is identical with GCC 9 through 16.
+- Add a calibration build that times the audio callback on a module with the DWT cycle counter.
+- Add PORTING.md and OPTIMIZATIONS.md; align STYLE.md with Mutable Instruments' code; MANUAL_ERRATA.md notes that the outputs are inverted by the hardware.
 - Keep SEED scale taps through a pending save; closing options restores normal controls while the final change settles.
 
 ## 2026.10.16 (tag `drizzlet-2026.10.16`, alpha 2)

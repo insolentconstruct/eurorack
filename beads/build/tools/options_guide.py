@@ -47,8 +47,8 @@ COLOURS = {
 }
 STEPS = [
     "Open: hold ASSIGN {hold} s, release.",
-    "Change page: tap ASSIGN. The pulsing mix LED marks the page (F / "
-    "D/W / R).",
+    "Change page: tap ASSIGN. The pulsing mix LED marks the page "
+    "(R, F, D/W for pages 1-3).",
     "Change a setting: turn its knob; it saves {settle} second after you "
     "stop (the page LED flashes).",
     "Close: hold ASSIGN {hold} s, or press any other button except SEED "

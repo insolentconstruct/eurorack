@@ -1,21 +1,23 @@
 # Testing
 
-How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the checks its developers ran before releases 2026.10.14 and 2026.10.16 (alphas). Hardware testing used one module.
+How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the checks its developers ran before releases 2026.10.14 and 2026.10.16 (alphas) and Beta 1. Hardware testing used one module.
 
 ## TL;DR
 
-- **In numbers:** 160 tests in 13 host test programs (963 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 160 tests in 13 host test programs (963 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 149 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - emulator comparisons found identical audio in 44 of 44 scenarios against the previous release (2026.10.14), and in 20 of 20 between GCC 9 and GCC 4.9.3 builds (2026.10.16).
 - **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle recipe, flash wear from a modulated FREEZE, monophonic grains and self-play, using oscilloscope captures and the debug probe.
+- **Beta 1 on a module:** a recorded run of 28 scenarios on release candidate 3 and the same 22 shared scenarios on the released source, with no difference traced to the firmware; a shorter run on release candidate 5; every pitch scale on scale; CPU load 60–90.5% of the audio budget with no underruns.
+- **Module totals:** 48 firmware installs on the test module, none of which failed to boot, and about 13 hours of automated test runs.
 - **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
 
 Counts come from the test calls in each program’s `main()`, `CHECK` sites
 in those source files, and the `cases` list in `mutation_check.py`. Options
 also runs an advanced build; it is counted once. Assertions inside loops
-execute more than once. The manual-coverage totals below are unchanged.
+execute more than once.
 
 ## Automated (every push)
 
@@ -154,17 +156,100 @@ firmware. See CHANGELOG.md for the source difference. On our module, the 2021
 and 2024 firmware clicked and the released source / Drizzlet did not. A desktop
 run of both grain schedulers produced no clicks, so the clicks are not a DSP-
 logic artefact. CPU timing is the current hypothesis: the 2024 scheduler costs
-more in that range, but module CPU timing there has not yet been measured.
+more in that range. Drizzlet peaks at 105,346 cycles (87.8%) on the crackle
+recipe; the 2024 firmware was not timed on the module.
+
+### Beta 1
+
+Recorded with a Focusrite Scarlett 18i8: both outputs, a copy of the input
+signal and a timecode from the Bela for alignment. CPU load comes from a
+calibration build: the same code with timing counters added.
+
+**Release candidate 3 against the released source** (2026-10-17), same panel
+settings. *Measured* scenarios record values for comparison and have no pass
+threshold.
+
+| Scenarios | Released source | Drizzlet |
+|---|---|---|
+| Dry path; PITCH, TIME, SIZE and SHAPE CV; SEED; FREEZE gate; gated DENSITY; latched clock; monophonic grains; dry and wet output in the qualities checked | 15 pass | 15 pass |
+| Dry crosstalk | Inconclusive (the laptop's playback skipped) | Pass |
+| Dry output, first quality; three delay scenarios | Inconclusive (measurement limits) | Inconclusive, same reasons |
+| Input gain and limiter, delay echoes | Measured | Measured |
+| Random amounts for PITCH, TIME, SIZE and SHAPE | Measured | Measured |
+| Self-play, inputs unplugged | Pass | Pass |
+| Drizzlet only: limiter Fast and Off, three ASSIGN destinations | | Measured |
+| Drizzlet only: Clouds-style switching | | Inconclusive here, pass on release candidate 5 |
+| Drizzlet only: all nine pitch scales | | Measured, see below |
+
+Measured values were compared with the released source. Every difference
+traced back to the test rather than the firmware, and those tests were fixed.
+No recording had dropouts or digital clipping. The click candidates found came
+from the audio itself (music on the dry path, delay echoes, self-play), at
+similar counts on the released source.
+
+**Pitch scales.** With PITCH randomness turned up, 222 grains were detected
+across the nine scale settings. Every one landed on a note of its scale, the
+worst within 4.6 cents.
+
+**CPU load on the module.** Peak cycles for the whole audio callback, including
+codec and control input handling; the budget is 120,000 cycles per block. The
+shared settings are DENSITY 0.95, SIZE 0.85, PITCH +24 semitones, Bright
+digital, with inputs playing.
+
+| Settings | Peak cycles | Budget |
+|---|---:|---:|
+| Delay mode | 72,472 | 60% |
+| Sunny tape | 76,746 | 64% |
+| Default options (heaviest grain case) | 102,009–103,223 | 85–86% |
+| Crackle recipe, Clouds-style reverb | 105,346 | 87.8% |
+| Clouds-style reverb | 105,720 | 88.1% |
+| Clouds-style reverb and Raag Shri scale | 105,761 | 88.1% |
+| Synth mode, inputs unplugged | 108,590 | 90.5% |
+
+No audio underruns in any capture. The released source has no timing counters,
+so it was not timed the same way.
+
+**Release candidate 5** (2026-10-18), the Beta 1 code. Only the Clouds-style
+reverb's modulation rate, explicit rounding that keeps GCC 9's results, and
+code tidying changed since release candidate 3; the emulator gives identical
+audio in every scenario with default options. A short run checked them on the module:
+
+| Check | Result |
+|---|---|
+| Clouds-style switching, A/B/A | Pass |
+| PITCH CV, gated DENSITY | Pass |
+| Clouds-style CPU | 105,764 cycles (88.1%), no underruns, same as release candidate 3 |
+| Self-play | Inconclusive: the noise rule expects a quiet start, which self-play never has |
+| Dry path | Inconclusive: weak alignment, as before |
+| Delay | Inconclusive at first: the alignment check fell 0.13 s short. Reduced again with the check corrected: loop period pass, pitch shift and echo levels measured |
+| Dropouts, clipping | None |
+| Click candidates | None in Clouds-style, PITCH, DENSITY or CPU recordings; dry path, delay and self-play at the counts seen before |
+
+**Test module totals** (2026-10-11 to 2026-10-18). Firmware installs:
+
+| Firmware | Debug probe | Audio file |
+|---|---:|---:|
+| 2021 forum release | 2 | 4 |
+| 2024 recovery firmware | 2 | 2 |
+| Released source | 9 | 2 |
+| Drizzlet (all builds) | 22 | 4 |
+| Reverse-engineered port | 0 | 1 |
+| **Total** | **35** | **13** |
+
+Every probe install was read back and checked. The module never failed to
+boot. Once, an update file played too quietly stopped partway through; the
+bootloader was untouched, and playing it again at full volume fixed it.
+
+About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1
+sessions), counted from the run logs. Time spent waiting for someone to move a
+control is excluded, and a run recorded by several instruments counts once.
 
 ## Not tested
 
-Beta 1 still needs module CPU headroom for the heaviest grain case, the rest of
-the bench suite (running now), the pitch audio check, the rc3 green/yellow/red
-LED ladder check, and outside testers on other units. Done on a module for
-release candidate 3 (2026-10-17): trim, freeze, power cycle and stock downgrade
-with a trimmed save; Clouds-style listening and switching. The earlier pitch LED
-module check used the old palette; the rc3 green/yellow/red ladder has not been
-checked on a module yet.
+Beta 1 is a call for testers: everything above used one module. Also done on
+a module for release candidate 3 (2026-10-17): trim, freeze, power cycle and
+stock downgrade with a trimmed save. The options page's green/yellow/red LED
+colours have not been checked by eye on a module.
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.

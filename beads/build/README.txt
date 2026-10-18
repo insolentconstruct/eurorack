@@ -3,7 +3,7 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-Release candidate 3: module checks are under way and outside testing is still pending.
+Beta 1, a call for testers: tested on one module so far.
 Please report any problems you find. TESTING.md in the repository
 shows how it was tested.
 
@@ -20,8 +20,8 @@ to grain stealing, as in the released source. On our module, the 2021 and 2024
 firmware clicked with DENSITY and PITCH near fully clockwise and the released
 source / Drizzlet did not. A desktop run of both grain schedulers produced no
 clicks, so that test found no click in the DSP itself. CPU timing is the current
-hypothesis: the 2024 scheduler costs more in that range, but module CPU timing
-there has not yet been measured. New since alpha 2: buffer trim, pitch scales,
+hypothesis: the 2024 scheduler costs more in that range. Drizzlet peaks at
+87.8% of the CPU budget there; the 2024 firmware was not timed on the module. New since alpha 2: buffer trim, pitch scales,
 Clouds-style reverb, stereo width and delay mode. The new settings default to
 stock behaviour. Details are in CHANGELOG.md in the repository.
 

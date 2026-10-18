@@ -17,7 +17,14 @@ notes="Alternative firmware for Mutable Instruments Beads, built on the released
 changelog=${CHANGELOG:-beads/build/CHANGELOG.md}
 changes=$(awk -v v="${tag#drizzlet-}" '/^## /{p = $2 == v; next} p' "$changelog")
 [[ -n ${changes//[[:space:]]/} ]] || { echo "No CHANGELOG.md section for ${tag#drizzlet-}" >&2; exit 1; }
-notes+=$'\n\n## Changes\n'"$changes"
+# A release can replace the Changes section with its own page,
+# beads/build/release-notes/VERSION.md; {TAG} there becomes the tag.
+page=${RELEASE_NOTES:-beads/build/release-notes/${tag#drizzlet-}.md}
+if [[ -f $page ]]; then
+  notes+=$'\n\n'"$(sed "s/{TAG}/$tag/g" "$page")"
+else
+  notes+=$'\n\n## Changes\n'"$changes"
+fi
 # The heading's label, e.g. "alpha 2" from "## 2026.10.16 (tag `...`, alpha 2)", goes in the title.
 heading=$(awk -v v="${tag#drizzlet-}" '/^## / && $2 == v {print; exit}' "$changelog")
 if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then

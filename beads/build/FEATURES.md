@@ -187,10 +187,10 @@ Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before t
 The GCC 9 Clouds-style build uses 270,808 app flash bytes and 35,700 DTCM
 `.bss` bytes, plus 1,188 `.data` bytes and the 1,536-byte minimum heap/stack
 reservation. D1/D2/D3 and DMA reservations are unchanged. Actual module stack
-high-water and heaviest grain callback timing remain unverified.
+high-water remains unverified; module callback timing is in TESTING.md.
 
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. First module timing: delay-mode callback 60% of budget; the heaviest grain case is unmeasured. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
-The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Treat CPU headroom as UNKNOWN: time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. Module timing, whole callback: delay mode 60% of budget; heaviest grain case with default options 85–86%; Clouds-style 88.1%; synth mode 90.5%; no underruns (TESTING.md). <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
+The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Synth mode leaves 9.5% of the budget; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
 ## Planning rules
 
@@ -217,7 +217,7 @@ four 16-bit allpasses per channel (4 KiB buffer), coefficient 0.625, amount 0.7.
 Clouds' granular TEXTURE maps 0.75–1 to diffusion 0–1; amount 0.7 corresponds to
 TEXTURE 0.925. Delay and self-play use the reverb character without the grain
 diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
-changes, including settled option changes. Module listening done; module timing remains to be measured.
+changes, including settled option changes. Module listening done; module CPU 105,764 cycles (88.1%), see TESTING.md.
 
 Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality; delay lengths remain in samples.
 

@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
 
-**Release candidate 3:** module checks are under way and outside testing is still pending. Please report any problems you find. [TESTING.md](TESTING.md) shows how it was tested.
+**Beta 1, a call for testers:** tested on one module so far. Please report any problems you find, and what works. [TESTING.md](TESTING.md) shows how it was tested.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
@@ -34,7 +34,10 @@ Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run fa
 Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is Mutable Instruments' released source plus the bug fixes, the reproducible GCC 9 build kit and the CPU optimizations, without Drizzlet's features. See its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
 
 **TL;DR:** buffer trim, pitch scales, Clouds-style reverb, stereo width and
-delay mode are new since alpha 2. The new settings default to stock behaviour.
+delay mode are new since alpha 2, on a reorganised options page that saves
+after one second. The new settings default to stock behaviour. The grain
+engine needs about 6,900 fewer cycles per block in the heaviest stock case,
+with the same sound.
 
 ## Delay mode
 
