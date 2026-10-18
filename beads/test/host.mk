@@ -2,6 +2,19 @@
 # Author: Insolent Construct
 # Shared native test rules; program makefiles retain their sanitizer flags.
 
+PACKAGES = beads/drivers beads/dsp beads/test stmlib/utils stmlib/dsp beads
+VPATH = $(PACKAGES) beads/dsp/fx
+BUILD_ROOT ?= build/
+BUILD_DIR = $(BUILD_ROOT)$(TARGET)/
+HOST_SANITIZERS ?= 1
+HOST_FLAGS += -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedefs \
+	$(addprefix -I,$(STUBS)) -I.
+ifeq ($(HOST_SANITIZERS),1)
+HOST_FLAGS += -fsanitize=address,undefined,integer-divide-by-zero \
+	-fno-sanitize-recover=all -fno-pie
+HOST_LDFLAGS += -fsanitize=address,undefined,integer-divide-by-zero -no-pie
+endif
+
 OBJ_FILES = $(CC_FILES:.cc=.o)
 OBJS = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
 DEPS = $(OBJS:.o=.d)

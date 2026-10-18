@@ -1,11 +1,4 @@
-PACKAGES       =  beads/drivers beads/dsp beads/test stmlib/utils stmlib/dsp \
-		beads
-
-VPATH          = $(PACKAGES) beads/dsp/fx
-
-TARGET         = firmware_test
-BUILD_ROOT     = build/
-BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
+TARGET = firmware_test
 CC_FILES       = 		firmware_test.cc \
 		beads.cc \
 		cv_reader.cc \
@@ -30,11 +23,9 @@ CC_FILES       = 		firmware_test.cc \
 		units.cc \
 		pitch_quantizer.cc \
 		random.cc
-HOST_FLAGS = \
-	-DTEST -Os -g -Wall -Werror -Wno-unused-local-typedefs -DSTM32H7XX \
-	-Wno-int-to-pointer-cast -Ibeads/test/firmware_stubs -Ibeads/test/common_stubs -I. \
-	-fsanitize=address,undefined,integer-divide-by-zero -fno-sanitize-recover=all -fno-pie
-HOST_LDFLAGS = \
-	-fsanitize=address,undefined,integer-divide-by-zero -no-pie
-$(BUILD_DIR)beads.o: EXTRA_FLAGS = -Dmain=BeadsMain
+
+STUBS = beads/test/firmware_stubs beads/test/common_stubs
+HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast
 include beads/test/host.mk
+
+$(BUILD_DIR)beads.o: EXTRA_FLAGS = -Dmain=BeadsMain

@@ -1,10 +1,4 @@
-PACKAGES       = beads/dsp beads/test stmlib/utils stmlib/dsp beads
-
-VPATH          = $(PACKAGES) beads/dsp/fx
-
-TARGET         = clouds_test
-BUILD_ROOT     = build/
-BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
+TARGET = clouds_test
 CC_FILES       = clouds_test.cc \
 		pitch_quantizer.cc \
 		synth.cc \
@@ -19,11 +13,9 @@ CC_FILES       = clouds_test.cc \
 		resources.cc \
 		units.cc \
 		random.cc
-HOST_FLAGS = \
-	-DTEST -Os -g -Wall -Werror -Wno-unused-local-typedefs -ffp-contract=off $(EXTRA) -Ibeads/test/common_stubs -I. \
-	-fsanitize=address,undefined,integer-divide-by-zero -fno-sanitize-recover=all -fno-pie
-HOST_LDFLAGS = \
-	-fsanitize=address,undefined,integer-divide-by-zero -no-pie
+
+STUBS = beads/test/common_stubs
+HOST_FLAGS = -ffp-contract=off $(EXTRA)
 include beads/test/host.mk
 
 .PHONY: capture

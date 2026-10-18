@@ -1,10 +1,4 @@
-PACKAGES       =  beads/dsp beads/test stmlib/utils stmlib/dsp beads
-
-VPATH          = $(PACKAGES)
-
-TARGET         = beads_test
-BUILD_ROOT     = build/
-BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
+TARGET = beads_test
 CC_FILES       = 		processor.cc \
 		synth.cc \
 		beads_test.cc \
@@ -16,7 +10,7 @@ CC_FILES       = 		processor.cc \
 		trigger_generator.cc \
 		pitch_quantizer.cc \
 		units.cc
-HOST_FLAGS = \
-	-DTEST -Os -g -Wall -Werror -Wno-unused-local-typedefs -Ibeads/test/common_stubs -I.
-HOST_LDFLAGS =
+
+STUBS = beads/test/common_stubs
+HOST_SANITIZERS = 0
 include beads/test/host.mk
