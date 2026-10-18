@@ -65,6 +65,17 @@ class Schema(unittest.TestCase):
         with self.assertRaises(scenario.ScenarioError):
             scenario.parse(BASE + '\n[[events]]\nkind="cv"\nchannel="seed"\nt=1\nlevel=1\n')
 
+    def test_event_times_must_lie_inside_the_scenario(self):
+        for bad in ("-1", "6", "inf"):
+            ev = f'\n[[events]]\nkind="trigger"\nchannel="seed"\ntimes=[{bad}]\n'
+            with self.assertRaises(scenario.ScenarioError):
+                scenario.parse(BASE + ev)
+
+    def test_names_are_one_safe_path_component(self):
+        for bad in ("../x", "/abs", "a/b", ".hidden", "a b"):
+            with self.assertRaises(scenario.ScenarioError):
+                scenario.parse(BASE.replace('name = "t"', f'name = "{bad}"'))
+
     def test_size_fully_clockwise_needs_an_explicit_delay_guard(self):
         cw = BASE.replace("[stimulus]", "[panel]\nsize = 1.0\n[stimulus]")
         with self.assertRaisesRegex(scenario.ScenarioError, "delay mode"):

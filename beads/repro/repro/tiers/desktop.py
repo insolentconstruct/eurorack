@@ -35,6 +35,7 @@ from dataclasses import dataclass
 import hashlib
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -79,7 +80,7 @@ class DesktopTier:
             cwd=REPO, check=True, env=env)
         built = REPO / BINARY
         target = build_dir / BINARY
-        built.replace(target)
+        shutil.move(str(built), str(target))
         self.binary = target
         self.toolchain = subprocess.run(
             ["g++", "--version"], capture_output=True, text=True,
@@ -95,6 +96,11 @@ class DesktopTier:
                 "toolchain": self.toolchain}
 
     def run(self, scenario, stimulus, seed):
+        if any(e["kind"] == "cv" and e["channel"] == "assign"
+               for e in scenario.events):
+            raise RuntimeError(
+                f"{scenario.name}: the desktop driver does not route the "
+                "ASSIGN CV; use another tier for it")
         panel = dict(scenario.panel)
         args = [f"{k}={v}" for k, v in (
             ("media", MEDIA[panel.pop("media")]),

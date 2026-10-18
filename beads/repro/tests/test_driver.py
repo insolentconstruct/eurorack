@@ -60,6 +60,12 @@ class Driver(unittest.TestCase):
             name="g", size=size, guard=f'[guard]\ndelay_mode = "{guard}"'))
         return scn, self.tier.run(scn, stimulus.build(scn, 48000, 1), 1)
 
+    def test_assign_cv_is_refused_not_ignored(self):
+        scn = scenario.parse(SILENT_TEXT.format(name="a", size=0.5, guard="") +
+                             '[[events]]\nkind="cv"\nchannel="assign"\nt=1\nlevel=0.5\n')
+        with self.assertRaisesRegex(RuntimeError, "ASSIGN"):
+            self.tier.run(scn, stimulus.build(scn, 48000, 1), 1)
+
     def test_noon_knob_stays_in_grain_mode(self):
         scn, render = self.render(0.5, "never")
         self.assertEqual(int(render.delay_mode.sum()), 0)

@@ -112,14 +112,19 @@ def _verdict(ok):
 
 def _silent(x, sr, p):
     peak_db = 20 * np.log10(np.max(np.abs(x)) + 1e-12)
-    v = rms_db(mono(seg(x, sr, p["win"]))) - peak_db
+    # Energy over all channels: opposite-sign channels must not cancel.
+    v = rms_db(seg(x, sr, p["win"])) - peak_db
     return dict(value_db_re_peak=v, verdict=_verdict(v < -45))
 
 
 def _onsets_match_triggers(x, sr, p):
     on = onsets(seg(x, sr, p["win"]), sr) + p["win"][0]
-    lat = [min((o - t for o in on if 0 <= o - t < 0.2), default=None)
-           for t in p["triggers"]]
+    pending, lat = list(on), []
+    for t in p["triggers"]:  # each onset answers at most one trigger
+        match = next((o for o in pending if 0 <= o - t < 0.2), None)
+        lat.append(None if match is None else match - t)
+        if match is not None:
+            pending.remove(match)
     hit = [v for v in lat if v is not None]
     extra = len(on) - len(hit)
     return dict(triggers=len(p["triggers"]), onsets=len(on), matched=len(hit),

@@ -211,10 +211,11 @@ int main(int argc, char** argv) {
     parameters.size.cv = s.cv[CV_SIZE][pos];
     parameters.shape.cv = s.cv[CV_SHAPE][pos];
     parameters.time.cv = s.cv[CV_TIME][pos];
+    // Process() picks its mode from the state at block entry.
+    const uint8_t delay = processor.delay_mode_transition_ > 0.0f ? 1 : 0;
     processor.Process(seed_state, seed_flags, freeze, density, parameters,
         mix, in, out, kBlockSize);
     fwrite(out, sizeof(FloatFrame), kBlockSize, out_fp);
-    const uint8_t delay = processor.delay_mode_transition_ > 0.0f ? 1 : 0;
     fwrite(&delay, 1, 1, delay_fp);
   }
   fclose(out_fp);

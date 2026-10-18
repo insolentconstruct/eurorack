@@ -57,6 +57,17 @@ class Rules(unittest.TestCase):
                                  triggers=[1.0, 2.0])], x, SR)[0]
         self.assertEqual(r["verdict"], "FAIL")
 
+    def test_one_onset_cannot_answer_two_triggers(self):
+        x = bursts([1.05, 2.0])
+        r = rules.evaluate([dict(rule="onsets_match_triggers", win=[0.5, 3.0],
+                                 triggers=[1.0, 1.02])], x, SR)[0]
+        self.assertEqual(r["verdict"], "FAIL")
+
+    def test_opposite_channels_are_not_silence(self):
+        x = np.stack([0.2 * np.ones(SR), -0.2 * np.ones(SR)], 1)
+        r = rules.evaluate([dict(rule="silent", win=[0.1, 0.5])], x, SR)[0]
+        self.assertEqual(r["verdict"], "FAIL")
+
     def test_silent_and_unknown_rule(self):
         x = bursts([1.0])
         res = rules.evaluate([dict(rule="silent", win=[3.0, 5.0]),

@@ -29,6 +29,8 @@
 
 from dataclasses import dataclass, field
 import hashlib
+import math
+import re
 from pathlib import Path
 import tomllib
 
@@ -55,6 +57,9 @@ ANALOG_DEFAULTS = {"pitch": 60.0, "density": 1.0, "size": 1.0, "shape": 1.0,
 # Above this knob value the processor enters delay mode (the pot only; CV on
 # SIZE cannot get there).
 DELAY_MODE_SIZE = 0.99
+
+
+NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 class ScenarioError(ValueError):
@@ -86,7 +91,8 @@ def _check(cond, name, msg):
 def parse(text, path="<memory>"):
     data = tomllib.loads(text)
     name = data.get("name", "")
-    _check(isinstance(name, str) and name, path, "name is required")
+    _check(isinstance(name, str) and NAME.match(name), path,
+           "name must be letters, digits, '.', '_' or '-' (one path component)")
     allowed = {"name", "description", "seconds", "tiers", "behaviours",
                "panel", "guard", "stimulus", "analog", "events", "rules"}
     _check(not set(data) - allowed, name,
@@ -128,6 +134,17 @@ def parse(text, path="<memory>"):
         valid = CV_CHANNELS if kind == "cv" else GATE_CHANNELS
         _check(channel in valid, name,
                f"{kind} event channel {channel!r} must be one of {valid}")
+        times = list(ev.get("times", ())) if kind == "trigger" else [
+            ev.get(k) for k in (("t0", "t1") if kind == "hold" else ("t",))]
+        _check(times and all(isinstance(t, (int, float)) and math.isfinite(t)
+                             and 0 <= t <= seconds for t in times), name,
+               f"{kind} event times must lie within 0..{seconds} s")
+        if kind == "hold":
+            _check(ev["t0"] <= ev["t1"], name, "hold needs t0 <= t1")
+        if kind == "cv":
+            _check(isinstance(ev.get("level"), (int, float)), name,
+                   "cv event needs a numeric level")
+            _check(ev.get("ramp", 0) >= 0, name, "cv ramp must not be negative")
 
     rules = list(data.get("rules", ()))
     _check(rules, name, "at least one rule is required")
@@ -157,7 +174,11 @@ def load_set(root, set_name):
         raise ScenarioError(f"no set {set_name!r}; have {sorted(sets)}")
     found = {}
     for path in sorted((root / "scenarios").rglob("*.toml")):
-        found[load(path).name] = path
+        loaded = load(path)
+        if loaded.name in found:
+            raise ScenarioError(f"scenario name {loaded.name!r} is used by "
+                                f"{found[loaded.name].name} and {path.name}")
+        found[loaded.name] = path
     out = []
     for name in sets[set_name]["scenarios"]:
         if name not in found:
