@@ -94,6 +94,39 @@ class Level(unittest.TestCase):
         self.assertEqual(r["verdict"], "PASS")
 
 
+class Degenerate(unittest.TestCase):
+    """Inputs that would otherwise pass, hang or crash without measuring."""
+
+    def test_silent_window_cannot_pass_dry_passes(self):
+        r = one("dry_passes", np.zeros(SR * 2), win=[0.2, 1.8], freq=60.0)
+        self.assertEqual(r["verdict"], "FAIL")
+
+    def test_a_single_window_is_not_an_ordering(self):
+        for rule, extra in (("duration_monotonic", {}),
+                            ("age_increasing", dict(tones=[200.0, 300.0], step_s=0.25))):
+            r = one(rule, np.zeros(SR * 2), wins=[[0.0, 1.0]], **extra)
+            self.assertEqual(r["verdict"], "ERROR", rule)
+
+    def test_steps_shorter_than_a_frame_are_refused(self):
+        with self.assertRaises(ValueError):
+            stimulus.steps(SR, SR, 1e-9, [440.0], 0.1)
+        text = (ROOT / "scenarios/behaviours/b-freeze-gate.toml").read_text()
+        with self.assertRaises(scenario.ScenarioError):
+            scenario.parse(text.replace("seg_s = 1.0", "seg_s = 0", 1))
+
+    def test_stereo_noise_cannot_be_routed_to_one_channel(self):
+        text = (ROOT / "scenarios/beta/beta-clouds-ab.toml").read_text()
+        with self.assertRaises(scenario.ScenarioError):
+            scenario.parse(text.replace("stereo = true", "stereo = true\nchannel = 0"))
+
+    def test_noise_past_the_block_boundary_is_clipped(self):
+        text = (ROOT / "scenarios/beta/beta-clouds-ab.toml").read_text()
+        s = scenario.parse(text)
+        s.seconds, s.events = 1.0001, []
+        s.generator["layers"][0]["stop"] = 1.0001
+        self.assertEqual(stimulus.build(s, SR, 1).frames, 48000)
+
+
 class Pitch(unittest.TestCase):
     def grain_stream(self, freq, total=4.0):
         return burst_train([0.5 + 0.5 * i for i in range(6)], freq, 0.3, total)

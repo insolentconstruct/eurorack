@@ -177,7 +177,10 @@ def _level_step(x, sr, p, offset_s=0.0, ctx=None):
 
 
 def _dry_passes(x, sr, p, offset_s=0.0, ctx=None):
-    f = dominant(mono(seg(x, sr, _shift(p["win"], offset_s))), sr)
+    s = mono(seg(x, sr, _shift(p["win"], offset_s)))
+    f = dominant(s, sr)
+    if rms_db(s) < -60:  # a silent window has no dominant frequency to speak of
+        return dict(dominant_hz=f, verdict=FAIL, reason="window is silent")
     return dict(dominant_hz=f, verdict=_verdict(abs(f / p["freq"] - 1) < 0.01))
 
 
@@ -261,7 +264,13 @@ def _rate_divided(x, sr, p, offset_s=0.0, ctx=None):
 # ---------------------------------------------------------------------------
 # grain shape and pitch rules
 # ---------------------------------------------------------------------------
+def _need_windows(p, count=2):
+    if len(p["wins"]) < count:
+        raise ValueError(f"needs at least {count} windows")
+
+
 def _duration_monotonic(x, sr, p, offset_s=0.0, ctx=None):
+    _need_windows(p)
     d = [float(np.median([g[1] for g in
                           grains(x, sr, _shift(w, offset_s))] or [np.nan]))
          for w in p["wins"]]
@@ -341,6 +350,7 @@ def _age_increasing(x, sr, p, offset_s=0.0, ctx=None):
     the buffer end, and a capacity of 8 s or more cannot be resolved by an 8 s
     tone cycle, so it is reported as MEASURE."""
     ctx = ctx or {}
+    _need_windows(p)
     tones = np.array(stimulus.tones(p["tones"]))
     stim_offset = ctx.get("stimulus_offset_s", 0.0)
     ratio = ctx.get("stimulus_rate_ratio", 1.0)

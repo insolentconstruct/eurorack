@@ -138,6 +138,8 @@ def steps(n, sr, seg_s, freqs, amp, start_s=0.0):
     tone's frequency says when it was played."""
     out = np.zeros(n)
     seg = frames_of(seg_s, sr)
+    if seg < 1:
+        raise ValueError(f"steps: seg_s {seg_s} is less than one frame")
     i, j = frames_of(start_s, sr), 0
     while i < n:
         out += sine(n, sr, freqs[j % len(freqs)], amp, i, i + seg)
@@ -210,8 +212,8 @@ def render_layers(layers, n, sr, seed):
                 layer["f0"] * clock
                 + 0.5 * layer["rate_hz_per_s"] * clock ** 2))
         elif kind == "noise":
-            a = frames_of(layer.get("start", 0.0), sr)
-            b = frames_of(layer["stop"], sr) if "stop" in layer else n
+            b = min(frames_of(layer["stop"], sr), n) if "stop" in layer else n
+            a = min(frames_of(layer.get("start", 0.0), sr), b)
             shape = (b - a, 2) if layer.get("stereo") else b - a
             rng = np.random.Generator(np.random.PCG64(layer.get("seed", seed)))
             fill = rng.uniform(-1.0, 1.0, shape)

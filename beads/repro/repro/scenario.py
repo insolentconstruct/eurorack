@@ -161,6 +161,13 @@ def parse(text, path="<memory>"):
                    "a layer needs a numeric amp")
             _check(layer.get("channel", "both") in (0, 1, "both"), name,
                    "layer channel must be 0, 1 or \"both\"")
+            _check(not (layer.get("stereo") and layer.get("channel", "both") != "both"),
+                   name, "a stereo noise layer plays on both channels")
+            for key in ("seg_s", "dur_s", "every", "period_s"):
+                _check(key not in layer or (isinstance(layer[key], (int, float))
+                                            and layer[key] > 0), name,
+                       f"layer {key} must be a positive number")
+            _check(layer.get("count", 1) >= 1, name, "layer count must be at least 1")
 
     events = list(data.get("events", ()))
     for ev in events:
