@@ -38,54 +38,26 @@ heading; a release turns it into a dated heading.
 - **2021 forum release:** `beads.wav`, posted on the Mutable Instruments forum in April 2021.
 - **2024 recovery firmware:** `beads_patch_firmware.wav` / `beads_golden_bootloader_combo.bin`, shared in the ModWiggler Beads thread in early 2024 to fix modules stuck on boot.
 
-These are the source changes needed to reproduce the older application images exactly, not the original history. The release bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation, not listening tests.
+These are the source changes needed to reproduce the older images, not the original history. The release bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation, not listening tests.
 
 ### 2024 recovery firmware → released source
 
-One change: grain stealing in polyphonic mode (`beads/dsp/granular_player.h`).
+One change: grain stealing in polyphonic mode (`beads/dsp/granular_player.h`). New grains fade out safety grains early to keep a voice free. The older firmware steals the oldest grain at intervals <5 ms and otherwise sorts by remaining time; this build steals the oldest at intervals <25 ms. Between 5 and 25 ms it also swaps two safety-grain fade-out caps, so the stolen grain fades out within 5 ms instead of one grain interval.
 
-New grains fade out safety grains early to keep a voice free. The older firmware steals the oldest grain at intervals <5 ms; otherwise it sorts by remaining time. This build uses the oldest-grain method at intervals <25 ms.
+In emulation with identical input and state, outputs are bit-identical at intervals of 25 ms or more and differ from 5 to <25 ms. Below 5 ms both run the same code, though differences can persist briefly if earlier intervals in the 5–25 ms range changed grain history. The "freeze gate" and "gated density" bench tests reached the changed range.
 
-At intervals >5 ms and <25 ms, this build swaps two safety-grain fade-out caps. The stolen grain fades out within 5 ms instead of one grain interval.
+On our module the 2021 and 2024 firmware clicked at DENSITY 0.98 and PITCH +24 semitones; the released source and Drizzlet did not (145 and 164 clicks against 0; recipe and counts in TESTING.md). A desktop run of both schedulers produced no clicks, so the DSP logic is not the cause. CPU timing is the working hypothesis: the 2024 scheduler costs more in that range, but it has not been timed on the module.
 
-With identical input and state, emulation shows:
-- At intervals ≥25 ms, outputs are bit-identical.
-- At intervals from 5 ms to <25 ms, outputs differ.
-- At intervals <5 ms, both run the same code. Differences can persist briefly if earlier intervals in the 5–25 ms range changed grain history.
-
-The “freeze gate” and “gated density” bench tests reached the changed range.
-
-On our module, the 2021 and 2024 firmware clicked and the released source /
-Drizzlet did not. A desktop run of both grain schedulers produced no clicks, so
-that test found no click in the DSP itself. CPU timing is the current hypothesis:
-the 2024 scheduler costs more in that range, but module CPU timing there has not
-yet been measured. Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just
-below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and
-REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L
-went to a scope with OUT R unplugged, so it carried L+R. Clicks were found by a
-detector on the scope captures, not by ear:
-
-| Firmware | Clicks | Output observed |
-|---|---:|---:|
-| 2021 forum release | 145 | 21 s |
-| 2024 recovery firmware | 164 | 20.6 s |
-| Released source, same GCC 4.9.3 compiler | 0 | 14 s |
-| Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
-
-Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any of the four. CPU timing is the current hypothesis; it has not been measured in this range.
-
-In these older builds, monophonic mode is unchanged and compiled out (`ENABLE_ADVANCED_FEATURES` is commented out).
+Monophonic mode is compiled out in these older builds (`ENABLE_ADVANCED_FEATURES` is commented out).
 
 ### 2021 forum release → 2024 recovery firmware
 
 Five changes:
 
-1. **Settings recovery:** SEED held at power-on rewrites settings while keeping valid calibration, fixing modules stuck on boot. The 2021 release lacks this path. Do not hold SEED at power-on unintentionally.
+1. **Settings recovery:** SEED held at power-on rewrites settings while keeping valid calibration, fixing modules stuck on boot. The 2021 release lacks this path.
 2. **Knob/CV smoothing:** stmlib's `HysteresisFilter` loses its brief tracking mode after a change. State per channel shrinks from 28 to 20 bytes.
 3. **Delay density/FM smoothing:** the dead band changes from 0.005 to 0.0025. The FM follower no longer tracks the input directly for the 7 calls after a change.
 4. **Frozen delay slices:** during frozen playback, manual and clocked delay add hysteresis with a 0.0025 dead band to slice/TIME selection.
 5. **Clocked delay FM:** both FM inputs affect the clock divider. Exponential FM previously bent tap ratios separately. Manual delay is unchanged.
 
-None of these five touch grain playback, and the 2024 firmware clicks like the 2021 release.
-
-Upgrading from 2021 to this build includes all six changes. The build kit here builds Drizzlet only; patches and comparison details for the older builds are available on request.
+None of these touch grain playback, and the 2024 firmware clicks like the 2021 release. Upgrading from 2021 to this build includes all six changes. Patches and comparison details for the older builds are available on request.

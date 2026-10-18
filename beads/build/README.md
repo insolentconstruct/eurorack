@@ -2,151 +2,129 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
 
-**Beta 1 "Mist", a call for testers:** tested on one module so far. Please report any problems you find, and what works. [TESTING.md](TESTING.md) shows how it was tested.
+**TL;DR:** Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode, on a three-page options page that saves by itself. New settings default to stock behaviour. The grain engine needs about 6,900 fewer cycles per block in the heaviest stock case, with the same sound.
+
+Tested on one module so far. Please report problems, and what works, in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); do not contact Mutable Instruments. [TESTING.md](TESTING.md) shows how it was tested.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
 > Code provided as is, builds on a Desktop platform but not verified to build and run on a module. Install at your own risks.
 
-Install at your own risk. Please do not contact Mutable Instruments about it; report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
+Install at your own risk.
 
 ## Quick start
 
-Controls use the letters from the Beads manual: [A] is the quality button, which
-selects the recording quality, and [M] is the button below the FEEDBACK [J] knob that assigns the CV input (7).
+Buttons use the letters from the Beads manual: [A] is the quality button, and [M] is the CV-assign button below the FEEDBACK [J] knob (CV input 7).
 
-Hold the CV-assign button [M] for three seconds and release to enter. Tap [M] to change
-page; move a mix knob and rest it for one second to save.
-See the [text guide](OPTIONS.md) and [printable guide](options-guide.svg).
+Hold the CV-assign button [M] for three seconds, then release, to open the options page. Tap [M] to change page; move a mix knob and rest it for one second to save. Guides: [text](OPTIONS.md), [printable](options-guide.svg).
 
 ![Options page phone guide](options-guide-mobile.svg)
 
 ## Downloads
 
-Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases).
+From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 
 - `<tag>-wav.zip`: audio update, with `README.txt`, `NOTICE.txt` and the options guides.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
-For the module itself, read the [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and the [Beads development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/).
-What changed, including against older firmware: see [CHANGELOG.md](CHANGELOG.md).
-Where the Beads manual and the firmware disagree, see [MANUAL_ERRATA.md](MANUAL_ERRATA.md).
+Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](MANUAL_ERRATA.md).
 
-Contributing code: follow [STYLE.md](STYLE.md). What the build changed to run faster, and how to propose more: [OPTIMIZATIONS.md](OPTIMIZATIONS.md). Building the DSP elsewhere: [PORTING.md](PORTING.md). Before adding a feature, check [FEATURES.md](FEATURES.md) for which buttons, settings bytes, flash and RAM are already taken.
-
-Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is Mutable Instruments' released source plus the bug fixes, the reproducible GCC 9 build kit and the CPU optimizations, without Drizzlet's features. See its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
-
-**TL;DR:** buffer trim, pitch scales, Clouds-style reverb, stereo width and
-delay mode are new since alpha 2, on a reorganised options page that saves
-after one second. The new settings default to stock behaviour. The grain
-engine needs about 6,900 fewer cycles per block in the heaviest stock case,
-with the same sound.
+Developers: [STYLE.md](STYLE.md), [OPTIMIZATIONS.md](OPTIMIZATIONS.md), [PORTING.md](PORTING.md), and [FEATURES.md](FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is the released source plus bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
 
 ## Delay mode
 
 This is the manual's delay or beat slicer, which turns on at SIZE fully clockwise.
 On page 2 (FEEDBACK LED), DRY/WET selects Auto (Stock) / Never /
 Wide detent in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
-clockwise. Never keeps granular playback there. Wide detent keeps automatic
-switching and makes the delay filter neutral in the middle of its range,
-with no resonant boost at either end. The filter is controlled by the SIZE
-attenurandomizer and SIZE CV; its neutral sound is unfiltered. Outside the
-neutral zone the remaining travel reaches the usual low-pass and high-pass
-ends. The quality LED [A] shows steady green / yellow / red.
+clockwise. Never keeps granular playback there. Wide detent keeps the switch
+and makes the delay filter neutral in the middle of its range, with no
+resonant boost at either end. The filter is controlled by the SIZE
+attenurandomizer and SIZE CV. The quality LED [A] shows steady green / yellow / red.
 The setting is saved and defaults to Auto (Stock). It does not affect wavetable synth mode.
 
 ## Stereo width
 
 On page 1 (REVERB LED), DRY/WET sets the stereo width of the grains.
-At the bottom of the knob it is Stock. Turn clockwise from there and the
-grains spread wider, up to a full random spread fully clockwise. With the
-lowest width the input stereo positioning passes through and mono stays
-centred. Width randomizes every grain, even at DENSITY fully clockwise with no
-other randomness. Pan is fixed when a grain starts, so changes affect new
-grains only, including synth.
-The [A] LED is steady green for Stock. Width blinks slowly, using
-Beads' green through yellow to red meter colour for the amount.
-When width is on, short [M] presses cycle the three stock destinations then
-WIDTH; all three mix LEDs pulse together for WIDTH. The existing custom
-mix assignment remains available. The assignable CV input (7) adds to the
-set width. Stock keeps the stock cycle and pan rounding.
+At the bottom of the knob it is Stock. Turning clockwise spreads the grains
+wider, up to a full random spread fully clockwise. At the lowest width the
+input stereo position passes through and mono stays centred. Width randomizes
+every grain, even at DENSITY fully clockwise. Each grain's pan is fixed when it
+starts, so changes affect new grains only, including synth.
+The [A] LED is steady green for Stock; width blinks slowly, green through
+yellow to red for the amount.
+When width is on, short [M] presses cycle the three stock destinations, then
+WIDTH; all three mix LEDs pulse together for WIDTH. Custom mix assignment
+still works. The assignable CV input (7) adds to the width. Stock keeps the
+stock cycle and pan rounding.
 
 ## Monophonic grains
 
-Hold [A] first, then press SEED to toggle monophonic grains; the setting
-is saved and defaults off. The [A] LED is dimmed when on. This enables Mutable Instruments'
-original code and gesture. Each new grain fades the previous grains out.
-It suits the square and decay SHAPE settings. Slower shapes can go nearly
-silent because each new grain cuts the previous one's attack. To recover
-sound, switch to square or decay, reduce the trigger rate, shorten SIZE,
-or use the same gesture to turn monophonic grains off. Turn them off before
+Hold [A] first, then press SEED to toggle monophonic grains. The setting
+is saved and defaults off; the [A] LED is dimmed when on. This is Mutable
+Instruments' original code and gesture: each new grain fades the previous
+grains out. It suits the square and decay SHAPE settings. Slower shapes can go
+nearly silent. To recover sound, switch to square or decay, reduce the trigger
+rate, shorten SIZE, or toggle monophonic grains off. Turn them off before
 downgrading to stock firmware.
 
 ## Buffer trim
 
 Hold [A] first, then press FREEZE to start a new recording window from
 zero length and clear the FREEZE button latch. Release both buttons, record
-the desired length, then freeze. A FREEZE gate keeps the window empty until
-the gate goes low. Grains already playing finish normally.
-Frozen-buffer saves keep the trimmed length. Stock firmware loads these
-saves at full length. The gesture comes from Mutable Instruments' disabled
-buffer-trim code.
+the length you want, then freeze. A FREEZE gate keeps the window empty until
+it goes low. Grains already playing finish normally.
+Frozen-buffer saves keep the trimmed length; stock firmware loads them at full
+length. The gesture comes from Mutable Instruments' disabled buffer-trim code.
 
 ## Frozen-buffer autosave
 
-Autosave normally starts after FREEZE has been on for ten seconds. A save cut
-short after erasing (by releasing FREEZE during a save, for example) doubles
-the next wait, up to a cap, until a save completes or FREEZE has been off for
-a minute; power-up starts at the normal ten seconds.
-If FREEZE is released during wavetable synth, the minute starts when wavetable synth ends.
+A frozen buffer is saved after FREEZE has been on for ten seconds. A save cut
+short (by releasing FREEZE, for example) doubles the next wait, up to a cap,
+until a save completes or FREEZE has been off for a minute; power-up resets the
+wait. If FREEZE is released during wavetable synth, the minute starts when
+wavetable synth ends.
 
 ## Options page
 
-Visual and text guides: OPTIONS.md, options-guide.svg (printable), and
-options-guide-mobile.svg (phone). Find them beside this README in release
-zips, or beside the build documentation in the source download.
+Visual and text guides: OPTIONS.md, options-guide.svg (printable) and
+options-guide-mobile.svg (phone). They sit beside this README in the release
+zips and the source download.
 
 Hold the CV-assign button [M] alone for three seconds with the mix knobs still; then release.
-Tap [M] to cycle page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
-(DRY/WET LED), then page 1. The page LED pulses slowly. All three pulse
-on entry. Reopening remembers the last page until power-off; power-up
-starts on page 1. [A] shows the first available setting on each page,
-then the last knob that took over. A knob must be moved far enough to take
-it over; small bumps before that are ignored. Knobs marked Not used yet do nothing, including to [A] and saving.
+Tap [M] to change page: page 1 (REVERB LED), page 2 (FEEDBACK LED), page 3
+(DRY/WET LED). The page LED pulses slowly. Reopening returns to the last page
+until power-off; power-up starts on page 1. [A] shows the first available
+setting on each page, then the last knob you took over. A knob must move a
+little before it takes over. Knobs marked Not used yet do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
 2 / FEEDBACK        Not used yet  Delay mode    Not used yet
 3 / DRY/WET         Wavetable synth     Limiter       Not used yet
 
-Changes are saved by themselves about a second after you stop turning.
-Close by holding [M] for three seconds or pressing another button; there is no
-idle close or cancel. On page 1 with Scale selected, short SEED taps step
-the scale instead of closing options. A pending change still saves after closing: wait one second
-before powering off. Mix controls resume with smooth catch-up after closing.
+Changes save by themselves about a second after you stop turning; wait that
+long before powering off. Close by holding [M] for three seconds or pressing
+another button. Mix controls then catch up smoothly. On page 1 with Scale
+selected, short SEED taps step the scale instead of closing.
 Every first value, including Pitch Off, is steady green. Other values follow
 yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
-The page LED flashes briefly on entry, close and after a changed batch is
-written. [A] keeps showing the value. See [OPTIONS.md](OPTIONS.md) for every value.
+The page LED flashes on entry, close and save. See [OPTIONS.md](OPTIONS.md) for every value.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
+
 Wavetable synth: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects
 Automatic (Stock) (steady green); upper half selects Manual (steady yellow).
-The knob must be moved far enough to take it over; small bumps before
-that are ignored.
-Automatic (Stock) starts Beads as a granular wavetable synth after 10 s with both
-audio inputs unpatched, as the Beads manual describes. With Manual, it never starts by itself. With both audio inputs
-unpatched and FREEZE off, hold [A] for about a second and a half to start the wavetable synth;
-hold again to stop. Patching either input also stops it (once FREEZE is off).
-With an input patched, the hold restarts automatic gain as usual.
-Automatic (Stock) keeps stock behaviour.
-The setting is saved. Stock firmware ignores it; saving after a downgrade
-resets it to Automatic (Stock).
+Automatic (Stock) starts the granular wavetable synth after 10 s with both
+audio inputs unpatched, as the Beads manual describes. Manual never starts it
+by itself. To start it by hand, unpatch both audio inputs, turn FREEZE off and
+hold [A] for about a second and a half; hold again to stop. Patching either
+input also stops it (once FREEZE is off); with an input patched, the hold
+restarts automatic gain as usual. The setting is saved. Stock firmware ignores
+it; saving after a downgrade resets it to Automatic (Stock).
 
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (steady yellow).
-The knob must be moved a little before it switches. The [A] LED shows the last knob that took over on this page.
 Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
 plus fixed diffusion on the grain wet output. In delay and wavetable synth modes,
 only the reverb character changes. Switching briefly fades the sound out and
@@ -161,14 +139,13 @@ Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
 then a pause). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons close the page. The setting is saved; default is Off.
 
-Each grain's PITCH knob, CV and random offset snap together at its start.
-The grid has a fixed root at the unshifted pitch; +1 V remains one octave.
+Each grain's PITCH knob, CV and random offset snap together at its start,
+on a grid rooted at the unshifted pitch; +1 V is still one octave.
 Playing grains keep their pitch. Synth grains snap too; the continuous
 synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at
-least 64, including four-note Pelog. Major and Minor pentatonic are subsets
-of its Major and Minor scales.
-Pelog and the raags are microtonal.
+least 64 (Pelog has four notes). Major and Minor pentatonic are subsets
+of its Major and Minor scales. Pelog and the raags are microtonal.
 
 ## Updating your module
 
@@ -194,9 +171,7 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 ### ST-Link recovery
 
-Back up calibration first, then flash the combo `.bin` from `<tag>-combo.zip`; this command doesn't touch the settings sector.
-
-Use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
+Back up calibration first, then flash the combo `.bin` from `<tag>-combo.zip`; this command doesn't touch the settings sector. Use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
@@ -205,41 +180,7 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 ## Saved data
 
-The settings and frozen-buffer format below are frozen for Beta 1. Off,
-Automatic (Stock) and Stock keep the stock behaviour; zero and unknown option values
-select those defaults.
-
-Byte 12/13 values are frozen at Beta 1. Future options use a free byte
-17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid.
-
-Width uses byte 14: 0 is Stock; 1..255 encode enabled width from zero to full.
-WIDTH assignment uses byte 16: 0 is unassigned, 1 is assigned; other values
-are unassigned. Stock sees FEEDBACK and clears these extensions on save.
-
-Settings offsets are bytes in the 24-byte State payload:
-
-| Byte | Setting | Saved values | Stock firmware |
-|---|---|---|---|
-| 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown → Stock | Ignores; clears to 0 on save |
-| 11 | Wavetable synth | 0 Automatic (Stock), 0xA1 Manual; unknown → Automatic (Stock) | Ignores; clears to 0 on save |
-| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Major pentatonic, 0xA6 Minor pentatonic, 0xA7 Pelog, 0xA8 Raag Bhairav, 0xA9 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
-| 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
-| 14 | Stereo width | 0 Stock; 1..255 enabled width, zero to full spread | Ignores; clears to 0 on save |
-| 15 | Delay mode | 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown → Auto (Stock) | Ignores; clears to 0 on save |
-| 16 | WIDTH assignment | 0 unassigned, 1 assigned; other values → unassigned | Sees FEEDBACK; clears extension on save |
-
-Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
-byte but compiles out the gesture, so turn mono off before downgrading.
-
-The frozen-buffer header is 32 bytes, little-endian. Bytes 20–23 hold an
-unsigned 32-bit count of frames removed from the full buffer, not the remaining
-length: 0 means full length; the full frame count means empty. The count must
-not exceed the full length for the saved quality and mono/stereo mode. It is
-covered by the audio/header CRC and read only with the CRC1 tag in bytes
-16–19. Alpha 1 and 2 wrote zero here; untagged older saves load at full length.
-Stock reads only bytes 0–9 and loads a trimmed save at full length. Stock
-rewrites do not preserve the trimmed length. Bytes 24–31 remain reserved and
-are written as zero. The audio payload and header size are unchanged.
+The settings and frozen-buffer formats are frozen for Beta 1. Zero and unknown values select the stock behaviour. Stock firmware ignores the Drizzlet bytes and clears them when it saves, and loads trimmed buffers at full length. Turn monophonic grains off before downgrading. Byte layout: [FEATURES.md](FEATURES.md).
 
 ## Building it yourself
 
@@ -251,19 +192,7 @@ docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/b
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
-The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its
-previous bytes. Both compiler archives are pinned.
-
-Builds verify the firmware and WAV hashes. CI also builds the unchanged
-released app with GCC 4.9.3 as a fixed golden reference, and checks WAV
-decoding. Releases publish from `drizzlet-*` tags; the release notes include
-the tag's CHANGELOG.md section, and publishing stops if it is missing.
-
-To build the golden reference locally (needs a full Git checkout):
-
-```sh
-bash beads/build/golden.sh "$PWD/golden"
-```
+The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its previous bytes. Builds verify the firmware and WAV hashes. CI also builds the unchanged released app with GCC 4.9.3 as a golden reference (locally: `bash beads/build/golden.sh "$PWD/golden"`, needs a full Git checkout). Releases publish from `drizzlet-*` tags and include the tag's CHANGELOG.md section.
 
 ## License and credits
 

@@ -1,27 +1,23 @@
 # Code style
 
-Follow upstream Mutable Instruments master: Beads (2021) first, then Plaits,
-Stages and Marbles. Use Clouds effects as the diffuser/reverb idiom. These
-rules come after those sources; leave unrelated existing code alone.
+**TL;DR:** follow upstream Mutable Instruments master: Beads (2021) first, then Plaits, Stages and Marbles; Clouds effects for diffuser/reverb. Rules marked (Drizzlet) are ours. Leave unrelated existing code alone.
 
 ## Layout
 
 - 2-space indent, no tabs in C/C++. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
 - Put firmware code in `namespace beads` and close it with `}  // namespace beads`. Host test functions may be global, as in MI tests.
 - New headers use `BEADS_<PATH>_H_` guards, closed by `#endif  // BEADS_<PATH>_H_`.
-- Includes, usually: the file's own header, then `<system>`, `stmlib/...`, `beads/...`, with blank lines between groups. Imports such as `using namespace std;` or `using namespace stmlib;` appear inside the module namespace where needed, usually in `.cc` files; some headers also use them.
+- Includes: the file's own header, then `<system>`, `stmlib/...`, `beads/...`, with blank lines between groups. `using namespace std;` / `stmlib` go inside the module namespace, usually in `.cc` files.
 
 ## File and folder structure
 
-- Follow the Beads source on upstream master first. Keep the entry point (`beads.cc`), UI, settings and module coordination at the top level; hardware access in `drivers/`, audio processing in `dsp/`, effects in `dsp/fx/`.
-- Keep resource generators and inputs in `resources/`, host tests in `test/`, boot code in `bootloader/`, board and panel files in `hardware_design/`, and standalone generators in `tools/`. Keep makefiles at the module root, `bootloader/makefile` and `test/makefile`.
-- Follow the module's existing folders. Plaits has `dsp/engine/`, `dsp/oscillator/` and other DSP groups; Stages keeps processing classes at the top level, Marbles uses `random/` and `ramp/`, and Tides 2 uses `ramp/`. Don't impose Beads' tree on them.
-- Use `lower_snake_case.h` / `.cc` matching the main class (`DelayClock` in `dsp/delay_clock.*`). Pair declarations with out-of-line definitions; small inline DSP helpers and templates stay header-only (`dsp/delay_line.h`), as do module helpers (`pot_controller.h`). Don't add a `.cc` just for symmetry.
-- Usually keep one main class per file. Group small related types with their owner (`Processor::Media` and `MixParameters` in `dsp/processor.h`; `RandomWalkModulation` and `RandomizedParameter` in `dsp/randomized_parameter.h`). Keep shared data in the owning header (`settings.h`, `dsp/frame.h`); use a shared parameters header when needed, as in older Clouds/Warps `dsp/parameters.h`, rather than one file per enum.
-- Keep generated `resources.cc` / `.h` at the module root. Change `resources/resources.py`, its generators or inputs and regenerate with `make -f beads/makefile resources` (add `-B` after changing a non-Python input such as `waves.bin`); don't hand-edit the output.
-- Follow the usual Beads header order: licence and author, separator, brief description, guard, includes, namespace, constants and related types, class. Put public constructor/destructor, `Init`, methods and accessors before private helpers and members; usually finish with `DISALLOW_COPY_AND_ASSIGN`. Nearby files may interleave methods and accessors or nest types.
-- MI tests are normally flat: one `<module>_test.cc` and `makefile`, with helper headers such as Stages/Marbles `test/fixtures.h` and Marbles `test/ramp_checker.h`. Tides 2 calls its program `tides_test.cc`; Beads also has `test/plot_distributions.py`.
-- Treat file splits and source order as build changes. The module makefile's `PACKAGES` selects folders; `stmlib/makefile.inc` expands their `.cc` files into `CC_FILES` and ordered objects (host makefiles list sources explicitly). Adding a `.cc` to a selected folder adds a translation unit and changes the link; moving one to a new folder needs a package entry. Preserve order and unique object basenames when matching firmware.
+- Follow the Beads tree on upstream master: entry point (`beads.cc`), UI, settings and coordination at the top level; hardware in `drivers/`, audio in `dsp/`, effects in `dsp/fx/`, generators and inputs in `resources/`, host tests in `test/`, boot code in `bootloader/`, board files in `hardware_design/`, standalone generators in `tools/`. Makefiles stay at the module root, `bootloader/makefile` and `test/makefile`. Other modules keep their own folders; don't impose Beads' tree on them.
+- Use `lower_snake_case.h` / `.cc` named after the main class (`DelayClock` in `dsp/delay_clock.*`). Declarations pair with out-of-line definitions; small inline DSP helpers and templates stay header-only (`dsp/delay_line.h`, `pot_controller.h`). Don't add a `.cc` for symmetry.
+- Usually one main class per file; group small related types with their owner (`Processor::Media` in `dsp/processor.h`). Shared data stays in the owning header (`settings.h`, `dsp/frame.h`), not one file per enum.
+- Keep generated `resources.cc` / `.h` at the module root. Edit `resources/resources.py` or its inputs and regenerate with `make -f beads/makefile resources` (add `-B` after changing a non-Python input such as `waves.bin`); never hand-edit the output.
+- Header order: licence and author, separator, brief description, guard, includes, namespace, constants and related types, class. Public constructor/destructor, `Init`, methods and accessors come before private helpers and members; usually finish with `DISALLOW_COPY_AND_ASSIGN`.
+- MI tests are flat: one `<module>_test.cc` and `makefile`, with helper headers such as `test/fixtures.h`.
+- File splits and source order are build changes. `PACKAGES` in the module makefile selects folders; `stmlib/makefile.inc` expands their `.cc` files into ordered objects (host makefiles list sources explicitly). A new `.cc` in a selected folder adds a translation unit and changes the link; a new folder needs a package entry. Preserve order and unique object basenames when matching firmware.
 
 ### Drizzlet test exceptions
 
@@ -83,7 +79,7 @@ Observed upstream DSP conventions and design principles:
 
 ## Tests
 
-- MI host programs commonly render WAVs or print values for listening/plotting; checks include assertions and printed errors. Beads comments out its test calls in `main()`; other modules run tests actively.
+- MI host programs render WAVs or print values for listening/plotting; Beads comments out its test calls in `main()`.
 - (Drizzlet) CI programs use `void TestXxx()` functions, print `ERROR: <test>: <condition>`, count failures and return non-zero; this adapts the printed-error checker idiom.
 - (Drizzlet) Keep compile-time layout checks and sanitizer coverage.
 - Preserve the file's licence. For new host files, use the Beads/Clouds MIT

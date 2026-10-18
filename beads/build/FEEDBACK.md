@@ -2,11 +2,8 @@
 
 # Options feedback
 
-The options page follows the three-page control map in [README.txt](README.txt).
-Report which page LED was pulsing, which knob moved, the quality LED [A] colour/pulse,
-and the setting expected. Changes save after one second of settled controls;
-closing retains them. There is no idle close. Knobs marked Not used yet are inert.
+**TL;DR:** tell us which page LED pulsed, which knob you moved, the quality LED [A] colour and pulse, and the setting you expected.
 
-Please check the [A] colours on a module, especially green/yellow/red, and listen for interruption during a settled settings save or
-when the settings memory fills and is rewritten. Host tests verify RGB/pulse distinctions; they cannot
-verify perceived colour or physical flash timing. The [options guide](OPTIONS.md) includes printable and phone diagrams.
+The page map is in [README.txt](README.txt) and the [options guide](OPTIONS.md). Changes save after one second of settled controls; closing keeps them. Knobs marked Not used yet do nothing.
+
+Please check the [A] colours on your module, especially green/yellow/red, and listen for interruptions during a settings save, and when the settings memory fills and is rewritten. Host tests cannot verify perceived colour or physical flash timing.

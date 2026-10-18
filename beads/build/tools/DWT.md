@@ -3,11 +3,7 @@ Copyright 2026 Insolent Construct.
 Author: Insolent Construct (insolentconstruct@gmail.com)
 -->
 
-DWT calibration is a bench-only build, enabled by `DWT_CALIBRATION=1` through
-`beads/build/link-order.mk`; it is absent by default. `build_dwt.sh OUTPUT`
-archives committed sources using Docker (optional `BUILD_CONTEXT`).
-Optional `BUILD_DRAIN_DIR` stops builds when its context marker exists. No hardware is
-accessed by that build script. `dwt.py decode DUMP` is entirely offline.
+**TL;DR:** a bench-only build (`DWT_CALIBRATION=1` through `beads/build/link-order.mk`, off by default) counts CPU cycles per audio block; read the counters over SWD and decode them offline with `dwt.py`. `build_dwt.sh OUTPUT` archives committed sources and builds with Docker (optional `BUILD_CONTEXT`; optional `BUILD_DRAIN_DIR` stops builds when its context marker exists). It touches no hardware, and `dwt.py decode DUMP` is entirely offline.
 
 Build from a committed checkout (including the stmlib submodule):
 
@@ -15,11 +11,7 @@ Build from a committed checkout (including the stmlib submodule):
 bash beads/build/tools/build_dwt.sh "$PWD/dwt-output"
 ```
 
-`BUILD_CONTEXT` is optional; plain local Docker works too. The build image is
-`${BEADS_BUILD_IMAGE:-beads-build-kit}`. Flash the calibration application with your usual
-application-only programmer procedure at 0x08020000, preserving bootloader,
-settings and calibration. Verify the binary SHA256 against `calibration.bin` in
-`expected-hashes.sha256`. Flashing and reset requests require an operator at the bench.
+Plain local Docker works too; the image is `${BEADS_BUILD_IMAGE:-beads-build-kit}`. Flash the calibration application with your usual application-only procedure at 0x08020000, preserving bootloader, settings and calibration, and verify the binary SHA256 against `calibration.bin` in `expected-hashes.sha256`. Flashing and reset requests need an operator at the bench.
 
 Start OpenOCD with an ST-LINK and a board-appropriate configuration that
 attaches without resetting or halting the running core, for example:
@@ -33,14 +25,9 @@ python3 beads/build/tools/dwt.py openocd reset
 python3 beads/build/tools/dwt.py openocd sai
 ```
 
-The last three commands only print Tcl to paste into OpenOCD's console.
-Read prints `mdw 0x30041000 278` (1112 bytes), then saves `capture.bin` in
-OpenOCD's working directory with the same before/after sequence guard.
-Discard the dump on any error. Decode with `dwt.py decode capture.bin`.
-Reset **writes RAM** at 0x3004100c; it does not verify the running application
-hash. Confirm calibration firmware first. Record generation at 0x30041010
-before the write; require it to advance and request at 0x3004100c to clear.
-Use request 3 for fixture entry, request 1 to restore panel acquisition.
+The last three commands only print Tcl to paste into OpenOCD's console. Read prints `mdw 0x30041000 278` (1112 bytes), then saves `capture.bin` in OpenOCD's working directory with the same before/after sequence guard; discard the dump on any error. Decode with `dwt.py decode capture.bin`.
+
+Reset **writes RAM** at 0x3004100c and does not verify the running application hash, so confirm calibration firmware first. Record generation at 0x30041010 before the write; require it to advance and request at 0x3004100c to clear. Request 3 enters the fixture; request 1 restores panel acquisition.
 
 Stats live at 0x30041000, 1112 bytes in uncached SRAM3, dedicated NOLOAD
 section `.dwt_calibration`. The supplemental linker script asserts size and
@@ -55,34 +42,11 @@ Brackets: callback, DSP inner, fixture preparation, callback minus fixture.
 The decoder returns quantile intervals, including budget percentages.
 Snapshot acceptance requires identical even sequence before/after the read.
 
-Normal request=1 clears and captures 240000 blocks (~60 s). Request=3
-(request byte 3) clears, selects the explicit q3 stereo stress32 fixture,
-warms 16000 blocks (4 s), and captures 4096 (1.024 s). Acquisition then stops
-updating stats so SWD can read them coherently while audio continues. A new
-request starts another acquisition. Return to panel with request byte 1. Counts must reach the expected window before accepting a result.
+Request 1 clears and captures 240000 blocks (~60 s). Request 3 clears, selects the q3 stereo stress32 fixture, warms 16000 blocks (4 s) and captures 4096 (1.024 s). Acquisition then stops updating stats so SWD reads them coherently while audio continues; a new request starts another acquisition. Counts must reach the expected window before accepting a result.
 
-Fixture requires settled q3 stereo, Stock limiter, pitch scale Off, no
-switching/UI/background save or buffer trim. Do not trim during acquisition. The extracted preparation helper preserves the original samples, PRNG seed,
-gate sequence, parameters and grain setup. Its compiled instruction layout
-and instrumentation overhead can change; prior cycle measurements must not
-be treated as measurements of this image. It resets DSP/buffers/PRNG, primes 32 +4x
-grains every block, uses Seed3 deterministic input, gates and parameters.
-The initial buffer clear is deliberately outside acquisition and can overrun
-that warmup callback; mute monitoring for fixture entry. Do not use its
-first callback as a deadline observation. The fixture replaces live audio
-and controls until the next normal reset. Warmup is not included in stats.
-Fixture preparation is measured separately; callback minus fixture subtracts
-that same block's preparation, rather than subtracting independent maxima.
+The fixture requires settled q3 stereo, Stock limiter, pitch scale Off, no switching, UI, background save or buffer trim (do not trim during acquisition). It resets DSP, buffers and PRNG, and primes 32 +4x grains every block from Seed3's deterministic input, gates and parameters (the extracted preparation helper preserves the original samples, PRNG seed, gate sequence, parameters and grain setup). Its compiled instruction layout and instrumentation overhead can change, so earlier cycle measurements are not measurements of this image. The initial buffer clear is outside acquisition and can overrun the warmup callback: mute monitoring for fixture entry and ignore its first callback. The fixture replaces live audio and controls until the next normal reset. Warmup is not in the stats. Preparation is measured separately; callback minus fixture subtracts that block's preparation, not independent maxima.
 
-DWT barriers match Seed3. Unsigned subtraction handles CYCCNT wrap within
-a block. 64-bit sums avoid overflow within capture windows. No logging in
-the callback. IRQ preemption within brackets is included; IRQ work outside
-callback and ISR entry/exit are not. Prologue, constructor/reset bookkeeping,
-final callback histogram updates and return machinery are outside the total's
-read pair. Inner and preparation histogram updates are inside it; callback
-minus fixture retains those updates and subtracts only the preparation read
-pair. Readout runs after acquisition, avoiding SWD traffic in the measurement
-interval.
+Timing: DWT barriers match Seed3; unsigned subtraction handles CYCCNT wrap within a block; 64-bit sums avoid overflow; no logging in the callback. IRQ preemption inside brackets is counted; IRQ work outside the callback and ISR entry/exit are not. Prologue, constructor/reset bookkeeping, the final callback histogram update and return machinery are outside the total's read pair; inner and preparation histogram updates are inside it. Readout runs after acquisition, so there is no SWD traffic in the measurement.
 
 Offline checks: `python3 -m unittest test_dwt` from this directory.
 `verify_dwt.py RELEASE_BIN CALIBRATION_BIN` checks artifact SHA256 identity;
@@ -120,15 +84,7 @@ cycles for rows 1/4/5/6 (callback) and Stock fixture (callback minus fixture).
 Report Clouds and combined-option margins separately; no hardware result
 is implied by offline checks.
 
-Options open on page 1 (REVERB LED): hold the CV-assign button [M] alone for 3 s, then
-release. On page 1, FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in
-Scale, short SEED taps cycle the scales through Shri), and REVERB selects
-Stock/Clouds-style reverb (lower/upper half). Two [M] taps reach page 3
-(DRY/WET LED): DRY/WET bottom third is the Stock limiter, FEEDBACK lower half
-is Wavetable synth: Automatic (Stock). Move the relevant pot by more than 10%
-to qualify a change; it saves after one second at rest. Close by holding [M]
-for 3 s or pressing another button. Restore the scenario mix controls after
-exit and settle before capture.
+Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (REVERB LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri) and REVERB selects Stock/Clouds-style (lower/upper half). Two [M] taps reach page 3 (DRY/WET LED): DRY/WET bottom third is the Stock limiter, FEEDBACK lower half is Wavetable synth: Automatic (Stock). Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 
 Operator sequence: read both SAI status registers; record generation;
 write request 1; confirm generation advanced and request cleared; wait 65 s

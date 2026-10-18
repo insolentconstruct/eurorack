@@ -37,7 +37,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release. Entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 1; reopening remembers the last page in RAM, with page 1 at power-up. Move a knob >10% before it edits. Save after one second without qualified movement or value changes; no idle close. Hold [M] 3 s or press another button to close, retaining changes. On page 1 with Scale selected, short SEED taps step the scale instead of closing.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. On page 1 with Scale selected, short SEED taps step the scale instead of closing.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
@@ -45,45 +45,11 @@ Enter with [M] alone for 3 s, mix knobs still, then release. Entry needs normal 
 | 2 / FEEDBACK | Reserved: attacks | Delay mode | Reserved: mix law |
 | 3 / DRY/WET | Wavetable synth | Limiter | Reserved: LED brightness |
 
-Reserved knobs have no effect on [A] or saving. [A] shows the first available setting on page entry, then the last qualified knob moved. Every first value, including Pitch Off, is steady green. Other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. Other colours and pulses are listed in README.txt's firmware-checked Options reference. Saved byte positions are unchanged. `make -f beads/build/tools/options_tables.mk test` checks the reference; `./build/options_tables` prints its TSV directly from firmware tables.
-
-
-Pitch scale values and grain behaviour are described in the [options guide](OPTIONS.md).
+Reserved knobs have no effect on [A] or saving. [A] shows the first available setting on page entry, then the last qualified knob moved. Every first value, including Pitch Off, is steady green; other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 
 ## Saved data
 
-The settings and frozen-buffer format below are frozen for Beta 1. Off,
-Automatic (Stock) and Stock keep the stock behaviour; zero and unknown option values
-select those defaults.
-
-Byte 12/13 values are frozen at Beta 1. Width, delay mode and WIDTH assignment
-occupy bytes 14–16. Future options use a free byte 17–22, with 0 meaning the
-Beta 1 behaviour so existing saves stay valid.
-
-Settings offsets are bytes in the 24-byte State payload:
-
-| Byte | Setting | Saved values | Stock firmware |
-|---|---|---|---|
-| 10 | Limiter | 0 Stock, 0xA1 Fast release, 0xA2 Off; unknown → Stock | Ignores; clears to 0 on save |
-| 11 | Wavetable synth | 0 Automatic (Stock), 0xA1 Manual; unknown → Automatic (Stock) | Ignores; clears to 0 on save |
-| 12 | Pitch scale | 0 Off, 0xA1 Chromatic, 0xA2 Fifths and octaves, 0xA3 Major, 0xA4 Minor, 0xA5 Major pentatonic, 0xA6 Minor pentatonic, 0xA7 Pelog, 0xA8 Raag Bhairav, 0xA9 Raag Shri; unknown → Off | Ignores; clears to 0 on save |
-| 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
-| 14 | Stereo width | 0 Stock; 1..255 enabled width, zero to full spread | Ignores; clears to 0 on save |
-| 15 | Delay mode | 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown → Auto (Stock) | Ignores; clears to 0 on save |
-| 16 | WIDTH assignment | 0 unassigned, 1 assigned; other values → unassigned | Sees FEEDBACK; clears extension on save |
-
-Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
-byte but compiles out the gesture, so turn mono off before downgrading.
-
-The frozen-buffer header is 32 bytes, little-endian. Bytes 20–23 hold an
-unsigned 32-bit count of frames removed from the full buffer, not the remaining
-length: 0 means full length; the full frame count means empty. The count must
-not exceed the full length for the saved quality and mono/stereo mode. It is
-covered by the audio/header CRC and read only with the CRC1 tag in bytes
-16–19. Alpha 1 and 2 wrote zero here; untagged older saves load at full length.
-Stock reads only bytes 0–9 and loads a trimmed save at full length. Stock
-rewrites do not preserve the trimmed length. Bytes 24–31 remain reserved and
-are written as zero. The audio payload and header size are unchanged.
+Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; future options use a free byte 17–22, with 0 meaning the Beta 1 behaviour. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–16 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
 
 ### Settings layout
 
@@ -109,9 +75,9 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 17–22, individually | `padding[7]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
-Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. Turn monophonic grains off before downgrading. Drizzlet uses byte 9 without changing the settings layout. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
+Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads/checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Returning to stock and saving loses Drizzlet options. Drizzlet canonicalizes bytes 10–16 on load/save. Stock ignores byte 11; a downgrade-and-save resets wavetable synth to Automatic (Stock). Bytes 17–23 are cleared on save. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Saving on stock loses Drizzlet options (wavetable synth returns to Automatic (Stock)). Drizzlet canonicalizes bytes 10–16 on load/save and clears 17–23. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 | Flash area | TAKEN | FREE / limit |
@@ -134,11 +100,7 @@ Frozen-buffer backup header: one 32-byte flash word at 0x08100000, little-endian
 | 20–23 | `trimmed_frames` | Frames removed from the full buffer; 0 = full length, CRC-covered; stock ignores it |
 | 24–31 | `reserved` | Zero |
 
-Autosave normally starts after FREEZE has been on for 10 seconds. A save cut
-short after erasing doubles the next wait, up to 320 seconds, until a save
-completes or FREEZE has been off for a minute; power-up starts at 10 seconds.
-The thaw reset is checked only outside wavetable synth mode (backup processing is skipped there): if FREEZE is released during wavetable synth mode, the minute starts when wavetable synth mode ends.
-Backoff is RAM-only and runs in the main loop.
+Autosave starts after FREEZE has been on for 10 s. A save cut short after erasing doubles the next wait, up to 320 s, until a save completes or FREEZE has been off for a minute; power-up starts at 10 s. The thaw reset is checked only outside wavetable synth mode (backup processing is skipped there), so the minute starts when wavetable synth mode ends. Backoff is RAM-only and runs in the main loop.
 
 Saving erases the header's sector first and writes the header last, after the audio, so a header means a complete backup; a failed erase or program abandons the save. Loading checks the ranges, then the CRC when tagged, before touching the processor; any failure starts with an empty buffer. Known limit: power lost while a flash word is being programmed can leave an ECC error that faults when read, as in stock. <!-- beads/background_buffer_backup.h; beads/background_buffer_backup.cc; beads/test/backup_test.cc -->
 
@@ -169,10 +131,7 @@ Buffer trim and monophonic grains use Mutable Instruments’ original gestures a
 
 ## Budgets
 
-Earlier combined pitch-scale and reverb build: 273,456 B of app flash;
-this excludes the later trim changes.
-Off matches Stock audio in emulator fixtures; instruction counts vary with
-code generation. Hardware cycle headroom remains unmeasured for this build.
+Earlier combined pitch-scale and reverb build: 273,456 B of app flash, excluding the later trim changes. Off matches Stock audio in emulator fixtures; instruction counts vary with code generation.
 
 Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before the GCC 9 app build and this cycle's features; remeasure before allocating this headroom. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
 
@@ -205,7 +164,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte 11 stores wavetable synth (0xA1 Manual, otherwise Automatic (Stock)). Byte 12 stores pitch scale (0 Off, 0xA1–0xA9); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Byte 12/13 values are frozen at Beta 1. Width (byte 14), delay mode (byte 15, 0xA1/0xA2) and WIDTH assignment (byte 16, 0/1) use bytes 14–16. Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).

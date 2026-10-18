@@ -1,30 +1,20 @@
 # Testing
 
-How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the checks its developers ran before releases 2026.10.14 and 2026.10.16 (alphas) and Beta 1. Hardware testing used one module.
+**TL;DR:** 164 host tests in 13 programs cover 110 of 117 manual behaviours (3 only in part), backed by 152 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
 
-## TL;DR
+- **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
+- **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
+- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the released source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns.
+- **Totals:** 48 firmware installs on the test module, none failed to boot; about 13 hours of automated runs.
 
-- **In numbers:** 164 tests in 13 host test programs (1021 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 152 deliberate-fault mutations, 538 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
-- **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
-- **Before release:**
-  - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
-  - emulator comparisons found identical audio in 44 of 44 scenarios against the previous release (2026.10.14), and in 20 of 20 between GCC 9 and GCC 4.9.3 builds (2026.10.16).
-- **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle recipe, flash wear from a modulated FREEZE, monophonic grains and wavetable synth, using oscilloscope captures and the debug probe.
-- **Beta 1 on a module:** a recorded run of 28 scenarios on release candidate 3 and the same 22 shared scenarios on the released source, with no difference traced to the firmware; a shorter run on release candidate 5; every pitch scale on scale; CPU load 60–90.5% of the audio budget with no underruns.
-- **Module totals:** 48 firmware installs on the test module, none of which failed to boot, and about 13 hours of automated test runs.
-- **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
-
-Counts come from the test calls in each program’s `main()`, `CHECK` sites
-in those source files, and the `cases` list in `mutation_check.py`. Options
-also runs an advanced build; it is counted once. Assertions inside loops
-execute more than once.
+Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build, counted once. Assertions inside loops run more than once.
 
 ## Automated (every push)
 
 | Check | What it covers |
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
-| `beads/test/options.mk` | Options page entry, pages, knob zones, one-second save-on-settle, no idle close, explicit close gestures and settings format; stock CV-assign button [M] routing, amounts and their LEDs, the autosave chord and display, SEED latch gestures and start-up latch, quality cycling, the [A] gain hold, manual gain and its meter, the input-level blink while learning, and the FREEZE LED while saving; recovery mode keeps calibration; input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, and a corrupted calibration rewritten once; limiter arithmetic, stereo linking and mode switching. Normal and advanced builds; the monophonic grain gesture, its LED cue and saving; the wavetable synth setting, its storage and the [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate; settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned |
+| `beads/test/options.mk` | Options page: entry, pages, knob zones, one-second save-on-settle, no idle close, close gestures, settings format. Stock UI: [M] routing, amounts and LEDs, the autosave chord and display, SEED latch gestures, quality cycling, the [A] gain hold, manual gain and meter, the input-level blink, the FREEZE LED while saving, recovery mode keeping calibration, input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, a corrupted calibration rewritten once. Limiter arithmetic and mode switching. Normal and advanced builds: monophonic grain gesture, LED cue and saving; wavetable synth setting, storage and [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate. Settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned |
 | `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
@@ -35,7 +25,7 @@ execute more than once.
 | `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios; FEEDBACK's bank selection and its hysteresis; dry/wet, FREEZE, the output resolution of each quality, 1 V/octave and pitch spread, and the dry sine level at octaves from C3 to C9; quantized synth grains; stereo width in rendered grains (Stock, zero, small and full displacement, CV clamped at both ends, grains keep the width they started with) |
 | `beads/test/processor.mk` | The whole audio processor with sanitizers: each quality's sample rate, bit depth and buffer length, mono and stereo; FREEZE from the button and the gate; frozen grains keep playing; the crossfade when recording resumes; trim dispatch for every quality, mono and stereo |
 | `beads/test/mix.mk` | Mixing with sanitizers: feedback into the recording, feedback saturation per quality, dry/wet, reverb after dry/wet and its tail when the send is closed, stereo output from a mono recording, feedback echoes in delay mode |
-| `beads/test/firmware.mk` | The firmware's own start-up, main loop and audio callback (`beads.cc`, unmodified) with hardware stubs and sanitizers: the wavetable synth after 10 s and on a [A] hold, mono/stereo switching, the quality lock while frozen, the overwrite indicator, the trigger output, CV routing, the power-on reset and corrupted-calibration branches, the pitch chain from CV input, and leaving the wavetable synth with a frozen buffer; pitch-scale CV routing and reverb switching; a saved pitch scale reaching wavetable synth grains (automatic and manualest, random and CV, across a reboot) while the continuous oscillator stays unquantized. A check keeps the test's copy of the main loop identical to `main()`'s |
+| `beads/test/firmware.mk` | The firmware's own start-up, main loop and audio callback (`beads.cc`, unmodified) with hardware stubs and sanitizers: the wavetable synth after 10 s and on a [A] hold, mono/stereo switching, the quality lock while frozen, the overwrite indicator, the trigger output, CV routing, the power-on reset and corrupted-calibration branches, the pitch chain from CV input, and leaving the wavetable synth with a frozen buffer; pitch-scale CV routing and reverb switching; a saved pitch scale reaching wavetable synth grains (Automatic and Manual, random and CV, across a reboot) while the continuous oscillator stays unquantized. A check keeps the test's copy of the main loop identical to `main()`'s |
 | `beads/test/delay_mode.mk` | Delay mode through the processor with sanitizers: continuous playback with SIZE fully clockwise, the fade when switching modes, the pitch shifter and its bypass at noon, the delay bandwidth control and SIZE CV |
 
 | Program | Tests | Assertion sites |
@@ -57,20 +47,13 @@ execute more than once.
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
-The table lists the tests; several were added after release 2026.10.14. Run any of them from the repository root with `make -f beads/test/<name>.mk test`. Where the firmware and the manual differ, the tests check the firmware: the 7.8 ms shortest requested grain, reset settings keeping calibration, the [M] LED levels, and the input gain falling after an overload. These differences are in [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand; the host checks run in eight balanced jobs on every push.
+Run any test from the repository root with `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Where the firmware and the manual differ, the tests check the firmware (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs weekly on GitHub Actions and on demand.
 
-Saves without the CRC tag, including every stock save, load after the range checks alone, so stock and Drizzlet can read each other's saves. A save whose CRC tag itself is damaged is treated the same way.
+Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
-Stereo width adds host checks for the unchanged Stock calculation and RNG
-sequence, zero displacement, full spread with zero randomness, CV clamping,
-stock/enabled [M] cycles, every saved width byte, preview and saving,
-and unchanged bytes 12/13. Callback tests check WIDTH CV routing, processor
-and synth propagation, and rendered grain pan retention. Saved assignments
-are also checked through the stock destination clamp.
-
-Delay mode adds host checks for all stored byte values, preview and settled saving, Never at SIZE fully clockwise in every quality and channel mode,
-returning from delay to granular, detent boundaries and neutral playback within 1e-7 FS
-with SIZE CV inside the detent. Auto (Stock) remains the default.
+Feature checks beyond the table:
+- **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, preview and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.
+- **Delay mode:** every stored byte value, preview and settled saving, Never at SIZE fully clockwise in every quality and channel mode, returning from delay to granular, detent boundaries, and neutral playback within 1e-7 FS with SIZE CV inside the detent.
 
 ## Coverage of the manual
 
@@ -151,13 +134,7 @@ Wavetable synth Manual, the delay clock fix (#57) and the frozen-delay slice fix
 | Released source, same GCC 4.9.3 compiler | 0 | 14 s |
 | Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
 
-Reverse, square-envelope, low-pitch and no-grain variants gave none on any
-firmware. See CHANGELOG.md for the source difference. On our module, the 2021
-and 2024 firmware clicked and the released source / Drizzlet did not. A desktop
-run of both grain schedulers produced no clicks, so the clicks are not a DSP-
-logic artefact. CPU timing is the current hypothesis: the 2024 scheduler costs
-more in that range. Drizzlet peaks at 105,346 cycles (87.8%) on the crackle
-recipe; the 2024 firmware was not timed on the module.
+Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any firmware. A desktop run of both grain schedulers produced none either, so the DSP logic is not the cause; CPU timing is the working hypothesis (the 2024 scheduler costs more in that range). Drizzlet peaks at 105,346 cycles (87.8%) on the recipe; the 2024 firmware was not timed on the module. The source difference is in CHANGELOG.md.
 
 ### Beta 1
 
@@ -236,20 +213,13 @@ audio in every scenario with default options. A short run checked them on the mo
 | Reverse-engineered port | 0 | 1 |
 | **Total** | **35** | **13** |
 
-Every probe install was read back and checked. The module never failed to
-boot. Once, an update file played too quietly stopped partway through; the
-bootloader was untouched, and playing it again at full volume fixed it.
+Every probe install was read back and checked; the module never failed to boot. Once, an update file played too quietly stopped partway; the bootloader was untouched and replaying at full volume fixed it.
 
-About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1
-sessions), counted from the run logs. Time spent waiting for someone to move a
-control is excluded, and a run recorded by several instruments counts once.
+About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 sessions), counted from run logs, excluding waits for a control to be moved; a run recorded by several instruments counts once.
 
 ## Not tested
 
-Beta 1 is a call for testers: everything above used one module. Also done on
-a module for release candidate 3 (2026-10-17): trim, freeze, power cycle and
-stock downgrade with a trimmed save. The options page's green/yellow/red LED
-colours have not been checked by eye on a module.
+Everything above used one module. Also done on it for release candidate 3 (2026-10-17): trim, freeze, power cycle and stock downgrade with a trimmed save. The options page's green/yellow/red LED colours have not been checked by eye.
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
@@ -259,30 +229,16 @@ colours have not been checked by eye on a module.
 
 Report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
 
-Options table checks: `make -f beads/build/tools/options_tables.mk test` builds the
-TSV exporter and compares README.txt's Options reference with the firmware.
-`./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.
-The UI host checks all nine page/knob slots, cycling, RAM page memory,
-reserved-knob inertia, qualification, a sweep with one settled save, unchanged
-idle pages, hold/button close gestures, pending saves after closing, width hysteresis,
-SEED scale cycling, all-stock steady-green palette consistency, ladder colours
-and distinct colour/pattern combinations within each setting. Renderer checks
-cover the full 2.048-second pattern and all 255 enabled width amounts against
-Beads' meter, including green/red endpoints and the slow dark phase. Entry,
-close and completed-save confirmations last 100 ms; idle controls do not
-repeat the save flash. The exported reference also checks the allowed
-colours and patterns. Physical LED colour separation and audio during flash
-writes still need module checks.
+## Options checks
 
-Options regressions cover 10 s of ±0.002 width noise at an encoded step boundary
-(one save and one confirmation), short SEED taps and long holds during a pending
-save, volatile commit publication, and a second FREEZE press before the pending
-save settles. Closing restores the normal [A] indication immediately.
+- `make -f beads/build/tools/options_tables.mk test` builds the TSV exporter and compares README.txt's Options reference with the firmware tables. `./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.
+- The UI host checks all nine page/knob slots, cycling, RAM page memory, inert Not-used knobs, takeover, a sweep with one settled save, idle pages, close gestures, pending saves after closing, width hysteresis, SEED scale cycling, steady-green stock values, and distinct colour/pattern combinations within each setting.
+- Renderer checks cover the full 2.048 s pattern and all 255 enabled width amounts against Beads' meter. Entry, close and save confirmations last 100 ms; idle controls do not repeat the save flash.
+- Regressions: 10 s of ±0.002 width noise at an encoded step boundary (one save, one confirmation); short SEED taps and long holds during a pending save; volatile commit publication; a second FREEZE press before the pending save settles. Closing restores the normal [A] indication immediately.
+- The delay mode test compares the maximum wet-output step when switching Auto (Stock) to Wide with an identical no-switch render at the clockwise filter endpoint.
+- Physical LED colour separation and audio during flash writes still need module checks.
 
-The delay mode test compares the maximum wet-output step when switching Auto (Stock) to Wide with
-an identical no-switch render at the clockwise filter endpoint.
-
-Generate the options guides with Python 3 (standard library only):
+Generate the options guides (Python 3, standard library only):
 
 ```sh
 make -f beads/build/tools/options_tables.mk build/options_tables
@@ -290,25 +246,11 @@ make -f beads/build/tools/options_tables.mk build/options_tables
 make -f beads/build/tools/options_tables.mk test
 ```
 
-The check regenerates all three files in a small temporary directory and
-compares bytes, checks the Markdown values against the firmware TSV and
-README.txt, mutates each exported zone boundary in a temporary TSV to check
-that both SVGs change, and exercises release ZIP packaging with tiny
-placeholder assets.
-The printable SVG uses a 190 mm wide page area within both A4 and Letter;
-print at actual size, centred, with browser headers and footers disabled.
+The test regenerates all three guide files in a temporary directory and compares bytes, checks the Markdown values against the firmware TSV and README.txt, mutates each exported zone boundary to check that both SVGs change, and exercises release ZIP packaging with placeholder assets. The printable SVG is 190 mm wide, within A4 and Letter; print at actual size, centred, without browser headers and footers.
 
 ## Host CI groups
 
-`beads/test/ci-jobs.json` is the single list of host jobs and their commands.
-The workflow's `list-host-tests` job reads it into the matrix. Short suites
-share three jobs; delay mode uses three jobs and Clouds uses two. Each make
-invocation uses `-j$(nproc)` and retains its existing sanitizer flags. Native
-tests use `-O1` rather than `-Os`: size optimization made sanitized DSP renders
-particularly slow with the Ubuntu 24.04 compiler. Firmware flags are unchanged.
-
-See [the host test README](../test/README.md) for selection and local commands.
-The quantizer delay comparison warms each quality/channel processor once and
-restores that state for the comparison, instead of rendering the same warmup
-twice. All eight quality/channel cases, the 16000-block warmup duration and
-1200 comparison blocks per output are retained.
+- `beads/test/ci-jobs.json` lists the host jobs and their commands; the workflow's `list-host-tests` job reads it into the matrix. Short suites share three jobs; delay mode uses three and Clouds two.
+- Each make call uses `-j$(nproc)` and keeps its sanitizer flags. Native tests use `-O1` rather than `-Os`, which made sanitized DSP renders slow on the Ubuntu 24.04 compiler. Firmware flags are unchanged.
+- The quantizer delay comparison warms each quality/channel processor once and restores that state, keeping all eight quality/channel cases, the 16000-block warmup and 1200 comparison blocks per output.
+- Selection and local commands: [host test README](../test/README.md).
