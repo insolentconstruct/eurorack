@@ -69,6 +69,27 @@ markdown_readme = Path("beads/build/README.md").read_text()
 plain_options = section.split("Options reference (TSV)", 1)[0]
 rich_options = markdown_readme.split("## Options page\n", 1)[1]
 rich_options = rich_options.split("\n## ", 1)[0]
+# Markdown keeps width and delay in their own sections instead of repeating
+# them under Options. Compare the relocated width prose and shared delay facts.
+width_start = plain_options.index("On page 1 (REVERB LED), DRY/WET selects Stock")
+delay_start = plain_options.index("Delay mode: Auto (Stock)", width_start)
+limiter_start = plain_options.index("Output limiter:", delay_start)
+rich_width = markdown_readme.split("## Stereo width\n", 1)[1].split("\n## ", 1)[0]
+assert " ".join(plain_options[width_start:delay_start].split()) == " ".join(
+    rich_width.split()
+), "README.md and README.txt Stereo width prose differ"
+plain_delay = plain_options[delay_start:limiter_start]
+rich_delay = markdown_readme.split("## Delay mode\n", 1)[1].split("\n## ", 1)[0]
+for fact in ("Auto (Stock)", "Never", "Wide detent", "40%", "60%", "SIZE CV",
+             "green / yellow / red", "does not affect synth mode"):
+    assert fact in " ".join(plain_delay.split()), fact
+    assert fact in " ".join(rich_delay.split()), fact
+plain_options = plain_options[:width_start] + plain_options[limiter_start:]
+plain_reference = "See below for every value."
+rich_reference = "See [OPTIONS.md](OPTIONS.md) for every value."
+assert plain_reference in plain_options
+assert rich_reference in rich_options
+plain_options = plain_options.replace(plain_reference, rich_reference)
 assert " ".join(plain_options.split()) == " ".join(
     rich_options.split()
 ), "README.md and README.txt Options prose differ"

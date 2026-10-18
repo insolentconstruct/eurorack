@@ -60,7 +60,15 @@ With identical input and state, emulation shows:
 
 The “freeze gate” and “gated density” bench tests reached the changed range.
 
-Together, these two changes removed the clicks behind the crackle report (#1) in a test on one module; they were not tested separately. Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L went to a scope with OUT R unplugged, so it carried L+R. Clicks were found by a detector on the scope captures, not by ear:
+On our module, the 2021 and 2024 firmware clicked and the released source /
+Drizzlet did not. A desktop run of both grain schedulers produced no clicks, so
+the clicks are not a DSP-logic artefact. CPU timing is the current hypothesis:
+the 2024 scheduler costs more in that range, but module CPU timing there has not
+yet been measured. Settings: DENSITY 0.98, PITCH +24 semitones, SIZE 0.92 (just
+below delay) and SHAPE 0.5, set by CV; DRY/WET fully clockwise, FEEDBACK and
+REVERB fully counter-clockwise; Bright digital; music into both inputs. OUT L
+went to a scope with OUT R unplugged, so it carried L+R. Clicks were found by a
+detector on the scope captures, not by ear:
 
 | Firmware | Clicks | Output observed |
 |---|---:|---:|
@@ -69,7 +77,7 @@ Together, these two changes removed the clicks behind the crackle report (#1) in
 | Released source, same GCC 4.9.3 compiler | 0 | 14 s |
 | Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
 
-Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any of the four. CPU overload is a hypothesis; CPU load has not been measured.
+Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any of the four. CPU timing is the current hypothesis; it has not been measured in this range.
 
 In these older builds, monophonic mode is unchanged and compiled out (`ENABLE_ADVANCED_FEATURES` is commented out).
 

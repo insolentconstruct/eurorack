@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
 
-**Beta 1 preparation:** module checks and outside testing are still pending. Please report any problems you find. [TESTING.md](TESTING.md) shows how it was tested.
+**Release candidate 3:** module checks are under way and outside testing is still pending. Please report any problems you find. [TESTING.md](TESTING.md) shows how it was tested.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
@@ -68,7 +68,7 @@ to 0..1. Stock keeps the stock cycle and pan rounding.
 ## Monophonic grains
 
 Hold MEDIA first, then press SEED to toggle monophonic grains; the setting
-is saved and defaults off. The MEDIA/MEDIA LED is half as bright when on
+is saved and defaults off. The MEDIA LED is half as bright when on
 (the recording reserve can dim it further). This enables Mutable Instruments'
 original code and gesture. Each new grain fades the previous grains out.
 It suits the square and decay SHAPE settings. Slower shapes can go nearly
@@ -125,28 +125,7 @@ Every first value, including Pitch Off, is steady green. Other values follow
 yellow, red, then green/yellow/red slow and fast blinking. Slow is about 1 Hz;
 fast is about 4 Hz. Raag Shri uses two yellow pulses then a pause.
 The page LED flashes for 100 ms on entry, close and after a changed batch is
-written. MEDIA keeps showing the value. See the reference for every value.
-
-On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
-Move out of Stock above 13%; return below 7%.
-Above this zone it sets a continuous saved width: zero displacement at 13%
-to full random spread at fully clockwise. At zero width the input stereo
-positioning passes through and mono stays centred. Enabled width randomizes
-every grain, including at DENSITY fully clockwise with no other randomness.
-Pan is fixed at grain start; changes affect new grains only, including synth.
-The MEDIA LED is steady green for Stock. Enabled width blinks slowly, using
-Beads' green through yellow to red meter colour for the amount; adjacent saved
-amounts can share a colour.
-When enabled, short ASSIGN presses cycle the three stock destinations then
-WIDTH; all three ASSIGN LEDs pulse together for WIDTH. The existing custom
-mix assignment remains available. ASSIGN CV adds to resting width and clamps
-to 0..1. Stock keeps the stock cycle and pan rounding.
-Delay mode: Auto (Stock) keeps the usual delay switch at SIZE fully clockwise.
-Never keeps granular playback there. Wide detent keeps the switch, with
-an unfiltered zone from 40% to 60% on the delay filter (SIZE attenurandomizer
-plus SIZE CV) and no resonant boost. It does not affect synth mode.
-For delay mode, the MEDIA LED shows steady green / yellow / red
-for Auto (Stock) / Never / Wide detent.
+written. MEDIA keeps showing the value. See [OPTIONS.md](OPTIONS.md) for every value.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
@@ -245,7 +224,7 @@ Settings offsets are bytes in the 24-byte State payload:
 | 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
 | 14 | Stereo width | 0 Stock; 1..255 enabled width, zero to full spread | Ignores; clears to 0 on save |
 | 15 | Delay mode | 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown → Auto (Stock) | Ignores; clears to 0 on save |
-| 16 | WIDTH assignment | 0 unassigned, 0xA1 assigned; unknown → unassigned | Sees FEEDBACK; clears extension on save |
+| 16 | WIDTH assignment | 0 unassigned, 1 assigned; other values → unassigned | Sees FEEDBACK; clears extension on save |
 
 Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
 byte but compiles out the gesture, so turn mono off before downgrading.

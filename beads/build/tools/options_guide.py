@@ -227,7 +227,7 @@ def markdown(rows, pages):
         *instructions(NOTES),
         "",
         "MEDIA shows the setting value: steady, slow blink, fast blink "
-        "or two pulses;"
+        "or two pulses; "
         "colours are named below.",
     ]
     for page, knobs in pages.items():

@@ -15,7 +15,7 @@
 Move a knob more than 10% of its travel before it responds.
 Wait one second before powering off.
 
-MEDIA shows the setting value: steady, slow blink, fast blink or two pulses;colours are named below.
+MEDIA shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
 ## Page 1 — REVERB LED pulsing
 

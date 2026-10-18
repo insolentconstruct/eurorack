@@ -20,7 +20,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 | SEED hold, 4 s | TAKEN: latch generation | No <!-- beads/ui.cc:48-50,463-469; manual.md:59 --> |
 | ASSIGN tap | TAKEN: cycle feedback / dry/wet / reverb CV destination | Yes <!-- beads/ui.cc:499-515 --> |
 | ASSIGN + mix knobs | TAKEN: set three independent CV amounts; release saves | Yes <!-- beads/ui.cc:178-180,499-515 --> |
-| ASSIGN alone, 3 s | TAKEN by Drizzlet: options entry | Save gesture below <!-- beads/options.h:125-140; beads/build/README.md:23-30 --> |
+| ASSIGN alone, 3 s | TAKEN by Drizzlet: options entry | Save gesture below <!-- beads/options.h:125-140; beads/build/README.md:97-128 --> |
 | Hold SEED, press FREEZE | TAKEN: latch SEED; consumes both releases | No <!-- beads/ui.cc:320-324; manual.md:59 --> |
 | Hold ASSIGN, press SEED | TAKEN: toggle R output between audio and grain gate | Yes <!-- beads/ui.cc:331-339; manual.md:138 --> |
 | Hold ASSIGN, press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
@@ -70,7 +70,7 @@ Settings offsets are bytes in the 24-byte State payload:
 | 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, → Stock | Ignores; clears to 0 on save |
 | 14 | Stereo width | 0 Stock; 1..255 enabled width, zero to full spread | Ignores; clears to 0 on save |
 | 15 | Delay mode | 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown → Auto (Stock) | Ignores; clears to 0 on save |
-| 16 | WIDTH assignment | 0 unassigned, 0xA1 assigned; unknown → unassigned | Sees FEEDBACK; clears extension on save |
+| 16 | WIDTH assignment | 0 unassigned, 1 assigned; other values → unassigned | Sees FEEDBACK; clears extension on save |
 
 Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
 byte but compiles out the gesture, so turn mono off before downgrading.
@@ -105,7 +105,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
 | 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown values read Auto (Stock) |
-| 16 | `padding[6]` | WIDTH assignment: 0 off, 0xA1 on; unknown values read off; stock destination stays FEEDBACK |
+| 16 | `padding[6]` | WIDTH assignment: 0 off, 1 on; other values read off; stock destination stays FEEDBACK |
 | 17–22, individually | `padding[7]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
@@ -151,7 +151,7 @@ Updater reception has no end-address guard; extending app/update files can overw
 | DENSITY knob + CV | Grain rate; noon stops latched grains; clock divider/probability; unlatched noon triggers single grains. Delay: base time or clock/tap ratio | Synth grain rate, with density CV also used for exponential FM at high rates; TAKEN <!-- manual.md:63-77,150-162; beads/dsp/synth.cc:70-81 --> |
 | TIME, PITCH, SIZE, SHAPE knobs + CV | Position, transposition, duration/direction, envelope. SIZE fully CW enters delay; TIME then delay multiple/frozen slice, PITCH pitch-shift, SHAPE tap envelopes | Synth TIME wave position, PITCH root/grain pitch, SIZE duration, SHAPE envelope; all TAKEN <!-- manual.md:87-97,144-174; beads/dsp/wavetable_voice.h:84-94; beads/dsp/wavetable_granular_player.h:65-68; beads/dsp/delay_controller.cc:173-175,293-294,346 --> |
 | Four attenurandomizers | Patched: CW CV amount, CCW CV-controlled randomness; unpatched: peaky/uniform randomness. Delay: slow random LFOs; SIZE amount + SIZE CV also set bandwidth | Synth PITCH CV always 1 V/oct root; PITCH attenurandomizer remains grain randomness; TAKEN <!-- manual.md:102-106,174,192-194; beads/dsp/granular_processor.h:277-282 --> |
-| Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow all three mix knobs (FEEDBACK and DRY/WET in use); TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
+| Feedback, dry/wet, reverb knobs; ASSIGN CV | Feedback, audio blend, reverb; destinations 0/1/2 or custom three-way amounts | Synth feedback selects 12 banks (manual says 8), dry/wet oscillator/grains; options borrow all three mix knobs (all three in use); TAKEN <!-- beads/beads.cc:219-234; beads/dsp/synth.h:43; beads/dsp/synth.cc:52,83,98-108; manual.md:182-184; beads/options.h:94-113 --> |
 | FREEZE + SEED gate inputs | Record stop; grain clock/gate, delay clock. Button freeze ORs with gate; SEED input delayed 2.5 ms | Synth freeze stops new grains/holds envelopes; SEED still drives grains; TAKEN <!-- beads/beads.cc:132-151; manual.md:158,186; beads/dsp/synth.cc:73-81 --> |
 | L/R audio in, L/R audio out | Input normalization selects mono/stereo; output always stereo, unpatched R sums to L; optional R grain gate replaces audio | Automatic (Stock) self-play: both inputs empty, FREEZE off and quiet output for 10 s selects synth; On request: a MEDIA hold instead; patching an input exits once FREEZE is off; R gate costs stereo output; no spare dedicated gate output <!-- manual.md:36-40,134-138; beads/beads.cc:360-394; beads/dsp/synth.cc:138-142 --> |
 | MEDIA RGB LED | 0 Scorched cassette red/pink, 1 Sunny tape amber, 2 Cold digital teal, 3 Bright digital white; dims with overwrite reserve; manual gain overrides with meter | Same palette marks synth resolutions 4/4, 16/6, 7/7, 16/16 bits (continuous/grains); options override colours; TAKEN <!-- beads/ui.cc:190-195,238-245; beads/dsp/processor.h:58-63; beads/dsp/synth.cc:84-85 --> |
@@ -187,14 +187,14 @@ Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before t
 The GCC 9 Clouds-style build uses 270,808 app flash bytes and 35,700 DTCM
 `.bss` bytes, plus 1,188 `.data` bytes and the 1,536-byte minimum heap/stack
 reservation. D1/D2/D3 and DMA reservations are unchanged. Actual module stack
-high-water and total callback timing remain unverified.
+high-water and heaviest grain callback timing remain unverified.
 
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. No worst-case block timing has been measured for Drizzlet yet. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. First module timing: delay-mode callback 60% of budget; the heaviest grain case is unmeasured. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
 The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Treat CPU headroom as UNKNOWN: time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
 ## Planning rules
 
-- Allocate a reserved category knob before borrowing another normal gesture; record category, knob, colours and saved bytes together. <!-- derived: beads/options.h:90-113; beads/ui.cc:283-299; beads/settings.h:60 -->
+- Allocate a reserved page knob before borrowing another normal gesture; record page, knob, colours and saved bytes together. <!-- derived: beads/options.h:90-113; beads/ui.cc:283-299; beads/settings.h:60 -->
 - Give zero/unknown settings the stock default; preserve the 24-byte State layout and accept that stock saves erase extension bytes. <!-- derived: beads/settings.h:74-85; stock:beads/settings.cc:94-96; stmlib/system/sector_storage_h7xx.h:168-175 -->
 - Change load/save clearing when assigning padding; do not claim byte 9 or flash journal/backup tails as free. <!-- derived: beads/settings.cc:84,96-99; beads/settings.h:59; beads/background_buffer_backup.cc:95-116,157 -->
 - Check button order, long holds, startup and disabled-feature collisions; keep calibration/reset/update chords reserved. <!-- derived: beads/ui.cc:315-399; beads/bootloader/bootloader.cc:315-322; beads/beads.cc:329 -->
@@ -205,10 +205,10 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic (Stock)). Byte 12 stores pitch scale (0 Off, 0xA1–0xA9); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Byte 12/13 values are frozen at Beta 1. Width, delay mode and WIDTH assignment use bytes 14–16. Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
+- **Saved options default to stock.** Byte 11 stores self-play (0xA1 On request, otherwise Automatic (Stock)). Byte 12 stores pitch scale (0 Off, 0xA1–0xA9); byte 13 stores reverb character (0 Stock, 0xA2 Clouds-style; 0xA1 reserved). Byte 12/13 values are frozen at Beta 1. Width (byte 14), delay mode (byte 15, 0xA1/0xA2) and WIDTH assignment (byte 16, 0/1) use bytes 14–16. Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour so existing saves stay valid. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up. The limiter keeps byte 10 as it is (0 Stock, 0xA1 Fast, 0xA2 Off).
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
-- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three categories with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
-- **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three pages with three settings each, including the limiter and self-play; monophonic grains use MEDIA+SEED outside the page. Other requests stay open as issues.
+- **Buffer trim:** grains stay within the trimmed window at their start; release can run a few milliseconds past it (the envelope minimum release).
 - **Gestures:** MEDIA+SEED is taken by monophonic grains; MEDIA+FREEZE = buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
 
 Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
@@ -217,8 +217,7 @@ four 16-bit allpasses per channel (4 KiB buffer), coefficient 0.625, amount 0.7.
 Clouds' granular TEXTURE maps 0.75–1 to diffusion 0–1; amount 0.7 corresponds to
 TEXTURE 0.925. Delay and self-play use the reverb character without the grain
 diffuser. A roughly 10 ms fade out, state clear, and 10 ms fade in separates
-changes, including settled option changes. Actual module listening and timing
-remain to be verified.
+changes, including settled option changes. Module listening done; module timing remains to be measured.
 
 ## Stereo width
 

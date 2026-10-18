@@ -4,12 +4,12 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **In numbers:** 160 tests in 13 host test programs (962 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 160 tests in 13 host test programs (963 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 150 deliberate-fault mutations, 531 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
   - emulator comparisons found identical audio in 44 of 44 scenarios against the previous release (2026.10.14), and in 20 of 20 between GCC 9 and GCC 4.9.3 builds (2026.10.16).
-- **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle fix, flash wear from a modulated FREEZE, monophonic grains and self-play, using oscilloscope captures and the debug probe.
+- **On a module:** seven checks for 2026.10.14, from installing the release file to a stock firmware loading a Drizzlet save; six for 2026.10.16, including the crackle recipe, flash wear from a modulated FREEZE, monophonic grains and self-play, using oscilloscope captures and the debug probe.
 - **Not covered:** other modules, long sessions, and listening tests of the limiter modes.
 
 Counts come from the test calls in each program’s `main()`, `CHECK` sites
@@ -41,7 +41,7 @@ execute more than once. The manual-coverage totals below are unchanged.
 | backup | 16 | 106 |
 | clouds | 3 | 9 |
 | delay | 10 | 45 |
-| delay_mode | 8 | 40 |
+| delay_mode | 8 | 41 |
 | firmware | 15 | 118 |
 | gain | 5 | 21 |
 | granular | 23 | 113 |
@@ -51,7 +51,7 @@ execute more than once. The manual-coverage totals below are unchanged.
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 10 | 42 |
-| **Total** | **160** | **962** |
+| **Total** | **160** | **963** |
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
@@ -149,15 +149,22 @@ Self-play On request, the delay clock fix (#57) and the frozen-delay slice fix (
 | Released source, same GCC 4.9.3 compiler | 0 | 14 s |
 | Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
 
-Reverse, square-envelope, low-pitch and no-grain variants gave none on any firmware. See CHANGELOG.md for the source difference.
+Reverse, square-envelope, low-pitch and no-grain variants gave none on any
+firmware. See CHANGELOG.md for the source difference. On our module, the 2021
+and 2024 firmware clicked and the released source / Drizzlet did not. A desktop
+run of both grain schedulers produced no clicks, so the clicks are not a DSP-
+logic artefact. CPU timing is the current hypothesis: the 2024 scheduler costs
+more in that range, but module CPU timing there has not yet been measured.
 
 ## Not tested
 
-Beta 1 preparation still needs module CPU headroom for the complete audio
-callback, the full bench suite, trim/freeze/power-cycle and stock downgrade
-with a trimmed save, pitch listening and LED checks, and Clouds-style listening
-and switching checks. Outside testers on other units are still needed.
-No new module results are claimed here.
+Beta 1 still needs module CPU headroom for the heaviest grain case, the rest of
+the bench suite (running now), the pitch audio check, the rc3 green/yellow/red
+LED ladder check, and outside testers on other units. Done on a module for
+release candidate 3 (2026-10-17): trim, freeze, power cycle and stock downgrade
+with a trimmed save; Clouds-style listening and switching. The earlier pitch LED
+module check used the old palette; the rc3 green/yellow/red ladder has not been
+checked on a module yet.
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.

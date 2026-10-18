@@ -28,7 +28,7 @@ Several differences come from the April 2021 firmware update, which the manual p
 
 ## Not in the manual
 
-- **Power-on reset:** holding SEED while powering on resets saved settings to defaults; calibration is kept. In Drizzlet this also resets the output limiter to Stock, self-play to Automatic and monophonic grains to off. <!-- beads/beads.cc:327-328; beads/settings.cc:43-75; stmlib/system/sector_storage_h7xx.h:126-130 -->
+- **Power-on reset:** holding SEED while powering on resets saved settings to defaults; calibration is kept. In Drizzlet this also resets the limiter, self-play, pitch scale, reverb character, stereo width and delay mode to stock and turns monophonic grains off. <!-- beads/beads.cc:327-328; beads/settings.cc:43-75; stmlib/system/sector_storage_h7xx.h:126-130 -->
 - **Erase chord:** holding FREEZE and ASSIGN at power-on erases the firmware and waits for an update. Holding FREEZE alone enters the updater without erasing. Use only for recovery. <!-- beads/bootloader/bootloader.cc:28,266-281,315-322 -->
 - **Calibration:** pressing MEDIA and ASSIGN together starts CV calibration, which needs precise reference voltages and overwrites the stored calibration. Avoid it unless you are recalibrating. <!-- beads/ui.cc:320-328,358-384; beads/calibrator.h:91-118 -->
 - **Saved choices:** recording quality, ASSIGN routing and amounts, the R trigger-output mode and autosave are all remembered across power cycles, not just input gain. <!-- beads/ui.cc:261-264,276-279,416-418,437-444; beads/settings.cc -->

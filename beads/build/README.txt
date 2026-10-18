@@ -3,7 +3,7 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-BETA 1 PREPARATION: module checks and outside testing are still pending.
+Release candidate 3: module checks are under way and outside testing is still pending.
 Please report any problems you find. TESTING.md in the repository
 shows how it was tested.
 
@@ -15,13 +15,15 @@ Install at your own risk. Please don't contact Mutable Instruments;
 report problems at:
 https://github.com/insolentconstruct/eurorack/issues
 
-Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one
-change to grain stealing, as in the released source. In a test on one
-module, the 2021 and 2024 firmware clicked with DENSITY and PITCH near
-fully clockwise; builds with this change did not. New since alpha 2:
-buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode.
-The new settings default to stock behaviour. Details are in CHANGELOG.md
-in the repository.
+Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one change
+to grain stealing, as in the released source. On our module, the 2021 and 2024
+firmware clicked with DENSITY and PITCH near fully clockwise and the released
+source / Drizzlet did not. A desktop run of both grain schedulers produced no
+clicks, so the clicks are not a DSP-logic artefact. CPU timing is the current
+hypothesis: the 2024 scheduler costs more in that range, but module CPU timing
+there has not yet been measured. New since alpha 2: buffer trim, pitch scales,
+Clouds-style reverb, stereo width and delay mode. The new settings default to
+stock behaviour. Details are in CHANGELOG.md in the repository.
 
 Beads manual and development history:
 https://pichenettes.github.io/mutable-instruments-
@@ -42,7 +44,7 @@ buffer-trim code.
 Monophonic grains
 -----------------
 Hold MEDIA first, then press SEED to toggle monophonic grains; the setting
-is saved and defaults off. The MEDIA/MEDIA LED is half as bright when on
+is saved and defaults off. The MEDIA LED is half as bright when on
 (the recording reserve can dim it further). This enables Mutable Instruments'
 original code and gesture. Each new grain fades the previous grains out.
 It suits the square and decay SHAPE settings. Slower shapes can go nearly
@@ -90,7 +92,7 @@ Every first value, including Pitch Off, is steady green. Other values follow
 yellow, red, then green/yellow/red slow and fast blinking. Slow is about 1 Hz;
 fast is about 4 Hz. Raag Shri uses two yellow pulses then a pause.
 The page LED flashes for 100 ms on entry, close and after a changed batch is
-written. MEDIA keeps showing the value. See the reference for every value.
+written. MEDIA keeps showing the value. See below for every value.
 
 On page 1 (REVERB LED), DRY/WET selects Stock below 10% (3% dead band).
 Move out of Stock above 13%; return below 7%.
@@ -208,7 +210,7 @@ Settings offsets are bytes in the 24-byte State payload:
 | 13 | Reverb | 0 Stock, 0xA2 Clouds-style; all other values, including reserved 0xA1, -> Stock | Ignores; clears to 0 on save |
 | 14 | Stereo width | 0 Stock; 1..255 enabled width, zero to full spread | Ignores; clears to 0 on save |
 | 15 | Delay mode | 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown -> Auto (Stock) | Ignores; clears to 0 on save |
-| 16 | WIDTH assignment | 0 unassigned, 0xA1 assigned; unknown -> unassigned | Sees FEEDBACK; clears extension on save |
+| 16 | WIDTH assignment | 0 unassigned, 1 assigned; other values -> unassigned | Sees FEEDBACK; clears extension on save |
 
 Monophonic grains use the original byte 9 (0 off, 1 on). Stock retains this
 byte but compiles out the gesture, so turn mono off before downgrading.

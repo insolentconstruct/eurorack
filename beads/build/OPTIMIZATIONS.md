@@ -8,7 +8,7 @@ What Drizzlet changed to run faster or smaller, what was measured and rejected, 
 - **Code:** three small bit-identical changes ship in Beta 1: mono/stereo chosen once per block (template), grain output summed in a local frame, and an unsigned modulo for the delay-line read index. The stock worst case (q3 stereo, 32 grains held active) goes from 97,255 to 90,333 cycles per block (75.3% of the 120,000 budget); the worst block of all 28 scenarios is 92,486 (77.1%).
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulated scenarios. The code changes matched in 28 of 28 Seed3 hashes, 20 of 20 emulator scenarios and 13 of 13 long runs (max error 0).
 - **Rejected:** GCC 10.3 to 15.x, ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
-- **Caveat:** timings are DSP-only, measured on a Daisy Seed3 (an STM32H750: the same die as the module's STM32H743, Cortex-M7 at 480 MHz), not on the module. Whole-callback timing on the module is not yet calibrated.
+- **Caveat:** timings are DSP-only, measured on a separate development board (the same processor die and clock rate as the module), not on the module. First module figure: the whole delay-mode callback takes 72,088–72,472 cycles (60%), with no dropouts; the heaviest grain case on the module is still to be measured.
 
 ## Build comparison
 
@@ -84,7 +84,7 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 - **Seed3 probe.** The real `Processor::Process` at 480 MHz with caches on and memory placed as in the firmware (state and stack in DTCM, delay buffers in AXI and D2 SRAM, reverb in D3 SRAM). 16,000 warm blocks, then 4,096 measured; median is the upper middle. 28 scenarios: q0 to q3, stereo and mono, dense, stress32 and delay, Clouds-style and pitch-scale cases. Stress32 holds all 32 grains active at +4x speed. Peaks are finite-sample maxima, not proven bounds.
 - **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb, output limiter. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, synth mode. The full callback on the module will be higher.
-- **Module calibration (planned).** DWT cycle counters around `Process` and the whole callback, running the same stress32 fixture on the module. The ratio to the Seed3 median calibrates these figures; the module must stay at or below 90,000 cycles to keep a 25% reserve.
+- **Module calibration (in progress).** DWT cycle counters around `Process` and the whole callback, running the same stress32 fixture on the module. The ratio to the Seed3 median calibrates these figures; the module must stay at or below 90,000 cycles to keep a 25% reserve.
 - **Bit-identical checks.** Seed3 output and buffer hashes; 20 short and 13 long emulator scenarios (272,000 blocks in all) compared sample by sample; host tests with sanitizers. Counts are in [TESTING.md](TESTING.md).
 
 ## Rules for future changes
