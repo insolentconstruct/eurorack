@@ -1,7 +1,24 @@
 #!/usr/bin/env bash
 # Copyright 2026 Insolent Construct. MIT; see beads/build/LICENSE.
 set -euo pipefail
-out=${1:?usage: beads/test/run.sh OUTPUT_DIR}
+# Suite files are the registry; storage and audio have separate drivers.
+suites=()
+for suite in beads/test/*.mk; do
+  test=${suite##*/}
+  test=${test%.mk}
+  case "$test" in suite|audio_reference) continue ;; esac
+  suites+=("$test")
+done
+if [[ $# == 1 && $1 == --list ]]; then
+  printf '%s\n' "${suites[@]}"
+  exit
+fi
+usage() {
+  echo 'usage: beads/test/run.sh --list | OUTPUT_DIR' >&2
+  exit 2
+}
+[[ $# == 1 && $1 != -* ]] || usage
+out=$1
 if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
   mkdir -p "$out"
   out=$(cd "$out" && pwd)
@@ -22,11 +39,8 @@ if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
 fi
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
-# Suite files are the registry; audio capture has its own driver below.
-for suite in beads/test/*.mk; do
-  test=${suite##*/}
-  test=${test%.mk}
-  case "$test" in suite|audio_reference) continue ;; esac
+for test in "${suites[@]}"; do
+  suite=beads/test/$test.mk
   make -j"${JOBS:-$(n=$(nproc); echo $(( n < 4 ? n : 4 )))}" -f "$suite" "BUILD_ROOT=$out/objects/" "TARGET=$out/${test}_test" test
   echo "PASS $test"
 done

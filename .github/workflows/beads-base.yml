@@ -1,15 +1,90 @@
 name: Beads base
 on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-kit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - run: git submodule update --init stmlib stm_audio_bootloader
-      - run: docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
-      - run: RELEASE_NAME=beads-base-ci beads/build/build.sh /tmp/beads-base-one --wav
-      - run: RELEASE_NAME=beads-base-ci beads/build/build.sh /tmp/beads-base-two --wav
-      - run: diff /tmp/beads-base-one/SHA256SUMS /tmp/beads-base-two/SHA256SUMS
-      - run: beads/test/run.sh /tmp/beads-base-tests
+          submodules: false
+          persist-credentials: false
+      - name: Build shared kit
+        run: |
+          docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
+          docker save --output /tmp/beads-build-kit.tar beads-build-kit:gcc9
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: beads-build-kit
+          path: /tmp/beads-build-kit.tar
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+  host-tests:
+    needs: build-kit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Initialize submodules
+        run: git submodule update --init stmlib stm_audio_bootloader
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: beads-build-kit
+          path: /tmp/beads-build-kit
+      - name: Load build kit
+        run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
+      - name: Run host tests, storage compatibility and audio reference
+        run: beads/test/run.sh "$RUNNER_TEMP/host-tests"
+  release-build:
+    needs: build-kit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [one, two]
+    name: release (${{ matrix.replica }})
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Initialize submodules
+        run: git submodule update --init stmlib stm_audio_bootloader
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: beads-build-kit
+          path: /tmp/beads-build-kit
+      - name: Load build kit
+        run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
+      - name: Build reproducible release
+        run: JOBS="$(nproc)" RELEASE_NAME=beads-base-ci beads/build/build.sh "$RUNNER_TEMP/release" --wav
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ matrix.replica }}
+          path: ${{ runner.temp }}/release/SHA256SUMS
+          retention-days: 1
+          if-no-files-found: error
+  compare-releases:
+    needs: [host-tests, release-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-*
+          path: manifests
+      - name: Compare release manifests
+        run: diff -u manifests/release-one/SHA256SUMS manifests/release-two/SHA256SUMS

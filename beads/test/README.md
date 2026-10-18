@@ -72,6 +72,21 @@ Every suite calls `InitTestFpu()` at startup. For a new suite, copy a short
 suite list. `SANITIZERS =` disables sanitizers only for mapped flash tests.
 Object/dependency files live under each target's own build directory.
 
+List host suites without Docker or builds:
+
+```sh
+beads/test/run.sh --list
+```
+
+`--list` prints one host suite per line, excluding the separate storage and
+audio drivers. A plain run executes all suites, storage compatibility and audio
+reference checks, including the optimization comparison.
+
+CI builds the shared kit, then runs one host-tests job and two independent
+release builds in parallel. A final job waits for all three and diffs the two
+release `SHA256SUMS` manifests. All host suites together take about 40 seconds
+in Docker; sharding costs more in per-job image downloads than it saves.
+
 `TestMainLoopMatchesHarness` in `firmware_test.cc` compares the source text of
 `beads.cc`; editing `main()` requires updating that harness check too.
 
@@ -92,4 +107,4 @@ Firmware and WAV hashes are re-pinned with
 The runner mounts source read-only by default, read/write for `UPDATE=1`.
 For a remote Docker daemon, copy the checkout into a container, export stock
 sources if Git metadata is absent, and set `BEADS_TEST_CONTAINER=1` to invoke
-the same in-container runner. `JOBS` controls parallel compilation (default 8).
+the same in-container runner. `JOBS` controls parallel compilation (default min(4, cores)).
