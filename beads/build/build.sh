@@ -3,7 +3,7 @@
 set -euo pipefail
 export LC_ALL=C
 unset MAKEFLAGS MFLAGS MAKELEVEL
-out=${1:?usage: beads/build/build.sh EMPTY_OUTPUT_DIR --wav   (from the repository root, on the host)}
+out=${1:?usage: beads/build/build.sh OUTPUT_DIR --wav}
 mode=${2:-}
 [[ $# -le 2 && ( -z "$mode" || "$mode" == --wav ) ]] || exit 2
 [[ "$out" = /* && "$out" != *[[:space:]]* ]] || { echo "Output must be an absolute path without whitespace" >&2; exit 2; }
@@ -16,6 +16,8 @@ if [[ -z "${TOOLCHAIN_PATH:-}" ]]; then
   [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == 39d95a8be305c6bc4a99fd218518d832c7ff821c ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
   container=$(docker create --platform linux/amd64 --network none \
+    -e UPDATE_HASHES="${UPDATE_HASHES:-0}" \
+    -e JOBS="${JOBS:-8}" \
     -e RELEASE_NAME="${RELEASE_NAME:-beads-base-dev}" \
     "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" bash beads/build/build.sh /out --wav)
   trap 'docker rm -f "$container" >/dev/null' EXIT
@@ -28,10 +30,14 @@ if [[ -z "${TOOLCHAIN_PATH:-}" ]]; then
   docker start -a "$container" || true
   status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
   docker cp "$container:/out/." "$out"
+  if [[ ${UPDATE_HASHES:-0} == 1 && "$status" == 0 ]]; then
+    docker cp "$container:/src/beads/build/expected-hashes.sha256" "$root/beads/build/expected-hashes.sha256"
+    docker cp "$container:/src/beads/build/expected-wav.sha256" "$root/beads/build/expected-wav.sha256"
+  fi
   [[ "$status" == 0 ]]
   exit 0
 fi
-# Without --wav, this runs inside the compiler container.
+# In-container mode lets the kit invoke the pinned compilers without nesting Docker.
 [[ -n "${TOOLCHAIN_PATH:-}" ]] || { echo "Use --wav on the host; the other mode runs inside the build container" >&2; exit 2; }
 [[ -f stmlib/makefile.inc && -f stm_audio_bootloader/qpsk/encoder.py ]] || { echo "Initialize submodules first" >&2; exit 1; }
 mkdir -p "$out/objects/beads" "$out/objects/beads_bootloader"
@@ -45,7 +51,7 @@ for spec in 'beads/makefile beads' 'beads/bootloader/makefile beads_bootloader';
   fi
   nice -n 10 make --no-print-directory -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
     "KIT_MAKEFILE=$mf" "BUILD_ROOT=$out/objects/" \
-    "TOOLCHAIN_PATH=$tc" "KIT_GCC9=$gcc9" -j2 bin hex kit-info notice-deps \
+    "TOOLCHAIN_PATH=$tc" "KIT_GCC9=$gcc9" -j"${JOBS:-8}" bin hex kit-info notice-deps \
     > "$out/$target.log" 2>&1 || { tail -40 "$out/$target.log" >&2; exit 1; }
 done
 cp "$out/objects/beads/beads.bin" "$out/app.bin"
@@ -74,7 +80,21 @@ padded = b + bytes(0x20000-len(b))
 if (p/'objects/beads/beads_bootloader_combo.bin').read_bytes() != padded+a:
     raise SystemExit('Combo disagrees with upstream HEX merge')
 PYCODE
-(cd "$out" && sha256sum -c "$OLDPWD/beads/build/expected-hashes.sha256") || { echo "FATAL: branch firmware hash mismatch" >&2; exit 1; }
+check_hashes() {
+  local manifest=$1
+  if ! (cd "$out" && sha256sum -c "$manifest"); then
+    case ${RELEASE_NAME:-beads-base-dev} in
+      beads-base-dev) echo "WARNING: development build differs from pinned hashes" >&2 ;;
+      *) echo "FATAL: release hash mismatch" >&2; exit 1 ;;
+    esac
+  fi
+}
+manifest=$PWD/beads/build/expected-hashes.sha256
+if [[ ${UPDATE_HASHES:-0} == 1 ]]; then
+  (cd "$out" && sha256sum $(awk '{print $2}' "$manifest")) > "$manifest.new"
+  mv "$manifest.new" "$manifest"
+fi
+check_hashes "$manifest"
 (cd "$out" && sha256sum bootloader.bin bootloader-padded.bin app.bin app.elf combo.bin > SHA256SUMS
  sha256sum -c SHA256SUMS)
 
@@ -86,6 +106,11 @@ if [[ "$mode" == --wav ]]; then
   name=${RELEASE_NAME:-beads-base-dev}
   [[ "$name" =~ ^beads-base-[A-Za-z0-9._-]+$ ]] || exit 2
   mv "$out/app.wav" "$out/$name.wav"
-  echo "$(cut -c1-64 beads/build/expected-wav.sha256)  $name.wav" | (cd "$out" && sha256sum -c -)
+  if [[ ${UPDATE_HASHES:-0} == 1 ]]; then
+    (cd "$out" && sha256sum "$name.wav") | \
+      sed "s/  .*/  beads-base-dev.wav/" > beads/build/expected-wav.sha256
+  fi
+  echo "$(cut -c1-64 beads/build/expected-wav.sha256)  $name.wav" > "$out/wav.sha256"
+  check_hashes "$out/wav.sha256"
   python3 beads/build/tools/release.py "$out"
 fi

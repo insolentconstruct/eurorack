@@ -2,10 +2,25 @@
 # Copyright 2026 Insolent Construct. MIT; see beads/build/LICENSE.
 set -euo pipefail
 out=${1:?usage: beads/test/run.sh OUTPUT_DIR}
+if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
+  mkdir -p "$out"
+  out=$(cd "$out" && pwd)
+  root=$(git rev-parse --show-toplevel)
+  exec docker run --rm --platform linux/amd64 --network none \
+    -e BEADS_TEST_CONTAINER=1 -e JOBS="${JOBS:-8}" -e UPDATE="${UPDATE:-0}" \
+    -v "$root:/src:$( [[ ${UPDATE:-0} == 1 ]] && echo rw || echo ro )" \
+    -v "$out:/out" "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" \
+    bash beads/test/run.sh /out
+fi
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
-for test in backup delay delay_mode gain granular mix processor trigger wavetable firmware; do
-  make -j2 -f "beads/test/$test.mk" "BUILD_ROOT=$out/objects/" "TARGET=$out/${test}_test" test
+# Suite files are the registry; audio capture has its own driver below.
+for suite in beads/test/*.mk; do
+  test=${suite##*/}
+  test=${test%.mk}
+  case "$test" in suite|audio_reference) continue ;; esac
+  make -j"${JOBS:-8}" -f "$suite" "BUILD_ROOT=$out/objects/" "TARGET=$out/${test}_test" test
   echo "PASS $test"
 done
-bash beads/test/audio_reference.sh "$out"
+bash beads/test/storage_compat.sh "$out/storage"
+bash beads/test/audio_reference.sh "$out" --optimizations

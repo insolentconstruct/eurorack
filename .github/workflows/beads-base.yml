@@ -9,8 +9,7 @@ jobs:
           fetch-depth: 0
       - run: git submodule update --init stmlib stm_audio_bootloader
       - run: docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
-      - run: beads/build/build.sh /tmp/beads-base-one --wav
-      - run: beads/build/build.sh /tmp/beads-base-two --wav
+      - run: RELEASE_NAME=beads-base-ci beads/build/build.sh /tmp/beads-base-one --wav
+      - run: RELEASE_NAME=beads-base-ci beads/build/build.sh /tmp/beads-base-two --wav
       - run: diff /tmp/beads-base-one/SHA256SUMS /tmp/beads-base-two/SHA256SUMS
-      - run: docker run --rm --network none -v "$PWD:/src:ro" beads-build-kit:gcc9 bash beads/test/run.sh /tmp/tests
-      - run: docker run --rm --network none -v "$PWD:/src:ro" beads-build-kit:gcc9 bash beads/test/storage_compat.sh /tmp/storage
+      - run: beads/test/run.sh /tmp/beads-base-tests
