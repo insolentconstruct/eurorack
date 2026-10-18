@@ -606,6 +606,8 @@ void TestMultitapDelay() {
           delay,
           1.0f,
           0.5f,
+          kStockDelayQOffset,
+          kStockDelayQScale,
           &frame);
       wav_writer.Write(&frame.l, &frame.r, 1);
     }

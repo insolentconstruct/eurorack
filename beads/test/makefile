@@ -1,5 +1,8 @@
 TARGET = beads_test
 CC_FILES       = 		processor.cc \
+		playback_options.cc \
+		diffuser.cc \
+		reverb.cc \
 		synth.cc \
 		beads_test.cc \
 		mu_law.cc \
