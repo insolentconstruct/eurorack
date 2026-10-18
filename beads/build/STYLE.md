@@ -47,7 +47,7 @@ rules come after those sources; leave unrelated existing code alone.
 ## Code
 
 - (Drizzlet) Pass new arguments explicitly rather than adding default arguments.
-- C++98-era subset: no `auto`, `nullptr`, lambdas or `constexpr`; no exceptions or RTTI, and no STL or virtual dispatch in per-sample code.
+- C++98-era subset: no `auto`, `nullptr`, lambdas or `constexpr`; no exceptions or RTTI; no STL containers or virtual dispatch in per-sample code (`std::min`/`std::max` as in `limiter.h` and `std::fill` as in `gain_control.cc` are fine).
 - Prefer `const` for locals that don't change, and `bool` for flags.
 - Loops: `while (size--)` with a pointer, or an indexed `for`; indices are usually `size_t` or `int`.
 - Use the stmlib helpers: `CONSTRAIN`, `ONE_POLE`, `SLOPE`, `ParameterInterpolator`, the `Interpolate*` functions and lookup tables.
