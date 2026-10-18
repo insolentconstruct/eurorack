@@ -1,5 +1,5 @@
 # GNU Arm Embedded 9-2020-q2, with 4.9.3 for the golden build.
-FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS compiler
+FROM docker.io/library/debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS compiler
 SHELL ["nice", "-n", "10", "/bin/sh", "-c"]
 
 ARG DEBIAN_SNAPSHOT=20260916T000000Z
@@ -9,15 +9,15 @@ ARG TC_SHA256=3a574c5becfca496bafe07bbd76e9deae1fd0cc99c5a9de0f8c610750f2f89ac
 
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && printf '%s\n' \
-      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm main" \
-      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm-updates main" \
-      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT} bookworm-security main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} trixie main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} trixie-updates main" \
+      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT} trixie-security main" \
       > /etc/apt/sources.list \
  && dpkg --add-architecture i386 \
  && apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update \
  && apt-get install -y --no-install-recommends \
         ca-certificates curl bzip2 git make python3 python3-numpy python3-scipy g++ \
-        qemu-user-static:amd64=1:7.2+dfsg-7+deb12u18+b3 \
+        qemu-user-static:amd64 \
         libc6:i386 libstdc++6:i386 zlib1g:i386 \
  && rm -rf /var/lib/apt/lists/* \
  && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
