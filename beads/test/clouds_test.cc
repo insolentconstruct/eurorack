@@ -89,7 +89,7 @@ uint32_t Render(int quality, int mode, bool clouds, bool reconfigure) {
 #ifndef REFERENCE_CAPTURE
   if (clouds) {
     processor.SetCloudsStyle(true);
-    synth.SetCloudsStyle(true);
+    synth.SetCloudsStyle(true, true);
     if (reconfigure) {
       processor.Configure(Processor::Media(quality), false);
     }

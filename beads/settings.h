@@ -76,9 +76,11 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(sizeof(State) == 24, state_size);
   STATIC_ASSERT(offsetof(State, media) == 0, state_media_offset);
   STATIC_ASSERT(
-      offsetof(State, assignable_cv_destination) == 1, state_assignable_cv_destination_offset);
+      offsetof(State, assignable_cv_destination) == 1,
+      state_assignable_cv_destination_offset);
   STATIC_ASSERT(
-      offsetof(State, assignable_cv_amount) == 2, state_assignable_cv_amount_offset);
+      offsetof(State, assignable_cv_amount) == 2,
+      state_assignable_cv_amount_offset);
   STATIC_ASSERT(offsetof(State, gain) == 5, state_gain_offset);
   STATIC_ASSERT(
       offsetof(State, gate_output_mode) == 6, state_gate_output_mode_offset);
@@ -88,7 +90,8 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(
       offsetof(State, monophonic_mode) == 9, state_monophonic_mode_offset);
   STATIC_ASSERT(
-      offsetof(State, output_limiter_mode) == 10, state_output_limiter_mode_offset);
+      offsetof(State, output_limiter_mode) == 10,
+      state_output_limiter_mode_offset);
   STATIC_ASSERT(offsetof(State, self_play) == 11, state_self_play_offset);
   STATIC_ASSERT(offsetof(State, pitch_scale) == 12, state_pitch_scale_offset);
   STATIC_ASSERT(offsetof(State, reverb_style) == 13, state_reverb_style_offset);

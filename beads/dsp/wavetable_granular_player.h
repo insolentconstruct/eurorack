@@ -29,9 +29,9 @@
 #ifndef BEADS_DSP_WAVETABLE_GRANULAR_PLAYER_H_
 #define BEADS_DSP_WAVETABLE_GRANULAR_PLAYER_H_
 
+#ifdef TEST
 #include <cstdio>
-
-#include <cstdio>
+#endif
 
 #include "stmlib/stmlib.h"
 

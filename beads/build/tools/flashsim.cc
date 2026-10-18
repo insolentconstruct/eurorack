@@ -65,7 +65,8 @@ int main(int argc, char** argv) {
   size_t n;
   bool stop = false;
   bool complete = false;
-  while (!stop && (n = fread(buf, sizeof(buf[0]), sizeof(buf) / sizeof(buf[0]), in)) > 0) {
+  while (!stop &&
+      (n = fread(buf, sizeof(buf[0]), sizeof(buf) / sizeof(buf[0]), in)) > 0) {
     for (size_t i = 0; i < n; ++i) {
       demodulator.PushSample(static_cast<int16_t>(buf[i]));
     }
@@ -97,7 +98,8 @@ int main(int argc, char** argv) {
         if (first_error < 0) {
           first_error = symbols;
         }
-        stop = true;  // the real bootloader shows the error and waits for a button
+        // The real bootloader shows the error and waits for a button.
+        stop = true;
         break;
       }
     }

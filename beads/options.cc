@@ -32,6 +32,60 @@
 
 namespace beads {
 
+const OptionPage kOptionPages[kNumOptionPages] = {
+  { 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
+  { 0, { OPTION_RESERVED, OPTION_DELAY, OPTION_RESERVED } },
+  { 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED } }
+};
+const OptionValue kOptionValues[] = {
+  { OPTION_RESERVED, 0,
+    { 0, 0, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 2,
+    { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 3,
+    { 0, 255, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 4,
+    { 255, 255, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 5,
+    { 255, 0, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 6,
+    { 0, 255, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 7,
+    { 255, 255, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 8,
+    { 255, 0, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 9,
+    { 255, 255, 0 }, PULSE_DOUBLE },
+  { OPTION_WIDTH, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_WIDTH, 1,
+    { 255, 255, 0 }, PULSE_SLOW },
+  { OPTION_REVERB, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_REVERB, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 2,
+    { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SELF_PLAY, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SELF_PLAY, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 2,
+    { 255, 0, 0 }, PULSE_STEADY }
+};
+
 void Options::Init() {
   stage_ = STAGE_INACTIVE;
   armed_ = eligible_ = holding_ = commit_ = dirty_ = false;
@@ -182,7 +236,8 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
           float amount = (pot - kWidthEnabledThreshold) / kWidthRange;
           CONSTRAIN(amount, 0.0f, 1.0f);
-          width_preview_ = enabled ? 1 + int(amount * float(kStereoWidthMax - 1) + 0.5f) : 0;
+          width_preview_ = enabled
+              ? 1 + int(amount * float(kStereoWidthMax - 1) + 0.5f) : 0;
         } break;
         case OPTION_REVERB:
           if (pot < kOptionsHalfLow) {

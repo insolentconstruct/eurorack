@@ -59,22 +59,13 @@ class Limiter {
     max_peak_ = max_peak;
   }
 
-  void InitOutput(float decay, float max_peak, float sample_rate) {
-    Init(decay, max_peak);
-    fast_decay_ = 1.0f / (sample_rate * kFastDecayTime);
-  }
-
   void Process(FloatFrame* in_out, size_t size) {
-    ProcessWithDecay(in_out, size, decay_);
-  }
-
-  void ProcessWithDecay(FloatFrame* in_out, size_t size, float decay) {
     while (size--) {
       const float peak = std::min(
           std::max(fabsf(in_out->l), fabsf(in_out->r)),
           40.0f);
-      SLOPE(peak_, peak, 0.1f, decay);
-      SLOPE(peak_lp_, peak_, 0.5f, decay);
+      SLOPE(peak_, peak, 0.1f, decay_);
+      SLOPE(peak_lp_, peak_, 0.5f, decay_);
       float gain = (peak_lp_ <= max_peak_ ? 1.0f : max_peak_ / peak_lp_);
       in_out->l *= gain;
       in_out->r *= gain;
@@ -83,12 +74,15 @@ class Limiter {
   }
 
   void ProcessOutput(
-      FloatFrame* in_out, size_t size, OutputLimiterMode mode) {
+      FloatFrame* in_out, size_t size, OutputLimiterMode mode, float sr) {
     if (mode == OUTPUT_LIMITER_OFF) {
       // Re-enable with a fresh detector, not a stale overload.
       peak_ = peak_lp_ = 0.5f;
     } else if (mode == OUTPUT_LIMITER_FAST) {
-      ProcessWithDecay(in_out, size, fast_decay_);
+      const float decay = decay_;
+      decay_ = 1.0f / (sr * kFastDecayTime);
+      Process(in_out, size);
+      decay_ = decay;
     } else {
       Process(in_out, size);
     }
@@ -98,7 +92,6 @@ class Limiter {
   float peak_;
   float peak_lp_;
   float decay_;
-  float fast_decay_;
   float max_peak_;
 
   DISALLOW_COPY_AND_ASSIGN(Limiter);

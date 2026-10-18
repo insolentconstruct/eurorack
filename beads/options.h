@@ -50,10 +50,6 @@ enum OptionSetting {
 };
 
 struct OptionPage {
-
-#ifdef TEST
-  const char* led_name;
-#endif
   int led_index;
   OptionSetting knobs[MIX_PARAMETER_LAST];  // FEEDBACK, DRY/WET, REVERB.
 };
@@ -77,35 +73,8 @@ const uint32_t kOptionsSlowPeriod = 1024;
 const uint32_t kOptionsFastPeriod = 256;
 const uint32_t kOptionsPulsePeriod = 2048;
 const uint32_t kSelfPlayHoldTime = 1500;
-const OptionPage kOptionPages[kNumOptionPages] = {
-  {
-#ifdef TEST
-    "REVERB",
-#endif
-    2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
-  {
-#ifdef TEST
-    "FEEDBACK",
-#endif
-    0, { OPTION_RESERVED, OPTION_DELAY, OPTION_RESERVED } },
-  {
-#ifdef TEST
-    "DRY/WET",
-#endif
-    1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED } }
-};
-#ifdef TEST
-const char* const kOptionNames[] = {
-  "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
-  "Delay mode", "Self-play", "Limiter"
-};
-const char* const kOptionKnobNames[] = {
-#ifdef TEST
-    "FEEDBACK",
-#endif
-    "DRY/WET", "REVERB" };
-#endif
-// Shared by the MEDIA renderer, host export and documentation check.
+extern const OptionPage kOptionPages[kNumOptionPages];
+
 enum PulsePattern {
   PULSE_STEADY, PULSE_SLOW, PULSE_FAST, PULSE_DOUBLE
 };
@@ -113,132 +82,12 @@ enum PulsePattern {
 struct OptionValue {
   OptionSetting setting;
   int value;
-#ifdef TEST
-  const char* name;
-  const char* color_name;
-#endif
   Leds::Color color;
   PulsePattern pulses;
 };
-const OptionValue kOptionValues[] = {
-  { OPTION_RESERVED, 0,
-#ifdef TEST
-    "Not used yet", "unchanged",
-#endif
-    { 0, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 0,
-#ifdef TEST
-    "Off", "green",
-#endif
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 1,
-#ifdef TEST
-    "Chromatic", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 2,
-#ifdef TEST
-    "Fifths and octaves", "red",
-#endif
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 3,
-#ifdef TEST
-    "Major", "green",
-#endif
-    { 0, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 4,
-#ifdef TEST
-    "Minor", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 5,
-#ifdef TEST
-    "Major pentatonic", "red",
-#endif
-    { 255, 0, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 6,
-#ifdef TEST
-    "Minor pentatonic", "green",
-#endif
-    { 0, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 7,
-#ifdef TEST
-    "Pelog", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 8,
-#ifdef TEST
-    "Raag Bhairav", "red",
-#endif
-    { 255, 0, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 9,
-#ifdef TEST
-    "Raag Shri", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_DOUBLE },
-  { OPTION_WIDTH, 0,
-#ifdef TEST
-    "Stock", "green",
-#endif
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_WIDTH, 1,
-#ifdef TEST
-    "Width (wider →)", "meter",
-#endif
-    { 255, 255, 0 }, PULSE_SLOW },
-  { OPTION_REVERB, 0,
-#ifdef TEST
-    "Stock", "green",
-#endif
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_REVERB, 1,
-#ifdef TEST
-    "Clouds-style", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 0,
-#ifdef TEST
-    "Auto (Stock)", "green",
-#endif
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 1,
-#ifdef TEST
-    "Never", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 2,
-#ifdef TEST
-    "Wide detent", "red",
-#endif
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SELF_PLAY, 0,
-#ifdef TEST
-    "Automatic (Stock)", "green",
-#endif
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SELF_PLAY, 1,
-#ifdef TEST
-    "On request", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 0,
-#ifdef TEST
-    "Stock", "green",
-#endif
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 1,
-#ifdef TEST
-    "Fast release", "yellow",
-#endif
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 2,
-#ifdef TEST
-    "Off", "red",
-#endif
-    { 255, 0, 0 }, PULSE_STEADY }
-};
-const size_t kNumOptionValues =
-    sizeof(kOptionValues) / sizeof(kOptionValues[0]);
+const size_t kNumOptionValues = 23;
+// Shared by the MEDIA renderer, host export and documentation check.
+extern const OptionValue kOptionValues[kNumOptionValues];
 
 class Options {
  public:

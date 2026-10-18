@@ -131,9 +131,7 @@ class Ui {
     overwrite_reserve_ = overwrite_reserve;
   }
   
-  inline OutputLimiterMode output_limiter_mode() const {
-    return output_limiter_mode_;
-  }
+  OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }

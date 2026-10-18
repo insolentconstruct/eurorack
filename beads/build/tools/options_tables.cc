@@ -29,6 +29,46 @@
 #include <cstdio>
 #include "beads/options.h"
 
+namespace {
+
+const char* const kPageNames[] = { "REVERB", "FEEDBACK", "DRY/WET" };
+const char* const kOptionNames[] = {
+  "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
+  "Delay mode", "Self-play", "Limiter"
+};
+const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
+struct ValueNames {
+  const char* name;
+  const char* color;
+};
+const ValueNames kValueNames[] = {
+  { "Not used yet", "unchanged" },
+  { "Off", "green" },
+  { "Chromatic", "yellow" },
+  { "Fifths and octaves", "red" },
+  { "Major", "green" },
+  { "Minor", "yellow" },
+  { "Major pentatonic", "red" },
+  { "Minor pentatonic", "green" },
+  { "Pelog", "yellow" },
+  { "Raag Bhairav", "red" },
+  { "Raag Shri", "yellow" },
+  { "Stock", "green" },
+  { "Width (wider →)", "meter" },
+  { "Stock", "green" },
+  { "Clouds-style", "yellow" },
+  { "Auto (Stock)", "green" },
+  { "Never", "yellow" },
+  { "Wide detent", "red" },
+  { "Automatic (Stock)", "green" },
+  { "On request", "yellow" },
+  { "Stock", "green" },
+  { "Fast release", "yellow" },
+  { "Off", "red" },
+};
+
+}  // namespace
+
 int main() {
   using namespace beads;
   puts("page\tLED\tknob\tsetting\tvalue\tcolour\tpulse");
@@ -51,8 +91,9 @@ int main() {
               kOptionsPulsePeriod / 1000.0);
         }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
-            kOptionPages[page].led_name, kOptionKnobNames[knob],
-            kOptionNames[setting], value.name, value.color_name, pulse);
+            kPageNames[page], kOptionKnobNames[knob],
+            kOptionNames[setting], kValueNames[i].name,
+            kValueNames[i].color, pulse);
       }
     }
   }

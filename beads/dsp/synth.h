@@ -58,9 +58,9 @@ class Synth {
   
   void Init(uint16_t* reverb_buffer);
   void Reset();
-  void SetCloudsStyle(bool clouds) {
+  void SetCloudsStyle(bool clouds, bool clear) {
     clouds_style_ = clouds;
-    reverb_.Reset(kSynthSampleRate, true);
+    reverb_.Reset(kSynthSampleRate, clear);
   }
   
   void Render(

@@ -37,6 +37,43 @@ sys.path.insert(0, str(Path("beads/build/tools").resolve()))
 from release_package import package
 from options_guide import SHORT, indication, generate
 
+def body(source, signature, opening):
+    start = source.index(opening, source.index(signature)) + len(opening)
+    depth = 1
+    for end in range(start, len(source)):
+        depth += (source[end] == "{") - (source[end] == "}")
+        if not depth:
+            return source[start:end]
+    raise AssertionError("Unclosed loop body")
+
+
+def check_main_loop(firmware, harness):
+    import re
+    compact = lambda text: re.sub(r"\s+", "", text)
+    actual = body(firmware, "int main(void)", "while (1) {")
+    expected = body(harness, "void MainLoopStep() {", "{")
+    assert compact(actual) == compact(
+        expected + "processor.WasteCPUCycles(16);"
+    ), "TestMainLoopMatchesHarness: main loop differs from host harness"
+
+
+firmware = Path("beads/beads.cc").read_text()
+harness = Path("beads/test/firmware_test.cc").read_text()
+check_main_loop(firmware, harness)
+for old, new in (
+    ("processor.WasteCPUCycles(16);", "processor.WasteCPUCycles(15);"),
+    ("ui.DoEvents();", "ui.DoEvents(); ui.DoEvents();"),
+    ("background_buffer_backup.Process(ui.freeze_led_state());", ""),
+):
+    assert firmware.count(old) == 1
+    try:
+        check_main_loop(firmware.replace(old, new), harness)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("Main loop drift survived: " + old)
+print("Main loop matches harness; three drift controls detected: PASS")
+
 export = subprocess.check_output(["./build/options_tables"], text=True)
 actual = export.split("\nconstant\tname\tvalue\n")[0]
 readme = Path("beads/build/README.txt").read_text()

@@ -47,7 +47,7 @@ void Synth::Init(uint16_t* reverb_buffer) {
   
   trigger_generator_.Init(sr);
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
-  output_limiter_.InitOutput(1.0f / (sr * 6.0f), 0.9f, kSynthSampleRate);
+  output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   wavetable_granular_player_.Init(sr);
   wavetable_voice_.Init(sr);
   bank_quantizer_.Init(kNumBanks, 0.048f, false);
@@ -138,7 +138,7 @@ void Synth::Render(
 
   // Final clipping/limiting
   output_limiter_.ProcessOutput(
-      out, size, output_limiter_mode_);
+      out, size, output_limiter_mode_, kSynthSampleRate);
   
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {

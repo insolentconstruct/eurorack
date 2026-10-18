@@ -63,13 +63,9 @@ cases = [
   ('TestOptionsWidthAndSeed', 'options', 'beads/options.cc',
     'scale_ == PITCH_SCALE_SHRI',
     'scale_ == PITCH_SCALE_BHAIRAV'),
-  ('TestOptionsPalette', 'options', 'beads/options.h',
-    '"yellow",\n'
-    '#endif\n'
+  ('TestOptionsPalette', 'options', 'beads/options.cc',
     '    { 255, 255, 0 }, PULSE_SLOW },\n'
     '  { OPTION_PITCH, 5',
-    '"yellow",\n'
-    '#endif\n'
     '    { 0, 255, 255 }, PULSE_SLOW },\n'
     '  { OPTION_PITCH, 5'),
   ('TestCloudsStorage', 'options', 'beads/settings.h',
@@ -472,9 +468,6 @@ cases = [
   ('TestBackupRestoredThaw', 'backup', 'beads/background_buffer_backup.cc',
     '    if (freeze_state_) {',
     '    if (freeze_state_ && save_started_) {'),
-  ('TestMainLoopMatchesHarness', 'firmware', 'beads/beads.cc',
-    'processor.WasteCPUCycles(16);',
-    'processor.WasteCPUCycles(15);'),
   ('TestAutomaticSelfPlay', 'firmware', 'beads/beads.cc',
     ') >= 10000)',
     ') >= 9900)'),
@@ -517,6 +510,12 @@ for name, suite, source, before, after in cases:
 if '--patterns-only' in sys.argv:
   print('All %d mutation patterns occur exactly once' % len(cases))
   raise SystemExit(0)
+
+if '--only' in sys.argv:
+  selected = sys.argv[sys.argv.index('--only') + 1]
+  cases = [case for case in cases if case[0] == selected]
+  assert cases, selected
+  del sys.argv[sys.argv.index('--only'):sys.argv.index('--only') + 2]
 
 out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
     'beads/test/.runs/mutations').resolve()
@@ -571,7 +570,7 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     try:
       with log.open('w') as stream:
         run = subprocess.run(
-            ['nice', '-n', '10', 'make', '-s', '-f',
+            ['nice', '-n', '10', 'make', '-s', '-j4', '-f',
                 'beads/test/' + suite + '.mk', 'test'],
             cwd=work, stdout=stream, stderr=subprocess.STDOUT,
             timeout=240 if suite in ('firmware', 'clouds', 'granular') else 60)

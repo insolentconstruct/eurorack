@@ -395,25 +395,25 @@ void TestDsp() {
     const float sr = sample_rates[j];
     Limiter stock, fast, off;
     const float decay = 1.0f / (sr * 6.0f);
-    stock.InitOutput(decay, .9f, sr);
-    fast.InitOutput(decay, .9f, sr);
-    off.InitOutput(decay, .9f, sr);
+    stock.Init(decay, .9f);
+    fast.Init(decay, .9f);
+    off.Init(decay, .9f);
     StockLimiter reference(decay);
     for (int i = 0; i < 4096; ++i) {
       FloatFrame x = {sinf(i * .17f) * 4.0f, cosf(i * .13f) * 2.0f};
       FloatFrame y = x, z = x;
-      stock.ProcessOutput(&y, 1, OUTPUT_LIMITER_STOCK);
+      stock.ProcessOutput(&y, 1, OUTPUT_LIMITER_STOCK, sr);
       reference.Process(&z);
       CHECK(!memcmp(&y, &z, sizeof(y)));
-      off.ProcessOutput(&x, 1, OUTPUT_LIMITER_OFF);
+      off.ProcessOutput(&x, 1, OUTPUT_LIMITER_OFF, sr);
       CHECK(x.l == sinf(i * .17f) * 4.0f && x.r == cosf(i * .13f) * 2.0f);
-      fast.ProcessOutput(&x, 1, OUTPUT_LIMITER_FAST);
+      fast.ProcessOutput(&x, 1, OUTPUT_LIMITER_FAST, sr);
       CHECK(std::isfinite(x.l) && std::isfinite(x.r));
     }
     for (int i = 0; i < int(sr); ++i) {
       FloatFrame x = {.1f, -.1f}, y = x;
-      stock.ProcessOutput(&x, 1, OUTPUT_LIMITER_STOCK);
-      fast.ProcessOutput(&y, 1, OUTPUT_LIMITER_FAST);
+      stock.ProcessOutput(&x, 1, OUTPUT_LIMITER_STOCK, sr);
+      fast.ProcessOutput(&y, 1, OUTPUT_LIMITER_FAST, sr);
       if (i == int(sr) - 1) {
         CHECK(y.l > x.l && y.l >= .099f);
       }
@@ -586,15 +586,15 @@ void TestLimiterLinkedGainAndModeSwitch() {
   for (int m = 0; m < 2; ++m) {
     Limiter limiter;
     Limiter fresh;
-    limiter.InitOutput(1.0f / (48000.0f * 6.0f), 0.9f, 48000.0f);
-    fresh.InitOutput(1.0f / (48000.0f * 6.0f), 0.9f, 48000.0f);
+    limiter.Init(1.0f / (48000.0f * 6.0f), 0.9f);
+    fresh.Init(1.0f / (48000.0f * 6.0f), 0.9f);
     FloatFrame block[32];
     for (int n = 0; n < 10; ++n) {
       for (int i = 0; i < 32; ++i) {
         block[i].l = 20.0f;
         block[i].r = -5.0f;
       }
-      limiter.ProcessOutput(block, 32, modes[m]);
+      limiter.ProcessOutput(block, 32, modes[m], 48000.0f);
     }
     CHECK(fabsf(block[31].l) < 1.0f);
     for (int n = 0; n < 4; ++n) {
@@ -602,7 +602,7 @@ void TestLimiterLinkedGainAndModeSwitch() {
         block[i].l = 0.1f;
         block[i].r = -0.025f;
       }
-      limiter.ProcessOutput(block, 32, OUTPUT_LIMITER_OFF);
+      limiter.ProcessOutput(block, 32, OUTPUT_LIMITER_OFF, 48000.0f);
     }
     for (int n = 0; n < 4; ++n) {
       FloatFrame expected[32];
@@ -610,8 +610,8 @@ void TestLimiterLinkedGainAndModeSwitch() {
         block[i].l = expected[i].l = 0.1f;
         block[i].r = expected[i].r = -0.025f;
       }
-      limiter.ProcessOutput(block, 32, modes[m]);
-      fresh.ProcessOutput(expected, 32, modes[m]);
+      limiter.ProcessOutput(block, 32, modes[m], 48000.0f);
+      fresh.ProcessOutput(expected, 32, modes[m], 48000.0f);
       for (int i = 0; i < 32; ++i) {
         CHECK(block[i].l == expected[i].l);
         CHECK(block[i].r == expected[i].r);
@@ -619,12 +619,12 @@ void TestLimiterLinkedGainAndModeSwitch() {
     }
   }
   Limiter limiter;
-  limiter.InitOutput(1.0f / (48000.0f * 6.0f), 0.9f, 48000.0f);
+  limiter.Init(1.0f / (48000.0f * 6.0f), 0.9f);
   for (int i = 0; i < 3000; ++i) {
     const OutputLimiterMode mode = OutputLimiterMode((i / 100) % 3);
     const float input = i % 2 ? 1.0e20f : -1.0e20f;
     FloatFrame x = { input, -input * 0.25f };
-    limiter.ProcessOutput(&x, 1, mode);
+    limiter.ProcessOutput(&x, 1, mode, 48000.0f);
     CHECK(std::isfinite(x.l) && std::isfinite(x.r));
     // The detector cap does not bound the output to the audio range.
     CHECK(fabsf(x.l) > 1.0f && fabsf(x.l) <= fabsf(input));
@@ -633,7 +633,7 @@ void TestLimiterLinkedGainAndModeSwitch() {
       CHECK(x.l == input);
     }
     FloatFrame small = { 0.1f, -0.025f };
-    limiter.ProcessOutput(&small, 1, mode);
+    limiter.ProcessOutput(&small, 1, mode, 48000.0f);
     CHECK(std::isfinite(small.l) && std::isfinite(small.r));
     CHECK(fabsf(small.l) <= 0.1f && small.r == -small.l * 0.25f);
     if (mode == OUTPUT_LIMITER_OFF) {
@@ -921,7 +921,7 @@ void TestCloudsStorage() {
     r.settings.mutable_state()->reverb_style = value;
     CHECK(r.settings.clouds_style() == (value == 0xa2));
     r.settings.mutable_state()->pitch_scale = 0xa7;
-    r.settings.mutable_state()->padding[6] = 0xff;
+    r.settings.mutable_state()->padding[0] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
@@ -929,7 +929,7 @@ void TestCloudsStorage() {
     CHECK(loaded.state().reverb_style == (value == 0xa2 ? 0xa2 : 0));
     CHECK(loaded.state().pitch_scale == 0xa7);
     CHECK(loaded.pitch_scale() == PITCH_SCALE_PELOG);
-    CHECK(loaded.state().padding[6] == 0);
+    CHECK(loaded.state().padding[0] == 0);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->reverb_style = value;
     loaded.chunk_storage_.SaveState();
@@ -993,13 +993,13 @@ void TestPitchStorage() {
     CHECK(loaded.Init(false));
     CHECK(loaded.pitch_scale() == expected);
     CHECK(loaded.state().pitch_scale == (expected ? i : 0));
-    loaded.mutable_state()->padding[6] = 0xff;
+    loaded.mutable_state()->padding[0] = 0xff;
     loaded.SaveState();
     CHECK(r.settings.Init(false));
     CHECK(r.settings.pitch_scale() == expected);
     CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
     CHECK(r.settings.self_play_on_request());
-    CHECK(r.settings.state().padding[6] == 0);
+    CHECK(r.settings.state().padding[0] == 0);
   }
 }
 
@@ -1036,7 +1036,8 @@ void TestPlaybackStorage() {
       CHECK(loaded.state().stereo_width == width);
       CHECK(loaded.state().delay_mode == (delay ? 0xa0 + delay : 0));
       for (int byte = 7; byte < 14; ++byte) {
-        CHECK(reinterpret_cast<const uint8_t*>(&loaded.state())[byte + 10] == 0);
+        CHECK(reinterpret_cast<const uint8_t*>(
+            &loaded.state())[byte + 10] == 0);
       }
     }
   }
@@ -1326,7 +1327,8 @@ void TestOptionsPalette() {
     const OptionValue& v = kOptionValues[i];
     CHECK(v.color.r || v.color.g || v.color.b);
     if (v.value == 0) {
-      CHECK(v.color.r == 0 && v.color.g == 255 && v.color.b == 0 && v.pulses == 0);
+      CHECK(v.color.r == 0 && v.color.g == 255 &&
+          v.color.b == 0 && v.pulses == 0);
     }
     CHECK(v.color.b == 0);
     CHECK((v.color.r == 0 && v.color.g == 255) ||
@@ -1334,7 +1336,8 @@ void TestOptionsPalette() {
     for (size_t j = i + 1; j < kNumOptionValues; ++j) {
       const OptionValue& w = kOptionValues[j];
       if (v.setting == w.setting) {
-        CHECK(v.color.r != w.color.r || v.color.g != w.color.g || v.color.b != w.color.b || v.pulses != w.pulses);
+        CHECK(v.color.r != w.color.r || v.color.g != w.color.g ||
+            v.color.b != w.color.b || v.pulses != w.pulses);
       }
     }
   }
@@ -1353,11 +1356,13 @@ void TestOptionsPalette() {
       case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value);
         break;
       case OPTION_SELF_PLAY: r.ui.options_.self_play_preview_ = v.value; break;
-      case OPTION_LIMITER: r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
+      case OPTION_LIMITER:
+        r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
         break;
       default: break;
     }
     const OptionValue& indication = r.ui.options_.indication();
+    CHECK(&indication == &v);
     CHECK(indication.setting == v.setting && indication.value == v.value);
     CHECK(indication.color.r == v.color.r && indication.color.g == v.color.g &&
         indication.color.b == v.color.b && indication.pulses == v.pulses);

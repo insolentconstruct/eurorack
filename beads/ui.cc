@@ -58,6 +58,10 @@ void Ui::FlashOptionsPage() {
       kOptionPages[options_.page()].led_index);
 }
 
+OutputLimiterMode Ui::output_limiter_mode() const {
+  return output_limiter_mode_;
+}
+
 void Ui::Init(
     Settings* settings,
     GainControl* gain_control,
@@ -343,7 +347,8 @@ void Ui::UpdateLeds() {
     if (indication.setting == OPTION_WIDTH && options_.width_preview()) {
       // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
       leds_.set_meter(lit
-          ? 0.25f + kWidthMeterSpan * float(options_.width_preview() - 1) / float(kStereoWidthMax - 1)
+          ? 0.25f + kWidthMeterSpan * float(options_.width_preview() - 1)
+              / float(kStereoWidthMax - 1)
           : 0.0f);
     } else {
       leds_.set_media(color, lit ? 1.0f : 0.0f);

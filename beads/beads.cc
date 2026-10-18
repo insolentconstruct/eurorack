@@ -261,7 +261,7 @@ void Process(
     if (reverb_style_previous_gain == 0.0f) {
       clouds_style = requested_style;
       processor.SetCloudsStyle(clouds_style);
-      synth.SetCloudsStyle(clouds_style);
+      synth.SetCloudsStyle(clouds_style, false);
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
@@ -297,7 +297,8 @@ void Process(
         d, p, m,
         float_out, size);
 #ifdef DWT_CALIBRATION
-    dwt_calibration::Record(dwt_calibration::BRACKET_INNER, dwt_calibration::Read() - calibration_start);
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
@@ -314,7 +315,8 @@ void Process(
         float_in,
         float_out, size);
 #ifdef DWT_CALIBRATION
-    dwt_calibration::Record(dwt_calibration::BRACKET_INNER, dwt_calibration::Read() - calibration_start);
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
   }
   
