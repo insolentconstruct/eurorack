@@ -31,8 +31,12 @@ heading=$(awk -v v="${tag#drizzlet-}" '/^## / && $2 == v {print; exit}' "$change
 if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then
   label=${BASH_REMATCH[1]}
   title+=" ($label)"
-  if [[ ${label,,} =~ alpha|beta|rc|preview ]]; then prerelease=true; fi
+  # Alphas, release candidates and previews are pre-releases; betas are
+  # public calls for testers and become the latest release.
+  if [[ ${label,,} =~ (^|[^a-z])(alpha|rc|preview)([^a-z]|$) ]]; then prerelease=true; fi
 fi
+latest=true
+[[ $prerelease == false ]] || latest=false
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
@@ -40,8 +44,11 @@ names() { for f in "$@"; do basename "$f"; done | sort; }
 publish() {
   if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
     # Re-run: make the existing release match this build.
+    # Only a pre-release gives up Latest here; a re-run never moves Latest back.
+    local keep=()
+    [[ $latest == true ]] || keep=(--latest=false)
     gh release edit "$tag" --repo "$repo" --draft=false --prerelease=$prerelease \
-      --title "$title" --notes "$notes"
+      "${keep[@]}" --title "$title" --notes "$notes"
     gh release upload "$tag" --repo "$repo" --clobber "${assets[@]}"
     local wanted name
     wanted=$(names "${assets[@]}")
@@ -51,6 +58,7 @@ publish() {
       done
   else
     gh release create "$tag" --repo "$repo" --verify-tag --prerelease=$prerelease \
+      --latest=$latest \
       --title "$title" --notes "$notes" "${assets[@]}"
   fi
 }
