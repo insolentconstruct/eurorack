@@ -44,21 +44,13 @@
 #include "beads/calibrator.h"
 #include "beads/gain_control.h"
 
+#include "beads/test/firmware_shims.h"
+
 using namespace beads;
 
 bool test_down[4] = { };
 unsigned test_writes = 0;
-namespace stmlib {
-SystemClock system_clock;
-}  // namespace stmlib
 namespace beads {
-bool Leds::Init() {
-  Clear();
-  return true;
-}
-void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
-void Leds::Write() { }
-void TestOptionsDispatchInterrupt() { }
 }  // namespace beads
 
 struct Rig {
@@ -71,8 +63,8 @@ struct Rig {
   FloatFrame output[12];
   bool same_channels;
 
-  void Init(Processor::Media media = Processor::MEDIA_DIGITAL,
-      bool mono = false) {
+  void Init(Processor::Media media,
+      bool mono) {
     memset(static_cast<void*>(this), 0, sizeof(*this));
     uint8_t* buffers[] = { banks[0], banks[1], banks[2] };
     processor.Init(buffers, reverb);
@@ -117,7 +109,7 @@ void CheckQuality(Line& line, int capacity, float step) {
 
 void TestBrightRecording() {
   test_checker.Start("TestBrightRecording");
-  rig.Init();
+  rig.Init(Processor::MEDIA_DIGITAL, false);
   CHECK(rig.processor.sample_rate() == 48000.0f);
   CheckQuality(rig.processor.processor_digital_.stereo_delay_line_,
       192000, 1.0f / 32768.0f);
@@ -127,7 +119,7 @@ void TestBrightRecording() {
 
 void TestColdRecording() {
   test_checker.Start("TestColdRecording");
-  rig.Init(Processor::MEDIA_VINTAGE_DIGITAL);
+  rig.Init(Processor::MEDIA_VINTAGE_DIGITAL, false);
   CHECK(rig.processor.sample_rate() == 32000.0f);
   CheckQuality(rig.processor.processor_vintage_digital_.stereo_delay_line_,
       256000, 1.0f / 2048.0f);
@@ -137,7 +129,7 @@ void TestColdRecording() {
 
 void TestSunnyRecording() {
   test_checker.Start("TestSunnyRecording");
-  rig.Init(Processor::MEDIA_CLEAN_TAPE);
+  rig.Init(Processor::MEDIA_CLEAN_TAPE, false);
   CHECK(rig.processor.sample_rate() == 48000.0f);
   CHECK(rig.processor.ratio() == 2);
   CHECK(rig.processor.remaining() == 256000);
@@ -161,7 +153,7 @@ void TestSunnyRecording() {
 
 void TestCassetteRecording() {
   test_checker.Start("TestCassetteRecording");
-  rig.Init(Processor::MEDIA_DIRTY_TAPE);
+  rig.Init(Processor::MEDIA_DIRTY_TAPE, false);
   CHECK(rig.processor.sample_rate() == 24000.0f);
   CHECK(rig.processor.wow_and_flutter_.delay_ == 0.0f);
   CheckQuality(rig.processor.processor_dirty_tape_.stereo_delay_line_,
@@ -177,7 +169,7 @@ void TestCassetteRecording() {
 void TestFreezeGateRecording() {
   test_checker.Start("TestFreezeGateRecording");
   for (int media = 0; media < 4; ++media) {
-    rig.Init(Processor::Media(media));
+    rig.Init(Processor::Media(media), false);
     rig.Block(false, 0.25f);
     const int before = *rig.processor.mutable_delay_write_ptr();
     for (int i = 0; i < 100; ++i) {
@@ -199,7 +191,7 @@ void TestFreezeButtonRecording() {
   memset(test_down, 0, sizeof(test_down));
   settings.Init(false);
   ui.Init(&settings, &gain, &calibration, &backup);
-  rig.Init();
+  rig.Init(Processor::MEDIA_DIGITAL, false);
   for (int tap = 0; tap < 2; ++tap) {
     for (int down = 1; down >= 0; --down) {
       test_down[SWITCH_FREEZE] = down;
@@ -217,7 +209,7 @@ void TestFreezeButtonRecording() {
 
 void TestFrozenGrains() {
   test_checker.Start("TestFrozenGrains");
-  rig.Init();
+  rig.Init(Processor::MEDIA_DIGITAL, false);
   rig.same_channels = true;
   for (int i = 0; i < 17000; ++i) {
     rig.Block(false, 0.25f);
@@ -240,7 +232,7 @@ void TestFrozenGrains() {
 
 void TestUnfreezeCrossfade() {
   test_checker.Start("TestUnfreezeCrossfade");
-  rig.Init();
+  rig.Init(Processor::MEDIA_DIGITAL, false);
   for (int i = 0; i < 30; ++i) {
     rig.Block(true, 0.25f);
   }
@@ -318,7 +310,7 @@ void CheckTrimGrowth(Line& line) {
 
 void TestTrimGrowth() {
   test_checker.Start("TestTrimGrowth");
-  rig.Init();
+  rig.Init(Processor::MEDIA_DIGITAL, false);
   CheckTrimGrowth(rig.processor.processor_dirty_tape_.mono_delay_line_);
   CheckTrimGrowth(rig.processor.processor_dirty_tape_.stereo_delay_line_);
   CheckTrimGrowth(rig.processor.processor_clean_tape_.mono_delay_line_);

@@ -31,9 +31,7 @@
 
 #include "beads/test/test_checker.h"
 
-#define private public
 #include "beads/dsp/delay_controller.h"
-#undef private
 #include "beads/dsp/delay_line.h"
 // Include the table guards as well as the reachable ratios.
 #include "beads/dsp/delay_controller.cc"
@@ -103,26 +101,26 @@ void TestFrozenSliceBoundarySelection() {
       int start[DelayController::NUM_TAPS];
       int remaining[DelayController::NUM_TAPS];
       for (int i = 0; i < DelayController::NUM_HEADS; ++i) {
-        head[2 * i] = &c.play_head_[i];
-        head[2 * i + 1] = &c.slave_play_head_[i];
+        head[2 * i] = &c.test_play_heads()[i];
+        head[2 * i + 1] = &c.test_slave_play_heads()[i];
       }
       for (int i = 0; i < DelayController::NUM_TAPS; ++i) {
-        start[i] = head[i]->start_;
-        remaining[i] = head[i]->remaining_;
+        start[i] = head[i]->test_start();
+        remaining[i] = head[i]->test_remaining();
       }
       GateFlags g = n % 4096 == 0 ? GATE_FLAG_RISING : GATE_FLAG_LOW;
       c.Render(clocked ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_LOCKED,
           clocked ? &g : NULL, &frozen, 0.25f, 0.0f, 0.0f,
           position, shape, &o, 1);
-      if (!pending || (clocked && c.clock_.retrig())) {
+      if (!pending || (clocked && c.test_clock().retrig())) {
         continue;
       }
       for (int i = 0; i < DelayController::NUM_TAPS; ++i) {
         if (remaining[i] > 0) {
-          CHECK(head[i]->start_ == start[i]);
+          CHECK(head[i]->test_start() == start[i]);
           ++unchanged;
-        } else if (head[i]->start_ != start[i]) {
-          CHECK(head[i]->start_ > start[i]);
+        } else if (head[i]->test_start() != start[i]) {
+          CHECK(head[i]->test_start() > start[i]);
           ++changed;
         }
       }
@@ -165,15 +163,15 @@ void TestClockDividerTable() {
       if (n < 12000) {
         continue;
       }
-      CHECK(int(c.density_ * 20) == index);
+      CHECK(int(c.test_density() * 20) == index);
       for (int i = 0; i < DelayController::NUM_HEADS; ++i) {
-        const PlayHead& h = c.play_head_[i];
+        const PlayHead& h = c.test_play_heads()[i];
         const int ratio_index = index + ((i % 2) != (index & 1));
-        const int duration = std::max(1, int(c.clock_.interval(i / 2) *
+        const int duration = std::max(1, int(c.test_clock().interval(i / 2) *
             expected[ratio_index]));
-        CHECK(fabsf(h.phase_increment_ * duration - 1.0f) < 0.00001f);
+        CHECK(fabsf(h.test_phase_increment() * duration - 1.0f) < 0.00001f);
         CHECK(duration >= 1);
-        if (h.remaining_ == duration - 1) {
+        if (h.test_remaining() == duration - 1) {
           ++checked;
         }
       }
@@ -189,7 +187,7 @@ void TestDelayIntervals() {
   }
   // Two SEED edges under 16 samples apart, or the first edge after Init, made
   // a zero-length slice at the 1/16 ratio: an integer division by zero.
-  // Such slices now last one sample, which plays silently, as before.
+  // These slices last one sample and play silently.
   const int short_periods[] = { 2, 4, 8, 15 };
   for (size_t i = 0;
        i < sizeof(short_periods) / sizeof(short_periods[0]); ++i) {
@@ -217,16 +215,16 @@ void TestClockIdleCounter() {
   DelayClock clock;
   clock.Init(48000.0f);
   // Hours without a tick: the counter stops at the limit instead of wrapping.
-  clock.next_interval_ = 2147483647 - 4;
+  clock.test_next_interval() = 2147483647 - 4;
   for (int i = 0; i < 16; ++i) {
     clock.Process(false, false);
   }
-  CHECK(clock.next_interval_ == clock.max_interval_);
+  CHECK(clock.test_next_interval() == clock.test_max_interval());
   // The next tick is ignored, as after any gap longer than 4 s.
   const float interval_0 = clock.interval(0);
   const float interval_1 = clock.interval(1);
   clock.Process(true, false);
-  CHECK(clock.next_interval_ == 0);
+  CHECK(clock.test_next_interval() == 0);
   CHECK(clock.interval(0) == interval_0 && clock.interval(1) == interval_1);
   printf("PASS clock: idle counter stops at the limit\n");
 }
@@ -255,7 +253,7 @@ void TestFreeDelayDensityAndCv() {
         RenderFree(&controller, cv ? 0.0f : density[i],
             cv ? density[i] : 0.0f, 0.0f, &out);
       }
-      CHECK(fabsf(controller.clock_.interval(0) - expected[i]) <
+      CHECK(fabsf(controller.test_clock().interval(0) - expected[i]) <
           expected[i] * 0.001f);
     }
   }
@@ -415,7 +413,7 @@ void TestDelayRandomModulation() {
         continue;
       }
       const int index = (n - 16000) / 250;
-      const float value = controller.multiplier_lp_;
+      const float value = controller.test_multiplier();
       CHECK(value >= -1.0f && value <= 1.0f);
       // SmoothStep slope <= 1.5, with samples 250 frames apart.
       if (index && !CHECK(fabsf(value - previous) < 0.0026f)) {

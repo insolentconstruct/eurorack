@@ -36,7 +36,7 @@ using namespace beads;
 // Static firmware storage zero-initializes manual_gain_ before Init().
 static GainControl control;
 
-FloatFrame Render(float level, uint8_t gain, int blocks, bool active = true) {
+FloatFrame Render(float level, uint8_t gain, int blocks, bool active) {
   Codec::Frame in[24];
   FloatFrame out[24];
   for (int i = 0; i < 24; ++i) {
@@ -52,29 +52,29 @@ FloatFrame Render(float level, uint8_t gain, int blocks, bool active = true) {
 void TestGainLearningWindow() {
   test_checker.Start("TestGainLearningWindow");
   control.Init(48000.0f, GainControl::SOFT_CLIPPING_MODE_OFF, true);
-  Render(0.1f, 0, 1);
+  Render(0.1f, 0, 1, true);
   CHECK(control.adjusting());
-  Render(0.1f, 0, 1999);
+  Render(0.1f, 0, 1999, true);
   CHECK(control.adjusting());
   // The first second holds the detector at its initial value.
-  CHECK(fabsf(Render(0.1f, 0, 1).l - 0.18f) < 0.001f);
-  Render(0.1f, 0, 9998);
+  CHECK(fabsf(Render(0.1f, 0, 1, true).l - 0.18f) < 0.001f);
+  Render(0.1f, 0, 9998, true);
   CHECK(control.adjusting());
-  Render(0.1f, 0, 1);
+  Render(0.1f, 0, 1, true);
   CHECK(!control.adjusting());
   control.Restart();
   CHECK(control.adjusting());
-  Render(0.1f, 1, 1);
+  Render(0.1f, 1, 1, true);
   CHECK(!control.adjusting());
 }
 
 void TestGainHeadroomAndRise() {
   test_checker.Start("TestGainHeadroomAndRise");
   control.Init(48000.0f, GainControl::SOFT_CLIPPING_MODE_OFF, true);
-  const float learned = Render(0.05f, 0, 14000).l;
+  const float learned = Render(0.05f, 0, 14000, true).l;
   CHECK(fabsf(learned - 0.9f) < 0.002f);
-  const float transient = Render(0.5f, 0, 1).l;
-  const float settled = Render(0.5f, 0, 6000).l;
+  const float transient = Render(0.5f, 0, 1, true).l;
+  const float settled = Render(0.5f, 0, 6000, true).l;
   CHECK(transient > 1.0f);
   CHECK(settled < transient * 0.2f);
   CHECK(fabsf(settled - 0.9f) < 0.002f);
@@ -83,10 +83,10 @@ void TestGainHeadroomAndRise() {
 void TestGainDigitalClipping() {
   test_checker.Start("TestGainDigitalClipping");
   control.Init(48000.0f, GainControl::SOFT_CLIPPING_MODE_OFF, true);
-  const FloatFrame clean = Render(0.01f, 255, 2000);
+  const FloatFrame clean = Render(0.01f, 255, 2000, true);
   CHECK(fabsf(clean.l - 0.4f) < 0.0001f);
   CHECK(fabsf(clean.r + 0.4f) < 0.0001f);
-  const FloatFrame clipped = Render(0.1f, 255, 1);
+  const FloatFrame clipped = Render(0.1f, 255, 1, true);
   CHECK(clipped.l == 1.0f);
   CHECK(clipped.r == -1.0f);
 }
@@ -99,10 +99,10 @@ void TestGainTapeClipping() {
   };
   for (int i = 0; i < 2; ++i) {
     control.Init(48000.0f, modes[i], true);
-    const FloatFrame knee = Render(0.025f, 255, 2000);
+    const FloatFrame knee = Render(0.025f, 255, 2000, true);
     CHECK(knee.l > 0.6f && knee.l < 0.9f);
     CHECK(knee.r < -0.6f && knee.r > -0.9f);
-    const FloatFrame overload = Render(0.1f, 255, 2000);
+    const FloatFrame overload = Render(0.1f, 255, 2000, true);
     CHECK(overload.l > knee.l && overload.l < 1.0f);
     CHECK(overload.r < knee.r && overload.r >= -1.0f);
   }

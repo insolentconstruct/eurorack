@@ -26,8 +26,8 @@
 //
 // GPIO and flash operations for UI tests.
 
-#ifndef BEADS_TEST_FIRMWARE_STUBS_STM32H7XX_HAL_H_
-#define BEADS_TEST_FIRMWARE_STUBS_STM32H7XX_HAL_H_
+#ifndef BEADS_TEST_COMMON_STUBS_STM32H7XX_HAL_H_
+#define BEADS_TEST_COMMON_STUBS_STM32H7XX_HAL_H_
 
 #include <stdint.h>
 #include <cstring>
@@ -77,4 +77,4 @@ inline void HAL_IncTick() { }
 #define FLASH_VOLTAGE_RANGE_4 0
 #define FLASH_TYPEPROGRAM_FLASHWORD 0
 
-#endif  // BEADS_TEST_FIRMWARE_STUBS_STM32H7XX_HAL_H_
+#endif  // BEADS_TEST_COMMON_STUBS_STM32H7XX_HAL_H_

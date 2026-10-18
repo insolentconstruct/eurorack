@@ -122,7 +122,7 @@ struct Rig {
   }
   // Freeze for 10 s, then run the main loop until the backup ends or the
   // power goes. Returns false on power loss.
-  bool Freeze(int save_every = 0) {
+  bool Freeze(int save_every) {
     for (int i = 0; i < 10000; ++i) {
       system_clock.Tick();
     }
@@ -152,7 +152,7 @@ void Save(Processor::Media media, bool mono, int write_ptr, uint8_t seed) {
   processor.Configure(media, mono);
   processor.write_ptr_ = write_ptr;
   Fill(seed);
-  CHECK(rig.Freeze());
+  CHECK(rig.Freeze(0));
   CHECK(rig.settings.state().frozen);
 }
 
@@ -174,7 +174,7 @@ void TestTrimBackup() {
         processor.write_ptr_ = 123;
         processor.duration_ = lengths[i];
         Fill(3);
-        CHECK(r.Freeze());
+        CHECK(r.Freeze(0));
         CHECK(kHeader->trimmed_frames == uint32_t(capacity - lengths[i]));
         CHECK(r.Boot());
         CHECK(processor.duration_ == lengths[i]);
@@ -255,7 +255,7 @@ void TestFrozenTrimBackup() {
     CHECK(!r.settings.state().frozen);
     CHECK(!r.backup.busy());
     CHECK(!r.backup.previous_freeze_state_);
-    CHECK(r.Freeze());
+    CHECK(r.Freeze(0));
     CHECK(kHeader->trimmed_frames == uint32_t(kMaxDelay[3]));
     CHECK(r.Boot());
     CHECK(processor.duration_ == 0);
@@ -345,7 +345,7 @@ void CheckPowerLoss(bool half, bool stock) {
     Fill(2);
     test_budget = budget;
     test_half_erase = half;
-    rig.Freeze();
+    rig.Freeze(0);
     test_half_erase = false;
     Rig after;
     if (after.Boot()) {
@@ -376,7 +376,7 @@ void TestFlashErrors() {
     processor.write_ptr_ = 7;
     Fill(4);
     test_fail_at = test_ops + fail;
-    rig.Freeze();
+    rig.Freeze(0);
     if (rig.settings.state().frozen) {
       continue;  // The failure came after the backup: nothing to check.
     }
@@ -388,7 +388,7 @@ void TestFlashErrors() {
     processor.Configure(Processor::MEDIA_CLEAN_TAPE, true);
     processor.write_ptr_ = 7;
     Fill(4);
-    CHECK(after.Freeze());
+    CHECK(after.Freeze(0));
     Rig again;
     CHECK(again.Boot() && Restored(4));
     ++checked;
@@ -442,7 +442,7 @@ void TestFreezeDeadlineAndCancel() {
   for (int i = 0; i < 10000; ++i) {
     system_clock.Tick();
   }
-  CHECK(r.Freeze());
+  CHECK(r.Freeze(0));
   CHECK(kHeader->tag == 0x5a5a5246 && r.settings.state().frozen);
   Rig after;
   CHECK(after.Boot() && Restored(17));

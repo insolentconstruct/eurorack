@@ -24,22 +24,20 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Host interface for normalization detection.
+// Switch pins for UI tests.
 
-#ifndef BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_NORMALIZATION_PROBE_H_
-#define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_NORMALIZATION_PROBE_H_
+#ifndef BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_PINS_H_
+#define BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_PINS_H_
 
-#include <stdint.h>
+#include <stm32h7xx_hal.h>
 
-namespace beads {
+#define FREEZE_SW_GPIO_PORT NULL
+#define SEED_SW_GPIO_PORT NULL
+#define MEDIA_SW_GPIO_PORT NULL
+#define ASSIGN_SW_GPIO_PORT NULL
+#define FREEZE_SW_GPIO_PIN 0
+#define SEED_SW_GPIO_PIN 1
+#define MEDIA_SW_GPIO_PIN 2
+#define ASSIGN_SW_GPIO_PIN 3
 
-class NormalizationProbe {
- public:
-  void Init() { }
-  void Set(bool value) { }
-  void Low() { }
-};
-
-}  // namespace beads
-
-#endif  // BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_NORMALIZATION_PROBE_H_
+#endif  // BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_PINS_H_

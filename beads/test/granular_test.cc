@@ -43,12 +43,16 @@
 struct ADC_HandleTypeDef { };
 struct DMA_HandleTypeDef { };
 struct TIM_HandleTypeDef { };
-#define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CV_ADC_H_
+#define BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CV_ADC_H_
 #define private public
 #include "../drivers/cv_adc.h"
 #include "beads/cv_reader.h"
 #undef private
 #include "beads/cv_reader.cc"
+
+#define BEADS_TEST_CV_SHIMS
+#define BEADS_TEST_CHANNEL_SHIMS_ONLY
+#include "beads/test/firmware_shims.h"
 
 namespace beads {
 
@@ -59,10 +63,6 @@ void CvAdc::Convert() { }
 bool PotsAdc::Init() { return true; }
 void PotsAdc::Convert() { }
 void PotsAdc::StartMuxedPotsConversion() { }
-CvChannel::CvChannel() { }
-CvChannel::~CvChannel() { }
-PotChannel::PotChannel() { }
-PotChannel::~PotChannel() { }
 
 }  // namespace beads
 

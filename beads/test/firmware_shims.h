@@ -24,20 +24,37 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Switch pins for UI tests.
+// Shared native firmware definitions.
 
-#ifndef BEADS_TEST_FIRMWARE_STUBS_BEADS_DRIVERS_PINS_H_
-#define BEADS_TEST_FIRMWARE_STUBS_BEADS_DRIVERS_PINS_H_
+#ifndef BEADS_TEST_FIRMWARE_SHIMS_H_
+#define BEADS_TEST_FIRMWARE_SHIMS_H_
 
-#include <stm32h7xx_hal.h>
+#include <algorithm>
+#include "stmlib/system/system_clock.h"
+#include "beads/drivers/leds.h"
 
-#define FREEZE_SW_GPIO_PORT NULL
-#define SEED_SW_GPIO_PORT NULL
-#define MEDIA_SW_GPIO_PORT NULL
-#define ASSIGN_SW_GPIO_PORT NULL
-#define FREEZE_SW_GPIO_PIN 0
-#define SEED_SW_GPIO_PIN 1
-#define MEDIA_SW_GPIO_PIN 2
-#define ASSIGN_SW_GPIO_PIN 3
+#ifndef BEADS_TEST_CHANNEL_SHIMS_ONLY
+namespace stmlib {
+SystemClock system_clock;
+}
 
-#endif  // BEADS_TEST_FIRMWARE_STUBS_BEADS_DRIVERS_PINS_H_
+namespace beads {
+bool Leds::Init() {
+  Clear();
+  return true;
+}
+void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
+void Leds::Write() { }
+}  // namespace beads
+#endif
+
+namespace beads {
+#ifdef BEADS_TEST_CV_SHIMS
+CvChannel::CvChannel() { }
+CvChannel::~CvChannel() { }
+PotChannel::PotChannel() { }
+PotChannel::~PotChannel() { }
+#endif
+}  // namespace beads
+
+#endif  // BEADS_TEST_FIRMWARE_SHIMS_H_

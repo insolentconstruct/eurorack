@@ -24,15 +24,17 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Host codec interface.
+// Host hardware interface.
 
-#ifndef BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CODEC_H_
-#define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CODEC_H_
+#ifndef BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CODEC_H_
+#define BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CODEC_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace beads {
 
+const size_t kMaxCodecBlockSize = 24;
 class Codec {
  public:
   struct Frame {
@@ -40,8 +42,28 @@ class Codec {
     int32_t r;
   };
   enum Event { EVENT_NONE, EVENT_SEED, EVENT_FREEZE };
+  typedef void (*FillBufferCallback)(
+      const Event*, const Frame*, Frame*, size_t);
+  bool Init() {
+    callback_ = NULL;
+    starts_ = stops_ = 0;
+    return true;
+  }
+  bool Start(int32_t rate, size_t size, FillBufferCallback callback) {
+    sample_rate_ = rate;
+    block_size_ = size;
+    callback_ = callback;
+    ++starts_;
+    return true;
+  }
+  void Stop() { ++stops_; }
+  int sample_rate_;
+  size_t block_size_;
+  FillBufferCallback callback_;
+  int starts_;
+  int stops_;
 };
 
 }  // namespace beads
 
-#endif  // BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CODEC_H_
+#endif  // BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CODEC_H_

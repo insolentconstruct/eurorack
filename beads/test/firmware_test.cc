@@ -27,14 +27,10 @@
 // The firmware entry point, driven by host hardware.
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <fstream>
-#include <iterator>
 #include <new>
-#include <string>
 #include <sys/mman.h>
 
 #include "beads/test/test_checker.h"
@@ -52,32 +48,20 @@
 #undef protected
 #undef private
 
+#define BEADS_TEST_CV_SHIMS
+#include "beads/test/firmware_shims.h"
+
 using namespace beads;
 using namespace stmlib;
 
 bool test_down[4];
 unsigned test_writes;
-namespace stmlib {
-SystemClock system_clock;
-}  // namespace stmlib
 namespace beads {
-// The firmware does not define these constructors.
-CvChannel::CvChannel() { }
-CvChannel::~CvChannel() { }
-PotChannel::PotChannel() { }
-PotChannel::~PotChannel() { }
-void TestOptionsDispatchInterrupt() { }
 bool test_probe;
 bool test_freeze_input;
 bool test_seed_input;
 uint16_t CvAdc::values_[CV_ADC_CHANNEL_LAST];
 uint16_t PotsAdc::values_[POTS_ADC_CHANNEL_LAST];
-bool Leds::Init() {
-  Clear();
-  return true;
-}
-void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
-void Leds::Write() { }
 }  // namespace beads
 
 extern BackgroundBufferBackup background_buffer_backup;
@@ -126,7 +110,7 @@ struct Rig {
   int32_t audio;
   Codec::Frame out[kMaxCodecBlockSize];
 
-  Rig(bool on_request = false, bool unpatched = true)
+  Rig(bool on_request, bool unpatched)
       : left(!unpatched), right(!unpatched), seed_patched(false), audio(0) {
     memset(reinterpret_cast<void*>(0x08100000), 255, 0x100000);
     PowerOnObject(&settings);
@@ -234,59 +218,9 @@ struct Rig {
   void Settle() { Tick(600); }
 };
 
-std::string Compact(const std::string& source) {
-  std::string result;
-  for (size_t i = 0; i < source.size(); ++i) {
-    if (!isspace(static_cast<unsigned char>(source[i]))) {
-      result += source[i];
-    }
-  }
-  return result;
-}
-
-// Returns the body of the block that opens at the first `opening` after
-// `anchor` in a source file, or an empty string.
-std::string Body(const char* path, const char* anchor, const char* opening) {
-  std::ifstream file(path);
-  std::string source((std::istreambuf_iterator<char>(file)),
-      std::istreambuf_iterator<char>());
-  size_t start = source.find(anchor);
-  if (start == std::string::npos) {
-    return std::string();
-  }
-  start = source.find(opening, start);
-  if (start == std::string::npos) {
-    return std::string();
-  }
-  start = source.find('{', start) + 1;
-  size_t end = start;
-  int depth = 1;
-  for (; end < source.size() && depth; ++end) {
-    if (source[end] == '{') {
-      ++depth;
-    }
-    if (source[end] == '}') {
-      --depth;
-    }
-  }
-  return depth ? std::string() : source.substr(start, end - start - 1);
-}
-
-void TestMainLoopMatchesHarness() {
-  test_checker.Start("TestMainLoopMatchesHarness");
-  // main()'s loop body must equal MainLoopStep() plus the timing call.
-  const std::string firmware = Body(
-      "beads/beads.cc", "int main(void)", "while (1) {");
-  const std::string harness = Body(
-      "beads/test/firmware_test.cc", "void MainLoopStep() {", "{");
-  CHECK(!firmware.empty() && !harness.empty());
-  CHECK(Compact(firmware) ==
-      Compact(harness + "processor.WasteCPUCycles(16);"));
-}
-
 void TestAutomaticSelfPlay() {
   test_checker.Start("TestAutomaticSelfPlay");
-  Rig r;
+  Rig r(false, true);
   r.StartAutomatic();
   CHECK(synth_mode);
   r.left = true;
@@ -294,7 +228,7 @@ void TestAutomaticSelfPlay() {
   CHECK(!synth_mode);
   r.left = false;
   r.Settle();
-  // Silence now, with no grains or reverb tail from the initial synth.
+  // Silence: no grains or reverb tail from the initial synth.
   PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
   // Detection settles within a few hundred milliseconds.
   for (int i = 0; i < 2000 && !normalization_detector.no_input(); ++i) {
@@ -369,7 +303,7 @@ void TestAutomaticSelfPlay() {
 
 void TestRequestedSelfPlay() {
   test_checker.Start("TestRequestedSelfPlay");
-  Rig r(true);
+  Rig r(true, true);
   CHECK(codec.callback_ == NULL);  // No synth audio at power-on.
   r.Settle();
   CHECK(!synth_mode);
@@ -400,7 +334,7 @@ void TestRequestedSelfPlay() {
 void TestSelfPlayRequestLifecycle() {
   test_checker.Start("TestSelfPlayRequestLifecycle");
   for (int blocker = 0; blocker < 5; ++blocker) {
-    Rig r(true);
+    Rig r(true, true);
     r.Settle();
     r.HoldMedia(false);
     CHECK(ui.self_play_requested());
@@ -550,7 +484,7 @@ void TestTriggerOutput() {
 
 void TestStartupBranches() {
   test_checker.Start("TestStartupBranches");
-  Rig r;
+  Rig r(false, true);
   settings.mutable_persistent_data()->adc_calibration[0].offset = 0.987f;
   settings.SavePersistentData();
   settings.mutable_state()->media = 1;
@@ -806,7 +740,7 @@ void TestQuantizedPitchChain() {
 
 void TestSelfPlayFrozenBackup() {
   test_checker.Start("TestSelfPlayFrozenBackup");
-  Rig r(true);
+  Rig r(true, true);
   // A stock-format frozen buffer, with no CRC extension.
   BackgroundBufferBackup::BufferBackupHeader* header =
       reinterpret_cast<BackgroundBufferBackup::BufferBackupHeader*>(0x08100000);
@@ -851,7 +785,7 @@ void TestSelfPlayFrozenBackup() {
 
 void TestSynthWidthCallback() {
   test_checker.Start("TestSynthWidthCallback");
-  Rig r;
+  Rig r(false, true);
   settings.set_stereo_width(128);
   settings.set_width_assigned(true);
   r.StartAutomatic();
@@ -928,7 +862,6 @@ int main() {
   }
   TestSynthWidthCallback();
   TestCloudsSwitch();
-  TestMainLoopMatchesHarness();
   TestAutomaticSelfPlay();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();

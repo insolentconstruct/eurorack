@@ -24,19 +24,34 @@
 //
 // -----------------------------------------------------------------------------
 //
-// ADC channels used by settings.
+// Queue read interrupt injection for native tests.
 
-#ifndef BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CV_ADC_H_
-#define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CV_ADC_H_
+#ifndef BEADS_TEST_COMMON_STUBS_EVENT_QUEUE_H_
+#define BEADS_TEST_COMMON_STUBS_EVENT_QUEUE_H_
+
+#define EventQueue FirmwareEventQueue
+#include_next "stmlib/ui/event_queue.h"
+#undef EventQueue
 
 namespace beads {
+void TestOptionsDispatchInterrupt() __attribute__((weak));
+inline void DispatchInterrupt() {
+  if (TestOptionsDispatchInterrupt) {
+    TestOptionsDispatchInterrupt();
+  }
+}
+}
 
-enum CvAdcChannel {
-  CV_ADC_CHANNEL_ASSIGN, CV_ADC_CHANNEL_DENSITY, CV_ADC_CHANNEL_PITCH,
-  CV_ADC_CHANNEL_TIME, CV_ADC_CHANNEL_SIZE, CV_ADC_CHANNEL_SHAPE,
-  CV_ADC_CHANNEL_LAST
+namespace stmlib {
+template<uint16_t size = 32>
+class EventQueue : public FirmwareEventQueue<size> {
+ public:
+  Event PullEvent() {
+    Event event = FirmwareEventQueue<size>::PullEvent();
+    beads::DispatchInterrupt();
+    return event;
+  }
 };
+}  // namespace stmlib
 
-}  // namespace beads
-
-#endif  // BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_CV_ADC_H_
+#endif  // BEADS_TEST_COMMON_STUBS_EVENT_QUEUE_H_

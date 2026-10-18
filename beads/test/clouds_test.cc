@@ -42,7 +42,7 @@
 using namespace beads;
 
 // Captures use explicit grain-pan FMA and rate-aware Clouds modulation.
-// Implicit contraction is disabled.
+// GCC 12 (amd64), -ffp-contract=off; make -f beads/test/clouds.mk capture.
 #if defined(__aarch64__)
 const uint32_t kStockSynthHashes[4] = {
   0xe67ef064, 0xdde6451f, 0xde7f8524, 0x1777a760
@@ -77,7 +77,7 @@ static Synth synth;
 static uint8_t banks[3][262144];
 static uint16_t reverb[32768];
 
-uint32_t Render(int quality, int mode, bool clouds, bool reconfigure = false) {
+uint32_t Render(int quality, int mode, bool clouds, bool reconfigure) {
   memset(static_cast<void*>(&processor), 0, sizeof(processor));
   memset(static_cast<void*>(&synth), 0, sizeof(synth));
   memset(banks, 0, sizeof(banks));
@@ -89,7 +89,7 @@ uint32_t Render(int quality, int mode, bool clouds, bool reconfigure = false) {
 #ifndef REFERENCE_CAPTURE
   if (clouds) {
     processor.SetCloudsStyle(true);
-    synth.SetCloudsStyle(true, true);
+    synth.SetCloudsStyle(true);
     if (reconfigure) {
       processor.Configure(Processor::Media(quality), false);
     }
@@ -155,9 +155,9 @@ void TestStockHashes() {
   test_checker.Start("TestStockHashes");
   for (int q = 0; q < 4; ++q) {
     for (int mode = 0; mode < 3; ++mode) {
-      const uint32_t hash = Render(q, mode, false);
+      const uint32_t hash = Render(q, mode, false, false);
       printf("Stock q%d mode%d %08x\n", q, mode, hash);
-#ifndef REFERENCE_CAPTURE
+#if !defined(REFERENCE_CAPTURE) && !defined(GOLDEN_CAPTURE)
       CHECK(hash == (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
 #endif
     }
@@ -170,11 +170,13 @@ void TestCloudsOutput() {
 #ifndef REFERENCE_CAPTURE
   for (int q = 0; q < 4; ++q) {
     for (int mode = 0; mode < 3; ++mode) {
-      const uint32_t hash = Render(q, mode, true);
+      const uint32_t hash = Render(q, mode, true, false);
       printf("Clouds q%d mode%d %08x\n", q, mode, hash);
       CHECK(hash != (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
+#ifndef GOLDEN_CAPTURE
       CHECK(hash == (mode == 2
           ? kCloudsSynthHashes[q] : kCloudsHashes[q][mode]));
+#endif
       if (mode == 0) {
         CHECK(hash == Render(q, mode, true, true));
       }
@@ -195,7 +197,7 @@ void TestReverbRates() {
     memset(static_cast<void*>(&reference), 0, sizeof(reference));
     actual.Init(memory[0], rate);
     reference.Init(memory[1], rate);
-    actual.SetCloudsStyle(true, rate, true);
+    actual.Reset(rate, true);
     reference.Reset(rate);
     actual.set_mix(1.0f);
     reference.set_mix(1.0f);

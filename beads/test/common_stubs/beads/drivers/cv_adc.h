@@ -1,6 +1,8 @@
-// Copyright 2026 Insolent Construct.
+// Copyright 2018 Fred's Lab and Mutable Instruments.
 //
-// Author: Insolent Construct (insolentconstruct@gmail.com)
+// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
+// Author: Frédéric Meslin (fred@fredslab.net)
+// Author: Oliver Rockstedt (info@sourcebox.de)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,20 +26,38 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Switch pins for UI tests.
+// Host hardware interface.
 
-#ifndef BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_PINS_H_
-#define BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_PINS_H_
+#ifndef BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CV_ADC_H_
+#define BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CV_ADC_H_
 
-#include <stm32h7xx_hal.h>
+#include <stdint.h>
 
-#define FREEZE_SW_GPIO_PORT NULL
-#define SEED_SW_GPIO_PORT NULL
-#define MEDIA_SW_GPIO_PORT NULL
-#define ASSIGN_SW_GPIO_PORT NULL
-#define FREEZE_SW_GPIO_PIN 0
-#define SEED_SW_GPIO_PIN 1
-#define MEDIA_SW_GPIO_PIN 2
-#define ASSIGN_SW_GPIO_PIN 3
+namespace beads {
 
-#endif  // BEADS_TEST_OPTIONS_STUBS_BEADS_DRIVERS_PINS_H_
+enum CvAdcChannel {
+  CV_ADC_CHANNEL_ASSIGN,
+  CV_ADC_CHANNEL_DENSITY,
+  CV_ADC_CHANNEL_PITCH,
+  CV_ADC_CHANNEL_TIME,
+  CV_ADC_CHANNEL_SIZE,
+  CV_ADC_CHANNEL_SHAPE,
+  CV_ADC_CHANNEL_LAST
+};
+
+class CvAdc {
+ public:
+  bool Init() { return true; }
+  void DeInit() { }
+  void Convert() { }
+  uint16_t value(CvAdcChannel c) const { return values_[c]; }
+  float float_value(CvAdcChannel c) const {
+    return float(values_[c]) / 65536.0f;
+  }
+  const uint16_t* values() { return values_; }
+  static uint16_t values_[CV_ADC_CHANNEL_LAST];
+};
+
+}  // namespace beads
+
+#endif  // BEADS_TEST_COMMON_STUBS_BEADS_DRIVERS_CV_ADC_H_
