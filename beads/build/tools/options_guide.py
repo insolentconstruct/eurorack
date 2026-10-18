@@ -180,6 +180,30 @@ DETAILS = [
 ]
 
 
+GESTURES = [
+    (
+        "Monophonic grains",
+        "Hold the quality button [A], then press SEED [C] to toggle. Best "
+        "with the first two SHAPE settings (square and decay). The [A] LED "
+        "is dimmed while on.",
+    ),
+    (
+        "Buffer trim",
+        "Hold [A], then press FREEZE [B] to start a fresh recording window. "
+        "The next freeze keeps only what was recorded since.",
+    ),
+    (
+        "Wavetable synth (Manual)",
+        "With both inputs unplugged and FREEZE off, hold [A] for about a "
+        "second and a half to start or stop it.",
+    ),
+]
+WARNING = (
+    "Don't hold SEED while powering on: it resets all settings to defaults "
+    "(calibration is kept)."
+)
+
+
 def instructions(lines):
     hold = CONSTANTS["kOptionsHoldTime"] / 1000
     assert hold == 3, "Update the spoken hold time"
@@ -239,6 +263,9 @@ def markdown(rows, pages):
                 f"- {r['value']}: {indication(r)}"
                 for r in knobs["FEEDBACK"][2:]
             ]
+    out += ["", "## Other gestures", ""]
+    out += [f"- **{title}:** {text}" for title, text in GESTURES]
+    out += ["", f"**Warning:** {WARNING}"]
     out += ["", "## Details", ""]
     out += [paragraph + "\n" for paragraph in DETAILS]
     return "\n".join(out)
@@ -361,6 +388,30 @@ class Drawing:
             )
         return base - y
 
+    def gestures(self, x, y, step, columns, gap=10):
+        """Gesture list: a row of columns (step > 0) or one column."""
+        self.text(x, y, "OTHER GESTURES", 20, "bold")
+        y += 30
+        ends = [y]
+        for i, (title, text) in enumerate(GESTURES):
+            gx = x + (i * step if step else 0)
+            gy = y if step else ends[-1]
+            self.text(gx, gy, title, 16, "bold")
+            ends.append(self.lines(gx, gy + 22, text, columns) + gap)
+        return max(ends) if step else ends[-1]
+
+    def warning(self, x, y, width, columns):
+        lines = textwrap.wrap(WARNING, columns)
+        box = 21 * len(lines) + 12
+        self.items.append(
+            f'<rect x="{x - 8}" y="{y}" width="{width + 16}" '
+            f'height="{box}" rx="6" fill="#fdf0f0" stroke="{COLOURS["red"]}" '
+            'stroke-width="3"/>'
+        )
+        for i, line in enumerate(lines):
+            self.text(x, y + 22 + 21 * i, line, 15, "bold", COLOURS["red"])
+        return y + box
+
     def marker(self, x, y, led):
         for i, knob in enumerate(KNOBS):
             xx = x + i * 57
@@ -448,9 +499,12 @@ def svg(pages, mobile=False):
         y += 300
         d.legend(margin, y)
         y += 235
+        y = d.gestures(margin, y, 0, 43) + 5
+        y = d.warning(margin, y, width - 2 * margin, 43) + 35
     else:
         d.panel(margin + 365, 70)
         d.legend(margin + 710, 70)
+        d.warning(margin + 710, 280, 310, 34)
         y = max(y + 15, 315)
     for page, knobs in pages.items():
         d.text(margin, y, f"PAGE {page}", 20, "bold")
@@ -467,7 +521,12 @@ def svg(pages, mobile=False):
                 d.card(margin + i * 330, y, 315, knobs[k])
                 for i, k in enumerate(KNOBS)
             ]
-            y += max(heights) + 35
+            if page == "1":
+                top = y + max(heights[1:]) + 12
+                heights[0] = max(
+                    heights[0], d.gestures(margin + 330, top, 233, 27) - y
+                )
+            y += max(heights) + 25
     d.text(margin, y + 5, "Author: Insolent Construct • Control sketch", 15)
     height = y + 30
     if mobile:

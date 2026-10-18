@@ -52,6 +52,14 @@ Scale (tap SEED to step through):
 | DRY/WET | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
 | REVERB | Not used yet | — | — |
 
+## Other gestures
+
+- **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
+- **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
+- **Wavetable synth (Manual):** With both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
+
+**Warning:** Don't hold SEED while powering on: it resets all settings to defaults (calibration is kept).
+
 ## Details
 
 Hold the CV-assign button [M] for three seconds, with the mix knobs still, then release. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close.
