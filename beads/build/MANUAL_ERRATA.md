@@ -42,6 +42,7 @@ Several differences come from the April 2021 firmware update, which the manual p
 - **R trigger output** is a gate whose length depends on how grains are generated, not a fixed pulse. In synth mode it keeps running while FREEZE stops new grains. <!-- manual.md:138,205; beads/dsp/trigger_generator.cc:115-118,215-224,305-307; beads/dsp/processor.cc:145-159 -->
 - **SEED input delay:** external SEED triggers are delayed about 2.5 ms on purpose; the 0.25 ms latency on the module page is not the trigger response. <!-- index.md:84; beads/beads.cc:50,133-148,293; stmlib/dsp/delay_line.h -->
 - **Pitch CV range:** PITCH tracks ±5 V (±60 semitones); the ±8 V on the module page is the input range, not the tracking range. <!-- index.md:85; beads/cv_reader.cc:67-85 -->
+- **Output polarity:** OUT is inverted relative to IN. Each output channel's single op-amp stage inverts the DAC signal; the firmware does not flip the sign. Invert downstream if phase alignment with the dry source matters. Measured on one module: -0.996 correlation, with the audio interface's own loopback not inverted. <!-- beads/hardware_design/pcb/beads_v51.sch (NJM2068 differential stage, R52-R54, R60); beads/beads.cc -->
 - **Updater start-up:** the updater ignores the first 2 s or so of audio after it starts, so start playback a moment after entering it. <!-- manual.md:251; beads/bootloader/bootloader.cc:151-176,308 -->
 
 ## Clarifications
