@@ -6,11 +6,19 @@ if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
   mkdir -p "$out"
   out=$(cd "$out" && pwd)
   root=$(git rev-parse --show-toplevel)
-  exec docker run --rm --platform linux/amd64 --network none \
+  stock=$(mktemp -d)
+  trap 'rm -rf -- "$stock"' EXIT
+  mkdir -p "$stock/beads"
+  for file in background_buffer_backup.cc background_buffer_backup.h settings.cc settings.h; do
+    git show "f4cfa76:beads/$file" > "$stock/beads/$file"
+  done
+  docker run --rm --platform linux/amd64 --network none \
     -e BEADS_TEST_CONTAINER=1 -e JOBS="${JOBS:-8}" -e UPDATE="${UPDATE:-0}" \
+    -e STOCK_SOURCE_DIR=/stock-source -v "$stock:/stock-source:ro" \
     -v "$root:/src:$( [[ ${UPDATE:-0} == 1 ]] && echo rw || echo ro )" \
     -v "$out:/out" "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" \
     bash beads/test/run.sh /out
+  exit
 fi
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
