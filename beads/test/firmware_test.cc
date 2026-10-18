@@ -783,6 +783,117 @@ void TestSelfPlayFrozenBackup() {
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
 }
 
+// Semitones above the synth's root note of the grain the next block starts.
+float NextSynthGrainSemitones(Rig* rig) {
+  WavetableGranularPlayer& player = synth.wavetable_granular_player_;
+  for (int i = 0; i < 400; ++i) {
+    WavetableGrain* grain = player.new_grain();
+    rig->Block();
+    if (player.grain_interval_ <= int(codec.block_size_)) {
+      return 12.0f * log2f(
+          grain->frequency_ * kSynthSampleRate / kWavetableRootNote);
+    }
+  }
+  CHECK(false);  // No grain was triggered.
+  return 0.0f;
+}
+
+// Distance in semitones to the nearest note of the scale, in any octave.
+float DistanceToScale(float semitones, PitchScale scale) {
+  const PitchScaleNotes& notes = kPitchScales[scale - 1];
+  const float octave = floorf(semitones / 12.0f) * 12.0f;
+  float distance = fabsf(semitones - octave - 12.0f);
+  for (int i = 0; i < notes.size; ++i) {
+    distance = std::min(distance, fabsf(
+        semitones - octave - kPitchScaleNotes[notes.offset + i]));
+  }
+  return distance;
+}
+
+void StartSelfPlay(Rig* r, bool requested) {
+  if (requested) {
+    r->Settle();
+    r->HoldMedia(false);
+    MainLoopStep();
+  } else {
+    r->StartAutomatic();
+  }
+  CHECK(synth_mode);
+  r->Settle();
+}
+
+// Grains of 32 triggers: how many are off the scale, and how many pitches.
+void SurveySynthGrains(Rig* r, PitchScale scale, int* off_scale,
+    int* distinct) {
+  float seen[32];
+  *off_scale = *distinct = 0;
+  for (int i = 0; i < 32; ++i) {
+    const float semitones = NextSynthGrainSemitones(r);
+    if (DistanceToScale(semitones, scale) > 0.01f) {
+      ++*off_scale;
+    }
+    bool known = false;
+    for (int j = 0; j < *distinct; ++j) {
+      known |= fabsf(seen[j] - semitones) < 0.05f;
+    }
+    if (!known) {
+      seen[(*distinct)++] = semitones;
+    }
+  }
+}
+
+void TestSynthPitchScaleChain() {
+  test_checker.Start("TestSynthPitchScaleChain");
+  const PitchScale scale = PITCH_SCALE_PENTATONIC_MAJOR;
+  for (int requested = 0; requested < 2; ++requested) {
+    Rig r(requested != 0, true);
+    r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+    settings.set_pitch_scale(scale);
+    settings.SaveState();
+    for (int boot = 0; boot < 2; ++boot) {
+      if (boot) {
+        r.Reboot();  // The saved scale alone must bring it back.
+      }
+      CHECK(settings.pitch_scale() == scale);
+      // Full randomness with no CV: the spread is wide, the grains on scale.
+      r.cv[CV_ADC_CHANNEL_PITCH] = 32768;
+      r.cv_patched[CV_ADC_CHANNEL_PITCH] = false;
+      PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 65535;
+      StartSelfPlay(&r, requested != 0);
+      CHECK(ui.pitch_scale() == scale);
+      int off_scale, distinct;
+      SurveySynthGrains(&r, scale, &off_scale, &distinct);
+      CHECK(off_scale == 0 && distinct >= 3);
+      // Without a scale the same randomness leaves most grains between notes.
+      settings.set_pitch_scale(PITCH_SCALE_OFF);
+      r.Settle();
+      SurveySynthGrains(&r, scale, &off_scale, &distinct);
+      CHECK(off_scale >= 16);
+      settings.set_pitch_scale(scale);
+      r.Settle();
+
+      // Pitch CV alone: the voice follows it exactly, the grains snap.
+      r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+      PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 32768;
+      const float cv_semitones[2] = { 4.4f, 5.8f };
+      const float snapped[2] = { 3.9996f, 6.9996f };
+      for (int i = 0; i < 2; ++i) {
+        r.cv[CV_ADC_CHANNEL_PITCH] = uint16_t(
+            (60.0f - cv_semitones[i]) * 65536.0f / 120.0f + 0.5f);
+        r.Settle();
+        const float voice = 12.0f * log2f(
+            synth.wavetable_voice_.frequency_ * kSynthSampleRate /
+            kWavetableRootNote);
+        CHECK(fabsf(voice - cv_semitones[i]) < 0.02f);
+        for (int grain = 0; grain < 4; ++grain) {
+          CHECK(fabsf(NextSynthGrainSemitones(&r) - snapped[i]) < 0.02f);
+        }
+      }
+    }
+  }
+}
+
 void TestSynthWidthCallback() {
   test_checker.Start("TestSynthWidthCallback");
   Rig r(false, true);
@@ -861,6 +972,7 @@ int main() {
     return 2;
   }
   TestSynthWidthCallback();
+  TestSynthPitchScaleChain();
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
   TestRequestedSelfPlay();

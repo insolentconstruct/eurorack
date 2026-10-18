@@ -977,6 +977,110 @@ void TestSelfPlayHold() {
   }
 }
 
+// Settled option saves until the sector fills; a power cut anywhere in the
+// rollover that erases and rewrites calibration and state together.
+const uint32_t kCalibrationChunk = (8 + sizeof(PersistentData) + 31) & ~31u;
+const uint32_t kStateChunk = (8 + sizeof(State) + 31) & ~31u;
+const int kStateChunks = (0x20000 - kCalibrationChunk) / kStateChunk;
+
+void TestSettingsRollover() {
+  test_checker.Start("TestSettingsRollover");
+  // Rolling save: erase, four calibration blocks, one state block.
+  for (int cut = 0; cut <= 6; ++cut) {
+    Rig r;
+    const State defaults = r.settings.state();
+    const PersistentData factory = r.settings.persistent_data();
+    PersistentData* calibration = r.settings.mutable_persistent_data();
+    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+      calibration->adc_calibration[i].scale = -2.5f - 0.125f * i;
+      calibration->adc_calibration[i].offset = 0.75f + 0.0625f * i;
+    }
+    r.settings.SavePersistentData();
+    r.settings.set_output_limiter_mode(OUTPUT_LIMITER_FAST);
+    r.settings.set_self_play_on_request(true);
+    r.settings.set_pitch_scale(PITCH_SCALE_PENTATONIC_MAJOR);
+    r.settings.set_clouds_style(false);
+    r.settings.set_stereo_width(200);
+    r.settings.set_width_assigned(true);
+    r.settings.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+    r.settings.SaveState();
+    const PersistentData old_calibration = r.settings.persistent_data();
+    r.Enter();
+    CHECK(!r.ui.options_.clouds_preview());
+    // Real settled saves: the reverb knob alone flips the style each time.
+    const unsigned erases = TestFlashErases();
+    for (int i = 0; i < 2; ++i) {
+      const unsigned writes = test_writes;
+      r.reverb = i ? .1f : .9f;
+      r.Tick(1100);
+      CHECK(test_writes == writes + 1);
+    }
+    CHECK(!r.settings.clouds_style());
+    while (r.settings.chunk_storage_.next_state_chunk_index_ <=
+        kStateChunks) {
+      r.settings.SaveState();
+    }
+    CHECK(TestFlashErases() == erases);
+    const State old_state = r.settings.state();
+    State new_state = old_state;
+    new_state.reverb_style = kOptionTag + 2;
+
+    const unsigned writes = test_writes;
+    TestFlashBudget() = cut;
+    r.reverb = .9f;
+    r.Tick(1100);
+    TestFlashBudget() = -1;
+    CHECK(r.settings.clouds_style());
+    CHECK(TestFlashErases() == erases + (cut ? 1 : 0));
+    CHECK(test_writes == writes + (cut > 1 ? cut - 1 : 0));
+
+    Settings loaded;
+    const bool valid = loaded.Init(false);
+    const State& state = loaded.state();
+    const AdcCalibrationData* data = loaded.persistent_data().adc_calibration;
+    if (cut == 0) {
+      // Power went before the erase: the previous record is untouched.
+      CHECK(valid);
+      CHECK(!memcmp(&state, &old_state, sizeof(State)));
+      CHECK(!memcmp(data, old_calibration.adc_calibration,
+          sizeof(old_calibration.adc_calibration)));
+    } else if (cut < 5) {
+      // Stock stmlib window: from the erase to the last calibration block no
+      // copy of the calibration exists, so both come back as the defaults.
+      CHECK(!valid);
+      CHECK(!memcmp(&state, &defaults, sizeof(State)));
+      CHECK(!memcmp(data, factory.adc_calibration,
+          sizeof(factory.adc_calibration)));
+    } else if (cut == 5) {
+      // Stock window: calibration is whole but no state followed it, so the
+      // options come back as the defaults while the calibration survives.
+      CHECK(!valid);
+      CHECK(!memcmp(&state, &defaults, sizeof(State)));
+      CHECK(!memcmp(data, old_calibration.adc_calibration,
+          sizeof(old_calibration.adc_calibration)));
+    } else {
+      CHECK(valid);
+      CHECK(!memcmp(&state, &new_state, sizeof(State)));
+      CHECK(!memcmp(data, old_calibration.adc_calibration,
+          sizeof(old_calibration.adc_calibration)));
+      CHECK(loaded.chunk_storage_.next_state_chunk_index_ == 2);
+      CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_FAST);
+      CHECK(loaded.self_play_on_request());
+      CHECK(loaded.pitch_scale() == PITCH_SCALE_PENTATONIC_MAJOR);
+      CHECK(loaded.clouds_style());
+      CHECK(loaded.stereo_width() == 200);
+      CHECK(loaded.width_assigned());
+      CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
+    }
+    // Whatever came back is stable: a second boot finds a valid record.
+    Settings again;
+    CHECK(again.Init(false));
+    CHECK(!memcmp(&again.state(), &state, sizeof(State)));
+    CHECK(!memcmp(again.persistent_data().adc_calibration, data,
+        sizeof(old_calibration.adc_calibration)));
+  }
+}
+
 void TestPitchStorage() {
   test_checker.Start("TestPitchStorage");
   Rig r;
@@ -1581,6 +1685,7 @@ int main() {
   TestGateOutputChordPersistence();
   TestOverwriteReserveDisplay();
   TestCorruptCalibrationRewritesOnce();
+  TestSettingsRollover();
   TestQualityTapCycle();
   TestManualGainGestureAndMeter();
   TestSeedStartupLatch();

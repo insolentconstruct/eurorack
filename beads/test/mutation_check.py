@@ -501,6 +501,18 @@ cases = [
   ('TestSelfPlayFrozenBackup', 'firmware', 'beads/background_buffer_backup.cc',
     'if (previous_freeze_state_) {',
     'if (false) {'),
+  ('TestSynthPitchScaleChain', 'firmware', 'beads/beads.cc',
+    'synth.set_pitch_scale(ui.pitch_scale());',
+    'synth.set_pitch_scale(PITCH_SCALE_OFF);'),
+  ('TestSynthStereoWidth', 'wavetable', 'beads/dsp/wavetable_granular_player.h',
+    '          pan,\n'
+    '          trigger.fractional_sample);',
+    '          0.5f,\n'
+    '          trigger.fractional_sample);'),
+  ('TestSettingsRollover', 'options', 'stmlib/system/sector_storage_h7xx.h',
+    '    WriteChunk(1, state_data_);\n'
+    '    next_state_chunk_index_ = 2;',
+    '    next_state_chunk_index_ = 2;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

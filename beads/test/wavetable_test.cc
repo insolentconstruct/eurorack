@@ -26,6 +26,7 @@
 //
 // Wavetable interpolation and synth signal path tests.
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -406,10 +407,124 @@ void TestQuantizedSynthGrains() {
   }
 }
 
+// Energy of the next samples, split by channel.
+static void RenderEnergy(SynthHarness* h, int samples, double* l, double* r) {
+  *l = *r = 0.0;
+  for (int i = 0; i < samples; ++i) {
+    const FloatFrame out = h->Tick(false, false);
+    *l += out.l * out.l;
+    *r += out.r * out.r;
+  }
+}
+
+static double Balance(double l, double r) {
+  return (l - r) / (l + r);
+}
+
+// Left-right balance of one new grain, rendered alone through the synth.
+static double GrainBalance(SynthHarness* h) {
+  h->synth.wavetable_granular_player_.Reset();
+  h->Tick(true, false);
+  double l, r;
+  RenderEnergy(h, 400, &l, &r);
+  CHECK(l + r > 1.0e-6);
+  return Balance(l, r);
+}
+
+// Same setting as the firmware callback: the saved byte and the ASSIGN CV.
+static void SetWidth(SynthHarness* h, StereoWidth width, float cv) {
+  h->synth.set_stereo_width(ModulatedStereoWidth(width, cv), width != 0);
+}
+
+// Mean and largest imbalance over 48 grains from the same random stream.
+static void WidthSpread(SynthHarness* h, StereoWidth width, float cv,
+    double* mean, double* largest) {
+  stmlib::Random::Seed(777);
+  SetWidth(h, width, cv);
+  *mean = *largest = 0.0;
+  for (int i = 0; i < 48; ++i) {
+    const double balance = fabs(GrainBalance(h));
+    *mean += balance / 48.0;
+    *largest = std::max(*largest, balance);
+  }
+}
+
+// Balance reached by the extreme pan of a given displacement.
+static double ExtremeBalance(float amount) {
+  const float pan = 0.5f + 0.5f * amount;
+  const double l = double(1.0f - pan) * (1.0f + pan);
+  const double r = double(pan) * (2.0f - pan);
+  return fabs(Balance(l * l, r * r));
+}
+
+void TestSynthStereoWidth() {
+  test_checker.Start("TestSynthStereoWidth");
+  static SynthHarness h;
+  h.Init();
+  h.mix.dry_wet = 1.0f;
+  h.Tick(false, false);
+  double mean, largest;
+  double stock_mean, full_mean, small_mean, small_largest;
+  // Stock keeps its own pan law (the gate's irregularity spreads it a little),
+  // and the CV cannot enable the width while the saved byte is zero.
+  double stock_largest;
+  WidthSpread(&h, 0, 0.0f, &stock_mean, &stock_largest);
+  CHECK(stock_mean > 0.01 && stock_largest > 0.1);
+  WidthSpread(&h, 0, 5.0f, &mean, &largest);
+  CHECK(mean == stock_mean && largest == stock_largest);
+  // Encoded 1 is zero displacement, 255 the full span, 64 about a quarter.
+  WidthSpread(&h, 1, 0.0f, &mean, &largest);
+  CHECK(largest < 1.0e-4);
+  WidthSpread(&h, 64, 0.0f, &small_mean, &small_largest);
+  const float small_amount = float(64 - 1) / float(kStereoWidthMax - 1);
+  CHECK(small_largest <= ExtremeBalance(small_amount) + 1.0e-3);
+  CHECK(small_largest > 0.5 * ExtremeBalance(small_amount));
+  WidthSpread(&h, 255, 0.0f, &full_mean, &largest);
+  CHECK(largest <= ExtremeBalance(1.0f) + 1.0e-3);
+  CHECK(largest > 0.9 * ExtremeBalance(1.0f));
+  CHECK(small_mean > 0.02 && full_mean > 2.0 * small_mean);
+  CHECK(full_mean > 2.0 * stock_mean);
+  // The CV adds to the byte's displacement and clamps to 0..1 at both ends.
+  double clamped_mean, clamped_largest;
+  WidthSpread(&h, 1, 5.0f, &clamped_mean, &clamped_largest);
+  CHECK(clamped_mean == full_mean && clamped_largest == largest);
+  WidthSpread(&h, 255, -5.0f, &mean, &clamped_largest);
+  CHECK(clamped_largest < 1.0e-4);
+  WidthSpread(&h, 1, 0.25f, &mean, &clamped_largest);
+  CHECK(clamped_largest > 0.5 * ExtremeBalance(0.25f) &&
+      clamped_largest <= ExtremeBalance(0.25f) + 1.0e-3);
+
+  // A grain keeps the width it started with when the width changes.
+  stmlib::Random::Seed(777);
+  SetWidth(&h, 255, 0.0f);
+  double first = 0.0;
+  for (int i = 0; i < 32 && fabs(first) < 0.2; ++i) {
+    first = GrainBalance(&h);
+  }
+  CHECK(fabs(first) >= 0.2);
+  SetWidth(&h, 1, 0.0f);
+  double l, r;
+  RenderEnergy(&h, 400, &l, &r);
+  CHECK(l + r > 1.0e-6);
+  CHECK(fabs(Balance(l, r) - first) < 0.01);
+  // A centred grain stays centred after the width opens; later grains spread.
+  h.synth.wavetable_granular_player_.Reset();
+  h.Tick(true, false);
+  SetWidth(&h, 255, 0.0f);
+  RenderEnergy(&h, 400, &l, &r);
+  CHECK(l + r > 1.0e-6 && fabs(Balance(l, r)) < 1.0e-4);
+  double widest = 0.0;
+  for (int i = 0; i < 16; ++i) {
+    widest = std::max(widest, fabs(GrainBalance(&h)));
+  }
+  CHECK(widest > 0.2);
+}
+
 int main() {
   TestSynthMixEndpoints();
   TestSynthFreeze();
   TestQuantizedSynthGrains();
+  TestSynthStereoWidth();
   TestSynthResolution();
   TestSynthPitchCvAndSpread();
   TestSynthAmplitudeSweep();

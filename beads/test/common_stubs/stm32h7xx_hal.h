@@ -47,6 +47,26 @@ struct FLASH_EraseInitTypeDef {
 };
 extern bool test_down[4];
 extern unsigned test_writes;
+// Power loss: flash operations left before it (-1: never) and the erases done.
+// Function statics, so every program shares one definition.
+inline int& TestFlashBudget() {
+  static int budget = -1;
+  return budget;
+}
+inline unsigned& TestFlashErases() {
+  static unsigned erases = 0;
+  return erases;
+}
+inline bool TestFlashOperation() {
+  int& budget = TestFlashBudget();
+  if (budget == 0) {
+    return false;
+  }
+  if (budget > 0) {
+    --budget;
+  }
+  return true;
+}
 inline int HAL_GPIO_ReadPin(GPIO_TypeDef*, uint16_t pin) {
   return !test_down[pin];
 }
@@ -54,11 +74,18 @@ inline void HAL_GPIO_Init(GPIO_TypeDef*, GPIO_InitTypeDef*) { }
 inline void HAL_FLASH_Unlock() { }
 inline void HAL_FLASH_Lock() { }
 inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
+  if (!TestFlashOperation()) {
+    return 1;
+  }
+  ++TestFlashErases();
   memset(reinterpret_cast<void*>(0x08100000 + (e->Sector - 8) * 0x20000),
       255, 0x20000 * e->NbSectors);
   return 0;
 }
 inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
+  if (!TestFlashOperation()) {
+    return 1;
+  }
   ++test_writes;
   uint8_t* dst = reinterpret_cast<uint8_t*>(uintptr_t(address));
   uint8_t* src = reinterpret_cast<uint8_t*>(uintptr_t(source));
