@@ -108,3 +108,31 @@ The runner mounts source read-only by default, read/write for `UPDATE=1`.
 For a remote Docker daemon, copy the checkout into a container, export stock
 sources if Git metadata is absent, and set `BEADS_TEST_CONTAINER=1` to invoke
 the same in-container runner. `JOBS` controls parallel compilation (default min(4, cores)).
+
+## Mutation check
+
+`beads/test/mutation_check.py [--only TEST] [OUTPUT_DIR]` copies `beads` and
+`stmlib`, breaks one recorded bug fix or optimization at a time and runs only
+the named test, which must fail (`ERROR: TEST:` or a sanitizer report; a
+mutation that does not compile is an error). Survivors are listed and fail
+the run. `--patterns-only` checks, without building, that every replaced text
+occurs exactly once. The cases cover #33, #57, #36, #56 and #35 and the
+local grain sum. Run it inside the image, from the repository root:
+
+```sh
+mkdir -p /tmp/mutations
+docker run --rm --network none -v "$PWD:/src" -v /tmp/mutations:/out \
+  -w /src beads-build-kit:gcc9 python3 beads/test/mutation_check.py /out
+```
+
+The script makes a scratch copy under `beads/test`, so the checkout must be
+writable. The weekly `Mutation check` workflow runs it. About 15 seconds.
+
+Not covered, because the tests cannot see them: the upper slice bound (#33),
+the flash-failure aborts in `TestFlashErrors` (#36), the dummy grain trigger
+fields (#34), the mono/stereo template and the unsigned read index. The audio
+reference stays identical when the grain player is disabled, so it cannot
+vouch for those paths.
+
+`run.sh` accepts `DOCKER_CONTEXT` for a remote Docker host: it copies sources
+in and results out instead of bind-mounting.
