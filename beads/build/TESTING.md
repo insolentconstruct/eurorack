@@ -4,7 +4,7 @@ How Drizzlet is tested: the automated checks on the `drizzlet` branch, and the c
 
 ## TL;DR
 
-- **In numbers:** 163 tests in 13 host test programs (1019 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 152 deliberate-fault mutations, 538 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
+- **In numbers:** 164 tests in 13 host test programs (1021 assertion sites) covering 110 of 117 manual behaviours (3 only in part), 152 deliberate-fault mutations, 538 injected power-loss and flash-error points, byte-reproducible builds, emulator comparisons, and checks on a real module.
 - **Automated:** every build is reproducible to pinned hashes, and host tests run on every push. Most run the real firmware on a computer, from start-up and the main loop down to the audio processor and synth. They cover 110 of the 117 behaviours listed from the manual, 3 of them only in part.
 - **Before release:**
   - sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after;
@@ -41,19 +41,19 @@ execute more than once.
 | Program | Tests | Assertion sites |
 |---|---:|---:|
 | backup | 16 | 106 |
-| clouds | 3 | 9 |
+| clouds | 4 | 12 |
 | delay | 10 | 45 |
-| delay_mode | 8 | 41 |
-| firmware | 16 | 126 |
+| delay_mode | 9 | 40 |
+| firmware | 15 | 124 |
 | gain | 5 | 21 |
 | granular | 23 | 113 |
 | mix | 7 | 28 |
-| options | 42 | 384 |
+| options | 42 | 386 |
 | pitch_quantizer | 2 | 23 |
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 11 | 60 |
-| **Total** | **163** | **1019** |
+| **Total** | **164** | **1021** |
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
@@ -253,7 +253,7 @@ colours have not been checked by eye on a module.
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
-- Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite resets calibration and settings to defaults; the host tests check this window and that the full rewrite keeps everything.
+- Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite can reset calibration, settings or both to defaults; the host tests check this window and that the full rewrite keeps everything.
 - Listening tests of the limiter modes. Their code is unchanged since the limiter's own measurements.
 - The full bench suite was not rerun on 2026.10.16.
 

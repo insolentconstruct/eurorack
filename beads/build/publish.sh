@@ -20,6 +20,7 @@ changes=$(awk -v v="${tag#drizzlet-}" '/^## /{p = $2 == v; next} p' "$changelog"
 # A release can replace the Changes section with its own page,
 # beads/build/release-notes/VERSION.md; {TAG} there becomes the tag.
 page=${RELEASE_NOTES:-beads/build/release-notes/${tag#drizzlet-}.md}
+[[ -z ${RELEASE_NOTES:-} || -f $page ]] || { echo "No release notes page: $page" >&2; exit 1; }
 if [[ -f $page ]]; then
   notes+=$'\n\n'"$(sed "s/{TAG}/$tag/g" "$page")"
 else

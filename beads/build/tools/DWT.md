@@ -107,7 +107,7 @@ trim or change controls during capture. Preserve stimulus and capture logs.
 | 2 | Clouds-style | Clouds-style on; also capture matching synthetic fixture |
 | 3 | Pitch scale | Clouds-style on; Scale=Shri; optional matched fixture |
 | 4 | Delay | SIZE fully CW; Stock reverb |
-| 5 | Synth | Stock reverb; self-play Automatic; disconnect both inputs, wait >10 s quiet then settle |
+| 5 | Synth | Stock reverb; wavetable synth Automatic (Stock); disconnect both inputs, wait >10 s quiet then settle |
 | 6 | Sunny tape | Sunny tape quality; Stock reverb; reconnect both inputs |
 | 7 | Crackle | Bright digital, Clouds-style on, DRY/WET fully CW, FEEDBACK fully CCW, REVERB as left by options exit, DENSITY .98, PITCH +24 semitones, SIZE .92, SHAPE .5 by fixed CV; music into both inputs |
 
@@ -120,14 +120,15 @@ cycles for rows 1/4/5/6 (callback) and Stock fixture (callback minus fixture).
 Report Clouds and combined-option margins separately; no hardware result
 is implied by offline checks.
 
-Options open on Reverb: hold ASSIGN alone for 3 s, then release. On this
-page, FEEDBACK selects pitch Off/Chromatic/Scale by thirds. In Scale, short SEED taps cycle
-the scales through Shri. Two ASSIGN taps reach Dry/wet for Stock limiter
-(DRY/WET bottom third) and Stock/Clouds-style reverb (REVERB lower/upper
-half); one tap from Reverb reaches Feedback for self-play
-Automatic (FEEDBACK lower half). Hold ASSIGN 3 s or wait 5 s to save.
-Move the relevant pot by more than 10% to qualify a change. Restore the
-scenario mix controls after exit and settle before capture.
+Options open on page 1 (REVERB LED): hold [M] (ASSIGN) alone for 3 s, then
+release. On page 1, FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in
+Scale, short SEED taps cycle the scales through Shri), and REVERB selects
+Stock/Clouds-style reverb (lower/upper half). Two [M] taps reach page 3
+(DRY/WET LED): DRY/WET bottom third is the Stock limiter, FEEDBACK lower half
+is Wavetable synth: Automatic (Stock). Move the relevant pot by more than 10%
+to qualify a change; it saves after one second at rest. Close by holding [M]
+for 3 s or pressing another button. Restore the scenario mix controls after
+exit and settle before capture.
 
 Operator sequence: read both SAI status registers; record generation;
 write request 1; confirm generation advanced and request cleared; wait 65 s
