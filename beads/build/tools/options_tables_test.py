@@ -140,7 +140,7 @@ for fact in ("Auto (Stock)", "Never", "Wide detent", "middle", "SIZE CV",
     assert fact in " ".join(rich_delay.split()), fact
 plain_options = plain_options[:width_start] + plain_options[limiter_start:]
 plain_reference = "See below for every value."
-rich_reference = "See [OPTIONS.md](OPTIONS.md) for every value."
+rich_reference = "See [OPTIONS.md](docs/OPTIONS.md) for every value."
 assert plain_reference in plain_options
 assert rich_reference in rich_options
 plain_options = plain_options.replace(plain_reference, rich_reference)
@@ -191,7 +191,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         "options-guide-mobile.svg",
     ):
         generated = Path(directory, name).read_bytes()
-        assert generated == Path("beads/build", name).read_bytes(), name
+        assert generated == Path("beads/build/docs", name).read_bytes(), name
         if name.endswith(".svg"):
             root = ET.fromstring(generated)
             assert root.tag == "{http://www.w3.org/2000/svg}svg"
@@ -288,7 +288,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     pct = lambda name: format(round(constants[name] * 100, 6), "g")
     seconds = lambda name: format(constants[name] / 1000, "g")
     band = pct("kOptionsZoneBand")
-    features = Path("beads/build/FEATURES.md").read_text()
+    features = Path("beads/build/docs/FEATURES.md").read_text()
     features = features.split("## Exact option values", 1)[1]
     flat_features = " ".join(features.split())
     for phrase in (
@@ -368,6 +368,6 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
             ):
                 assert (
                     archive.read(guide)
-                    == Path("beads/build", guide).read_bytes()
+                    == Path("beads/build/docs", guide).read_bytes()
                 )
 print("Release ZIPs include the generated guides: PASS")

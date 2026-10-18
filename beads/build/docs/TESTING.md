@@ -253,4 +253,4 @@ The test regenerates all three guide files in a temporary directory and compares
 - `beads/test/ci-jobs.json` lists the host jobs and their commands; the workflow's `list-host-tests` job reads it into the matrix. Short suites share three jobs; delay mode uses three and Clouds two.
 - Each make call uses `-j$(nproc)` and keeps its sanitizer flags. Native tests use `-O1` rather than `-Os`, which made sanitized DSP renders slow on the Ubuntu 24.04 compiler. Firmware flags are unchanged.
 - The quantizer delay comparison warms each quality/channel processor once and restores that state, keeping all eight quality/channel cases, the 16000-block warmup and 1200 comparison blocks per output.
-- Selection and local commands: [host test README](../test/README.md).
+- Selection and local commands: [host test README](../../test/README.md).

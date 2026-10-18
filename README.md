@@ -54,10 +54,10 @@ For example, your 5U adaptation of Mutable Instruments Clouds can be called "Foo
 
 ## Options page
 
-See the [options guide](beads/build/OPTIONS.md) or
-[printable guide](beads/build/options-guide.svg).
+See the [options guide](beads/build/docs/OPTIONS.md) or
+[printable guide](beads/build/docs/options-guide.svg).
 
-![Options page phone guide](beads/build/options-guide-mobile.svg)
+![Options page phone guide](beads/build/docs/options-guide-mobile.svg)
 
 ## For firmware modders
 

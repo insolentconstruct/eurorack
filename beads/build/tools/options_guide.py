@@ -495,7 +495,7 @@ def generate(data):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).resolve().parents[1]
+        "--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "docs"
     )
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)

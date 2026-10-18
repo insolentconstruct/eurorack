@@ -4,7 +4,7 @@ Alternative firmware for Mutable Instruments Beads, built on the released Mutabl
 
 **TL;DR:** Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode, on a three-page options page that saves by itself. New settings default to stock behaviour. The grain engine needs about 6,900 fewer cycles per block in the heaviest stock case, with the same sound.
 
-Tested on one module so far. Please report problems, and what works, in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); do not contact Mutable Instruments. [TESTING.md](TESTING.md) shows how it was tested.
+Tested on one module so far. Please report problems, and what works, in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
@@ -16,9 +16,9 @@ Install at your own risk.
 
 Buttons use the letters from the Beads manual: [A] is the quality button, and [M] is the CV-assign button below the FEEDBACK [J] knob (CV input 7).
 
-Hold the CV-assign button [M] for three seconds, then release, to open the options page. Tap [M] to change page; move a mix knob and rest it for one second to save. Guides: [text](OPTIONS.md), [printable](options-guide.svg).
+Hold the CV-assign button [M] for three seconds, then release, to open the options page. Tap [M] to change page; move a mix knob and rest it for one second to save. Guides: [text](docs/OPTIONS.md), [printable](docs/options-guide.svg).
 
-![Options page phone guide](options-guide-mobile.svg)
+![Options page phone guide](docs/options-guide-mobile.svg)
 
 ## Downloads
 
@@ -27,9 +27,9 @@ From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 - `<tag>-wav.zip`: audio update, with `README.txt`, `NOTICE.txt` and the options guides.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 
-Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](MANUAL_ERRATA.md).
+Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
 
-Developers: [STYLE.md](STYLE.md), [OPTIMIZATIONS.md](OPTIMIZATIONS.md), [PORTING.md](PORTING.md), and [FEATURES.md](FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is the released source plus bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
+Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? The [`beads-bugfix-backport`](https://github.com/insolentconstruct/eurorack/tree/beads-bugfix-backport) branch is the released source plus bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-bugfix-backport/README-BASE.md).
 
 ## Delay mode
 
@@ -108,7 +108,7 @@ another button. Mix controls then catch up smoothly. On page 1 with Scale
 selected, short SEED taps step the scale instead of closing.
 Every first value, including Pitch Off, is steady green. Other values follow
 yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
-The page LED flashes on entry, close and save. See [OPTIONS.md](OPTIONS.md) for every value.
+The page LED flashes on entry, close and save. See [OPTIONS.md](docs/OPTIONS.md) for every value.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
@@ -180,7 +180,7 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 ## Saved data
 
-The settings and frozen-buffer formats are frozen for Beta 1. Zero and unknown values select the stock behaviour. Stock firmware ignores the Drizzlet bytes and clears them when it saves, and loads trimmed buffers at full length. Turn monophonic grains off before downgrading. Byte layout: [FEATURES.md](FEATURES.md).
+The settings and frozen-buffer formats are frozen for Beta 1. Zero and unknown values select the stock behaviour. Stock firmware ignores the Drizzlet bytes and clears them when it saves, and loads trimmed buffers at full length. Turn monophonic grains off before downgrading. Byte layout: [FEATURES.md](docs/FEATURES.md).
 
 ## Building it yourself
 

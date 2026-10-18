@@ -50,8 +50,9 @@ def write_zip(path, names):
 def package(out, here, wav, wav_zip, combo, combo_zip):
     assets = [wav_zip, combo_zip, "NOTICE.txt"]
     guides = ["OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"]
-    for name in ["README.txt"] + guides:
-        (out / name).write_bytes((here / name).read_bytes())
+    (out / "README.txt").write_bytes((here / "README.txt").read_bytes())
+    for name in guides:
+        (out / name).write_bytes((here / "docs" / name).read_bytes())
     write_zip(out / wav_zip, [wav, "README.txt", "NOTICE.txt"] + guides)
     # Combo image, named after the release.
     (out / combo).write_bytes((out / "combo.bin").read_bytes())
