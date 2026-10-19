@@ -1,4 +1,4 @@
-#!/usr/bin/python2.5
+#!/usr/bin/env python3
 #
 # Copyright 2009 Emilie Gillet.
 #
@@ -61,7 +61,7 @@ def CreateMidifile(
   m = midifile.Writer()
   if options.write_comments:
     for comment in comments:
-      m.AddTrack().AddEvent(0, midifile.TextEvent(comment))
+      m.AddTrack().AddEvent(0, midifile.TextEvent(comment.encode()))
   t = m.AddTrack()
   t.AddEvent(0, midifile.TempoEvent(120.0))
   page_size *= 2  # Converts from words to bytes
@@ -69,16 +69,20 @@ def CreateMidifile(
   # first SysEx block everytime stop/play is pressed.
   time = 1
   syx_data = []
-  for i in xrange(0, size, page_size):
-    block = ''.join(map(chr, data[i:i+page_size]))
+  # The command line options hold raw byte values.
+  mfr_id = options.manufacturer_id if not \
+      options.force_obsolete_manufacturer_id else '\x00\x20\x77'
+  mfr_id = mfr_id.encode('latin-1')
+  update_command = options.update_command.encode('latin-1')
+  reset_command = options.reset_command.encode('latin-1')
+  for i in range(0, size, page_size):
+    block = bytes(data[i:i+page_size])
     padding = page_size - len(block)
-    block += '\x00' * padding
-    mfr_id = options.manufacturer_id if not \
-        options.force_obsolete_manufacturer_id else '\x00\x20\x77'
+    block += b'\x00' * padding
     event = midifile.SysExEvent(
         mfr_id,
         struct.pack('>h', options.device_id),
-        options.update_command + midifile.Nibblize(block))
+        update_command + midifile.Nibblize(block))
     t.AddEvent(time, event)
     syx_data.append(event.raw_message)
     # ms -> s -> beats -> ticks
@@ -86,16 +90,15 @@ def CreateMidifile(
   event = midifile.SysExEvent(
       mfr_id,
       struct.pack('>h', options.device_id),
-      options.reset_command)
+      reset_command)
   t.AddEvent(time, event)
   syx_data.append(event.raw_message)
   
-  f = file(output_file, 'wb')
-  if options.syx:
-    f.write(''.join(syx_data))
-  else:
-    m.Write(f, format=1)
-  f.close()
+  with open(output_file, 'wb') as f:
+    if options.syx:
+      f.write(b''.join(syx_data))
+    else:
+      m.Write(f, format=1)
 
 
 if __name__ == '__main__':
@@ -174,9 +177,11 @@ if __name__ == '__main__':
     sys.exit(1)
 
   if args[0].endswith('.bin'):
-    data = map(ord, file(args[0], 'rb').read())
+    with open(args[0], 'rb') as f:
+      data = list(f.read())
   else:
-    data = hexfile.LoadHexFile(file(args[0]))
+    with open(args[0]) as f:
+      data = hexfile.LoadHexFile(f)
     if not data:
       logging.fatal('Error while loading .hex file')
       sys.exit(2)

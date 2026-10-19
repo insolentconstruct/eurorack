@@ -40,20 +40,19 @@ def UnpackInteger(value, size=4):
 def PackVariableLengthInteger(value):
   """Packs a python integer into a variable length byte sequence."""
   if value == 0:
-    return '\x00'
+    return b'\x00'
   s = value
   output = []
   while value:
     to_write = value & 0x7f
     value = value >> 7
     output.insert(0, to_write)
-  for i in xrange(len(output) - 1):
+  for i in range(len(output) - 1):
     output[i] |= 0x80
-  output = ''.join(map(chr, output))
-  return output
+  return bytes(output)
 
 """Classes representing a MIDI event, with a Serialize method which encodes
-them into a string."""
+them into bytes."""
 
 class Event(object):
   def __init__(self):
@@ -70,8 +69,8 @@ class MetaEvent(Event):
     self.data = data
     
   def Serialize(self, running_status):
-    return ''.join([
-        '\xff',
+    return b''.join([
+        b'\xff',
         PackInteger(self.id, size=1),
         PackInteger(len(self.data), size=1),
         self.data]), None
@@ -121,7 +120,7 @@ class CuePointEvent(MetaEvent):
 
 class EndOfTrackEvent(MetaEvent):
   def __init__(self):
-    super(EndOfTrackEvent, self).__init__(0x2f, '')
+    super(EndOfTrackEvent, self).__init__(0x2f, b'')
 
 
 class TempoEvent(MetaEvent):
@@ -135,7 +134,7 @@ class TempoEvent(MetaEvent):
 class SMPTEOffsetEvent(MetaEvent):
   def __init__(self, h, m, s, f, sf):
     self.smpte_offset = (h, m, s, f, sf)
-    data = ''.join(map(chr, [h, m, s, f, sf]))
+    data = bytes([h, m, s, f, sf])
     super(SMPTEOffsetEvent, self).__init__(0x54, data)
 
 
@@ -143,10 +142,10 @@ class TimeSignatureEvent(MetaEvent):
   def __init__(self, numerator, denominator):
     self.numerator = numerator
     self.denominator = denominator
-    data = ''.join([
+    data = b''.join([
         PackInteger(numerator, size=1),
         PackInteger(int(math.log(denominator) / math.log(2)), size=1),
-        '\x16\x08'])
+        b'\x16\x08'])
     super(TimeSignatureEvent, self).__init__(0x58, data)
 
 
@@ -154,7 +153,7 @@ class KeyEvent(MetaEvent):
   def __init__(self, sharp_flats, major_minor):
     self.sharp_flats = sharp_flats
     self.major_minor = major_minor
-    data = ''.join([
+    data = b''.join([
         PackInteger(sharp_flats, size=1),
         PackInteger(major_minor, size=1)])
     super(KeyEvent, self).__init__(0x59, data)
@@ -267,15 +266,15 @@ class StopEvent(SystemEvent):
 class SysExEvent(Event):
   def __init__(self, manufacturer_id, device_id, data):
     self.data = data
-    self.message = ''.join([
+    self.message = b''.join([
         manufacturer_id,
         device_id,
         data,
-        '\xf7'])
-    self.raw_message = '\xf0' + self.message
-    assert all(ord(x) < 128 for x in self.message[:-1])
-    self.message = ''.join([
-        '\xf0',
+        b'\xf7'])
+    self.raw_message = b'\xf0' + self.message
+    assert all(x < 128 for x in self.message[:-1])
+    self.message = b''.join([
+        b'\xf0',
         PackVariableLengthInteger(len(self.message)),
         self.message])
 
@@ -287,13 +286,13 @@ def Nibblize(data, add_checksum=True):
   """Converts a byte string into a nibble string. Also adds checksum"""
   output = []
   if add_checksum:
-    tail = [chr(sum(ord(char) for char in data) % 256)]
+    tail = [sum(data) % 256]
   else:
     tail = []
-  for char in map(ord, list(data) + tail):
-    output.append(chr(char >> 4))
-    output.append(chr(char & 0x0f))
-  return ''.join(output)
+  for byte in list(data) + tail:
+    output.append(byte >> 4)
+    output.append(byte & 0x0f)
+  return bytes(output)
 
 
 class Track(object):
@@ -304,7 +303,9 @@ class Track(object):
     self._events.append((time, event))
 
   def Sort(self):
-    self._events = sorted(self._events)
+    # Events at the same time are ordered by class name, as in Python 2.
+    self._events = sorted(
+        self._events, key=lambda e: (e[0], type(e[1]).__name__))
 
   def Serialize(self):
     self.Sort()
@@ -320,10 +321,10 @@ class Track(object):
       event_data, running_status = event.Serialize(running_status)
       data.append(event_data)
       current_time = time
-    return ''.join(data)
+    return b''.join(data)
     
   def Write(self, file_object):
-    file_object.write('MTrk')
+    file_object.write(b'MTrk')
     track_data = self.Serialize()
     file_object.write(PackInteger(len(track_data)))
     file_object.write(track_data)
@@ -357,7 +358,7 @@ class Writer(object):
       tracks = [self._MergeTracks()]
 
     # File header.
-    file_object.write('MThd')
+    file_object.write(b'MThd')
     file_object.write(PackInteger(6))
     file_object.write(PackInteger(format, size=2))
     if format == 0:
@@ -379,7 +380,7 @@ class Reader(object):
     self._previous_status = 0
     
   def Read(self, f):
-    assert f.read(4) == 'MThd'
+    assert f.read(4) == b'MThd'
     assert struct.unpack('>i', f.read(4))[0] == 6
     self.format = struct.unpack('>h', f.read(2))[0]
     assert self.format <= 2
@@ -387,13 +388,13 @@ class Reader(object):
     self.ppq = struct.unpack('>h', f.read(2))[0]
     self._tempo_map = []
     
-    for i in xrange(num_tracks):
+    for i in range(num_tracks):
       self.tracks.append(self._ReadTrack(f))
     self._CreateCumulativeTempoMap()
     
       
   def _ReadTrack(self, f):
-    assert f.read(4) == 'MTrk'
+    assert f.read(4) == b'MTrk'
     size = struct.unpack('>i', f.read(4))[0]
     t = 0
     events = []
@@ -505,19 +506,19 @@ class Reader(object):
       elif event_type == 0x07:
         event = CuePointEvent(bytes)
       elif event_type == 0x20:
-        current_channel = ord(bytes[0])
+        current_channel = bytes[0]
         event = None
       elif event_type == 0x2f:
         event = EndOfTrackEvent()
       elif event_type == 0x51:
-        value = UnpackInteger('\x00' + bytes, size=4)
+        value = UnpackInteger(b'\x00' + bytes, size=4)
         event = TempoEvent(60000000.0 / value)
       elif event_type == 0x54:
-        event = SMPTEOffsetEvent(*map(ord, bytes))
+        event = SMPTEOffsetEvent(*bytes)
       elif event_type == 0x58:
-        event = TimeSignatureEvent(ord(bytes[0]), 2 ** ord(bytes[1]))
+        event = TimeSignatureEvent(bytes[0], 2 ** bytes[1])
       elif event_type == 0x59:
-        event = KeyEvent(ord(bytes[0]), ord(bytes[1]))
+        event = KeyEvent(bytes[0], bytes[1])
       elif event_type == 0x7f:
         event = BlobEvent(bytes)
     elif event_byte == 0xf0:
@@ -527,7 +528,7 @@ class Reader(object):
       size += event_size
       event = SysExEvent(bytes[0:3], bytes[3:5], bytes[5:-1])
     else:
-      print event_byte, '!!'
+      print(event_byte, '!!')
       event = None
     return delta_t, event, size
     
@@ -539,10 +540,9 @@ if __name__ == '__main__':
   
   t = m.AddTrack()
   t.AddEvent(1, SysExEvent(
-      '\x00\x20\x77',
-      '\x00\x01',
-      '\x7f\x7f' + Nibblize('\xff\x00\xcc')))
+      b'\x00\x20\x77',
+      b'\x00\x01',
+      b'\x7f\x7f' + Nibblize(b'\xff\x00\xcc')))
   
-  f = file('output.mid', 'wb')
-  m.Write(f, format=0)
-  f.close()
+  with open('output.mid', 'wb') as f:
+    m.Write(f, format=0)

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.5
+#!/usr/bin/env python3
 #
 # Copyright 2014 Emilie Gillet.
 #
@@ -76,7 +76,7 @@ def plot_response(
     sr=96000.0,
     critical_frequency=16000.0):
   gain = 20 * numpy.log10(numpy.abs(numpy.fft.rfft(ir, n)) + 1e-30)
-  f = numpy.arange(n / 2 + 1) / float(n) * sr * ratio
+  f = numpy.arange(n // 2 + 1) / float(n) * sr * ratio
   bin_index = critical_frequency / ratio / sr * n
   critical_gain = gain[int(round(bin_index))]
   pylab.figure(figsize=(8, 12))
@@ -111,7 +111,7 @@ def make_header_guard_name(name):
 
 def generate_filters(options):
   output_file = options.output_file
-  out = file(output_file, 'w') if output_file else sys.stderr
+  out = open(output_file, 'w') if output_file else sys.stderr
   guard = make_header_guard_name(output_file)
   namespace = output_file.split(os.sep)[0] if output_file else ''
   out.write(HEADER)
@@ -149,10 +149,10 @@ def generate_filters(options):
           ('UP' if up else 'DOWN', ratio, length))
       out.write('  template<int32_t i> inline float Read() const {\n')
       out.write('    const float h[] = {\n')
-      for i in xrange(0, length / 2, 4):
+      for i in range(0, length // 2, 4):
         out.write('      ');
         out.write(', '.join(
-            '% 16.9e' % scaled[j]  for j in xrange(i, min(length / 2, i + 4))))
+            '% 16.9e' % scaled[j]  for j in range(i, min(length // 2, i + 4))))
         out.write(',\n');
       out.write('    };\n')
       out.write('    return h[i];\n')
