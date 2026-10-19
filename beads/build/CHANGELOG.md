@@ -1,11 +1,16 @@
-# Changes from earlier Beads firmware
+# Changelog
+
+## 2026.10.11 (tag `beads-2026.10.11`)
+- First build: the released Mutable Instruments Beads source, unmodified.
+
+## Changes from earlier Beads firmware
 
 - **2021 forum release:** `beads.wav`, posted on the Mutable Instruments forum in April 2021.
 - **2024 recovery firmware:** `beads_patch_firmware.wav` / `beads_golden_bootloader_combo.bin`, shared in the ModWiggler Beads thread in early 2024 to fix modules stuck on boot.
 
-These are the source changes needed to reproduce the older application images exactly, not the original history. The release bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation, not listening tests.
+These are the source changes needed to reproduce the older application images exactly, not the original history. The release bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation unless a module test is named.
 
-## 2024 recovery firmware → released source
+### 2024 recovery firmware → released source
 
 One change: grain stealing in polyphonic mode (`beads/dsp/granular_player.h`).
 
@@ -18,11 +23,13 @@ With identical input and state, emulation shows:
 - At intervals from 5 ms to <25 ms, outputs differ.
 - At intervals <5 ms, both run the same code. Differences can persist briefly if earlier intervals in the 5–25 ms range changed grain history.
 
-The “freeze gate” and “gated density” bench tests reached the changed range. Lower CPU use in dense textures is a possible reason for the change, but has not been measured.
+The “freeze gate” and “gated density” bench tests reached the changed range.
+
+On a test module, the 2021 and 2024 firmware clicked at DENSITY 0.98 and PITCH +24 semitones (145 clicks in 21 s and 164 in 20.6 s); this build did not (none in 14 s). A desktop run of both schedulers found no click in the DSP itself; CPU timing is the working hypothesis, not yet measured on the module.
 
 Monophonic mode is unchanged and compiled out of all shipped builds (`ENABLE_ADVANCED_FEATURES` is commented out).
 
-## 2021 forum release → 2024 recovery firmware
+### 2021 forum release → 2024 recovery firmware
 
 Five changes:
 
@@ -32,4 +39,4 @@ Five changes:
 4. **Frozen delay slices:** during frozen playback, manual and clocked delay add hysteresis with a 0.0025 dead band to slice/TIME selection.
 5. **Clocked delay FM:** both FM inputs affect the clock divider. Exponential FM previously bent tap ratios separately. Manual delay is unchanged.
 
-Upgrading from 2021 to this build includes all six changes. This kit builds only the released source; patches and comparison details for the older builds are available on request.
+None of these touch grain playback, and the 2024 firmware clicks like the 2021 release. Upgrading from 2021 to this build includes all six changes. This kit builds only the released source; patches and comparison details for the older builds are available on request.
