@@ -39,6 +39,17 @@ it goes low. Grains already playing finish normally.
 Frozen-buffer saves keep the trimmed length; stock firmware loads them at full
 length. The gesture comes from Mutable Instruments' disabled buffer-trim code.
 
+When the buffer is cleared
+--------------------------
+FREEZE never clears the recording buffer: releasing it resumes recording
+where it stopped, with a short crossfade. As on stock firmware, the buffer
+starts empty after changing the recording quality, switching between mono and
+stereo input (for example, patching or unpatching IN R while IN L is
+patched), leaving the wavetable synth, or
+powering up without a saved frozen buffer. Buffer trim restarts the recording
+window without erasing the old audio; grains already playing finish on it,
+and new grains read only the new window.
+
 Monophonic grains
 -----------------
 Hold [A] first, then press SEED to toggle monophonic grains. The setting
