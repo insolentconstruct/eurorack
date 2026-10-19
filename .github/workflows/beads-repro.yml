@@ -2,15 +2,11 @@ name: Beads repro kit
 on:
   push:
     paths:
-      - 'beads/repro/**'
-      - 'beads/dsp/**'
-      - 'beads/test/host.mk'
+      - 'beads/**'
       - '.github/workflows/beads-repro.yml'
   pull_request:
     paths:
-      - 'beads/repro/**'
-      - 'beads/dsp/**'
-      - 'beads/test/host.mk'
+      - 'beads/**'
       - '.github/workflows/beads-repro.yml'
 permissions:
   contents: read
@@ -46,3 +42,101 @@ jobs:
             repro-out/desktop/desktop/merged.tsv
             repro-out/desktop/desktop/*/verdict.json
             repro-out/desktop/desktop/*/provenance.json
+  firmware:
+    # The emulator runs this build's own app.elf (debug info included).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Initialize only Beads dependencies
+        run: git submodule update --init stmlib stm_audio_bootloader
+      - name: Build pinned amd64 compiler
+        run: docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/build
+      - name: Build app.elf
+        run: |
+          mkdir -p artifacts
+          docker run --rm --platform linux/amd64 --network none \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$PWD,dst=/src,readonly" \
+            --mount "type=bind,src=$PWD/artifacts,dst=/out" beads-build-kit \
+            nice -n 10 bash beads/build/build.sh /out
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: repro-app-elf
+          if-no-files-found: error
+          path: artifacts/app.elf
+  emulator:
+    needs: firmware
+    runs-on: ubuntu-24.04
+    # A scenario takes minutes; a shard holds a quarter of them. The limit
+    # leaves a wide margin under GitHub's 6 hour cap.
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: repro-app-elf
+          path: elf
+      - name: Emulator scenarios, shard ${{ matrix.shard }} of 4
+        run: |
+          docker build -q -t drizzlet-repro beads/repro
+          # Both sets in one container pass; each scenario runs in its own
+          # process, four at a time on the 4 vCPU runner.
+          for set in behaviours beta; do
+            beads/repro/repro.sh run $set --tier emulator --elf elf/app.elf \
+              --shard ${{ matrix.shard }}/4 --jobs 4 --out repro-out || status=1
+          done
+          exit ${status:-0}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: repro-emulator-shard-${{ matrix.shard }}
+          if-no-files-found: warn
+          path: |
+            repro-out/*/emulator/merged.json
+            repro-out/*/emulator/*/observables.json
+            repro-out/*/emulator/*/verdict.json
+            repro-out/*/emulator/*/provenance.json
+            repro-out/*/emulator/*/timing.json
+  merge:
+    needs: [firmware, emulator]
+    if: always() && needs.firmware.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: repro-emulator-shard-*
+          path: shards
+      - name: Merge the shards
+        run: |
+          docker build -q -t drizzlet-repro beads/repro
+          fail=0
+          for set in behaviours beta; do
+            docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+              -v "$PWD:/src" -w /src drizzlet-repro \
+              sh -c "PYTHONPATH=beads/repro exec python3 -m repro merge $set --tier emulator --out repro-merged shards/*" || fail=1
+          done
+          exit $fail
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: repro-emulator
+          if-no-files-found: warn
+          path: |
+            repro-merged/*/emulator/merged.json
+            repro-merged/*/emulator/merged.tsv

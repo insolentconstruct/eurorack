@@ -34,6 +34,16 @@ import sys
 from repro import jobs as jobs_mod, runner, scenario as scenario_mod
 
 
+def report(doc):
+    for name, entry in doc["scenarios"].items():
+        print(f"{entry['verdict']:8} {name}")
+        for r in entry["rules"]:
+            print(f"    {r['verdict']:8} {r['rule']}")
+        if entry["guard"]["verdict"] != "PASS":
+            print(f"    {entry['guard']['verdict']:8} guard: "
+                  f"{entry['guard'].get('error', '')}")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="repro", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -48,6 +58,19 @@ def main(argv=None):
     run.add_argument("--seed", type=int, default=0, help="base seed")
     run.add_argument("--scenario", action="append",
                      help="run only this scenario (repeatable)")
+    run.add_argument("--elf", help="firmware app.elf for the emulator tier "
+                     "(default: BEADS_ELF)")
+    run.add_argument("--window", type=float, default=None, metavar="SECONDS",
+                     help="emulator tier: stop each render this many seconds "
+                          "into the scenario (the stimulus is unchanged)")
+    run.add_argument("--shard", metavar="I/K",
+                     help="run only the scenarios whose name hashes to "
+                          "I modulo K")
+    merge = sub.add_parser("merge", help="combine shard runs of one set")
+    merge.add_argument("set")
+    merge.add_argument("--tier", default="emulator")
+    merge.add_argument("--out", default="repro-merged")
+    merge.add_argument("shards", nargs="+", help="shard output directories")
     args = parser.parse_args(argv)
 
     if args.command == "list":
@@ -59,16 +82,30 @@ def main(argv=None):
                 print(f"  {s.name}\t{','.join(s.tiers)}")
         return 0
 
+    if args.command == "merge":
+        base, doc = runner.merge_shards(args.set, args.tier, Path(args.out),
+                                        args.shards)
+        report(doc)
+        print(f"merged: {base / 'merged.json'}")
+        return 1 if doc["verdict"] in ("FAIL", "INVALID") else 0
+
     jobs = jobs_mod.resolve(args.jobs)
+    options = {}
+    if args.tier == "emulator":
+        options = dict(elf=args.elf, window=args.window)
+    shard = None
+    if args.shard:
+        i, k = (int(x) for x in args.shard.split("/"))
+        if not 0 <= i < k:
+            parser.error("--shard I/K needs 0 <= I < K")
+        shard = (i, k)
     base, doc = runner.run_set(args.set, args.tier, Path(args.out), jobs,
-                               args.seed, args.scenario)
-    for name, entry in doc["scenarios"].items():
-        print(f"{entry['verdict']:8} {name}")
-        for r in entry["rules"]:
-            print(f"    {r['verdict']:8} {r['rule']}")
-        if entry["guard"]["verdict"] != "PASS":
-            print(f"    {entry['guard']['verdict']:8} guard: "
-                  f"{entry['guard'].get('error', '')}")
+                               args.seed, args.scenario, tier_options=options,
+                               shard=shard)
+    if doc is None:
+        print("this shard has none of the set's scenarios")
+        return 0
+    report(doc)
     print(f"merged: {base / 'merged.json'}")
     return 1 if doc["verdict"] in ("FAIL", "INVALID") else 0
 

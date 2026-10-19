@@ -1,9 +1,11 @@
 # Copyright 2026 Insolent Construct.
 # Author: Insolent Construct
 name = "u-latched-clocked"
-description = """SEED latched (locked on). An 8 Hz SEED clock from 2 s; DENSITY CV 0\
-gives no grains, +0.25 and +0.5 raise the probability, -0.25 and -0.5\
-divide the clock."""
+description = """SEED latched (locked on). An 8 Hz SEED clock from 2 s to the end, so it\
+outlasts the last divider window; DENSITY CV 0 gives no grains, +0.25 and\
++0.5 raise the probability, -0.33 and -0.2 divide the clock by 3 and by 6.\
+(DENSITY fully counter-clockwise does not divide: the ratio is 1 there and\
+grows toward noon, so the windows sit mid-range.)"""
 seconds = 24
 tiers = ["emulator", "module"]
 behaviours = ["latched-silent", "latched-probability", "latched-divider"]
@@ -22,7 +24,7 @@ amp = 0.12
 [[events]]
 kind = "trigger"
 channel = "seed"
-times = { start = 2.0, step = 0.125, count = 150 }
+times = { start = 2.0, step = 0.125, count = 176 }
 
 [[events]]
 kind = "cv"
@@ -46,13 +48,13 @@ level = 0.5
 kind = "cv"
 channel = "density"
 t = 14.0
-level = -0.25
+level = -0.33
 
 [[events]]
 kind = "cv"
 channel = "density"
 t = 18.0
-level = -0.5
+level = -0.2
 
 [[events]]
 kind = "cv"

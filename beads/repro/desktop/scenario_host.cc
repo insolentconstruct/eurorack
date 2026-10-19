@@ -129,6 +129,14 @@ static bool ReadStimulus(const char* path, Stimulus* s) {
   return ok;
 }
 
+// A panel attenuverter is a knob position (0 fully counter-clockwise, 1 fully
+// clockwise). The firmware reads it through this law (cv_reader.h): zero at
+// centre, -1 and +1 at the ends, with a dead band around the centre.
+static float AttenuverterLaw(float position) {
+  const float v = position - 0.5f;
+  return (2.0f / 0.47f) * v * max(fabsf(v) - 0.03f, 0.0f);
+}
+
 static uint8_t banks[3][262144];
 static uint16_t reverb_buffer[32768];
 static Processor processor;
@@ -167,13 +175,13 @@ int main(int argc, char** argv) {
   Parameters parameters;
   memset(&parameters, 0, sizeof(parameters));
   parameters.time.base = Get("time");
-  parameters.time.attenuverter = Get("time_att");
+  parameters.time.attenuverter = AttenuverterLaw(Get("time_att"));
   parameters.size.base = Get("size");
-  parameters.size.attenuverter = Get("size_att");
+  parameters.size.attenuverter = AttenuverterLaw(Get("size_att"));
   parameters.shape.base = Get("shape");
-  parameters.shape.attenuverter = Get("shape_att");
+  parameters.shape.attenuverter = AttenuverterLaw(Get("shape_att"));
   parameters.pitch.base = Get("pitch");
-  parameters.pitch.attenuverter = Get("pitch_att");
+  parameters.pitch.attenuverter = AttenuverterLaw(Get("pitch_att"));
   // The bench patches a CV into every jack, so the attenuverters scale CV.
   parameters.time.has_cv = true;
   parameters.size.has_cv = true;

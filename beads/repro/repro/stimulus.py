@@ -288,3 +288,39 @@ def build(scenario, sr, seed):
                                     if e["kind"] != "cv" and e["channel"] == g])
              for g in ("seed", "freeze")}
     return Stimulus(sr, audio, cv, gates)
+
+
+def history_seconds(scenario):
+    """How long before the scenario a continuous tone was already playing: the
+    longest `phase_s` of a sine layer that starts at zero. A tier that has no
+    earlier run (the emulator) plays this lead-in first."""
+    return max((layer.get("phase_s", 0.0)
+                for layer in scenario.generator.get("layers", ())
+                if layer["kind"] == "sine" and layer.get("start", 0.0) == 0.0
+                and "every" not in layer), default=0.0)
+
+
+def history(scenario, sr, seconds):
+    """(n, 2) audio for the `seconds` before the scenario starts: each
+    phase-shifted tone from the moment it began, in phase with the scenario's
+    own render of it. Frames line up so the last history frame is the one
+    before frame 0."""
+    n = frames_of(seconds, sr)
+    out = np.zeros((n, 2))
+    for layer in scenario.generator.get("layers", ()):
+        lead = layer.get("phase_s", 0.0)
+        if (layer["kind"] != "sine" or not lead
+                or layer.get("start", 0.0) != 0.0 or "every" in layer):
+            continue
+        start = max(0, n - frames_of(lead, sr))
+        k = np.arange(n - start)
+        w = np.ones(len(k))
+        fade = min(frames_of(layer.get("fade_s", 0.01), sr), len(k))
+        if fade:
+            w[:fade] = np.linspace(0, 1, fade)
+        sig = np.zeros(n)
+        sig[start:] = layer["amp"] * w * np.sin(2 * np.pi * layer["freq"] * k / sr)
+        channel = layer.get("channel", "both")
+        for c in ((0, 1) if channel == "both" else (channel,)):
+            out[:, c] += sig
+    return out.astype(np.float32)

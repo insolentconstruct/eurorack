@@ -26,17 +26,23 @@
 
 
 """Tier adapters. A tier turns a Stimulus into a render; rules and verdicts
-are shared. Tiers other than desktop arrive in later phases."""
+are shared. Tiers: desktop (host build), emulator (the firmware ELF in a
+Cortex-M7 emulator). Seed3 and module arrive later."""
 
 
 class TierUnavailable(RuntimeError):
     pass
 
 
-def get(name):
+def get(name, **options):
+    """A tier object. `options` are the tier's own settings (the emulator
+    takes `elf` and `window`)."""
     if name == "desktop":
         from repro.tiers import desktop
         return desktop.DesktopTier()
+    if name == "emulator":
+        from repro.tiers import emulator
+        return emulator.EmulatorTier(**options)
     raise TierUnavailable(
-        f"tier {name!r} is not implemented yet (desktop is the only tier in "
-        "this phase)")
+        f"tier {name!r} is not implemented yet (desktop and emulator are "
+        "the tiers so far)")

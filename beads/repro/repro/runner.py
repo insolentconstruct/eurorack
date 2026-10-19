@@ -79,6 +79,12 @@ def _guard_result(scn, render):
     return dict(verdict=rules.PASS, observed_delay_mode=entered)
 
 
+def shard_of(name, count):
+    """Which of `count` shards runs a scenario: a hash of its name, so the
+    split does not depend on the set or on file order."""
+    return int.from_bytes(hashlib.sha256(name.encode()).digest()[:4], "little") % count
+
+
 def run_one(task):
     """Worker: run one scenario and write its directory. Returns the entry
     that goes into the merged result."""
@@ -87,12 +93,16 @@ def run_one(task):
     tier.restore(task["tier_state"])
     scn = scenario_mod.load(task["scenario_path"])
     seed = task["seed"]
-    stim = stimulus.build(scn, tier.sr, seed)
+    # A tier whose clock follows the scenario (the codec rate depends on the
+    # media) says so; otherwise one rate serves every scenario.
+    sr = tier.sample_rate(scn) if hasattr(tier, "sample_rate") else tier.sr
+    stim = stimulus.build(scn, sr, seed)
     stim_hash = stim.sha256()
     render = tier.run(scn, stim, seed)
 
     guard = _guard_result(scn, render)
-    results = rules.evaluate(scn.rules, render.audio.astype(np.float64), render.sr)
+    results = rules.evaluate(scn.rules, render.audio.astype(np.float64),
+                             render.sr, ctx=render.info.get("ctx") or None)
     verdict = rules.overall([r["verdict"] for r in results] + [guard["verdict"]])
     peak = float(np.max(np.abs(render.audio))) if render.audio.size else 0.0
     observables = dict(
@@ -138,17 +148,21 @@ def merge(set_name, tier_name, base_seed, entries):
 
 
 def run_set(set_name, tier_name, out_root, jobs, base_seed=0, only=None,
-            root=ROOT):
+            root=ROOT, tier_options=None, shard=None):
     """Run, merge, write `merged.json` and `merged.tsv`; return (path, doc)."""
     scns = scenario_mod.load_set(root, set_name)
     scns = [s for s in scns if tier_name in s.tiers]
     if only:
         scns = [s for s in scns if s.name in only]
+    if shard:
+        scns = [s for s in scns if shard_of(s.name, shard[1]) == shard[0]]
+    if not scns and shard:
+        return None, None  # a small set can leave a shard empty
     if not scns:
         raise SystemExit(f"no scenarios in set {set_name!r} run on {tier_name}")
     for var in THREAD_VARS:
         os.environ[var] = "1"
-    tier = tiers.get(tier_name)
+    tier = tiers.get(tier_name, **(tier_options or {}))
     base = Path(out_root) / set_name / tier_name
     state = tier.prepare(Path(out_root) / "_build")
     head = _git_head()
@@ -163,6 +177,44 @@ def run_set(set_name, tier_name, out_root, jobs, base_seed=0, only=None,
         with ProcessPoolExecutor(min(jobs, len(tasks)), mp_context=ctx) as pool:
             entries = list(pool.map(run_one, tasks))
     text, tsv = merge(set_name, tier_name, base_seed, entries)
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "merged.json").write_text(text)
+    (base / "merged.tsv").write_text(tsv)
+    return base, json.loads(text)
+
+
+def merge_shards(set_name, tier_name, out_root, shard_roots, root=ROOT,
+                 expect=True):
+    """Combine the `merged.json` of shard runs (each under
+    `<root>/<set>/<tier>/`) into one set-wide merge. The shards must hold
+    different scenarios and one base seed, and together exactly the scenarios
+    the set runs on this tier (a shard that crashed leaves a gap, which is an
+    error, not a smaller result); the merge is byte-for-byte what a single
+    unsharded run writes. `expect` may be a list of names instead of True, or
+    False to skip the completeness check."""
+    entries, seeds = {}, set()
+    for shard_root in shard_roots:
+        path = Path(shard_root) / set_name / tier_name / "merged.json"
+        if not path.exists():
+            continue  # that shard had none of this set's scenarios
+        doc = json.loads(path.read_text())
+        seeds.add(doc["base_seed"])
+        for name, entry in doc["scenarios"].items():
+            if name in entries:
+                raise SystemExit(f"scenario {name} appears in two shards")
+            entries[name] = entry
+    if len(seeds) != 1:
+        raise SystemExit(f"shards disagree on the base seed: {sorted(seeds)}")
+    if expect is True:
+        expect = [s.name for s in scenario_mod.load_set(root, set_name)
+                  if tier_name in s.tiers]
+    if expect:
+        missing, extra = set(expect) - set(entries), set(entries) - set(expect)
+        if missing or extra:
+            raise SystemExit(f"shards are not the whole set: missing "
+                             f"{sorted(missing)}, unexpected {sorted(extra)}")
+    text, tsv = merge(set_name, tier_name, seeds.pop(), list(entries.values()))
+    base = Path(out_root) / set_name / tier_name
     base.mkdir(parents=True, exist_ok=True)
     (base / "merged.json").write_text(text)
     (base / "merged.tsv").write_text(tsv)

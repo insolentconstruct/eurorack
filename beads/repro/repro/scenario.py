@@ -68,7 +68,14 @@ OPTIONAL_PANEL = {
                     "bhairav", "shri"),
     "assign_destination": ("feedback", "dry_wet", "reverb"),
     "inputs_patched": (True, False),
+    "self_play": ("automatic", "on_request"),
+    "reverb_style": ("stock", "clouds"),
+    "delay_mode": ("auto", "never", "wide_detent"),
+    "width_assigned": (True, False),
 }
+# Integer panel settings: name -> (lowest, highest). stereo_width is the saved
+# byte: 0 is stock, 1..255 spans no displacement to full.
+INT_PANEL = {"stereo_width": (0, 255)}
 LAYER_KINDS = ("sine", "steps", "chirp", "cyclic_chirp", "noise")
 
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -127,12 +134,24 @@ def parse(text, path="<memory>"):
            f"tiers must be a non-empty subset of {TIERS}")
 
     panel = dict(PANEL_DEFAULTS)
-    extra = set(data.get("panel", {})) - set(PANEL_DEFAULTS) - set(OPTIONAL_PANEL)
+    extra = (set(data.get("panel", {})) - set(PANEL_DEFAULTS)
+             - set(OPTIONAL_PANEL) - set(INT_PANEL))
     _check(not extra, name, f"unknown panel keys {sorted(extra)}")
     panel.update(data.get("panel", {}))
     for key, allowed in OPTIONAL_PANEL.items():
         _check(key not in panel or panel[key] in allowed, name,
                f"panel.{key} must be one of {allowed}")
+    for key, (low, high) in INT_PANEL.items():
+        _check(key not in panel or (isinstance(panel[key], int)
+                                    and not isinstance(panel[key], bool)
+                                    and low <= panel[key] <= high), name,
+               f"panel.{key} must be an integer in {low}..{high}")
+    if panel.get("width_assigned"):
+        _check(panel.get("stereo_width", 0) > 0, name,
+               "panel.width_assigned needs panel.stereo_width above 0")
+        _check(panel.get("assign_destination", "feedback") == "feedback", name,
+               "panel.width_assigned replaces the ASSIGN destination; leave "
+               "assign_destination unset")
     _check(panel["media"] in MEDIA, name, f"media must be one of {MEDIA}")
     _check(panel["seed_button"] in SEED_BUTTON, name,
            f"seed_button must be one of {SEED_BUTTON}")
@@ -163,6 +182,9 @@ def parse(text, path="<memory>"):
                    "layer channel must be 0, 1 or \"both\"")
             _check(not (layer.get("stereo") and layer.get("channel", "both") != "both"),
                    name, "a stereo noise layer plays on both channels")
+            _check(not layer.get("phase_s") or layer.get("kind") != "sine"
+                   or layer.get("fade_s", 0.01) == 0, name,
+                   "a sine with phase_s is already running: set fade_s = 0")
             for key in ("seg_s", "dur_s", "every", "period_s"):
                 _check(key not in layer or (isinstance(layer[key], (int, float))
                                             and layer[key] > 0), name,

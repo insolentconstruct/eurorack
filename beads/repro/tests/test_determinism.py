@@ -27,9 +27,10 @@
 
 """The merged results must not depend on the job count."""
 
+import os
 import unittest
 
-from repro import canon
+from repro import canon, runner
 from tests import helpers
 
 
@@ -54,6 +55,29 @@ class Determinism(unittest.TestCase):
         text = (serial / "merged.json").read_text()
         self.assertEqual(text, canon.dumps(doc))
         self.assertNotIn("\n  ", text)  # one serializer, no indent
+
+
+@unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
+class EmulatorDeterminism(unittest.TestCase):
+    """The emulator tier too: one process or several, the same bytes."""
+
+    def test_jobs_1_and_2_are_byte_identical(self):
+        kw = dict(only={"b-seed-trigger", "b-density-gated"},
+                  tier_options=dict(elf=os.environ["BEADS_ELF"], window=1.0))
+        outs = []
+        for name, jobs in (("emu1", 1), ("emu2", 2)):
+            base, _ = runner.run_set("p0", "emulator", helpers.scratch() / name,
+                                     jobs, **kw)
+            outs.append(base)
+        for name in ("merged.json", "merged.tsv"):
+            self.assertEqual((outs[0] / name).read_bytes(),
+                             (outs[1] / name).read_bytes(), name)
+        for d in sorted(p for p in outs[0].iterdir() if p.is_dir()):
+            for f in sorted(d.iterdir()):
+                if f.name != "timing.json":
+                    self.assertEqual(f.read_bytes(),
+                                     (outs[1] / d.name / f.name).read_bytes(),
+                                     f"{d.name}/{f.name}")
 
 
 if __name__ == "__main__":
