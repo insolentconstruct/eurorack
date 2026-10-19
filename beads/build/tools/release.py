@@ -127,7 +127,7 @@ def notices(out):
     files.update(shlex.split(text.split(':',1)[1]))
   if not files or not any('stm32h7xx_hal.c' in f for f in files):
     raise ValueError('incomplete compiled source inventory')
-  chunks = ['Unofficial released-source Beads build. Applicable notices by compiled file.\n'
+  chunks = ['Unofficial vanilla-source Beads build. Applicable notices by compiled file.\n'
             'Original notices below are preserved verbatim. Files without a standalone\n'
             'notice are listed too; dependency/runtime licenses follow.\n']
   for name in sorted(files):
