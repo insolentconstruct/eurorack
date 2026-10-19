@@ -66,9 +66,13 @@ re-runs 20 fixed fixtures (four media, five modes) and compares each output
 hash with `tests/data/emulator_golden.tsv`. It skips without an ELF the table
 was recorded on.
 
-Timing, rc5-equivalent code on one core: a 20 s scenario takes about 2 minutes
-(roughly 1.6 ms of host time per 250 us codec block), a 150 s scenario about
-15 minutes.
+Timing (37 scenarios run together, 26 at a time on a 28-core host; one
+scenario alone is about a quarter faster): a 19 to 24 s scenario takes 2.5 to
+3.5 minutes, a 27 to 30 s one 4 to 6 minutes, the pitch-scale and random
+scenarios (30 s plus a 17 s lead-in) about 9 minutes, and the 150 s Clouds A/B
+scenario 21 minutes. All 37 together are about 4 CPU-hours; split four ways by
+name hash that is 10 to 20 minutes of ideal wall time per shard on four cores,
+far below GitHub's 6 hour limit.
 
 ## Scenarios and sets
 
