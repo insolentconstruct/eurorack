@@ -191,7 +191,7 @@ class DelayGrain : public Grain {
 
     int32_t delay_integral = delay_ >> 10;
     float delay_fractional = float(delay_ & 1023) / 1024.0f;
-    FloatFrame sample = delay_line->template Read<INTERPOLATION_HERMITE>(
+    FloatFrame sample = delay_line->template Read<INTERPOLATION_HERMITE_RAW>(
         delay_integral, delay_fractional);
     
     // Crossfade with samples near the tail.
@@ -199,11 +199,11 @@ class DelayGrain : public Grain {
       sample *= fade_ramp;
       if (delay_integral < head_crossing_safety_zone) {
         sample += (1.0f - fade_ramp) * \
-            delay_line->template Read<INTERPOLATION_HERMITE>(
+            delay_line->template Read<INTERPOLATION_HERMITE_RAW>(
                 delay_integral + (xfade_tail >> 10), delay_fractional);
       } else if (delay_ >= xfade_tail) {
         sample += (1.0f - fade_ramp) * \
-            delay_line->template Read<INTERPOLATION_HERMITE>(
+            delay_line->template Read<INTERPOLATION_HERMITE_RAW>(
                 delay_integral - (xfade_tail >> 10), delay_fractional);
       }
     } else {

@@ -1,6 +1,6 @@
 # Testing
 
-**TL;DR:** 164 host tests in 13 programs cover 110 of 117 manual behaviours (3 only in part), backed by 152 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
+**TL;DR:** 165 host tests in 13 programs cover 110 of 117 manual behaviours (3 only in part), backed by 154 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
 
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
@@ -32,7 +32,7 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 |---|---:|---:|
 | backup | 16 | 106 |
 | clouds | 4 | 12 |
-| delay | 10 | 45 |
+| delay | 11 | 46 |
 | delay_mode | 9 | 40 |
 | firmware | 15 | 124 |
 | gain | 5 | 21 |
@@ -43,7 +43,7 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 11 | 60 |
-| **Total** | **164** | **1021** |
+| **Total** | **165** | **1022** |
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 

@@ -513,6 +513,12 @@ cases = [
     '    WriteChunk(1, state_data_);\n'
     '    next_state_chunk_index_ = 2;',
     '    next_state_chunk_index_ = 2;'),
+  ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
+    'const int32_t b_neg = w + a;',
+    'const int32_t b_neg = w + a + 1;'),
+  ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
+    'result.l = result.r = i ? odd : even;',
+    'result.l = result.r = even;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:
