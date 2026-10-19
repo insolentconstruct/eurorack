@@ -17,7 +17,7 @@ build and run on a module. Install at your own risks."
 Install at your own risk.
 
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one change
-to grain stealing, as in the released source. On our module, the 2021 and 2024
+to grain stealing, as in the vanilla source. On our module, the 2021 and 2024
 firmware clicked with DENSITY and PITCH near fully clockwise and this one did
 not; see CHANGELOG.md and TESTING.md.
 

@@ -2,7 +2,7 @@
 
 **TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s hold of the quality button [A] for automatic gain and 12 synth banks rather than 8.
 
-Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and module page differ from the released firmware source. Drizzlet keeps all of it unless noted; its own additions are in [README.md](../README.md). Several items come from the April 2021 update, which the manual predates ([release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572)).
+Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and module page differ from the vanilla firmware source. Drizzlet keeps all of it unless noted; its own additions are in [README.md](../README.md). Several items come from the April 2021 update, which the manual predates ([release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572)).
 <!-- Source: Mutable Instruments eurorack d8f4739 (stmlib e3bd7c9); manual.md and index.md from the mutable-instruments-documentation repository. Each item cites manual line and source. -->
 
 ## Corrections
