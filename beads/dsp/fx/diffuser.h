@@ -29,6 +29,8 @@
 #ifndef BEADS_DSP_FX_DIFFUSER_H_
 #define BEADS_DSP_FX_DIFFUSER_H_
 
+#include <algorithm>
+
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/frame.h"
@@ -44,7 +46,9 @@ class Diffuser {
   ~Diffuser() { }
 
   void Init(uint16_t* buffer) {
-    engine_.Init(buffer);
+    buffer_ = buffer;
+    std::fill(&buffer_[0], &buffer_[kDiffuserBufferSize], 0);
+    write_ptr_ = 0;
   }
 
   void Process(FloatFrame* in_out, size_t size);
@@ -54,9 +58,31 @@ class Diffuser {
   }
 
  private:
+  // The engine only lays out the delay lines; the buffer is accessed here.
   typedef FxEngine<kDiffuserBufferSize, FORMAT_16_BIT> E;
-  E engine_;
+  typedef DataType<FORMAT_16_BIT> Format;
+  enum {
+    MASK = kDiffuserBufferSize - 1
+  };
 
+  // Reads the oldest sample of a delay line.
+  template<typename D>
+  inline float Tail(D& d, int32_t write_ptr) const {
+    const int32_t index = write_ptr + D::base + D::length - 1;
+    return Format::Decompress(buffer_[index & MASK]);
+  }
+
+  // Writes the sum to the head of a delay line, returns the all-pass output.
+  template<typename D>
+  inline float AllPass(
+      D& d, int32_t write_ptr, float in, float tail, float coefficient) {
+    const float sum = in + tail * coefficient;
+    buffer_[(write_ptr + D::base) & MASK] = Format::Compress(sum);
+    return tail - sum * coefficient;
+  }
+
+  uint16_t* buffer_;
+  int32_t write_ptr_;
   float amount_;
   DISALLOW_COPY_AND_ASSIGN(Diffuser);
 };
