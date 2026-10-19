@@ -257,7 +257,6 @@ class Processor {
       2> processor_dirty_tape_;
 #endif  // ENABLE_HARDWARE_24K
 
-  AttackInput attack_input_;
   TriggerGenerator trigger_generator_;
   DelayController delay_controller_;
   
@@ -279,7 +278,9 @@ class Processor {
   Diffuser diffuser_;
   uint16_t diffuser_buffer_[kDiffuserBufferSize];
   bool clouds_style_;
-  
+
+  AttackInput attack_input_;
+
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };
 

@@ -454,7 +454,6 @@ class GranularProcessor {
     if (attacks) attacks->EndBlock(writes);
   }
       
-  AttackDetector attacks_;
   DelayGranularPlayer dummy_granular_player_;
   DelayGranularPlayer granular_player_;
   MultitapDelay multitap_delay_;
@@ -477,7 +476,9 @@ class GranularProcessor {
   RandomWalkModulation pitch_modulation_;
   
   Limiter input_limiter_;
-    
+
+  AttackDetector attacks_;
+
   DISALLOW_COPY_AND_ASSIGN(GranularProcessor);
 };
 
