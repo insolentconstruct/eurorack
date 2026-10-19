@@ -4,11 +4,11 @@ What Drizzlet changed to run faster or smaller, what was measured and rejected, 
 
 ## TL;DR
 
-On the module, with the panel settings of the CPU tests, the busiest stock block now takes 94,311 of the 120,000 cycles available (78.6%). The released source takes 110,947 (92.5%) on the same test. The sound is unchanged.
+On the module, with the panel settings of the CPU tests, the busiest stock block now takes 94,311 of the 120,000 cycles available (78.6%). The vanilla source takes 110,947 (92.5%) on the same test. The sound is unchanged.
 
 | Module, whole audio callback, worst block | Stock, panel | Stock, stress test | Clouds-style, panel |
 |---|---:|---:|---:|
-| Released source (GCC 4.9.3) | 110,947 (92.5%) | 114,053 (95.0%) | – |
+| Vanilla source (GCC 4.9.3) | 110,947 (92.5%) | 114,053 (95.0%) | – |
 | Drizzlet before the integer Hermite read | 102,433 (85.4%) | 106,014 (88.3%) | 103,665 (86.4%) |
 | Drizzlet with it | 94,311 (78.6%) | 98,802 (82.3%) | 96,022 (80.0%) |
 
@@ -25,11 +25,11 @@ Headroom gained per change, in points of the budget on the busiest stock block (
 
 The Clouds-style reverb also gains 1.0 point from its diffuser reading its tails first. Plain GCC 11 to 16 builds are 5,800 to 9,300 cycles slower than GCC 9 on the stock peak (GCC 10.3, from an unverified archive, 10,200); raising the inlining limit brings GCC 11 within noise of GCC 9. One explicit fused multiply-add and a few explicit roundings make every compiler's audio and buffer hashes match GCC 9 in all 28 scenarios. The bootloader stays on 4.9.3.
 
-The same changes on the released source alone ([beads-tuneup](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup), no Drizzlet features): development board, busiest stock block, 24 scenarios, all hashes matched:
+The same changes on the vanilla source alone ([beads-tuneup](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup), no Drizzlet features): development board, busiest stock block, 24 scenarios, all hashes matched:
 
 | Build | Cycles | Budget |
 |---|---:|---:|
-| Released source (beads-build-kit, GCC 4.9.3) | 99,511 | 82.9% |
+| Vanilla source (beads-build-kit, GCC 4.9.3) | 99,511 | 82.9% |
 | beads-tuneup (GCC 9 and the first three code changes) | 90,529 | 75.4% |
 | beads-tuneup with the integer Hermite read (not yet on that branch) | 82,911 | 69.1% |
 
