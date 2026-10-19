@@ -1,8 +1,8 @@
 # Changelog
 
-Changes from the released Mutable Instruments Beads source (`f4cfa76`). Every
+Changes from the vanilla Mutable Instruments Beads source (`f4cfa76`). Every
 change, one line each, is in [README-BASE.md](../../README-BASE.md). Changes
-from the 2021 and 2024 firmware to the released source are in the
+from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
 ## Unreleased
@@ -14,4 +14,4 @@ from the 2021 and 2024 firmware to the released source are in the
 - App built with GCC 9 instead of 4.9.3; the sound is unchanged.
 - More CPU headroom: about 9,000 fewer cycles per audio block in the heaviest stock case, with the same sound.
 
-Controls, settings and the default sound are those of the released source; no features are added.
+Controls, settings and the default sound are those of the vanilla source; no features are added.

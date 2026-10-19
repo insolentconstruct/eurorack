@@ -8,7 +8,7 @@ point additions or grain scheduling.
 | `ProcessInternal<mono>` | GCC 9 without specialization | Choose recording format once per block | Identical mono and stereo output |
 | Local grain sum | Template build | Keep accumulation in registers | Same grain order, starting from zero |
 | Unsigned read-index modulo | Local-sum build | Remove signed division correction | Callers supply non-negative indices |
-| GCC 9 plus `fmaf` | GCC 4.9.3 released source | Improve compiler output while pinning pan rounding | `fmaf` gives one fused rounding on every platform |
+| GCC 9 plus `fmaf` | GCC 4.9.3 vanilla source | Improve compiler output while pinning pan rounding | `fmaf` gives one fused rounding on every platform |
 
 Earlier measurements of these same changes on a separate timing harness
 reported 2,669, 3,630 and 739 fewer peak cycles respectively in its heaviest
