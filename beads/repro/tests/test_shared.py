@@ -415,6 +415,21 @@ class CloudsAB(unittest.TestCase):
         self.assertGreater(r["transitions"][0]["step_db"],
                            beta_rules.STEP_MAX_DB)
 
+    def test_a_silent_gap_in_the_control_window_is_inconclusive(self):
+        x = self.good.copy()
+        x[13 * SR:13 * SR + SR // 50] = 0  # 20 ms of digital silence
+        r = self.run_rule(x)
+        self.assertEqual(r["verdict"], "INCONCLUSIVE", r)
+
+    def test_an_onset_just_after_a_short_gap_is_not_a_click(self):
+        x = clouds_render(onset=False)
+        for t in (45, 105):
+            a = t * SR
+            x[a:a + SR // 100] *= np.linspace(1, 0, SR // 100)[:, None]
+            x[a + SR // 100:a + SR // 100 + SR // 100] = 0
+            x[a + SR // 50:a + SR // 50 + SR // 100] = 0.7
+        self.assertEqual(self.run_rule(x)["verdict"], "PASS")
+
     def test_assign_effect_of_a_silent_tail_is_floored(self):
         x = np.zeros((27 * SR, 2))
         for t in (3, 11, 19):

@@ -110,6 +110,8 @@ def clouds_ab(audio,sr,transitions,start_epoch):
     control_base=float(np.sqrt(np.mean(x[11*sr:12*sr]**2)))
     if control_base<.0001: return invalid('quiet no-switch control')
     control_dip=dip_db(x[12*sr:19*sr],control_base)
+    # A silent gap in the control leaves no room to show a deeper fade.
+    if control_dip<-40: return invalid('no-switch control has a silent gap')
     rows=[]
     for r in switches:
         # Epoch brackets come from actual writer invocation and verified convergence.
@@ -123,13 +125,13 @@ def clouds_ab(audio,sr,transitions,start_epoch):
         dip=db(float(rms.min()),base)
         # The fade is the run of bins around the quietest one that sit 6 dB or
         # more under the reference. Click checks look at the fade going down
-        # and its first 10 ms of silence only: the grain that starts once the
-        # style has changed begins with a hard onset of its own, which is not
-        # the fade.
+        # (15 ms before the run to 10 ms into it), not at what follows: a grain
+        # that starts once the style has changed begins with a hard onset of
+        # its own. A pop inside the silent gap is therefore not seen here.
         lo=hi=int(np.argmin(rms)); quiet=base*10**(-6/20)
         while lo>0 and rms[lo-1]<=quiet: lo-=1
         while hi<n-1 and rms[hi+1]<=quiet: hi+=1
-        z=y[max(0,lo-3)*width:min(n,lo+3)*width]
+        z=y[max(0,lo-3)*width:min(n,lo+2)*width]
         peak=float(np.max(abs(z))); crest=db(peak,base)
         step=float(np.max(abs(np.diff(z,axis=0)),initial=0))
         step_db=db(step,base)
