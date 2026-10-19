@@ -89,5 +89,39 @@ class Golden(unittest.TestCase):
         self.assertEqual(got, want)
 
 
+OPTION_PANELS = [
+    dict(limiter="fast"), dict(limiter="off"), dict(pitch_scale="shri"),
+    dict(pitch_scale="fifths", assign_destination="reverb"),
+    dict(self_play="on_request"), dict(reverb_style="clouds"),
+    dict(delay_mode="never"), dict(delay_mode="wide_detent"),
+    dict(stereo_width=100), dict(stereo_width=255, width_assigned=True),
+    dict(mono=True, media="clean_tape"),
+    dict(media="dirty_tape", assign_destination="dry_wet"),
+    dict(limiter="fast", pitch_scale="bhairav", self_play="on_request",
+         reverb_style="clouds", delay_mode="never", stereo_width=7,
+         assign_destination="reverb"),
+]
+
+
+class Options(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
+    def test_every_panel_option_is_read_back_by_the_firmware(self):
+        """Settings::Init must load each encoded option as written (the boot
+        checks the state bytes), and the media sets the codec rate."""
+        from repro import scenario
+        from repro.emu import elf as elf_mod, firmware, itcm, panel
+        elf = elf_mod.Elf(os.environ["BEADS_ELF"])
+        image = itcm.itcm_image(elf)
+        rates = {"dirty_tape": 24000, "clean_tape": 48000,
+                 "vintage_digital": 32000, "digital": 48000}
+        for opts in OPTION_PANELS:
+            with self.subTest(**opts):
+                p = dict(scenario.PANEL_DEFAULTS, **opts)
+                fw = firmware.Firmware(
+                    elf, panel.state_for(p, elf.layout()), itcm=image,
+                    cal=panel.IDEAL_CAL, autostart=True)
+                self.assertEqual(fw.codec[-1][1], rates[p["media"]])
+
+
 if __name__ == "__main__":
     unittest.main()

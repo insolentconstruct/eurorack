@@ -41,7 +41,9 @@ beads/repro/repro.sh merge beta --tier emulator --out merged shard0 shard1 shard
 ```
 
 `app.elf` is the debug ELF from the build kit (`beads/build/build.sh`), or the
-`repro-app-elf` artifact of the CI run. The emulator reads everything it needs
+`repro-app-elf` artifact of the CI run. In Docker (the default) the repository
+is mounted at `/src`, so keep the ELF and any shard directories inside it;
+`--native` takes any path. The emulator reads everything it needs
 from that file: function and object addresses from the symbol table, field
 offsets and enumerator values from the DWARF. Nothing about the firmware is
 written down in the kit, so a layout change in the source cannot go stale
