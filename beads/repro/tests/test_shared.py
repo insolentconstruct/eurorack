@@ -165,6 +165,10 @@ class Rates(unittest.TestCase):
         r = one("rate_divided", x, wins=[[0.0, 2.0], [2.0, 4.5]], clock_hz=8.0)
         self.assertEqual(r["verdict"], "PASS")
         self.assertEqual(len(r["clock_over_rate"]), 2)
+        # Ratios are checked, not just "different": this train is not 3 and 6.
+        r = one("rate_divided", x, wins=[[0.0, 2.0], [2.0, 4.5]], clock_hz=8.0,
+                ratios=[3, 6])
+        self.assertEqual(r["verdict"], "FAIL")
 
     def test_triggers_with_a_timing_guard_accept_an_early_onset(self):
         x = burst_train([0.98, 2.0], total=4.0)

@@ -255,10 +255,15 @@ def _rate_divided(x, sr, p, offset_s=0.0, ctx=None):
     rates = _rates(x, sr, p, offset_s)
     ok = (all(0 < v < p["clock_hz"] * 0.9 for v in rates)
           and abs(rates[1] - rates[0]) > 0.2)
-    return dict(rates_hz=rates,
-                clock_over_rate=[p["clock_hz"] / v if v else None for v in rates],
-                verdict=_verdict(ok),
-                rule_text="both settings divide the clock, by different ratios")
+    over = [p["clock_hz"] / v if v else None for v in rates]
+    want = p.get("ratios")
+    if want is not None:
+        tol = p.get("ratio_tol", 0.2)
+        ok = (ok and len(want) == len(over) and all(
+            o is not None and abs(o - w) <= tol * w for o, w in zip(over, want)))
+    return dict(rates_hz=rates, clock_over_rate=over, verdict=_verdict(ok),
+                rule_text="both settings divide the clock, by different ratios"
+                          + (f" (expected {want})" if want is not None else ""))
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 name = "u-latched-clocked"
 description = """SEED latched (locked on). An 8 Hz SEED clock from 2 s to the end, so it\
 outlasts the last divider window; DENSITY CV 0 gives no grains, +0.25 and\
-+0.5 raise the probability, -0.33 and -0.2 divide the clock by 3 and by 6.\
++0.5 raise the probability, -0.34 and -0.22 divide the clock by 3 and by 6.\
 (DENSITY fully counter-clockwise does not divide: the ratio is 1 there and\
 grows toward noon, so the windows sit mid-range.)"""
 seconds = 24
@@ -48,13 +48,13 @@ level = 0.5
 kind = "cv"
 channel = "density"
 t = 14.0
-level = -0.33
+level = -0.34
 
 [[events]]
 kind = "cv"
 channel = "density"
 t = 18.0
-level = -0.2
+level = -0.22
 
 [[events]]
 kind = "cv"
@@ -78,3 +78,4 @@ rule = "rate_divided"
 behaviours = ["latched-divider"]
 wins = [[14.5, 17.9], [18.5, 21.9]]
 clock_hz = 8.0
+ratios = [3, 6]
