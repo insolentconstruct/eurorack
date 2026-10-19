@@ -47,14 +47,19 @@ class AttackInput {
       bool left_normalization = false, bool right_normalization = false) {
     if (!mode_) return false;
     if (refractory_ > size) refractory_ -= size; else refractory_ = 0;
-    float peak = 0.0f;
+    // Peaks in integers (magnitude order is float order): two conversion-free
+    // maxima per block, one float conversion at the end.
+    uint32_t peak_l = 0, peak_r = 0;
     if (!(left_normalization && right_normalization)) {
       for (size_t i = 0; i < size; ++i) {
-        float l = float(left_normalization ? in[i].r : in[i].l) * scale;
-        float r = float(right_normalization ? in[i].l : in[i].r) * scale;
-        peak = std::max(peak, std::max(fabsf(l), fabsf(r)));
+        peak_l = std::max(peak_l, Magnitude(in[i].l));
+        peak_r = std::max(peak_r, Magnitude(in[i].r));
       }
     }
+    const uint32_t block_peak = std::max(
+        left_normalization ? peak_r : peak_l,
+        right_normalization ? peak_l : peak_r);
+    const float peak = float(block_peak) * scale;
     const bool onset = !refractory_ && peak > threshold_ * std::max(reference_, slow * 0.5f) && peak > 0.002f;
     // Fast attack, 20 Hz release at the actual block rate.
     const float release = 20.0f * float(size) / sample_rate;
@@ -65,12 +70,9 @@ class AttackInput {
     }
     return false;
   }
-  // Merge before Beads' TriggerGenerator, so held SEED wins naturally.
-  static void MergeSeed(bool onset, stmlib::GateFlags* seed, size_t size) {
-    if (!onset || !size) return;
-    seed[0] = stmlib::GateFlags(seed[0] | stmlib::GATE_FLAG_HIGH | stmlib::GATE_FLAG_RISING);
-  }
  private:
+  static uint32_t Magnitude(int32_t x) { return x < 0 ? -uint32_t(x) : uint32_t(x); }
+
   int mode_;
   float threshold_, reference_;
   unsigned refractory_;
