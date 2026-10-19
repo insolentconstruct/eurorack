@@ -28,23 +28,35 @@
 #
 # My favorite DX7 patches.
 
+import os
+
+SYX_DIR = 'plaits/resources/syx'
+
 def Read(name):
-  data = file(name, 'rb').read()
+  with open(name, 'rb') as f:
+    data = f.read()
   #for i in xrange(32):
   #  print data[6 + 118 + i * 128:6 + 118 + i * 128 + 10]
   # Skip the SysEx header and footer
-  return map(ord, data[6:-2])
+  return list(data[6:-2])
+
+def syx_file_name(rom_name):
+  # Two of the files end in .SYX: match the extension in any case.
+  for name in os.listdir(SYX_DIR):
+    if name.lower() == '%s.syx' % rom_name.lower():
+      return os.path.join(SYX_DIR, name)
 
 def make_bank(patches):
   data = []
   cache = {}
   for rom_name, index in patches:
     if not rom_name in cache:
-      rom_data = file('plaits/resources/syx/%s.syx' % rom_name, 'rb').read()
+      with open(syx_file_name(rom_name), 'rb') as f:
+        rom_data = f.read()
       cache[rom_name] = rom_data[6:-2]
     patch = cache[rom_name][index * 128:(index + 1) * 128]
     # print rom_name, index, patch[118:128]
-    data += map(ord, patch)
+    data += list(patch)
   return data
   
 banks = [
@@ -172,5 +184,6 @@ banks = [
 patches = []
 for i, bank in enumerate(banks):
   bank_data = make_bank(bank)
-  file('bank_%d.raw' % i, 'wb').write(''.join(map(chr, bank_data)))
+  with open('bank_%d.raw' % i, 'wb') as f:
+    f.write(bytes(bank_data))
   patches += [('bank_%d' % i, bank_data)]

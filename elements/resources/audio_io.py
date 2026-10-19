@@ -100,12 +100,12 @@ def ReadWavFile(file_name, scale=True):
       - The file header is corrupted.
       - The file uses an unsupported sampling rate, bitdepth or codec.
   """
-  f = file(file_name, 'r')
+  f = open(file_name, 'rb')
   header = f.read(12)
-  if len(header) < 12 or header[:4] != 'RIFF' or header[8:] != 'WAVE':
+  if len(header) < 12 or header[:4] != b'RIFF' or header[8:] != b'WAVE':
     raise AudioIoException('Corrupted header')
 
-  format_header_size = _GoToIffChunk(f, 'fmt ')
+  format_header_size = _GoToIffChunk(f, b'fmt ')
   if format_header_size < 0 or format_header_size != 16:
     raise AudioIoException('Invalid header size')
 
@@ -126,8 +126,8 @@ def ReadWavFile(file_name, scale=True):
   if bitdepth != 8 and bitdepth != 16:
     raise AudioIoException('Unsupported bit depth')
 
-  sample_data_size = _GoToIffChunk(f, 'data')
-  num_samples = sample_data_size / (bitdepth / 8)
+  sample_data_size = _GoToIffChunk(f, b'data')
+  num_samples = sample_data_size // (bitdepth // 8)
   # Make sure we are reading a number of samples which is a multiple of the
   # number of channels. Some corrupted stereo .wav files may contain 5 samples!
   num_samples -= num_samples % num_channels
@@ -136,7 +136,7 @@ def ReadWavFile(file_name, scale=True):
     if scale:
       samples = (samples / _UNSIGNED_CHAR_TO_FLOAT_SCALE) - 1.0
   else:
-    bytes = bitdepth / 8
+    bytes = bitdepth // 8
     samples = numpy.fromfile(f, dtype='<i%d' % bytes, count=num_samples)
     if scale:
       # Semantics of x = x / y and x /= y are different when x and y are
@@ -179,7 +179,7 @@ def Quantize(signal, bitdepth, normalize=True):
     scale = (1 << (bitdepth - 1)) - 1
     # pylint: disable-msg=C6407
     scaled_signal = scaled_signal * scale
-    scaled_signal = numpy.array(scaled_signal, dtype='i%d' % (bitdepth / 8))
+    scaled_signal = numpy.array(scaled_signal, dtype='i%d' % (bitdepth // 8))
 
   return scaled_signal
 
@@ -216,16 +216,16 @@ def WriteWavFile(signal, sample_rate, file_name, bitdepth=16, normalize=True):
   # 'data' chunk.
   total_size += _DATA_CHUNK_HEADER_SIZE + scaled_signal.nbytes
 
-  f = file(file_name, 'w')
+  f = open(file_name, 'wb')
   try:
-    f.write('RIFF')
+    f.write(b'RIFF')
     f.write(struct.pack('<L', total_size))
-    f.write('WAVEfmt ')
-    bitrate = sample_rate * num_channels * (bitdepth / 8)
-    bits_per_sample = num_channels * (bitdepth / 8)
+    f.write(b'WAVEfmt ')
+    bitrate = sample_rate * num_channels * (bitdepth // 8)
+    bits_per_sample = num_channels * (bitdepth // 8)
     f.write(struct.pack('<LHHLLHH', 16, 1, num_channels, sample_rate, bitrate,
                         bits_per_sample, bitdepth))
-    f.write('data')
+    f.write(b'data')
     f.write(struct.pack('<L', scaled_signal.nbytes))
     scaled_signal.tofile(f)
   finally:

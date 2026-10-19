@@ -76,7 +76,7 @@ notes = numpy.arange(
     (highest_octave + 12) * 128.0 + 16,
     16)
 pitches = a4_pitch * 2 ** ((notes - a4_midi * 128) / (128 * 12))
-increments = excursion / sample_rate * pitches
+increments = excursion // sample_rate * pitches
 
 lookup_tables_32.append(
     ('oscillator_increments', increments.astype(int)))
@@ -86,7 +86,7 @@ lookup_tables_32.append(
 Pulse delay values.
 ----------------------------------------------------------------------------"""
 
-sample_rate = 48000 / 8
+sample_rate = 48000 // 8
 min_delay = 0.001
 max_delay = 10.0
 gamma = 0.3

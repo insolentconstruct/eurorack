@@ -41,7 +41,7 @@ def scale(x):
 
 def sine(frequency):
   t = numpy.arange(0, WAVETABLE_SIZE) / float(WAVETABLE_SIZE - 1)
-  if frequency >= WAVETABLE_SIZE / 2:
+  if frequency >= WAVETABLE_SIZE // 2:
     return t * 0
   t[-1] = t[0]
   x = numpy.sin(2 * numpy.pi * t * frequency)
@@ -50,56 +50,56 @@ def sine(frequency):
 
 def comb(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine(i + 1)
   return x
 
 
 def tri(n, f=1):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine((2 * i + 1) * f) / (2 * i + 1) ** 2.0
   return x
 
 
 def tri_stack_bright(n):
   x = 0
-  for i in xrange(n):
-    x += tri(15 + 5 * n, i + n / 3)
+  for i in range(n):
+    x += tri(15 + 5 * n, i + n // 3)
   return x
 
 
 def tri_stack(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += tri(5 + 7 * n, i + 1) / ((i + 1) ** 0.5)
   return x
 
 
 def saw(n, f=1):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine((i + 1) * f) / (i + 1)
   return x
 
 
 def saw_stack(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += saw(1 + 6 * i, i + 1) / ((i + 1) ** 0.5)
   return x
 
 
 def square(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine(2 * i + 1) / (2 * i + 1)
   return x
 
 
 def quadra(n):
   x = 0
-  for harmonic, amplitude in zip(xrange(4), [1, 0.5, 1, 0.5]):
+  for harmonic, amplitude in zip(range(4), [1, 0.5, 1, 0.5]):
     x += sine(2 * n + 2 * harmonic + 1) * amplitude
   return x
 
@@ -213,7 +213,7 @@ def make_bank(waveforms):
 
 
 def make_family(fn, arguments):
-  return map(fn, arguments)
+  return [fn(argument) for argument in arguments]
 
 # Bank 1: mild and additive.
 bank_1 = []
@@ -237,13 +237,13 @@ bank_2 += make_family(pulse, [0.5, 0.4, 1/3.0, 0.25, 0.2, 0.125, 1/16.0, 1/32.0]
 bank_2 += make_family(burst, [0.5, 0.4, 1/3.0, 0.25, 0.2, 0.125, 1/16.0, 1/32.0])
 bank_2 += make_family(square_formant, [2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 24.0])
 bank_2 += make_family(bandpass_formant, [2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 32.0])
-bank_2 += make_family(formant_f, xrange(8))
-bank_2 += make_family(digi_formant_f, xrange(8))
-bank_2 += make_family(sine_power, xrange(8))
+bank_2 += make_family(formant_f, range(8))
+bank_2 += make_family(digi_formant_f, range(8))
+bank_2 += make_family(sine_power, range(8))
 
 # Bank 3: Shruthi.
-bank_3 = list(numpy.fromstring(
-    file('tides/resources/waves.bin', 'rb').read(), numpy.int16))
+with open('tides/resources/waves.bin', 'rb') as f:
+  bank_3 = list(numpy.frombuffer(f.read(), numpy.int16))
 
 wavetables.append(('waves', make_bank(bank_1) + make_bank(bank_2) + bank_3[:50*257]))
 

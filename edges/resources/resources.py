@@ -52,8 +52,8 @@ includes = """
 #include <avr/pgmspace.h>
 """
 
-import lookup_tables
-import waveforms
+from . import lookup_tables
+from . import waveforms
 
 create_specialized_manager = True
 

@@ -68,6 +68,6 @@ waveforms.append(('overdrive', numpy.round(32767 * overdrive).astype(int)))
 Surprise!
 ----------------------------------------------------------------------------"""
 
-digits = file('peaks/data/digits.bin', 'rb').read()
-digits = map(ord, digits)
+with open('peaks/data/digits.bin', 'rb') as f:
+  digits = list(f.read())
 waveforms_8 = [('digits', digits)]

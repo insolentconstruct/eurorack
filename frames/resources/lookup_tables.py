@@ -70,7 +70,7 @@ quartic_in = (x ** 4) * 65535.0
 quartic_out = (1 - (1 - x) ** 4) * 65535.0
 in_out_sine = (1.0 - numpy.cos(x * numpy.pi)) / 2.0 * 65535.0
 in_out_bounce = x + 0
-for i in xrange(len(x)):
+for i in range(len(x)):
   in_out_bounce[i] = BounceEaseOut(x[i], 0, 65535.0, 1.0)
 
 # lookup_tables.append(('easing_steps', steps))

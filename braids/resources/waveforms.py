@@ -72,13 +72,13 @@ JUNINESS = 1.0
 
 
 def dither(x, order=0, type=numpy.int16):
-  for i in xrange(order):
+  for i in range(order):
     x = numpy.hstack((numpy.zeros(1,), numpy.cumsum(x)))
   x = numpy.round(x)
-  for i in xrange(order):
+  for i in range(order):
     x = numpy.diff(x)
   if any(x < numpy.iinfo(type).min) or any(x > numpy.iinfo(type).max):
-    print 'Clipping occurred!'
+    print('Clipping occurred!')
   x[x < numpy.iinfo(type).min] = numpy.iinfo(type).min
   x[x > numpy.iinfo(type).max] = numpy.iinfo(type).max
   return x.astype(type)
@@ -103,11 +103,11 @@ bl_pulse_tables = []
 bl_tri_tables = []
 
 wrap = numpy.fmod(
-    numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE / 2,
+    numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE // 2,
     WAVETABLE_SIZE)
     
 quadrature = numpy.fmod(
-    numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE / 4,
+    numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE // 4,
     WAVETABLE_SIZE)
     
 fill = numpy.fmod(
@@ -124,10 +124,10 @@ for zone in range(num_zones):
     f0 = min(f0, SAMPLE_RATE / 2.0)
   period = SAMPLE_RATE / f0
   m = 2 * numpy.floor(period / 2) + 1.0
-  i = numpy.arange(-WAVETABLE_SIZE / 2, WAVETABLE_SIZE / 2) / \
+  i = numpy.arange(-WAVETABLE_SIZE // 2, WAVETABLE_SIZE // 2) / \
       float(WAVETABLE_SIZE)
   pulse = numpy.sin(numpy.pi * i * m) / (m * numpy.sin(numpy.pi * i) + 1e-9)
-  pulse[WAVETABLE_SIZE / 2] = 1.0
+  pulse[WAVETABLE_SIZE // 2] = 1.0
   pulse = pulse[fill]
 
   bl_pulse_tables.append(('bandlimited_comb_%d' % zone,
@@ -142,10 +142,12 @@ Wavetables
 -----------------------------------------------------------------------------"""
 
 wavetable_data = []
-waves = map(ord, file('braids/data/waves.bin', 'rb').read())
+with open('braids/data/waves.bin', 'rb') as f:
+  waves = list(f.read())
 wavetable_data.append(('waves', waves))
 
-wave_map = map(ord, file('braids/data/map.bin', 'rb').read())
+with open('braids/data/map.bin', 'rb') as f:
+  wave_map = list(f.read())
 wavetable_data.append(('map', wave_map))
 
 

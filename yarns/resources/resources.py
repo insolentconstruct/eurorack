@@ -67,9 +67,9 @@ includes = """
 #include "stmlib/stmlib.h"
 """
 
-import characters
-import lookup_tables
-import waveforms
+from . import characters
+from . import lookup_tables
+from . import waveforms
 
 create_specialized_manager = True
 

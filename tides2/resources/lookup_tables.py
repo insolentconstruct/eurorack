@@ -41,7 +41,7 @@ Sine table.
 ----------------------------------------------------------------------------"""
 
 size = 1024
-t = numpy.arange(0, size + size / 4 + 1) / float(size) * numpy.pi * 2
+t = numpy.arange(0, size + size // 4 + 1) / float(size) * numpy.pi * 2
 lookup_tables.append(('sine', numpy.sin(t)))
 
 
@@ -81,7 +81,7 @@ wavetable += scale(bump)
 Waveshaper for control rate
 ----------------------------------------------------------------------------"""
 
-x = numpy.arange(0, WAVESHAPER_SIZE / 2) / float(WAVESHAPER_SIZE / 2)
+x = numpy.arange(0, WAVESHAPER_SIZE // 2) / float(WAVESHAPER_SIZE // 2)
 linear = x
 sin = (1.0 - numpy.cos(numpy.pi * x)) / 2.0
 inverse_sin = numpy.arccos(1 - 2 * x) / numpy.pi

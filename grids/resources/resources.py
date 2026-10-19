@@ -52,7 +52,7 @@ includes = """
 #include <avr/pgmspace.h>
 """
 
-import lookup_tables
+from . import lookup_tables
 
 create_specialized_manager = True
 

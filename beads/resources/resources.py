@@ -67,8 +67,8 @@ includes = """
 #include "stmlib/stmlib.h"
 """
 
-import lookup_tables
-import wavetables
+from . import lookup_tables
+from . import wavetables
 
 create_specialized_manager = True
 

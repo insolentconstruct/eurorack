@@ -403,14 +403,14 @@ def EuclidianPattern(k, n):
   pattern = [[1]] * k + [[0]] * (n - k)
   while k:
     cut = min(k, len(pattern) - k)
-    k, pattern = cut, [pattern[i] + pattern[k + i] for i in xrange(cut)] + \
+    k, pattern = cut, [pattern[i] + pattern[k + i] for i in range(cut)] + \
       pattern[cut:k] + pattern[k + cut:]
   return pattern
 
 
 table = []
-for num_steps in xrange(1, 33):
-  for num_notes in xrange(32):
+for num_steps in range(1, 33):
+  for num_notes in range(32):
     num_notes = int(round(float(num_notes) / 31 * num_steps))
     bitmask = 0
     for i, bit in enumerate(Flatten(EuclidianPattern(num_notes, num_steps))):

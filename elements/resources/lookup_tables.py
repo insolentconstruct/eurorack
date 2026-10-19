@@ -228,8 +228,10 @@ for ratio in detune_ratios:
 target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
 while len(scale) < target_size:
   gap = numpy.argmax(numpy.diff(scale))
-  scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
-      scale[gap + 1:]
+  midpoint = scale[gap] + scale[gap + 1]
+  # The table was built with Python 2, which floored int / int.
+  midpoint = midpoint // 2 if isinstance(midpoint, int) else midpoint / 2
+  scale = scale[:gap + 1] + [midpoint] + scale[gap + 1:]
 
 scale.append(scale[-1])
 

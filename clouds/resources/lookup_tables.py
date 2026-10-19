@@ -40,7 +40,7 @@ Cosine table.
 ----------------------------------------------------------------------------"""
 
 size = 1024
-t = numpy.arange(0, size + size / 4 + 1) / float(size) * numpy.pi * 2
+t = numpy.arange(0, size + size // 4 + 1) / float(size) * numpy.pi * 2
 lookup_tables.append(('sin', numpy.sin(t)))
 
 
@@ -77,9 +77,9 @@ Sine window.
 def sum_window(window, steps):
   n = window.shape[0]
   start = 0
-  stride = n / steps
+  stride = n // steps
   s = 0
-  for i in xrange(steps):
+  for i in range(steps):
     s = s + window[start:start+stride] ** 2
     start += stride
   return s
@@ -144,7 +144,7 @@ PITCH_TABLE_SIZE = 1025
 pitch = numpy.zeros((PITCH_TABLE_SIZE, ))
 notches = [-24, -12, -7, -4, -3, -1, -0.1, 0, 0, 0.1, 1, 3, 4, 7, 12, 24]
 n = len(notches) - 1
-for i in xrange(n):
+for i in range(n):
   start_index = int(float(i) / n * PITCH_TABLE_SIZE)
   end_index = int(float(i + 1) / n * PITCH_TABLE_SIZE)
   length = end_index - start_index

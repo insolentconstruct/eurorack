@@ -76,6 +76,6 @@ Sine table.
 ----------------------------------------------------------------------------"""
 
 size = 1024
-t = numpy.arange(0, size + size / 4 + 1) / float(size) * numpy.pi * 2
+t = numpy.arange(0, size + size // 4 + 1) / float(size) * numpy.pi * 2
 lookup_tables.append(('sine', numpy.sin(t)))
 

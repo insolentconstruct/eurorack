@@ -21,18 +21,18 @@ import numpy
 
 waveforms = []
 
-SAMPLE_RATE = float(32000000 / 666)
+SAMPLE_RATE = float(32000000 // 666)
 
 WAVETABLE_SIZE = 512
 
 def Dither(x, order=0, type=numpy.uint8):
-  for i in xrange(order):
+  for i in range(order):
     x = numpy.hstack((numpy.zeros(1,), numpy.cumsum(x)))
   x = numpy.round(x)
-  for i in xrange(order):
+  for i in range(order):
     x = numpy.diff(x)
   if any(x < numpy.iinfo(type).min) or any(x > numpy.iinfo(type).max):
-    print 'Clipping occurred!'
+    print('Clipping occurred!')
   x[x < numpy.iinfo(type).min] = numpy.iinfo(type).min
   x[x > numpy.iinfo(type).max] = numpy.iinfo(type).max
   return x.astype(type)
@@ -57,24 +57,24 @@ bl_tri_tables = []
 bl_ntri_tables = []
 
 fill = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1), WAVETABLE_SIZE)
-wrap = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE / 2, WAVETABLE_SIZE)
-quadrature = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE / 4, WAVETABLE_SIZE)
-step = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE / 32, WAVETABLE_SIZE)
+wrap = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE // 2, WAVETABLE_SIZE)
+quadrature = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE // 4, WAVETABLE_SIZE)
+step = numpy.fmod(numpy.arange(WAVETABLE_SIZE + 1) + WAVETABLE_SIZE // 32, WAVETABLE_SIZE)
 
 for zone in range(num_zones):
   f0 = 440.0 * 2.0 ** ((18 + 16 * zone - 69) / 12.0)
   period = SAMPLE_RATE / f0
   m = 2 * numpy.floor(period / 2) + 1.0
-  i = numpy.arange(-WAVETABLE_SIZE / 2, WAVETABLE_SIZE / 2) / float(WAVETABLE_SIZE)
+  i = numpy.arange(-WAVETABLE_SIZE // 2, WAVETABLE_SIZE // 2) / float(WAVETABLE_SIZE)
   pulse = numpy.sin(numpy.pi * i * m) / (m * numpy.sin(numpy.pi * i) + 1e-9)
-  pulse[WAVETABLE_SIZE / 2] = 1.0
+  pulse[WAVETABLE_SIZE // 2] = 1.0
   pulse = pulse[fill]
 
   square = numpy.cumsum(pulse - pulse[wrap])
   triangle = -numpy.cumsum(square[::-1] - square.mean()) / WAVETABLE_SIZE
   
   nes_triangle = 0
-  for i in xrange(32):
+  for i in range(32):
     nes_triangle += (1 if i < 16 else -1) * pulse
     pulse = pulse[step]
   nes_triangle = -numpy.cumsum(nes_triangle)

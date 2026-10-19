@@ -46,7 +46,7 @@ def modified_chamberlin(f, fq, x, mode='bp'):
   y = numpy.zeros(x.shape)
   x_ = 0.0
   coefficient = 1.0 if mode == 'bp' else 0.0
-  for i in xrange(len(y)):
+  for i in range(len(y)):
     lp += f * bp
     bp += -fq * bp -f * lp + (x[i] + x_ * coefficient)
     x_ = x[i]
@@ -64,8 +64,8 @@ SAMPLE_RATE = 96000
 IR_SIZE = 2048
 
 
-sample_rates = [SAMPLE_RATE / 12] * 13
-sample_rates += [SAMPLE_RATE / 3] * 6
+sample_rates = [SAMPLE_RATE // 12] * 13
+sample_rates += [SAMPLE_RATE // 3] * 6
 sample_rates += [SAMPLE_RATE] * 1
 num_bands = len(sample_rates)
 
@@ -115,7 +115,7 @@ for index, (frequency, sr) in enumerate(zip(frequencies, sample_rates)):
   out = numpy.eye(IR_SIZE, 1).ravel() * gain
   
   coefficients = [0, 0, 0]
-  for i in xrange(2):
+  for i in range(2):
     f, fq = pole_pair_to_f_fq(p[i*2:i*2 + 2])
     out = modified_chamberlin(f, fq, out, svf_mode)
     out = modified_chamberlin(f, fq, out, svf_mode)
@@ -128,7 +128,7 @@ for index, (frequency, sr) in enumerate(zip(frequencies, sample_rates)):
   if index == num_bands - 1:
     delay += 4
   
-  coefficients[0] = SAMPLE_RATE / sr
+  coefficients[0] = SAMPLE_RATE // sr
   coefficients[1] = numpy.floor(delay)
   coefficients[2] = gain
   
@@ -142,7 +142,7 @@ if generate_figures:
   pylab.figure(figsize=(20,8))
   n = len(responses.keys())
   for row, sr in enumerate(sorted(responses.keys())):
-    f = numpy.arange(IR_SIZE / 2 + 1) / float(IR_SIZE) * sr
+    f = numpy.arange(IR_SIZE // 2 + 1) / float(IR_SIZE) * sr
     for column, plots in enumerate([reconstruction[sr], responses[sr]]):
       pylab.subplot(2, n, column * n + row + 1)
       for r in plots:

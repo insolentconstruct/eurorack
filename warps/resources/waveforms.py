@@ -66,7 +66,7 @@ t = numpy.arange(WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE) * 2 * numpy.pi
 sine = -numpy.sin(t)
 harmonics = -numpy.sin(t) - 0.5 * numpy.sin(2 * t) + 0.5 * numpy.sin(5 * t)
 buzzy = 0
-for i in xrange(7):
+for i in range(7):
   buzzy += numpy.sin((1 + i) * t + 1.012 * i) * numpy.sin(1.123 * i)
 
 iq_waveforms = []

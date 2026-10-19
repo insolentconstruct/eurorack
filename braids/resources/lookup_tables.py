@@ -209,7 +209,7 @@ Simulates VCO detuning
 
 modified_pitch = []
 
-for i in xrange(257):
+for i in range(257):
   frequency = 440 * 2 ** ((i / 2.0 - 69) / 12.0)
   
   # Simulates an offset current in the integrator.
@@ -237,7 +237,7 @@ Bell envelopes for VOSIM and FOF
 ----------------------------------------------------------------------------"""
 
 def bell(size, ratio):
-  n = size / ratio
+  n = size // ratio
   first_half = numpy.hanning(n * 2)[:n] * 65535
   r = size - n
   second_half = numpy.hanning(r * 2)[r:] * 65535

@@ -33,8 +33,8 @@ import pylab
 
 
 WAVETABLE_SIZE = 256
-BRAIDS_WAVES = numpy.fromstring(
-  file('beads/resources/waves.bin', 'rb').read(), numpy.uint8)
+with open('beads/resources/waves.bin', 'rb') as f:
+  BRAIDS_WAVES = numpy.frombuffer(f.read(), numpy.uint8)
 
 wavetables = []
 
@@ -48,14 +48,14 @@ def sine(frequency):
 
 def comb(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine(i + 1)
   return x
 
 
 def pair(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine(i + 1) * (i + 0.5) / (n - 1.0)
     x += sine((i + 1) * 4) * (i + 0.5) / (n - 1.0) * 0.5
   return x
@@ -63,42 +63,42 @@ def pair(n):
 
 def tri(n, f=1):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine((2 * i + 1) * f) / (2 * i + 1) ** 2.0
   return x
 
 
 def tri_stack(n):
   x = 0
-  for i in xrange(n):
-    x += tri(15 + 5 * n, i + n / 3)
+  for i in range(n):
+    x += tri(15 + 5 * n, i + n // 3)
   return x
 
 
 def saw(n, f=1):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine((i + 1) * f) / (i + 1)
   return x
 
 
 def saw_stack(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += saw(1 + 6 * i, i + 1) / ((i + 1) ** 0.5)
   return x
 
 
 def square(n):
   x = 0
-  for i in xrange(n):
+  for i in range(n):
     x += sine(2 * i + 1) / (2 * i + 1)
   return x
 
 
 def quadra(n):
   x = 0
-  for harmonic, amplitude in zip(xrange(4), [1, 0.5, 1, 0.5]):
+  for harmonic, amplitude in zip(range(4), [1, 0.5, 1, 0.5]):
     x += sine(2 * n + 2 * harmonic + 1) * amplitude
   return x
 
@@ -213,7 +213,7 @@ def fm(carrier, modulator, amount):
 
 
 def make_family(fn, arguments):
-  return map(fn, arguments)
+  return [fn(argument) for argument in arguments]
 
 
 def make_braids_family(indices, fix=False):
@@ -272,7 +272,7 @@ waves += make_family(burst, [0.5, 0.4, 1/3.0, 0.25, 0.2, 0.125, 1/16.0, 1/32.0])
 waves += make_family(bandpass_formant, [16.0, 10.0, 9.0, 8.0, 6.0, 4.0, 3.0, 2.0])
 
 # F
-waves += make_family(formant_f, xrange(8))
+waves += make_family(formant_f, range(8))
 waves += make_family(digi_formant_f, [7, 6, 5, 4, 3, 2, 1, 0])
 
 # G

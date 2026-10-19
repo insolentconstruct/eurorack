@@ -55,7 +55,7 @@ for oversampled, ratio, length in configurations:
       [0, transition / ratio, 0.499 / ratio, 0.5], [1, 0])
   ir /= sum(ir)
   gain = 20 * numpy.log10(numpy.abs(numpy.fft.rfft(ir, IR_LENGTH)))
-  f = numpy.arange(IR_LENGTH / 2 + 1) / float(IR_LENGTH) * SAMPLE_RATE * ratio
+  f = numpy.arange(IR_LENGTH // 2 + 1) / float(IR_LENGTH) * SAMPLE_RATE * ratio
   bin_index = CRITICAL_FREQUENCY / ratio / SAMPLE_RATE * IR_LENGTH
   critical_gain = gain[int(round(bin_index))]
 

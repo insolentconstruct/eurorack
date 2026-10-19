@@ -39,7 +39,7 @@ Sine table.
 ----------------------------------------------------------------------------"""
 
 size = 1024
-t = np.arange(0, size + size / 4 + 1) / float(size) * np.pi * 2
+t = np.arange(0, size + size // 4 + 1) / float(size) * np.pi * 2
 lookup_tables.append(('sin', np.sin(t)))
 
 
@@ -125,7 +125,7 @@ source = [0, 0.006, 0.014, 0.16, 0.33, 0.5, 0.67, 0.84, 0.96, 0.994, 1.00]
 dest = [0, 0.1, 0.125, 0.25, 0.375, 0.5, 0.625, 0.750, 0.875, 0.9, 1.00]
 n = len(source) - 1
 pot_curve = []
-for i in xrange(513):
+for i in range(513):
   frac = i / 512.0
   n = 0
   while (frac > source[n + 1]):
@@ -159,10 +159,10 @@ def iir_lpf_poles(cutoff, order, warp=True):
   q = u + 2 * u ** 5 + 15 * u ** 9 + 150 * u ** 13
 
   poles = []
-  for i in xrange((order - 1) / 2):
+  for i in range((order - 1) // 2):
     w = (i + 1) * np.pi / order
-    num = np.sum(((-1) ** m) * q ** (m * (m + 1)) * np.sin((2 * m + 1) * w) for m in xrange(0, 7))
-    den = np.sum(((-1) ** m) * q ** (m * m) * np.cos(2 * m * w) for m in xrange(1, 7))
+    num = sum(((-1) ** m) * q ** (m * (m + 1)) * np.sin((2 * m + 1) * w) for m in range(0, 7))
+    den = sum(((-1) ** m) * q ** (m * m) * np.cos(2 * m * w) for m in range(1, 7))
     l = 2 * q ** 0.25 * num / (1 + 2 * den)
     b = ((1 - k * l ** 2) * (1 - l ** 2 / k)) ** 0.5
     c = 2 * b / (1 + l ** 2)
@@ -188,7 +188,7 @@ def warped_lp_to_ap(lp_poles, band):
 def phase_shift(x, y):
   xf = np.fft.rfft(x)
   yf = np.fft.rfft(y)
-  f = np.arange(0, FFT_SIZE / 2 + 1) / float(FFT_SIZE) * SAMPLE_RATE
+  f = np.arange(0, FFT_SIZE // 2 + 1) / float(FFT_SIZE) * SAMPLE_RATE
   error = np.mod(np.angle(yf / xf) + 2 * np.pi, 2 * np.pi)
   return f, error / np.pi * 180
 

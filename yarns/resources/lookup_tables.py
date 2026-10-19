@@ -79,7 +79,7 @@ notes = numpy.arange(
     (highest_octave + 12) * 128.0 + 16,
     16)
 pitches = a4_pitch * 2 ** ((notes - a4_midi * 128) / (128 * 12))
-increments = excursion / sample_rate * pitches
+increments = excursion // sample_rate * pitches
 
 lookup_tables_32.append(
     ('oscillator_increments', increments.astype(int)))
@@ -170,14 +170,14 @@ def EuclideanPattern(k, n):
   pattern = [[1]] * k + [[0]] * (n - k)
   while k:
     cut = min(k, len(pattern) - k)
-    k, pattern = cut, [pattern[i] + pattern[k + i] for i in xrange(cut)] + \
+    k, pattern = cut, [pattern[i] + pattern[k + i] for i in range(cut)] + \
       pattern[cut:k] + pattern[k + cut:]
   return pattern
 
 
 table = []
-for num_steps in xrange(1, 33):
-  for num_notes in xrange(32):
+for num_steps in range(1, 33):
+  for num_notes in range(32):
     num_notes = min(num_notes, num_steps)
     bitmask = 0
     for i, bit in enumerate(Flatten(EuclideanPattern(num_notes, num_steps))):
@@ -236,7 +236,7 @@ for interval in intervals:
   consonant_intervals.append((midi_ratio, consonance_score))
 
 consonance_table = [0] * 1536
-for i in xrange(1536):
+for i in range(1536):
   nearest = numpy.argmin(
       [min(abs(i - p), abs(i - p - 1536)) for (p, _) in consonant_intervals])
   index, consonance_score = consonant_intervals[nearest]

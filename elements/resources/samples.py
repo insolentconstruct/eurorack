@@ -20,14 +20,14 @@
 # Waveshaper lookup tables.
 
 import numpy
-import audio_io
+from . import audio_io
 
 boundaries = [0]
 sample_data = []
 
 TRUNCATE = False
 
-for i in xrange(1, 10):
+for i in range(1, 10):
   audio_data, sr = audio_io.ReadWavFile('elements/samples/hit_%02d.wav' % i)
   audio_data = audio_data.sum(axis=1)
   audio_data = list(audio_data)
