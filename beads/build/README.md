@@ -1,6 +1,6 @@
 # Drizzlet
 
-Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
+Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable Instruments source; not a Mutable Instruments product.
 
 **TL;DR:** Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode, on a three-page options page that saves by itself. New settings default to stock behaviour. The grain engine needs about 6,900 fewer cycles per block in the heaviest stock case, with the same sound.
 
@@ -30,7 +30,7 @@ From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 
 Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
 
-Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) builds the released source exactly as released. [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) adds the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-tuneup/README-BASE.md).
+Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) builds the vanilla source unmodified. [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) adds the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-tuneup/README-BASE.md).
 
 ## Delay mode
 
@@ -204,7 +204,7 @@ docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/b
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
-The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its previous bytes. Builds verify the firmware and WAV hashes. CI also builds the unchanged released app with GCC 4.9.3 as a golden reference (locally: `bash beads/build/golden.sh "$PWD/golden"`, needs a full Git checkout). Releases publish from `drizzlet-*` tags and include the tag's CHANGELOG.md section.
+The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its previous bytes. Builds verify the firmware and WAV hashes. CI also builds the vanilla app with GCC 4.9.3 as a golden reference (locally: `bash beads/build/golden.sh "$PWD/golden"`, needs a full Git checkout). Releases publish from `drizzlet-*` tags and include the tag's CHANGELOG.md section.
 
 ## License and credits
 
