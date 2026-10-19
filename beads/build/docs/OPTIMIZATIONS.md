@@ -23,10 +23,18 @@ Headroom gained per change, in points of the budget on the busiest stock block (
 | Grains interpolate the stored integers (integer Hermite) | 6.8 |
 | Total, module | 13.9 |
 
-The Clouds-style reverb also gains 1.0 point from its diffuser reading its tails first. GCC 10 and later were slower and changed the sound; one explicit fused multiply-add and a few explicit roundings keep the sound identical across compilers. The bootloader stays on 4.9.3.
+The Clouds-style reverb also gains 1.0 point from its diffuser reading its tails first. Plain GCC 11 to 16 builds are 5,800 to 9,300 cycles slower than GCC 9 on the stock peak (GCC 10.3, from an unverified archive, 10,200); raising the inlining limit brings GCC 11 within noise of GCC 9. One explicit fused multiply-add and a few explicit roundings make every compiler's audio and buffer hashes match GCC 9 in all 28 scenarios. The bootloader stays on 4.9.3.
+
+The same changes on the released source alone ([beads-tuneup](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup), no Drizzlet features): development board, busiest stock block, 24 scenarios, all hashes matched:
+
+| Build | Cycles | Budget |
+|---|---:|---:|
+| Released source (beads-build-kit, GCC 4.9.3) | 99,511 | 82.9% |
+| beads-tuneup (GCC 9 and the first three code changes) | 90,529 | 75.4% |
+| beads-tuneup with the integer Hermite read (not yet on that branch) | 82,911 | 69.1% |
 
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests; the emulator agreed wherever it was run (integer Hermite: 70 of 70 comparisons).
-- **Rejected:** GCC 10.3 to 15.x, ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
+- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
 
 ## Build comparison
 
