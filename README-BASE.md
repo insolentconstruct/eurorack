@@ -1,6 +1,6 @@
 # Beads base for firmware modders
 
-This branch starts at the released source in `origin/master` (`f4cfa76`).
+This branch starts at the vanilla source in `origin/master` (`f4cfa76`).
 It carries bug fixes, a reproducible compiler kit and three audio-preserving
 CPU optimizations. Controls, gestures, settings layout and default sound
 follow that source. Options that master compiles out stay compiled out.
@@ -11,7 +11,7 @@ Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
 
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|
-| Released source (GCC 4.9.3) | 99,511 | 82.9% |
+| Vanilla source (GCC 4.9.3) | 99,511 | 82.9% |
 | This branch (GCC 9 and the three optimizations) | 90,529 | 75.4% |
 | Trial with the integer Hermite read (not included yet; backport planned) | 82,911 | 69.1% |
 
