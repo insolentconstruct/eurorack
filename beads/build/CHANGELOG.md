@@ -1,16 +1,16 @@
 # Changelog
 
 ## 2026.10.11 (tag `beads-2026.10.11`)
-- First build: the released Mutable Instruments Beads source, unmodified.
+- First build: the vanilla Mutable Instruments Beads source, unmodified.
 
 ## Changes from earlier Beads firmware
 
 - **2021 forum release:** `beads.wav`, posted on the Mutable Instruments forum in April 2021.
 - **2024 recovery firmware:** `beads_patch_firmware.wav` / `beads_golden_bootloader_combo.bin`, shared in the ModWiggler Beads thread in early 2024 to fix modules stuck on boot.
 
-These are the source changes needed to reproduce the older application images exactly, not the original history. The release bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation unless a module test is named.
+These are the source changes needed to reproduce the older application images exactly, not the original history. The vanilla bootloader matches the 2024 combo bootloader byte-for-byte. Effects below come from code and emulation unless a module test is named.
 
-### 2024 recovery firmware → released source
+### 2024 recovery firmware → vanilla source
 
 One change: grain stealing in polyphonic mode (`beads/dsp/granular_player.h`).
 
@@ -39,4 +39,4 @@ Five changes:
 4. **Frozen delay slices:** during frozen playback, manual and clocked delay add hysteresis with a 0.0025 dead band to slice/TIME selection.
 5. **Clocked delay FM:** both FM inputs affect the clock divider. Exponential FM previously bent tap ratios separately. Manual delay is unchanged.
 
-None of these touch grain playback, and the 2024 firmware clicks like the 2021 release. Upgrading from 2021 to this build includes all six changes. This kit builds only the released source; patches and comparison details for the older builds are available on request.
+None of these touch grain playback, and the 2024 firmware clicks like the 2021 release. Upgrading from 2021 to this build includes all six changes. This kit builds only the vanilla source; patches and comparison details for the older builds are available on request.

@@ -1,6 +1,6 @@
 # Unofficial Beads firmware build
 
-An unofficial, community build of the released Mutable Instruments Beads source; not a Mutable Instruments product.
+An unofficial, community build of the vanilla Mutable Instruments Beads source; not a Mutable Instruments product.
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 

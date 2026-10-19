@@ -57,7 +57,7 @@ Observed upstream DSP conventions and design principles:
 - Prefer a data-format fix (for example fixed-point delay addresses) over micro-tuning.
 - Spend spare CPU on audio-rate quality; measure the worst-case block cost and leave deadline headroom.
 - Keep DSP portable and test it on the desktop.
-- (Drizzlet) This branch builds the released source unchanged: the firmware must keep matching the pinned hashes in `beads/build/expected-hashes.sha256`.
+- (Drizzlet) This branch builds the vanilla source unchanged: the firmware must keep matching the pinned hashes in `beads/build/expected-hashes.sha256`.
 
 ## Comments
 

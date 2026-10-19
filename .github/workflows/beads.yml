@@ -1,4 +1,4 @@
-name: Beads released source
+name: Beads vanilla source
 on:
   workflow_dispatch:
   push:
