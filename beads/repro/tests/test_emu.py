@@ -264,6 +264,50 @@ class Schema(unittest.TestCase):
         self.assertGreater(last, window_end)
         self.assertLessEqual(last, s.seconds)
 
+    def test_latched_silent_window_is_in_the_dead_band_for_both_knobs(self):
+        # DENSITY adds knob and CV; the firmware's dead band is 0.48 to 0.52.
+        # A noon knob reads 0.4711 on the module and 0.5 in the emulator.
+        s = scenario.load(helpers.HERE / "scenarios/behaviours/"
+                          "u-latched-clocked.toml")
+        silent = next(r for r in s.rules if r["rule"] == "silent")["win"]
+        levels = sorted((e["t"], e["level"]) for e in s.events
+                        if e["kind"] == "cv" and e["channel"] == "density")
+
+        def level_at(t):
+            return [v for ts, v in levels if ts <= t][-1]
+        for knob in (0.4711, 0.5):
+            for t in silent:
+                self.assertGreater(knob + level_at(t), 0.48 + 0.004)
+                self.assertLess(knob + level_at(t), 0.52 - 0.004)
+            for win in next(r for r in s.rules
+                            if r["rule"] == "rate_divided")["wins"]:
+                self.assertLess(knob + level_at(win[0]), 0.48 - 0.1)
+
+    def test_delay_scenarios_freeze_a_loop_with_content(self):
+        for medium in range(3):
+            s = scenario.load(helpers.HERE / "scenarios/beta/"
+                              f"beta-media{medium}-delay.toml")
+            freeze = next(e for e in s.events if e["kind"] == "hold")["t0"]
+            noise = next(layer for layer in s.generator["layers"]
+                         if layer["kind"] == "noise")
+            # The frozen slice is the newest one while TIME is at its minimum.
+            self.assertEqual(s.panel["time"], 0.0)
+            self.assertGreaterEqual(noise["stop"], freeze)
+            self.assertLess(noise["start"], freeze - 0.5)
+            self.assertLessEqual(next(
+                e["level"] for e in s.events
+                if e["kind"] == "cv" and e["channel"] == "time"), -0.5)
+
+    def test_assign_reverb_runs_dense_grains_over_the_bursts(self):
+        s = scenario.load(helpers.HERE / "scenarios/beta/"
+                          "beta-assign-reverb.toml")
+        density = next(e["level"] for e in s.events
+                       if e["kind"] == "cv" and e["channel"] == "density")
+        self.assertGreaterEqual(density, 0.4)
+        self.assertTrue(any(e["kind"] == "hold" and e["channel"] == "seed"
+                            and e["t0"] <= 3.0 and e["t1"] >= 24.0
+                            for e in s.events))
+
 
 if __name__ == "__main__":
     unittest.main()

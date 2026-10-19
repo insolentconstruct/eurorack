@@ -319,8 +319,142 @@ class Beta(unittest.TestCase):
                            np.zeros((SR, 2)), SR, offset_s=0.5)[0]
         self.assertEqual(r["verdict"], "ERROR")
 
+    def test_crosstalk_tolerates_a_lone_full_scale_sample(self):
+        x = np.zeros((SR * 20, 2))
+        x[3 * SR:7 * SR, 0] = tone(997, 4.0, 0.1)
+        x[11 * SR:15 * SR, 1] = tone(997, 4.0, 0.1)
+        ctx = {"noise_dbfs": [-100, -100]}
+        x[5 * SR, 0] = 1.0  # limiter overshoot, clamped by the converter
+        r = rules.evaluate([dict(rule="dry_crosstalk")], x, SR, ctx=ctx)[0]
+        self.assertEqual(r["verdict"], "PASS", r)
+        x[3 * SR:7 * SR:50, 0] = 1.0  # 2 % of the window
+        r = rules.evaluate([dict(rule="dry_crosstalk")], x, SR, ctx=ctx)[0]
+        self.assertEqual(r["verdict"], "INCONCLUSIVE", r)
+
     def test_random_side_with_no_grains_is_inconclusive(self):
         r = one("random_side_statistics", np.zeros((SR * 30, 2)), control="size")
+        self.assertEqual(r["verdict"], "INCONCLUSIVE")
+
+
+def clouds_render(hf_gain=0.9, fade=True, pulse=0.0, onset=True):
+    """150 s of white noise with the A/B/A style switches at 45 s and 105 s.
+    State B (45 to 105 s) scales the 4 to 10 kHz band by `hf_gain`. With
+    `fade` the output goes silent for 40 ms at each switch, as the firmware
+    does; `onset` starts a loud burst 44 ms after the switch; `pulse` adds a
+    single sample of that many times the signal's rms inside the fade."""
+    n = 150 * SR
+    rng = np.random.Generator(np.random.PCG64(7))
+    white = rng.uniform(-1, 1, (n, 2)) * 0.08
+    spectrum = np.fft.rfft(white, axis=0)
+    f = np.fft.rfftfreq(n, 1 / SR)
+    spectrum[(f >= 4000) & (f < 10000)] *= hf_gain
+    state_b = np.fft.irfft(spectrum, n, axis=0)
+    x = white.copy()
+    x[45 * SR:105 * SR] = state_b[45 * SR:105 * SR]
+    for t in (45, 105):
+        a = t * SR
+        if fade:
+            ramp = int(0.01 * SR)
+            x[a:a + ramp] *= np.linspace(1, 0, ramp)[:, None]
+            x[a + ramp:a + int(0.044 * SR)] = 0
+        if onset:
+            k = int(0.01 * SR)
+            x[a + int(0.044 * SR):a + int(0.044 * SR) + k] = (
+                rng.uniform(-1, 1, (k, 2)) * 0.8)
+        if pulse:
+            x[a + int(0.005 * SR), 0] += pulse * 0.046
+    return x
+
+
+CLOUDS_CTX = dict(start_epoch=0.0, transitions=dict(switches=[
+    dict(value=0xa2, before_epoch=45.0, after_epoch=45.005, rc=0),
+    dict(value=0, before_epoch=105.0, after_epoch=105.005, rc=0)]))
+
+
+class CloudsAB(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.good = clouds_render()
+
+    def run_rule(self, x):
+        return rules.evaluate([dict(rule="clouds_ab")], x, SR,
+                              ctx=CLOUDS_CTX)[0]
+
+    def test_a_working_switch_passes_with_a_grain_onset_after_the_fade(self):
+        r = self.run_rule(self.good)
+        self.assertEqual(r["verdict"], "PASS", r)
+        # The fade to digital silence is a floored dip, and the hard onset
+        # after it is outside the fade, so it is not a click.
+        self.assertEqual(r["transitions"][1]["fade_dip_db"], beta_rules.DB_FLOOR)
+        self.assertLess(r["hf_change_db"], -0.5)
+
+    def test_a_lone_full_scale_sample_is_not_clipping(self):
+        x = self.good.copy()
+        x[20 * SR, 0] = 1.0
+        x[70 * SR, 1] = -1.0
+        self.assertEqual(self.run_rule(x)["verdict"], "PASS")
+        x[20 * SR:140 * SR:200, 0] = 1.0  # 0.25 % of the samples
+        r = self.run_rule(x)
+        self.assertEqual(r["verdict"], "INCONCLUSIVE", r)
+
+    def test_a_switch_that_changes_nothing_fails(self):
+        r = self.run_rule(clouds_render(hf_gain=1.0))
+        self.assertEqual(r["verdict"], "FAIL", r)
+        self.assertGreater(r["hf_change_db"], -0.5)
+
+    def test_a_switch_without_a_fade_fails(self):
+        r = self.run_rule(clouds_render(fade=False, onset=False))
+        self.assertEqual(r["verdict"], "FAIL", r)
+        self.assertEqual({t["verdict"] for t in r["transitions"]}, {"FAIL"})
+
+    def test_a_click_inside_the_fade_fails(self):
+        r = self.run_rule(clouds_render(pulse=40.0))
+        self.assertEqual(r["verdict"], "FAIL", r)
+        self.assertEqual([t["verdict"] for t in r["transitions"]],
+                         ["FAIL", "FAIL"])
+        self.assertGreater(r["transitions"][0]["step_db"],
+                           beta_rules.STEP_MAX_DB)
+
+    def test_assign_effect_of_a_silent_tail_is_floored(self):
+        x = np.zeros((27 * SR, 2))
+        for t in (3, 11, 19):
+            x[t * SR:t * SR + SR] = 0.1 * tone(300, 1.0, 1.0)[:, None]
+        x[20 * SR + SR // 2:24 * SR] = 0.001 * tone(300, 3.5, 1.0)[:, None]
+        r = one("assign_cv_effect", x, destination="reverb")
+        self.assertEqual(r["verdict"], "MEASURE")
+        self.assertEqual(r["tail_rms"][0], 0.0)
+        self.assertLess(r["effect_db"], 125)
+
+
+class LoopPeriod(unittest.TestCase):
+    def loop(self, gains, period=0.3, seconds=5.0):
+        """Noise bursts that repeat every `period` s, repeat k scaled by
+        gains[k % len(gains)]."""
+        rng = np.random.Generator(np.random.PCG64(3))
+        slot = int(period * SR)
+        pattern = rng.uniform(-1, 1, slot) * np.repeat(
+            rng.uniform(0.05, 1, slot // 480 + 1), 480)[:slot]
+        x = np.concatenate([pattern * gains[k % len(gains)]
+                            for k in range(int(seconds / period))])
+        return x * 0.3
+
+    def test_the_period_is_the_first_repeat_not_a_multiple(self):
+        # Repeats alternate 1.0 and 0.8, so the autocorrelation at twice the
+        # period is the higher peak: an argmax reads 0.6 s.
+        x = self.loop([1.0, 0.8])
+        r = one("loop_period", x, win=[0.2, 4.7], period=0.3, tol=0.03)
+        self.assertEqual(r["verdict"], "PASS", r)
+        self.assertAlmostEqual(r["period_s"], 0.3, delta=0.01)
+
+    def test_a_longer_loop_is_reported_as_longer(self):
+        x = self.loop([1.0], period=0.6)
+        r = one("loop_period", x, win=[0.2, 4.7], period=0.3, tol=0.03)
+        self.assertEqual(r["verdict"], "FAIL", r)
+        self.assertAlmostEqual(r["period_s"], 0.6, delta=0.01)
+
+    def test_a_silent_loop_is_inconclusive(self):
+        r = one("loop_period", np.zeros(5 * SR), win=[0.2, 4.7], period=0.3,
+                tol=0.03)
         self.assertEqual(r["verdict"], "INCONCLUSIVE")
 
 

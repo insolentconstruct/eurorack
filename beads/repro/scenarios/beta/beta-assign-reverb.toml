@@ -39,7 +39,7 @@ dur_s = 0.2
 kind = "cv"
 channel = "density"
 t = 0.0
-level = 0.15
+level = 0.45
 
 [[events]]
 kind = "hold"

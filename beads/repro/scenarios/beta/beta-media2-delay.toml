@@ -1,7 +1,10 @@
 # Copyright 2026 Insolent Construct.
 # Author: Insolent Construct
 name = "beta-media2-delay"
-description = """The u-delay scenario with the vintage digital medium stored."""
+description = """The u-delay scenario with the vintage digital medium stored, TIME held at its\
+minimum (CV -0.6) and the noise running up to the freeze. FREEZE loops the\
+newest slice, one clock interval long (0.3 s); at noon TIME reads a slice from\
+the middle of the medium's buffer, which is empty and differs per medium."""
 seconds = 30
 tiers = ["emulator", "module"]
 behaviours = ["delay-echo", "delay-loop", "delay-pitch-shift"]
@@ -11,6 +14,7 @@ delay_mode = "always"
 
 [panel]
 size = 1.0
+time = 0.0
 media = "vintage_digital"
 
 [stimulus]
@@ -31,8 +35,14 @@ kind = "noise"
 amp = 0.1
 seed = 20261017
 start = 14.3
-stop = 16.4
+stop = 17.0
 fade_s = 0.01
+
+[[events]]
+kind = "cv"
+channel = "time"
+t = 0.0
+level = -0.6
 
 [[events]]
 kind = "trigger"

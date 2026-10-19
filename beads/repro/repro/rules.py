@@ -388,13 +388,20 @@ def _age_increasing(x, sr, p, offset_s=0.0, ctx=None):
 def _loop_period(x, sr, p, offset_s=0.0, ctx=None):
     """Autocorrelation of the 2 ms envelope: the period of a repeating loop.
     ac[k]/ac[0] near 1 is an exact repeat; a silent window scores near 0 and
-    its argmax is arbitrary, so a low peak is INCONCLUSIVE."""
+    its argmax is arbitrary, so a low peak is INCONCLUSIVE. A loop that repeats
+    exactly also repeats at every multiple of its period, where the peaks are
+    equal to within noise, so the period is the first peak within 10 % of the
+    highest, not the highest."""
     s = mono(seg(x, sr, _shift(p["win"], offset_s)))
     e, w = env(s, sr, 0.002)
     e = e - e.mean()
     ac = np.correlate(e, e, "full")[len(e) - 1:]
     lo, hi = int(0.1 * sr / w), int(1.5 * sr / w)
-    k = lo + int(np.argmax(ac[lo:hi]))
+    best = ac[lo:hi].max()
+    k = next((lo + i for i in range(1, hi - lo - 1)
+              if ac[lo + i] >= 0.9 * best and ac[lo + i] >= ac[lo + i - 1]
+              and ac[lo + i] >= ac[lo + i + 1]),
+             lo + int(np.argmax(ac[lo:hi])))
     per = k * w / sr
     peak = float(ac[k] / ac[0]) if ac[0] > 0 else 0.0
     verdict = (INCONCLUSIVE if peak < p.get("min_ac_peak", 0.3)
@@ -529,10 +536,10 @@ def clip_check(x, sr, p, offset_s, raw, raw_sr):
     """None, or an INVALID result when more than 0.1% of the samples in the
     rule's windows reached full scale in the raw capture."""
     clipped = sum(int(np.sum(np.abs(seg(raw, raw_sr, _shift(w, offset_s)))
-                             >= 0.999)) for w in _windows(p))
+                             >= beta_rules.CLIP_LEVEL)) for w in _windows(p))
     total = sum(seg(raw, raw_sr, _shift(w, offset_s)).size
                 for w in _windows(p)) or 1
-    if clipped > 0.001 * total:
+    if clipped > beta_rules.CLIP_FRACTION * total:
         return dict(verdict=INVALID,
                     error=f"recording clipped at the input: {clipped} samples "
                           "in the rule's windows")

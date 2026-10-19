@@ -34,6 +34,31 @@ import numpy as np
 
 from repro.scales import SCALES, TRIGGERS  # noqa: F401
 
+# A render is clipped when more than 0.1 % of its samples reach full scale (the
+# same limit as rules.clip_check). The output limiter lets a lone sample
+# overshoot and the converter clamps it, so a handful of full-scale samples is
+# not a clipped render.
+CLIP_LEVEL = .999
+CLIP_FRACTION = .001
+
+
+# clouds_ab thresholds (decibels).
+HF_CHANGE_MIN_DB = .5
+MAX_CONTROL_VARIATION_DB = 1.
+STEP_MAX_DB = 20.
+DB_FLOOR = -120.
+SILENCE = 1e-6  # -120 dBFS: below this a level is digital silence
+
+
+def db(value, reference):
+    """20 log10(value / reference), floored: a fade to digital silence is a
+    large dip, not minus infinity."""
+    return float(max(20*np.log10(max(value, 1e-15)/reference), DB_FLOOR))
+
+
+def clipped(x):
+    return bool(np.mean(np.abs(x) >= CLIP_LEVEL) > CLIP_FRACTION)
+
 
 def dry_crosstalk(audio, sr, *, noise_dbfs):
     x=np.asarray(audio,float)
@@ -41,7 +66,7 @@ def dry_crosstalk(audio, sr, *, noise_dbfs):
     rows=[]
     for driven,a,b in ((0,3.,7.),(1,11.,15.)):
         y=x[round(a*sr):round(b*sr)]
-        if len(y)!=round((b-a)*sr) or np.max(abs(y),initial=0)>=.999:
+        if len(y)!=round((b-a)*sr) or clipped(y):
             return dict(rule='dry_crosstalk',verdict='INCONCLUSIVE',reason='coverage or clipping')
         rms=np.sqrt(np.mean(y*y,axis=0))
         if rms[driven]<.005:
@@ -56,7 +81,7 @@ def dry_crosstalk(audio, sr, *, noise_dbfs):
 def clouds_ab(audio,sr,transitions,start_epoch):
     x=np.asarray(audio,float)
     def invalid(reason): return dict(rule='clouds_ab',verdict='INCONCLUSIVE',reason=reason)
-    if x.ndim!=2 or x.shape[1]!=2 or not np.isfinite(x).all() or len(x)<149*sr or np.max(abs(x),initial=0)>=.999:
+    if x.ndim!=2 or x.shape[1]!=2 or not np.isfinite(x).all() or len(x)<149*sr or clipped(x):
         return invalid('invalid, clipped or incomplete audio')
     switches=transitions.get('switches',[])
     if len(switches)!=2 or [r.get('value') for r in switches]!=[0xa2,0]: return invalid('missing A/B/A switches')
@@ -72,13 +97,16 @@ def clouds_ab(audio,sr,transitions,start_epoch):
         if low<1e-12 or high<1e-12: return invalid('unresolved HF bands')
         bands.append(high/low)
     control_variation=float(abs(10*np.log10(bands[1]/bands[0])))
+    # Two windows of the same state that disagree this much say the grains are
+    # too few to compare states, not that the firmware misbehaves.
+    if control_variation>MAX_CONTROL_VARIATION_DB: return invalid('no-switch windows disagree')
     bands=bands[1:]
     # A no-switch A window supplies a baseline for stochastic grain-envelope dips.
     def dip_db(y,base):
         width=max(1,round(.005*sr)); n=len(y)//width
         if n<1: raise ValueError('short fade window')
         rms=np.sqrt(np.mean(y[:n*width].reshape(n,width,2)**2,axis=(1,2)))
-        return float(20*np.log10(max(float(rms.min()),1e-15)/base))
+        return db(float(rms.min()),base)
     control_base=float(np.sqrt(np.mean(x[11*sr:12*sr]**2)))
     if control_base<.0001: return invalid('quiet no-switch control')
     control_dip=dip_db(x[12*sr:19*sr],control_base)
@@ -92,16 +120,30 @@ def clouds_ab(audio,sr,transitions,start_epoch):
         rms=np.sqrt(np.mean(y[:n*width].reshape(n,width,2)**2,axis=(1,2)))
         base=float(np.sqrt(np.mean(x[round((a-1)*sr):round(a*sr)]**2)))
         if base<.0001: return invalid('quiet switch reference')
-        dip=float(20*np.log10(max(float(rms.min()),1e-15)/base))
-        peak=float(np.max(abs(y))); crest=float(20*np.log10(max(peak,1e-15)/base))
-        step=float(np.max(abs(np.diff(y,axis=0)),initial=0))
-        rows.append(dict(fade_dip_db=dip,crest_db=crest,max_sample_step=step,
-                         control_dip_db=control_dip,verdict='PASS' if dip<=min(-6,control_dip-3.) and crest<=20 and step<=.25 else 'FAIL'))
+        dip=db(float(rms.min()),base)
+        # The fade is the run of bins around the quietest one that sit 6 dB or
+        # more under the reference. Click checks look at the fade going down
+        # and its first 10 ms of silence only: the grain that starts once the
+        # style has changed begins with a hard onset of its own, which is not
+        # the fade.
+        lo=hi=int(np.argmin(rms)); quiet=base*10**(-6/20)
+        while lo>0 and rms[lo-1]<=quiet: lo-=1
+        while hi<n-1 and rms[hi+1]<=quiet: hi+=1
+        z=y[max(0,lo-3)*width:min(n,lo+3)*width]
+        peak=float(np.max(abs(z))); crest=db(peak,base)
+        step=float(np.max(abs(np.diff(z,axis=0)),initial=0))
+        step_db=db(step,base)
+        rows.append(dict(fade_dip_db=dip,crest_db=crest,max_sample_step=step,step_db=step_db,
+                         control_dip_db=control_dip,
+                         verdict='PASS' if dip<=min(-6,control_dip-3.) and crest<=20 and step_db<=STEP_MAX_DB else 'FAIL'))
     change=float(10*np.log10(bands[1]/np.sqrt(bands[0]*bands[2])))
     recovery=float(abs(10*np.log10(bands[2]/bands[0])))
-    passed=change<=-(control_variation+1.) and recovery<=3. and all(r['verdict']=='PASS' for r in rows)
+    # The state change moves the high band by about a decibel on this noise, so
+    # the bar is half a decibel and beyond the scatter between no-switch windows.
+    hf_max=-max(HF_CHANGE_MIN_DB,control_variation)
+    passed=change<=hf_max and recovery<=3. and all(r['verdict']=='PASS' for r in rows)
     return dict(rule='clouds_ab',verdict='PASS' if passed else 'FAIL',hf_ratios=bands,hf_change_db=change,
-                recovery_db=recovery,transitions=rows,thresholds=dict(hf_change_max_db=-(control_variation+1.),control_variation_db=control_variation,fade_margin_db=3.,recovery_db=3.,fade_dip_db=-6.,crest_db=20.,sample_step=.25),
+                recovery_db=recovery,transitions=rows,thresholds=dict(hf_change_max_db=hf_max,control_variation_db=control_variation,fade_margin_db=3.,recovery_db=3.,fade_dip_db=-6.,crest_db=20.,step_db=STEP_MAX_DB),
                 limitation='provisional regression thresholds; switch interval includes transport and guard time')
 
 
@@ -159,8 +201,8 @@ def measure(audio,sr,row):
                 return float(np.sqrt(np.mean(part**2))) if len(part)==round((b-a)*sr) else 0.
             energy.append(rms(t,t+1)); tail.append(rms(t+1,t+5))
         destination=row['assignable_cv_destination']
-        db=lambda a,b: float(20*np.log10(max(a,1e-12)/max(b,1e-12)))
-        effect=db(energy[-1],energy[0]) if destination==1 else db(tail[-1],tail[0])
+        ratio_db=lambda a,b: db(max(a,SILENCE),max(b,SILENCE))
+        effect=ratio_db(energy[-1],energy[0]) if destination==1 else ratio_db(tail[-1],tail[0])
         return dict(rule='assign_cv_effect',destination=destination,verdict='MEASURE' if max(energy)>1e-4 else 'INCONCLUSIVE',
                     levels=(-.5,0.,.5),burst_rms=energy,tail_rms=tail,effect_db=effect,
                     expected='dry/wet changes burst energy' if destination==1 else 'increased '+('feedback recirculation' if destination==0 else 'reverb tail'),

@@ -2,10 +2,13 @@
 # Author: Insolent Construct
 name = "u-latched-clocked"
 description = """SEED latched (locked on). An 8 Hz SEED clock from 2 s to the end, so it\
-outlasts the last divider window; DENSITY CV 0 gives no grains, +0.25 and\
-+0.5 raise the probability, -0.34 and -0.22 divide the clock by 3 and by 6.\
-(DENSITY fully counter-clockwise does not divide: the ratio is 1 there and\
-grows toward noon, so the windows sit mid-range.)"""
+outlasts the last divider window; DENSITY CV +0.015 gives no grains, +0.25\
+and +0.5 raise the probability, -0.34 and -0.22 divide the clock by 3 and by\
+6. The knob and CV add. The dead band, where the clock neither divides nor\
+fires, is 0.48 to 0.52, and a knob at noon reads 0.4711 on the module and\
+0.5 in the emulator, so the CV puts both inside it. (DENSITY fully\
+counter-clockwise does not divide: the ratio is 1 there and grows toward\
+noon, so the divider windows sit mid-range.)"""
 seconds = 24
 tiers = ["emulator", "module"]
 behaviours = ["latched-silent", "latched-probability", "latched-divider"]
@@ -30,7 +33,7 @@ times = { start = 2.0, step = 0.125, count = 176 }
 kind = "cv"
 channel = "density"
 t = 2.0
-level = 0.0
+level = 0.015
 
 [[events]]
 kind = "cv"
@@ -60,7 +63,7 @@ level = -0.22
 kind = "cv"
 channel = "density"
 t = 22.0
-level = 0.0
+level = 0.015
 
 [[rules]]
 rule = "silent"
