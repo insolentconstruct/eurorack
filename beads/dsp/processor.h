@@ -34,6 +34,9 @@
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
 #include "beads/dsp/fx/diffuser.h"
+#ifdef BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER
+#include "beads/dsp/fx/feedback_diffuser.h"
+#endif
 #include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/fx/wow_and_flutter.h"
 
@@ -261,6 +264,9 @@ class Processor {
   Diffuser diffuser_;
   uint16_t diffuser_buffer_[kDiffuserBufferSize];
   bool clouds_style_;
+#ifdef BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER
+  FeedbackDiffuser feedback_diffuser_;
+#endif
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };
