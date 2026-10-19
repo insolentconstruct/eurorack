@@ -37,7 +37,9 @@ if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then
 fi
 latest=true
 [[ $prerelease == false ]] || latest=false
-assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
+assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt"
+  "$dir/OPTIONS.md" "$dir/options-guide.svg" "$dir/options-guide-mobile.svg"
+  "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
 

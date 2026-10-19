@@ -383,4 +383,8 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
                     archive.read(guide)
                     == Path("beads/build/docs", guide).read_bytes()
                 )
+    listed = [line.split()[1] for line in (out / "SHA256SUMS").read_text().splitlines()]
+    for guide in ("OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"):
+        assert guide in listed, guide
+        assert (out / guide).read_bytes() == Path("beads/build/docs", guide).read_bytes()
 print("Release ZIPs include the generated guides: PASS")

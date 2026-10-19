@@ -26,6 +26,7 @@ From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 
 - `<tag>-wav.zip`: audio update, with `README.txt`, `NOTICE.txt` and the options guides.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
+- `options-guide.svg`, `options-guide-mobile.svg` and `OPTIONS.md`: the options guides, also on their own.
 
 Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
 
