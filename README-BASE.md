@@ -6,6 +6,15 @@ CPU optimizations. Controls, gestures, settings layout and default sound
 follow that source. Options that master compiles out stay compiled out.
 Hardware operation has not been tested as part of this port.
 
+CPU, busiest stock audio block on a development board (same die and clock as
+Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
+
+| Build | Cycles of 120,000 | Budget |
+|---|---:|---:|
+| Released source (GCC 4.9.3) | 99,511 | 82.9% |
+| This branch (GCC 9 and the three optimizations) | 90,529 | 75.4% |
+| Trial with the integer Hermite read (not included yet; backport planned) | 82,911 | 69.1% |
+
 Changes from master, one line per change:
 
 - Bound frozen delay slices to the recording: negative FM cannot read outside the buffer ([#33](https://github.com/insolentconstruct/eurorack/issues/33)).
