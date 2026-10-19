@@ -6,7 +6,7 @@ What Drizzlet changed to run faster or smaller, what was measured and rejected, 
 
 - **Compiler:** GCC 9.3.1 instead of 4.9.3, chosen from a sweep of GCC 4.9 to 15. GCC 8 was runner-up (smaller image, less headroom); GCC 10 and later were slower and changed the sound. The bootloader stays on 4.9.3.
 - **Code:** three small bit-identical changes: mono/stereo chosen once per block (template), grain output summed in a local frame, and an unsigned modulo for the delay-line read index. The stock worst case (q3 stereo, 32 grains active) goes from 97,255 to 90,333 cycles per block (75.3% of the 120,000 budget); the worst block of all 28 scenarios is 92,486 (77.1%). A fourth, the Clouds-style diffuser reading its delay-line tails before filtering, saves about 1,240 cycles on the Clouds-style worst block (93,030 to 91,796; stock unchanged) with identical output.
-- **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulated scenarios. The code changes matched in 28 of 28 Seed3 hashes, 20 of 20 emulator scenarios and 13 of 13 long runs (max error 0).
+- **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulated scenarios. The first three code changes matched in 28 of 28 Seed3 hashes, 20 of 20 emulator scenarios and 13 of 13 long runs (max error 0); the diffuser change matched 28 of 28 Seed3 hashes and the host tests (emulator not run).
 - **Rejected:** GCC 10.3 to 15.x, ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
 - **Caveat:** timings are DSP-only, from a separate development board (same die and clock), not the module. Whole-callback peaks on the module are in [TESTING.md](TESTING.md): 60% to 90.5% of the budget, no underruns.
 
