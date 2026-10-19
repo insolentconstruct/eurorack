@@ -573,9 +573,14 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     original_test = test.read_text()
     if suite != 'wavetable':
       main = original_test.index('int main(')
-      first = re.compile(r'\n  Test\w+\(\);').search(
-          original_test, main).group(0)[1:]
-      cut = original_test.index(first, main)
+      table = original_test.find('const HostTest tests[]', main)
+      if table >= 0:
+        # Table-style main (clouds_test.cc, delay_mode_test.cc).
+        cut = original_test.rindex('\n', 0, table) + 1
+      else:
+        first = re.compile(r'\n  Test\w+\(\);').search(
+            original_test, main).group(0)[1:]
+        cut = original_test.index(first, main)
       test.write_text(original_test[:cut] + name + '();\n' +
           '  return test_checker.failures() ? 1 : 0;\n}\n')
     log = out / ('%02d-%s.log' % (index, name))
