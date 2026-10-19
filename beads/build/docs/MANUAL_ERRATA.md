@@ -14,6 +14,8 @@ Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutab
 
 ## Changed by the April 2021 update
 
+The update's [release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572) are Mutable Instruments' list of changes from the factory firmware ([CHANGELOG.md](../CHANGELOG.md) has a summary). These are the ones the manual contradicts or leaves out.
+
 - **Unfreezing:** recording resumes with a short crossfade into the current input. It does not replay the old buffer tail. <!-- manual.md:47; beads/dsp/delay_line.h:180,296-322; release notes post 1 -->
 - **Synth banks:** FEEDBACK (and its assigned CV) selects **12 banks** of 16 waveforms, not 8; four FM banks were added. <!-- manual.md:182; beads/dsp/synth.h:43; beads/dsp/synth.cc:82; release notes post 1 -->
 - **Shortest grains:** grains near the reverse/forward point of SIZE (about 10:30) can be much shorter than 30 ms: about 8 ms requested, 10–20 ms heard depending on SHAPE. <!-- manual.md:91; index.md:51; beads/dsp/granular_player.h:97-104; beads/dsp/grain_envelope.h -->
@@ -23,6 +25,8 @@ Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutab
 - **Manual gain display:** while setting manual gain ([A] + FEEDBACK), the quality LED becomes a green-to-red gain indicator. <!-- manual.md:44; beads/ui.cc:152-153,186-192 -->
 - **Manual gain clipping:** with manual gain, overloads hard-clip in the digital modes, soft-clip in Scorched cassette, and use a blend in Sunny tape. <!-- manual.md:44; beads/beads.cc:281-287; beads/gain_control.cc:133-181 -->
 - **Granular/delay switch:** turning SIZE into or out of delay fades the wet signal out and back in, taking about 1.5 s. <!-- manual.md:93,144; beads/dsp/processor.cc:37-38,112-119,205-222 -->
+- **Reverb at minimum:** turning REVERB fully counterclockwise stops sending signal into the reverb; the tail already in it fades out instead of being cut. <!-- manual.md:127; beads/dsp/fx/reverb.h:98-101 -->
+- **Clocked probability:** with a clock in SEED, DENSITY from 12 o'clock to fully clockwise sets the trigger probability on a quadratic curve, so sparse grains are easy to get even from a fast clock. <!-- manual.md:69; beads/dsp/trigger_generator.cc:135-138 -->
 
 ## Not in the manual
 

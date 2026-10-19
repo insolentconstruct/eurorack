@@ -2,6 +2,8 @@
 
 What Drizzlet changed to run faster or smaller, what was measured and rejected, and the rules for future changes. Audio-path work is judged on cycles saved on a measured worst case, and on whether the sound changes.
 
+Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overload (crackles on the left channel in 48 kHz stereo) "through several code optimizations having no negative impact on the module’s functionality" ([release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572)).
+
 ## TL;DR
 
 On the module, with the panel settings of the CPU tests, the busiest stock block now takes 94,311 of the 120,000 cycles available (78.6%). The vanilla source takes 110,947 (92.5%) on the same test. The sound is unchanged.

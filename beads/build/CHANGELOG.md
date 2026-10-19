@@ -39,6 +39,7 @@ heading; a release turns it into a dated heading.
 
 ## Earlier Mutable Instruments firmware
 
+- **Factory firmware:** what modules shipped with at launch. We have no copy; Mutable Instruments' release notes for the 2021 update list what changed (below).
 - **2021 forum release:** `beads.wav`, posted on the Mutable Instruments forum in April 2021.
 - **2024 recovery firmware:** `beads_patch_firmware.wav` / `beads_golden_bootloader_combo.bin`, shared in the ModWiggler Beads thread in early 2024 to fix modules stuck on boot.
 
@@ -53,6 +54,14 @@ In emulation with identical input and state, outputs are bit-identical at interv
 On our module the 2021 and 2024 firmware clicked at DENSITY 0.98 and PITCH +24 semitones; the vanilla source and Drizzlet did not (145 and 164 clicks against 0; recipe and counts in TESTING.md). A desktop run of both schedulers produced no clicks, so that test found no click in the DSP itself. CPU timing is the working hypothesis: the 2024 scheduler costs more in that range, but it has not been timed on the module.
 
 Monophonic mode is compiled out in these older builds (`ENABLE_ADVANCED_FEATURES` is commented out).
+
+### Factory firmware → 2021 forum release
+
+From Mutable Instruments' [release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572) (April 2021), condensed; this list is theirs, not ours.
+
+- **Audio:** a CPU overload causing crackles on the left channel in 48 kHz stereo, with some SIZE and DENSITY settings, fixed "through several code optimizations having no negative impact on the module’s functionality". A longer crossfade when recording resumes after FREEZE. Smooth transitions between TIME factors in delay mode, crossfades when an external clock changes the delay time, and slices that finish before TIME picks the next one. Tamer modulation of the secondary delay tap. A fade between granular and delay mode. More cautious grain stealing. Less bursty power draw, removing a whine with some power supplies. Interpolated pitch for the dry wavetable signal, and better band-limiting for high notes.
+- **Controls:** a smaller notch at noon on the attenurandomizers, and a smaller SIZE deadband at 10:30 for shorter grains. With no CV patched, the PITCH knob still transposes with its attenurandomizer at either extreme. REVERB at minimum stops the send, so the tail fades. The wavetable root is an octave lower. No software low-pass on PITCH CV. A quadratic probability curve for clocked DENSITY. Less hysteresis on quantized CVs. FEEDBACK range up 30%.
+- **New:** four FM wavetables; [M] + FREEZE toggles buffer autosave; FREEZE dims while the buffer saves; the SIZE attenurandomizer filters the delay; the quality LED shows the overwrite point and the manual gain; manual-gain clipping depends on the recording quality.
 
 ### 2021 forum release → 2024 recovery firmware
 

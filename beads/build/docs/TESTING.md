@@ -57,7 +57,7 @@ Feature checks beyond the table:
 
 ## Coverage of the manual
 
-The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 110 of them.
+The developers listed 117 behaviours from the Beads manual, the module page and the [April 2021 update notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572). Host tests check 110 of them.
 
 | Area | Behaviours | Host tests | Not covered by host tests |
 |---|---:|---:|---|

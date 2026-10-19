@@ -28,7 +28,7 @@ From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
 - `options-guide.svg`, `options-guide-mobile.svg` and `OPTIONS.md`: the options guides, also on their own.
 
-Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
+Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware back to the factory release: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
 
 Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) builds the vanilla source unmodified. [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) adds the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-tuneup/README-BASE.md).
 
