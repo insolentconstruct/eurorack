@@ -119,7 +119,7 @@ jobs:
             beads/repro/repro.sh run "$set" --tier emulator --elf elf/app.elf \
               --shard ${{ matrix.shard }}/4 --jobs 4 --out repro-out || status=1
           done
-          exit ${status:-0}
+          exit "${status:-0}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -154,7 +154,7 @@ jobs:
               -v "$PWD:/src" -w /src drizzlet-repro \
               sh -c "PYTHONPATH=beads/repro exec python3 -m repro merge $set --tier emulator --out repro-merged shards/*" || fail=1
           done
-          exit $fail
+          exit "$fail"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
