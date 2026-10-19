@@ -5,7 +5,7 @@ heading; a release turns it into a dated heading.
 
 ## Unreleased
 - Clouds-style reverb uses less CPU; the sound is unchanged.
-- Grains use less CPU (about 7,000 cycles of 120,000 per block in the busiest case); the sound is unchanged.
+- Grains use less CPU (about 6% of the audio budget in the busiest case); the sound is unchanged.
 
 ## 2026.10.18 (tag `drizzlet-2026.10.18`, beta 1 "Mist")
 - New options page layout on three pages. Page 1 (REVERB LED): pitch scale, stereo width, reverb character. Page 2 (FEEDBACK LED): delay mode. Page 3 (DRY/WET LED): wavetable synth (formerly self-play) and limiter. Changes save by themselves about a second after you stop turning; close by holding [M] for three seconds or pressing another button. Values show on the quality LED [A] in green, yellow and red, steady or blinking; stock values are steady green.

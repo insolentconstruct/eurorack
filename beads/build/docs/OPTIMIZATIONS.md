@@ -4,11 +4,29 @@ What Drizzlet changed to run faster or smaller, what was measured and rejected, 
 
 ## TL;DR
 
-- **Compiler:** GCC 9.3.1 instead of 4.9.3, chosen from a sweep of GCC 4.9 to 15. GCC 8 was runner-up (smaller image, less headroom); GCC 10 and later were slower and changed the sound. The bootloader stays on 4.9.3.
-- **Code:** three small bit-identical changes: mono/stereo chosen once per block (template), grain output summed in a local frame, and an unsigned modulo for the delay-line read index. The stock worst case (q3 stereo, 32 grains active) goes from 97,255 to 90,333 cycles per block (75.3% of the 120,000 budget); the worst block of all 28 scenarios is 92,486 (77.1%). A fourth, the Clouds-style diffuser reading its delay-line tails before filtering, saves about 1,240 cycles on the Clouds-style worst block (93,030 to 91,796; stock unchanged) with identical output. A fifth, grains interpolating the stored integers and scaling once, saves about 6,800 cycles on the stock worst block (90,120 to 83,345) and 7,100 on the Clouds-style one (91,656 to 84,567) with identical output; the worst of all 28 scenarios is then 84,567 (70.5%).
-- **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulated scenarios. The first three code changes matched in 28 of 28 Seed3 hashes, 20 of 20 emulator scenarios and 13 of 13 long runs (max error 0); the diffuser change and the integer interpolation each matched 28 of 28 Seed3 hashes and the host tests (emulator not run).
+On the module, with the panel settings of the CPU tests, the busiest stock block now takes 94,311 of the 120,000 cycles available (78.6%). The released source takes 110,947 (92.5%) on the same test. The sound is unchanged.
+
+| Module, whole audio callback, worst block | Stock, panel | Stock, stress test | Clouds-style, panel |
+|---|---:|---:|---:|
+| Released source (GCC 4.9.3) | 110,947 (92.5%) | 114,053 (95.0%) | – |
+| Drizzlet before the integer Hermite read | 102,433 (85.4%) | 106,014 (88.3%) | 103,665 (86.4%) |
+| Drizzlet with it | 94,311 (78.6%) | 98,802 (82.3%) | 96,022 (80.0%) |
+
+Headroom gained per change, in points of the budget on the busiest stock block (development board, DSP only, except the Hermite row and the total, which are the whole callback on the module with the stock panel settings):
+
+| Change | Headroom |
+|---|---:|
+| GCC 9.3.1 instead of 4.9.3 (no code changes) | about 2.0 |
+| Mono/stereo chosen once per block | 2.2 |
+| Grains summed in a local frame | 3.0 |
+| Unsigned modulo for the delay-line read | 0.6 |
+| Grains interpolate the stored integers (integer Hermite) | 6.8 |
+| Total, module | 13.9 |
+
+The Clouds-style reverb also gains 1.0 point from its diffuser reading its tails first. GCC 10 and later were slower and changed the sound; one explicit fused multiply-add and a few explicit roundings keep the sound identical across compilers. The bootloader stays on 4.9.3.
+
+- **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests; the emulator agreed wherever it was run (integer Hermite: 70 of 70 comparisons).
 - **Rejected:** GCC 10.3 to 15.x, ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
-- **Caveat:** timings are DSP-only, from a separate development board (same die and clock), not the module. Whole-callback peaks on the module are in [TESTING.md](TESTING.md): 60% to 90.5% of the budget, no underruns.
 
 ## Build comparison
 
@@ -82,13 +100,11 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 **Diffuser.** Removing the diffuser entirely saves 2,772 / 2,740 on the stress32 Clouds-style block, and running a second copy on a scratch buffer (same output) costs 2,819 / 2,878, so it takes about 2,800 cycles per 12-sample block (about 235 per sample) of the 2,700 to 3,200 Clouds-style adds over stock. The loop was latency bound: each all-pass read its tail, converted it and multiplied it after the previous all-pass had stored its head, and the compiler cannot hoist a load above a store that may alias, so every stage stalled the in-order core about 28 cycles. The eight reads of a sample never depend on its writes (the lines are disjoint), so they now come first; the compiler interleaves their conversions with the left and right filter chains and the loop drops to about 125 cycles per sample. Arithmetic and rounding are the same expressions (the Seed3 audio and buffer hashes match in all 28 scenarios), the engine is used for the delay line layout only, and `Start` no longer runs the unused LFO (-32 B RAM). The `mutation_check.py` diffuser case now mutates the all-pass output sign. Per-stage block loops are bit-identical but slower: an in-order core gets no overlap between loop iterations without unrolling. Float storage saves a further 449 to 602 cycles but drops the 16-bit rounding and clipping: in a host comparison with noise at 0.1 full scale the difference is -77 dBFS (above the -90 dBFS gate), and full-scale input clips in 16 bit but not in float, so it is not an optimization in the sense above. A two-samples-per-iteration unroll was not tried; it would not read like Mutable Instruments code.
 
-**Integer Hermite.** A grain read converted four stored samples to float and scaled each by 1/32768 (or 1/2048) before the polynomial. Clouds' `ReadHermite` does it the other way round, interpolating the unscaled samples and scaling the result once (`clouds/dsp/audio_buffer.h:241-277`). Here the 16-bit and 12-bit items give their stored integers (`Item::raw`), the polynomial's exact parts (`c`, `v`, `w`, `a`, `b_neg`) are integer adds, and the result is scaled once: the eight multiplies per stereo read become two, and about 25 float operations per channel become about 10. Grains ask for it with `INTERPOLATION_HERMITE_RAW`; mu-law (8-bit) lines keep the float path because their table holds rounded decimals, not whole steps. Measured cost per block with all 32 grains reading: 6,775 / 7,140 fewer cycles (peak / median) on stock, 7,089 / 7,301 on Clouds-style; a repeat of the same code gave 6,840 / 7,130 and 6,924 / 7,307. Slowest case anywhere: 264 cycles at peak (q0 and delay scenarios, layout noise). Flash 274,956 B to 274,452 B. The base build measured twice gave identical numbers.
-
-The sound is identical only if every rounding step stays where it was. Three drafts showed how fragile that is: (1) the polynomial entirely on doubled integers differed in 10 of 28 hashes, because GCC then fused `u * t + c` into one operation where the float code multiplied first and fused only the add of `c`; keeping `c` as `float(c) * 0.5f`, computed first, restores the order. (2) Using the integer read for the delay taps as well differed in the 7 delay scenarios (the same fusion choice made differently in that inlining context), so the taps keep the float read; they are not on the peak. (3) Spelling the fusions with `fmaf` matched on the Seed3 but changed the host goldens, which do not fuse. The final form is plain arithmetic, checked by hash on the Seed3 and by `TestHermiteRawMatchesScaled` on the host (exact on hosts that do not fuse, within 1e-6 FS on those that do).
+**Integer Hermite.** Grain reads converted four stored samples to float and scaled each one before the Hermite polynomial. Like Clouds' `ReadHermite` (`clouds/dsp/audio_buffer.h:241-277`), they now interpolate the stored integers (`Item::raw`) and scale the result once: two multiplies per stereo read instead of eight. 8-bit µ-law lines and the delay taps keep the float read. Identical sound depends on keeping each rounding step in place: `c` stays `float(c) * 0.5f`, computed first, otherwise GCC fuses a different multiply-add and 10 of 28 hashes change (the delay taps differed the same way, so they keep the old read). `TestHermiteRawMatchesScaled` checks it on the host.
 
 **ITCM.** It helped some delay cases but cost more than it saved in the saturated case. Hot state and the stack already sit in fast core-coupled memory.
 
-**Result.** Against the GCC 9 build with the template, the worst block of all 28 scenarios goes 97,123 to 92,486 (77.1%) and the stock peak 94,702 to 90,333 (75.3%). Against the GCC 9 baseline, the stock peak goes 97,255 to 90,333. Both stay just above the 90,000-cycle (75%) DSP-only target for a 25% reserve. An earlier CPU gate on a different harness measured 98,314 (81.93%) stock.
+**Result.** On the development board the stock worst block goes 97,255 (GCC 9 baseline) to 90,333 with the first three changes, and to 83,345 (69.5%) with the integer Hermite read; the worst of all 28 scenarios is 84,567 (70.5%), under the 90,000-cycle (75%) DSP-only target. On the module the whole callback is in the TL;DR table.
 
 **Untried ideas** (none fits the rules below): whole-block rendering per grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
 
