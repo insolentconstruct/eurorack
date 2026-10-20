@@ -79,7 +79,7 @@ void NumberStation::Process(
   } else {
     drift_ -= (drift_ - drift_target) >> 13;
   }
-  int32_t slow_noise = drift_ << 5;
+  int32_t slow_noise = drift_ * 32;
   CLIP(slow_noise);
 
   size /= kDownsample;
@@ -125,7 +125,7 @@ void NumberStation::Process(
         gate_ = false;
       }
     } else {
-      phase_ += phase_increment + (lp_noise_ << 10);
+      phase_ += phase_increment + lp_noise_ * 1024;
       digit = Interpolate1022(wav_sine, phase_);
       digit = digit * tone_amplitude_ >> 16;
       gate_ = tone_amplitude_ > 0;
@@ -150,7 +150,9 @@ void NumberStation::Process(
     }
 
     // Final ringmod.
-    ringmod_phase_ += 38654706 + (38654706 * drift_ >> 10);
+    // The drift product overflows; keep the wrapped value, as on the module.
+    ringmod_phase_ += 38654706 + (
+        static_cast<int32_t>(38654706U * drift_) >> 10);
     int32_t ringmod = Interpolate1022(wav_sine, ringmod_phase_) >> 1;
     ringmod = ringmod * inner_sample >> 15;
     inner_sample += ringmod * distortion_ >> 15;

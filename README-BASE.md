@@ -8,7 +8,7 @@ pinned GCC 4.8 it builds the same firmware as vanilla. The plan is in
 
 Changes from vanilla, one line per change:
 
-- None yet.
+- Define the overflowing shifts and products in the bass drum, FM drum, high hat, bouncing ball, LFO and number station: the firmware is byte-identical.
 
 ## Build and verify
 

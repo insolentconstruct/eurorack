@@ -101,7 +101,7 @@ class Lfo {
   }
   
   inline void set_reset_phase(int16_t reset_phase) {
-    reset_phase_ = static_cast<int32_t>(reset_phase) << 16;
+    reset_phase_ = static_cast<int32_t>(reset_phase) * 65536;
   }
   
   inline void set_sync(bool sync) {

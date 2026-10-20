@@ -102,7 +102,7 @@ class BouncingBall {
   }
   
   inline void set_initial_velocity(int16_t initial_velocity) {
-    initial_velocity_ = static_cast<int32_t>(initial_velocity) << 4;
+    initial_velocity_ = static_cast<int32_t>(initial_velocity) * 16;
   }
   
   inline bool FillBuffer() const {
