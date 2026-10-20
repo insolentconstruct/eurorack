@@ -189,7 +189,7 @@ void TestModeChangeCrash() {
   poly_slope_generator.Init();
   
   for (int i = 0; i < 1000; ++i) {
-    Range range = Range(i % 3);
+    Range range = Range(i % RANGE_LAST);
     const float kRoot[3] = {
       0.125f / kSampleRate,
       2.0f / kSampleRate,
@@ -244,7 +244,7 @@ void TestVerySlowClock() {
     float ramp[kBlockSize];
     
     pulses.Render(external_clock, kBlockSize);
-    Ratio r = { 1, 1.0f };
+    Ratio r = { 1.0f, 1 };
     const float f0 = ramp_extractor.Process(
         audio_mode, false, r, external_clock, ramp, kBlockSize);
 

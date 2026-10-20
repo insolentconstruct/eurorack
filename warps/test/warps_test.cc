@@ -112,7 +112,7 @@ void TestModulator() {
   
   fseek(fp_in, 48, SEEK_SET);
   
-  Modulator modulator;
+  static Modulator modulator;
   modulator.Init(kSampleRate);
   
   Parameters* p = modulator.mutable_parameters();
@@ -162,7 +162,7 @@ void TestEasterEgg() {
   
   fseek(fp_in, 48, SEEK_SET);
   
-  Modulator modulator;
+  static Modulator modulator;
   modulator.Init(kSampleRate);
   modulator.set_easter_egg(true);
   
@@ -211,7 +211,7 @@ void TestOscillators() {
   WavWriter wav_writer(2, kSampleRate, 15);
   wav_writer.Open("warps_oscillator.wav");
   
-  Modulator modulator;
+  static Modulator modulator;
   modulator.Init(kSampleRate);
   
   Parameters* p = modulator.mutable_parameters();
@@ -238,7 +238,7 @@ void TestOscillators() {
 }
 
 void TestFilterBankReconstruction() {
-  FilterBank fb;
+  static FilterBank fb;
   fb.Init(96000.0);
   
   size_t num_blocks = 1000;
@@ -290,7 +290,7 @@ void TestSineTransition() {
   WavWriter wav_writer(2, kSampleRate, 15);
   wav_writer.Open("warps_sine_transition.wav");
   
-  Modulator modulator;
+  static Modulator modulator;
   modulator.Init(kSampleRate);
   
   Parameters* p = modulator.mutable_parameters();
@@ -321,7 +321,7 @@ void TestGain() {
   WavWriter wav_writer(2, kSampleRate, 10);
   wav_writer.Open("warps_gain.wav");
   
-  Modulator modulator;
+  static Modulator modulator;
   modulator.Init(kSampleRate);
   
   Parameters* p = modulator.mutable_parameters();
@@ -357,7 +357,7 @@ void TestGain() {
 void TestQuadratureOscillator() {
   WavWriter wav_writer(2, kSampleRate, 10);
   wav_writer.Open("warps_quadrature.wav");
-  QuadratureOscillator q;
+  static QuadratureOscillator q;
   q.Init(kSampleRate);
   while (!wav_writer.done()) {
     float triangle = wav_writer.triangle();

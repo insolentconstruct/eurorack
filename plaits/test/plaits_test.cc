@@ -380,8 +380,9 @@ void TestFMEngine() {
   WavWriter wav_writer(2, kSampleRate, 80);
   wav_writer.Open("plaits_fm_engine.wav");
   
-  FMEngine e;
-  e.Init(NULL);
+  static FMEngine e;
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -405,7 +406,8 @@ void TestGrainEngine() {
   wav_writer.Open("plaits_grain_engine.wav");
   
   GrainEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -430,7 +432,8 @@ void TestModalEngine() {
   wav_writer.Open("plaits_modal_engine.wav");
   
   ModalEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -749,7 +752,8 @@ void TestVirtualAnalogVCFEngine() {
   wav_writer.Open("plaits_virtual_analog_vcf_engine.wav");
   
   VirtualAnalogVCFEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -799,7 +803,7 @@ void TestChiptuneEngine() {
   wav_writer.Open("plaits_chiptune_engine.wav");
   
   BufferAllocator allocator(ram_block, 16384);
-  ChiptuneEngine e;
+  static ChiptuneEngine e;
   e.Init(&allocator);
   e.Reset();
   
@@ -834,7 +838,8 @@ void TestWaveshapingEngine() {
   wav_writer.Open("plaits_waveshaping_engine.wav");
   
   WaveshapingEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -920,7 +925,8 @@ void EnumerateWavetables() {
   wav_writer.Open("plaits_wavetable_enumeration.wav");
   
   WavetableEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -977,7 +983,8 @@ void TestBassDrumEngine() {
   wav_writer.Open("plaits_bass_drum_engine.wav");
   
   BassDrumEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;
@@ -1006,7 +1013,8 @@ void TestSnareDrumEngine() {
   wav_writer.Open("plaits_snare_drum_engine.wav");
   
   SnareDrumEngine e;
-  e.Init(NULL);
+  BufferAllocator allocator(ram_block, 16384);
+  e.Init(&allocator);
   e.Reset();
   
   EngineParameters p;

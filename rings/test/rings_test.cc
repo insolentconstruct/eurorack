@@ -41,7 +41,7 @@ void TestModal() {
   WavWriter wav_writer(2, ::kSampleRate, 20);
   wav_writer.Open("rings_modal.wav");
 
-  Part part;
+  static Part part;
   part.Init(reverb_buffer);
 
   Patch patch;
@@ -98,7 +98,7 @@ void TestString() {
   WavWriter wav_writer(2, ::kSampleRate, 20);
   wav_writer.Open("rings_string.wav");
   
-  Part part;
+  static Part part;
   part.Init(reverb_buffer);
 
   Patch patch;
@@ -125,6 +125,7 @@ void TestString() {
     float in[kAudioBlockSize];
     float out[kAudioBlockSize];
     float aux[kAudioBlockSize];
+    fill(&in[0], &in[kAudioBlockSize], 0.0f);
     
     // patch.position = 0.75f * tri / 32768.0f + 0.125f;
     //patch.structure = 0.5f * tri2 / 32768.0f + 0.5f;
@@ -156,7 +157,7 @@ void TestFM() {
   WavWriter wav_writer(2, ::kSampleRate, 20);
   wav_writer.Open("rings_fm.wav");
 
-  Part part;
+  static Part part;
   part.Init(reverb_buffer);
 
   Patch patch;
@@ -226,7 +227,7 @@ void TestLowDelay() {
   WavWriter wav_writer(2, ::kSampleRate, 20);
   wav_writer.Open("rings_low_delay.wav");
   
-  Part part;
+  static Part part;
   part.Init(reverb_buffer);
 
   Patch patch;
@@ -292,7 +293,8 @@ void TestPitchAccuracy() {
     WavWriter wav_writer(1, ::kSampleRate, 5);
     wav_writer.Open(name);
   
-    Part part;
+    static Part part;
+    memset(&part, 0, sizeof(part));
     part.Init(reverb_buffer);
 
     Patch patch;
@@ -425,7 +427,7 @@ void TestGain() {
   wav_writer.Open("rings_gain.wav");
   
 
-  Part part;
+  static Part part;
   part.Init(reverb_buffer);
 
   Patch patch;
@@ -506,7 +508,7 @@ void TestStringSynthPart() {
   WavWriter wav_writer(2, ::kSampleRate, 48);
   wav_writer.Open("rings_string_synth.wav");
   
-  StringSynthPart part;
+  static StringSynthPart part;
   part.Init(reverb_buffer);
 
   Patch patch;
@@ -535,6 +537,7 @@ void TestStringSynthPart() {
     fill(&in[0], &in[kAudioBlockSize], 0.0f);
     
     PerformanceState performance;
+    performance.chord = 0;
     performance.strum = false;
     performance.internal_exciter = true;
     patch.brightness = tri2 / 32768.0f;
