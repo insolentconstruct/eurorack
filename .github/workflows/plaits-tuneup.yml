@@ -16,6 +16,10 @@ jobs:
           persist-credentials: false
       - name: Initialize submodules
         run: git submodule update --init stmlib stm_audio_bootloader
+      # A checkout writes resources.cc before the scripts that generate it,
+      # and make would then regenerate it with today's stmlib.
+      - name: Keep the committed resources
+        run: touch plaits/resources.cc
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: insolentconstruct/mutable-dev-environment
@@ -24,7 +28,6 @@ jobs:
           persist-credentials: false
       - name: Build the image
         run: mutable-dev-environment/mutable image
-      # Before the build, which can regenerate resources.cc.
       - name: Host render tests
         run: mutable-dev-environment/mutable -C . render plaits
       - name: Build the application, bootloader and update file
