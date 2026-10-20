@@ -18,6 +18,7 @@ of it beside this one, from the repository root:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
+touch yarns/resources.cc
 M=../mutable-dev-environment/mutable
 $M image
 $M -C . make -f yarns/makefile
@@ -26,8 +27,10 @@ $M -C . make -f yarns/makefile syx
 sha256sum -c yarns/tuneup/expected-hashes.sha256
 ```
 
-CI runs the same steps. When a change alters the firmware on purpose, update
-the hashes and say why in the commit:
+The `touch` keeps the committed `resources.cc`: without it, make
+regenerates the file in a fresh checkout with today's stmlib, which
+builds different firmware. CI runs the same steps. When a change alters
+the firmware on purpose, update the hashes and say why in the commit:
 
 ```sh
 sha256sum build/yarns/yarns.bin build/yarns_bootloader/yarns_bootloader.hex build/yarns/yarns.syx > yarns/tuneup/expected-hashes.sha256
