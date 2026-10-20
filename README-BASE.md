@@ -9,6 +9,7 @@ pinned GCC 4.8 it builds the same firmware as vanilla. The plan is in
 Changes from vanilla, one line per change:
 
 - Define the overflowing shifts and products in the bass drum, FM drum, high hat, bouncing ball, LFO and number station: the firmware is byte-identical.
+- Define the snare drum's noise product, which overflows on fast retriggers: the output is unchanged; with GCC 4.8 the snare executes one more instruction per sample but issues one fewer, counting the conditional instructions it skips.
 
 ## Build and verify
 
