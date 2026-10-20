@@ -54,7 +54,11 @@ Ui ui;
 // Default interrupt handlers.
 extern "C" {
 
-int __errno;
+// libm's error paths call __errno() for the address of errno.
+int* __errno() {
+  static int errno_value;
+  return &errno_value;
+}
 
 void NMI_Handler() { }
 void HardFault_Handler() { while (1); }
