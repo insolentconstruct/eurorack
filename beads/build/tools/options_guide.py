@@ -36,6 +36,51 @@ import textwrap
 from html import escape
 
 KNOBS = ()
+
+
+def load_panel_geometry():
+    """Read panel_geometry.tsv: x/y centre and drawn size (knob cap or real)."""
+    rows = []
+    path = Path(__file__).with_name("panel_geometry.tsv")
+    for line in path.read_text().splitlines():
+        if line.startswith("#") or line.startswith("letter\t"):
+            continue
+        letter, kind, name, x, y, d, cap = line.split("\t")
+        if kind == "outline":
+            size = tuple(float(v) for v in d.split("x"))
+            continue
+        rows.append(
+            dict(
+                letter=letter,
+                kind=kind,
+                name=name,
+                x=float(x),
+                y=float(y),
+                d=float(cap or d),
+                key=f"{letter}:{kind}:{name}",
+            )
+        )
+    return rows, size
+
+
+PANEL_GEOMETRY, PANEL_SIZE_MM = load_panel_geometry()
+PANEL_CROP_MM = (11.0, 89.0)
+# Controls the options pages use, as (manual letter, kind).
+PANEL_USED = {
+    ("A", "button"), ("A", "led"), ("B", "button"), ("C", "button"),
+    ("J", "knob"), ("K", "knob"), ("L", "knob"), ("J", "led"),
+    ("K", "led"), ("L", "led"), ("M", "button"),
+}
+# (geometry key, label lines, side): names follow the manual.
+PANEL_LABELS = (
+    ("B:button:FREEZE", ("FREEZE", "[B]"), "left"),
+    ("C:button:SEED", ("SEED", "[C]"), "right"),
+    ("A:button:quality selector", ("[A]",), "below"),
+    ("J:knob:FEEDBACK", ("FEEDBACK", "[J]"), "left"),
+    ("M:button:CV assign", ("CV assign", "[M]"), "left"),
+    ("K:knob:DRY/WET", ("DRY/WET", "[K]"), "right"),
+    ("L:knob:REVERB", ("REVERB", "[L]"), "right"),
+)
 CONSTANTS = {}
 COLOURS = {
     "green": "#247443",
@@ -44,6 +89,10 @@ COLOURS = {
     "meter": "#777",
     "unchanged": "#777",
 }
+ATTRIBUTION = (
+    "Panel layout from the Mutable Instruments Beads panel file, "
+    "geometry only (CC BY-SA 3.0)."
+)
 STEPS = [
     "Open: hold the CV-assign button [M] {hold}, release.",
     "Change page: tap [M]. The pulsing mix LED marks the page "
@@ -60,7 +109,7 @@ NOTES = [
 SHORT = {
     "Clouds-style": "Clouds",
     "Auto (Stock)": "Auto",
-    "Wide detent": "Wide",
+    "Wide/smooth filter": "Wide",
     "Automatic (Stock)": "Automatic",
     "Fast release": "Fast",
     "Width (wider →)": "wider →",
@@ -167,7 +216,7 @@ DETAILS = [
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
-    "Never stays granular. Wide detent keeps the switch and adds a "
+    "Disabled stays granular. Wide/smooth filter keeps the switch and adds a "
     "neutral, unfiltered zone around the middle of the delay filter "
     "(SIZE attenurandomizer plus SIZE CV), with no resonant boost. The "
     "wavetable synth is unaffected.",
@@ -178,6 +227,30 @@ DETAILS = [
     "it. Patching an input stops it once FREEZE is off.",
     "Limiter Off lets loud peaks clip.",
 ]
+
+
+GESTURES = [
+    (
+        "Monophonic grains",
+        "Hold the quality button [A], then press SEED [C] to toggle. Best "
+        "with the first two SHAPE settings (square and decay). The [A] LED "
+        "is dimmed while on.",
+    ),
+    (
+        "Buffer trim",
+        "Hold [A], then press FREEZE [B] to start a fresh recording window. "
+        "The next freeze keeps only what was recorded since.",
+    ),
+    (
+        "Wavetable synth (Manual)",
+        "With both inputs unplugged and FREEZE off, hold [A] for about a "
+        "second and a half to start or stop it.",
+    ),
+]
+WARNING = (
+    "Don't hold SEED while powering on: it resets all settings to defaults "
+    "(calibration is kept)."
+)
 
 
 def instructions(lines):
@@ -239,6 +312,9 @@ def markdown(rows, pages):
                 f"- {r['value']}: {indication(r)}"
                 for r in knobs["FEEDBACK"][2:]
             ]
+    out += ["", "## Other gestures", ""]
+    out += [f"- **{title}:** {text}" for title, text in GESTURES]
+    out += ["", f"**Warning:** {WARNING}"]
     out += ["", "## Details", ""]
     out += [paragraph + "\n" for paragraph in DETAILS]
     return "\n".join(out)
@@ -361,6 +437,30 @@ class Drawing:
             )
         return base - y
 
+    def gestures(self, x, y, step, columns, gap=10):
+        """Gesture list: a row of columns (step > 0) or one column."""
+        self.text(x, y, "OTHER GESTURES", 20, "bold")
+        y += 30
+        ends = [y]
+        for i, (title, text) in enumerate(GESTURES):
+            gx = x + (i * step if step else 0)
+            gy = y if step else ends[-1]
+            self.text(gx, gy, title, 16, "bold")
+            ends.append(self.lines(gx, gy + 22, text, columns) + gap)
+        return max(ends) if step else ends[-1]
+
+    def warning(self, x, y, width, columns):
+        lines = textwrap.wrap(WARNING, columns)
+        box = 21 * len(lines) + 12
+        self.items.append(
+            f'<rect x="{x - 8}" y="{y}" width="{width + 16}" '
+            f'height="{box}" rx="6" fill="#fdf0f0" stroke="{COLOURS["red"]}" '
+            'stroke-width="3"/>'
+        )
+        for i, line in enumerate(lines):
+            self.text(x, y + 22 + 21 * i, line, 15, "bold", COLOURS["red"])
+        return y + box
+
     def marker(self, x, y, led):
         for i, knob in enumerate(KNOBS):
             xx = x + i * 57
@@ -375,35 +475,102 @@ class Drawing:
             if led == knob:
                 self.text(xx, y + 43, "pulsing", 15, anchor="middle")
 
-    def panel(self, x, y):
+    def panel(self, x, y, scale):
+        """To-scale top of the panel from panel_geometry.tsv; returns height.
+
+        scale is pixels per PostScript point of the panel file (1 mm is 2.83
+        points). Controls the options pages use are drawn heavy and labelled
+        by name; the others stay light with only their manual letter.
+        """
+        mm = scale * 72 / 25.4
+        x0 = x + 85
+        top, bottom = PANEL_CROP_MM
+        y0 = y + 24
+        width = PANEL_SIZE_MM[0] * mm
+        height = (bottom - top) * mm
+
+        def at(item):
+            return x0 + item["x"] * mm, y0 + (item["y"] - top) * mm
+
         self.text(x, y, "FIND THE CONTROLS", 17, "bold")
-        # Panel controls follow the board layout.
+        self.text(x + 205, y, "to scale", 15, colour="#555")
         self.items.append(
-            f'<rect x="{x}" y="{y + 14}" width="310" height="250" '
-            'rx="12" fill="#f6f5f0" stroke="#aaa"/>'
+            f'<rect x="{x0:.1f}" y="{y0:.1f}" width="{width:.1f}" '
+            f'height="{height:.1f}" fill="#f6f5f0"/>'
         )
-        for dx, dy, name in ((48, 45, "FREEZE [B]"), (265, 45, "SEED [C]")):
-            self.circle(x + dx, y + dy, 10)
-            self.text(x + dx, y + dy + 29, name, 15, anchor="middle")
-        self.circle(x + 131, y + 105, 8, COLOURS["green"])
-        self.text(x + 131, y + 132, "Quality LED [A]", 15, anchor="middle")
-        for dx, dy, name, letter in (
-            (42, 155, "FEEDBACK", "[J]"),
-            (265, 155, "DRY/WET", "[K]"),
-            (265, 215, "REVERB", "[L]"),
-        ):
-            self.circle(x + dx, y + dy, 14)
-            self.circle(x + dx, y + dy + 24, 5)
-            for line, offset in ((name, -1), (letter, 17)):
+        for yy in (y0, y0 + height):
+            self.items.append(
+                f'<line x1="{x0 - 4:.1f}" y1="{yy:.1f}" '
+                f'x2="{x0 + width + 4:.1f}" y2="{yy:.1f}" stroke="#aaa" '
+                'stroke-width="1.5" stroke-dasharray="5 4"/>'
+            )
+        for xx in (x0, x0 + width):
+            self.items.append(
+                f'<line x1="{xx:.1f}" y1="{y0:.1f}" x2="{xx:.1f}" '
+                f'y2="{y0 + height:.1f}" stroke="#aaa" stroke-width="2"/>'
+            )
+        for item in PANEL_GEOMETRY:
+            if not top <= item["y"] <= bottom or item["kind"] in (
+                "jack",
+                "mount",
+            ):
+                continue
+            cx, cy = at(item)
+            r = item["d"] * mm / 2
+            used = (item["letter"], item["kind"]) in PANEL_USED
+            stroke = "#222" if used else "#aaa"
+            weight = 2 if used else 1.5
+            if item["kind"] == "button":
+                self.items.append(
+                    f'<rect x="{cx - r:.1f}" y="{cy - r:.1f}" '
+                    f'width="{2 * r:.1f}" height="{2 * r:.1f}" rx="4" '
+                    f'fill="white" stroke="{stroke}" stroke-width="{weight}"/>'
+                )
+            elif item["kind"] == "led":
+                self.items.append(
+                    f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" '
+                    f'fill="{"#222" if used else "none"}" stroke="{stroke}" '
+                    f'stroke-width="{weight}"/>'
+                )
+            else:
+                self.items.append(
+                    f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" '
+                    f'fill="{"white" if used else "none"}" '
+                    f'stroke="{stroke}" stroke-width="{weight}"/>'
+                )
+                if not used:
+                    self.text(
+                        f"{cx:.1f}", f"{cy + 5:.1f}", item["letter"], 15,
+                        colour="#666", anchor="middle",
+                    )
+        for key, lines, side in PANEL_LABELS:
+            item = next(i for i in PANEL_GEOMETRY if i["key"] == key)
+            cx, cy = at(item)
+            r = item["d"] * mm / 2
+            if side == "below":
+                for i, line in enumerate(lines):
+                    self.text(
+                        f"{cx:.1f}", f"{cy + r + 17 + 17 * i:.1f}", line, 15,
+                        "bold", anchor="middle",
+                    )
+                continue
+            left = side == "left"
+            edge = x0 - 8 if left else x0 + width + 8
+            for i, line in enumerate(lines):
                 self.text(
-                    x + dx + (26 if dx == 42 else -26),
-                    y + dy + offset,
+                    f"{edge:.1f}",
+                    f"{cy - 2 + 17 * i:.1f}",
                     line,
                     15,
-                    anchor="start" if dx == 42 else "end",
+                    "normal",
+                    anchor="end" if left else "start",
                 )
-        self.circle(x + 42, y + 215, 9)
-        self.text(x + 68, y + 220, "[M] CV assign", 15)
+            self.items.append(
+                f'<line x1="{edge + (3 if left else -3):.1f}" '
+                f'y1="{cy:.1f}" x2="{cx + (-r if left else r):.1f}" '
+                f'y2="{cy:.1f}" stroke="#222" stroke-width="1"/>'
+            )
+        return 24 + height
 
     def legend(self, x, y):
         self.text(x, y, "READ THE [A] LED", 17, "bold")
@@ -444,14 +611,16 @@ def svg(pages, mobile=False):
     for note in instructions(NOTES):
         y = d.lines(margin, y, note, columns)
     if mobile:
-        d.panel(margin, y + 15)
-        y += 300
+        y += d.panel(margin, y + 15, 1.0) + 52
         d.legend(margin, y)
         y += 235
+        y = d.gestures(margin, y, 0, 43) + 5
+        y = d.warning(margin, y, width - 2 * margin, 43) + 35
     else:
-        d.panel(margin + 365, 70)
-        d.legend(margin + 710, 70)
-        y = max(y + 15, 315)
+        panel_height = d.panel(margin + 370, 70, 1.0)
+        d.legend(margin + 745, 70)
+        d.warning(margin + 745, 280, 285, 31)
+        y = max(y + 15, 70 + panel_height + 16, 315)
     for page, knobs in pages.items():
         d.text(margin, y, f"PAGE {page}", 20, "bold")
         d.marker(margin + 180, y - 12, next(iter(knobs.values()))[0]["LED"])
@@ -467,8 +636,19 @@ def svg(pages, mobile=False):
                 d.card(margin + i * 330, y, 315, knobs[k])
                 for i, k in enumerate(KNOBS)
             ]
-            y += max(heights) + 35
-    d.text(margin, y + 5, "Author: Insolent Construct • Control sketch", 15)
+            if page == "1":
+                top = y + max(heights[1:]) + 12
+                heights[0] = max(
+                    heights[0], d.gestures(margin + 330, top, 233, 27) - y
+                )
+            y += max(heights) + 25
+    y -= 16
+    for line in textwrap.wrap(
+        "Author: Insolent Construct • Control sketch • " + ATTRIBUTION,
+        41 if mobile else 140,
+    ):
+        y += 21
+        d.text(margin, y, line, 15)
     height = y + 30
     if mobile:
         physical = f'width="390" height="{height}"'

@@ -61,4 +61,4 @@ See the [options guide](beads/build/docs/OPTIONS.md) or
 
 ## For firmware modders
 
-The [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) branch is a clean base: Mutable Instruments' released Beads source plus the bug fixes, the reproducible GCC 9 build kit and the CPU optimizations, without Drizzlet's features.
+To build the vanilla Mutable Instruments Beads source, unmodified, use the [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) branch. For that source plus the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features, use [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup).

@@ -1,6 +1,6 @@
 # Drizzlet
 
-Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product.
+Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable Instruments source; not a Mutable Instruments product.
 
 **TL;DR:** Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode, on a three-page options page that saves by itself. New settings default to stock behaviour. The grain engine needs about 6,900 fewer cycles per block in the heaviest stock case, with the same sound.
 
@@ -26,17 +26,18 @@ From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 
 - `<tag>-wav.zip`: audio update, with `README.txt`, `NOTICE.txt` and the options guides.
 - `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
+- `options-guide.svg`, `options-guide-mobile.svg` and `OPTIONS.md`: the options guides, also on their own.
 
-Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
+Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware back to the factory release: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
 
-Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? The [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) branch is the released source plus bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-tuneup/README-BASE.md).
+Developers: [STYLE.md](docs/STYLE.md), [OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md), [PORTING.md](docs/PORTING.md), and [FEATURES.md](docs/FEATURES.md) (which buttons, settings bytes, flash and RAM are taken). Starting your own firmware? [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) builds the vanilla source unmodified. [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) adds the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features; see its [README-BASE.md](https://github.com/insolentconstruct/eurorack/blob/beads-tuneup/README-BASE.md).
 
 ## Delay mode
 
 This is the manual's delay or beat slicer, which turns on at SIZE fully clockwise.
-On page 2 (FEEDBACK LED), DRY/WET selects Auto (Stock) / Never /
-Wide detent in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
-clockwise. Never keeps granular playback there. Wide detent keeps the switch
+On page 2 (FEEDBACK LED), DRY/WET selects Auto (Stock) / Disabled /
+Wide/smooth filter in thirds. Auto (Stock) keeps the usual switch to delay at SIZE fully
+clockwise. Disabled keeps granular playback there. Wide/smooth filter keeps the switch
 and makes the delay filter neutral in the middle of its range, with no
 resonant boost at either end. The filter is controlled by the SIZE
 attenurandomizer and SIZE CV. The quality LED [A] shows steady green / yellow / red.
@@ -75,6 +76,17 @@ the length you want, then freeze. A FREEZE gate keeps the window empty until
 it goes low. Grains already playing finish normally.
 Frozen-buffer saves keep the trimmed length; stock firmware loads them at full
 length. The gesture comes from Mutable Instruments' disabled buffer-trim code.
+
+## When the buffer is cleared
+
+FREEZE never clears the recording buffer: releasing it resumes recording
+where it stopped, with a short crossfade. As on stock firmware, the buffer
+starts empty after changing the recording quality, switching between mono and
+stereo input (for example, patching or unpatching IN R while IN L is
+patched), leaving the wavetable synth, or
+powering up without a saved frozen buffer. Buffer trim restarts the recording
+window without erasing the old audio; grains already playing finish on it,
+and new grains read only the new window.
 
 ## Frozen-buffer autosave
 
@@ -192,7 +204,7 @@ docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/b
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
-The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its previous bytes. Builds verify the firmware and WAV hashes. CI also builds the unchanged released app with GCC 4.9.3 as a golden reference (locally: `bash beads/build/golden.sh "$PWD/golden"`, needs a full Git checkout). Releases publish from `drizzlet-*` tags and include the tag's CHANGELOG.md section.
+The app is built with GCC 9.3.1; the bootloader keeps GCC 4.9.3 and its previous bytes. Builds verify the firmware and WAV hashes. CI also builds the vanilla app with GCC 4.9.3 as a golden reference (locally: `bash beads/build/golden.sh "$PWD/golden"`, needs a full Git checkout). Releases publish from `drizzlet-*` tags and include the tag's CHANGELOG.md section.
 
 ## License and credits
 

@@ -86,9 +86,9 @@ cases = [
   ('TestCloudsOutput', 'clouds', 'beads/dsp/fx/reverb.cc',
     '4680.0f, LFO_2',
     '4600.0f, LFO_2'),
-  ('TestDiffuserImpulse', 'clouds', 'beads/dsp/fx/diffuser.cc',
-    'c.WriteAllPass(apl1, -kAllPassCoefficient);',
-    'c.WriteAllPass(apl1, kAllPassCoefficient);'),
+  ('TestDiffuserImpulse', 'clouds', 'beads/dsp/fx/diffuser.h',
+    'return tail - sum * coefficient;',
+    'return tail + sum * coefficient;'),
   ('TestCloudsSwitch', 'firmware', 'beads/beads.cc',
     'if (reverb_style_previous_gain == 0.0f) {',
     'if (true) {'),
@@ -513,6 +513,12 @@ cases = [
     '    WriteChunk(1, state_data_);\n'
     '    next_state_chunk_index_ = 2;',
     '    next_state_chunk_index_ = 2;'),
+  ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
+    'const int32_t b_neg = w + a;',
+    'const int32_t b_neg = w + a + 1;'),
+  ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
+    'result.l = result.r = i ? odd : even;',
+    'result.l = result.r = even;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:
@@ -573,9 +579,14 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     original_test = test.read_text()
     if suite != 'wavetable':
       main = original_test.index('int main(')
-      first = re.compile(r'\n  Test\w+\(\);').search(
-          original_test, main).group(0)[1:]
-      cut = original_test.index(first, main)
+      table = original_test.find('const HostTest tests[]', main)
+      if table >= 0:
+        # Table-style main (clouds_test.cc, delay_mode_test.cc).
+        cut = original_test.rindex('\n', 0, table) + 1
+      else:
+        first = re.compile(r'\n  Test\w+\(\);').search(
+            original_test, main).group(0)[1:]
+        cut = original_test.index(first, main)
       test.write_text(original_test[:cut] + name + '();\n' +
           '  return test_checker.failures() ? 1 : 0;\n}\n')
     log = out / ('%02d-%s.log' % (index, name))

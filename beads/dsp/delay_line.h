@@ -49,6 +49,12 @@ enum Resolution {
   RESOLUTION_LAST
 };
 
+// Stored samples as integers, before the scale that brings them to +/-1.
+struct IntFrame {
+  int32_t l;
+  int32_t r;
+};
+
 template<Resolution resolution, int num_channels>
 struct Item { };
 
@@ -62,7 +68,13 @@ struct Item<RESOLUTION_16_BIT, 1> {
     result.l = result.r = static_cast<float>(lr) / 32768.0f;
     return result;
   }
-  enum { bundle_size = 1 };
+  inline IntFrame raw(int i) const {
+    IntFrame result;
+    result.l = result.r = lr;
+    return result;
+  }
+  static inline float raw_scale() { return 1.0f / 32768.0f; }
+  enum { bundle_size = 1, has_raw = 1 };
   int16_t lr;
 };
 
@@ -78,7 +90,14 @@ struct Item<RESOLUTION_16_BIT, 2> {
     result.r = static_cast<float>(r) / 32768.0f;
     return result;
   }
-  enum { bundle_size = 1 };
+  inline IntFrame raw(int i) const {
+    IntFrame result;
+    result.l = l;
+    result.r = r;
+    return result;
+  }
+  static inline float raw_scale() { return 1.0f / 32768.0f; }
+  enum { bundle_size = 1, has_raw = 1 };
   int16_t l;
   int16_t r;
 };
@@ -95,7 +114,14 @@ struct Item<RESOLUTION_12_BIT, 2> {
     result.r = static_cast<float>(r) / 2048.0f;
     return result;
   }
-  enum { bundle_size = 1 };
+  inline IntFrame raw(int i) const {
+    IntFrame result;
+    result.l = l;
+    result.r = r;
+    return result;
+  }
+  static inline float raw_scale() { return 1.0f / 2048.0f; }
+  enum { bundle_size = 1, has_raw = 1 };
   int16_t l : 12;
   int16_t r : 12;
 } __attribute__((packed));
@@ -116,7 +142,13 @@ struct Item<RESOLUTION_12_BIT, 1> {
     result.l = result.r = static_cast<float>(i ? odd : even) / 2048.0f;
     return result;
   }
-  enum { bundle_size = 2 };
+  inline IntFrame raw(int i) const {
+    IntFrame result;
+    result.l = result.r = i ? odd : even;
+    return result;
+  }
+  static inline float raw_scale() { return 1.0f / 2048.0f; }
+  enum { bundle_size = 2, has_raw = 1 };
   int16_t odd : 12;
   int16_t even : 12;
 } __attribute__((packed));
@@ -132,7 +164,8 @@ struct Item<RESOLUTION_8_BIT, 1> {
     result.l = result.r = MuLaw2Lin(lr);
     return result;
   }
-  enum { bundle_size = 1 };
+  // The mu-law table holds rounded decimals, not whole steps: no raw values.
+  enum { bundle_size = 1, has_raw = 0 };
   uint8_t lr;
 };
 
@@ -148,7 +181,7 @@ struct Item<RESOLUTION_8_BIT, 2> {
     result.r = MuLaw2Lin(r);
     return result;
   }
-  enum { bundle_size = 1 };
+  enum { bundle_size = 1, has_raw = 0 };
   uint8_t l;
   uint8_t r;
 };
@@ -156,7 +189,8 @@ struct Item<RESOLUTION_8_BIT, 2> {
 enum Interpolation {
   INTERPOLATION_ZOH,
   INTERPOLATION_LINEAR,
-  INTERPOLATION_HERMITE
+  INTERPOLATION_HERMITE,
+  INTERPOLATION_HERMITE_RAW  // Same result, from the stored integers.
 };
 
 template<
@@ -331,7 +365,8 @@ class DelayLine {
   
   template<Interpolation interpolation>
   inline FloatFrame Read(int delay_integral, float delay_fractional) const {
-    if (interpolation == INTERPOLATION_HERMITE) {
+    if (interpolation == INTERPOLATION_HERMITE ||
+        interpolation == INTERPOLATION_HERMITE_RAW) {
       delay_integral += max_delay - 1; // Fix latency.
     }
     // Callers never read ahead of the write head, so the index is never
@@ -346,17 +381,10 @@ class DelayLine {
       const FloatFrame x0 = Load(i);
       const FloatFrame x1 = Load(i + 1);
       value = x0 + (x1 - x0) * delay_fractional;
+    } else if (interpolation == INTERPOLATION_HERMITE_RAW) {
+      value = ReadHermite(i, delay_fractional, Selector<ItemType::has_raw>());
     } else {
-      FloatFrame x[4];
-      LoadQuad(i, x);
-      
-      const FloatFrame c = (x[2] - x[0]) * 0.5f;
-      const FloatFrame v = x[1] - x[2];
-      const FloatFrame w = c + v;
-      const FloatFrame a = w + v + (x[3] - x[1]) * 0.5f;
-      const FloatFrame b_neg = w + a;
-      const float t = delay_fractional;
-      value = (((a * t) - b_neg) * t + c) * delay_fractional + x[1];
+      value = ReadHermite(i, delay_fractional, Selector<0>());
     }
     return value;
   }
@@ -377,6 +405,63 @@ class DelayLine {
   }
   
  private:
+  template<int has_raw>
+  struct Selector { };
+
+  // Reads that give each item as a float in +/-1 or as its stored integers.
+  struct ScaledAccess {
+    typedef FloatFrame Frame;
+    static inline Frame Get(const ItemType& item, int i) {
+      return item.value(i);
+    }
+  };
+
+  struct RawAccess {
+    typedef IntFrame Frame;
+    static inline Frame Get(const ItemType& item, int i) {
+      return item.raw(i);
+    }
+  };
+
+  inline FloatFrame ReadHermite(int i, float t, Selector<0> selector) const {
+    FloatFrame x[4];
+    LoadQuad<ScaledAccess>(i, x);
+
+    const FloatFrame c = (x[2] - x[0]) * 0.5f;
+    const FloatFrame v = x[1] - x[2];
+    const FloatFrame w = c + v;
+    const FloatFrame a = w + v + (x[3] - x[1]) * 0.5f;
+    const FloatFrame b_neg = w + a;
+    return (((a * t) - b_neg) * t + c) * t + x[1];
+  }
+
+  // The same polynomial on the stored integers, scaled once at the end. The
+  // coefficients are exact in integers, kept at twice their value with the
+  // 0.5 moved into t_half. Each rounding step is the one the float code has,
+  // so the output is the same (checked on the Seed3: same hashes).
+  inline FloatFrame ReadHermite(int i, float t, Selector<1> selector) const {
+    IntFrame x[4];
+    LoadQuad<RawAccess>(i, x);
+
+    const float t_half = t * 0.5f;
+    const float scale = ItemType::raw_scale();
+    FloatFrame value;
+    value.l = scale * HermiteRaw(x[0].l, x[1].l, x[2].l, x[3].l, t, t_half);
+    value.r = scale * HermiteRaw(x[0].r, x[1].r, x[2].r, x[3].r, t, t_half);
+    return value;
+  }
+
+  static inline float HermiteRaw(
+      int32_t x0, int32_t x1, int32_t x2, int32_t x3, float t, float t_half) {
+    const int32_t c = x2 - x0;
+    const int32_t v = x1 - x2;
+    const int32_t w = c + 2 * v;
+    const int32_t a = w + 2 * v + (x3 - x1);
+    const int32_t b_neg = w + a;
+    const float c_half = float(c) * 0.5f;
+    return (((float(a) * t) - float(b_neg)) * t_half + c_half) * t + float(x1);
+  }
+
   inline void Store(int i, FloatFrame value) {
     mutable_item(i / ItemType::bundle_size)->Store(
         i % ItemType::bundle_size, value);
@@ -386,7 +471,14 @@ class DelayLine {
     return item(i / ItemType::bundle_size).value(i % ItemType::bundle_size);
   }
   
-  inline void LoadQuad(int i, FloatFrame* x) const {
+  template<typename Access>
+  inline typename Access::Frame Get(int i) const {
+    return Access::Get(
+        item(i / ItemType::bundle_size), i % ItemType::bundle_size);
+  }
+
+  template<typename Access>
+  inline void LoadQuad(int i, typename Access::Frame* x) const {
     // Try to find optimizations if there are several banks and if the
     // memory layout is not too gnarly.
     if (num_banks != 1) {
@@ -396,10 +488,10 @@ class DelayLine {
         size_t bank = size_t(i) / items_per_bank();
         if ((offset + 3) < items_per_bank()) {
           // Optimization found! All items belong in the same bank!
-          x[0] = items_[bank][offset].value(0);
-          x[1] = items_[bank][offset + 1].value(0);
-          x[2] = items_[bank][offset + 2].value(0);
-          x[3] = items_[bank][offset + 3].value(0);
+          x[0] = Access::Get(items_[bank][offset], 0);
+          x[1] = Access::Get(items_[bank][offset + 1], 0);
+          x[2] = Access::Get(items_[bank][offset + 2], 0);
+          x[3] = Access::Get(items_[bank][offset + 3], 0);
           return;
         }
       } else if (ItemType::bundle_size == 2) {
@@ -410,15 +502,15 @@ class DelayLine {
         if ((offset + 2) < items_per_bank()) {
           // Optimization found! All items belong in the same bank!
           if ((i % 2) == 0) {
-            x[0] = items_[bank][offset].value(0);
-            x[1] = items_[bank][offset].value(1);
-            x[2] = items_[bank][offset + 1].value(0);
-            x[3] = items_[bank][offset + 1].value(1);
+            x[0] = Access::Get(items_[bank][offset], 0);
+            x[1] = Access::Get(items_[bank][offset], 1);
+            x[2] = Access::Get(items_[bank][offset + 1], 0);
+            x[3] = Access::Get(items_[bank][offset + 1], 1);
           } else {
-            x[0] = items_[bank][offset].value(1);
-            x[1] = items_[bank][offset + 1].value(0);
-            x[2] = items_[bank][offset + 1].value(1);
-            x[3] = items_[bank][offset + 2].value(0);
+            x[0] = Access::Get(items_[bank][offset], 1);
+            x[1] = Access::Get(items_[bank][offset + 1], 0);
+            x[2] = Access::Get(items_[bank][offset + 1], 1);
+            x[3] = Access::Get(items_[bank][offset + 2], 0);
           }
           return;
         }
@@ -426,10 +518,10 @@ class DelayLine {
     }
     
     // No optmization was found, use the slow code.
-    x[0] = Load(i);
-    x[1] = Load(i + 1);
-    x[2] = Load(i + 2);
-    x[3] = Load(i + 3);
+    x[0] = Get<Access>(i);
+    x[1] = Get<Access>(i + 1);
+    x[2] = Get<Access>(i + 2);
+    x[3] = Get<Access>(i + 3);
   }
    
   // Non-const flavor write access.

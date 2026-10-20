@@ -49,37 +49,38 @@ void Diffuser::Process(FloatFrame* in_out, size_t size) {
   E::DelayLine<Memory, 5> apr2;
   E::DelayLine<Memory, 6> apr3;
   E::DelayLine<Memory, 7> apr4;
-  E::Context c;
+  // The reads of a sample do not depend on its writes, so they are all done
+  // first: the processor then overlaps their latency with the filtering.
+  const float amount = amount_;
+  int32_t write_ptr = write_ptr_;
   while (size--) {
-    engine_.Start(&c);
+    write_ptr = (write_ptr - 1) & MASK;
+    const float tl1 = Tail(apl1, write_ptr);
+    const float tl2 = Tail(apl2, write_ptr);
+    const float tl3 = Tail(apl3, write_ptr);
+    const float tl4 = Tail(apl4, write_ptr);
+    const float tr1 = Tail(apr1, write_ptr);
+    const float tr2 = Tail(apr2, write_ptr);
+    const float tr3 = Tail(apr3, write_ptr);
+    const float tr4 = Tail(apr4, write_ptr);
 
-    float wet = 0.0f;
-    c.Read(in_out->l);
-    c.Read(apl1 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apl1, -kAllPassCoefficient);
-    c.Read(apl2 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apl2, -kAllPassCoefficient);
-    c.Read(apl3 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apl3, -kAllPassCoefficient);
-    c.Read(apl4 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apl4, -kAllPassCoefficient);
-    c.Write(wet, 0.0f);
-    in_out->l += amount_ * (wet - in_out->l);
+    float wet = in_out->l;
+    wet = AllPass(apl1, write_ptr, wet, tl1, kAllPassCoefficient);
+    wet = AllPass(apl2, write_ptr, wet, tl2, kAllPassCoefficient);
+    wet = AllPass(apl3, write_ptr, wet, tl3, kAllPassCoefficient);
+    wet = AllPass(apl4, write_ptr, wet, tl4, kAllPassCoefficient);
+    in_out->l += amount * (wet - in_out->l);
 
-    c.Read(in_out->r);
-    c.Read(apr1 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apr1, -kAllPassCoefficient);
-    c.Read(apr2 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apr2, -kAllPassCoefficient);
-    c.Read(apr3 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apr3, -kAllPassCoefficient);
-    c.Read(apr4 TAIL, kAllPassCoefficient);
-    c.WriteAllPass(apr4, -kAllPassCoefficient);
-    c.Write(wet, 0.0f);
-    in_out->r += amount_ * (wet - in_out->r);
+    wet = in_out->r;
+    wet = AllPass(apr1, write_ptr, wet, tr1, kAllPassCoefficient);
+    wet = AllPass(apr2, write_ptr, wet, tr2, kAllPassCoefficient);
+    wet = AllPass(apr3, write_ptr, wet, tr3, kAllPassCoefficient);
+    wet = AllPass(apr4, write_ptr, wet, tr4, kAllPassCoefficient);
+    in_out->r += amount * (wet - in_out->r);
 
     ++in_out;
   }
+  write_ptr_ = write_ptr;
 }
 
 }  // namespace beads

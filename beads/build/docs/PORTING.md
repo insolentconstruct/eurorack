@@ -4,7 +4,7 @@ What to know when building Drizzlet's DSP (`beads/dsp`) somewhere other than the
 
 ## TL;DR
 
-- Drizzlet's changes make the DSP no less portable than Mutable Instruments' released source. They add no assembly, section attributes, C++11 features, 64-bit assumptions or hardware constants.
+- Drizzlet's changes make the DSP no less portable than Mutable Instruments' vanilla source. They add no assembly, section attributes, C++11 features, 64-bit assumptions or hardware constants.
 - Every changed DSP file is built and run on a desktop compiler (g++ with AddressSanitizer and UndefinedBehaviorSanitizer) by the host tests in `beads/test`. No clang, MSVC or VCV build has been tried.
 - A port replaces the firmware side anyway: drivers, UI, the options page, settings and frozen-buffer saves, the bootloader and the DWT calibration build.
 

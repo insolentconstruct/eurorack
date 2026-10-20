@@ -17,7 +17,7 @@ build and run on a module. Install at your own risks."
 Install at your own risk.
 
 Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one change
-to grain stealing, as in the released source. On our module, the 2021 and 2024
+to grain stealing, as in the vanilla source. On our module, the 2021 and 2024
 firmware clicked with DENSITY and PITCH near fully clockwise and this one did
 not; see CHANGELOG.md and TESTING.md.
 
@@ -38,6 +38,17 @@ the length you want, then freeze. A FREEZE gate keeps the window empty until
 it goes low. Grains already playing finish normally.
 Frozen-buffer saves keep the trimmed length; stock firmware loads them at full
 length. The gesture comes from Mutable Instruments' disabled buffer-trim code.
+
+When the buffer is cleared
+--------------------------
+FREEZE never clears the recording buffer: releasing it resumes recording
+where it stopped, with a short crossfade. As on stock firmware, the buffer
+starts empty after changing the recording quality, switching between mono and
+stereo input (for example, patching or unpatching IN R while IN L is
+patched), leaving the wavetable synth, or
+powering up without a saved frozen buffer. Buffer trim restarts the recording
+window without erasing the old audio; grains already playing finish on it,
+and new grains read only the new window.
 
 Monophonic grains
 -----------------
@@ -96,10 +107,10 @@ WIDTH; all three mix LEDs pulse together for WIDTH. Custom mix assignment
 still works. The assignable CV input (7) adds to the width. Stock keeps the
 stock cycle and pan rounding.
 Delay mode: Auto (Stock) keeps the usual switch to delay at SIZE fully clockwise.
-Never keeps granular playback there. Wide detent keeps the switch and makes the
+Disabled keeps granular playback there. Wide/smooth filter keeps the switch and makes the
 delay filter (SIZE attenurandomizer plus SIZE CV) neutral in the middle, with no
 resonant boost. The [A] LED shows steady green / yellow / red for Auto (Stock) /
-Never / Wide detent. It does not affect wavetable synth mode.
+Disabled / Wide/smooth filter. It does not affect wavetable synth mode.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
@@ -156,8 +167,8 @@ page	LED	knob	setting	value	colour	pulse
 1	REVERB	REVERB	Reverb character	Clouds-style	yellow	steady
 2	FEEDBACK	FEEDBACK	Not used yet	Not used yet	unchanged	steady
 2	FEEDBACK	DRY/WET	Delay mode	Auto (Stock)	green	steady
-2	FEEDBACK	DRY/WET	Delay mode	Never	yellow	steady
-2	FEEDBACK	DRY/WET	Delay mode	Wide detent	red	steady
+2	FEEDBACK	DRY/WET	Delay mode	Disabled	yellow	steady
+2	FEEDBACK	DRY/WET	Delay mode	Wide/smooth filter	red	steady
 2	FEEDBACK	REVERB	Not used yet	Not used yet	unchanged	steady
 3	DRY/WET	FEEDBACK	Wavetable synth	Automatic (Stock)	green	steady
 3	DRY/WET	FEEDBACK	Wavetable synth	Manual	yellow	steady

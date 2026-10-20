@@ -1,10 +1,10 @@
 # Testing
 
-**TL;DR:** 164 host tests in 13 programs cover 110 of 117 manual behaviours (3 only in part), backed by 152 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
+**TL;DR:** 165 host tests in 13 programs cover 110 of 117 manual behaviours (3 only in part), backed by 154 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
 
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the released source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns.
+- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns.
 - **Totals:** 48 firmware installs on the test module, none failed to boot; about 13 hours of automated runs.
 
 Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build, counted once. Assertions inside loops run more than once.
@@ -32,7 +32,7 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 |---|---:|---:|
 | backup | 16 | 106 |
 | clouds | 4 | 12 |
-| delay | 10 | 45 |
+| delay | 11 | 46 |
 | delay_mode | 9 | 40 |
 | firmware | 15 | 124 |
 | gain | 5 | 21 |
@@ -43,7 +43,7 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 | processor | 10 | 36 |
 | trigger | 10 | 27 |
 | wavetable | 11 | 60 |
-| **Total** | **164** | **1021** |
+| **Total** | **165** | **1022** |
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
@@ -53,11 +53,11 @@ Saves without the CRC tag (every stock save, or a damaged tag) load after the ra
 
 Feature checks beyond the table:
 - **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, preview and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.
-- **Delay mode:** every stored byte value, preview and settled saving, Never at SIZE fully clockwise in every quality and channel mode, returning from delay to granular, detent boundaries, and neutral playback within 1e-7 FS with SIZE CV inside the detent.
+- **Delay mode:** every stored byte value, preview and settled saving, Disabled at SIZE fully clockwise in every quality and channel mode, returning from delay to granular, detent boundaries, and neutral playback within 1e-7 FS with SIZE CV inside the detent.
 
 ## Coverage of the manual
 
-The developers listed 117 behaviours from the Beads manual, the module page and the April 2021 update notes. Host tests check 110 of them.
+The developers listed 117 behaviours from the Beads manual, the module page and the [April 2021 update notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572). Host tests check 110 of them.
 
 | Area | Behaviours | Host tests | Not covered by host tests |
 |---|---:|---:|---|
@@ -85,7 +85,7 @@ Run by the developers; these scripts and results are not in this repository.
 |---|---|
 | Frozen delay with negative FM (#33), host build with AddressSanitizer and UBSan | Previous code: out-of-bounds read. Fixed code: clean; output at FM 0 and +0.5 identical |
 | Wavetable interpolation past the last wave (#35) | Previous code: out-of-bounds read. Fixed code: clean; normal output identical |
-| Emulator comparison, GCC 9 against GCC 4.9.3 builds of the released source (2026.10.16) | 20 of 20 scenarios bit-identical |
+| Emulator comparison, GCC 9 against GCC 4.9.3 builds of the vanilla source (2026.10.16) | 20 of 20 scenarios bit-identical |
 | Emulator comparison against the previous release (2026.10.14) | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, wavetable synth, freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
 | Instruction counts | No audio-path function grew |
 | Code review | Five rounds by a second AI model; the first four led to fixes (three of them real bugs in the frozen-buffer save) |
@@ -131,7 +131,7 @@ Wavetable synth Manual, the delay clock fix (#57) and the frozen-delay slice fix
 |---|---:|---:|
 | 2021 forum release | 145 | 21 s |
 | 2024 recovery firmware | 164 | 20.6 s |
-| Released source, same GCC 4.9.3 compiler | 0 | 14 s |
+| Vanilla source, same GCC 4.9.3 compiler | 0 | 14 s |
 | Drizzlet 2026.10.16 | 0 | 83 s (four runs) |
 
 Reverse, square-envelope, low-pitch and no-grain variants gave no clicks on any firmware. A desktop run of both grain schedulers produced none either, so the DSP logic is not the cause; CPU timing is the working hypothesis (the 2024 scheduler costs more in that range). Drizzlet peaks at 105,346 cycles (87.8%) on the recipe; the 2024 firmware was not timed on the module. The source difference is in CHANGELOG.md.
@@ -142,11 +142,11 @@ Recorded with a Focusrite Scarlett 18i8: both outputs, a copy of the input
 signal and a timecode from the Bela for alignment. CPU load comes from a
 calibration build: the same code with timing counters added.
 
-**Release candidate 3 against the released source** (2026-10-17), same panel
+**Release candidate 3 against the vanilla source** (2026-10-17), same panel
 settings. *Measured* scenarios record values for comparison and have no pass
 threshold.
 
-| Scenarios | Released source | Drizzlet |
+| Scenarios | Vanilla source | Drizzlet |
 |---|---|---|
 | Dry path; PITCH, TIME, SIZE and SHAPE CV; SEED; FREEZE gate; gated DENSITY; latched clock; monophonic grains; dry and wet output in the qualities checked | 15 pass | 15 pass |
 | Dry crosstalk | Inconclusive (the laptop's playback skipped) | Pass |
@@ -158,11 +158,11 @@ threshold.
 | Drizzlet only: Clouds-style switching | | Inconclusive here, pass on release candidate 5 |
 | Drizzlet only: all nine pitch scales | | Measured, see below |
 
-Measured values were compared with the released source. Every difference
+Measured values were compared with the vanilla source. Every difference
 traced back to the test rather than the firmware, and those tests were fixed.
 No recording had dropouts or digital clipping. The click candidates found came
 from the audio itself (music on the dry path, delay echoes, wavetable synth), at
-similar counts on the released source.
+similar counts on the vanilla source.
 
 **Pitch scales.** With PITCH randomness turned up, 222 grains were detected
 across the nine scale settings. Every one landed on a note of its scale, the
@@ -183,7 +183,7 @@ digital, with inputs playing.
 | Clouds-style reverb and Raag Shri scale | 105,761 | 88.1% |
 | Synth mode, inputs unplugged | 108,590 | 90.5% |
 
-No audio underruns in any capture. The released source has no timing counters,
+No audio underruns in any capture. The vanilla source has no timing counters,
 so it was not timed the same way.
 
 **Release candidate 5** (2026-10-18), the Beta 1 code. Only the Clouds-style
@@ -208,7 +208,7 @@ audio in every scenario with default options. A short run checked them on the mo
 |---|---:|---:|
 | 2021 forum release | 2 | 4 |
 | 2024 recovery firmware | 2 | 2 |
-| Released source | 9 | 2 |
+| Vanilla source | 9 | 2 |
 | Drizzlet (all builds) | 22 | 4 |
 | Reverse-engineered port | 0 | 1 |
 | **Total** | **35** | **13** |

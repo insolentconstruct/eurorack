@@ -45,6 +45,9 @@ jobs:
             artifacts/combo.bin
             artifacts/drizzlet-*-combo.bin
             artifacts/NOTICE.txt
+            artifacts/OPTIONS.md
+            artifacts/options-guide.svg
+            artifacts/options-guide-mobile.svg
             artifacts/SHA256SUMS
             artifacts/drizzlet-*.wav
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

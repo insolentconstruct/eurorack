@@ -12,7 +12,7 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 
 title="Drizzlet ${tag#drizzlet-}"
 prerelease=false
-notes="Alternative firmware for Mutable Instruments Beads, built on the released Mutable Instruments source; not a Mutable Instruments product. Read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first. How it was tested: [TESTING.md](https://github.com/$repo/blob/$tag/beads/build/docs/TESTING.md)."
+notes="Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable Instruments source; not a Mutable Instruments product. Read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first. How it was tested: [TESTING.md](https://github.com/$repo/blob/$tag/beads/build/docs/TESTING.md)."
 # This release's CHANGELOG.md section, under its "## VERSION" heading.
 changelog=${CHANGELOG:-beads/build/CHANGELOG.md}
 changes=$(awk -v v="${tag#drizzlet-}" '/^## /{p = $2 == v; next} p' "$changelog")
@@ -37,7 +37,9 @@ if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then
 fi
 latest=true
 [[ $prerelease == false ]] || latest=false
-assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
+assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt"
+  "$dir/OPTIONS.md" "$dir/options-guide.svg" "$dir/options-guide-mobile.svg"
+  "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
 

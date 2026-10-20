@@ -2,7 +2,7 @@
 
 **TL;DR:** places where the Beads manual differs from the firmware, such as the 1.5 s hold of the quality button [A] for automatic gain and 12 synth banks rather than 8.
 
-Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and module page differ from the released firmware source. Drizzlet keeps all of it unless noted; its own additions are in [README.md](../README.md). Several items come from the April 2021 update, which the manual predates ([release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572)).
+Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and module page differ from the vanilla firmware source. Drizzlet keeps all of it unless noted; its own additions are in [README.md](../README.md). Several items come from the April 2021 update, which the manual predates ([release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572)).
 <!-- Source: Mutable Instruments eurorack d8f4739 (stmlib e3bd7c9); manual.md and index.md from the mutable-instruments-documentation repository. Each item cites manual line and source. -->
 
 ## Corrections
@@ -14,6 +14,8 @@ Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutab
 
 ## Changed by the April 2021 update
 
+The update's [release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572) are Mutable Instruments' list of changes from the factory firmware ([CHANGELOG.md](../CHANGELOG.md) has a summary). These are the ones the manual contradicts or leaves out.
+
 - **Unfreezing:** recording resumes with a short crossfade into the current input. It does not replay the old buffer tail. <!-- manual.md:47; beads/dsp/delay_line.h:180,296-322; release notes post 1 -->
 - **Synth banks:** FEEDBACK (and its assigned CV) selects **12 banks** of 16 waveforms, not 8; four FM banks were added. <!-- manual.md:182; beads/dsp/synth.h:43; beads/dsp/synth.cc:82; release notes post 1 -->
 - **Shortest grains:** grains near the reverse/forward point of SIZE (about 10:30) can be much shorter than 30 ms: about 8 ms requested, 10–20 ms heard depending on SHAPE. <!-- manual.md:91; index.md:51; beads/dsp/granular_player.h:97-104; beads/dsp/grain_envelope.h -->
@@ -23,6 +25,8 @@ Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutab
 - **Manual gain display:** while setting manual gain ([A] + FEEDBACK), the quality LED becomes a green-to-red gain indicator. <!-- manual.md:44; beads/ui.cc:152-153,186-192 -->
 - **Manual gain clipping:** with manual gain, overloads hard-clip in the digital modes, soft-clip in Scorched cassette, and use a blend in Sunny tape. <!-- manual.md:44; beads/beads.cc:281-287; beads/gain_control.cc:133-181 -->
 - **Granular/delay switch:** turning SIZE into or out of delay fades the wet signal out and back in, taking about 1.5 s. <!-- manual.md:93,144; beads/dsp/processor.cc:37-38,112-119,205-222 -->
+- **Reverb at minimum:** turning REVERB fully counterclockwise stops sending signal into the reverb; the tail already in it fades out instead of being cut. <!-- manual.md:127; beads/dsp/fx/reverb.h:98-101 -->
+- **Clocked probability:** with a clock in SEED, DENSITY from 12 o'clock to fully clockwise sets the trigger probability on a quadratic curve, so sparse grains are easy to get even from a fast clock. <!-- manual.md:69; beads/dsp/trigger_generator.cc:135-138 -->
 
 ## Not in the manual
 
@@ -47,6 +51,7 @@ Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutab
 
 - **Scorched cassette resolution:** the 8-bit recording uses µ-law compression, which preserves quiet sounds better than linear 8-bit recording. <!-- manual.md:34, images/quality_table.png; index.md:36; beads/dsp/processor.h:183-192; beads/dsp/delay_line.h:124-153; beads/dsp/mu_law.h:46-78 -->
 - **Automatic gain** waits about 1 s, then listens for 5 s, and keeps adapting afterwards; silence postpones it. Restarting with [A] skips the wait. <!-- manual.md:42; beads/gain_control.cc:44-45,61-65,92-119 -->
+- **Hiss:** automatic gain raises the input by up to 40 times (about +32 dB), and the input's own noise with it. For quiet sources set the gain by hand ([A]+FEEDBACK). In desktop tests, silent input gave silent output, and the Clouds-style reverb carried 2–7 dB more input noise than the stock reverb; the module's own noise is not yet measured. <!-- beads/gain_control.cc kMaxGain; desktop study for #59 -->
 - **Input limiter:** the limiter for big level changes is the automatic gain itself. A sudden jump can briefly pass above full scale; the gain then falls in about 0.2 s (0.1 s while still listening). <!-- manual.md:42; beads/gain_control.cc:96-111,161-166 -->
 - **mix LEDs** (Mixing and audio output): the LEDs under FEEDBACK, DRY/WET and REVERB show the [M] setting: half lit for a single destination, each LED's brightness for individual amounts. They do not follow the incoming CV. <!-- manual.md:129-130; beads/ui.cc:263-271 -->
 - **DENSITY extremes:** fully counterclockwise gives a steady C3 rate (about 131 grains/s); fully clockwise is random with a lower average, not a steady C3. <!-- manual.md:65; beads/dsp/trigger_generator.cc:42,73-74,88-110,265-279 -->
