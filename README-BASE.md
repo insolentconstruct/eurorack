@@ -18,6 +18,7 @@ of it beside this one, from the repository root:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
+touch peaks/resources.cc
 M=../mutable-dev-environment/mutable
 $M image
 $M -C . render peaks
@@ -27,15 +28,16 @@ $M -C . make -f peaks/makefile wav
 sha256sum -c peaks/tuneup/expected-hashes.sha256
 ```
 
-CI runs the same steps. When a change alters the firmware on purpose, update
-the hashes and say why in the commit:
+The `touch` keeps the committed `resources.cc`: without it, make
+regenerates the file in a fresh checkout with today's stmlib, which
+builds different firmware. CI runs the same steps. When a change alters
+the firmware on purpose, update the hashes and say why in the commit:
 
 ```sh
 sha256sum build/peaks/peaks.bin build/peaks_bootloader/peaks_bootloader.hex build/peaks/peaks.wav > peaks/tuneup/expected-hashes.sha256
 ```
 
-Run the render tests on a clean checkout: the build can regenerate
-`resources.cc`. When a change alters a render on purpose, run
+When a change alters a render on purpose, run
 `$M -C . render --update peaks` and give the reason in the commit.
 `$M -C . render --sanitize peaks` adds AddressSanitizer, UBSan and a check
 for output that depends on uninitialised locals.
