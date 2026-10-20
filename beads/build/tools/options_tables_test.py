@@ -134,7 +134,7 @@ assert " ".join(plain_options[width_start:delay_start].split()) == " ".join(
 ), "README.md and README.txt Stereo width prose differ"
 plain_delay = plain_options[delay_start:limiter_start]
 rich_delay = markdown_readme.split("## Delay mode\n", 1)[1].split("\n## ", 1)[0]
-for fact in ("Auto (Stock)", "Never", "Wide detent", "middle", "SIZE CV",
+for fact in ("Auto (Stock)", "Disabled", "Wide/smooth filter", "middle", "SIZE CV",
              "green / yellow / red", "does not affect wavetable synth mode"):
     assert fact in " ".join(plain_delay.split()), fact
     assert fact in " ".join(rich_delay.split()), fact
@@ -248,15 +248,28 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     # User-facing prose carries no exact numbers; those live in FEATURES.md.
     for banned in STYLE_BANNED:
         assert banned not in markdown, ("OPTIONS.md", banned)
-    for phrase in ("Wide detent", "Raag Shri", "about a second and a half"):
+    for phrase in ("Wide/smooth filter", "Raag Shri", "about a second and a half"):
         assert phrase in details, phrase
+    warning = ("Don't hold SEED while powering on: it resets all settings "
+               "to defaults (calibration is kept).")
+    assert "## Other gestures" in markdown and warning in markdown
+    for phrase in ("Monophonic grains", "Buffer trim",
+                   "Wavetable synth (Manual)", "FREEZE [B]"):
+        assert phrase in markdown.split("## Details")[0], phrase
+    assert "erase" not in markdown.lower()
     for name in ("options-guide.svg", "options-guide-mobile.svg"):
         root = ET.parse(Path(directory, name)).getroot()
         texts = list(root.iter("{http://www.w3.org/2000/svg}text"))
         labels = [node.text for node in texts]
         assert labels.count("pulsing") == 3
-        assert all(labels.count(label) == 3 for label in ("F", "D/W", "R"))
+        assert all(labels.count(label) == 3 for label in ("D/W", "R"))
+        assert labels.count("F") == 4  # three page markers + panel knob F
         assert labels.count("READ THE [A] LED") == 1
+        assert labels.count("OTHER GESTURES") == 1
+        for title in ("Monophonic grains", "Buffer trim",
+                      "Wavetable synth (Manual)"):
+            assert title in labels, title
+        assert warning in " ".join(labels), name
         assert labels.count("REVERB: Not used yet") == 2
         assert labels.count("FEEDBACK: Not used yet") == 1
         assert "Reserved" not in labels
@@ -265,7 +278,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         flat = " ".join(labels)
         for phrase in STYLE_BANNED:
             assert phrase not in flat, (name, phrase)
-        assert "Quality LED [A]" in labels and "[M] CV assign" in labels
+        assert {"[A]", "CV assign", "[M]"} <= set(labels)
         for row in rows:
             _, _, _, setting, value, color, pulse = row.split("\t")
             if setting != "Not used yet":
@@ -370,4 +383,8 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
                     archive.read(guide)
                     == Path("beads/build/docs", guide).read_bytes()
                 )
+    listed = [line.split()[1] for line in (out / "SHA256SUMS").read_text().splitlines()]
+    for guide in ("OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"):
+        assert guide in listed, guide
+        assert (out / guide).read_bytes() == Path("beads/build/docs", guide).read_bytes()
 print("Release ZIPs include the generated guides: PASS")

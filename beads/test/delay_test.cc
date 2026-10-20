@@ -430,6 +430,58 @@ void TestDelayRandomModulation() {
   CHECK(fabsf(sequence[1500] - sequence[0]) > 0.01f);
 }
 
+// The grains read the stored integers and scale once; the taps read floats.
+// Both must give the same samples on every line format, across the bank edges
+// (1024-byte banks: every format, mono and stereo, spans several) and the wrap
+// of the write pointer. Exact bit identity on the Cortex-M7 is checked by the
+// Seed3 output hashes; here a compiler that fuses is allowed to differ.
+template<Resolution resolution, int num_channels>
+void CheckHermiteRaw(uint32_t* seed) {
+  typedef DelayLine<resolution, 1500, num_channels, 1024, 6> SmallLine;
+  static uint8_t data[6 * 1024 + 2048];
+  SmallLine line;
+  line.Init(data, sizeof(data));
+  int mismatches = 0;
+  for (int n = 0; n < 6000; ++n) {
+    FloatFrame in;
+    *seed = *seed * 1664525u + 1013904223u;
+    in.l = float(int32_t(*seed >> 8) - (1 << 23)) / float(1 << 23);
+    *seed = *seed * 1664525u + 1013904223u;
+    in.r = float(int32_t(*seed >> 8) - (1 << 23)) / float(1 << 23);
+    line.Write(in);
+    if (n < 800) {
+      continue;
+    }
+    for (int k = 0; k < 8; ++k) {
+      *seed = *seed * 1664525u + 1013904223u;
+      const int integral = int(*seed >> 16) % 1400;
+      const float fractional = float((*seed >> 6) & 1023) / 1024.0f;
+      const FloatFrame a = line.template Read<INTERPOLATION_HERMITE>(
+          integral, fractional);
+      const FloatFrame b = line.template Read<INTERPOLATION_HERMITE_RAW>(
+          integral, fractional);
+#ifdef __FP_FAST_FMAF
+      // A compiler that fuses may round the two spellings differently.
+      mismatches += !(fabsf(a.l - b.l) < 1.0e-6f && fabsf(a.r - b.r) < 1.0e-6f);
+#else
+      mismatches += !(a.l == b.l && a.r == b.r);
+#endif
+    }
+  }
+  CHECK(mismatches == 0);
+}
+
+void TestHermiteRawMatchesScaled() {
+  test_checker.Start("TestHermiteRawMatchesScaled");
+  uint32_t seed = 1;
+  CheckHermiteRaw<RESOLUTION_16_BIT, 2>(&seed);
+  CheckHermiteRaw<RESOLUTION_16_BIT, 1>(&seed);
+  CheckHermiteRaw<RESOLUTION_12_BIT, 2>(&seed);
+  CheckHermiteRaw<RESOLUTION_12_BIT, 1>(&seed);
+  CheckHermiteRaw<RESOLUTION_8_BIT, 2>(&seed);
+  CheckHermiteRaw<RESOLUTION_8_BIT, 1>(&seed);
+}
+
 int main() {
   TestFrozenSliceBoundarySelection();
   TestClockDividerTable();
@@ -441,5 +493,6 @@ int main() {
   TestTimeMultipliersAndCrossfade();
   TestDelayShapeEnvelope();
   TestDelayRandomModulation();
+  TestHermiteRawMatchesScaled();
   return test_checker.failures() ? 1 : 0;
 }

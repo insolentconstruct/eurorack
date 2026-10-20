@@ -70,7 +70,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
-| 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Never, 0xA2 Wide detent; unknown values read Auto (Stock) |
+| 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Disabled, 0xA2 Wide/smooth filter; unknown values read Auto (Stock) |
 | 16 | `padding[6]` | WIDTH assignment: 0 off, 1 on; other values read off; stock destination stays FEEDBACK |
 | 17–22, individually | `padding[7]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
@@ -151,6 +151,18 @@ high-water remains unverified; module callback timing is in TESTING.md.
 Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. Module timing, whole callback: delay mode 60% of budget; heaviest grain case with default options 85–86%; Clouds-style 88.1%; wavetable synth mode 90.5%; no underruns (TESTING.md). <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
 The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Synth mode leaves 9.5% of the budget; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
+## Design aims
+
+Mutable Instruments built Beads as a real-time granular texture tool around one model: "a fixed-length tape loop. This is not a sampler." The panel should say what the module does ("I want to keep this module WYSIWYG"), and the stock firmware was to get "no further additional feature that will require a button combo". Drizzlet adds some things Mutable Instruments declined for stock (diffusion, scales, trim, mono grains), so a new feature is judged by these tests instead:
+
+- It shapes the sound live (texture), not edits or files it (studio).
+- It is off by default and hard to reach by accident.
+- One manual paragraph explains it; no hidden state the panel can't show.
+- Patching can't already do it.
+- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source.
+
+Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the page is full once the planned options land).
+
 ## Planning rules
 
 - Allocate a reserved page knob before borrowing another normal gesture; record page, knob, colours and saved bytes together. <!-- derived: beads/options.h:90-113; beads/ui.cc:283-299; beads/settings.h:60 -->
@@ -165,7 +177,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
 - **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
-- **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
+- **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. They need the recording RAM: six Plaits voices take about 152 KB and Clouds' spectral engine 130,688 B (stereo) or 114,240 B (mono), against 92,648 B of free DTCM. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
@@ -196,7 +208,7 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 - **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch scale, Delay mode and Limiter use thirds; Reverb character and Wavetable synth use halves.
 - **Stereo width:** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
-- **Delay mode, Wide detent:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
+- **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
 - **Wavetable synth, Manual:** hold [A] 1.5 s to start or stop (the manual says 1 s).
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.

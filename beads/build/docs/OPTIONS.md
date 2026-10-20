@@ -41,7 +41,7 @@ Scale (tap SEED to step through):
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Not used yet | — | — |
-| DRY/WET | Delay mode | Auto (Stock) / Never / Wide detent | green; steady / yellow; steady / red; steady |
+| DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
 | REVERB | Not used yet | — | — |
 
 ## Page 3 — DRY/WET LED pulsing
@@ -51,6 +51,14 @@ Scale (tap SEED to step through):
 | FEEDBACK | Wavetable synth | Automatic (Stock) / Manual | green; steady / yellow; steady |
 | DRY/WET | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
 | REVERB | Not used yet | — | — |
+
+## Other gestures
+
+- **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
+- **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
+- **Wavetable synth (Manual):** With both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
+
+**Warning:** Don't hold SEED while powering on: it resets all settings to defaults (calibration is kept).
 
 ## Details
 
@@ -66,7 +74,7 @@ The quality LED [A] shows the value of the last knob that took over. The first v
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
-Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Never stays granular. Wide detent keeps the switch and adds a neutral, unfiltered zone around the middle of the delay filter (SIZE attenurandomizer plus SIZE CV), with no resonant boost. The wavetable synth is unaffected.
+Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays granular. Wide/smooth filter keeps the switch and adds a neutral, unfiltered zone around the middle of the delay filter (SIZE attenurandomizer plus SIZE CV), with no resonant boost. The wavetable synth is unaffected.
 
 Clouds-style changes the reverb character and adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
