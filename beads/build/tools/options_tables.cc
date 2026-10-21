@@ -34,7 +34,7 @@ namespace {
 const char* const kPageNames[] = { "REVERB", "FEEDBACK", "DRY/WET" };
 const char* const kOptionNames[] = {
   "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
-  "Delay mode", "Wavetable synth", "Limiter"
+  "Delay mode", "Wavetable synth", "Limiter", "Frozen feedback"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 struct ValueNames {
@@ -65,6 +65,8 @@ const ValueNames kValueNames[] = {
   { "Stock", "green" },
   { "Fast release", "yellow" },
   { "Off", "red" },
+  { "Stock", "green" },
+  { "Evolving", "yellow" },
 };
 
 }  // namespace

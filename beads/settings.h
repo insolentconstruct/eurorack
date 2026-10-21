@@ -69,7 +69,8 @@ struct State {
   uint8_t delay_mode;
   uint8_t width_assigned;
   uint8_t diffusion;
-  uint8_t padding[6];
+  uint8_t frozen_feedback;
+  uint8_t padding[5];
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -101,7 +102,9 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(
       offsetof(State, width_assigned) == 16, state_width_assigned_offset);
   STATIC_ASSERT(offsetof(State, diffusion) == 17, state_diffusion_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 18, state_padding_offset);
+  STATIC_ASSERT(
+      offsetof(State, frozen_feedback) == 18, state_frozen_feedback_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 19, state_padding_offset);
 };
 
 const uint8_t kOptionTag = 0xa0;
@@ -180,6 +183,14 @@ class Settings {
   inline void set_width_assigned(bool assigned) {
     state_.width_assigned = assigned && stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
+  }
+
+  inline bool evolving_feedback() const {
+    return state_.frozen_feedback == (kOptionTag + 1);
+  }
+
+  inline void set_evolving_feedback(bool evolving) {
+    state_.frozen_feedback = evolving ? (kOptionTag + 1) : 0;
   }
 
   // Zero follows the reverb character: none with Stock, Beta 1's fixed

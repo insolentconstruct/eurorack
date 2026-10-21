@@ -99,6 +99,11 @@ class FeedbackDiffuser {
     wander_[2].Init(1.0f / (4.0f * kFeedbackWanderPeriodDiffuser));
   }
 
+  // Faded out and cleared: Process would do nothing.
+  inline bool idle() const {
+    return !dirty_ && engaged_ <= 0.0f && clear_ >= kClearEnd;
+  }
+
   void Process(FloatFrame* in_out, float feedback, bool frozen, size_t size) {
     // Nothing runs while FREEZE is off, other than clearing the memory a slice
     // at a time once the loop has faded out.
@@ -130,7 +135,7 @@ class FeedbackDiffuser {
         &regeneration_, LoopGain(feedback * engaged), size);
     stmlib::ParameterInterpolator wet_amount(&wet_amount_, mix, size);
     stmlib::ParameterInterpolator dry_amount(
-        &dry_amount_, sqrtf(1.0f - mix * mix), size);
+        &dry_amount_, stmlib::Sqrt(1.0f - mix * mix), size);
     stmlib::ParameterInterpolator match(&match_, match_target_, size);
 
     // The taps move slowly: one position per block.
@@ -173,7 +178,7 @@ class FeedbackDiffuser {
     ONE_POLE(input_power_, input_power, kFeedbackPowerSlew);
     ONE_POLE(wet_power_, wet_power, kFeedbackPowerSlew);
     if (input_power_ > 1.0e-9f && wet_power_ > 1.0e-9f) {
-      match_target_ = sqrtf(input_power_ / wet_power_);
+      match_target_ = stmlib::Sqrt(input_power_ / wet_power_);
       CONSTRAIN(match_target_, kFeedbackMatchMin, kFeedbackMatchMax);
     }
     if (fabsf(previous_.l) < kFeedbackDenormal) {

@@ -75,6 +75,7 @@ bool Settings::Init(bool recovery_mode) {
   state_.delay_mode = 0;
   state_.width_assigned = 0;
   state_.diffusion = 0;
+  state_.frozen_feedback = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   
   if (recovery_mode) {
@@ -108,6 +109,7 @@ void Settings::NormalizeOptions() {
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
   set_delay_mode(delay_mode());
+  set_evolving_feedback(evolving_feedback());
   // One store, so the audio interrupt never sees the target cleared.
   state_.width_assigned = width_assigned() && stereo_width() ? 1
       : (diffusion_assigned() && diffusion_assignable() ? 2 : 0);

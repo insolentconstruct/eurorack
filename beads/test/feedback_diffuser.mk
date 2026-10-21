@@ -14,5 +14,5 @@ CC_FILES       = 		feedback_diffuser_test.cc \
 		random.cc
 
 STUBS = beads/test/options_stubs beads/test/common_stubs
-HOST_FLAGS = -DBEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER -DSTM32H7XX -Wno-int-to-pointer-cast
+HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast
 include beads/test/host.mk

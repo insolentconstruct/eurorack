@@ -44,6 +44,7 @@ void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
   clouds_style_ = false;
+  evolving_feedback_ = false;
   diffusion_ = 0.0f;
   diffuser_.Init(diffuser_buffer_);
   diffuser_.set_amount(diffusion_);
@@ -79,9 +80,7 @@ void Processor::SetCloudsStyle(bool clouds) {
 }
 
 void Processor::Configure(Media media, bool mono) {
-#ifdef BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER
   feedback_diffuser_.Init();
-#endif
   media_ = media;
   mono_ = mono;
   
@@ -218,9 +217,10 @@ void Processor::Process(
       break;
   }
   
-#ifdef BEADS_EXPERIMENTAL_FEEDBACK_DIFFUSER
-  feedback_diffuser_.Process(out, feedback, freeze[size - 1], size);
-#endif
+  if (evolving_feedback_ || !feedback_diffuser_.idle()) {
+    feedback_diffuser_.Process(
+        out, feedback, evolving_feedback_ && freeze[size - 1], size);
+  }
   if (diffusion_ > 0.0f && !delay_mode) {
     diffuser_.Process(out, size);
   }

@@ -119,6 +119,7 @@ void TestFrozenFeedback() {
       memset(banks, 0, sizeof(banks));
       processor.Init(buffers, reverb);
       processor.Configure(Processor::Media(quality), mono);
+      processor.set_evolving_feedback(true);
       Parameters p;
       memset(&p, 0, sizeof(p));
       p.size.base = 1.0f;
@@ -152,6 +153,20 @@ void TestFrozenFeedback() {
         }
       }
       CHECK(memcmp(saved, banks, sizeof(banks)) == 0);
+      CHECK(!processor.feedback_diffuser_.idle());
+      // Off while frozen: the loop fades out, clears, then stops running.
+      processor.set_evolving_feedback(false);
+      for (int block = 0; block < 4000; ++block) {
+        FloatFrame in[12], out[12];
+        bool freeze[12];
+        for (size_t i = 0; i < size; ++i) {
+          in[i].l = in[i].r = 0.0f;
+          freeze[i] = true;
+        }
+        processor.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze,
+            d, p, mix, in, out, size);
+      }
+      CHECK(processor.feedback_diffuser_.idle());
     }
   }
 }

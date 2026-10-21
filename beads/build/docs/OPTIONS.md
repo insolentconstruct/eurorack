@@ -42,7 +42,7 @@ Scale (tap SEED to step through):
 |---|---|---|---|
 | FEEDBACK | Not used yet | — | — |
 | DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
-| REVERB | Not used yet | — | — |
+| REVERB | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
 
 ## Page 3 — DRY/WET LED pulsing
 
@@ -80,5 +80,7 @@ Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays gr
 Clouds-style changes the reverb character and, until a diffusion amount is set with [A]+REVERB, adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
 Wavetable synth Manual needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
+
+Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
 Limiter Off lets loud peaks clip.

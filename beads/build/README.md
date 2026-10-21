@@ -111,7 +111,7 @@ little before it takes over. Knobs marked Not used yet do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
-2 / FEEDBACK        Not used yet  Delay mode    Not used yet
+2 / FEEDBACK        Not used yet  Delay mode    Frozen feedback
 3 / DRY/WET         Wavetable synth     Limiter       Not used yet
 
 Changes save by themselves about a second after you stop turning; wait that
@@ -142,6 +142,14 @@ plus diffusion on the grain wet output until an amount is set with [A]+REVERB
 (below). In delay and wavetable synth modes, only the reverb character changes. Switching briefly fades the sound out and
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
+
+Frozen feedback: page 2 (FEEDBACK LED), REVERB knob. Lower half selects
+Stock (default, steady green); upper half selects Evolving (steady yellow).
+With Evolving, while FREEZE is on, the grains run through a slowly moving
+all-pass loop, so the frozen sound drifts and its attacks soften instead of
+repeating exactly; FEEDBACK sets how far it goes. It fades in and out
+quickly and does nothing while FREEZE is off. The setting is saved; stock
+firmware ignores it.
 
 Grain diffusion: hold [A] and turn REVERB to set the amount, with either
 reverb; the [A] LED shows it as a meter, and fully CCW is none. Until it is

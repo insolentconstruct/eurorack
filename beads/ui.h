@@ -133,6 +133,8 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
+
+  inline bool evolving_feedback() const { return evolving_feedback_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
@@ -206,6 +208,7 @@ class Ui {
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
   volatile bool clouds_style_;
+  volatile bool evolving_feedback_;
   volatile PitchScale pitch_scale_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;

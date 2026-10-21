@@ -270,8 +270,11 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
                       "Wavetable synth (Manual)"):
             assert title in labels, title
         assert warning in " ".join(labels), name
-        assert labels.count("REVERB: Not used yet") == 2
-        assert labels.count("FEEDBACK: Not used yet") == 1
+        for knob in ("FEEDBACK", "DRY/WET", "REVERB"):
+            reserved = sum(1 for row in rows
+                           if row.split("\t")[2] == knob
+                           and row.split("\t")[3] == "Not used yet")
+            assert labels.count(knob + ": Not used yet") == reserved, knob
         assert "Reserved" not in labels
         assert "Scale (tap SEED to step through):" in labels
         assert all(float(node.attrib["font-size"]) >= 15 for node in texts)

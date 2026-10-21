@@ -46,7 +46,8 @@ const int kNumOptionPages = 3;
 
 enum OptionSetting {
   OPTION_RESERVED, OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB,
-  OPTION_DELAY, OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_LAST
+  OPTION_DELAY, OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_FROZEN,
+  OPTION_LAST
 };
 
 struct OptionPage {
@@ -85,7 +86,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 23;
+const size_t kNumOptionValues = 25;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -132,6 +133,8 @@ class Options {
 
   inline PitchScale pitch_preview() const { return pitch_preview_; }
 
+  inline bool evolving_preview() const { return evolving_preview_; }
+
   inline bool seed_allowed() const {
     return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&
         pitch_preview_ >= PITCH_SCALE_FIFTHS;
@@ -177,6 +180,7 @@ class Options {
   StereoWidth width_preview_;
   DelayMode delay_preview_;
   PitchScale pitch_preview_;
+  bool evolving_preview_;
   PitchScale scale_;
   bool seed_held_;
   uint32_t seed_time_;

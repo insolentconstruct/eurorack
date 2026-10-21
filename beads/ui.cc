@@ -109,6 +109,7 @@ void Ui::Init(
 void Ui::LoadOptions() {
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
+  evolving_feedback_ = settings_->evolving_feedback();
   pitch_scale_ = settings_->pitch_scale();
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
@@ -222,6 +223,8 @@ void Ui::Poll() {
       ? options_.clouds_preview() : settings_->clouds_style();
   delay_mode_ = previewing
       ? options_.delay_preview() : settings_->delay_mode();
+  evolving_feedback_ = previewing
+      ? options_.evolving_preview() : settings_->evolving_feedback();
   stereo_width_ = previewing
       ? options_.width_preview() : settings_->stereo_width();
   pitch_scale_ = previewing
@@ -624,13 +627,15 @@ void Ui::DoEvents() {
         options_.clouds_preview() != settings_->clouds_style() ||
         options_.pitch_preview() != settings_->pitch_scale() ||
         options_.width_preview() != settings_->stereo_width() ||
-        options_.delay_preview() != settings_->delay_mode()) {
+        options_.delay_preview() != settings_->delay_mode() ||
+        options_.evolving_preview() != settings_->evolving_feedback()) {
       settings_->set_output_limiter_mode(options_.limiter_preview());
       settings_->set_self_play_on_request(options_.self_play_preview());
       settings_->set_clouds_style(options_.clouds_preview());
       settings_->set_pitch_scale(options_.pitch_preview());
       settings_->set_stereo_width(options_.width_preview());
       settings_->set_delay_mode(options_.delay_preview());
+      settings_->set_evolving_feedback(options_.evolving_preview());
       settings_->SaveState();
       FlashOptionsPage();
     }

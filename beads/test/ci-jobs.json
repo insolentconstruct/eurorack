@@ -13,7 +13,7 @@
   },
   {
     "name": "clouds-stock",
-    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestReverbRates TestDiffuserImpulse'"
+    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestReverbRates TestDiffuserImpulse'\nmake -j\"$(nproc)\" -f beads/test/feedback_diffuser.mk test"
   },
   {
     "name": "clouds-style",
