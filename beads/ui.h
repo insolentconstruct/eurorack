@@ -138,6 +138,8 @@ class Ui {
 
   inline bool plaits_synth() const { return plaits_synth_; }
 
+  inline AttackMode attack_mode() const { return attack_mode_; }
+
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
@@ -214,6 +216,7 @@ class Ui {
   volatile bool evolving_feedback_;
 
   volatile bool plaits_synth_;
+  volatile AttackMode attack_mode_;
   volatile PitchScale pitch_scale_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;

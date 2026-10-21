@@ -34,7 +34,7 @@ namespace beads {
 
 const OptionPage kOptionPages[kNumOptionPages] = {
   { 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
-  { 0, { OPTION_RESERVED, OPTION_DELAY, OPTION_FROZEN } },
+  { 0, { OPTION_ATTACKS, OPTION_DELAY, OPTION_FROZEN } },
   { 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_SYNTH } }
 };
 const OptionValue kOptionValues[] = {
@@ -91,7 +91,13 @@ const OptionValue kOptionValues[] = {
   { OPTION_SYNTH, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_SYNTH, 1,
-    { 255, 255, 0 }, PULSE_STEADY }
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 2,
+    { 255, 0, 0 }, PULSE_STEADY }
 };
 
 void Options::Init() {
@@ -103,6 +109,7 @@ void Options::Init() {
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   self_play_preview_ = clouds_preview_ = evolving_preview_ = false;
   plaits_preview_ = false;
+  attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
   width_preview_ = 0;
@@ -272,6 +279,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_LIMITER:
           limiter_preview_ = OutputLimiterMode(zone_[i]);
           break;
+        case OPTION_ATTACKS:
+          attack_preview_ = AttackMode(zone_[i]);
+          break;
         case OPTION_FROZEN:
           if (pot < kOptionsHalfLow) {
             evolving_preview_ = false;
@@ -336,6 +346,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
     width_preview_ = settings.stereo_width();
     delay_preview_ = settings.delay_mode();
     evolving_preview_ = settings.evolving_feedback();
+    attack_preview_ = settings.attack_mode();
     ResetPots(pots);
     eligible_ = false;
     stage_ = STAGE_WAIT_RELEASE;
@@ -360,6 +371,8 @@ int Options::Value(OptionSetting setting) const {
       return evolving_preview_;
     case OPTION_SYNTH:
       return plaits_preview_;
+    case OPTION_ATTACKS:
+      return attack_preview_;
     default:
       return 0;
   }

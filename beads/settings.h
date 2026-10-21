@@ -36,6 +36,7 @@
 
 #include "beads/drivers/cv_adc.h"
 #include "beads/dsp/limiter.h"
+#include "beads/dsp/attack_detector.h"
 #include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
 
@@ -70,7 +71,8 @@ struct State {
   uint8_t width_assigned;
   uint8_t diffusion;
   uint8_t frozen_feedback;
-  uint8_t padding[2];
+  uint8_t attacks;
+  uint8_t padding[1];
   uint8_t synth_engine;
   uint8_t padding_end[2];
   enum { tag = 0x54415453 };  // STAT
@@ -106,7 +108,8 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(offsetof(State, diffusion) == 17, state_diffusion_offset);
   STATIC_ASSERT(
       offsetof(State, frozen_feedback) == 18, state_frozen_feedback_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 19, state_padding_offset);
+  STATIC_ASSERT(offsetof(State, attacks) == 19, state_attacks_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 20, state_padding_offset);
   STATIC_ASSERT(
       offsetof(State, synth_engine) == 21, state_synth_engine_offset);
   STATIC_ASSERT(offsetof(State, padding_end) == 22, state_padding_end_offset);
@@ -196,6 +199,18 @@ class Settings {
   inline void set_width_assigned(bool assigned) {
     state_.width_assigned = assigned && stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
+  }
+
+  inline AttackMode attack_mode() const {
+    const uint8_t value = state_.attacks;
+    return value == (kOptionTag + 1) ? ATTACK_MODE_SNAP
+        : value == (kOptionTag + 2) ? ATTACK_MODE_SNAP_AND_TRIGGER
+        : ATTACK_MODE_OFF;
+  }
+
+  inline void set_attack_mode(AttackMode mode) {
+    state_.attacks = mode == ATTACK_MODE_SNAP ? (kOptionTag + 1)
+        : mode == ATTACK_MODE_SNAP_AND_TRIGGER ? (kOptionTag + 2) : 0;
   }
 
   inline bool evolving_feedback() const {

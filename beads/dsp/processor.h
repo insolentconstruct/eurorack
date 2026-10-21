@@ -73,6 +73,38 @@ class Processor {
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
   void SetCloudsStyle(bool clouds);
+  // Attacks (#58, #47); changing the mode forgets the marks.
+  void SetAttacks(int mode, float threshold) {
+    attack_input_.Configure(mode, threshold);
+    processor_digital_.SetAttacks(mode);
+    processor_vintage_digital_.SetAttacks(mode);
+    processor_clean_tape_.SetAttacks(mode);
+    processor_dirty_tape_.SetAttacks(mode);
+  }
+
+  inline AttackInput* attack_input() { return &attack_input_; }
+
+  // Attacks are marked only while granular playback records.
+  inline bool AttackRecording() const {
+    return delay_mode_transition_ <= 0.0f;
+  }
+
+  void SetAttackOnset(bool onset) {
+    switch (media_) {
+      case MEDIA_DIRTY_TAPE:
+        processor_dirty_tape_.SetAttackOnset(onset);
+        break;
+      case MEDIA_CLEAN_TAPE:
+        processor_clean_tape_.SetAttackOnset(onset);
+        break;
+      case MEDIA_VINTAGE_DIGITAL:
+        processor_vintage_digital_.SetAttackOnset(onset);
+        break;
+      default:
+        processor_digital_.SetAttackOnset(onset);
+        break;
+    }
+  }
   void Configure(Media media, bool mono);
   
   inline Media media() const { return media_; }
@@ -280,6 +312,7 @@ class Processor {
   float diffusion_;
   FeedbackDiffuser feedback_diffuser_;
   bool evolving_feedback_;
+  AttackInput attack_input_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

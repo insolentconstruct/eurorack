@@ -83,7 +83,7 @@ little before it takes over. Knobs marked Not used yet do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
-2 / FEEDBACK        Not used yet  Delay mode    Frozen feedback
+2 / FEEDBACK        Attacks       Delay mode    Frozen feedback
 3 / DRY/WET         Wavetable synth     Limiter       Synth engine
 
 Changes save by themselves about a second after you stop turning; wait that
@@ -144,6 +144,14 @@ plus diffusion on the grain wet output until an amount is set with [A]+REVERB
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
+Attacks: page 2 (FEEDBACK LED), FEEDBACK knob, in thirds. Off (default,
+steady green), Snap (steady yellow): while recording, Beads marks the attacks
+in the input, and a grain that would start just after one starts on it
+instead, so grains begin on a hit rather than partway through its decay.
+Snap and trigger (steady red) also starts a grain on each attack, as a SEED
+pulse would. Only granular playback uses the marks; a patched SEED still
+works. The setting is saved; stock firmware ignores it.
+
 Frozen feedback: page 2 (FEEDBACK LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Evolving (steady yellow).
 With Evolving, while FREEZE is on, the grains run through a slowly moving
@@ -192,7 +200,9 @@ page	LED	knob	setting	value	colour	pulse
 1	REVERB	DRY/WET	Stereo width	Width (wider →)	meter	slow (0.98 Hz)
 1	REVERB	REVERB	Reverb character	Stock	green	steady
 1	REVERB	REVERB	Reverb character	Clouds-style	yellow	steady
-2	FEEDBACK	FEEDBACK	Not used yet	Not used yet	unchanged	steady
+2	FEEDBACK	FEEDBACK	Attacks	Off	green	steady
+2	FEEDBACK	FEEDBACK	Attacks	Snap	yellow	steady
+2	FEEDBACK	FEEDBACK	Attacks	Snap and trigger	red	steady
 2	FEEDBACK	DRY/WET	Delay mode	Auto (Stock)	green	steady
 2	FEEDBACK	DRY/WET	Delay mode	Disabled	yellow	steady
 2	FEEDBACK	DRY/WET	Delay mode	Wide/smooth filter	red	steady

@@ -274,6 +274,8 @@ class DelayLine {
             items_[offset / bank_size])) + (offset % bank_size);
   }
   
+  inline int write_ptr() const { return write_ptr_; }
+
   inline int* mutable_write_ptr() { return &write_ptr_; }
   
   inline void Reset(bool clear) {

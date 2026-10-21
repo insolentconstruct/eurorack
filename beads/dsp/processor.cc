@@ -43,6 +43,7 @@ using namespace stmlib;
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
+  attack_input_.Init();
   clouds_style_ = false;
   evolving_feedback_ = false;
   diffusion_ = 0.0f;
@@ -80,6 +81,7 @@ void Processor::SetCloudsStyle(bool clouds) {
 }
 
 void Processor::Configure(Media media, bool mono) {
+  attack_input_.Reset();
   feedback_diffuser_.Init();
   media_ = media;
   mono_ = mono;

@@ -67,7 +67,8 @@ STATIC_ASSERT(offsetof(State, monophonic_mode) == 9, mono);
 namespace state_layout_test {
 STATIC_ASSERT(offsetof(State, diffusion) == 17, diffusion);
 STATIC_ASSERT(offsetof(State, frozen_feedback) == 18, frozen_feedback);
-STATIC_ASSERT(offsetof(State, padding) == 19, options);
+STATIC_ASSERT(offsetof(State, attacks) == 19, attacks);
+STATIC_ASSERT(offsetof(State, padding) == 20, options);
 STATIC_ASSERT(offsetof(State, synth_engine) == 21, synth_engine);
 }
 
@@ -917,6 +918,42 @@ void TestSelfPlayStorage() {
   CHECK(loaded.state().self_play == 0);
 }
 
+void TestAttackStorage() {
+  test_checker.Start("TestAttackStorage");
+  Rig r;
+  for (int value = 0; value < 256; ++value) {
+    r.settings.mutable_state()->attacks = value;
+    const AttackMode mode = value == 0xa1 ? ATTACK_MODE_SNAP
+        : value == 0xa2 ? ATTACK_MODE_SNAP_AND_TRIGGER : ATTACK_MODE_OFF;
+    CHECK(r.settings.attack_mode() == mode);
+    r.settings.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.attack_mode() == mode);
+    CHECK(loaded.state().attacks == (mode ? 0xa0 + mode : 0));
+    loaded.mutable_state()->attacks = value;
+    loaded.chunk_storage_.SaveState();
+    CHECK(loaded.Init(false));
+    CHECK(loaded.state().attacks == (mode ? 0xa0 + mode : 0));
+    CHECK(r.settings.Init(false));
+  }
+  // Page 2, FEEDBACK, in thirds.
+  // Far enough from the entry position (0.5) to take over.
+  const float positions[] = { 0.05f, 0.62f, 0.95f };
+  for (int zone = 0; zone < 3; ++zone) {
+    Rig s;
+    s.Enter();
+    s.Tap();
+    s.feedback = positions[zone];
+    s.Tick(20);
+    CHECK(s.ui.attack_mode() == AttackMode(zone));
+    s.Tick(1100);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.attack_mode() == AttackMode(zone));
+  }
+}
+
 void TestFrozenFeedbackStorage() {
   test_checker.Start("TestFrozenFeedbackStorage");
   Rig r;
@@ -978,14 +1015,14 @@ void TestSynthEngineStorage() {
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->synth_engine = value;
     CHECK(r.settings.plaits_synth() == (value == 0xa1));
-    r.settings.mutable_state()->padding[1] = 0xff;
+    r.settings.mutable_state()->padding[0] = 0xff;
     r.settings.mutable_state()->padding_end[1] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.plaits_synth() == (value == 0xa1));
     CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
-    CHECK(loaded.state().padding[1] == 0 && loaded.state().padding_end[1] == 0);
+    CHECK(loaded.state().padding[0] == 0 && loaded.state().padding_end[1] == 0);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->synth_engine = value;
     loaded.chunk_storage_.SaveState();
@@ -1403,7 +1440,7 @@ void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
   const OptionSetting expected[3][3] = {
     { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB },
-    { OPTION_RESERVED, OPTION_DELAY, OPTION_FROZEN },
+    { OPTION_ATTACKS, OPTION_DELAY, OPTION_FROZEN },
     { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_SYNTH }
   };
   Rig r;
@@ -1445,7 +1482,7 @@ void TestOptionsTablesAndLifetime() {
 
 void TestOptionsKnobsAndSettling() {
   test_checker.Start("TestOptionsKnobsAndSettling");
-  // Every physical knob, including the reserved position.
+  // Every physical knob.
   for (int page = 0; page < 3; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       Rig r;
@@ -1488,7 +1525,8 @@ void TestOptionsKnobsAndSettling() {
           ? r.settings.clouds_style() : setting == OPTION_SELF_PLAY
           ? r.settings.self_play_on_request() : setting == OPTION_FROZEN
           ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
-          ? r.settings.plaits_synth()
+          ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
+          ? int(r.settings.attack_mode())
           : int(r.settings.output_limiter_mode())));
       r.Tick(5000);
       CHECK(test_writes == writes + 1);
@@ -1668,6 +1706,9 @@ void TestOptionsPalette() {
         r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
         break;
       case OPTION_FROZEN: r.ui.options_.evolving_preview_ = v.value; break;
+      case OPTION_ATTACKS:
+        r.ui.options_.attack_preview_ = AttackMode(v.value);
+        break;
       default: break;
     }
     const OptionValue& indication = r.ui.options_.indication();
@@ -1884,6 +1925,7 @@ int main() {
   TestPlaybackStorage();
   TestCloudsStorage();
   TestFrozenFeedbackStorage();
+  TestAttackStorage();
   TestSynthEngineStorage();
   TestPitchStorage();
   TestSelfPlayStorage();
