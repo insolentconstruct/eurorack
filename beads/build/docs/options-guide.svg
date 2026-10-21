@@ -227,7 +227,22 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="374" cy="1091" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
 <text x="390" y="1096" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide/smooth filter</text>
 <text x="677" y="1096" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
-<text x="695" y="907" font-size="15" font-weight="normal" fill="#737373" text-anchor="start">REVERB: Not used yet</text>
+<text x="695" y="907" font-size="16" font-weight="bold" fill="#222" text-anchor="start">REVERB</text>
+<text x="695" y="930" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Frozen feedback</text>
+<circle cx="852.5" cy="1002" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 852.5 1002 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 824.900 1026.642 A 37 37 0 0 1 821.703 981.492" fill="none" stroke="#555" stroke-width="3"/>
+<text x="799.63" y="1010.74" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
+<path d="M 831.992 971.203 A 37 37 0 0 1 873.008 971.203" fill="none" stroke="#555" stroke-width="3"/>
+<text x="852.5" y="954.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Evolving</text>
+<path d="M 822.912 979.784 A 37 37 0 0 1 830.284 972.412" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 874.716 972.412 A 37 37 0 0 1 882.088 979.784" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="704" cy="1047" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="720" y="1052" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Stock</text>
+<text x="1007" y="1052" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
+<circle cx="704" cy="1069" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="720" y="1074" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Evolving</text>
+<text x="1007" y="1074" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
 <text x="35" y="1143" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 3</text>
 <text x="215" y="1131" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">F</text>
 <circle cx="215" cy="1148" r="7" fill="white" stroke="#333" stroke-width="2"/>

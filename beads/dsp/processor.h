@@ -34,6 +34,7 @@
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
 #include "beads/dsp/fx/diffuser.h"
+#include "beads/dsp/fx/feedback_diffuser.h"
 #include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/fx/wow_and_flutter.h"
 
@@ -195,6 +196,12 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
+  // Frozen feedback evolves through an all-pass loop (#4). Turning it off
+  // lets the loop fade out first.
+  inline void set_evolving_feedback(bool evolving) {
+    evolving_feedback_ = evolving;
+  }
+
   // Grain diffusion; zero skips the diffuser, which restarts clean.
   inline void set_diffusion(float amount) {
     if (amount > 0.0f && diffusion_ == 0.0f) {
@@ -271,6 +278,8 @@ class Processor {
   uint16_t diffuser_buffer_[kDiffuserBufferSize];
   bool clouds_style_;
   float diffusion_;
+  FeedbackDiffuser feedback_diffuser_;
+  bool evolving_feedback_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

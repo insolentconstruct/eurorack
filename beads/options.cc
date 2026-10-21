@@ -34,7 +34,7 @@ namespace beads {
 
 const OptionPage kOptionPages[kNumOptionPages] = {
   { 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
-  { 0, { OPTION_RESERVED, OPTION_DELAY, OPTION_RESERVED } },
+  { 0, { OPTION_RESERVED, OPTION_DELAY, OPTION_FROZEN } },
   { 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED } }
 };
 const OptionValue kOptionValues[] = {
@@ -83,7 +83,11 @@ const OptionValue kOptionValues[] = {
   { OPTION_LIMITER, 1,
     { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_LIMITER, 2,
-    { 255, 0, 0 }, PULSE_STEADY }
+    { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_FROZEN, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_FROZEN, 1,
+    { 255, 255, 0 }, PULSE_STEADY }
 };
 
 void Options::Init() {
@@ -93,7 +97,7 @@ void Options::Init() {
   page_ = 0;
   selected_ = OPTION_PITCH;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
-  self_play_preview_ = clouds_preview_ = false;
+  self_play_preview_ = clouds_preview_ = evolving_preview_ = false;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
   width_preview_ = 0;
@@ -263,6 +267,15 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_LIMITER:
           limiter_preview_ = OutputLimiterMode(zone_[i]);
           break;
+        case OPTION_FROZEN:
+          if (pot < kOptionsHalfLow) {
+            evolving_preview_ = false;
+          }
+
+          if (pot > kOptionsHalfHigh) {
+            evolving_preview_ = true;
+          }
+          break;
         default:
           break;
       }
@@ -307,6 +320,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         ? settings.pitch_scale() : PITCH_SCALE_FIFTHS;
     width_preview_ = settings.stereo_width();
     delay_preview_ = settings.delay_mode();
+    evolving_preview_ = settings.evolving_feedback();
     ResetPots(pots);
     eligible_ = false;
     stage_ = STAGE_WAIT_RELEASE;
@@ -327,6 +341,8 @@ int Options::Value(OptionSetting setting) const {
       return self_play_preview_;
     case OPTION_LIMITER:
       return limiter_preview_;
+    case OPTION_FROZEN:
+      return evolving_preview_;
     default:
       return 0;
   }

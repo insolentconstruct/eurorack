@@ -306,6 +306,7 @@ void Process(
     processor.set_pitch_scale(ui.pitch_scale());
     processor.set_stereo_width(stereo_width, ui.stereo_width() != 0);
     processor.set_delay_mode(ui.delay_mode());
+    processor.set_evolving_feedback(ui.evolving_feedback());
     float diffusion = settings.diffusion_set()
         ? settings.diffusion()
         : (clouds_style ? kCloudsDiffusion : 0.0f);
