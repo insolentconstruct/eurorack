@@ -111,20 +111,75 @@ void TestRandomizedPitchGrid() {
         const float pitch = p.value(NULL, 0, 24.0f, false);
         const uint32_t next = stmlib::Random::GetWord();
         stmlib::Random::Seed(i);
-        CHECK(p.pitch_value(PITCH_SCALE_PELOG) == stmlib::SemitonesToRatio(
-            QuantizePitch(pitch, PITCH_SCALE_PELOG)));
+        CHECK(p.pitch_value(PITCH_SCALE_PELOG, false) ==
+            stmlib::SemitonesToRatio(QuantizePitch(pitch, PITCH_SCALE_PELOG)));
         CHECK(stmlib::Random::GetWord() == next);
         stmlib::Random::Seed(i);
         const float stock = p.pitch_value();
         stmlib::Random::Seed(i);
-        CHECK(p.pitch_value(PITCH_SCALE_OFF) == stock);
+        CHECK(p.pitch_value(PITCH_SCALE_OFF, false) == stock);
+        if (a >= 0) {
+          // Random intervals only acts counter-clockwise.
+          stmlib::Random::Seed(i);
+          CHECK(p.pitch_value(PITCH_SCALE_OFF, true) == stock);
+        }
+        // Exactly: the offset snaps, then the scale; same random draws.
+        for (int c = 0; c < 3; ++c) {
+          p.cv = c == 0 ? 12.0f : c == 1 ? 0.0f : -5.0f;
+          stmlib::Random::Seed(i);
+          const float raw = p.value(NULL, 0, 24.0f, false);
+          const uint32_t after = stmlib::Random::GetWord();
+          const float snapped = a < 0
+              ? p.base + QuantizePitch(raw - p.base, PITCH_SCALE_FIFTHS)
+              : raw;
+          stmlib::Random::Seed(i);
+          CHECK(p.pitch_value(PITCH_SCALE_PELOG, true) ==
+              stmlib::SemitonesToRatio(
+                  QuantizePitch(snapped, PITCH_SCALE_PELOG)));
+          CHECK(stmlib::Random::GetWord() == after);
+        }
+        p.cv = 12.0f;
       }
     }
+  }
+}
+
+// Random intervals (#8): counter-clockwise, the random offset lands on fifths
+// and octaves around the knob's pitch, and the scale still applies; clockwise
+// it stays continuous.
+void TestRandomIntervals() {
+  test_checker.Start("TestRandomIntervals");
+  RandomizedParameter p;
+  p.base = 2.5f;
+  p.cv = 0.0f;
+  p.has_cv = false;
+  int off_grid[2] = { 0, 0 };
+  int moved = 0;
+  for (int side = 0; side < 2; ++side) {
+    p.attenuverter = side ? 0.8f : -0.8f;
+    for (int i = 0; i < 2000; ++i) {
+      const float offset = 12.0f * log2f(
+          p.pitch_value(PITCH_SCALE_OFF, true)) - p.base;
+      const float snapped = QuantizePitch(offset, PITCH_SCALE_FIFTHS);
+      off_grid[side] += fabsf(offset - snapped) > 0.001f;
+      moved += !side && fabsf(offset) > 0.5f;
+    }
+  }
+  printf("Random intervals: CCW moved %d, off the grid CCW %d CW %d\n",
+      moved, off_grid[0], off_grid[1]);
+  CHECK(moved > 200);
+  CHECK(off_grid[0] == 0 && off_grid[1] > 1900);
+  // With a scale, the result is on the scale.
+  p.attenuverter = -0.8f;
+  for (int i = 0; i < 500; ++i) {
+    const float pitch = 12.0f * log2f(p.pitch_value(PITCH_SCALE_MAJOR, true));
+    CHECK(fabsf(pitch - QuantizePitch(pitch, PITCH_SCALE_MAJOR)) < 0.001f);
   }
 }
 
 int main() {
   TestPitchGrids();
   TestRandomizedPitchGrid();
+  TestRandomIntervals();
   return test_checker.failures() ? 1 : 0;
 }

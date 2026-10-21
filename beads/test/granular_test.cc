@@ -852,6 +852,39 @@ void TestQuantizedGrainPitch() {
   }
 }
 
+// Random intervals reaches every quality's grains.
+void TestRandomIntervalGrains() {
+  test_checker.Start("TestRandomIntervalGrains");
+  for (int quality = 0; quality < 4; ++quality) {
+    int off_grid[2] = { 0, 0 };
+    for (int intervals = 0; intervals < 2; ++intervals) {
+      for (int i = 0; i < 30; ++i) {
+        InitProcessor();
+        processor.Configure(Processor::Media(quality), false);
+        parameters.size.base = 0.8f;
+        parameters.pitch.base = 0.0f;
+        parameters.pitch.cv = 0.0f;
+        parameters.pitch.has_cv = false;
+        parameters.pitch.attenuverter = -1.0f;
+        processor.set_random_intervals(intervals);
+        ProcessQuantizedBlock(true);
+        DelayGranularPlayer* player = quality == 0
+            ? &processor.processor_dirty_tape_.granular_player_
+            : quality == 1 ? &processor.processor_clean_tape_.granular_player_
+            : quality == 2
+                ? &processor.processor_vintage_digital_.granular_player_
+            : &processor.processor_digital_.granular_player_;
+        const float offset = 12.0f * log2f(
+            float(abs(player->grain_[0].speed_)) / 1024.0f);
+        // One step of the grain's 1/1024 speed is under 0.02 semitone.
+        off_grid[intervals] +=
+            fabsf(offset - QuantizePitch(offset, PITCH_SCALE_FIFTHS)) > 0.02f;
+      }
+    }
+    CHECK(off_grid[0] > 10 && off_grid[1] == 0);
+  }
+}
+
 void TestStereoWidth() {
   test_checker.Start("TestStereoWidth");
   CHECK(ModulatedStereoWidth(0, 1.0f) == 0.0f);
@@ -968,6 +1001,7 @@ int main() {
   TestMonophonicGrains();
   TestProcessorGrainLatch();
   TestQuantizedGrainPitch();
+  TestRandomIntervalGrains();
   TestProcessorEnvelopeCompletion();
   TestProcessorVoiceRelease();
   TestProcessorVoiceSaturation();

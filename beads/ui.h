@@ -145,6 +145,7 @@ class Ui {
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
+  inline bool random_intervals() const { return random_intervals_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -220,6 +221,7 @@ class Ui {
   volatile AttackMode attack_mode_;
   volatile bool spectral_;
   volatile PitchScale pitch_scale_;
+  volatile bool random_intervals_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;
 

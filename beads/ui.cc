@@ -113,6 +113,7 @@ void Ui::LoadOptions() {
   attack_mode_ = settings_->attack_mode();
   spectral_ = settings_->spectral();
   pitch_scale_ = settings_->pitch_scale();
+  random_intervals_ = settings_->random_intervals();
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
 }
@@ -237,6 +238,8 @@ void Ui::Poll() {
   stereo_width_ = settings_->stereo_width();
   pitch_scale_ = previewing
       ? options_.pitch_preview() : settings_->pitch_scale();
+  random_intervals_ = previewing
+      ? options_.intervals_preview() : settings_->random_intervals();
   output_limiter_mode_ = previewing
       ? options_.limiter_preview() : settings_->output_limiter_mode();
   if (!previewing) {
@@ -655,7 +658,8 @@ void Ui::DoEvents() {
         options_.pitch_preview() != settings_->pitch_scale() ||
         options_.delay_preview() != settings_->delay_mode() ||
         options_.evolving_preview() != settings_->evolving_feedback() ||
-        options_.attack_preview() != settings_->attack_mode()) {
+        options_.attack_preview() != settings_->attack_mode() ||
+        options_.intervals_preview() != settings_->random_intervals()) {
       settings_->set_output_limiter_mode(options_.limiter_preview());
       settings_->set_spectral(options_.spectral_preview());
       settings_->set_self_play_on_request(options_.manual_start_preview());
@@ -665,6 +669,7 @@ void Ui::DoEvents() {
       settings_->set_delay_mode(options_.delay_preview());
       settings_->set_evolving_feedback(options_.evolving_preview());
       settings_->set_attack_mode(options_.attack_preview());
+      settings_->set_random_intervals(options_.intervals_preview());
       settings_->SaveState();
       FlashOptionsPage();
     }

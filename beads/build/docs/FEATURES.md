@@ -42,7 +42,7 @@ Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal 
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
-| 1 / FEEDBACK | Pitch scale | Reserved: random intervals | Attacks |
+| 1 / FEEDBACK | Pitch scale | Random intervals | Attacks |
 | 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / all three | Reserved | Reserved | Limiter |
@@ -51,7 +51,7 @@ Reserved knobs have no effect on [A] or saving. On entry and on each page change
 
 ## Saved data
 
-Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17, frozen feedback byte 18, attacks byte 19, the processor byte 20 and the synth byte 21; future options use the free byte 22, with 0 meaning the Beta 1 behaviour. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–21 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
+Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17, frozen feedback byte 18, attacks byte 19, the processor byte 20, the synth byte 21 and random intervals byte 22. No byte is free; byte 23 is reserved. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–22 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
 
 ### Settings layout
 
@@ -79,8 +79,8 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 19 | `attacks` | Attacks: 0xA1 = Snap, 0xA2 = Snap and trigger; 0 and all unknown values = Off; canonicalized on load/save |
 | 20 | `engine` | Processor: 0xA1 = Spectral; 0 and all unknown values = Granular (Stock); canonicalized on load/save |
 | 21 | `synth_engine` | Synth: 0 Beads (Stock), 0xA1 Plaits; unknown values read Beads (Stock); canonicalized on load/save |
-| 22 | `padding[0]` | FREE; zeroed on every save |
-| 23 | `padding[1]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
+| 22 | `random_intervals` | Random intervals: 0xA1 = Fifths and octaves; 0 and all unknown values = Free (Stock); canonicalized on load/save |
+| 23 | `padding[0]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
@@ -183,7 +183,7 @@ Prefer, in order: no control (a better default or an indicator), a new value in 
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Future options take the free byte 22, with 0 meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
+- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Byte 22 holds random intervals, so no byte is free; later options must use spare values of existing bytes, with 0 still meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks. Byte 23 stays reserved.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).

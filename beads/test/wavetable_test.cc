@@ -407,6 +407,30 @@ void TestQuantizedSynthGrains() {
   }
 }
 
+// Random intervals reaches the synth's grains.
+void TestRandomIntervalSynthGrains() {
+  test_checker.Start("TestRandomIntervalSynthGrains");
+  static SynthHarness h;
+  int off_grid[2] = { 0, 0 };
+  for (int intervals = 0; intervals < 2; ++intervals) {
+    for (int i = 0; i < 30; ++i) {
+      h.Init();
+      h.parameters.pitch.base = 0.0f;
+      h.parameters.pitch.cv = 0.0f;
+      h.parameters.pitch.has_cv = false;
+      h.parameters.pitch.attenuverter = -1.0f;
+      h.synth.set_random_intervals(intervals);
+      h.Tick(true, false);
+      const WavetableGrain& grain = h.synth.wavetable_granular_player_.grain_[0];
+      const float offset = 12.0f * log2f(
+          grain.frequency_ * 48000.0f / kWavetableRootNote);
+      off_grid[intervals] +=
+          fabsf(offset - QuantizePitch(offset, PITCH_SCALE_FIFTHS)) > 0.001f;
+    }
+  }
+  CHECK(off_grid[0] > 10 && off_grid[1] == 0);
+}
+
 // Energy of the next samples, split by channel.
 static void RenderEnergy(SynthHarness* h, int samples, double* l, double* r) {
   *l = *r = 0.0;
@@ -524,6 +548,7 @@ int main() {
   TestSynthMixEndpoints();
   TestSynthFreeze();
   TestQuantizedSynthGrains();
+  TestRandomIntervalSynthGrains();
   TestSynthStereoWidth();
   TestSynthResolution();
   TestSynthPitchCvAndSpread();

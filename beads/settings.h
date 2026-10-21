@@ -74,7 +74,8 @@ struct State {
   uint8_t attacks;
   uint8_t engine;
   uint8_t synth_engine;
-  uint8_t padding[2];
+  uint8_t random_intervals;
+  uint8_t padding[1];
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -112,7 +113,9 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(offsetof(State, engine) == 20, state_engine_offset);
   STATIC_ASSERT(
       offsetof(State, synth_engine) == 21, state_synth_engine_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 22, state_padding_offset);
+  STATIC_ASSERT(
+      offsetof(State, random_intervals) == 22, state_random_intervals_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 23, state_padding_offset);
 };
 
 const uint8_t kOptionTag = 0xa0;
@@ -200,6 +203,14 @@ class Settings {
 
   inline void set_plaits_synth(bool plaits) {
     state_.synth_engine = plaits ? (kOptionTag + 1) : 0;
+  }
+
+  inline bool random_intervals() const {
+    return state_.random_intervals == (kOptionTag + 1);
+  }
+
+  inline void set_random_intervals(bool intervals) {
+    state_.random_intervals = intervals ? (kOptionTag + 1) : 0;
   }
 
   inline bool width_assigned() const { return state_.width_assigned == 1; }

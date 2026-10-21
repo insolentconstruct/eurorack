@@ -33,7 +33,7 @@
 namespace beads {
 
 const OptionPage kOptionPages[kNumOptionPages] = {
-  { 0, { OPTION_PITCH, OPTION_RESERVED, OPTION_ATTACKS } },
+  { 0, { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS } },
   { 1, { OPTION_DELAY, OPTION_REVERB, OPTION_FROZEN } },
   { 2, { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START } },
   { MIX_PARAMETER_LAST, { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER } }
@@ -98,6 +98,10 @@ const OptionValue kOptionValues[] = {
   { OPTION_SYNTH_START, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_SYNTH_START, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 1,
     { 255, 255, 0 }, PULSE_STEADY }
 };
 
@@ -126,7 +130,7 @@ void Options::Init() {
   preview_time_ = indication_time_ = 0;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
-  spectral_preview_ = manual_start_preview_ = false;
+  spectral_preview_ = manual_start_preview_ = intervals_preview_ = false;
   attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
@@ -280,6 +284,15 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
             spectral_preview_ = true;
           }
           break;
+        case OPTION_INTERVALS:
+          if (pot < kOptionsHalfLow) {
+            intervals_preview_ = false;
+          }
+
+          if (pot > kOptionsHalfHigh) {
+            intervals_preview_ = true;
+          }
+          break;
         case OPTION_SYNTH_START:
           if (pot < kOptionsHalfLow) {
             manual_start_preview_ = false;
@@ -352,6 +365,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
     limiter_preview_ = settings.output_limiter_mode();
     spectral_preview_ = settings.spectral();
     manual_start_preview_ = settings.self_play_on_request();
+    intervals_preview_ = settings.random_intervals();
     clouds_preview_ = settings.clouds_style();
     plaits_preview_ = settings.plaits_synth();
     pitch_preview_ = settings.pitch_scale();
@@ -378,6 +392,8 @@ int Options::Value(OptionSetting setting) const {
       return spectral_preview_;
     case OPTION_SYNTH_START:
       return manual_start_preview_;
+    case OPTION_INTERVALS:
+      return intervals_preview_;
     case OPTION_LIMITER:
       return limiter_preview_;
     case OPTION_FROZEN:
