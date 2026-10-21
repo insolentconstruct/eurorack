@@ -35,6 +35,7 @@
 #include "beads/drivers/seed_input.h"
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
+#include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/dwt_calibration.h"
@@ -57,6 +58,12 @@ uint8_t delay_buffer_1[512 * 1024] __attribute__ ((section (".ramd1")));
 uint8_t delay_buffer_2[256 * 1024] __attribute__ ((section (".ramd2")));
 uint16_t reverb_buffer[32768] __attribute__ ((section (".ramd3")));
 
+// The Plaits voices borrow the first delay bank in synth mode, when nothing
+// else reads or writes it. Leaving synth mode clears every delay bank
+// (Processor::Configure) before the granular processor or the buffer backup
+// use it again. Bank 0's last byte, which 12-bit media never clear, stays out.
+STATIC_ASSERT(kPlaitsSynthRamSize < 256 * 1024, plaits_voices_in_bank_0);
+
 BackgroundBufferBackup background_buffer_backup;
 Calibrator calibrator;
 CvReader cv_reader;
@@ -65,6 +72,7 @@ FactoryTest factory_test;
 FreezeInput freeze_input;
 GainControl gain_control;
 NormalizationDetector normalization_detector;
+PlaitsSynth plaits_synth;
 Processor processor;
 SeedInput seed_input;
 Settings settings;
@@ -264,6 +272,7 @@ void Process(
       clouds_style = requested_style;
       processor.SetCloudsStyle(clouds_style);
       synth.SetCloudsStyle(clouds_style, false);
+      plaits_synth.SetCloudsStyle(clouds_style, false);
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
@@ -285,7 +294,25 @@ void Process(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
-  if (synth_mode) {
+  if (synth_mode && ui.plaits_synth()) {
+    plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
+    plaits_synth.set_pitch_scale(ui.pitch_scale());
+    plaits_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+    plaits_synth.Render(
+        seed_button_state,
+        seed_input,
+        freeze,
+        Synth::Resolution(settings.state().media),
+        d, p, m,
+        float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
+  } else if (synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
     synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
 #ifdef DWT_CALIBRATION
@@ -357,6 +384,9 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
   synth_mode = new_synth_mode;
   synth_mode_start_time = 0;
+  if (synth_mode) {
+    plaits_synth.InitVoices(delay_buffer_1);
+  }
 
   gain_control.Init(
       float(sr),
@@ -395,6 +425,7 @@ void Init() {
   
   processor.Init(delay_buffers, reverb_buffer);
   synth.Init(reverb_buffer);
+  plaits_synth.Init(reverb_buffer);
   clouds_style = false;
   reverb_style_gain = 1.0f;
   reverb_style_previous_gain = 1.0f;

@@ -70,7 +70,9 @@ struct State {
   uint8_t width_assigned;
   uint8_t diffusion;
   uint8_t frozen_feedback;
-  uint8_t padding[5];
+  uint8_t padding[2];
+  uint8_t synth_engine;
+  uint8_t padding_end[2];
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -105,6 +107,9 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(
       offsetof(State, frozen_feedback) == 18, state_frozen_feedback_offset);
   STATIC_ASSERT(offsetof(State, padding) == 19, state_padding_offset);
+  STATIC_ASSERT(
+      offsetof(State, synth_engine) == 21, state_synth_engine_offset);
+  STATIC_ASSERT(offsetof(State, padding_end) == 22, state_padding_end_offset);
 };
 
 const uint8_t kOptionTag = 0xa0;
@@ -176,6 +181,14 @@ class Settings {
   inline void set_delay_mode(DelayMode mode) {
     state_.delay_mode = mode == DELAY_MODE_NEVER ? (kOptionTag + 1)
         : mode == DELAY_MODE_WIDE_DETENT ? (kOptionTag + 2) : 0;
+  }
+
+  inline bool plaits_synth() const {
+    return state_.synth_engine == (kOptionTag + 1);
+  }
+
+  inline void set_plaits_synth(bool plaits) {
+    state_.synth_engine = plaits ? (kOptionTag + 1) : 0;
   }
 
   inline bool width_assigned() const { return state_.width_assigned == 1; }
