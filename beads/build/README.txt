@@ -128,10 +128,18 @@ it; saving after a downgrade resets it to Automatic (Stock).
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (steady yellow).
 Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
-plus fixed diffusion on the grain wet output. In delay and wavetable synth modes,
-only the reverb character changes. Switching briefly fades the sound out and
+plus diffusion on the grain wet output until an amount is set with [A]+REVERB
+(below). In delay and wavetable synth modes, only the reverb character changes. Switching briefly fades the sound out and
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
+
+Grain diffusion: hold [A] and turn REVERB to set the amount, with either
+reverb; the [A] LED shows it as a meter, and fully CCW is none. Until it is
+set, Stock has none and Clouds-style keeps its own amount. Once an amount is
+set, short presses of [M] add DIFFUSION after REVERB (and after WIDTH); the
+REVERB LED pulses alone while it is the CV destination. Diffusion acts on the
+grains only, not in delay or wavetable synth modes. The amount is saved; stock
+firmware ignores it.
 
 Pitch quantization: Reverb LED page, FEEDBACK knob. Three zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,

@@ -68,7 +68,8 @@ struct State {
   uint8_t stereo_width;
   uint8_t delay_mode;
   uint8_t width_assigned;
-  uint8_t padding[7];
+  uint8_t diffusion;
+  uint8_t padding[6];
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -99,7 +100,8 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(offsetof(State, delay_mode) == 15, state_delay_mode_offset);
   STATIC_ASSERT(
       offsetof(State, width_assigned) == 16, state_width_assigned_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 17, state_padding_offset);
+  STATIC_ASSERT(offsetof(State, diffusion) == 17, state_diffusion_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 18, state_padding_offset);
 };
 
 const uint8_t kOptionTag = 0xa0;
@@ -159,7 +161,7 @@ class Settings {
 
   inline void set_stereo_width(StereoWidth width) {
     state_.stereo_width = width;
-    if (!width) set_width_assigned(false);
+    if (!width && width_assigned()) set_width_assigned(false);
   }
 
   inline DelayMode delay_mode() const {
@@ -178,6 +180,38 @@ class Settings {
   inline void set_width_assigned(bool assigned) {
     state_.width_assigned = assigned && stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
+  }
+
+  // Zero follows the reverb character: none with Stock, Beta 1's fixed
+  // amount with Clouds-style. Other values are an amount set with [A]+REVERB.
+  inline bool diffusion_set() const { return state_.diffusion != 0; }
+
+  inline float diffusion() const {
+    return diffusion_set()
+        ? float(state_.diffusion - 1) / 254.0f
+        : (clouds_style() ? kCloudsDiffusion : 0.0f);
+  }
+
+  inline void set_diffusion(float amount) {
+    CONSTRAIN(amount, 0.0f, 1.0f);
+    state_.diffusion = 1 + static_cast<uint8_t>(amount * 254.0f + 0.5f);
+    if (state_.diffusion == 1) set_diffusion_assigned(false);
+  }
+
+  inline bool diffusion_assigned() const {
+    return state_.width_assigned == 2;
+  }
+
+  // Only an amount set with [A]+REVERB can be modulated.
+  inline bool diffusion_assignable() const { return state_.diffusion > 1; }
+
+  inline void set_diffusion_assigned(bool assigned) {
+    if (assigned && diffusion_assignable()) {
+      state_.width_assigned = 2;
+      state_.assignable_cv_destination = 0;
+    } else if (diffusion_assigned()) {
+      state_.width_assigned = 0;
+    }
   }
 
   inline State* mutable_state() {

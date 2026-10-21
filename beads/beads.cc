@@ -221,14 +221,16 @@ void Process(
   }
 
   const bool width_assigned = settings.width_assigned();
+  const bool diffusion_assigned = settings.diffusion_assigned();
+  const bool mix_assigned = !width_assigned && !diffusion_assigned;
   const float assign_cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
   float mix_parameter[Ui::MIX_PARAMETER_LAST];
   for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
     float base = ui.mix_parameter(Ui::MixParameter(i)) * 1.005f;
-    float amount = !width_assigned &&
+    float amount = mix_assigned &&
         settings.state().assignable_cv_destination == 3
         ? float(settings.state().assignable_cv_amount[i]) / 256.0f
-        : (!width_assigned &&
+        : (mix_assigned &&
             settings.state().assignable_cv_destination == i ? 1.0f : 0.0f);
     mix_parameter[i] = base + \
         assign_cv * amount;
@@ -304,6 +306,14 @@ void Process(
     processor.set_pitch_scale(ui.pitch_scale());
     processor.set_stereo_width(stereo_width, ui.stereo_width() != 0);
     processor.set_delay_mode(ui.delay_mode());
+    float diffusion = settings.diffusion_set()
+        ? settings.diffusion()
+        : (clouds_style ? kCloudsDiffusion : 0.0f);
+    if (diffusion_assigned) {
+      diffusion += assign_cv;
+      CONSTRAIN(diffusion, 0.0f, 1.0f);
+    }
+    processor.set_diffusion(diffusion);
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION

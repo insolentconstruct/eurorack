@@ -65,7 +65,8 @@ STATIC_ASSERT(offsetof(State, frozen) == 7, frozen);
 STATIC_ASSERT(offsetof(State, disable_autosave) == 8, autosave);
 STATIC_ASSERT(offsetof(State, monophonic_mode) == 9, mono);
 namespace state_layout_test {
-STATIC_ASSERT(offsetof(State, padding) == 17, options);
+STATIC_ASSERT(offsetof(State, diffusion) == 17, diffusion);
+STATIC_ASSERT(offsetof(State, padding) == 18, options);
 }
 
 struct Rig {
@@ -1170,6 +1171,134 @@ void TestWidthAssignCycle() {
   }
 }
 
+void TestDiffusionGestureAndMeter() {
+  test_checker.Start("TestDiffusionGestureAndMeter");
+  Rig r;
+  const uint8_t media = r.settings.state().media;
+  const uint8_t gain = r.settings.state().gain;
+  CHECK(r.settings.state().diffusion == 0);
+  CHECK(r.settings.diffusion() == 0.0f);
+  unsigned writes = test_writes;
+  r.Down(SWITCH_MEDIA);
+  const float positions[] = { 0.125f, 0.75f, 0.0f };
+  for (int i = 0; i < 3; ++i) {
+    r.reverb = positions[i];
+    r.Tick(20);
+    CHECK(r.settings.state().diffusion ==
+        1 + int(positions[i] * 254.0f + 0.5f));
+    CHECK(fabsf(r.settings.diffusion() - positions[i]) < 0.003f);
+    CHECK(r.ui.mix_parameter(Ui::MIX_PARAMETER_REVERB) == 0.5f);
+    CHECK(r.settings.state().gain == gain);
+    CHECK(test_writes == writes);
+  }
+  r.reverb = 0.5f;
+  r.Tick(20);
+  CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 0);  // The meter, not quality.
+  r.Tick(1700);  // Holding while turning never restarts the gain.
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.state().media == media);
+  CHECK(r.settings.state().gain == gain);
+  CHECK(test_writes == writes + 1);
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(loaded.state().diffusion == 128);
+  // A quality tap without turning REVERB leaves the amount alone.
+  r.Down(SWITCH_MEDIA);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.state().media == (media + 3) % 4);
+  CHECK(r.settings.state().diffusion == 128);
+}
+
+void TestDiffusionStorage() {
+  test_checker.Start("TestDiffusionStorage");
+  for (int clouds = 0; clouds < 2; ++clouds) {
+    for (int raw = 0; raw < 256; ++raw) {
+      Rig r;
+      r.settings.set_clouds_style(clouds);
+      r.settings.mutable_state()->diffusion = raw;
+      const float expected = raw
+          ? float(raw - 1) / 254.0f : (clouds ? kCloudsDiffusion : 0.0f);
+      CHECK(r.settings.diffusion() == expected);
+      r.settings.mutable_state()->assignable_cv_destination = 2;
+      r.settings.set_diffusion_assigned(true);
+      // Clouds-style's own amount is not a CV destination until set.
+      const bool assignable = raw > 1;
+      CHECK(r.settings.diffusion_assigned() == assignable);
+      r.settings.SaveState();
+      Settings loaded;
+      CHECK(loaded.Init(false));
+      CHECK(loaded.state().diffusion == raw);
+      CHECK(loaded.diffusion_assigned() == assignable);
+      CHECK(!loaded.width_assigned());
+      CHECK(loaded.state().assignable_cv_destination == (assignable ? 0 : 2));
+    }
+  }
+  Rig r;
+  r.settings.set_diffusion(0.5f);
+  r.settings.set_stereo_width(128);
+  r.settings.set_diffusion_assigned(true);
+  r.settings.set_stereo_width(0);  // Width off keeps the diffusion target.
+  CHECK(r.settings.diffusion_assigned());
+  r.settings.set_diffusion(0.0f);  // No diffusion left to modulate.
+  CHECK(!r.settings.diffusion_assigned());
+  CHECK(r.settings.state().diffusion == 1);
+  r.settings.set_diffusion(1.02f);  // A pot reading past the end.
+  CHECK(r.settings.state().diffusion == 255);
+}
+
+void TestDiffusionAssignCycle() {
+  test_checker.Start("TestDiffusionAssignCycle");
+  // Destinations: 0-2 mix knobs, 4 WIDTH, 5 DIFFUSION.
+  const int cycles[4][6] = {
+    { 1, 2, 0, 1, 2, 0 },
+    { 1, 2, 4, 0, 1, 2 },
+    { 1, 2, 5, 0, 1, 2 },
+    { 1, 2, 4, 5, 0, 1 },
+  };
+  for (int c = 0; c < 4; ++c) {
+    Rig r;
+    r.settings.set_stereo_width(c & 1 ? 128 : 0);
+    if (c & 2) r.settings.set_diffusion(0.4f);
+    r.settings.mutable_state()->assignable_cv_destination = 0;
+    r.Tick(20);
+    for (int i = 0; i < 6; ++i) {
+      r.Down(SWITCH_ASSIGN);
+      r.Up(SWITCH_ASSIGN);
+      const int destination = r.settings.width_assigned() ? 4
+          : r.settings.diffusion_assigned() ? 5
+          : r.settings.state().assignable_cv_destination;
+      CHECK(destination == cycles[c][i]);
+      if (destination == 5) {
+        for (int led = 0; led < 3; ++led) {
+          CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + led] == 0 ||
+              led == Ui::MIX_PARAMETER_REVERB);
+        }
+      }
+    }
+  }
+  // Clouds-style alone keeps the Beta 1 cycle.
+  {
+    Rig r;
+    r.settings.set_clouds_style(true);
+    r.settings.mutable_state()->assignable_cv_destination = 2;
+    r.Tap();
+    CHECK(!r.settings.diffusion_assigned());
+    CHECK(r.settings.state().assignable_cv_destination == 0);
+  }
+  // [M]+knob amounts replace the DIFFUSION target.
+  Rig r;
+  r.settings.set_diffusion(0.4f);
+  r.settings.mutable_state()->assignable_cv_destination = 2;
+  r.Tap();
+  CHECK(r.settings.diffusion_assigned());
+  r.Down(SWITCH_ASSIGN);
+  r.feedback = 0.9f;
+  r.Tick(20);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(!r.settings.diffusion_assigned());
+  CHECK(r.settings.state().assignable_cv_destination == 3);
+}
+
 void TestPendingWidthAssign() {
   test_checker.Start("TestPendingWidthAssign");
   for (int enabled = 0; enabled < 2; ++enabled) {
@@ -1673,6 +1802,9 @@ int main() {
   TestOptionsZonesAndSaveBatch();
   TestWidthAssignCycle();
   TestPendingWidthAssign();
+  TestDiffusionGestureAndMeter();
+  TestDiffusionStorage();
+  TestDiffusionAssignCycle();
   TestPlaybackStorage();
   TestCloudsStorage();
   TestPitchStorage();

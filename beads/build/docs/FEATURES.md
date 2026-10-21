@@ -49,7 +49,7 @@ Reserved knobs have no effect on [A] or saving. [A] shows the first available se
 
 ## Saved data
 
-Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; future options use a free byte 17–22, with 0 meaning the Beta 1 behaviour. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–16 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
+Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17; future options use a free byte 18–22, with 0 meaning the Beta 1 behaviour. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–17 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
 
 ### Settings layout
 
@@ -71,13 +71,14 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
 | 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Disabled, 0xA2 Wide/smooth filter; unknown values read Auto (Stock) |
-| 16 | `padding[6]` | WIDTH assignment: 0 off, 1 on; other values read off; stock destination stays FEEDBACK |
-| 17–22, individually | `padding[7]` … `padding[12]` | FREE; zeroed on every save |
+| 16 | `padding[6]` | ASSIGN extra destination: 0 off, 1 WIDTH, 2 DIFFUSION; other values read off; stock destination stays FEEDBACK |
+| 17 | `padding[7]` | Grain diffusion: 0 follows the reverb character (none with Stock, 0.7 with Clouds-style); 1..255 = amount 0..1 set with [A]+REVERB |
+| 18–22, individually | `padding[8]` … `padding[12]` | FREE; zeroed on every save |
 | 23 | `padding[13]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Saving on stock loses Drizzlet options (wavetable synth returns to Automatic (Stock)). Drizzlet canonicalizes bytes 10–16 on load/save and clears 17–23. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Saving on stock loses Drizzlet options (wavetable synth returns to Automatic (Stock)). Drizzlet canonicalizes bytes 10–16 on load/save, keeps byte 17 and clears 18–23. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 | Flash area | TAKEN | FREE / limit |
@@ -176,11 +177,11 @@ Prefer, in order: no control (a better default or an indicator), a new value in 
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Future options take a free byte 17–22, with 0 meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
+- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Future options take a free byte 18–22, with 0 meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
 - **Big engines ship as separate variants.** Engines that replace the granular engine (Plaits models, a spectral mode) are separate images, installed by `.wav`, each owning its panel. They need the recording RAM: six Plaits voices take about 152 KB and Clouds' spectral engine 130,688 B (stereo) or 114,240 B (mono), against 92,648 B of free DTCM. Variants share calibration and the common settings (quality, gain, routing, limiter). A variant that finds another variant's ID in byte 23 keeps the common bytes and resets its own.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
-- **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; the FREEZE long hold and flash sector 14 are unassigned.
+- **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold and flash sector 14 are unassigned.
 
 Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
 mapping, with Clouds delay lengths and modulation. The grain wet path adds
