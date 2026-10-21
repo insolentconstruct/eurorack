@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -56,9 +56,9 @@ class STFT {
  public:
   STFT() { }
   ~STFT() { }
-  
+
   struct Frame { short l; short r; };
-  
+
   void Init(
       FFT* fft,
       size_t fft_size,
@@ -79,7 +79,7 @@ class STFT {
       size_t stride);
 
   void Buffer();
-  
+
  private:
   FFT* fft_;
   size_t fft_size_;
@@ -90,24 +90,24 @@ class STFT {
   float* fft_out_;
   float* ifft_out_;
   float* ifft_in_;
-  
+
   const float* window_;
   size_t window_stride_;
 
   short* analysis_;
   short* synthesis_;
-  
+
   size_t buffer_ptr_;
   size_t process_ptr_;
   size_t block_size_;
-  
+
   size_t ready_;
   size_t done_;
-  
+
   const SpectralParameters* parameters_;
-  
+
   Modifier* modifier_;
-  
+
   DISALLOW_COPY_AND_ASSIGN(STFT);
 };
 

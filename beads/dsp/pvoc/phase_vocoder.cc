@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -51,17 +51,17 @@ void PhaseVocoder::Init(
 
   size_t fft_size = largest_fft_size;
   size_t hop_ratio = 4;
-  
+
   BufferAllocator allocator_0(buffer[0], buffer_size[0]);
   BufferAllocator allocator_1(buffer[1], buffer_size[1]);
   BufferAllocator* allocator[2] = { &allocator_0, &allocator_1 };
-  
+
   size_t num_textures = kMaxNumTextures;
   size_t texture_size = (fft_size >> 1) - kHighFrequencyTruncation;
   for (int32_t i = 0; i < num_channels_; ++i) {
     short* ana_syn_buffer = allocator[i]->Allocate<short>(
         (fft_size + (fft_size >> 1)) * 2);
-    
+
     num_textures = min(
         allocator[i]->free() / (sizeof(float) * texture_size),
         num_textures);

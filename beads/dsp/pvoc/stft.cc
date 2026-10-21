@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -54,26 +54,26 @@ void STFT::Init(
     ++fft_num_passes_;
   }
   buffer_size_ = fft_size_ + hop_size_;
-  
+
   fft_ = fft;
 #ifdef USE_ARM_FFT
   arm_rfft_fast_init_f32(fft_, fft_size);
 #else
   fft_->Init();
 #endif  // USE_ARM_FFT
-  
+
   analysis_ = &analysis_synthesis_buffer[0];
   synthesis_ = &analysis_synthesis_buffer[buffer_size_];
 
   ifft_in_ = fft_in_ = fft_buffer;
   ifft_out_ = fft_out_ = ifft_buffer;
-  
+
   window_ = window_lut;
   window_stride_ = LUT_SINE_WINDOW_4096_SIZE / fft_size;
   modifier_ = modifier;
-  
+
   parameters_ = NULL;
-  
+
   Reset();
 }
 
@@ -106,7 +106,7 @@ void STFT::Process(
       input += stride;
       output += stride;
     }
-    
+
     block_size_ += processed;
     size -= processed;
     buffer_ptr_ += processed;
@@ -134,7 +134,7 @@ void STFT::Buffer() {
     }
     ++done_;
   }
-  
+
   // Copy block to FFT buffer and apply window.
   size_t source_ptr = process_ptr_;
   const float* w = window_;
@@ -146,7 +146,7 @@ void STFT::Buffer() {
     }
     w += window_stride_;
   }
-  
+
   // Compute FFT. fft_in is lost.
 #ifdef USE_ARM_FFT
   arm_rfft_fast_f32(fft_, fft_in_, fft_out_, 0);
@@ -170,7 +170,7 @@ void STFT::Buffer() {
   } else {
     copy(&fft_out_[0], &fft_out_[fft_size_], &ifft_in_[0]);
   }
-  
+
   // Compute IFFT. ifft_in is lost.
 #ifdef USE_ARM_FFT
   // Re-arrange data.
@@ -189,7 +189,7 @@ void STFT::Buffer() {
     fft_->Inverse(ifft_in_, ifft_out_);
   }
 #endif  // USE_ARM_FFT
-  
+
   size_t destination_ptr = process_ptr_;
 #ifdef USE_ARM_FFT
   float inverse_window_size = 1.0f / \
@@ -198,11 +198,11 @@ void STFT::Buffer() {
   float inverse_window_size = 1.0f / \
       float(fft_size_ * fft_size_ / hop_size_ >> 1);
 #endif  // USE_ARM_FFT
-    
+
   w = window_;
   for (size_t i = 0; i < fft_size_; ++i) {
     float s = ifft_out_[i] * w[0] * inverse_window_size;
-    
+
     int32_t x = static_cast<int32_t>(s);
     if (i < fft_size_ - hop_size_) {
       // Overlap-add.

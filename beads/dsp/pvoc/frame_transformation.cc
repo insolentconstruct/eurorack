@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ void FrameTransformation::Init(
     int32_t num_textures) {
   fft_size_ = fft_size;
   size_ = (fft_size >> 1) - kHighFrequencyTruncation;
-  
+
   for (int32_t i = 0; i < num_textures; ++i) {
     textures_[i] = &buffer[i * size_];
   }
@@ -76,7 +76,7 @@ void FrameTransformation::Process(
   bool freeze = parameters.freeze;
   bool glitch = parameters.gate;
   float pitch_ratio = SemitonesToRatio(parameters.pitch);
-  
+
   if (!freeze) {
     RectangularToPolar(fft_out);
     StoreMagnitudes(
@@ -167,7 +167,7 @@ void FrameTransformation::AddGlitch(float* xf_polar) {
         }
       }
       break;
-      
+
     case 1:
       // Spectral shift up with aliasing.
       {
@@ -182,13 +182,13 @@ void FrameTransformation::AddGlitch(float* xf_polar) {
         }
       }
       break;
-      
+
     case 2:
       // Kill largest harmonic and boost second largest.
       *std::max_element(&x[0], &x[size_]) = 0.0f;
       *std::max_element(&x[0], &x[size_]) *= 8.0f;
       break;
-      
+
     case 3:
       {
         // Nasty high-pass
@@ -200,7 +200,7 @@ void FrameTransformation::AddGlitch(float* xf_polar) {
         }
       }
       break;
-      
+
     default:
       break;
   }
@@ -243,7 +243,7 @@ void FrameTransformation::WarpMagnitudes(
     float amount) {
   float bin_width = 1.0f / static_cast<float>(size_);
   float f = 0.0;
-  
+
   float coefficients[4];
   amount *= 4.0f;
   MAKE_INTEGRAL_FRACTIONAL(amount);
@@ -253,12 +253,12 @@ void FrameTransformation::WarpMagnitudes(
         kWarpPolynomials[amount_integral + 1][i],
         amount_fractional);
   }
-  
+
   float a = coefficients[0];
   float b = coefficients[1];
   float c = coefficients[2];
   float d = coefficients[3];
-  
+
   for (int32_t i = 1.0f; i < size_; ++i) {
     f += bin_width;
     float wf = (d + f * (c + f * (b + a * f))) * size_;
@@ -305,10 +305,10 @@ void FrameTransformation::StoreMagnitudes(
   float index_fractional = index_float - index_int;
   float gain_a = 1.0f - index_fractional;
   float gain_b = index_fractional;
-  
+
   float* a = textures_[index_int];
   float* b = textures_[index_int + (position == 1.0f ? 0 : 1)];
-  
+
   if (feedback >= 0.5f) {
     feedback = 2.0f * (feedback - 0.5f);
     if (feedback < 0.5f) {
