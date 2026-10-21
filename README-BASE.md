@@ -1,7 +1,7 @@
 # Beads base for firmware modders
 
 This branch starts at the vanilla source in `origin/master` (`f4cfa76`).
-It carries bug fixes, a reproducible compiler kit and three audio-preserving
+It carries bug fixes, a reproducible compiler kit and four audio-preserving
 CPU optimizations. Controls, gestures, settings layout and default sound
 follow that source. Options that master compiles out stay compiled out.
 Hardware operation has not been tested as part of this port.
@@ -12,8 +12,8 @@ Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|
 | Vanilla source (GCC 4.9.3) | 99,511 | 82.9% |
-| This branch (GCC 9 and the three optimizations) | 90,529 | 75.4% |
-| Trial with the integer Hermite read (not included yet; backport planned) | 82,911 | 69.1% |
+| GCC 9 and the first three optimizations | 90,529 | 75.4% |
+| This branch (with the integer Hermite read) | 82,911 | 69.1% |
 
 Changes from master, one line per change:
 
@@ -31,6 +31,7 @@ Changes from master, one line per change:
 - Compile the app with pinned GCC 9 and the bootloader with pinned GCC 4.9.3; explicit `fmaf` preserves random-pan rounding.
 - Round pan, shape and speed explicitly: sound is identical to the previous build in 20 emulated scenarios, and GCC 9-16 now match as measured on Drizzlet.
 - Select mono/stereo processing once per block with a template, sum grains locally and use unsigned read-index modulo; audio stays bit-identical.
+- Interpolate grain reads on the stored integers and scale once, as Clouds' `ReadHermite` does; audio stays bit-identical.
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 

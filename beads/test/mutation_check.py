@@ -45,6 +45,12 @@ cases = [
     'CONSTRAIN(slice_duration, 1, max_delay_);',
     'CONSTRAIN(slice_duration, 0, max_delay_);'),
   # #57: the idle counter saturates.
+  ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
+    'const int32_t b_neg = w + a;',
+    'const int32_t b_neg = w + a + 1;'),
+  ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
+    'result.l = result.r = i ? odd : even;',
+    'result.l = result.r = even;'),
   ('TestClockIdleCounter', 'delay', 'beads/dsp/delay_clock.cc',
     '  if (next_interval_ >= max_interval_) {\n'
     '    next_interval_ = max_interval_;\n'
