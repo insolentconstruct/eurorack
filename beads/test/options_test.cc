@@ -68,6 +68,7 @@ namespace state_layout_test {
 STATIC_ASSERT(offsetof(State, diffusion) == 17, diffusion);
 STATIC_ASSERT(offsetof(State, frozen_feedback) == 18, frozen_feedback);
 STATIC_ASSERT(offsetof(State, padding) == 19, options);
+STATIC_ASSERT(offsetof(State, synth_engine) == 21, synth_engine);
 }
 
 struct Rig {
@@ -970,6 +971,47 @@ void TestCloudsStorage() {
   }
 }
 
+void TestSynthEngineStorage() {
+  test_checker.Start("TestSynthEngineStorage");
+  Rig r;
+  CHECK(!r.settings.plaits_synth() && !r.ui.plaits_synth());
+  for (int value = 0; value < 256; ++value) {
+    r.settings.mutable_state()->synth_engine = value;
+    CHECK(r.settings.plaits_synth() == (value == 0xa1));
+    r.settings.mutable_state()->padding[1] = 0xff;
+    r.settings.mutable_state()->padding_end[1] = 0xff;
+    r.settings.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.plaits_synth() == (value == 0xa1));
+    CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.state().padding[1] == 0 && loaded.state().padding_end[1] == 0);
+    // Bypass SaveState normalization to exercise load normalization too.
+    loaded.mutable_state()->synth_engine = value;
+    loaded.chunk_storage_.SaveState();
+    CHECK(loaded.Init(false));
+    CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(r.settings.Init(false));
+  }
+  // Page 3, REVERB knob: two halves with a dead band, previewed live.
+  r.settings.set_plaits_synth(false);
+  r.settings.SaveState();
+  r.ui.LoadOptions();
+  r.EnterLimiter();
+  r.reverb = .9f; r.Tick(1);
+  CHECK(r.ui.options_.plaits_preview() && r.ui.plaits_synth());
+  CHECK(!r.settings.plaits_synth());
+  r.reverb = .5f; r.Tick(1);
+  CHECK(r.ui.options_.plaits_preview());
+  r.reverb = .46f; r.Tick(1);
+  CHECK(!r.ui.options_.plaits_preview() && !r.ui.plaits_synth());
+  r.reverb = .54f; r.Tick(1001);
+  CHECK(r.settings.plaits_synth());
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.plaits_synth());
+  CHECK(loaded.state().synth_engine == 0xa1);
+}
+
 void TestSelfPlayHold() {
   test_checker.Start("TestSelfPlayHold");
   for (int mode = 0; mode < 2; ++mode) {
@@ -1362,7 +1404,7 @@ void TestOptionsTablesAndLifetime() {
   const OptionSetting expected[3][3] = {
     { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB },
     { OPTION_RESERVED, OPTION_DELAY, OPTION_FROZEN },
-    { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED }
+    { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_SYNTH }
   };
   Rig r;
   r.Enter();
@@ -1403,7 +1445,7 @@ void TestOptionsTablesAndLifetime() {
 
 void TestOptionsKnobsAndSettling() {
   test_checker.Start("TestOptionsKnobsAndSettling");
-  // Every physical knob, including the two reserved positions.
+  // Every physical knob, including the reserved position.
   for (int page = 0; page < 3; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       Rig r;
@@ -1445,7 +1487,8 @@ void TestOptionsKnobsAndSettling() {
           ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
           ? r.settings.clouds_style() : setting == OPTION_SELF_PLAY
           ? r.settings.self_play_on_request() : setting == OPTION_FROZEN
-          ? r.settings.evolving_feedback()
+          ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
+          ? r.settings.plaits_synth()
           : int(r.settings.output_limiter_mode())));
       r.Tick(5000);
       CHECK(test_writes == writes + 1);
@@ -1620,6 +1663,7 @@ void TestOptionsPalette() {
       case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value);
         break;
       case OPTION_SELF_PLAY: r.ui.options_.self_play_preview_ = v.value; break;
+      case OPTION_SYNTH: r.ui.options_.plaits_preview_ = v.value; break;
       case OPTION_LIMITER:
         r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
         break;
@@ -1840,6 +1884,7 @@ int main() {
   TestPlaybackStorage();
   TestCloudsStorage();
   TestFrozenFeedbackStorage();
+  TestSynthEngineStorage();
   TestPitchStorage();
   TestSelfPlayStorage();
   TestSelfPlayHold();

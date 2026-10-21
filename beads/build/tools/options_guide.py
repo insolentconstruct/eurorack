@@ -113,6 +113,7 @@ SHORT = {
     "Automatic (Stock)": "Automatic",
     "Fast release": "Fast",
     "Width (wider →)": "wider →",
+    "Beads (Stock)": "Beads",
 }
 
 
@@ -162,7 +163,7 @@ def zone_bands(rows):
     if setting == "Stereo width":
         return [(CONSTANTS["kWidthStockThreshold"],
                  CONSTANTS["kWidthEnabledThreshold"])]
-    if setting in ("Reverb character", "Wavetable synth"):
+    if setting in ("Reverb character", "Wavetable synth", "Synth engine"):
         return [(CONSTANTS["kOptionsHalfLow"],
                  CONSTANTS["kOptionsHalfHigh"])]
     band = CONSTANTS["kOptionsZoneBand"]
@@ -193,9 +194,9 @@ DETAILS = [
     "button, to close.",
     "Move a knob far enough to take it over; small bumps before that are "
     "ignored. Pitch scale, Delay mode and Limiter "
-    "use the knob's three thirds; Reverb character and Wavetable synth "
-    "use its two halves. Near a boundary, turn a little past it to "
-    "switch.",
+    "use the knob's three thirds; Reverb character, Wavetable synth and "
+    "Synth engine use its two halves. Near a boundary, turn a little past "
+    "it to switch.",
     "Stereo width is Stock at the bottom of the knob. Turn clockwise to "
     "spread the grains wider, up to a full random spread fully CW. Only "
     "new grains are affected. When width is on, short presses of [M] add "
@@ -229,6 +230,11 @@ DETAILS = [
     "Frozen feedback Evolving runs frozen grains through a slowly moving "
     "all-pass loop; FEEDBACK sets how far they drift.",
     "Limiter Off lets loud peaks clip.",
+    "Synth engine Plaits plays six Plaits voices instead of the wavetable "
+    "synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set "
+    "HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE "
+    "sustains. With DENSITY at noon the last voice drones until SEED plays "
+    "a note.",
 ]
 
 

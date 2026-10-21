@@ -35,7 +35,7 @@ namespace beads {
 const OptionPage kOptionPages[kNumOptionPages] = {
   { 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
   { 0, { OPTION_RESERVED, OPTION_DELAY, OPTION_FROZEN } },
-  { 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_RESERVED } }
+  { 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_SYNTH } }
 };
 const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0,
@@ -87,6 +87,10 @@ const OptionValue kOptionValues[] = {
   { OPTION_FROZEN, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_FROZEN, 1,
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH, 1,
     { 255, 255, 0 }, PULSE_STEADY }
 };
 
@@ -98,6 +102,7 @@ void Options::Init() {
   selected_ = OPTION_PITCH;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   self_play_preview_ = clouds_preview_ = evolving_preview_ = false;
+  plaits_preview_ = false;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
   width_preview_ = 0;
@@ -276,6 +281,15 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
             evolving_preview_ = true;
           }
           break;
+        case OPTION_SYNTH:
+          if (pot < kOptionsHalfLow) {
+            plaits_preview_ = false;
+          }
+
+          if (pot > kOptionsHalfHigh) {
+            plaits_preview_ = true;
+          }
+          break;
         default:
           break;
       }
@@ -315,6 +329,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
     limiter_preview_ = settings.output_limiter_mode();
     self_play_preview_ = settings.self_play_on_request();
     clouds_preview_ = settings.clouds_style();
+    plaits_preview_ = settings.plaits_synth();
     pitch_preview_ = settings.pitch_scale();
     scale_ = settings.pitch_scale() >= PITCH_SCALE_FIFTHS
         ? settings.pitch_scale() : PITCH_SCALE_FIFTHS;
@@ -343,6 +358,8 @@ int Options::Value(OptionSetting setting) const {
       return limiter_preview_;
     case OPTION_FROZEN:
       return evolving_preview_;
+    case OPTION_SYNTH:
+      return plaits_preview_;
     default:
       return 0;
   }

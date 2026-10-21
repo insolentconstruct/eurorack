@@ -112,7 +112,7 @@ little before it takes over. Knobs marked Not used yet do nothing.
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
 2 / FEEDBACK        Not used yet  Delay mode    Frozen feedback
-3 / DRY/WET         Wavetable synth     Limiter       Not used yet
+3 / DRY/WET         Wavetable synth     Limiter       Synth engine
 
 Changes save by themselves about a second after you stop turning; wait that
 long before powering off. Close by holding [M] for three seconds or pressing
@@ -134,6 +134,17 @@ hold [A] for about a second and a half; hold again to stop. Patching either
 input also stops it (once FREEZE is off); with an input patched, the hold
 restarts automatic gain as usual. The setting is saved. Stock firmware ignores
 it; saving after a downgrade resets it to Automatic (Stock).
+
+Synth engine: page 3 (DRY/WET LED), REVERB knob. Lower half selects
+Beads (Stock) (steady green), the wavetable synth; upper half selects Plaits
+(steady yellow): six voices of Mutable Instruments' Plaits play instead. Each
+SEED trigger starts the next voice, which keeps its pitch and settings.
+FEEDBACK picks one of the 24 models; TIME, SIZE and SHAPE set HARMONICS,
+TIMBRE and MORPH, each note drawing its own random values; PITCH, DENSITY,
+SEED, REVERB, quality, stereo width and the pitch scale work as in the
+wavetable synth. DRY/WET sets the decay and FREEZE sustains. With DENSITY at
+noon and SEED unpatched, the last voice drones until SEED plays a note. The
+setting is saved; stock firmware ignores it.
 
 Reverb character: page 1 (REVERB LED), REVERB knob. Lower half selects
 Stock (default, steady green); upper half selects Clouds-style (steady yellow).

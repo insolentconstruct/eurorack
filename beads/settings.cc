@@ -76,7 +76,10 @@ bool Settings::Init(bool recovery_mode) {
   state_.width_assigned = 0;
   state_.diffusion = 0;
   state_.frozen_feedback = 0;
+  state_.synth_engine = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
+  fill(&state_.padding_end[0],
+      &state_.padding_end[sizeof(state_.padding_end)], 0);
   
   if (recovery_mode) {
     chunk_storage_.Recover(&persistent_data_, &state_);
@@ -110,6 +113,7 @@ void Settings::NormalizeOptions() {
   set_stereo_width(stereo_width());
   set_delay_mode(delay_mode());
   set_evolving_feedback(evolving_feedback());
+  set_plaits_synth(plaits_synth());
   // One store, so the audio interrupt never sees the target cleared.
   state_.width_assigned = width_assigned() && stereo_width() ? 1
       : (diffusion_assigned() && diffusion_assignable() ? 2 : 0);
@@ -119,6 +123,8 @@ void Settings::NormalizeOptions() {
 void Settings::SaveState() {
   NormalizeOptions();
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
+  fill(&state_.padding_end[0],
+      &state_.padding_end[sizeof(state_.padding_end)], 0);
   chunk_storage_.SaveState();
 }
 

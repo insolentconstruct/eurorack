@@ -40,6 +40,7 @@
 #include "beads/background_buffer_backup.h"
 #include "beads/calibrator.h"
 #include "beads/cv_reader.h"
+#include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/factory_test.h"
@@ -71,6 +72,7 @@ extern Codec codec;
 extern FactoryTest factory_test;
 extern GainControl gain_control;
 extern NormalizationDetector normalization_detector;
+extern PlaitsSynth plaits_synth;
 extern Processor processor;
 extern Settings settings;
 extern Synth synth;
@@ -138,6 +140,7 @@ struct Rig {
     PowerOnObject(&factory_test);
     PowerOnObject(&gain_control);
     PowerOnObject(&normalization_detector);
+    PowerOnObject(&plaits_synth);
     PowerOnObject(&processor);
     PowerOnObject(&settings);
     PowerOnObject(&synth);
@@ -964,6 +967,67 @@ void TestCloudsSwitch() {
   }
 }
 
+// Byte 21 picks the synth. The Plaits voices borrow the start of the first
+// delay bank only in synth mode; leaving it clears what they used.
+void TestPlaitsSynthSelection() {
+  test_checker.Start("TestPlaitsSynthSelection");
+  extern uint8_t delay_buffer_1[];
+  extern uint8_t delay_buffer_2[];
+  for (int plaits = 0; plaits < 2; ++plaits) {
+    Rig r(false, true);
+    settings.set_plaits_synth(plaits);
+    settings.SaveState();
+    r.Reboot();
+    CHECK(ui.plaits_synth() == bool(plaits));
+    r.Settle();
+    CHECK(!synth_mode);
+    // The granular processor has stopped writing when synth mode starts.
+    memset(delay_buffer_1, 0x11, 512 * 1024);
+    memset(delay_buffer_2, 0x22, 256 * 1024);
+    r.Advance(10001);
+    CHECK(synth_mode);
+    r.Settle();
+    bool loud = false;
+    for (int i = 0; i < 2000; ++i) {
+      r.Block();
+      for (size_t j = 0; j < codec.block_size_; ++j) {
+        loud = loud || fabs(double(r.out[j].l)) > 21474836.0;
+      }
+    }
+    CHECK(loud);
+    // Only the selected synth runs.
+    const int model = plaits_synth.voice_[plaits_synth.active_voice_].model();
+    CHECK(plaits ? model >= 0 : model == -1);
+    for (size_t i = kPlaitsSynthRamSize; i < 512 * 1024; ++i) {
+      if (delay_buffer_1[i] != 0x11) {
+        CHECK(false);
+        break;
+      }
+    }
+    for (size_t i = 0; i < 256 * 1024; ++i) {
+      if (delay_buffer_2[i] != 0x22) {
+        CHECK(false);
+        break;
+      }
+    }
+    r.left = true;
+    for (int i = 0; i < 2000 && synth_mode; ++i) {
+      MainLoopStep();
+      SysTick_Handler();
+      if (synth_mode) {
+        r.Block();
+      }
+    }
+    CHECK(!synth_mode);
+    for (size_t i = 0; i < kPlaitsSynthRamSize; ++i) {
+      if (delay_buffer_1[i]) {
+        CHECK(false);
+        break;
+      }
+    }
+  }
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -986,5 +1050,6 @@ int main() {
   TestPitchChain();
   TestQuantizedPitchChain();
   TestSelfPlayFrozenBackup();
+  TestPlaitsSynthSelection();
   return test_checker.failures() ? 1 : 0;
 }
