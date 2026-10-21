@@ -5,9 +5,11 @@ A host at another rate needs resampling around the engine. Define `TEST` to
 select the support library's portable arithmetic instead of ARM assembly.
 Packed sample structures and embedded memory placement remain upstream code.
 
-`MulAdd()` calls standard `fmaf()` to preserve one random-pan calculation's
+The random pan spread calls standard `fmaf()` to preserve one calculation's
 fused rounding. On a processor without FMA it may call the math library, once
-per grain start. Avoid introducing contraction elsewhere in a host port;
+per grain start. The grain pan mix also uses `fmaf()`, and the shape and speed
+targets are rounded separately, so GCC 9 to 16 produce the same sound. The
+integer Hermite read keeps each rounding step in a fixed order. Avoid introducing contraction elsewhere in a host port;
 match the chosen target's floating-point rounding and flush-to-zero behavior.
 
 Delay-line modulo assumes readers never advance ahead of the write head.

@@ -23,7 +23,7 @@
 
 - (Drizzlet) Keep several focused test programs with their own `<name>.mk` files so sanitizer builds, UI variants and hardware replacements can use separate flags, sources and object directories. Share small helpers in headers such as `test_checker.h`.
 - (Drizzlet) Keep `test/*_stubs/` for host tests only; programs may share them. Their nested paths mirror firmware includes so an earlier `-I` can replace hardware headers without changing firmware code.
-- (Drizzlet) The host test tooling and the build kit in `build/` are additions, not MI folder conventions.
+- (Drizzlet) Keep `test/mutation_check.py` beside the tests; it checks that deliberate faults fail in disposable copies. This tooling and the build kit in `build/` are additions, not MI folder conventions.
 
 ## Names
 

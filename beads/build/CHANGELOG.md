@@ -12,6 +12,6 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 - Frozen delay with negative FM no longer reads outside the buffer, and very fast SEED clocks no longer create a zero-length slice (#33).
 - Fixed undefined reads in the dummy CPU-load grains and past the last wavetable; output unchanged (#34, #35).
 - App built with GCC 9 instead of 4.9.3; the sound is unchanged.
-- More CPU headroom: about 9,000 fewer cycles per audio block in the heaviest stock case, with the same sound.
+- More CPU headroom: about 16,600 fewer cycles per audio block in the heaviest stock case, with the same sound.
 
 Controls, settings and the default sound are those of the vanilla source; no features are added.

@@ -6,14 +6,15 @@ Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overloa
 
 ## TL;DR
 
-On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 90,529 of the 120,000 cycles available (75.4%). The vanilla source takes 99,511 (82.9%) on the same test: 8,982 fewer cycles, 7.5 points of headroom. Audio and buffer hashes match in all 24 scenarios. These figures were not measured on a module.
+On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. These figures were not measured on a module.
 
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|
 | Vanilla source (beads-build-kit, GCC 4.9.3) | 99,511 | 82.9% |
-| beads-tuneup (GCC 9 and the three code changes) | 90,529 | 75.4% |
+| GCC 9 and the first three code changes | 90,529 | 75.4% |
+| beads-tuneup (with the integer Hermite read) | 82,911 | 69.1% |
 
-Headroom gained per change, in points of the budget on the busiest stock block. Each was measured on its own against the build before it, so the sum (7.8) is a little more than the measured total:
+Headroom gained per change, in points of the budget on the busiest stock block. Each was measured on its own against the build before it, on Drizzlet's tree, so the sum (13.4) differs a little from the total measured on this branch:
 
 | Change | Headroom |
 |---|---:|
@@ -21,13 +22,13 @@ Headroom gained per change, in points of the budget on the busiest stock block. 
 | Mono/stereo chosen once per block | 2.2 |
 | Grains summed in a local frame | 3.0 |
 | Unsigned modulo for the delay-line read | 0.6 |
-| Total, measured on this branch | 7.5 |
+| Grains interpolate the stored integers (integer Hermite) | 5.6 |
+| Total, measured on this branch | 13.8 |
 
 Plain GCC 11 to 16 builds are 5,800 to 9,300 cycles slower than GCC 9 on the stock peak (GCC 10.3, from an unverified archive, 10,200); raising the inlining limit brings GCC 11 within noise of GCC 9. An explicit fused multiply-add in the random pan spread keeps GCC 9's audio identical to 4.9.3's. Another in the grain pan mix, and two values rounded separately, make newer compilers round as GCC 9 does (emulated audio identical in 20 scenarios). The bootloader stays on 4.9.3.
 
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests.
 - **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
-- **Not on this branch yet:** grains interpolating the stored integers (integer Hermite read, below). A trial on this branch measured 82,911 cycles (69.1%), another 6.3 points.
 
 ## Build comparison
 
@@ -81,6 +82,7 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 | Sum delay grains in a local frame | Mutable Instruments: keep loop state in locals across the block (Timing and processes) | template | 3,630 / 3,725 (run 2: 3,826 / 3,732) | +1,648 B | 0 | same gates | kept |
 | Unsigned modulo for the delay-line read index | Mutable Instruments: the same file's `LoadQuad` already uses `size_t(i) % items_per_bank()` | local frame | 739 / 556 (run 2: 636 / 550) | -272 B | 0 | gates run on the combined tree | kept |
 | Both pass-2 changes together | the two rows above | template | 4,369 / 4,281 | +1,376 B | 0 | 28/28, 20/20, 13/13, error 0 | kept |
+| Grain Hermite read on the stored integers, scaled once | Mutable Instruments: Clouds' `ReadHermite` interpolates the unscaled samples and multiplies by `scale` once (`clouds/dsp/audio_buffer.h:241-277`) | the three changes | 6,775 / 7,140 (run 2: 6,840 / 7,130) | -504 B | 0 | 28/28 development board hashes (audio and buffers); host tests | kept |
 | All sample loops in ITCM | Mutable Instruments: stmlib's `IN_RAM` placement | GCC 9 | -765 / -770 | +336 B | +21,440 B ITCM | 28/28 development board | rejected |
 | ITCM on top of the template | Mutable Instruments: stmlib's `IN_RAM` placement | template | -611 / -505 | +360 B | +23,448 B ITCM | 28/28 development board | rejected |
 | Extra grain/delay template | Mutable Instruments: template specialization | GCC 9 | -1,693 / -1,812 | -336 B | 0 | 28/28 development board | rejected |
@@ -96,9 +98,9 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 
 **ITCM.** It helped some delay cases but cost more than it saved in the saturated case. Hot state and the stack already sit in fast core-coupled memory.
 
-**Result.** On Drizzlet's tree the stock worst block went 97,255 (GCC 9 baseline) to 90,333 with the three code changes. Measured on this branch against the vanilla source on GCC 4.9.3, it goes from 99,511 to 90,529 (TL;DR).
+**Result.** On Drizzlet's tree the stock worst block went 97,255 (GCC 9 baseline) to 90,333 with the three code changes. Measured on this branch against the vanilla source on GCC 4.9.3, it goes from 99,511 to 90,529 with them, and to 82,911 with the integer Hermite read (TL;DR).
 
-**Integer Hermite read (not on this branch yet).** Grain reads convert four stored samples to float and scale each one before the Hermite polynomial. Like Clouds' `ReadHermite` (`clouds/dsp/audio_buffer.h:241-277`), they can interpolate the stored integers and scale the result once: two multiplies per stereo read instead of eight. It saved 6,775 / 7,140 cycles (run 2: 6,840 / 7,130) with all 28 hashes matching, and a trial on this branch measured 82,911 (69.1%). Identical sound depends on keeping each rounding step in place. A backport is planned.
+**Integer Hermite.** Grain reads converted four stored samples to float and scaled each one before the Hermite polynomial. Like Clouds' `ReadHermite` (`clouds/dsp/audio_buffer.h:241-277`), they now interpolate the stored integers (`Item::raw`) and scale the result once: two multiplies per stereo read instead of eight. 8-bit µ-law lines and the delay taps keep the float read. Identical sound depends on keeping each rounding step in place: `c` stays `float(c) * 0.5f`, computed first, otherwise GCC fuses a different multiply-add and 10 of 28 hashes change (the delay taps differed the same way, so they keep the old read). `TestHermiteRawMatchesScaled` checks it on the host.
 
 **Untried ideas** (none fits the rules below): whole-block rendering per grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
 
@@ -117,7 +119,7 @@ These come from Mutable Instruments' code and tech notes ([STM32 miscellania](ht
 1. Specialize on configuration with template parameters: Clouds' grain renderer on channel count, quality and interpolation, stmlib's filter on its type, Warps on FIR templates. It is not always faster, as the freeze template shows.
 2. Look at the data format first. Mutable Instruments' own Beads gain was changing delay-line addresses from 47:16 to 21:10 fixed point, which avoids an int64-to-float conversion.
 3. Keep loop state in registers across the block; watch for state reloaded every sample, aliasing through `this`, and calls inside the sample loop.
-4. Judge the worst block, not the mean. Mutable Instruments toggle a pin around the block callback, design for 80 to 95% of the CPU, and treat 99% of the block as the ceiling. DSP-only, this branch is at about 75% here.
+4. Judge the worst block, not the mean. Mutable Instruments toggle a pin around the block callback, design for 80 to 95% of the CPU, and treat 99% of the block as the ceiling. DSP-only, this branch is at about 69% here.
 
 ### This branch's own rules
 
