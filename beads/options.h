@@ -47,7 +47,7 @@ const int kNumOptionPages = 3;
 
 enum OptionSetting {
   OPTION_RESERVED, OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB,
-  OPTION_DELAY, OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_FROZEN,
+  OPTION_DELAY, OPTION_ENGINE, OPTION_LIMITER, OPTION_FROZEN,
   OPTION_SYNTH, OPTION_ATTACKS, OPTION_LAST
 };
 
@@ -87,7 +87,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 30;
+const size_t kNumOptionValues = 31;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -124,7 +124,7 @@ class Options {
 
   inline OutputLimiterMode limiter_preview() const { return limiter_preview_; }
 
-  inline bool self_play_preview() const { return self_play_preview_; }
+  inline Engine engine_preview() const { return engine_preview_; }
 
   inline bool clouds_preview() const { return clouds_preview_; }
 
@@ -180,7 +180,7 @@ class Options {
   bool qualified_[MIX_PARAMETER_LAST];
   int zone_[MIX_PARAMETER_LAST];
   OutputLimiterMode limiter_preview_;
-  bool self_play_preview_;
+  Engine engine_preview_;
   bool clouds_preview_;
   bool plaits_preview_;
   StereoWidth width_preview_;

@@ -140,6 +140,8 @@ class Ui {
 
   inline AttackMode attack_mode() const { return attack_mode_; }
 
+  // The saved engine, applied once the options page has closed.
+  inline bool spectral() const { return spectral_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
@@ -214,9 +216,9 @@ class Ui {
   volatile OutputLimiterMode output_limiter_mode_;
   volatile bool clouds_style_;
   volatile bool evolving_feedback_;
-
   volatile bool plaits_synth_;
   volatile AttackMode attack_mode_;
+  volatile bool spectral_;
   volatile PitchScale pitch_scale_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;

@@ -112,7 +112,7 @@ little before it takes over. Knobs marked Not used yet do nothing.
 Page / pulsing LED  FEEDBACK      DRY/WET       REVERB
 1 / REVERB          Pitch scale   Stereo width  Reverb character
 2 / FEEDBACK        Attacks       Delay mode    Frozen feedback
-3 / DRY/WET         Wavetable synth     Limiter       Synth engine
+3 / DRY/WET         Engine        Limiter       Synth engine
 
 Changes save by themselves about a second after you stop turning; wait that
 long before powering off. Close by holding [M] for three seconds or pressing
@@ -125,15 +125,27 @@ The page LED flashes on entry, close and save. See [OPTIONS.md](docs/OPTIONS.md)
 Output limiter: Stock is steady green; Fast release is steady yellow;
 Off is steady red. With Off, loud peaks can hard-clip.
 
-Wavetable synth: page 3 (DRY/WET LED), FEEDBACK knob. Lower half selects
-Automatic (Stock) (steady green); upper half selects Manual (steady yellow).
-Automatic (Stock) starts the granular wavetable synth after 10 s with both
-audio inputs unpatched, as the Beads manual describes. Manual never starts it
-by itself. To start it by hand, unpatch both audio inputs, turn FREEZE off and
-hold [A] for about a second and a half; hold again to stop. Patching either
-input also stops it (once FREEZE is off); with an input patched, the hold
-restarts automatic gain as usual. The setting is saved. Stock firmware ignores
-it; saving after a downgrade resets it to Automatic (Stock).
+Engine: page 3 (DRY/WET LED), FEEDBACK knob. Three zones select Granular
+(Stock) (steady green), Granular, manual synth (steady yellow) and Spectral
+(steady red). Granular (Stock) starts the granular wavetable synth after 10 s
+with both audio inputs unpatched, as the Beads manual describes. Granular,
+manual synth never starts it by itself. To start it by hand, unpatch both
+audio inputs, turn FREEZE off and hold [A] for about a second and a half; hold
+again to stop. Patching either input also stops it (once FREEZE is off); with
+an input patched, the hold restarts automatic gain as usual.
+Spectral replaces the grains with the spectral processing of Mutable
+Instruments' Clouds. TIME picks the stored spectrum, SIZE warps it, SHAPE
+quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how
+quickly the spectrum is renewed, and scrambles its phases towards either end.
+Holding SEED glitches it; FREEZE holds it. The attenurandomizers draw a new
+value for each spectrum. FEEDBACK, DRY/WET, REVERB, the recording quality,
+the assignable CV and the R gate output work as usual; there is no grain
+diffusion, delay mode or wavetable synth.
+A new engine takes over when the page closes: the sound fades out, the
+recording is cleared, and the sound fades back in. A frozen buffer saved to
+flash stays there and comes back with the granular engine. The setting is
+saved. Stock firmware ignores it; saving after a downgrade resets it to
+Granular (Stock).
 
 Synth engine: page 3 (DRY/WET LED), REVERB knob. Lower half selects
 Beads (Stock) (steady green), the wavetable synth; upper half selects Plaits
