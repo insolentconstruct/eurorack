@@ -161,13 +161,14 @@ for row in rows:
         "slow (0.98 Hz)",
         "fast (3.91 Hz)",
         "2 yellow pulses / 2.048 s",
+        "2 red pulses / 2.048 s",
     }
     seen = values.setdefault(setting, set())
     if not seen:
         assert (color, pulse) == ("green", "steady"), setting
     assert (color, pulse) not in seen, (setting, value)
     seen.add((color, pulse))
-assert len(values["Pitch scale"]) == 10
+assert len(values["Pitch scale"]) == 11
 assert ("meter", "slow (0.98 Hz)") in values["Stereo width"]
 
 print("Options page map and TSV match firmware tables: PASS")
@@ -202,7 +203,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
                 assert root.attrib["width"] == "390"
     markdown = Path(directory, "OPTIONS.md").read_text()
     # Buyer-facing tables retain every live value/indication, with technical
-    # numbers confined to Details. Pitch's eight scales form a separate list.
+    # numbers confined to Details. Pitch's nine scales form a separate list.
     public, details = markdown.split("## Details", 1)
     assert public.count("| Knob | Setting |") == 3
     assert (

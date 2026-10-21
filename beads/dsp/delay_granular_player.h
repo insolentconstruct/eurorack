@@ -43,7 +43,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   ~DelayGranularPlayer() { }
   
   inline void Init(float sample_rate) {
-    GranularPlayer<DelayGrain, 32>::Init(sample_rate);
+    GranularPlayer::Init(sample_rate);
     attacks_ = NULL;
   }
 

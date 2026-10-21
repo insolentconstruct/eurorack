@@ -62,7 +62,8 @@ void TestPitchGrids() {
   CHECK(fabsf(QuantizePitch(-4.0f, PITCH_SCALE_BHAIRAV) + 4.0788f)
       < 0.00001f);
   CHECK(fabsf(QuantizePitch(3.0f, PITCH_SCALE_SHRI) - 3.156f) < 0.00001f);
-  for (int s = 1; s < PITCH_SCALE_LAST; ++s) {
+  // Random intervals has no grid of its own (TestRandomIntervals).
+  for (int s = 1; s < PITCH_SCALE_RANDOM_INTERVALS; ++s) {
     const PitchScale scale = PitchScale(s);
     float previous = -1000.0f;
     for (int i = -12000; i <= 12000; ++i) {
@@ -123,8 +124,42 @@ void TestRandomizedPitchGrid() {
   }
 }
 
+// Random intervals (#8): CCW, the random offset lands on fifths and octaves
+// around the knob's pitch; CW, it stays continuous.
+void TestRandomIntervals() {
+  test_checker.Start("TestRandomIntervals");
+  CHECK(QuantizePitch(3.3f, PITCH_SCALE_RANDOM_INTERVALS) == 3.3f);
+  RandomizedParameter p;
+  p.base = 2.5f;
+  p.cv = 0.0f;
+  p.has_cv = false;
+  int off_interval = 0;
+  int moved = 0;
+  for (int side = 0; side < 2; ++side) {
+    p.attenuverter = side ? 0.8f : -0.8f;
+    for (int i = 0; i < 2000; ++i) {
+      const float offset = 12.0f * log2f(
+          p.pitch_value(PITCH_SCALE_RANDOM_INTERVALS)) - p.base;
+      const float snapped = QuantizePitch(offset, PITCH_SCALE_FIFTHS);
+      const bool on_interval = fabsf(offset - snapped) < 0.001f;
+      if (!side) {
+        off_interval += !on_interval;
+        moved += fabsf(offset) > 0.5f;
+      } else {
+        off_interval -= !on_interval;
+      }
+    }
+  }
+  printf("Random intervals: CCW moved %d, CW minus CCW off-grid %d\n",
+      moved, off_interval);
+  CHECK(moved > 200);
+  // CCW all on the grid, CW almost never.
+  CHECK(off_interval < -1900);
+}
+
 int main() {
   TestPitchGrids();
+  TestRandomIntervals();
   TestRandomizedPitchGrid();
   return test_checker.failures() ? 1 : 0;
 }

@@ -1290,7 +1290,7 @@ void TestPitchStorage() {
   r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
   r.settings.set_self_play_on_request(true);
   for (int i = 0; i < 256; ++i) {
-    const PitchScale expected = i >= 0xa1 && i <= 0xa9
+    const PitchScale expected = i >= 0xa1 && i <= 0xaa
         ? PitchScale(i - 0xa0) : PITCH_SCALE_OFF;
     r.settings.mutable_state()->pitch_scale = i;
     CHECK(r.settings.pitch_scale() == expected);
@@ -1679,7 +1679,7 @@ void TestOptionsWidthAndSeed() {
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
   const bool seed_state = r.ui.seed_button_state_;
   const bool seed_locked = r.ui.seed_button_locked_;
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < 9; ++i) {
     test_down[SWITCH_SEED] = true;
     r.Tick(8, false);
     CHECK(!r.ui.queue_.available());
@@ -1690,7 +1690,7 @@ void TestOptionsWidthAndSeed() {
     CHECK(r.ui.seed_button_state_ == seed_state);
     CHECK(r.ui.seed_button_locked_ == seed_locked);
     CHECK(r.ui.options_.pitch_preview() ==
-        PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 8));
+        PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 9));
     CHECK(r.ui.options_.active());
   }
   r.Down(SWITCH_SEED);

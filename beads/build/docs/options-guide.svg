@@ -143,6 +143,11 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="48" cy="763" r="1" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="60" y="768" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Raag Shri</text>
 <text x="347" y="768" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; two pulses</text>
+<circle cx="44" cy="785" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<circle cx="40" cy="785" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<circle cx="48" cy="785" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<text x="60" y="790" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Random intervals</text>
+<text x="347" y="790" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; two pulses</text>
 <text x="365" y="399" font-size="16" font-weight="bold" fill="#222" text-anchor="start">DRY/WET</text>
 <text x="365" y="422" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Stereo width</text>
 <circle cx="522.5" cy="494" r="22" fill="white" stroke="#333" stroke-width="2"/>

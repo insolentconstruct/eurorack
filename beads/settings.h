@@ -178,7 +178,7 @@ class Settings {
 
   inline PitchScale pitch_scale() const {
     const uint8_t value = state_.pitch_scale;
-    return value >= (kOptionTag + 1) && value <= (kOptionTag + 9)
+    return value >= (kOptionTag + 1) && value <= (kOptionTag + 10)
         ? PitchScale(value - kOptionTag) : PITCH_SCALE_OFF;
   }
 

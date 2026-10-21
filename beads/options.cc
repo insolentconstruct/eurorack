@@ -60,6 +60,8 @@ const OptionValue kOptionValues[] = {
     { 255, 0, 0 }, PULSE_FAST },
   { OPTION_PITCH, 9,
     { 255, 255, 0 }, PULSE_DOUBLE },
+  { OPTION_PITCH, 10,
+    { 255, 0, 0 }, PULSE_DOUBLE },
   { OPTION_WIDTH, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_WIDTH, 1,
@@ -396,7 +398,7 @@ void Options::ApplySeedTaps() {
   }
   while (seed_taps_) {
     --seed_taps_;
-    scale_ = scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
+    scale_ = scale_ == PITCH_SCALE_RANDOM_INTERVALS ? PITCH_SCALE_FIFTHS
         : PitchScale(scale_ + 1);
     pitch_preview_ = scale_;
     selected_ = OPTION_PITCH;

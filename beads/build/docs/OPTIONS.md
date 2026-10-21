@@ -35,6 +35,7 @@ Scale (tap SEED to step through):
 - Pelog: yellow; fast blink
 - Raag Bhairav: red; fast blink
 - Raag Shri: yellow; two pulses
+- Random intervals: red; two pulses
 
 ## Page 2 — FEEDBACK LED pulsing
 
@@ -71,9 +72,9 @@ Stereo width is Stock at the bottom of the knob. Turn clockwise to spread the gr
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
 
-The quality LED [A] shows the value of the last knob that took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
+The quality LED [A] shows the value of the last knob that took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause, Random intervals two red ones. Unused knobs leave the LED alone.
 
-Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
+Scale: on page 1, tap SEED [C] to step through the nine scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
 Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays granular. Wide/smooth filter keeps the switch and adds a neutral, unfiltered zone around the middle of the delay filter (SIZE attenurandomizer plus SIZE CV), with no resonant boost. The wavetable synth is unaffected.
 

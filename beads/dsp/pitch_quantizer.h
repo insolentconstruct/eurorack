@@ -44,6 +44,8 @@ enum PitchScale {
   PITCH_SCALE_PELOG,
   PITCH_SCALE_BHAIRAV,
   PITCH_SCALE_SHRI,
+  // Only the random offset, on the CCW side, snaps to fifths and octaves.
+  PITCH_SCALE_RANDOM_INTERVALS,
   PITCH_SCALE_LAST
 };
 

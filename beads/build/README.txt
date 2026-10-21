@@ -91,7 +91,7 @@ long before powering off. Close by holding [M] for three seconds or pressing
 another button. Mix controls then catch up smoothly. On page 1 with Scale
 selected, short SEED taps step the scale instead of closing.
 Every first value, including Pitch Off, is steady green. Other values follow
-yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
+yellow, red, then green/yellow/red slow and fast blinking. Raag Shri and Random intervals use two yellow or red pulses then a pause.
 The page LED flashes on entry, close and save. See below for every value.
 
 On page 1 (REVERB LED), DRY/WET sets the stereo width of the grains.
@@ -184,8 +184,8 @@ Pitch quantization: Reverb LED page, FEEDBACK knob. Three zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
 Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
-Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
-then a pause). Holds do not cycle. SEED taps here do not trigger or latch
+Pelog (fast yellow), Raag Bhairav (fast red), Raag Shri (two yellow pulses
+then a pause) and Random intervals (two red pulses then a pause). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons close the page. The setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start,
@@ -195,6 +195,9 @@ synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at
 least 64 (Pelog has four notes). Major and Minor pentatonic are subsets
 of its Major and Minor scales. Pelog and the raags are microtonal.
+Random intervals leaves the knob and CV continuous: with the PITCH
+attenurandomizer counter-clockwise, each grain's random offset lands on
+fifths and octaves; clockwise it stays continuous.
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
@@ -208,6 +211,7 @@ page	LED	knob	setting	value	colour	pulse
 1	REVERB	FEEDBACK	Pitch scale	Pelog	yellow	fast (3.91 Hz)
 1	REVERB	FEEDBACK	Pitch scale	Raag Bhairav	red	fast (3.91 Hz)
 1	REVERB	FEEDBACK	Pitch scale	Raag Shri	yellow	2 yellow pulses / 2.048 s
+1	REVERB	FEEDBACK	Pitch scale	Random intervals	red	2 red pulses / 2.048 s
 1	REVERB	DRY/WET	Stereo width	Stock	green	steady
 1	REVERB	DRY/WET	Stereo width	Width (wider →)	meter	slow (0.98 Hz)
 1	REVERB	REVERB	Reverb character	Stock	green	steady

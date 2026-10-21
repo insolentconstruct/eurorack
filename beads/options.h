@@ -87,7 +87,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 31;
+const size_t kNumOptionValues = 32;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 

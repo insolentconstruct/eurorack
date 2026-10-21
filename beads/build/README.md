@@ -119,7 +119,7 @@ long before powering off. Close by holding [M] for three seconds or pressing
 another button. Mix controls then catch up smoothly. On page 1 with Scale
 selected, short SEED taps step the scale instead of closing.
 Every first value, including Pitch Off, is steady green. Other values follow
-yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
+yellow, red, then green/yellow/red slow and fast blinking. Raag Shri and Random intervals use two yellow or red pulses then a pause.
 The page LED flashes on entry, close and save. See [OPTIONS.md](docs/OPTIONS.md) for every value.
 
 Output limiter: Stock is steady green; Fast release is steady yellow;
@@ -194,8 +194,8 @@ Pitch quantization: Reverb LED page, FEEDBACK knob. Three zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
 tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
 Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
-Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
-then a pause). Holds do not cycle. SEED taps here do not trigger or latch
+Pelog (fast yellow), Raag Bhairav (fast red), Raag Shri (two yellow pulses
+then a pause) and Random intervals (two red pulses then a pause). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons close the page. The setting is saved; default is Off.
 
 Each grain's PITCH knob, CV and random offset snap together at its start,
@@ -205,6 +205,9 @@ synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at
 least 64 (Pelog has four notes). Major and Minor pentatonic are subsets
 of its Major and Minor scales. Pelog and the raags are microtonal.
+Random intervals leaves the knob and CV continuous: with the PITCH
+attenurandomizer counter-clockwise, each grain's random offset lands on
+fifths and octaves; clockwise it stays continuous.
 
 ## Updating your module
 

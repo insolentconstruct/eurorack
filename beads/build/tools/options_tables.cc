@@ -54,6 +54,7 @@ const ValueNames kValueNames[] = {
   { "Pelog", "yellow" },
   { "Raag Bhairav", "red" },
   { "Raag Shri", "yellow" },
+  { "Random intervals", "red" },
   { "Stock", "green" },
   { "Width (wider →)", "meter" },
   { "Stock", "green" },
@@ -96,7 +97,8 @@ int main() {
               1000.0 / (value.pulses == 1
                   ? kOptionsSlowPeriod : kOptionsFastPeriod));
         } else {
-          snprintf(pulse, sizeof(pulse), "2 yellow pulses / %.3f s",
+          snprintf(pulse, sizeof(pulse), "2 %s pulses / %.3f s",
+              kValueNames[i].color,
               kOptionsPulsePeriod / 1000.0);
         }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,

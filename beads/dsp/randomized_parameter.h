@@ -151,7 +151,13 @@ struct RandomizedParameter {
   
   inline float pitch_value(PitchScale scale) const {
     float pitch = value(NULL, 0, 24.0f, false);
-    if (scale != PITCH_SCALE_OFF) {
+    if (scale == PITCH_SCALE_RANDOM_INTERVALS) {
+      // CCW, the random offset lands on fifths and octaves (#8); CW and the
+      // knob and CV stay continuous.
+      if (attenuverter < 0.0f) {
+        pitch = base + QuantizePitch(pitch - base, PITCH_SCALE_FIFTHS);
+      }
+    } else if (scale != PITCH_SCALE_OFF) {
       pitch = QuantizePitch(pitch, scale);
     }
     return stmlib::SemitonesToRatio(pitch);

@@ -209,8 +209,9 @@ DETAILS = [
     "The quality LED [A] shows the value of the last knob that took over. The "
     "first value of every setting is steady green. Other values follow in "
     "yellow and red, then as slow blinks, then as fast blinks. Raag Shri "
-    "is two yellow pulses and a pause. Unused knobs leave the LED alone.",
-    "Scale: on page 1, tap SEED [C] to step through the eight scales "
+    "is two yellow pulses and a pause, Random intervals two red ones. "
+    "Unused knobs leave the LED alone.",
+    "Scale: on page 1, tap SEED [C] to step through the nine scales "
     "instead of closing; a long press does not step, and the taps do not "
     "play grains. The scale snaps the pitch of new grains, including "
     "wavetable synth grains. Grains already playing, the continuous "

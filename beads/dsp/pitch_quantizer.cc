@@ -62,7 +62,7 @@ const PitchScaleNotes kPitchScales[] = {
 };
 
 float QuantizePitch(float pitch, PitchScale scale) {
-  if (scale == PITCH_SCALE_OFF) {
+  if (scale == PITCH_SCALE_OFF || scale == PITCH_SCALE_RANDOM_INTERVALS) {
     return pitch;
   }
   if (scale == PITCH_SCALE_CHROMATIC) {
