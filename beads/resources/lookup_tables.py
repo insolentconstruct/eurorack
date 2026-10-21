@@ -45,3 +45,31 @@ WAVETABLE_SIZE = 1024
 t = numpy.arange(0.0, WAVETABLE_SIZE + WAVETABLE_SIZE / 4 + 1) / WAVETABLE_SIZE
 x = numpy.sin(2 * numpy.pi * t)
 lookup_tables += [('sine', x)]
+
+
+
+"""----------------------------------------------------------------------------
+Phase vocoder analysis/synthesis window, from Clouds.
+----------------------------------------------------------------------------"""
+
+def sum_window(window, steps):
+  n = window.shape[0]
+  start = 0
+  stride = n // steps
+  s = 0
+  for i in range(steps):
+    s = s + window[start:start+stride] ** 2
+    start += stride
+  return s
+
+
+window_size = 4096
+t = numpy.arange(0.0, window_size) / window_size
+
+# Needs tweaks to provide good reconstruction
+power = (1.0 - (2 * t - 1.0) ** 2.0) ** 1.25
+compensation = sum_window(power, 2) ** 0.5
+compensation = numpy.array(list(compensation) * 2)
+power /= compensation
+
+lookup_tables += [('sine_window_4096', power)]

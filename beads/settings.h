@@ -36,6 +36,7 @@
 
 #include "beads/drivers/cv_adc.h"
 #include "beads/dsp/limiter.h"
+#include "beads/dsp/attack_detector.h"
 #include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
 
@@ -68,7 +69,13 @@ struct State {
   uint8_t stereo_width;
   uint8_t delay_mode;
   uint8_t width_assigned;
-  uint8_t padding[7];
+  uint8_t diffusion;
+  uint8_t frozen_feedback;
+  uint8_t attacks;
+  uint8_t engine;
+  uint8_t synth_engine;
+  uint8_t random_intervals;
+  uint8_t padding[1];
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -99,7 +106,16 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(offsetof(State, delay_mode) == 15, state_delay_mode_offset);
   STATIC_ASSERT(
       offsetof(State, width_assigned) == 16, state_width_assigned_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 17, state_padding_offset);
+  STATIC_ASSERT(offsetof(State, diffusion) == 17, state_diffusion_offset);
+  STATIC_ASSERT(
+      offsetof(State, frozen_feedback) == 18, state_frozen_feedback_offset);
+  STATIC_ASSERT(offsetof(State, attacks) == 19, state_attacks_offset);
+  STATIC_ASSERT(offsetof(State, engine) == 20, state_engine_offset);
+  STATIC_ASSERT(
+      offsetof(State, synth_engine) == 21, state_synth_engine_offset);
+  STATIC_ASSERT(
+      offsetof(State, random_intervals) == 22, state_random_intervals_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 23, state_padding_offset);
 };
 
 const uint8_t kOptionTag = 0xa0;
@@ -134,6 +150,14 @@ class Settings {
     state_.self_play = on_request ? (kOptionTag + 1) : 0;
   }
 
+  inline bool spectral() const {
+    return state_.engine == (kOptionTag + 1);
+  }
+
+  inline void set_spectral(bool spectral) {
+    state_.engine = spectral ? (kOptionTag + 1) : 0;
+  }
+
   inline bool clouds_style() const {
     return state_.reverb_style == (kOptionTag + 2);
   }
@@ -159,7 +183,7 @@ class Settings {
 
   inline void set_stereo_width(StereoWidth width) {
     state_.stereo_width = width;
-    if (!width) set_width_assigned(false);
+    if (!width && width_assigned()) set_width_assigned(false);
   }
 
   inline DelayMode delay_mode() const {
@@ -173,11 +197,79 @@ class Settings {
         : mode == DELAY_MODE_WIDE_DETENT ? (kOptionTag + 2) : 0;
   }
 
+  inline bool plaits_synth() const {
+    return state_.synth_engine == (kOptionTag + 1);
+  }
+
+  inline void set_plaits_synth(bool plaits) {
+    state_.synth_engine = plaits ? (kOptionTag + 1) : 0;
+  }
+
+  inline bool random_intervals() const {
+    return state_.random_intervals == (kOptionTag + 1);
+  }
+
+  inline void set_random_intervals(bool intervals) {
+    state_.random_intervals = intervals ? (kOptionTag + 1) : 0;
+  }
+
   inline bool width_assigned() const { return state_.width_assigned == 1; }
 
   inline void set_width_assigned(bool assigned) {
     state_.width_assigned = assigned && stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
+  }
+
+  inline AttackMode attack_mode() const {
+    const uint8_t value = state_.attacks;
+    return value == (kOptionTag + 1) ? ATTACK_MODE_SNAP
+        : value == (kOptionTag + 2) ? ATTACK_MODE_SNAP_AND_TRIGGER
+        : ATTACK_MODE_OFF;
+  }
+
+  inline void set_attack_mode(AttackMode mode) {
+    state_.attacks = mode == ATTACK_MODE_SNAP ? (kOptionTag + 1)
+        : mode == ATTACK_MODE_SNAP_AND_TRIGGER ? (kOptionTag + 2) : 0;
+  }
+
+  inline bool evolving_feedback() const {
+    return state_.frozen_feedback == (kOptionTag + 1);
+  }
+
+  inline void set_evolving_feedback(bool evolving) {
+    state_.frozen_feedback = evolving ? (kOptionTag + 1) : 0;
+  }
+
+  // Zero follows the reverb character: none with Stock, Beta 1's fixed
+  // amount with Clouds-style. Other values are an amount set with [A]+REVERB.
+  inline bool diffusion_set() const { return state_.diffusion != 0; }
+
+  inline float diffusion() const {
+    return diffusion_set()
+        ? float(state_.diffusion - 1) / 254.0f
+        : (clouds_style() ? kCloudsDiffusion : 0.0f);
+  }
+
+  inline void set_diffusion(float amount) {
+    CONSTRAIN(amount, 0.0f, 1.0f);
+    state_.diffusion = 1 + static_cast<uint8_t>(amount * 254.0f + 0.5f);
+    if (state_.diffusion == 1) set_diffusion_assigned(false);
+  }
+
+  inline bool diffusion_assigned() const {
+    return state_.width_assigned == 2;
+  }
+
+  // Only an amount set with [A]+REVERB can be modulated.
+  inline bool diffusion_assignable() const { return state_.diffusion > 1; }
+
+  inline void set_diffusion_assigned(bool assigned) {
+    if (assigned && diffusion_assignable()) {
+      state_.width_assigned = 2;
+      state_.assignable_cv_destination = 0;
+    } else if (diffusion_assigned()) {
+      state_.width_assigned = 0;
+    }
   }
 
   inline State* mutable_state() {

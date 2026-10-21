@@ -27,6 +27,7 @@
 """Keep the plain-text Options page's reference table tied to firmware."""
 
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -35,7 +36,7 @@ import zipfile
 
 sys.path.insert(0, str(Path("beads/build/tools").resolve()))
 from release_package import package
-from options_guide import SHORT, indication, generate
+from options_guide import SHORT, WIDTH_ROWS, indication, generate
 
 # Words and units that belong in FEATURES.md, not in text a musician reads.
 STYLE_BANNED = ("%", " Hz", " ms", "dead band", "threshold", "qualified")
@@ -52,7 +53,6 @@ def body(source, signature, opening):
 
 
 def check_main_loop(firmware, harness):
-    import re
     compact = lambda text: re.sub(r"\s+", "", text)
     actual = body(firmware, "int main(void)", "while (1) {")
     expected = body(harness, "void MainLoopStep() {", "{")
@@ -110,10 +110,12 @@ markdown_readme = Path("beads/build/README.md").read_text()
 plain_options = section.split("Options reference (TSV)", 1)[0]
 rich_options = markdown_readme.split("## Options page\n", 1)[1]
 rich_options = rich_options.split("\n## ", 1)[0]
-# Markdown keeps width and delay in their own sections instead of repeating
-# them under Options. Compare the relocated width prose and shared delay facts.
-width_start = plain_options.index("On page 1 (REVERB LED), DRY/WET sets the stereo width")
-delay_start = plain_options.index("Delay mode: Auto (Stock)", width_start)
+# Markdown keeps delay in its own section instead of repeating it under
+# Options. Width is set with [A]+DRY/WET, outside the pages, in both READMEs.
+plain_width = re.split(
+    r"\n\n[^\n]+\n-+\n", readme.split("Stereo width\n------------\n", 1)[1], 1
+)[0]
+delay_start = plain_options.index("Delay mode: Auto (Stock)")
 limiter_start = plain_options.index("Output limiter:", delay_start)
 user_sections = [
     markdown_readme.split(f"## {name}\n", 1)[1].split("\n## ", 1)[0]
@@ -129,16 +131,22 @@ for text in user_sections:
     for banned in STYLE_BANNED:
         assert banned not in text, banned
 rich_width = markdown_readme.split("## Stereo width\n", 1)[1].split("\n## ", 1)[0]
-assert " ".join(plain_options[width_start:delay_start].split()) == " ".join(
+assert " ".join(plain_width.split()) == " ".join(
     rich_width.split()
 ), "README.md and README.txt Stereo width prose differ"
+for text in (plain_width, rich_width):
+    flat = " ".join(text.split())
+    assert flat.startswith("Hold [A] and turn DRY/WET"), flat[:40]
+    assert "At the bottom of the knob it is Stock" in flat
+    assert "page" not in flat.lower(), "Stereo width is not on a page"
+assert "Stereo width" not in plain_options + rich_options
 plain_delay = plain_options[delay_start:limiter_start]
 rich_delay = markdown_readme.split("## Delay mode\n", 1)[1].split("\n## ", 1)[0]
 for fact in ("Auto (Stock)", "Disabled", "Wide/smooth filter", "middle", "SIZE CV",
              "green / yellow / red", "does not affect wavetable synth mode"):
     assert fact in " ".join(plain_delay.split()), fact
     assert fact in " ".join(rich_delay.split()), fact
-plain_options = plain_options[:width_start] + plain_options[limiter_start:]
+plain_options = plain_options[:delay_start] + plain_options[limiter_start:]
 plain_reference = "See below for every value."
 rich_reference = "See [OPTIONS.md](docs/OPTIONS.md) for every value."
 assert plain_reference in plain_options
@@ -155,7 +163,7 @@ for row in rows:
     if setting == "Not used yet":
         assert color == "unchanged" and pulse == "steady"
         continue
-    assert color in {"green", "yellow", "red", "meter"}
+    assert color in {"green", "yellow", "red"}
     assert pulse in {
         "steady",
         "slow (0.98 Hz)",
@@ -168,7 +176,18 @@ for row in rows:
     assert (color, pulse) not in seen, (setting, value)
     seen.add((color, pulse))
 assert len(values["Pitch scale"]) == 10
-assert ("meter", "slow (0.98 Hz)") in values["Stereo width"]
+for setting in ("Delay mode", "Attacks", "Limiter"):
+    assert len(values[setting]) == 3, setting
+for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
+                "Synth start", "Random intervals"):
+    assert len(values[setting]) == 2, setting
+assert len(values) == 10 and "Stereo width" not in values
+# [A]+DRY/WET width keeps its meter on the guides.
+assert [indication(row) for row in WIDTH_ROWS] == [
+    "green; steady", "green → yellow → red"
+]
+page_numbers = sorted({row.split("\t")[0] for row in rows})
+assert page_numbers == ["1", "2", "3", "4"]
 
 print("Options page map and TSV match firmware tables: PASS")
 
@@ -204,7 +223,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     # Buyer-facing tables retain every live value/indication, with technical
     # numbers confined to Details. Pitch's eight scales form a separate list.
     public, details = markdown.split("## Details", 1)
-    assert public.count("| Knob | Setting |") == 3
+    assert public.count("| Knob | Setting |") == len(page_numbers)
     assert (
         sum(
             line[:2] in {"1.", "2.", "3.", "4."}
@@ -220,7 +239,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         label = value
         shown = indication(dict(colour=color, pulse=pulse))
         assert label in public and shown in public, row
-    for page in ("1", "2", "3"):
+    for page in page_numbers:
         page_text = public.split(f"## Page {page} —", 1)[1].split(
             "## Page", 1
         )[0]
@@ -248,8 +267,11 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     # User-facing prose carries no exact numbers; those live in FEATURES.md.
     for banned in STYLE_BANNED:
         assert banned not in markdown, ("OPTIONS.md", banned)
-    for phrase in ("Wide/smooth filter", "Raag Shri", "about a second and a half"):
+    for phrase in ("Wide/smooth filter", "Raag Shri", "about a second and a half",
+                   "each stored value in turn", "about two seconds",
+                   "hold [A] and turn DRY/WET"):
         assert phrase in details, phrase
+    assert "each stored value in turn" in public
     warning = ("Don't hold SEED while powering on: it resets all settings "
                "to defaults (calibration is kept).")
     assert "## Other gestures" in markdown and warning in markdown
@@ -261,17 +283,22 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         root = ET.parse(Path(directory, name)).getroot()
         texts = list(root.iter("{http://www.w3.org/2000/svg}text"))
         labels = [node.text for node in texts]
-        assert labels.count("pulsing") == 3
-        assert all(labels.count(label) == 3 for label in ("D/W", "R"))
-        assert labels.count("F") == 4  # three page markers + panel knob F
+        markers = len(page_numbers)
+        assert labels.count("pulsing") == markers
+        assert all(labels.count(label) == markers for label in ("D/W", "R"))
+        assert labels.count("F") == markers + 1  # page markers + panel knob F
+        assert labels.count("[A] + DRY/WET: Stereo width") == 1
         assert labels.count("READ THE [A] LED") == 1
         assert labels.count("OTHER GESTURES") == 1
         for title in ("Monophonic grains", "Buffer trim",
                       "Wavetable synth (Manual)"):
             assert title in labels, title
         assert warning in " ".join(labels), name
-        assert labels.count("REVERB: Not used yet") == 2
-        assert labels.count("FEEDBACK: Not used yet") == 1
+        for knob in ("FEEDBACK", "DRY/WET", "REVERB"):
+            reserved = sum(1 for row in rows
+                           if row.split("\t")[2] == knob
+                           and row.split("\t")[3] == "Not used yet")
+            assert labels.count(knob + ": Not used yet") == reserved, knob
         assert "Reserved" not in labels
         assert "Scale (tap SEED to step through):" in labels
         assert all(float(node.attrib["font-size"]) >= 15 for node in texts)
@@ -288,7 +315,8 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     for phrase in (
         "Three zones",
         "Lower half selects",
-        "At the bottom of the knob",
+        "each stored value in turn",
+        "about two seconds",
         "three seconds",
         "a second",
     ):
@@ -321,6 +349,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         f"{seconds('kOptionsPulsePeriod')} s group",
         f"from {pct('kDelayDetentLow')}% to {pct('kDelayDetentHigh')}%",
         f"{seconds('kSelfPlayHoldTime')} s",
+        f"{seconds('kOptionsPreviewTime')} s each",
     ):
         assert phrase in flat_features, phrase
     # Wording assumptions: thirds, halves, "a second", "a second and a half".
@@ -331,6 +360,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     assert constants["kOptionsSettleTime"] == 1000
     assert constants["kSelfPlayHoldTime"] == 1500
     assert constants["kOptionsHoldTime"] == 3000
+    assert abs(constants["kOptionsPreviewTime"] - 2000) < 100
     assert constants["kWidthRange"] == 1 - constants["kWidthEnabledThreshold"]
 print("Generated SVG/Markdown match live tables and README: PASS")
 

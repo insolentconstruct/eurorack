@@ -33,7 +33,9 @@
 
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
+#include "beads/dsp/spectral_processor.h"
 #include "beads/dsp/fx/diffuser.h"
+#include "beads/dsp/fx/feedback_diffuser.h"
 #include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/fx/wow_and_flutter.h"
 
@@ -72,10 +74,53 @@ class Processor {
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
   void SetCloudsStyle(bool clouds);
+  // Attacks (#58, #47); changing the mode forgets the marks.
+  void SetAttacks(int mode, float threshold) {
+    attack_input_.Configure(mode, threshold);
+    processor_digital_.SetAttacks(mode);
+    processor_vintage_digital_.SetAttacks(mode);
+    processor_clean_tape_.SetAttacks(mode);
+    processor_dirty_tape_.SetAttacks(mode);
+  }
+
+  inline AttackInput* attack_input() { return &attack_input_; }
+
+  // Attacks are marked only while granular playback records.
+  inline bool AttackRecording() const {
+    return delay_mode_transition_ <= 0.0f && !spectral_;
+  }
+
+  void SetAttackOnset(bool onset) {
+    switch (media_) {
+      case MEDIA_DIRTY_TAPE:
+        processor_dirty_tape_.SetAttackOnset(onset);
+        break;
+      case MEDIA_CLEAN_TAPE:
+        processor_clean_tape_.SetAttackOnset(onset);
+        break;
+      case MEDIA_VINTAGE_DIGITAL:
+        processor_vintage_digital_.SetAttackOnset(onset);
+        break;
+      default:
+        processor_digital_.SetAttackOnset(onset);
+        break;
+    }
+  }
   void Configure(Media media, bool mono);
   
   inline Media media() const { return media_; }
   inline bool mono() const { return mono_; }
+
+  // Takes effect at the next Configure, which clears the recording.
+  inline void set_spectral(bool spectral) { spectral_ = spectral; }
+  inline bool spectral() const { return spectral_; }
+
+  // Main loop: the spectral engine's frames.
+  inline void Buffer() {
+    if (spectral_) {
+      spectral_processor_.Buffer();
+    }
+  }
   
   inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
@@ -195,6 +240,26 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
+  // Clears the reverb's memory, which the synths share.
+  inline void ClearReverb() {
+    reverb_.Reset(sample_rate(), true);
+  }
+
+  // Frozen feedback evolves through an all-pass loop (#4). Turning it off
+  // lets the loop fade out first.
+  inline void set_evolving_feedback(bool evolving) {
+    evolving_feedback_ = evolving;
+  }
+
+  // Grain diffusion; zero skips the diffuser, which restarts clean.
+  inline void set_diffusion(float amount) {
+    if (amount > 0.0f && diffusion_ == 0.0f) {
+      diffuser_.Init(diffuser_buffer_);
+    }
+    diffusion_ = amount;
+    diffuser_.set_amount(amount);
+  }
+
   inline void set_stereo_width(float width, bool enabled) {
     processor_digital_.set_stereo_width(width, enabled);
     processor_vintage_digital_.set_stereo_width(width, enabled);
@@ -207,6 +272,15 @@ class Processor {
     processor_vintage_digital_.set_pitch_scale(scale);
     processor_clean_tape_.set_pitch_scale(scale);
     processor_dirty_tape_.set_pitch_scale(scale);
+    spectral_processor_.set_pitch_scale(scale);
+  }
+
+  // Grains only; spectral has no random grain pitch.
+  inline void set_random_intervals(bool intervals) {
+    processor_digital_.set_random_intervals(intervals);
+    processor_vintage_digital_.set_random_intervals(intervals);
+    processor_clean_tape_.set_random_intervals(intervals);
+    processor_dirty_tape_.set_random_intervals(intervals);
   }
 
 #ifdef DWT_CALIBRATION
@@ -216,6 +290,8 @@ class Processor {
 #endif  // DWT_CALIBRATION
 
  private:
+  void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+
   GranularProcessor<
       RESOLUTION_16_BIT,
       kDelayBufferSizeBits / (16 * 2),
@@ -240,6 +316,9 @@ class Processor {
       2> processor_dirty_tape_;
 #endif  // ENABLE_HARDWARE_24K
 
+  SpectralProcessor spectral_processor_;
+  bool spectral_;
+
   TriggerGenerator trigger_generator_;
   DelayController delay_controller_;
   
@@ -261,6 +340,10 @@ class Processor {
   Diffuser diffuser_;
   uint16_t diffuser_buffer_[kDiffuserBufferSize];
   bool clouds_style_;
+  float diffusion_;
+  FeedbackDiffuser feedback_diffuser_;
+  bool evolving_feedback_;
+  AttackInput attack_input_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

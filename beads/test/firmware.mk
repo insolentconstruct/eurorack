@@ -1,4 +1,5 @@
 TARGET = firmware_test
+include beads/test/plaits_sources.mk
 CC_FILES       = 		firmware_test.cc \
 		beads.cc \
 		cv_reader.cc \
@@ -8,6 +9,11 @@ CC_FILES       = 		firmware_test.cc \
 		factory_test.cc \
 		synth.cc \
 		processor.cc \
+		spectral_processor.cc \
+		phase_vocoder.cc \
+		stft.cc \
+		frame_transformation.cc \
+		atan.cc \
 		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
@@ -22,7 +28,8 @@ CC_FILES       = 		firmware_test.cc \
 		resources.cc \
 		units.cc \
 		pitch_quantizer.cc \
-		random.cc
+		random.cc \
+		$(PLAITS_CC_FILES)
 
 STUBS = beads/test/firmware_stubs beads/test/common_stubs
 HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast

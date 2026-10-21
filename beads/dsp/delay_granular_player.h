@@ -33,6 +33,7 @@
 
 #include "beads/dsp/delay_grain.h"
 #include "beads/dsp/granular_player.h"
+#include "beads/dsp/attack_detector.h"
 
 namespace beads {
 
@@ -41,6 +42,13 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   DelayGranularPlayer() { }
   ~DelayGranularPlayer() { }
   
+  inline void Init(float sample_rate) {
+    GranularPlayer<DelayGrain, 32>::Init(sample_rate);
+    attacks_ = NULL;
+  }
+
+  inline void SetAttacks(const AttackDetector* attacks) { attacks_ = attacks; }
+
   template<typename DelayLineType>
   inline void Render(
       const DelayLineType* delay_line,
@@ -59,8 +67,11 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
       new_grain()->Start(
           delay_line,
-          p.time.value() * float(max_delay) + float(safety),
-          (reverse ? -1.0f : 1.0f) * p.pitch.pitch_value(pitch_scale_),
+          attacks_ ? attacks_->Snap(
+              p.time.value() * float(max_delay) + float(safety),
+              float(max_delay + safety), delay_line->write_ptr())
+              : p.time.value() * float(max_delay) + float(safety),
+          (reverse ? -1.0f : 1.0f) * p.pitch.pitch_value(pitch_scale_, random_intervals_),
           ComputeGrainDuration(duration),
           p.shape.value(),
           amplitude, pan,
@@ -82,6 +93,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   }
 
  private:
+  const AttackDetector* attacks_;
   DISALLOW_COPY_AND_ASSIGN(DelayGranularPlayer);
 };
 

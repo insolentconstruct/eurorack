@@ -133,9 +133,19 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
+
+  inline bool evolving_feedback() const { return evolving_feedback_; }
+
+  inline bool plaits_synth() const { return plaits_synth_; }
+
+  inline AttackMode attack_mode() const { return attack_mode_; }
+
+  // The saved engine, applied once the options page has closed.
+  inline bool spectral() const { return spectral_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
+  inline bool random_intervals() const { return random_intervals_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -201,12 +211,17 @@ class Ui {
   float mix_pot_value_[MIX_PARAMETER_LAST];
   Options options_;
   volatile uint32_t options_flash_time_;
-  volatile Led options_flash_led_;
+  volatile int options_flash_page_;
   // Entry-only request: main discards events queued before options entry.
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
   volatile bool clouds_style_;
+  volatile bool evolving_feedback_;
+  volatile bool plaits_synth_;
+  volatile AttackMode attack_mode_;
+  volatile bool spectral_;
   volatile PitchScale pitch_scale_;
+  volatile bool random_intervals_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;
 

@@ -73,12 +73,23 @@ const uint32_t kCloudsHashes[4][2] = {
   { 0x9cad2330, 0x8955f0ae }
 };
 
+// Beta 1 (2026.10.18) with grains playing (TIME at the newest audio): a saved
+// diffusion of 0 must keep both reverbs identical.
+const uint32_t kGrainStockHashes[4] = {
+  0xa0d55183, 0xddb55757, 0x69ce6cc4, 0x6c919469
+};
+const uint32_t kGrainCloudsHashes[4] = {
+  0x29eb3196, 0x9009e699, 0x1149a241, 0x5244e4e0
+};
+
 static Processor processor;
 static Synth synth;
 static uint8_t banks[3][262144];
 static uint16_t reverb[32768];
 
-uint32_t Render(int quality, int mode, bool clouds, bool reconfigure) {
+// A negative diffusion follows the reverb character, as a saved zero does.
+uint32_t Render(int quality, int mode, bool clouds, bool reconfigure,
+                float diffusion = -1.0f, float time = 0.5f) {
   memset(static_cast<void*>(&processor), 0, sizeof(processor));
   memset(static_cast<void*>(&synth), 0, sizeof(synth));
   memset(banks, 0, sizeof(banks));
@@ -95,11 +106,13 @@ uint32_t Render(int quality, int mode, bool clouds, bool reconfigure) {
       processor.Configure(Processor::Media(quality), false);
     }
   }
+  processor.set_diffusion(diffusion >= 0.0f
+      ? diffusion : (clouds ? kCloudsDiffusion : 0.0f));
 #endif
   stmlib::Random::Seed(0x12345678);
   Parameters p;
   memset(&p, 0, sizeof(p));
-  p.time.base = 0.5f;
+  p.time.base = time;
   p.size.base = mode == 1 ? 1.0f : 0.5f;
   p.shape.base = 0.5f;
   p.pitch.base = 0.0f;
@@ -220,6 +233,29 @@ void TestReverbRates() {
   }
 }
 
+// The amount set with [A]+REVERB diffuses the grains with either reverb.
+void TestDiffusionAmount() {
+  test_checker.Start("TestDiffusionAmount");
+#ifndef REFERENCE_CAPTURE
+  for (int q = 0; q < 4; ++q) {
+    // TIME at the newest audio: the 2 s render has not filled the buffer.
+    const float time = 0.02f;
+    const uint32_t stock = Render(q, 0, false, false, 0.0f, time);
+    const uint32_t diffused = Render(q, 0, false, false, 0.5f, time);
+    const uint32_t clouds = Render(q, 0, true, false, -1.0f, time);
+    const uint32_t clouds_dry = Render(q, 0, true, false, 0.0f, time);
+    printf("Diffusion q%d stock %08x +0.5 %08x clouds %08x +0 %08x\n",
+        q, stock, diffused, clouds, clouds_dry);
+    CHECK(stock == kGrainStockHashes[q]);
+    CHECK(clouds == kGrainCloudsHashes[q]);
+    CHECK(diffused != stock);
+    CHECK(clouds_dry != clouds);
+    // Delay mode bypasses the diffuser, as before.
+    CHECK(Render(q, 1, false, false, 0.5f) == kStockHashes[q][1]);
+  }
+#endif
+}
+
 void TestDiffuserImpulse() {
   test_checker.Start("TestDiffuserImpulse");
 #ifndef REFERENCE_CAPTURE
@@ -249,6 +285,7 @@ int main(int argc, char** argv) {
     { "TestStockHashes", TestStockHashes },
     { "TestCloudsOutput", TestCloudsOutput },
     { "TestReverbRates", TestReverbRates },
+    { "TestDiffusionAmount", TestDiffusionAmount },
     { "TestDiffuserImpulse", TestDiffuserImpulse },
   };
   const int result = RunHostTests(argc, argv, tests,

@@ -30,6 +30,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 #include <new>
 #include <sys/mman.h>
 
@@ -40,6 +41,7 @@
 #include "beads/background_buffer_backup.h"
 #include "beads/calibrator.h"
 #include "beads/cv_reader.h"
+#include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/factory_test.h"
@@ -71,6 +73,7 @@ extern Codec codec;
 extern FactoryTest factory_test;
 extern GainControl gain_control;
 extern NormalizationDetector normalization_detector;
+extern PlaitsSynth plaits_synth;
 extern Processor processor;
 extern Settings settings;
 extern Synth synth;
@@ -86,11 +89,31 @@ void Process(const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
 extern "C" void SysTick_Handler();
 
 // Only the cache warming/timing call WasteCPUCycles is skipped.
+struct Rig;
+Rig* current_rig = NULL;
+void RigBlock(Rig* r);
+
 void MainLoopStep() {
   ui.DoEvents();
   MonitorStateChange();
-  if (!synth_mode) {
+  if (!synth_mode && !processor.spectral()) {
     background_buffer_backup.Process(ui.freeze_led_state());
+  }
+  processor.Buffer();
+}
+
+// One main loop pass; the audio interrupt runs on while main waits for a
+// fade before a codec restart (#53).
+void RunMainLoop() {
+  extern volatile bool codec_fade;
+  extern float reverb_style_gain;
+  MainLoopStep();
+  for (int i = 0; i < 64 && current_rig && codec_fade &&
+       reverb_style_gain > 0.0f && codec.callback_; ++i) {
+    RigBlock(current_rig);
+  }
+  if (codec_fade && reverb_style_gain == 0.0f) {
+    MainLoopStep();
   }
 }
 
@@ -109,9 +132,12 @@ struct Rig {
   uint16_t cv[CV_ADC_CHANNEL_LAST];
   int32_t audio;
   Codec::Frame out[kMaxCodecBlockSize];
+  std::vector<int32_t>* peaks;
 
   Rig(bool on_request, bool unpatched)
-      : left(!unpatched), right(!unpatched), seed_patched(false), audio(0) {
+      : left(!unpatched), right(!unpatched), seed_patched(false), audio(0),
+        peaks(NULL) {
+    current_rig = this;
     memset(reinterpret_cast<void*>(0x08100000), 255, 0x100000);
     PowerOnObject(&settings);
     settings.Init(false);
@@ -138,6 +164,7 @@ struct Rig {
     PowerOnObject(&factory_test);
     PowerOnObject(&gain_control);
     PowerOnObject(&normalization_detector);
+    PowerOnObject(&plaits_synth);
     PowerOnObject(&processor);
     PowerOnObject(&settings);
     PowerOnObject(&synth);
@@ -169,6 +196,13 @@ struct Rig {
     }
     if (codec.callback_) {
       codec.callback_(events, in, out, codec.block_size_);
+      if (peaks) {
+        int32_t peak = 0;
+        for (size_t i = 0; i < codec.block_size_; ++i) {
+          peak = std::max(peak, std::abs(out[i].l));
+        }
+        peaks->push_back(peak);
+      }
     }
   }
 
@@ -176,7 +210,7 @@ struct Rig {
     while (milliseconds--) {
       // The first main step starts the codec; thereafter four callbacks/ms.
       if (main_loop) {
-        MainLoopStep();
+        RunMainLoop();
       }
       for (int i = 0; i < 4; ++i) {
         Block();
@@ -189,7 +223,7 @@ struct Rig {
   // the decision. Boundary callbacks still verify the signal and gate state.
   void Advance(int milliseconds) {
     while (milliseconds--) {
-      MainLoopStep();
+      RunMainLoop();
       SysTick_Handler();
     }
   }
@@ -210,13 +244,15 @@ struct Rig {
     Tick(8, false);
     ui.DoEvents();
     if (consume) {
-      MainLoopStep();
+      RunMainLoop();
     }
   }
 
   // Eight 32 ms probe windows plus 250 ms of codec blanking.
   void Settle() { Tick(600); }
 };
+
+void RigBlock(Rig* r) { r->Block(); }
 
 void TestAutomaticSelfPlay() {
   test_checker.Start("TestAutomaticSelfPlay");
@@ -238,10 +274,10 @@ void TestAutomaticSelfPlay() {
     return;
   }
   synth_mode_start_time = 0;
-  MainLoopStep();
+  RunMainLoop();
   const int start = synth_mode_start_time;
   r.Advance(9900);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(!synth_mode);
   CHECK(synth_mode_start_time == start);
   r.Advance(101);
@@ -255,12 +291,12 @@ void TestAutomaticSelfPlay() {
   CHECK(synth_mode_start_time != 0);
   test_freeze_input = true;
   r.Tick(1);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(synth_mode_start_time == 0);
   test_freeze_input = false;
   r.Tick(2);
   r.Advance(9900);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(!synth_mode);
   r.Advance(102);
   CHECK(synth_mode);
@@ -288,7 +324,7 @@ void TestAutomaticSelfPlay() {
   CHECK(normalization_detector.no_input());
   bool heard = false;
   for (int i = 0; i < 1200; ++i) {
-    MainLoopStep();
+    RunMainLoop();
     tail.Block();
     for (size_t j = 0; j < codec.block_size_; ++j) {
       if (fabs(double(tail.out[j].l)) > 21474836.0 ||
@@ -312,13 +348,13 @@ void TestRequestedSelfPlay() {
   r.HoldMedia(false);
   CHECK(ui.self_play_requested());
   CHECK(!synth_mode);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(synth_mode);
   CHECK(!ui.self_play_requested());
   r.Settle();
   r.HoldMedia(false);
   CHECK(synth_mode);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(!synth_mode);
   r.Settle();
   r.left = true;
@@ -352,7 +388,7 @@ void TestSelfPlayRequestLifecycle() {
       // Settle detection without consuming the already raised request.
       r.Tick(350, false);
     }
-    MainLoopStep();
+    RunMainLoop();
     CHECK(!synth_mode);
     CHECK(!ui.self_play_requested());
     test_freeze_input = false;
@@ -438,7 +474,7 @@ void TestOverwriteIndicator() {
   }
   r.HoldMedia(false);
   CHECK(processor.overwrite_reserve() < 0.5f);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(synth_mode);
   r.Tick(260);
   r.Block();
@@ -738,6 +774,34 @@ void TestQuantizedPitchChain() {
   CHECK(ui.pitch_scale() == PITCH_SCALE_FIFTHS);
 }
 
+// Random intervals reaches the grains: with PITCH's attenurandomizer fully
+// counter-clockwise, grains differ by fifths and octaves only.
+void TestRandomIntervalsChain() {
+  test_checker.Start("TestRandomIntervalsChain");
+  int off_grid[2] = { 0, 0 };
+  for (int intervals = 0; intervals < 2; ++intervals) {
+    Rig r(false, true);
+    PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 0;
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+    settings.set_random_intervals(intervals);
+    r.Settle();
+    CHECK(ui.random_intervals() == bool(intervals));
+    float previous = 12.0f * log2f(NextGrainSpeed(&r));
+    for (int i = 0; i < 20; ++i) {
+      const float pitch = 12.0f * log2f(NextGrainSpeed(&r));
+      // Two offsets on fifths and octaves differ by 0, 5 or 7 semitones,
+      // within the grain's 1/1024 speed step.
+      float step = fmodf(fabsf(pitch - previous) + 0.05f, 12.0f) - 0.05f;
+      off_grid[intervals] += fabsf(step) > 0.04f &&
+          fabsf(step - 5.0f) > 0.04f && fabsf(step - 7.0f) > 0.04f;
+      previous = pitch;
+    }
+  }
+  printf("Random intervals chain: off the grid %d free, %d intervals\n",
+      off_grid[0], off_grid[1]);
+  CHECK(off_grid[0] > 10 && off_grid[1] == 0);
+}
+
 void TestSelfPlayFrozenBackup() {
   test_checker.Start("TestSelfPlayFrozenBackup");
   Rig r(true, true);
@@ -814,7 +878,7 @@ void StartSelfPlay(Rig* r, bool requested) {
   if (requested) {
     r->Settle();
     r->HoldMedia(false);
-    MainLoopStep();
+    RunMainLoop();
   } else {
     r->StartAutomatic();
   }
@@ -964,6 +1028,256 @@ void TestCloudsSwitch() {
   }
 }
 
+// Byte 21 picks the synth. The Plaits voices borrow the start of the first
+// delay bank only in synth mode; leaving it clears what they used.
+void TestPlaitsSynthSelection() {
+  test_checker.Start("TestPlaitsSynthSelection");
+  extern uint8_t delay_buffer_1[];
+  extern uint8_t delay_buffer_2[];
+  for (int plaits = 0; plaits < 2; ++plaits) {
+    Rig r(false, true);
+    settings.set_plaits_synth(plaits);
+    settings.SaveState();
+    r.Reboot();
+    CHECK(ui.plaits_synth() == bool(plaits));
+    r.Settle();
+    CHECK(!synth_mode);
+    r.Advance(10001);
+    CHECK(synth_mode);
+    r.Settle();
+    // In synth mode nothing but the voices touches the delay memory.
+    static uint8_t bank_1[512 * 1024];
+    static uint8_t bank_2[256 * 1024];
+    memcpy(bank_1, delay_buffer_1, sizeof(bank_1));
+    memcpy(bank_2, delay_buffer_2, sizeof(bank_2));
+    bool loud = false;
+    for (int i = 0; i < 2000; ++i) {
+      r.Block();
+      for (size_t j = 0; j < codec.block_size_; ++j) {
+        loud = loud || fabs(double(r.out[j].l)) > 21474836.0;
+      }
+    }
+    CHECK(loud);
+    // Only the selected synth runs.
+    const int model = plaits_synth.voice_[plaits_synth.active_voice_].model();
+    CHECK(plaits ? model >= 0 : model == -1);
+    CHECK(!memcmp(bank_1 + kPlaitsSynthRamSize,
+        delay_buffer_1 + kPlaitsSynthRamSize,
+        sizeof(bank_1) - kPlaitsSynthRamSize));
+    CHECK(!memcmp(bank_2, delay_buffer_2, sizeof(bank_2)));
+    r.left = true;
+    for (int i = 0; i < 2000 && synth_mode; ++i) {
+      RunMainLoop();
+      SysTick_Handler();
+      if (synth_mode) {
+        r.Block();
+      }
+    }
+    CHECK(!synth_mode);
+    for (size_t i = 0; i < kPlaitsSynthRamSize; ++i) {
+      if (delay_buffer_1[i]) {
+        CHECK(false);
+        break;
+      }
+    }
+  }
+}
+
+// A square wave in, with a main loop step and a SysTick every four blocks.
+double RunSquare(Rig* r, int blocks) {
+  double energy = 0.0;
+  for (int i = 0; i < blocks; ++i) {
+    r->audio = (i / 2) & 1 ? 0x10000000 : -0x10000000;
+    if (i % 4 == 0) {
+      RunMainLoop();
+    }
+    r->Block();
+    if (i % 4 == 3) {
+      SysTick_Handler();
+    }
+    for (size_t j = 0; j < codec.block_size_; ++j) {
+      const double l = r->out[j].l / 2147483648.0;
+      const double rr = r->out[j].r / 2147483648.0;
+      energy += l * l + rr * rr;
+    }
+  }
+  return energy;
+}
+
+// Engine changes fade out, clear the recording and fade back in. A frozen
+// buffer saved to flash is kept, and returns with the granular engine.
+// Spectral never starts the wavetable synth.
+void TestSpectralEngine() {
+  test_checker.Start("TestSpectralEngine");
+  extern float reverb_style_gain;
+  extern uint8_t delay_buffer_1[];
+  extern uint8_t delay_buffer_2[];
+  Rig r(false, false);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+  BackgroundBufferBackup::BufferBackupHeader* header =
+      reinterpret_cast<BackgroundBufferBackup::BufferBackupHeader*>(0x08100000);
+  memset(header, 0, sizeof(*header));
+  header->tag = 0x5a5a5246;
+  header->write_ptr = 1234;
+  header->media = Processor::MEDIA_DIGITAL;
+  header->mono = false;
+  settings.mutable_state()->frozen = true;
+  RunSquare(&r, 2400);
+  CHECK(!synth_mode && !processor.spectral() && !ui.freeze_button_state());
+
+  settings.set_spectral(true);
+  SysTick_Handler();
+  CHECK(ui.spectral() && !processor.spectral());
+  float gain = reverb_style_gain;
+  bool faded = false;
+  for (int i = 0; i < 400 && !processor.spectral(); ++i) {
+    RunSquare(&r, 1);
+    CHECK(reverb_style_gain <= gain);
+    gain = reverb_style_gain;
+    faded |= gain == 0.0f;
+  }
+  CHECK(faded && processor.spectral() && codec_transition_frames > 0);
+  bool cleared = true;
+  for (size_t i = 0; i < 512 * 1024; ++i) {
+    cleared = cleared && delay_buffer_1[i] == 0;
+  }
+  for (size_t i = 0; i < 256 * 1024; ++i) {
+    cleared = cleared && delay_buffer_2[i] == 0;
+  }
+  CHECK(cleared);
+  CHECK(settings.state().frozen && header->tag == 0x5a5a5246);
+
+  // Silent while the codec restarts, then back to full level.
+  CHECK(RunSquare(&r, 990) == 0.0);
+  CHECK(RunSquare(&r, 4000) > 1.0);
+  CHECK(reverb_style_gain == 1.0f);
+  const SpectralProcessor& spectral = processor.spectral_processor_;
+  CHECK(std::isfinite(spectral.previous_sample_.l) &&
+        std::isfinite(spectral.previous_sample_.r));
+
+  // FREEZE holds the spectrum; nothing is saved to flash.
+  const unsigned writes = test_writes;
+  test_freeze_input = true;
+  RunSquare(&r, 4);
+  CHECK(spectral.parameters_.freeze);
+  r.Advance(11000);
+  CHECK(test_writes == writes);
+  test_freeze_input = false;
+  RunSquare(&r, 4);
+
+  // Unpatched inputs do not start the synth, automatically or on a hold.
+  // All dry, so the output is silent and the synth's timer runs.
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  r.left = r.right = false;
+  r.Settle();
+  r.Advance(11000);
+  RunMainLoop();
+  CHECK(!synth_mode);
+  settings.set_self_play_on_request(true);
+  r.HoldMedia();
+  CHECK(!synth_mode && !ui.self_play_requested());
+  r.left = r.right = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+
+  // Back to granular: the saved frozen buffer returns, with its own quality
+  // even if another was picked meanwhile.
+  settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
+  RunSquare(&r, 3000);
+  CHECK(processor.spectral() && processor.media() == Processor::MEDIA_CLEAN_TAPE);
+  settings.set_spectral(false);
+  SysTick_Handler();
+  for (int i = 0; i < 400 && processor.spectral(); ++i) {
+    RunSquare(&r, 1);
+  }
+  CHECK(!processor.spectral() && !synth_mode);
+  CHECK(ui.freeze_button_state());
+  CHECK(*processor.mutable_delay_write_ptr() == 1234);
+  RunSquare(&r, 2000);
+  CHECK(reverb_style_gain == 1.0f);
+  CHECK(processor.media() == Processor::MEDIA_DIGITAL);
+  CHECK(settings.state().media == Processor::MEDIA_DIGITAL);
+  CHECK(*processor.mutable_delay_write_ptr() == 1234);
+
+  // Starting in spectral leaves the saved buffer in flash.
+  settings.set_spectral(true);
+  settings.SaveState();
+  r.Reboot();
+  CHECK(processor.spectral() && !ui.freeze_button_state());
+  CHECK(settings.state().frozen && header->tag == 0x5a5a5246);
+  RunSquare(&r, 4000);
+  CHECK(processor.spectral() && !synth_mode);
+}
+
+// Codec restarts fade out first (#53): the output steps down to silence
+// over about 10 ms instead of stopping at full level.
+void TestCodecRestartFade() {
+  test_checker.Start("TestCodecRestartFade");
+  Rig r(false, false);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  r.Settle();
+  std::vector<int32_t> peaks;
+  r.peaks = &peaks;
+  for (int i = 0; i < 400; ++i) {
+    r.audio = (i / 2) & 1 ? 0x20000000 : -0x20000000;
+    r.Block();
+  }
+  const int32_t steady = peaks.back();
+  CHECK(steady > 0x08000000);
+  settings.mutable_state()->media = (settings.state().media + 1) % 4;
+  const Processor::Media before = processor.media();
+  for (int i = 0; i < 200 && processor.media() == before; ++i) {
+    r.audio = (i / 2) & 1 ? 0x20000000 : -0x20000000;
+    RunMainLoop();
+    r.Block();
+  }
+  CHECK(processor.media() != before);
+  r.peaks = NULL;
+  // The last sounding block before the restart is quiet.
+  size_t last = peaks.size();
+  while (last && peaks[last - 1] == 0) --last;
+  CHECK(last > 40);
+  printf("Restart fade: steady %d, last %d\n", steady, peaks[last - 1]);
+  CHECK(peaks[last - 1] < steady / 8);
+
+  // FREEZE during the fade postpones the restart without leaving silence.
+  extern volatile bool codec_fade;
+  extern float reverb_style_gain;
+  r.Settle();
+  settings.mutable_state()->media = (settings.state().media + 1) % 4;
+  MainLoopStep();
+  CHECK(codec_fade);
+  test_freeze_input = true;
+  for (int i = 0; i < 400; ++i) {
+    r.Block();
+    MainLoopStep();
+  }
+  CHECK(!codec_fade && reverb_style_gain == 1.0f);
+  test_freeze_input = false;
+  r.Settle();
+}
+
+// Stopping the synth clears the reverb memory the synths share.
+void TestSynthStopClearsReverb() {
+  test_checker.Start("TestSynthStopClearsReverb");
+  extern uint16_t reverb_buffer[];
+  Rig r(false, true);
+  PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
+  r.StartAutomatic();
+  CHECK(synth_mode);
+  r.Tick(500);
+  bool used = false;
+  for (int i = 0; i < 32768 && !used; ++i) used = reverb_buffer[i] != 0;
+  CHECK(used);
+  r.left = true;
+  for (int i = 0; i < 2000 && synth_mode; ++i) {
+    r.Tick(1);
+  }
+  CHECK(!synth_mode && codec_transition_frames > 0);
+  bool clear = true;
+  for (int i = 0; i < 32768 && clear; ++i) clear = reverb_buffer[i] == 0;
+  CHECK(clear);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -985,6 +1299,11 @@ int main() {
   TestCallbackCvRouting();
   TestPitchChain();
   TestQuantizedPitchChain();
+  TestRandomIntervalsChain();
   TestSelfPlayFrozenBackup();
+  TestPlaitsSynthSelection();
+  TestSpectralEngine();
+  TestCodecRestartFade();
+  TestSynthStopClearsReverb();
   return test_checker.failures() ? 1 : 0;
 }

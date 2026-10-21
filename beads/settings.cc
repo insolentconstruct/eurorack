@@ -74,6 +74,12 @@ bool Settings::Init(bool recovery_mode) {
   state_.stereo_width = 0;
   state_.delay_mode = 0;
   state_.width_assigned = 0;
+  state_.diffusion = 0;
+  state_.frozen_feedback = 0;
+  state_.attacks = 0;
+  state_.engine = 0;
+  state_.synth_engine = 0;
+  state_.random_intervals = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   
   if (recovery_mode) {
@@ -103,11 +109,19 @@ void Settings::SavePersistentData() {
 void Settings::NormalizeOptions() {
   set_output_limiter_mode(output_limiter_mode());
   set_self_play_on_request(self_play_on_request());
+  set_spectral(spectral());
   set_clouds_style(clouds_style());
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
   set_delay_mode(delay_mode());
-  set_width_assigned(width_assigned());
+  set_evolving_feedback(evolving_feedback());
+  set_attack_mode(attack_mode());
+  set_plaits_synth(plaits_synth());
+  set_random_intervals(random_intervals());
+  // One store, so the audio interrupt never sees the target cleared.
+  state_.width_assigned = width_assigned() && stereo_width() ? 1
+      : (diffusion_assigned() && diffusion_assignable() ? 2 : 0);
+  if (state_.width_assigned) state_.assignable_cv_destination = 0;
 }
 
 void Settings::SaveState() {

@@ -31,10 +31,13 @@
 
 namespace {
 
-const char* const kPageNames[] = { "REVERB", "FEEDBACK", "DRY/WET" };
+const char* const kPageNames[] = {
+  "FEEDBACK", "DRY/WET", "REVERB", "all three"
+};
 const char* const kOptionNames[] = {
-  "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
-  "Delay mode", "Wavetable synth", "Limiter"
+  "Not used yet", "Pitch scale", "Reverb character", "Delay mode",
+  "Processor", "Limiter", "Frozen feedback", "Synth", "Attacks",
+  "Synth start", "Random intervals"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 struct ValueNames {
@@ -54,17 +57,26 @@ const ValueNames kValueNames[] = {
   { "Raag Bhairav", "red" },
   { "Raag Shri", "yellow" },
   { "Stock", "green" },
-  { "Width (wider →)", "meter" },
-  { "Stock", "green" },
   { "Clouds-style", "yellow" },
   { "Auto (Stock)", "green" },
   { "Disabled", "yellow" },
   { "Wide/smooth filter", "red" },
-  { "Automatic (Stock)", "green" },
-  { "Manual", "yellow" },
+  { "Granular (Stock)", "green" },
+  { "Spectral", "yellow" },
   { "Stock", "green" },
   { "Fast release", "yellow" },
   { "Off", "red" },
+  { "Stock", "green" },
+  { "Evolving", "yellow" },
+  { "Beads (Stock)", "green" },
+  { "Plaits", "yellow" },
+  { "Off", "green" },
+  { "Snap", "yellow" },
+  { "Snap and trigger", "red" },
+  { "Automatic (Stock)", "green" },
+  { "Manual", "yellow" },
+  { "Free (Stock)", "green" },
+  { "Fifths and octaves", "yellow" },
 };
 
 }  // namespace
@@ -72,7 +84,7 @@ const ValueNames kValueNames[] = {
 int main() {
   using namespace beads;
   puts("page\tLED\tknob\tsetting\tvalue\tcolour\tpulse");
-  for (int page = 0; page < 3; ++page) {
+  for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       const OptionSetting setting = kOptionPages[page].knobs[knob];
       for (size_t i = 0; i < kNumOptionValues; ++i) {
@@ -91,7 +103,7 @@ int main() {
               kOptionsPulsePeriod / 1000.0);
         }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
-            kPageNames[page], kOptionKnobNames[knob],
+            kPageNames[kOptionPages[page].led_index], kOptionKnobNames[knob],
             kOptionNames[setting], kValueNames[i].name,
             kValueNames[i].color, pulse);
       }
@@ -118,6 +130,7 @@ int main() {
   printf("constant\tkOptionsSlowPeriod\t%.9g\n", double(kOptionsSlowPeriod));
   printf("constant\tkOptionsFastPeriod\t%.9g\n", double(kOptionsFastPeriod));
   printf("constant\tkOptionsPulsePeriod\t%.9g\n", double(kOptionsPulsePeriod));
+  printf("constant\tkOptionsPreviewTime\t%.9g\n", double(kOptionsPreviewTime));
   printf("constant\tkSelfPlayHoldTime\t%.9g\n", double(kSelfPlayHoldTime));
   printf("constant\tkDelayDetentLow\t%.9g\n", double(kDelayDetentLow));
   printf("constant\tkDelayDetentHigh\t%.9g\n", double(kDelayDetentHigh));

@@ -13,11 +13,15 @@
   },
   {
     "name": "clouds-stock",
-    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestReverbRates TestDiffuserImpulse'"
+    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestReverbRates TestDiffuserImpulse'\nmake -j\"$(nproc)\" -f beads/test/feedback_diffuser.mk test\nmake -j\"$(nproc)\" -f beads/test/attack.mk test"
   },
   {
     "name": "clouds-style",
-    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestCloudsOutput'"
+    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestCloudsOutput TestDiffusionAmount'"
+  },
+  {
+    "name": "spectral",
+    "run": "make -j\"$(nproc)\" -f beads/test/spectral.mk test"
   },
   {
     "name": "firmware-controls",
@@ -30,5 +34,9 @@
   {
     "name": "processor-audio",
     "run": "make -j\"$(nproc)\" -f beads/test/backup.mk test\nmake -j\"$(nproc)\" -f beads/test/processor.mk test\nmake -j\"$(nproc)\" -f beads/test/mix.mk test\nmake -j\"$(nproc)\" -f beads/test/wavetable.mk test"
+  },
+  {
+    "name": "plaits-synth",
+    "run": "make -j\"$(nproc)\" -f beads/test/plaits_synth.mk test"
   }
 ]

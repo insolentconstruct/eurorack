@@ -53,6 +53,10 @@ inline float ModulatedStereoWidth(StereoWidth width, float cv) {
   return amount;
 }
 
+// Grain diffusion of the Clouds-style reverb until [A]+REVERB sets an amount.
+const float kCloudsDiffusion = 0.7f;
+
+// Options page 3, FEEDBACK. Manual starts the wavetable synth on an [A] hold.
 enum DelayMode {
   DELAY_MODE_AUTO,
   DELAY_MODE_NEVER,

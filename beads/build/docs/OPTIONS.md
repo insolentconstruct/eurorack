@@ -8,22 +8,21 @@
 ## Steps
 
 1. Open: hold the CV-assign button [M] 3 seconds, release.
-2. Change page: tap [M]. The pulsing mix LED marks the page (REVERB [L], FEEDBACK [J], DRY/WET [K] for pages 1-3).
-3. Change a setting: turn its knob. It saves by itself (the page LED flashes).
-4. Close: hold [M] 3 seconds, or press any other button except SEED [C] on page 1 with Scale selected: short taps step the scale.
+2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then all three.
+3. [A] shows each stored value in turn. Turn a knob to change it; it saves by itself.
+4. Close: hold [M] 3 seconds or press another button. With Scale selected, SEED taps step the scale.
 
-Move a knob a little before it responds.
-Wait a moment before powering off.
+Move a knob a little before it responds. Wait a moment before powering off.
 
 The quality LED [A] shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
-## Page 1 — REVERB LED pulsing
+## Page 1 — FEEDBACK LED pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Pitch scale | Off / Chromatic / Scale | green; steady / yellow; steady / see scale list |
-| DRY/WET | Stereo width | Stock / Width (wider →) | green; steady / green → yellow → red; slow blink |
-| REVERB | Reverb character | Stock / Clouds-style | green; steady / yellow; steady |
+| DRY/WET | Random intervals | Free (Stock) / Fifths and octaves | green; steady / yellow; steady |
+| REVERB | Attacks | Off / Snap / Snap and trigger | green; steady / yellow; steady / red; steady |
 
 Scale (tap SEED to step through):
 
@@ -36,27 +35,37 @@ Scale (tap SEED to step through):
 - Raag Bhairav: red; fast blink
 - Raag Shri: yellow; two pulses
 
-## Page 2 — FEEDBACK LED pulsing
+## Page 2 — DRY/WET LED pulsing
+
+| Knob | Setting | Values left to right | [A] LED per value |
+|---|---|---|---|
+| FEEDBACK | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
+| DRY/WET | Reverb character | Stock / Clouds-style | green; steady / yellow; steady |
+| REVERB | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
+
+## Page 3 — REVERB LED pulsing
+
+| Knob | Setting | Values left to right | [A] LED per value |
+|---|---|---|---|
+| FEEDBACK | Processor | Granular (Stock) / Spectral | green; steady / yellow; steady |
+| DRY/WET | Synth | Beads (Stock) / Plaits | green; steady / yellow; steady |
+| REVERB | Synth start | Automatic (Stock) / Manual | green; steady / yellow; steady |
+
+## Page 4 — all three LEDs pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Not used yet | — | — |
-| DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
-| REVERB | Not used yet | — | — |
-
-## Page 3 — DRY/WET LED pulsing
-
-| Knob | Setting | Values left to right | [A] LED per value |
-|---|---|---|---|
-| FEEDBACK | Wavetable synth | Automatic (Stock) / Manual | green; steady / yellow; steady |
-| DRY/WET | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
-| REVERB | Not used yet | — | — |
+| DRY/WET | Not used yet | — | — |
+| REVERB | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
 
 ## Other gestures
 
 - **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
 - **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
-- **Wavetable synth (Manual):** With both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
+- **Stereo width:** Hold [A] and turn DRY/WET; fully CCW is Stock. The [A] LED shows the width as a meter; releasing [A] saves it. Once on, [M] can route CV to it (all three mix LEDs pulsing).
+- **Grain diffusion:** Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can route CV to it (REVERB LED pulsing).
+- **Wavetable synth (Manual):** With Synth start on Manual, both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
 
 **Warning:** Don't hold SEED while powering on: it resets all settings to defaults (calibration is kept).
 
@@ -64,20 +73,32 @@ Scale (tap SEED to step through):
 
 Hold the CV-assign button [M] for three seconds, with the mix knobs still, then release. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close.
 
-Move a knob far enough to take it over; small bumps before that are ignored. Pitch scale, Delay mode and Limiter use the knob's three thirds; Reverb character and Wavetable synth use its two halves. Near a boundary, turn a little past it to switch.
+When a page opens, the quality LED [A] shows each stored value in turn, left to right, for about two seconds each, with that knob's mix LED lit. Turning a knob, or tapping SEED to step the scale, ends this.
 
-Stereo width is Stock at the bottom of the knob. Turn clockwise to spread the grains wider, up to a full random spread fully CW. Only new grains are affected. When width is on, short presses of [M] add WIDTH after the three mix destinations of the assignable CV input (7); all three mix LEDs pulse together for WIDTH.
+Move a knob far enough to take it over; small bumps before that are ignored. Pitch scale, Delay mode, Attacks and Limiter use the knob's three thirds; the other settings use its two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
 
-The quality LED [A] shows the value of the last knob that took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
+After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
+Random intervals: with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. The scale still applies.
+
+Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
+
 Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays granular. Wide/smooth filter keeps the switch and adds a neutral, unfiltered zone around the middle of the delay filter (SIZE attenurandomizer plus SIZE CV), with no resonant boost. The wavetable synth is unaffected.
 
-Clouds-style changes the reverb character and adds grain diffusion. Switching briefly fades the sound and clears the tail.
+Clouds-style changes the reverb character and, until a diffusion amount is set with [A]+REVERB, adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
-Wavetable synth Manual needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
+Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
+
+Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, delay mode or wavetable synth. A new processor takes over when the page closes, clearing the recording; a frozen buffer saved to flash comes back with Granular.
+
+Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains. With DENSITY at noon the last voice drones until SEED plays a note.
+
+Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
 
 Limiter Off lets loud peaks clip.
+
+Stereo width is not on the pages: hold [A] and turn DRY/WET, then release [A] to save. Fully CCW is Stock; turn clockwise to spread the grains wider, up to a full random spread fully CW. Only new grains are affected. When width is on, short presses of [M] add WIDTH after the three mix destinations of the assignable CV input (7); all three mix LEDs pulse together for WIDTH.
