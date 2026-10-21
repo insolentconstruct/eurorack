@@ -70,6 +70,7 @@ uses a mapped flash model with injected failures. No module is needed.
 See [Adding or changing a test](beads/test/README.md#adding-or-changing-a-test)
 for suite registration, stubs and audio re-baselining.
 See [OPTIMIZATIONS.md](beads/build/docs/OPTIMIZATIONS.md) and [PORTING.md](beads/build/docs/PORTING.md) for DSP notes, and [STYLE.md](beads/build/docs/STYLE.md) for code style.
+[MANUAL_ERRATA.md](beads/build/docs/MANUAL_ERRATA.md) lists where the Beads manual differs from the firmware.
 
 ## Storage and licences
 
