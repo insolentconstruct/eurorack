@@ -78,33 +78,7 @@ void PulseShaper::Process(
   uint8_t num_pulses = 0;
   for (uint8_t i = 0; i < kPulseBufferSize; ++i) {
     Pulse& p = pulse_buffer_[i];
-    if (p.repetition_counter) {
-      // Handle the case when the duration of the pulse is larger than the
-      // delay time. In this case, set the duration to just a sample below
-      // the delay time.
-      if (p.delay_counter < p.duration_counter && p.repetition_counter > 1) {
-        p.duration_counter = p.delay_counter;
-      }
-      
-      if (p.initial_delay_counter == 0) {
-        if (p.duration_counter) {
-          // ON
-          --p.duration_counter;
-          ++num_pulses;
-        }
-        if (p.delay_counter) {
-          --p.delay_counter;
-        } else {
-          // Retrigger
-          --p.repetition_counter;
-          p.duration_counter = duration();
-          p.delay_counter = delay();
-        }
-      } else {
-        // Still in pre-delay phase...
-        --p.initial_delay_counter;
-      }
-    } else {
+    if (!p.repetition_counter) {
       if (new_pulse) {
         p.repetition_counter = num_repetitions_ + 1;
         p.initial_delay_counter = initial_delay();
@@ -113,6 +87,32 @@ void PulseShaper::Process(
         new_pulse = false;
         num_pulses += p.initial_delay_counter ? 0 : 1;
       }
+      continue;
+    }
+    // Handle the case when the duration of the pulse is larger than the
+    // delay time. In this case, set the duration to just a sample below
+    // the delay time.
+    if (p.delay_counter < p.duration_counter && p.repetition_counter > 1) {
+      p.duration_counter = p.delay_counter;
+    }
+    
+    if (p.initial_delay_counter == 0) {
+      if (p.duration_counter) {
+        // ON
+        --p.duration_counter;
+        ++num_pulses;
+      }
+      if (p.delay_counter) {
+        --p.delay_counter;
+      } else {
+        // Retrigger
+        --p.repetition_counter;
+        p.duration_counter = duration();
+        p.delay_counter = delay();
+      }
+    } else {
+      // Still in pre-delay phase...
+      --p.initial_delay_counter;
     }
   }
     
