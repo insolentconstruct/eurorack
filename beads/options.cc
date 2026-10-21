@@ -33,9 +33,10 @@
 namespace beads {
 
 const OptionPage kOptionPages[kNumOptionPages] = {
-  { 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
-  { 0, { OPTION_ATTACKS, OPTION_DELAY, OPTION_FROZEN } },
-  { 1, { OPTION_ENGINE, OPTION_LIMITER, OPTION_SYNTH } }
+  { 0, { OPTION_PITCH, OPTION_RESERVED, OPTION_ATTACKS } },
+  { 1, { OPTION_DELAY, OPTION_REVERB, OPTION_FROZEN } },
+  { 2, { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START } },
+  { MIX_PARAMETER_LAST, { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER } }
 };
 const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0,
@@ -60,10 +61,6 @@ const OptionValue kOptionValues[] = {
     { 255, 0, 0 }, PULSE_FAST },
   { OPTION_PITCH, 9,
     { 255, 255, 0 }, PULSE_DOUBLE },
-  { OPTION_WIDTH, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_WIDTH, 1,
-    { 255, 255, 0 }, PULSE_SLOW },
   { OPTION_REVERB, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_REVERB, 1,
@@ -74,12 +71,10 @@ const OptionValue kOptionValues[] = {
     { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_DELAY, 2,
     { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_ENGINE, 0,
+  { OPTION_PROCESSOR, 0,
     { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_ENGINE, 1,
+  { OPTION_PROCESSOR, 1,
     { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ENGINE, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
   { OPTION_LIMITER, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_LIMITER, 1,
@@ -99,8 +94,27 @@ const OptionValue kOptionValues[] = {
   { OPTION_ATTACKS, 1,
     { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_ATTACKS, 2,
-    { 255, 0, 0 }, PULSE_STEADY }
+    { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH_START, 0,
+    { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH_START, 1,
+    { 255, 255, 0 }, PULSE_STEADY }
 };
+
+StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
+  bool enabled = current != 0;
+  if (pot < kWidthStockThreshold) {
+    enabled = false;
+  }
+
+  if (pot > kWidthEnabledThreshold) {
+    enabled = true;
+  }
+
+  float amount = (pot - kWidthEnabledThreshold) / kWidthRange;
+  CONSTRAIN(amount, 0.0f, 1.0f);
+  return enabled ? 1 + int(amount * float(kStereoWidthMax - 1) + 0.5f) : 0;
+}
 
 void Options::Init() {
   stage_ = STAGE_INACTIVE;
@@ -108,13 +122,14 @@ void Options::Init() {
   all_up_time_ = press_time_ = last_action_ = 0;
   page_ = 0;
   selected_ = OPTION_PITCH;
+  preview_knob_ = -1;
+  preview_time_ = indication_time_ = 0;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
-  engine_preview_ = ENGINE_GRANULAR;
+  spectral_preview_ = manual_start_preview_ = false;
   attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
-  width_preview_ = 0;
   delay_preview_ = DELAY_MODE_AUTO;
   seed_held_ = false;
   seed_time_ = 0;
@@ -157,6 +172,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       if (all_up) {
         stage_ = STAGE_EDITING;
         holding_ = false;
+        StartPreview(now, 0);
       }
       return;
     }
@@ -177,6 +193,13 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       holding_ = false;
       page_ = (page_ + 1) % kNumOptionPages;
       ResetPots(pots);
+      StartPreview(now, 0);
+    }
+
+    // Show each stored value in turn until a knob takes over.
+    if (preview_knob_ >= 0 &&
+        uint32_t(now - preview_time_) >= kOptionsPreviewTime) {
+      StartPreview(now, preview_knob_ + 1);
     }
 
     // Capture real edges even while main owns the published preview.
@@ -212,13 +235,12 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       }
 
       const float pot = pots[i];
-      bool moved = false;
       if (!qualified_[i] &&
           fabsf(pot - origin_[i]) > kOptionsPickupThreshold) {
-        moved = true;
         qualified_[i] = true;
         zone_[i] = pot < kOptionsZoneLow ? 0 : pot < kOptionsZoneHigh ? 1 : 2;
-        selected_ = setting;
+        preview_knob_ = -1;
+        Select(now, setting);
       }
 
       if (!qualified_[i]) {
@@ -226,9 +248,8 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       }
 
       if (fabsf(pot - previous_[i]) > kOptionsMovementThreshold) {
-        moved = true;
         previous_[i] = pot;
-        selected_ = setting;
+        Select(now, setting);
         last_action_ = now;
       }
 
@@ -238,25 +259,6 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_PITCH:
           pitch_preview_ = zone_[i] == 2 ? scale_ : PitchScale(zone_[i]);
           break;
-        case OPTION_WIDTH: {
-          if (!moved) {
-            break;
-          }
-
-          bool enabled = width_preview_ != 0;
-          if (pot < kWidthStockThreshold) {
-            enabled = false;
-          }
-
-          if (pot > kWidthEnabledThreshold) {
-            enabled = true;
-          }
-
-          float amount = (pot - kWidthEnabledThreshold) / kWidthRange;
-          CONSTRAIN(amount, 0.0f, 1.0f);
-          width_preview_ = enabled
-              ? 1 + int(amount * float(kStereoWidthMax - 1) + 0.5f) : 0;
-        } break;
         case OPTION_REVERB:
           if (pot < kOptionsHalfLow) {
             clouds_preview_ = false;
@@ -269,8 +271,23 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_DELAY:
           delay_preview_ = DelayMode(zone_[i]);
           break;
-        case OPTION_ENGINE:
-          engine_preview_ = Engine(zone_[i]);
+        case OPTION_PROCESSOR:
+          if (pot < kOptionsHalfLow) {
+            spectral_preview_ = false;
+          }
+
+          if (pot > kOptionsHalfHigh) {
+            spectral_preview_ = true;
+          }
+          break;
+        case OPTION_SYNTH_START:
+          if (pot < kOptionsHalfLow) {
+            manual_start_preview_ = false;
+          }
+
+          if (pot > kOptionsHalfHigh) {
+            manual_start_preview_ = true;
+          }
           break;
         case OPTION_LIMITER:
           limiter_preview_ = OutputLimiterMode(zone_[i]);
@@ -333,13 +350,13 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
   if (eligible_ && assign &&
       uint32_t(now - press_time_) >= kOptionsHoldTime) {
     limiter_preview_ = settings.output_limiter_mode();
-    engine_preview_ = settings.engine();
+    spectral_preview_ = settings.spectral();
+    manual_start_preview_ = settings.self_play_on_request();
     clouds_preview_ = settings.clouds_style();
     plaits_preview_ = settings.plaits_synth();
     pitch_preview_ = settings.pitch_scale();
     scale_ = settings.pitch_scale() >= PITCH_SCALE_FIFTHS
         ? settings.pitch_scale() : PITCH_SCALE_FIFTHS;
-    width_preview_ = settings.stereo_width();
     delay_preview_ = settings.delay_mode();
     evolving_preview_ = settings.evolving_feedback();
     attack_preview_ = settings.attack_mode();
@@ -353,14 +370,14 @@ int Options::Value(OptionSetting setting) const {
   switch (setting) {
     case OPTION_PITCH:
       return pitch_preview_;
-    case OPTION_WIDTH:
-      return width_preview_;
     case OPTION_REVERB:
       return clouds_preview_;
     case OPTION_DELAY:
       return delay_preview_;
-    case OPTION_ENGINE:
-      return engine_preview_;
+    case OPTION_PROCESSOR:
+      return spectral_preview_;
+    case OPTION_SYNTH_START:
+      return manual_start_preview_;
     case OPTION_LIMITER:
       return limiter_preview_;
     case OPTION_FROZEN:
@@ -375,11 +392,7 @@ int Options::Value(OptionSetting setting) const {
 }
 
 const OptionValue& Options::indication() const {
-  int value = Value(selected_);
-  if (selected_ == OPTION_WIDTH && value) {
-    value = 1;
-  }
-
+  const int value = Value(selected_);
   for (size_t i = 0; i < kNumOptionValues; ++i) {
     if (kOptionValues[i].setting == selected_ &&
         kOptionValues[i].value == value) {
@@ -399,7 +412,9 @@ void Options::ApplySeedTaps() {
     scale_ = scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
         : PitchScale(scale_ + 1);
     pitch_preview_ = scale_;
+    preview_knob_ = -1;
     selected_ = OPTION_PITCH;
+    indication_time_ = seed_action_time_;
     dirty_ = true;
     last_action_ = seed_action_time_;
   }
@@ -425,7 +440,37 @@ void Options::ResetPots(const float* pots) {
     }
   }
 
+  preview_knob_ = -1;
   seed_held_ = false;
+}
+
+void Options::StartPreview(uint32_t now, int knob) {
+  while (knob < MIX_PARAMETER_LAST &&
+         kOptionPages[page_].knobs[knob] == OPTION_RESERVED) {
+    ++knob;
+  }
+
+  if (knob == MIX_PARAMETER_LAST) {
+    // Back to the first setting, as before the preview.
+    preview_knob_ = -1;
+    knob = 0;
+    while (kOptionPages[page_].knobs[knob] == OPTION_RESERVED) {
+      ++knob;
+    }
+  } else {
+    preview_knob_ = knob;
+    preview_time_ = now;
+  }
+
+  selected_ = kOptionPages[page_].knobs[knob];
+  indication_time_ = now;
+}
+
+void Options::Select(uint32_t now, OptionSetting setting) {
+  if (setting != selected_) {
+    selected_ = setting;
+    indication_time_ = now;
+  }
 }
 
 void Options::UpdateZone(float pot, int* zone) {

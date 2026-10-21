@@ -54,8 +54,7 @@ const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
 
 void Ui::FlashOptionsPage() {
   options_flash_time_ = system_clock.milliseconds();
-  options_flash_led_ = Led(LED_ASSIGN_1 +
-      kOptionPages[options_.page()].led_index);
+  options_flash_page_ = options_.page();
 }
 
 OutputLimiterMode Ui::output_limiter_mode() const {
@@ -81,7 +80,7 @@ void Ui::Init(
   options_.Init();
   flush_options_events_ = false;
   options_flash_time_ = 0;
-  options_flash_led_ = LED_ASSIGN_1;
+  options_flash_page_ = 0;
   LoadOptions();
   fill(&mix_pot_value_[0], &mix_pot_value_[MIX_PARAMETER_LAST], 0.0f);
   
@@ -210,6 +209,9 @@ void Ui::Poll() {
         press_time_[SWITCH_MEDIA] = system_clock.milliseconds();
         if (i == MIX_PARAMETER_FEEDBACK) {
           state->gain = 1.0f + p->hidden_parameter() * 255.0f;
+        } else if (i == MIX_PARAMETER_DRY_WET) {
+          settings_->set_stereo_width(StereoWidthFromPot(
+              p->hidden_parameter(), settings_->stereo_width()));
         } else {
           settings_->set_diffusion(p->hidden_parameter());
         }
@@ -232,8 +234,7 @@ void Ui::Poll() {
       ? options_.evolving_preview() : settings_->evolving_feedback();
   attack_mode_ = previewing
       ? options_.attack_preview() : settings_->attack_mode();
-  stereo_width_ = previewing
-      ? options_.width_preview() : settings_->stereo_width();
+  stereo_width_ = settings_->stereo_width();
   pitch_scale_ = previewing
       ? options_.pitch_preview() : settings_->pitch_scale();
   output_limiter_mode_ = previewing
@@ -260,6 +261,8 @@ void Ui::UpdateLeds() {
 
   bool adjusting_manual_gain = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].editing_hidden_parameter();
+  bool adjusting_width = switches_.pressed(SWITCH_MEDIA) && \
+      assignable_cv_pot_[MIX_PARAMETER_DRY_WET].editing_hidden_parameter();
   bool adjusting_diffusion = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_REVERB].editing_hidden_parameter();
   
@@ -296,6 +299,13 @@ void Ui::UpdateLeds() {
         
         if (adjusting_manual_gain) {
           leds_.set_meter(0.05f + 0.95f * float(state.gain) / 256.0f);
+        } else if (adjusting_width) {
+          // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
+          const StereoWidth width = settings_->stereo_width();
+          leds_.set_meter(width
+              ? 0.25f + kWidthMeterSpan * float(width - 1)
+                  / float(kStereoWidthMax - 1)
+              : 0.05f);
         } else if (adjusting_diffusion) {
           leds_.set_meter(0.05f + 0.94f * settings_->diffusion());
         } else {
@@ -349,15 +359,19 @@ void Ui::UpdateLeds() {
   
   if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
       options_.stage() == Options::STAGE_EDITING) {
+    const int page_led = kOptionPages[options_.page()].led_index;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      leds_.set(Led(LED_ASSIGN_1 + i),
-          options_.stage() == Options::STAGE_WAIT_RELEASE ||
-              i == kOptionPages[options_.page()].led_index ? triangle : 0);
+      // While a page opens, the knob whose value [A] shows is lit steady.
+      const bool page = options_.stage() == Options::STAGE_WAIT_RELEASE ||
+          page_led == MIX_PARAMETER_LAST || i == page_led;
+      leds_.set(Led(LED_ASSIGN_1 + i), i == options_.preview_knob() ? 255
+          : page ? triangle : 0);
     }
     const OptionValue& indication = options_.indication();
     const Leds::Color color = indication.color;
     // Marbles' 4:1 slow/fast blink ratio.
-    const uint32_t now = system_clock.milliseconds();
+    const uint32_t now = system_clock.milliseconds() -
+        options_.indication_time();
     const uint32_t phase = now % kOptionsPulsePeriod;
     const bool lit = indication.pulses == PULSE_STEADY ||
         (indication.pulses == PULSE_SLOW &&
@@ -367,21 +381,18 @@ void Ui::UpdateLeds() {
         (indication.pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
             (phase >= kOptionsFastPeriod &&
             phase < kOptionsFastPeriod * 3 / 2)));
-    if (indication.setting == OPTION_WIDTH && options_.width_preview()) {
-      // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
-      leds_.set_meter(lit
-          ? 0.25f + kWidthMeterSpan * float(options_.width_preview() - 1)
-              / float(kStereoWidthMax - 1)
-          : 0.0f);
-    } else {
-      leds_.set_media(color, lit ? 1.0f : 0.0f);
-    }
+    leds_.set_media(color, lit ? 1.0f : 0.0f);
   }
 
   if (options_flash_time_ &&
       uint32_t(system_clock.milliseconds() - options_flash_time_) <
           kOptionsFlashTime) {
-    leds_.set(options_flash_led_, 255);
+    const int page_led = kOptionPages[options_flash_page_].led_index;
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      if (page_led == MIX_PARAMETER_LAST || i == page_led) {
+        leds_.set(Led(LED_ASSIGN_1 + i), 255);
+      }
+    }
   }
 
   if (mode_ != MODE_FACTORY_TEST) {
@@ -450,6 +461,7 @@ void Ui::OnSwitchPressed(const Event& e) {
     state->monophonic_mode = !state->monophonic_mode;
     settings_->SaveState();
     assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
+    assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
     assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
     ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_SEED] = true;
     return;
@@ -464,6 +476,7 @@ void Ui::OnSwitchPressed(const Event& e) {
     trim_flag_ = true;
     freeze_button_state_ = false;
     assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
+    assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
     assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
     ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_FREEZE] = true;
     return;
@@ -498,6 +511,7 @@ void Ui::OnSwitchPressed(const Event& e) {
       
     case SWITCH_MEDIA:
       assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Lock();
+      assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Lock();
       assignable_cv_pot_[MIX_PARAMETER_REVERB].Lock();
       break;
       
@@ -560,6 +574,8 @@ void Ui::OnSwitchReleased(const Event& e) {
       {
         if (!assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].
                 editing_hidden_parameter() &&
+            !assignable_cv_pot_[MIX_PARAMETER_DRY_WET].
+                editing_hidden_parameter() &&
             !assignable_cv_pot_[MIX_PARAMETER_REVERB].
                 editing_hidden_parameter()) {
           if (mode_ >= MODE_CALIBRATION_1 && mode_ <= MODE_CALIBRATION_4) {
@@ -584,10 +600,11 @@ void Ui::OnSwitchReleased(const Event& e) {
             }
           }
         } else {
-          // Save the manual gain or diffusion settings.
+          // Save the manual gain, width or diffusion settings.
           settings_->SaveState();
         }
         assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
+        assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
         assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
       }
       break;
@@ -601,9 +618,6 @@ void Ui::OnSwitchReleased(const Event& e) {
           assignable_cv_pot_[i].Unlock();
         }
         if (!pot_touched) {
-          // Publish the effective width before cycling or saving assignment.
-          // An exited options batch can still be waiting for its settle time.
-          settings_->set_stereo_width(stereo_width_);
           State* state = settings_->mutable_state();
           if (settings_->width_assigned()) {
             settings_->set_width_assigned(false);
@@ -633,20 +647,21 @@ void Ui::OnSwitchReleased(const Event& e) {
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
     if (options_.limiter_preview() != settings_->output_limiter_mode() ||
-        options_.engine_preview() != settings_->engine() ||
+        options_.spectral_preview() != settings_->spectral() ||
+        options_.manual_start_preview() !=
+            settings_->self_play_on_request() ||
         options_.clouds_preview() != settings_->clouds_style() ||
         options_.plaits_preview() != settings_->plaits_synth() ||
         options_.pitch_preview() != settings_->pitch_scale() ||
-        options_.width_preview() != settings_->stereo_width() ||
         options_.delay_preview() != settings_->delay_mode() ||
         options_.evolving_preview() != settings_->evolving_feedback() ||
         options_.attack_preview() != settings_->attack_mode()) {
       settings_->set_output_limiter_mode(options_.limiter_preview());
-      settings_->set_engine(options_.engine_preview());
+      settings_->set_spectral(options_.spectral_preview());
+      settings_->set_self_play_on_request(options_.manual_start_preview());
       settings_->set_clouds_style(options_.clouds_preview());
       settings_->set_plaits_synth(options_.plaits_preview());
       settings_->set_pitch_scale(options_.pitch_preview());
-      settings_->set_stereo_width(options_.width_preview());
       settings_->set_delay_mode(options_.delay_preview());
       settings_->set_evolving_feedback(options_.evolving_preview());
       settings_->set_attack_mode(options_.attack_preview());

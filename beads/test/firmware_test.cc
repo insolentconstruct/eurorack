@@ -1138,6 +1138,8 @@ void TestSpectralEngine() {
   RunSquare(&r, 4);
 
   // Unpatched inputs do not start the synth, automatically or on a hold.
+  // All dry, so the output is silent and the synth's timer runs.
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
   r.left = r.right = false;
   r.Settle();
   r.Advance(11000);
@@ -1147,6 +1149,7 @@ void TestSpectralEngine() {
   r.HoldMedia();
   CHECK(!synth_mode && !ui.self_play_requested());
   r.left = r.right = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
 
   // Back to granular: the saved frozen buffer returns, with its own quality
   // even if another was picked meanwhile.

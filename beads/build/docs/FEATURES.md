@@ -12,8 +12,9 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 | Gesture | Allocation / action | Saved? |
 |---|---|---|
 | the quality button [A] tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
-| [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and the manual wavetable synth engine, toggle wavetable synth; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
+| [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and Synth start on Manual, toggle wavetable synth; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
 | [A] + feedback knob | TAKEN: manual input gain; release saves. Planned: manual gain improvements (#19) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
+| [A] + dry/wet knob | TAKEN by Drizzlet: stereo width; release saves | Yes |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state save starts after 10 s (with interruption backoff below) if autosave enabled, outside wavetable synth and spectral modes <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
 | SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot <!-- beads/ui.cc:81-83,406-411,463-469 --> |
@@ -37,19 +38,20 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. On page 1 with Scale selected, short SEED taps step the scale instead of closing.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 4 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. On page 1 with Scale selected, short SEED taps step the scale instead of closing.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
-| 1 / REVERB | Pitch scale | Stereo width | Reverb character |
-| 2 / FEEDBACK | Reserved: attacks | Delay mode | Reserved: mix law |
-| 3 / DRY/WET | Engine | Limiter | Reserved: LED brightness |
+| 1 / FEEDBACK | Pitch scale | Reserved: random intervals | Attacks |
+| 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
+| 3 / REVERB | Processor | Synth | Synth start |
+| 4 / all three | Reserved | Reserved | Limiter |
 
-Reserved knobs have no effect on [A] or saving. [A] shows the first available setting on page entry, then the last qualified knob moved. Every first value, including Pitch Off, is steady green; other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
+Reserved knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green; other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 
 ## Saved data
 
-Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17, frozen feedback byte 18, attacks byte 19, the engine byte 20 and the synth engine byte 21; future options use the free byte 22, with 0 meaning the Beta 1 behaviour. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–21 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
+Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17, frozen feedback byte 18, attacks byte 19, the processor byte 20 and the synth byte 21; future options use the free byte 22, with 0 meaning the Beta 1 behaviour. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–21 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
 
 ### Settings layout
 
@@ -66,7 +68,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 8 | `disable_autosave` | 0; TAKEN <!-- beads/settings.h:58; beads/settings.cc:68 --> |
 | 9 | `monophonic_mode` | 0 = off (default), 1 = on; TAKEN: monophonic grains, using Mutable Instruments' original code <!-- beads/settings.h:59; beads/beads.cc:203; beads/ui.cc:358-369 --> |
 | 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
-| 11 | `padding[1]` | Wavetable synth: 0xA1 = Manual; 0 and all unknown values = Automatic (Stock); canonicalized on load/save |
+| 11 | `padding[1]` | Synth start: 0xA1 = Manual; 0 and all unknown values = Automatic (Stock); canonicalized on load/save |
 | 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
 | 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
 | 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
@@ -75,8 +77,8 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 17 | `padding[7]` | Grain diffusion: 0 follows the reverb character (none with Stock, 0.7 with Clouds-style); 1..255 = amount 0..1 set with [A]+REVERB |
 | 18 | `frozen_feedback` | Frozen feedback: 0xA1 = Evolving; 0 and all unknown values = Stock; canonicalized on load/save |
 | 19 | `attacks` | Attacks: 0xA1 = Snap, 0xA2 = Snap and trigger; 0 and all unknown values = Off; canonicalized on load/save |
-| 20 | `engine` | Engine: 0xA1 = Spectral; 0 and all unknown values = granular, with byte 11 choosing the wavetable synth start; canonicalized on load/save |
-| 21 | `synth_engine` | Synth engine: 0 Beads (Stock), 0xA1 Plaits; unknown values read Beads (Stock); canonicalized on load/save |
+| 20 | `engine` | Processor: 0xA1 = Spectral; 0 and all unknown values = Granular (Stock); canonicalized on load/save |
+| 21 | `synth_engine` | Synth: 0 Beads (Stock), 0xA1 Plaits; unknown values read Beads (Stock); canonicalized on load/save |
 | 22 | `padding[0]` | FREE; zeroed on every save |
 | 23 | `padding[1]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
@@ -183,7 +185,7 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 
 - **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Future options take the free byte 22, with 0 meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks. Byte 23 stays reserved.
-- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: three pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold and flash sector 14 are unassigned.
 
@@ -201,7 +203,7 @@ Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality
 
 | Allocation | Use |
 |---|---|
-| Page 1, DRY/WET | Continuous grain width; [controls and indications](OPTIONS.md) |
+| [A] + DRY/WET | Continuous grain width; release saves; [controls and indications](OPTIONS.md) |
 | Byte 14 | 0 Stock; 1..255 enabled width |
 | Byte 16 | 0 unassigned; 1 WIDTH assigned; all other values unassigned |
 | [M] | Optional fourth destination when width is enabled |
@@ -210,11 +212,11 @@ Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality
 
 The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
 
-- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch scale, Delay mode, Engine and Limiter use thirds; Reverb character uses halves.
-- **Stereo width:** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch scale, Delay mode, Attacks and Limiter use thirds; the other settings use halves. Opening a page shows each stored value for 2.048 s each.
+- **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
-- **Engine, manual wavetable synth:** hold [A] 1.5 s to start or stop (the manual says 1 s).
-- **Engine, Spectral:** takes effect once the page has closed: a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
+- **Synth start, Manual:** hold [A] 1.5 s to start or stop (the manual says 1 s).
+- **Processor, Spectral:** takes effect once the page has closed: a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.

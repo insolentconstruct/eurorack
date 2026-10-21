@@ -84,7 +84,7 @@ cycles for rows 1/4/5/6 (callback) and Stock fixture (callback minus fixture).
 Report Clouds and combined-option margins separately; no hardware result
 is implied by offline checks.
 
-Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (REVERB LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri) and REVERB selects Stock/Clouds-style (lower/upper half). Two [M] taps reach page 3 (DRY/WET LED): DRY/WET bottom third is the Stock limiter, FEEDBACK lower half is Wavetable synth: Automatic (Stock). Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
+Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (FEEDBACK LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri). One [M] tap reaches page 2 (DRY/WET LED), where DRY/WET selects reverb Stock/Clouds-style (lower/upper half). Page 3 (REVERB LED): REVERB lower half is Synth start: Automatic (Stock). Page 4 (all three LEDs): REVERB bottom third is the Stock limiter. Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 
 Operator sequence: read both SAI status registers; record generation;
 write request 1; confirm generation advanced and request cleared; wait 65 s

@@ -155,19 +155,6 @@ class Settings {
     state_.engine = spectral ? (kOptionTag + 1) : 0;
   }
 
-  // Spectral keeps byte 11, which firmware without it reads as before.
-  inline Engine engine() const {
-    return spectral() ? ENGINE_SPECTRAL : (self_play_on_request()
-        ? ENGINE_GRANULAR_MANUAL_SYNTH : ENGINE_GRANULAR);
-  }
-
-  inline void set_engine(Engine engine) {
-    set_spectral(engine == ENGINE_SPECTRAL);
-    if (engine != ENGINE_SPECTRAL) {
-      set_self_play_on_request(engine == ENGINE_GRANULAR_MANUAL_SYNTH);
-    }
-  }
-
   inline bool clouds_style() const {
     return state_.reverb_style == (kOptionTag + 2);
   }

@@ -4,11 +4,13 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- The options page now has four pages, lighting the mix LEDs left to right, then all three: 1 pitch scale and attacks; 2 delay mode, reverb character and frozen feedback; 3 processor, synth and synth start; 4 limiter. Opening a page shows each stored value on [A] in turn. The wavetable synth's start (Automatic or Manual) is now its own setting, Synth start.
+- Stereo width moves off the options page: hold [A] and turn DRY/WET, like manual gain and grain diffusion. Saved widths are kept.
 - Quality changes, mono/stereo switches and the wavetable synth starting or stopping now fade the output out briefly before the codec restarts, and the synth's reverb tail no longer plays on after it stops. The silence while the codec restarts, and the empty buffer after a quality change, remain (#53).
-- Add a spectral engine: Clouds' spectral processing in place of the grains, chosen on page 3 (FEEDBACK), now called Engine: Granular (Stock), Granular with the manual wavetable synth, or Spectral. TIME picks the stored spectrum, SIZE warps, SHAPE quantizes, PITCH shifts (with the pitch scale), DENSITY sets the refresh rate and phase randomization, holding SEED glitches and FREEZE holds. Changing engine clears the recording; a frozen buffer saved to flash is kept (#3).
-- Add attacks (page 2, FEEDBACK): Snap starts grains on the hits in the recording instead of partway through their decay; Snap and trigger also starts a grain on each hit (#58, #47).
+- Add a spectral engine: Clouds' spectral processing in place of the grains, chosen with Processor (page 3, FEEDBACK): Granular (Stock) or Spectral. TIME picks the stored spectrum, SIZE warps, SHAPE quantizes, PITCH shifts (with the pitch scale), DENSITY sets the refresh rate and phase randomization, holding SEED glitches and FREEZE holds. Changing processor clears the recording; a frozen buffer saved to flash is kept (#3).
+- Add attacks (page 1, REVERB): Snap starts grains on the hits in the recording instead of partway through their decay; Snap and trigger also starts a grain on each hit (#58, #47).
 - Add frozen feedback (page 2, REVERB): Evolving runs the grains through a slowly moving all-pass loop while FREEZE is on, so a frozen sound drifts and softens instead of repeating exactly; FEEDBACK sets how far (#4).
-- Add Plaits as a second synth (page 3, REVERB): six voices of Mutable Instruments' Plaits play in place of the wavetable synth, with FEEDBACK picking one of 24 models, TIME, SIZE and SHAPE as HARMONICS, TIMBRE and MORPH, DRY/WET as decay and FREEZE as sustain (#50).
+- Add Plaits as a second synth (page 3, DRY/WET): six voices of Mutable Instruments' Plaits play in place of the wavetable synth, with FEEDBACK picking one of 24 models, TIME, SIZE and SHAPE as HARMONICS, TIMBRE and MORPH, DRY/WET as decay and FREEZE as sustain (#50).
 - Add adjustable grain diffusion: hold [A] and turn REVERB, with either reverb. Once set, it is also an [M] destination for CV. Clouds-style reverb keeps its Beta 1 diffusion until you set an amount (#2).
 - Clouds-style reverb uses less CPU; the sound is unchanged.
 - Grains use less CPU (about 6% of the audio budget in the busiest case); the sound is unchanged.

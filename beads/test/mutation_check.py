@@ -39,7 +39,7 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
-  ('TestOptionsWidthAndSeed', 'options', 'beads/options.h',
+  ('TestOptionsSeed', 'options', 'beads/options.h',
     'return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&',
     'return qualified_[0] && stage_ == STAGE_EDITING && page_ == kPitchScalePage &&'),
   ('TestOptionsTablesAndLifetime', 'options', 'beads/options.cc',
@@ -60,7 +60,7 @@ cases = [
   ('TestPitchStorage', 'options', 'beads/settings.h',
     'value <= (kOptionTag + 9)',
     'value <= 0xaa'),
-  ('TestOptionsWidthAndSeed', 'options', 'beads/options.cc',
+  ('TestOptionsSeed', 'options', 'beads/options.cc',
     'scale_ == PITCH_SCALE_SHRI',
     'scale_ == PITCH_SCALE_BHAIRAV'),
   ('TestOptionsPalette', 'options', 'beads/options.cc',
@@ -107,7 +107,7 @@ cases = [
   ('TestQuantizedSynthGrains', 'wavetable', 'beads/dsp/wavetable_granular_player.h',
     'p.pitch.pitch_value(pitch_scale_)',
     'p.pitch.pitch_value()'),
-  ('TestOptionsWidthAndSeed', 'options', 'beads/ui.cc',
+  ('TestOptionsSeed', 'options', 'beads/ui.cc',
     'const bool accept_switch_events = !was_active && !options_.active() &&\n'
     '      options_.stage() != Options::STAGE_DRAIN;',
     'const bool accept_switch_events = true;'),
@@ -267,8 +267,8 @@ cases = [
     'SemitonesToRatio(exponential_fm * 60.0f)',
     'SemitonesToRatio(exponential_fm * 30.0f)'),
   ('TestGrainTimeAndDirection', 'granular', 'beads/dsp/delay_granular_player.h',
-    'p.time.value() * float(max_delay)',
-    '(1.0f - p.time.value()) * float(max_delay)'),
+    ': p.time.value() * float(max_delay)',
+    ': (1.0f - p.time.value()) * float(max_delay)'),
   ('TestGrainDuration', 'granular', 'beads/dsp/granular_player.h',
     'shortness * -108.0f',
     'shortness * -96.0f'),
@@ -353,8 +353,20 @@ cases = [
     'decrement_ = 1.0f / duration;',
     'decrement_ = 1.0f;'),
   ('TestProcessorVoiceSaturation', 'granular', 'beads/dsp/delay_granular_player.h',
-    'GranularPlayer<DelayGrain, 32>',
-    'GranularPlayer<DelayGrain, 31>'),
+    'GranularPlayer<DelayGrain, 32> {\n'
+    ' public:\n'
+    '  DelayGranularPlayer() { }\n'
+    '  ~DelayGranularPlayer() { }\n'
+    '  \n'
+    '  inline void Init(float sample_rate) {\n'
+    '    GranularPlayer<DelayGrain, 32>::Init',
+    'GranularPlayer<DelayGrain, 31> {\n'
+    ' public:\n'
+    '  DelayGranularPlayer() { }\n'
+    '  ~DelayGranularPlayer() { }\n'
+    '  \n'
+    '  inline void Init(float sample_rate) {\n'
+    '    GranularPlayer<DelayGrain, 31>::Init'),
   ('TestProcessorRandomPan', 'granular', 'beads/dsp/granular_player.h',
     '*pan = BoundedRandomFloat(pan_spread);',
     '*pan = BoundedRandomFloat(pan_spread * 0.0f);'),
@@ -440,8 +452,39 @@ cases = [
     'if (monophonic_mode) {',
     'if (false && monophonic_mode) {'),
   ('TestEngineOption', 'options', 'beads/options.cc',
-    'engine_preview_ = Engine(zone_[i]);',
-    'engine_preview_ = Engine(zone_[i] & 1);'),
+    'if (pot > kOptionsHalfHigh) {\n            spectral_preview_ = true;',
+    'if (pot > 0.93f) {\n            spectral_preview_ = true;'),
+  ('TestSynthStartOption', 'options', 'beads/options.cc',
+    'if (pot > kOptionsHalfHigh) {\n            manual_start_preview_ = true;',
+    'if (pot > 0.93f) {\n            manual_start_preview_ = true;'),
+  ('TestEngineOption', 'options', 'beads/ui.cc',
+    'settings_->set_spectral(options_.spectral_preview());',
+    'settings_->set_spectral(false);'),
+  ('TestOptionsPreview', 'options', 'beads/options.cc',
+    '  selected_ = kOptionPages[page_].knobs[knob];\n  indication_time_ = now;',
+    '  selected_ = kOptionPages[page_].knobs[knob];'),
+  ('TestOptionsPreview', 'options', 'beads/options.cc',
+    'StartPreview(now, preview_knob_ + 1);',
+    'StartPreview(now, MIX_PARAMETER_LAST);'),
+  ('TestOptionsPreview', 'options', 'beads/ui.cc',
+    'leds_.set(Led(LED_ASSIGN_1 + i), i == options_.preview_knob() ? 255',
+    'leds_.set(Led(LED_ASSIGN_1 + i), false ? 255'),
+  ('TestOptionsPalette', 'options', 'beads/ui.cc',
+    'const uint32_t now = system_clock.milliseconds() -\n'
+    '        options_.indication_time();',
+    'const uint32_t now = system_clock.milliseconds();'),
+  ('TestOptionsConfirmations', 'options', 'beads/ui.cc',
+    '      if (page_led == MIX_PARAMETER_LAST || i == page_led) {',
+    '      if (i == page_led) {'),
+  ('TestWidthGestureAndMeter', 'options', 'beads/ui.cc',
+    '          settings_->set_stereo_width(StereoWidthFromPot(',
+    '          (void)(StereoWidthFromPot('),
+  ('TestWidthGestureAndMeter', 'options', 'beads/ui.cc',
+    '      assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Lock();',
+    '      (void)0;'),
+  ('TestWidthGestureAndMeter', 'options', 'beads/options.cc',
+    '  if (pot < kWidthStockThreshold) {',
+    '  if (pot < 0.05f) {'),
   ('TestEngineStorage', 'options', 'beads/settings.h',
     'state_.engine == (kOptionTag + 1)',
     'state_.engine != 0'),
@@ -479,8 +522,8 @@ cases = [
     'if (ui.self_play_requested()) {',
     'if (false) {'),
   ('TestSelfPlayRequestLifecycle', 'firmware', 'beads/beads.cc',
-    '    ui.ClearSelfPlayRequest();\n    return;',
-    '    return;'),
+    '    ui.ClearSelfPlayRequest();\n    codec_fade = false;\n    return;',
+    '    codec_fade = false;\n    return;'),
   ('TestMonoStereo', 'firmware', 'beads/beads.cc',
     'bool mono = normalization_detector.mono();',
     'bool mono = false;'),
@@ -545,7 +588,7 @@ cases = [
     'const float kModelHysteresis = 0.048f;',
     'const float kModelHysteresis = 0.06f;'),
   ('TestFreezeSustains', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
-    'sustain_level_ = lpg_envelope_.gain();',
+    'sustain_level_ = level_;',
     'sustain_level_ = 0.0f;'),
   ('TestEveryModelRenders', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
     '? fm_patches_table[patch.model - 2]',

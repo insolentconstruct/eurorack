@@ -95,27 +95,33 @@ ATTRIBUTION = (
 )
 STEPS = [
     "Open: hold the CV-assign button [M] {hold}, release.",
-    "Change page: tap [M]. The pulsing mix LED marks the page "
-    "(REVERB [L], FEEDBACK [J], DRY/WET [K] for pages 1-3).",
-    "Change a setting: turn its knob. It saves by itself (the page LED "
-    "flashes).",
-    "Close: hold [M] {hold}, or press any other button except SEED [C] "
-    "on page 1 with Scale selected: short taps step the scale.",
+    "Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, "
+    "then all three.",
+    "[A] shows each stored value in turn. Turn a knob to change it; it "
+    "saves by itself.",
+    "Close: hold [M] {hold} or press another button. With Scale selected, "
+    "SEED taps step the scale.",
 ]
 NOTES = [
-    "Move a knob a little before it responds.",
-    "Wait a moment before powering off.",
+    "Move a knob a little before it responds. Wait a moment before "
+    "powering off.",
 ]
 SHORT = {
     "Clouds-style": "Clouds",
     "Auto (Stock)": "Auto",
     "Wide/smooth filter": "Wide",
     "Granular (Stock)": "Granular",
-    "Granular, manual synth": "Manual synth",
     "Fast release": "Fast",
     "Width (wider →)": "wider →",
     "Beads (Stock)": "Beads",
+    "Automatic (Stock)": "Auto",
 }
+# Stereo width is set with [A]+DRY/WET, outside the pages.
+WIDTH_ROWS = [
+    dict(knob="[A] + DRY/WET", setting="Stereo width", value=value,
+         colour=colour, pulse="steady")
+    for value, colour in (("Stock", "green"), ("Width (wider →)", "meter"))
+]
 
 
 def read_tsv(data):
@@ -143,7 +149,7 @@ def read_tsv(data):
         pages.setdefault(row["page"], {}).setdefault(row["knob"], []).append(
             row
         )
-    assert list(pages) == ["1", "2", "3"]
+    assert list(pages) == ["1", "2", "3", "4"]
     assert all(set(page) == set(KNOBS) for page in pages.values())
     return rows, pages
 
@@ -175,9 +181,9 @@ def zone_bands(rows):
 def indication(row):
     if row["colour"] == "unchanged":
         return "—"
-    colour = (
-        "green → yellow → red" if row["colour"] == "meter" else row["colour"]
-    )
+    if row["colour"] == "meter":
+        return "green → yellow → red"
+    colour = row["colour"]
     pulse = row["pulse"]
     if pulse.startswith("slow"):
         pulse = "slow blink"
@@ -193,23 +199,21 @@ DETAILS = [
     "release. Tap [M] to move between the pages; Beads remembers the last "
     "page until it is powered off. Hold [M] again, or press another "
     "button, to close.",
+    "When a page opens, the quality LED [A] shows each stored value in "
+    "turn, left to right, for about two seconds each, with that knob's mix "
+    "LED lit. Turning a knob, or tapping SEED to step the scale, ends this.",
     "Move a knob far enough to take it over; small bumps before that are "
-    "ignored. Pitch scale, Delay mode, Engine, Attacks and Limiter "
-    "use the knob's three thirds; Reverb character, Frozen feedback and "
-    "Synth engine use its two halves. Near a boundary, turn a little past "
-    "it to switch.",
-    "Stereo width is Stock at the bottom of the knob. Turn clockwise to "
-    "spread the grains wider, up to a full random spread fully CW. Only "
-    "new grains are affected. When width is on, short presses of [M] add "
-    "WIDTH after the three mix destinations of the assignable CV input "
-    "(7); all three mix LEDs pulse together for WIDTH.",
+    "ignored. Pitch scale, Delay mode, Attacks and Limiter use the knob's "
+    "three thirds; the other settings use its two halves. Near a boundary, "
+    "turn a little past it to switch.",
     "Settings save by themselves about a second after you stop turning. "
     "Closing keeps your changes, and there is no timeout or cancel. The "
     "page LED flashes when you open, close, and when a change is saved.",
-    "The quality LED [A] shows the value of the last knob that took over. The "
-    "first value of every setting is steady green. Other values follow in "
-    "yellow and red, then as slow blinks, then as fast blinks. Raag Shri "
-    "is two yellow pulses and a pause. Unused knobs leave the LED alone.",
+    "After the stored values, [A] shows the page's first setting, then "
+    "the last knob you took over. The first value of every setting is steady green. Other "
+    "values follow in yellow and red, then as slow blinks, then as fast "
+    "blinks. Raag Shri is two yellow pulses and a pause. Unused knobs "
+    "leave the LED alone.",
     "Scale: on page 1, tap SEED [C] to step through the eight scales "
     "instead of closing; a long press does not step, and the taps do not "
     "play grains. The scale snaps the pitch of new grains, including "
@@ -217,6 +221,8 @@ DETAILS = [
     "wavetable oscillator and delay pitch keep their pitch. The root is "
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
+    "Attacks: Snap starts grains on the hits in the recording; Snap and "
+    "trigger also starts a grain on each hit.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
     "Disabled stays granular. Wide/smooth filter keeps the switch and adds a "
     "neutral, unfiltered zone around the middle of the delay filter "
@@ -225,52 +231,68 @@ DETAILS = [
     "Clouds-style changes the reverb character and, until a diffusion "
     "amount is set with [A]+REVERB, adds grain diffusion. Switching briefly "
     "fades the sound and clears the tail.",
-    "Engine, manual wavetable synth: the synth needs both audio inputs "
-    "unpatched and FREEZE off: hold the quality button [A] for about a "
-    "second and a half to start or stop it. Patching an input stops it once "
-    "FREEZE is off.",
-    "Engine, Spectral: Clouds' spectral processing replaces the grains. "
+    "Frozen feedback Evolving runs frozen grains through a slowly moving "
+    "all-pass loop; FEEDBACK sets how far they drift.",
+    "Processor Spectral: Clouds' spectral processing replaces the grains. "
     "TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and "
     "PITCH shifts it (following the pitch scale). DENSITY sets how quickly "
     "the spectrum is renewed, and scrambles its phases towards either end. "
     "Holding SEED glitches it; FREEZE holds it. There is no grain "
-    "diffusion, delay mode or wavetable synth. A new engine takes over "
+    "diffusion, delay mode or wavetable synth. A new processor takes over "
     "when the page closes, clearing the recording; a frozen buffer saved "
-    "to flash comes back with the granular engine.",
-    "Attacks: Snap starts grains on the hits in the recording; Snap and "
-    "trigger also starts a grain on each hit.",
-    "Frozen feedback Evolving runs frozen grains through a slowly moving "
-    "all-pass loop; FEEDBACK sets how far they drift.",
-    "Limiter Off lets loud peaks clip.",
-    "Synth engine Plaits plays six Plaits voices instead of the wavetable "
+    "to flash comes back with Granular.",
+    "Synth Plaits plays six Plaits voices instead of the wavetable "
     "synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set "
     "HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE "
     "sustains. With DENSITY at noon the last voice drones until SEED plays "
     "a note.",
+    "Synth start Manual: the synth never starts by itself. It needs both "
+    "audio inputs unpatched and FREEZE off: hold the quality button [A] for "
+    "about a second and a half to start or stop it. Patching an input "
+    "stops it once FREEZE is off.",
+    "Limiter Off lets loud peaks clip.",
+    "Stereo width is not on the pages: hold [A] and turn DRY/WET, then "
+    "release [A] to save. Fully CCW is Stock; turn clockwise to spread the "
+    "grains wider, up to a full random spread fully CW. Only new grains "
+    "are affected. When width is on, short presses of [M] add WIDTH after "
+    "the three mix destinations of the assignable CV input (7); all three "
+    "mix LEDs pulse together for WIDTH.",
 ]
 
 
+# (title, text, shorter text for the printable guide)
 GESTURES = [
     (
         "Monophonic grains",
         "Hold the quality button [A], then press SEED [C] to toggle. Best "
         "with the first two SHAPE settings (square and decay). The [A] LED "
         "is dimmed while on.",
+        "Hold [A], press SEED [C]. Suits square and decay shapes.",
     ),
     (
         "Buffer trim",
         "Hold [A], then press FREEZE [B] to start a fresh recording window. "
         "The next freeze keeps only what was recorded since.",
+        "Hold [A], press FREEZE [B]: the next freeze keeps only what follows.",
+    ),
+    (
+        "Stereo width",
+        "Hold [A] and turn DRY/WET; fully CCW is Stock. The [A] LED shows "
+        "the width as a meter; releasing [A] saves it. Once on, [M] can "
+        "route CV to it (all three mix LEDs pulsing).",
+        "Hold [A], turn DRY/WET; fully CCW is Stock. [M] can route CV to it.",
     ),
     (
         "Grain diffusion",
         "Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can "
         "route CV to it (REVERB LED pulsing).",
+        "Hold [A], turn REVERB; fully CCW is none. [M] can route CV to it.",
     ),
     (
         "Wavetable synth (Manual)",
-        "With both inputs unplugged and FREEZE off, hold [A] for about a "
-        "second and a half to start or stop it.",
+        "With Synth start on Manual, both inputs unplugged and FREEZE off, "
+        "hold [A] for about a second and a half to start or stop it.",
+        "Synth start Manual: no inputs, FREEZE off, hold [A] to start or stop.",
     ),
 ]
 WARNING = (
@@ -283,6 +305,11 @@ def instructions(lines):
     hold = CONSTANTS["kOptionsHoldTime"] / 1000
     assert hold == 3, "Update the spoken hold time"
     return [line.format(hold="3 seconds") for line in lines]
+
+
+def page_leds(knobs):
+    led = next(iter(knobs.values()))[0]["LED"]
+    return led + (" LEDs" if led == "all three" else " LED")
 
 
 def markdown(rows, pages):
@@ -309,10 +336,9 @@ def markdown(rows, pages):
         "colours are named below.",
     ]
     for page, knobs in pages.items():
-        led = next(iter(knobs.values()))[0]["LED"]
         out += [
             "",
-            f"## Page {page} — {led} LED pulsing",
+            f"## Page {page} — {page_leds(knobs)} pulsing",
             "",
             "| Knob | Setting | Values left to right | [A] LED per value |",
             "|---|---|---|---|",
@@ -339,7 +365,7 @@ def markdown(rows, pages):
                 for r in knobs["FEEDBACK"][2:]
             ]
     out += ["", "## Other gestures", ""]
-    out += [f"- **{title}:** {text}" for title, text in GESTURES]
+    out += [f"- **{title}:** {text}" for title, text, _ in GESTURES]
     out += ["", f"**Warning:** {WARNING}"]
     out += ["", "## Details", ""]
     out += [paragraph + "\n" for paragraph in DETAILS]
@@ -412,13 +438,13 @@ class Drawing:
                 x, y, rows[0]["knob"] + ": Not used yet", colour="#737373"
             )
             return 26
-        self.text(x, y, rows[0]["knob"], 16, "bold")
-        self.text(x, y + 23, rows[0]["setting"], 18, "bold")
-        cx, cy = x + width / 2, y + 95
+        self.text(x, y, f'{rows[0]["knob"]}: {rows[0]["setting"]}', 17, "bold")
+        cx, cy = x + width / 2, y + 72
         self.circle(cx, cy, 22)
         self.items.append(
             f'<path d="M {cx} {cy} v -16" stroke="#222" stroke-width="2"/>'
         )
+        labels = []
         for a, b, value in zones(rows):
             self.arc(cx, cy, a, b)
             angle = math.radians(135 + 270 * ((a + b) / 2))
@@ -429,9 +455,11 @@ class Drawing:
                 else "start" if lx > cx + 15 else "middle"
             )
             self.text(round(lx, 2), round(ly + 5, 2), value, 15, anchor=anchor)
+            labels.append(ly + 5)
         for a, b in zone_bands(rows):
             self.arc(cx, cy, a, b, True)
-        base = y + 145
+        # Leave room for a zone label low on the dial (width's Stock).
+        base = max(y + 117, y + math.ceil(max(labels) - y) + 26)
         pitch = rows[0]["setting"] == "Pitch scale"
         for index, row in enumerate(rows):
             if pitch and index == 2:
@@ -443,7 +471,7 @@ class Drawing:
                 x + 9, base - 5, 8, COLOURS[row["colour"]], row["pulse"]
             )
             label = row["value"]
-            if mobile_card or row["setting"] == "Stereo width":
+            if mobile_card:
                 self.text(x + 25, base, label, 15)
                 self.text(
                     x + 25, base + 19, indication(row), 15, colour="#555"
@@ -458,22 +486,20 @@ class Drawing:
                     colour="#555",
                     anchor="end",
                 )
-            base += (
-                44 if mobile_card or row["setting"] == "Stereo width" else 22
-            )
+            base += 44 if mobile_card else 21
         return base - y
 
-    def gestures(self, x, y, step, columns, gap=10):
-        """Gesture list: a row of columns (step > 0) or one column."""
+    def gestures(self, x, y, columns, short=False, gap=10):
+        """Gesture list in one column; the printable uses the short texts
+        and leaves stereo width to its card."""
         self.text(x, y, "OTHER GESTURES", 20, "bold")
         y += 30
-        ends = [y]
-        for i, (title, text) in enumerate(GESTURES):
-            gx = x + (i * step if step else 0)
-            gy = y if step else ends[-1]
-            self.text(gx, gy, title, 16, "bold")
-            ends.append(self.lines(gx, gy + 22, text, columns) + gap)
-        return max(ends) if step else ends[-1]
+        for title, text, brief in GESTURES:
+            if short and title == "Stereo width":
+                continue
+            self.text(x, y, title, 16, "bold")
+            y = self.lines(x, y + 22, brief if short else text, columns) + gap
+        return y
 
     def warning(self, x, y, width, columns):
         lines = textwrap.wrap(WARNING, columns)
@@ -488,18 +514,17 @@ class Drawing:
         return y + box
 
     def marker(self, x, y, led):
-        for i, knob in enumerate(KNOBS):
-            xx = x + i * 57
-            self.text(
-                xx,
-                y,
-                "F" if i == 0 else "D/W" if i == 1 else "R",
-                15,
-                anchor="middle",
-            )
-            self.circle(xx, y + 17, 7, "#222" if led == knob else "white")
-            if led == knob:
-                self.text(xx, y + 43, "pulsing", 15, anchor="middle")
+        """Mix LEDs on the title line: filled is pulsing."""
+        for knob, label, width in zip(KNOBS, ("F", "D/W", "R"), (10, 31, 11)):
+            self.text(x, y, label, 15)
+            lit = led in (knob, "all three")
+            self.circle(x + width + 11, y - 5, 7, "#222" if lit else "white")
+            x += width + 40
+            if lit and led != "all three":
+                self.text(x - 16, y, "pulsing", 15, colour="#555")
+                x += 56
+        if led == "all three":
+            self.text(x - 16, y, "pulsing", 15, colour="#555")
 
     def panel(self, x, y, scale):
         """To-scale top of the panel from panel_geometry.tsv; returns height.
@@ -617,7 +642,7 @@ class Drawing:
 SVG_HEADER = """<svg xmlns="http://www.w3.org/2000/svg" {physical}
  viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">
 <title id="title">Drizzlet hidden options guide</title>
-<desc id="desc">Three pages of mix knob settings with quality LED [A] colour and blink
+<desc id="desc">Four pages of mix knob settings with quality LED [A] colour and blink
 indications. Full text version in OPTIONS.md.</desc>
 <metadata>Author: Insolent Construct</metadata>
 <rect width="100%" height="100%" fill="white"/>
@@ -629,7 +654,7 @@ def svg(pages, mobile=False):
     d = Drawing()
     width = 390 if mobile else 1100
     margin = 22 if mobile else 35
-    columns = 43
+    columns = 43 if mobile else 46
     d.text(margin, 35, "Drizzlet Hidden Options", 24, "bold")
     y = 70
     for i, line in enumerate(instructions(STEPS), 1):
@@ -640,17 +665,19 @@ def svg(pages, mobile=False):
         y += d.panel(margin, y + 15, 1.0) + 52
         d.legend(margin, y)
         y += 235
-        y = d.gestures(margin, y, 0, 43) + 5
+        y = d.gestures(margin, y, 43) + 5
+        y += d.card(margin, y + 15, width - 2 * margin, WIDTH_ROWS, True) + 30
         y = d.warning(margin, y, width - 2 * margin, 43) + 35
     else:
         panel_height = d.panel(margin + 370, 70, 1.0)
         d.legend(margin + 745, 70)
-        d.warning(margin + 745, 280, 285, 31)
-        y = max(y + 15, 70 + panel_height + 16, 315)
+        warned = d.warning(margin + 745, 270, 285, 31)
+        # Card titles sit 34 below the page title, clear of the warning.
+        y = math.ceil(max(y + 15, 70 + panel_height + 16, warned - 14))
     for page, knobs in pages.items():
         d.text(margin, y, f"PAGE {page}", 20, "bold")
-        d.marker(margin + 180, y - 12, next(iter(knobs.values()))[0]["LED"])
-        y += 50
+        d.marker(margin + 100, y, next(iter(knobs.values()))[0]["LED"])
+        y += 34
         if mobile:
             for knob in KNOBS:
                 y += (
@@ -663,11 +690,14 @@ def svg(pages, mobile=False):
                 for i, k in enumerate(KNOBS)
             ]
             if page == "1":
-                top = y + max(heights[1:]) + 12
-                heights[0] = max(
-                    heights[0], d.gestures(margin + 330, top, 233, 27) - y
+                # Gestures and the width card fill page 1's free space.
+                heights[1] = d.gestures(
+                    margin + 330, y + heights[1] + 14, 40, True
+                ) - y
+                heights[2] += 16 + d.card(
+                    margin + 660, y + heights[2] + 16, 315, WIDTH_ROWS
                 )
-            y += max(heights) + 25
+            y += max(heights) + 12
     y -= 16
     for line in textwrap.wrap(
         "Author: Insolent Construct • Control sketch • " + ATTRIBUTION,
