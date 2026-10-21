@@ -49,7 +49,6 @@ void Lfo::Init() {
   reset_phase_ = 0;
   sync_ = false;
   set_parameter(0);
-  previous_parameter_ = 32767;
   sync_counter_ = kSyncCounterMaxTime;
   level_ = 32767;
   pattern_predictor_.Init();
@@ -64,6 +63,25 @@ const int16_t presets[7][2] = {
   { LFO_SHAPE_NOISE, -32767 },
   { LFO_SHAPE_NOISE, 32767 },
 };
+
+void Lfo::set_parameter(int16_t parameter) {
+  parameter_ = parameter;
+  wf_gain_ = 2048 + (static_cast<int32_t>(parameter) * (65535 - 2048) >> 15);
+  quantization_levels_ = 2 + (((parameter + 32768) * 15) >> 16);
+  quantization_scale_ = 65535 / (quantization_levels_ - 1);
+
+  // The triangle's slopes. They used to be computed in the triangle only when
+  // the parameter changed, so a parameter of 32767 at power-up was missed.
+  uint16_t slope_offset = parameter + 32768;
+  if (slope_offset <= 1) {
+    decay_factor_ = 32768 << kSlopeBits;
+    attack_factor_ = 1 << (kSlopeBits - 1);
+  } else {
+    decay_factor_ = (32768 << kSlopeBits) / slope_offset;
+    attack_factor_ = (32768 << kSlopeBits) / (65536 - slope_offset);
+  }
+  end_of_attack_ = (static_cast<uint32_t>(slope_offset) << 16);
+}
 
 void Lfo::set_shape_parameter_preset(uint16_t value) {
   value = (value >> 8) * 7 >> 8;
@@ -137,19 +155,6 @@ int16_t Lfo::ComputeSampleSine() {
 }
 
 int16_t Lfo::ComputeSampleTriangle() {
-  if (parameter_ != previous_parameter_) {
-    uint16_t slope_offset = parameter_ + 32768;
-    if (slope_offset <= 1) {
-      decay_factor_ = 32768 << kSlopeBits;
-      attack_factor_ = 1 << (kSlopeBits - 1);
-    } else {
-      decay_factor_ = (32768 << kSlopeBits) / slope_offset;
-      attack_factor_ = (32768 << kSlopeBits) / (65536 - slope_offset);
-    }
-    end_of_attack_ = (static_cast<uint32_t>(slope_offset) << 16);
-    previous_parameter_ = parameter_;
-  }
-  
   uint32_t phase = phase_;
   uint32_t skewed_phase = phase;
   if (phase < end_of_attack_) {

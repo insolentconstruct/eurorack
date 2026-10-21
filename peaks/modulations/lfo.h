@@ -97,12 +97,7 @@ class Lfo {
   
   void set_shape_parameter_preset(uint16_t value);
   
-  inline void set_parameter(int16_t parameter) {
-    parameter_ = parameter;
-    wf_gain_ = 2048 + (static_cast<int32_t>(parameter) * (65535 - 2048) >> 15);
-    quantization_levels_ = 2 + (((parameter + 32768) * 15) >> 16);
-    quantization_scale_ = 65535 / (quantization_levels_ - 1);
-  }
+  void set_parameter(int16_t parameter);
   
   inline void set_reset_phase(int16_t reset_phase) {
     reset_phase_ = static_cast<int32_t>(reset_phase) * 65536;
@@ -147,7 +142,6 @@ class Lfo {
   uint32_t end_of_attack_;
   uint32_t attack_factor_;
   uint32_t decay_factor_;
-  int16_t previous_parameter_;
   int32_t wf_gain_;
   uint32_t quantization_levels_;
   uint32_t quantization_scale_;

@@ -54,8 +54,12 @@ values and 2 gate periods:
 | Noise | 241 → 190 | 227 → 176 |
 
 Output matches vanilla in 480 more cases, with the parameters (and so the
-shape) changed every 97 blocks. The triangle keeps its own update, which
-has a bug that is fixed separately.
+shape) changed every 97 blocks.
+
+Fixing the triangle's power-up bug (#90) moves its slopes into
+`set_parameter` too: triangle 180 → 157 with GCC 4.8 and 177 → 149 with
+GCC 15.3. With a plain triangle played first, the output matches the
+previous change in all 480 cases; from power-up, 98 differ, all from the bug.
 
 ## Candidates
 
