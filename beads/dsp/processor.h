@@ -240,6 +240,11 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
+  // Clears the reverb's memory, which the synths share.
+  inline void ClearReverb() {
+    reverb_.Reset(sample_rate(), true);
+  }
+
   // Frozen feedback evolves through an all-pass loop (#4). Turning it off
   // lets the loop fade out first.
   inline void set_evolving_feedback(bool evolving) {

@@ -107,6 +107,9 @@ void SysTick_Handler() {
 int codec_transition_frames;
 bool clouds_style;
 float reverb_style_gain;
+// Set by main before it restarts the codec: the output fades out first.
+volatile bool codec_fade;
+bool codec_running;
 float reverb_style_previous_gain;
 bool synth_mode;
 int synth_mode_start_time;
@@ -310,7 +313,7 @@ void Process(
   const bool requested_style = ui.clouds_style();
   const bool engine_change = ui.spectral() != processor.spectral();
   reverb_style_previous_gain = reverb_style_gain;
-  if (requested_style != clouds_style || engine_change) {
+  if (requested_style != clouds_style || engine_change || codec_fade) {
     reverb_style_gain = max(0.0f, reverb_style_gain - kReverbStyleFadeStep);
     if (reverb_style_previous_gain == 0.0f) {
       if (requested_style != clouds_style) {
@@ -446,6 +449,8 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   event_delay.Init();
 
   codec_transition_frames = kBlockRate / 4;
+  codec_fade = false;
+  codec_running = true;
   codec.Start(sr, sr / kBlockRate, &Process);
 }
 
@@ -475,6 +480,8 @@ void Init() {
   clouds_style = false;
   reverb_style_gain = 1.0f;
   reverb_style_previous_gain = 1.0f;
+  codec_fade = false;
+  codec_running = false;
   background_buffer_backup.Init(&processor, &settings);
 
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
@@ -514,11 +521,19 @@ void Init() {
   }
 }
 
+// Codec restarts fade the output out first (#53): true once it is silent.
+bool FadedOut() {
+  // Before the first start there is no audio to fade.
+  codec_fade = codec_running;
+  return !codec_running || reverb_style_gain == 0.0f;
+}
+
 void MonitorStateChange() {
   ui.set_no_input(normalization_detector.no_input());
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
+    codec_fade = false;
     return;
   }
 
@@ -533,6 +548,9 @@ void MonitorStateChange() {
     }
     processor.Configure(Processor::Media(settings.state().media),
         normalization_detector.mono());
+    if (synth_mode) {
+      processor.ClearReverb();
+    }
     if (!processor.spectral() && background_buffer_backup.Load()) {
       // The restored recording keeps the quality it was saved with.
       settings.mutable_state()->media = processor.media();
@@ -547,11 +565,15 @@ void MonitorStateChange() {
     if (settings.self_play_on_request()) {
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
+        if (!FadedOut()) {
+          return;
+        }
         ui.ClearSelfPlayRequest();
         codec.Stop();
         if (synth_mode) {
           processor.Configure(Processor::Media(settings.state().media),
               normalization_detector.mono());
+          processor.ClearReverb();
         }
         ConfigureAndStartCodec(!synth_mode, true);
       }
@@ -563,6 +585,9 @@ void MonitorStateChange() {
         if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
           // If 10 seconds have elapsed with nothing patched in the audio
           // inputs, enable the synth mode.
+          if (!FadedOut()) {
+            return;
+          }
           codec.Stop();
           ConfigureAndStartCodec(true, true);
         }
@@ -585,14 +610,23 @@ void MonitorStateChange() {
     bool mono_changed = mono != processor.mono();
     
     if (synth_mode || mono_changed || media_changed) {
+      if (!FadedOut()) {
+        return;
+      }
       // elapsed = system_clock.milliseconds();
       codec.Stop();
       processor.Configure(media, mono);
+      if (synth_mode) {
+        // The synth's reverb tail would otherwise play on.
+        processor.ClearReverb();
+      }
       ConfigureAndStartCodec(false, mono_changed || synth_mode);
     }
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
   }
+  // Restarted, or nothing to restart after all: fade back in.
+  codec_fade = false;
 }
 
 int main(void) {
