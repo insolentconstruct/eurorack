@@ -17,7 +17,7 @@
   },
   {
     "name": "clouds-style",
-    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestCloudsOutput'"
+    "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestCloudsOutput TestDiffusionAmount'"
   },
   {
     "name": "firmware-controls",
