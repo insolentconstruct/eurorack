@@ -978,14 +978,14 @@ void TestSynthEngineStorage() {
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->synth_engine = value;
     CHECK(r.settings.plaits_synth() == (value == 0xa1));
-    r.settings.mutable_state()->padding[2] = 0xff;
+    r.settings.mutable_state()->padding[1] = 0xff;
     r.settings.mutable_state()->padding_end[1] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.plaits_synth() == (value == 0xa1));
     CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
-    CHECK(loaded.state().padding[2] == 0 && loaded.state().padding_end[1] == 0);
+    CHECK(loaded.state().padding[1] == 0 && loaded.state().padding_end[1] == 0);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->synth_engine = value;
     loaded.chunk_storage_.SaveState();

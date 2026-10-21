@@ -502,8 +502,32 @@ cases = [
     'if (previous_freeze_state_) {',
     'if (false) {'),
   ('TestSynthPitchScaleChain', 'firmware', 'beads/beads.cc',
-    'synth.set_pitch_scale(ui.pitch_scale());',
-    'synth.set_pitch_scale(PITCH_SCALE_OFF);'),
+    '    synth.set_pitch_scale(ui.pitch_scale());',
+    '    synth.set_pitch_scale(PITCH_SCALE_OFF);'),
+  ('TestPlaitsSynthSelection', 'firmware', 'beads/dsp/delay_line.h',
+    '  inline void Reset() {\n    Reset(true);',
+    '  inline void Reset() {\n    Reset(false);'),
+  ('TestPlaitsSynthSelection', 'firmware', 'beads/beads.cc',
+    'if (synth_mode && ui.plaits_synth()) {',
+    'if (synth_mode && settings.state().synth_engine == 0) {'),
+  ('TestSynthEngineStorage', 'options', 'beads/settings.h',
+    'return state_.synth_engine == (kOptionTag + 1);',
+    'return state_.synth_engine != 0;'),
+  ('TestVoiceAllocation', 'plaits_synth', 'beads/dsp/plaits_synth.cc',
+    'active_voice_ = (active_voice_ + 1) % kNumPlaitsVoices;',
+    'active_voice_ = (active_voice_ + 1) % (kNumPlaitsVoices - 1);'),
+  ('TestVoiceAllocation', 'plaits_synth', 'beads/dsp/plaits_synth.cc',
+    'drone_ = drone_ && noon && !trigger;',
+    'drone_ = drone_ && noon;'),
+  ('TestModelDetents', 'plaits_synth', 'beads/dsp/plaits_synth.cc',
+    'const float kModelHysteresis = 0.048f;',
+    'const float kModelHysteresis = 0.06f;'),
+  ('TestFreezeSustains', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
+    'sustain_level_ = lpg_envelope_.gain();',
+    'sustain_level_ = 0.0f;'),
+  ('TestEveryModelRenders', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
+    '? fm_patches_table[patch.model - 2]',
+    '? fm_patches_table[0]'),
   ('TestSynthStereoWidth', 'wavetable', 'beads/dsp/wavetable_granular_player.h',
     '          pan,\n'
     '          trigger.fractional_sample);',
@@ -542,7 +566,7 @@ started = time.monotonic()
 results = []
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   work = pathlib.Path(tmp).resolve()
-  for directory in ('beads', 'stmlib'):
+  for directory in ('beads', 'plaits', 'stmlib'):
     shutil.copytree(root / directory, work / directory,
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))
@@ -596,7 +620,8 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
             ['nice', '-n', '10', 'make', '-s', '-j4', '-f',
                 'beads/test/' + suite + '.mk', 'test'],
             cwd=work, stdout=stream, stderr=subprocess.STDOUT,
-            timeout=240 if suite in ('firmware', 'clouds', 'granular') else 60)
+            timeout=240 if suite in (
+                'firmware', 'clouds', 'granular', 'plaits_synth') else 60)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestFinalBankRendering':
