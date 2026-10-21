@@ -17,7 +17,10 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import resample_poly
 
-PAYLOAD_SIZE = 327680
+# The updater writes 64 KiB blocks from 0x08020000 up to the frozen-buffer
+# sector at 0x08100000.
+BLOCK_SIZE = 65536
+APP_MAX_SIZE = 0x08100000 - 0x08020000
 SAMPLE_RATE = 48000
 
 ROOT = Path('/src')
@@ -47,16 +50,18 @@ def wav_write(path, pcm):
 
 
 def decoded_ok(stats, payload, expected):
-    return (stats['packets'] == 1280 and stats['blocks'] == 5 and stats['errors'] == 0
+    blocks = len(expected) // BLOCK_SIZE
+    return (stats['packets'] == 256 * blocks and stats['blocks'] == blocks and stats['errors'] == 0
                     and stats['overflow'] == 0 and stats['complete'] == 1 and payload == expected
-                    and len(payload) == PAYLOAD_SIZE)
+                    and len(payload) == len(expected))
 
 
 def proof(out):
     app = (out / 'app.bin').read_bytes()
-    if not 0 < len(app) <= PAYLOAD_SIZE:
+    if not 0 < len(app) <= APP_MAX_SIZE:
         raise ValueError('unexpected application size')
-    expected = app + b'\xff' * (PAYLOAD_SIZE - len(app))
+    payload_size = -(-len(app) // BLOCK_SIZE) * BLOCK_SIZE
+    expected = app + b'\xff' * (payload_size - len(app))
     wav_sha = sha(out / WAV)
     rows = []
     with tempfile.TemporaryDirectory(prefix='beads-decode-', dir=str(out)) as temp:
@@ -70,9 +75,13 @@ def proof(out):
         corrupt[30*SAMPLE_RATE:31*SAMPLE_RATE] = 0
         corrupted = work / 'corrupted.wav'
         wav_write(corrupted, corrupt)
-        # Truncated ending: must not decode.
+        # Truncated ending: must not decode. The encoder ends with the pause
+        # after the last block (3 s if it starts a flash sector, else 0.2 s)
+        # and 5 s of outro; cut all but 0.1 s of that.
+        last_block = 0x08020000 + payload_size - BLOCK_SIZE
+        tail = 5.0 + (3.0 if last_block % 0x20000 == 0 else 0.2)
         truncated = work / 'missing-eot.wav'
-        wav_write(truncated, x[:-int(7.9*SAMPLE_RATE)])
+        wav_write(truncated, x[:-int((tail - 0.1)*SAMPLE_RATE)])
         for label, path, rate, want in [('nominal-48000', out/WAV, SAMPLE_RATE, True),
                                                                       ('resampled-44100', out/WAV, 44100, True),
                                                                       ('corrupted-file', corrupted, SAMPLE_RATE, False),
