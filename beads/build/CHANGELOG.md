@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Quality changes, mono/stereo switches and the wavetable synth starting or stopping now fade the output out briefly before the codec restarts, and the synth's reverb tail no longer plays on after it stops. The silence while the codec restarts, and the empty buffer after a quality change, remain (#53).
 - Add a spectral engine: Clouds' spectral processing in place of the grains, chosen on page 3 (FEEDBACK), now called Engine: Granular (Stock), Granular with the manual wavetable synth, or Spectral. TIME picks the stored spectrum, SIZE warps, SHAPE quantizes, PITCH shifts (with the pitch scale), DENSITY sets the refresh rate and phase randomization, holding SEED glitches and FREEZE holds. Changing engine clears the recording; a frozen buffer saved to flash is kept (#3).
 - Add attacks (page 2, FEEDBACK): Snap starts grains on the hits in the recording instead of partway through their decay; Snap and trigger also starts a grain on each hit (#58, #47).
 - Add frozen feedback (page 2, REVERB): Evolving runs the grains through a slowly moving all-pass loop while FREEZE is on, so a frozen sound drifts and softens instead of repeating exactly; FEEDBACK sets how far (#4).
