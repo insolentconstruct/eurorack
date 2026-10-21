@@ -150,6 +150,7 @@ void PlaitsVoice::Init(uint8_t* ram) {
   model_ = -1;
   sustain_ = false;
   sustain_level_ = 0.0f;
+  level_ = 0.0f;
   lpg_envelope_.Init();
   lpg_.Init();
   limiter_.Init();
@@ -182,7 +183,7 @@ void PlaitsVoice::Render(
       lpg_envelope_.Trigger();
     }
   } else if (sustain && !sustain_) {
-    sustain_level_ = lpg_envelope_.gain();
+    sustain_level_ = level_;
   }
   sustain_ = sustain;
 
@@ -231,6 +232,8 @@ void PlaitsVoice::Render(
   } else {
     lpg_envelope_.Init();
   }
+  // The gate level last heard: a voice that never played holds silence.
+  level_ = lpg_bypass ? (unpatched ? 1.0f : 0.0f) : lpg_envelope_.gain();
 
   float gain = pp_s.out_gain;
   if (gain < 0.0f) {

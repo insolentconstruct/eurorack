@@ -300,6 +300,26 @@ void TestFreezeSustains() {
   printf("Freeze off %.3g, on %.3g\n", level[0], level[1]);
   CHECK(level[0] < 1e-6);
   CHECK(level[1] > 1.0);
+
+  // FREEZE held from the first block, before any note: voices that never
+  // played stay silent.
+  Reset();
+  Controls c;
+  c.mix.feedback = ModelCentre(8);
+  c.mix.reverb_amount = 0.0f;
+  c.seed = SEED_BUTTON_STATE_OFF;
+  c.density.base = 0.3f;
+  c.freeze = true;
+  double energy = 0.0;
+  for (int i = 0; i < 2000; ++i) {
+    FloatFrame out[kBlockSize];
+    Block(c, out);
+    for (size_t j = 0; j < kBlockSize; ++j) {
+      energy += out[j].l * out[j].l + out[j].r * out[j].r;
+    }
+  }
+  printf("Freeze from start %.3g\n", energy);
+  CHECK(energy < 1e-6);
 }
 
 int main() {

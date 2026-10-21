@@ -83,6 +83,7 @@ class PlaitsVoice {
 
   bool sustain_;
   float sustain_level_;
+  float level_;
   plaits::LPGEnvelope lpg_envelope_;
   plaits::LowPassGate lpg_;
   stmlib::Limiter limiter_;
