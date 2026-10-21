@@ -100,6 +100,9 @@ void STFT::Process(
       int32_t sample = *input * 32768.0f;
       analysis_[buffer_ptr_ + i] = Clip16(sample);
       *output = static_cast<float>(synthesis_[buffer_ptr_ + i]) / 16384.0f;
+      // The next frame to write here assigns rather than adds, so this
+      // changes nothing, unless frames stall: then silence, not a replay.
+      synthesis_[buffer_ptr_ + i] = 0;
       input += stride;
       output += stride;
     }
@@ -120,6 +123,16 @@ void STFT::Process(
 void STFT::Buffer() {
   if (ready_ == done_) {
     return;
+  }
+
+  // After a stall of the main loop (a flash erase), the input of all but the
+  // newest frame has been overwritten: skip those frames.
+  while (ready_ - done_ > 1) {
+    process_ptr_ += hop_size_;
+    if (process_ptr_ >= buffer_size_) {
+      process_ptr_ -= buffer_size_;
+    }
+    ++done_;
   }
   
   // Copy block to FFT buffer and apply window.

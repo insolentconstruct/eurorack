@@ -87,7 +87,7 @@ class Processor {
 
   // Attacks are marked only while granular playback records.
   inline bool AttackRecording() const {
-    return delay_mode_transition_ <= 0.0f;
+    return delay_mode_transition_ <= 0.0f && !spectral_;
   }
 
   void SetAttackOnset(bool onset) {

@@ -1122,7 +1122,11 @@ void TestSpectralEngine() {
   CHECK(!synth_mode && !ui.self_play_requested());
   r.left = r.right = true;
 
-  // Back to granular: the saved frozen buffer returns.
+  // Back to granular: the saved frozen buffer returns, with its own quality
+  // even if another was picked meanwhile.
+  settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
+  RunSquare(&r, 3000);
+  CHECK(processor.spectral() && processor.media() == Processor::MEDIA_CLEAN_TAPE);
   settings.set_spectral(false);
   SysTick_Handler();
   for (int i = 0; i < 400 && processor.spectral(); ++i) {
@@ -1133,6 +1137,9 @@ void TestSpectralEngine() {
   CHECK(*processor.mutable_delay_write_ptr() == 1234);
   RunSquare(&r, 2000);
   CHECK(reverb_style_gain == 1.0f);
+  CHECK(processor.media() == Processor::MEDIA_DIGITAL);
+  CHECK(settings.state().media == Processor::MEDIA_DIGITAL);
+  CHECK(*processor.mutable_delay_write_ptr() == 1234);
 
   // Starting in spectral leaves the saved buffer in flash.
   settings.set_spectral(true);

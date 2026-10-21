@@ -534,6 +534,8 @@ void MonitorStateChange() {
     processor.Configure(Processor::Media(settings.state().media),
         normalization_detector.mono());
     if (!processor.spectral() && background_buffer_backup.Load()) {
+      // The restored recording keeps the quality it was saved with.
+      settings.mutable_state()->media = processor.media();
       ui.set_freeze_button_state(true);
     }
     ConfigureAndStartCodec(false, synth_mode);

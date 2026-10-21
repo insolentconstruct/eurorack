@@ -471,6 +471,57 @@ void TestEngineBuffers() {
   CHECK(clear);
 }
 
+// A stalled main loop (a flash erase) loses the frames whose input has been
+// overwritten: the next call computes only the newest one. Attacks stay off.
+void TestStalledFrames() {
+  test_checker.Start("TestStalledFrames");
+  InitProcessor(3, false, true);
+  Parameters p;
+  ModulatedParameter density;
+  Processor::MixParameters mix;
+  DefaultControls(&p, &density, &mix);
+  // The spectral engine alone: no dry signal, reverb or feedback.
+  mix.feedback = 0.0f;
+  mix.dry_wet = 1.0f;
+  mix.reverb_amount = 0.0f;
+  CHECK(!processor.AttackRecording());
+  const STFT& stft = processor.spectral_processor_.phase_vocoder_.stft_[0];
+  double replay = 0.0;
+  double after = 0.0;
+  for (size_t block = 0; block < 2000; ++block) {
+    FloatFrame in[12];
+    FloatFrame out[12];
+    bool freeze[12] = { };
+    for (size_t i = 0; i < 12; ++i) {
+      TestSignal(block * 12 + i, 48000.0f, &in[i]);
+    }
+    processor.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze, density, p,
+        mix, in, out, 12);
+    // No frames from block 500 to 1000: about six hops.
+    if (block < 500 || block >= 1000) {
+      processor.Buffer();
+      CHECK(stft.ready_ == stft.done_);
+    }
+    for (size_t i = 0; i < 12; ++i) {
+      CHECK(std::isfinite(out[i].l) && std::isfinite(out[i].r));
+      const double e = out[i].l * out[i].l + out[i].r * out[i].r;
+      // A full ring (5120 samples) after the stall begins, nothing old
+      // plays again; frames resume afterwards.
+      if (block >= 940 && block < 1000) replay += e;
+      if (block >= 1200) after += e;
+    }
+  }
+  printf("Stall: replay %.3g, after %.3g\n", replay, after);
+  CHECK(replay < 1e-9);
+  CHECK(after > 1.0);
+  // The counters wrap.
+  STFT& s = processor.spectral_processor_.phase_vocoder_.stft_[0];
+  s.done_ = size_t(-2);
+  s.ready_ = size_t(1);
+  processor.Buffer();
+  CHECK(s.ready_ == s.done_);
+}
+
 int main(int argc, char** argv) {
   setbuf(stdout, NULL);
   const HostTest tests[] = {
@@ -481,6 +532,7 @@ int main(int argc, char** argv) {
     { "TestSpectralBypasses", TestSpectralBypasses },
     { "TestFrameControls", TestFrameControls },
     { "TestEngineBuffers", TestEngineBuffers },
+    { "TestStalledFrames", TestStalledFrames },
 #else
     { "TestCloudsReference", TestCloudsReference },
 #endif  // USE_ARM_FFT

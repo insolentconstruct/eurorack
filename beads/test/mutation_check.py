@@ -114,10 +114,10 @@ cases = [
   ('TestPitchStorage', 'options', 'beads/settings.cc',
     'void Settings::SaveState() {\n'
     '  NormalizeOptions();\n'
-    '  fill(&state_.reserved[0],',
+    '  fill(&state_.padding[0],',
     'void Settings::SaveState() {\n'
     '  NormalizeOptions();\n'
-    '  fill(&state_.reserved[1],'),
+    '  fill(&state_.padding[1],'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
     'const bool accept_switch_events = !was_active && !options_.active() &&\n'
     '      options_.stage() != Options::STAGE_DRAIN;',
