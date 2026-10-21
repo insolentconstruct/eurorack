@@ -195,6 +195,15 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
+  // Grain diffusion; zero skips the diffuser, which restarts clean.
+  inline void set_diffusion(float amount) {
+    if (amount > 0.0f && diffusion_ == 0.0f) {
+      diffuser_.Init(diffuser_buffer_);
+    }
+    diffusion_ = amount;
+    diffuser_.set_amount(amount);
+  }
+
   inline void set_stereo_width(float width, bool enabled) {
     processor_digital_.set_stereo_width(width, enabled);
     processor_vintage_digital_.set_stereo_width(width, enabled);
@@ -261,6 +270,7 @@ class Processor {
   Diffuser diffuser_;
   uint16_t diffuser_buffer_[kDiffuserBufferSize];
   bool clouds_style_;
+  float diffusion_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

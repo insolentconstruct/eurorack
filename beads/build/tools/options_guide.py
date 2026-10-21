@@ -220,8 +220,9 @@ DETAILS = [
     "neutral, unfiltered zone around the middle of the delay filter "
     "(SIZE attenurandomizer plus SIZE CV), with no resonant boost. The "
     "wavetable synth is unaffected.",
-    "Clouds-style changes the reverb character and adds grain diffusion. "
-    "Switching briefly fades the sound and clears the tail.",
+    "Clouds-style changes the reverb character and, until a diffusion "
+    "amount is set with [A]+REVERB, adds grain diffusion. Switching briefly "
+    "fades the sound and clears the tail.",
     "Wavetable synth Manual needs both audio inputs unpatched and FREEZE "
     "off: hold the quality button [A] for about a second and a half to start or stop "
     "it. Patching an input stops it once FREEZE is off.",
@@ -240,6 +241,11 @@ GESTURES = [
         "Buffer trim",
         "Hold [A], then press FREEZE [B] to start a fresh recording window. "
         "The next freeze keeps only what was recorded since.",
+    ),
+    (
+        "Grain diffusion",
+        "Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can "
+        "route CV to it (REVERB LED pulsing).",
     ),
     (
         "Wavetable synth (Manual)",

@@ -34,7 +34,6 @@
 
 namespace beads {
 
-const float kCloudsDiffusion = 0.7f;
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
@@ -45,8 +44,9 @@ void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
   clouds_style_ = false;
+  diffusion_ = 0.0f;
   diffuser_.Init(diffuser_buffer_);
-  diffuser_.set_amount(kCloudsDiffusion);
+  diffuser_.set_amount(diffusion_);
   output_limiter_mode_ = OUTPUT_LIMITER_STOCK;
   processor_digital_.Init(48000.0f, buffers);
   processor_vintage_digital_.Init(32000.0f, buffers);
@@ -215,7 +215,7 @@ void Processor::Process(
       break;
   }
   
-  if (clouds_style_ && !delay_mode) {
+  if (diffusion_ > 0.0f && !delay_mode) {
     diffuser_.Process(out, size);
   }
 

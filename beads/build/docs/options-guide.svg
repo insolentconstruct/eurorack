@@ -187,11 +187,16 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="598" y="738" font-size="15" font-weight="normal" fill="#222" text-anchor="start">recording window. The next</text>
 <text x="598" y="759" font-size="15" font-weight="normal" fill="#222" text-anchor="start">freeze keeps only what was</text>
 <text x="598" y="780" font-size="15" font-weight="normal" fill="#222" text-anchor="start">recorded since.</text>
-<text x="831" y="674" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth (Manual)</text>
-<text x="831" y="696" font-size="15" font-weight="normal" fill="#222" text-anchor="start">With both inputs unplugged</text>
-<text x="831" y="717" font-size="15" font-weight="normal" fill="#222" text-anchor="start">and FREEZE off, hold [A]</text>
-<text x="831" y="738" font-size="15" font-weight="normal" fill="#222" text-anchor="start">for about a second and a</text>
-<text x="831" y="759" font-size="15" font-weight="normal" fill="#222" text-anchor="start">half to start or stop it.</text>
+<text x="831" y="674" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Grain diffusion</text>
+<text x="831" y="696" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A] and turn REVERB;</text>
+<text x="831" y="717" font-size="15" font-weight="normal" fill="#222" text-anchor="start">fully CCW is none. Once</text>
+<text x="831" y="738" font-size="15" font-weight="normal" fill="#222" text-anchor="start">set, [M] can route CV to it</text>
+<text x="831" y="759" font-size="15" font-weight="normal" fill="#222" text-anchor="start">(REVERB LED pulsing).</text>
+<text x="1064" y="674" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth (Manual)</text>
+<text x="1064" y="696" font-size="15" font-weight="normal" fill="#222" text-anchor="start">With both inputs unplugged</text>
+<text x="1064" y="717" font-size="15" font-weight="normal" fill="#222" text-anchor="start">and FREEZE off, hold [A]</text>
+<text x="1064" y="738" font-size="15" font-weight="normal" fill="#222" text-anchor="start">for about a second and a</text>
+<text x="1064" y="759" font-size="15" font-weight="normal" fill="#222" text-anchor="start">half to start or stop it.</text>
 <text x="35" y="857" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 2</text>
 <text x="215" y="845" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">F</text>
 <circle cx="215" cy="862" r="7" fill="#222" stroke="#333" stroke-width="2"/>

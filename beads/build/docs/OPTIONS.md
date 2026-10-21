@@ -56,6 +56,7 @@ Scale (tap SEED to step through):
 
 - **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
 - **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
+- **Grain diffusion:** Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can route CV to it (REVERB LED pulsing).
 - **Wavetable synth (Manual):** With both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
 
 **Warning:** Don't hold SEED while powering on: it resets all settings to defaults (calibration is kept).
@@ -76,7 +77,7 @@ Scale: on page 1, tap SEED [C] to step through the eight scales instead of closi
 
 Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays granular. Wide/smooth filter keeps the switch and adds a neutral, unfiltered zone around the middle of the delay filter (SIZE attenurandomizer plus SIZE CV), with no resonant boost. The wavetable synth is unaffected.
 
-Clouds-style changes the reverb character and adds grain diffusion. Switching briefly fades the sound and clears the tail.
+Clouds-style changes the reverb character and, until a diffusion amount is set with [A]+REVERB, adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
 Wavetable synth Manual needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
 

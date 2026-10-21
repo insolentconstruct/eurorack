@@ -53,6 +53,9 @@ inline float ModulatedStereoWidth(StereoWidth width, float cv) {
   return amount;
 }
 
+// Grain diffusion of the Clouds-style reverb until [A]+REVERB sets an amount.
+const float kCloudsDiffusion = 0.7f;
+
 enum DelayMode {
   DELAY_MODE_AUTO,
   DELAY_MODE_NEVER,

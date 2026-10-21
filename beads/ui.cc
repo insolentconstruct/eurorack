@@ -204,7 +204,11 @@ void Ui::Poll() {
       if (switches_.pressed(SWITCH_MEDIA)) {
         // Big hack to prevent the long press detection to fire!
         press_time_[SWITCH_MEDIA] = system_clock.milliseconds();
-        state->gain = 1.0f + p->hidden_parameter() * 255.0f;
+        if (i == MIX_PARAMETER_FEEDBACK) {
+          state->gain = 1.0f + p->hidden_parameter() * 255.0f;
+        } else {
+          settings_->set_diffusion(p->hidden_parameter());
+        }
       } else if (switches_.pressed(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
         state->assignable_cv_destination = 3;
@@ -243,6 +247,8 @@ void Ui::UpdateLeds() {
 
   bool adjusting_manual_gain = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].editing_hidden_parameter();
+  bool adjusting_diffusion = switches_.pressed(SWITCH_MEDIA) && \
+      assignable_cv_pot_[MIX_PARAMETER_REVERB].editing_hidden_parameter();
   
   switch (mode_) {
     case MODE_PANIC:
@@ -277,6 +283,8 @@ void Ui::UpdateLeds() {
         
         if (adjusting_manual_gain) {
           leds_.set_meter(0.05f + 0.95f * float(state.gain) / 256.0f);
+        } else if (adjusting_diffusion) {
+          leds_.set_meter(0.05f + 0.94f * settings_->diffusion());
         } else {
           Leds::Color media_color = media_palette_[state.media];
           const float brightness = overwrite_reserve_ * \
@@ -305,6 +313,8 @@ void Ui::UpdateLeds() {
           for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
             leds_.set(Led(LED_ASSIGN_1 + i), triangle);
           }
+        } else if (settings_->diffusion_assigned()) {
+          leds_.set(Led(LED_ASSIGN_1 + MIX_PARAMETER_REVERB), triangle);
         } else if (state.assignable_cv_destination == 3) {
           for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
             leds_.set(
@@ -426,7 +436,8 @@ void Ui::OnSwitchPressed(const Event& e) {
     State* state = settings_->mutable_state();
     state->monophonic_mode = !state->monophonic_mode;
     settings_->SaveState();
-    assignable_cv_pot_[0].Unlock();
+    assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
+    assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
     ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_SEED] = true;
     return;
   }
@@ -439,7 +450,8 @@ void Ui::OnSwitchPressed(const Event& e) {
       e.control_id == SWITCH_FREEZE) {
     trim_flag_ = true;
     freeze_button_state_ = false;
-    assignable_cv_pot_[0].Unlock();
+    assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
+    assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
     ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_FREEZE] = true;
     return;
   }
@@ -472,7 +484,8 @@ void Ui::OnSwitchPressed(const Event& e) {
       break;
       
     case SWITCH_MEDIA:
-      assignable_cv_pot_[0].Lock();
+      assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Lock();
+      assignable_cv_pot_[MIX_PARAMETER_REVERB].Lock();
       break;
       
     case SWITCH_ASSIGN:
@@ -532,7 +545,10 @@ void Ui::OnSwitchReleased(const Event& e) {
 
     case SWITCH_MEDIA:
       {
-        if (!assignable_cv_pot_[0].editing_hidden_parameter()) {
+        if (!assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].
+                editing_hidden_parameter() &&
+            !assignable_cv_pot_[MIX_PARAMETER_REVERB].
+                editing_hidden_parameter()) {
           if (mode_ >= MODE_CALIBRATION_1 && mode_ <= MODE_CALIBRATION_4) {
             NextCalibrationStep();
           } else {
@@ -555,10 +571,11 @@ void Ui::OnSwitchReleased(const Event& e) {
             }
           }
         } else {
-          // Save the manual gain settings.
+          // Save the manual gain or diffusion settings.
           settings_->SaveState();
         }
-        assignable_cv_pot_[0].Unlock();
+        assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
+        assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
       }
       break;
 
@@ -577,8 +594,14 @@ void Ui::OnSwitchReleased(const Event& e) {
           State* state = settings_->mutable_state();
           if (settings_->width_assigned()) {
             settings_->set_width_assigned(false);
+            settings_->set_diffusion_assigned(true);
+          } else if (settings_->diffusion_assigned()) {
+            settings_->set_diffusion_assigned(false);
           } else if (state->assignable_cv_destination == 2 && stereo_width_) {
             settings_->set_width_assigned(true);
+          } else if (state->assignable_cv_destination == 2 &&
+                     settings_->diffusion_assignable()) {
+            settings_->set_diffusion_assigned(true);
           } else {
             state->assignable_cv_destination =
                 state->assignable_cv_destination == 3 ? 0
