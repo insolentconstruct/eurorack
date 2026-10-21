@@ -48,6 +48,7 @@ enum LfoShape {
 class Lfo {
  public:
   typedef int16_t (Lfo::*ComputeSampleFn)();
+  typedef void (Lfo::*ProcessFn)(const GateFlags*, int16_t*, size_t);
    
   Lfo() { }
   ~Lfo() { }
@@ -98,6 +99,9 @@ class Lfo {
   
   inline void set_parameter(int16_t parameter) {
     parameter_ = parameter;
+    wf_gain_ = 2048 + (static_cast<int32_t>(parameter) * (65535 - 2048) >> 15);
+    quantization_levels_ = 2 + (((parameter + 32768) * 15) >> 16);
+    quantization_scale_ = 65535 / (quantization_levels_ - 1);
   }
   
   inline void set_reset_phase(int16_t reset_phase) {
@@ -116,11 +120,15 @@ class Lfo {
   }
   
  private:
-  int16_t ComputeSampleSine();
-  int16_t ComputeSampleTriangle();
-  int16_t ComputeSampleSquare();
-  int16_t ComputeSampleSteps();
-  int16_t ComputeSampleNoise();
+  // The shape is chosen once per block.
+  template<ComputeSampleFn compute_sample>
+  void ProcessShape(const GateFlags* gate_flags, int16_t* out, size_t size);
+
+  inline int16_t ComputeSampleSine();
+  inline int16_t ComputeSampleTriangle();
+  inline int16_t ComputeSampleSquare();
+  inline int16_t ComputeSampleSteps();
+  inline int16_t ComputeSampleNoise();
    
   uint16_t rate_;
   LfoShape shape_;
@@ -140,11 +148,14 @@ class Lfo {
   uint32_t attack_factor_;
   uint32_t decay_factor_;
   int16_t previous_parameter_;
+  int32_t wf_gain_;
+  uint32_t quantization_levels_;
+  uint32_t quantization_scale_;
   
   int32_t value_;
   int32_t next_value_;
   
-  static ComputeSampleFn compute_sample_fn_table_[];
+  static ProcessFn process_fn_table_[];
 
   DISALLOW_COPY_AND_ASSIGN(Lfo);
 };
