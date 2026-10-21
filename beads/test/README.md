@@ -15,7 +15,7 @@ a smaller header.
 
 `audio_reference.sh OUTPUT_DIR` hashes every captured float byte against
 `audio_reference.sha256`. Use the pinned image for stable compiler output.
-`--optimizations` additionally compares against the three preserved DSP headers
+`--optimizations` additionally compares against the four preserved DSP headers
 in `reference/`, built with the same flags. Twenty scenarios cover four media
 and stereo grains, mono grains, delay, synth and unpatched synth. Each uses
 2,400 warm-up blocks and 2,000 capture blocks, checks finite/nonzero output,
