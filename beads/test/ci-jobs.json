@@ -30,5 +30,9 @@
   {
     "name": "processor-audio",
     "run": "make -j\"$(nproc)\" -f beads/test/backup.mk test\nmake -j\"$(nproc)\" -f beads/test/processor.mk test\nmake -j\"$(nproc)\" -f beads/test/mix.mk test\nmake -j\"$(nproc)\" -f beads/test/wavetable.mk test"
+  },
+  {
+    "name": "plaits-synth",
+    "run": "make -j\"$(nproc)\" -f beads/test/plaits_synth.mk test"
   }
 ]

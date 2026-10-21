@@ -42,6 +42,12 @@ PACKAGES       = beads \
 		beads/drivers \
 		beads/dsp \
 		beads/dsp/fx \
+		plaits/dsp/chords \
+		plaits/dsp/engine \
+		plaits/dsp/engine2 \
+		plaits/dsp/fm \
+		plaits/dsp/physical_modelling \
+		plaits/dsp/speech \
 		stmlib/dsp \
 		stmlib/utils \
 		stmlib/ui \
