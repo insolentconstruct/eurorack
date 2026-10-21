@@ -153,6 +153,28 @@ void Process(
   }
   ui.set_freeze_led_state(freeze_block);
   
+  const AttackMode attack_mode = ui.attack_mode();
+  if (attack_mode != processor.attack_input()->mode()) {
+    processor.SetAttacks(attack_mode, kAttackThreshold);
+  }
+  bool attack_onset = false;
+  if (attack_mode && !codec_transition_frames && !freeze_block &&
+      !synth_mode && processor.AttackRecording()) {
+    attack_onset = processor.attack_input()->Process(
+        in,
+        size,
+        1.0f / 2147483648.0f,
+        gain_control.peak(),
+        processor.sample_rate(),
+        normalization_detector.normalized(
+            NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
+        normalization_detector.normalized(
+            NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT));
+    processor.SetAttackOnset(attack_onset);
+  }
+  const bool attack_gate = attack_onset &&
+      attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER;
+  const GateFlags seed_at_block_start = previous_seed;
   bool seed_block = false;
   GateFlags* seed_input = NULL;
   if (!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED)) {
@@ -165,8 +187,25 @@ void Process(
       seed_block |= has_seed;
     }
     seed_input = seed;
+  } else if (attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER) {
+    // Attacks trigger grains as SEED would.
+    for (size_t i = 0; i < size; ++i) {
+      previous_seed = seed[i] = ExtractGateFlags(
+          previous_seed, attack_gate && i == 0);
+    }
+    seed_input = seed;
   } else {
     previous_seed = GATE_FLAG_LOW;
+  }
+  if (attack_gate && seed_input) {
+    // An attack adds a one-sample gate to SEED: only its first two edges can
+    // change, and the SEED input loop above stays as it was.
+    seed[0] = ExtractGateFlags(seed_at_block_start, true);
+    if (size > 1) {
+      seed[1] = ExtractGateFlags(seed[0], seed[1] & GATE_FLAG_HIGH);
+    }
+    previous_seed = seed[size - 1];
+    seed_block = true;
   }
   ui.set_seed_led_state(seed_block && !codec_transition_frames);
   ui.set_overwrite_reserve(synth_mode ? 1.0f : processor.overwrite_reserve());

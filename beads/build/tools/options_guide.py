@@ -227,6 +227,8 @@ DETAILS = [
     "Wavetable synth Manual needs both audio inputs unpatched and FREEZE "
     "off: hold the quality button [A] for about a second and a half to start or stop "
     "it. Patching an input stops it once FREEZE is off.",
+    "Attacks: Snap starts grains on the hits in the recording; Snap and "
+    "trigger also starts a grain on each hit.",
     "Frozen feedback Evolving runs frozen grains through a slowly moving "
     "all-pass loop; FEEDBACK sets how far they drift.",
     "Limiter Off lets loud peaks clip.",

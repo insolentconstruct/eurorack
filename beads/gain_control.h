@@ -71,6 +71,8 @@ class GainControl {
       FloatFrame* out,
       size_t size);
 
+  inline float peak() const { return peak_; }
+
   inline uint8_t vu_meter() const {
     float intensity = peak_ * gain_;
     if (intensity > 1.0f) {

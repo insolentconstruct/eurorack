@@ -4,6 +4,7 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Add attacks (page 2, FEEDBACK): Snap starts grains on the hits in the recording instead of partway through their decay; Snap and trigger also starts a grain on each hit (#58, #47).
 - Add frozen feedback (page 2, REVERB): Evolving runs the grains through a slowly moving all-pass loop while FREEZE is on, so a frozen sound drifts and softens instead of repeating exactly; FEEDBACK sets how far (#4).
 - Add Plaits as a second synth (page 3, REVERB): six voices of Mutable Instruments' Plaits play in place of the wavetable synth, with FEEDBACK picking one of 24 models, TIME, SIZE and SHAPE as HARMONICS, TIMBRE and MORPH, DRY/WET as decay and FREEZE as sustain (#50).
 - Add adjustable grain diffusion: hold [A] and turn REVERB, with either reverb. Once set, it is also an [M] destination for CV. Clouds-style reverb keeps its Beta 1 diffusion until you set an amount (#2).

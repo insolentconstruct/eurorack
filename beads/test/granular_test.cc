@@ -73,6 +73,7 @@ struct TaggedLine {
   mutable float age;
   bool frozen() const { return true; }
   int duration() const { return MAX_DELAY; }
+  int write_ptr() const { return 0; }
   template<int method>
   FloatFrame Read(int delay, float fraction) const {
     age = float(delay) + fraction;

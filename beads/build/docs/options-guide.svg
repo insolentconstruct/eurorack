@@ -205,7 +205,27 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="272" cy="862" r="7" fill="white" stroke="#333" stroke-width="2"/>
 <text x="329" y="845" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">R</text>
 <circle cx="329" cy="862" r="7" fill="white" stroke="#333" stroke-width="2"/>
-<text x="35" y="907" font-size="15" font-weight="normal" fill="#737373" text-anchor="start">FEEDBACK: Not used yet</text>
+<text x="35" y="907" font-size="16" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK</text>
+<text x="35" y="930" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Attacks</text>
+<circle cx="192.5" cy="1002" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 192.5 1002 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 164.900 1026.642 A 37 37 0 0 1 161.703 981.492" fill="none" stroke="#555" stroke-width="3"/>
+<text x="139.63" y="1010.74" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Off</text>
+<path d="M 171.992 971.203 A 37 37 0 0 1 213.008 971.203" fill="none" stroke="#555" stroke-width="3"/>
+<text x="192.5" y="954.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Snap</text>
+<path d="M 223.297 981.492 A 37 37 0 0 1 220.100 1026.642" fill="none" stroke="#555" stroke-width="3"/>
+<text x="245.37" y="1010.74" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Snap and trigger</text>
+<path d="M 162.912 979.784 A 37 37 0 0 1 170.284 972.412" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 214.716 972.412 A 37 37 0 0 1 222.088 979.784" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="44" cy="1047" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="60" y="1052" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Off</text>
+<text x="347" y="1052" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
+<circle cx="44" cy="1069" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="60" y="1074" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Snap</text>
+<text x="347" y="1074" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
+<circle cx="44" cy="1091" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="60" y="1096" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Snap and trigger</text>
+<text x="347" y="1096" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
 <text x="365" y="907" font-size="16" font-weight="bold" fill="#222" text-anchor="start">DRY/WET</text>
 <text x="365" y="930" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Delay mode</text>
 <circle cx="522.5" cy="1002" r="22" fill="white" stroke="#333" stroke-width="2"/>

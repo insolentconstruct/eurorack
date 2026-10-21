@@ -34,6 +34,7 @@
 #include "stmlib/stmlib.h"
 #include "beads/drivers/leds.h"
 #include "beads/dsp/limiter.h"
+#include "beads/dsp/attack_detector.h"
 #include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
 
@@ -47,7 +48,7 @@ const int kNumOptionPages = 3;
 enum OptionSetting {
   OPTION_RESERVED, OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB,
   OPTION_DELAY, OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_FROZEN,
-  OPTION_SYNTH, OPTION_LAST
+  OPTION_SYNTH, OPTION_ATTACKS, OPTION_LAST
 };
 
 struct OptionPage {
@@ -86,7 +87,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 27;
+const size_t kNumOptionValues = 30;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -137,6 +138,8 @@ class Options {
 
   inline bool evolving_preview() const { return evolving_preview_; }
 
+  inline AttackMode attack_preview() const { return attack_preview_; }
+
   inline bool seed_allowed() const {
     return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&
         pitch_preview_ >= PITCH_SCALE_FIFTHS;
@@ -184,6 +187,7 @@ class Options {
   DelayMode delay_preview_;
   PitchScale pitch_preview_;
   bool evolving_preview_;
+  AttackMode attack_preview_;
   PitchScale scale_;
   bool seed_held_;
   uint32_t seed_time_;

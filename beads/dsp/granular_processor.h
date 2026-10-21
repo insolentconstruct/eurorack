@@ -62,6 +62,7 @@ class GranularProcessor {
     filter_mode_.reserved = 0;
     filter_mode_.position = 0;
     
+    attacks_.Init(sample_rate);
     feedback_ = 0.0f;
     shape_ = 0.0f;
     speed_ = 0.0f;
@@ -81,7 +82,11 @@ class GranularProcessor {
     input_limiter_.Init(1.0f / sample_rate, 0.95f);
   }
   
+  inline void SetAttacks(int mode) { attacks_.Configure(mode); }
+  inline void SetAttackOnset(bool onset) { attacks_.SetOnset(onset); }
+
   inline void Reset() {
+    attacks_.Reset();
     mono_delay_line_.Reset();
     stereo_delay_line_.Reset();
     granular_player_.Reset();
@@ -361,6 +366,20 @@ class GranularProcessor {
     const float lp_coefficient = lp_coefficients[resolution];
     const float soft_limit_gain = soft_limit_gains[resolution];
     
+    // Attack marks follow the recording, in samples written.
+    AttackDetector* attacks = attacks_.mode() ? &attacks_ : NULL;
+    granular_player_.SetAttacks(attacks);
+    unsigned writes = 0;
+    if (attacks) {
+      for (size_t i = 0; i < size; ++i) {
+        writes += !freeze[i];
+      }
+      attacks->BeginBlock(
+          mono ? mono_delay_line_.write_ptr() : stereo_delay_line_.write_ptr(),
+          mono ? max_delay * 2 : max_delay,
+          triggers != NULL,
+          freeze[0]);
+    }
     while (size--) {
       const float feedback = feedback_modulation.Next();
       FloatFrame input = *in;
@@ -443,6 +462,9 @@ class GranularProcessor {
       ++in;
       ++out;
     }
+    if (attacks) {
+      attacks->EndBlock(writes);
+    }
   }
       
   DelayGranularPlayer dummy_granular_player_;
@@ -467,7 +489,9 @@ class GranularProcessor {
   RandomWalkModulation pitch_modulation_;
   
   Limiter input_limiter_;
-    
+
+  AttackDetector attacks_;
+
   DISALLOW_COPY_AND_ASSIGN(GranularProcessor);
 };
 

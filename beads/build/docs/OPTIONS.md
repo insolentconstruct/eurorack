@@ -40,7 +40,7 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Not used yet | — | — |
+| FEEDBACK | Attacks | Off / Snap / Snap and trigger | green; steady / yellow; steady / red; steady |
 | DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
 | REVERB | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
 
@@ -80,6 +80,8 @@ Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays gr
 Clouds-style changes the reverb character and, until a diffusion amount is set with [A]+REVERB, adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
 Wavetable synth Manual needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
+
+Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
 
 Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
