@@ -20,6 +20,10 @@
     "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestCloudsOutput TestDiffusionAmount'"
   },
   {
+    "name": "spectral",
+    "run": "make -j\"$(nproc)\" -f beads/test/spectral.mk test"
+  },
+  {
     "name": "firmware-controls",
     "run": "make -j\"$(nproc)\" -f beads/test/firmware.mk test\nmake -j\"$(nproc)\" -f beads/test/options.mk test\nmake -j\"$(nproc)\" -f beads/test/gain.mk test\nmake -j\"$(nproc)\" -f beads/test/pitch_quantizer.mk test\nmake -j\"$(nproc)\" -f beads/test/trigger.mk test"
   },
