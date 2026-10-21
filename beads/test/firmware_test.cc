@@ -91,9 +91,10 @@ extern "C" void SysTick_Handler();
 void MainLoopStep() {
   ui.DoEvents();
   MonitorStateChange();
-  if (!synth_mode) {
+  if (!synth_mode && !processor.spectral()) {
     background_buffer_backup.Process(ui.freeze_led_state());
   }
+  processor.Buffer();
 }
 
 template<typename T>
@@ -1028,6 +1029,128 @@ void TestPlaitsSynthSelection() {
   }
 }
 
+// A square wave in, with a main loop step and a SysTick every four blocks.
+double RunSquare(Rig* r, int blocks) {
+  double energy = 0.0;
+  for (int i = 0; i < blocks; ++i) {
+    r->audio = (i / 2) & 1 ? 0x10000000 : -0x10000000;
+    if (i % 4 == 0) {
+      MainLoopStep();
+    }
+    r->Block();
+    if (i % 4 == 3) {
+      SysTick_Handler();
+    }
+    for (size_t j = 0; j < codec.block_size_; ++j) {
+      const double l = r->out[j].l / 2147483648.0;
+      const double rr = r->out[j].r / 2147483648.0;
+      energy += l * l + rr * rr;
+    }
+  }
+  return energy;
+}
+
+// Engine changes fade out, clear the recording and fade back in. A frozen
+// buffer saved to flash is kept, and returns with the granular engine.
+// Spectral never starts the wavetable synth.
+void TestSpectralEngine() {
+  test_checker.Start("TestSpectralEngine");
+  extern float reverb_style_gain;
+  extern uint8_t delay_buffer_1[];
+  extern uint8_t delay_buffer_2[];
+  Rig r(false, false);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+  BackgroundBufferBackup::BufferBackupHeader* header =
+      reinterpret_cast<BackgroundBufferBackup::BufferBackupHeader*>(0x08100000);
+  memset(header, 0, sizeof(*header));
+  header->tag = 0x5a5a5246;
+  header->write_ptr = 1234;
+  header->media = Processor::MEDIA_DIGITAL;
+  header->mono = false;
+  settings.mutable_state()->frozen = true;
+  RunSquare(&r, 2400);
+  CHECK(!synth_mode && !processor.spectral() && !ui.freeze_button_state());
+
+  settings.set_spectral(true);
+  SysTick_Handler();
+  CHECK(ui.spectral() && !processor.spectral());
+  float gain = reverb_style_gain;
+  bool faded = false;
+  for (int i = 0; i < 400 && !processor.spectral(); ++i) {
+    RunSquare(&r, 1);
+    CHECK(reverb_style_gain <= gain);
+    gain = reverb_style_gain;
+    faded |= gain == 0.0f;
+  }
+  CHECK(faded && processor.spectral() && codec_transition_frames > 0);
+  bool cleared = true;
+  for (size_t i = 0; i < 512 * 1024; ++i) {
+    cleared = cleared && delay_buffer_1[i] == 0;
+  }
+  for (size_t i = 0; i < 256 * 1024; ++i) {
+    cleared = cleared && delay_buffer_2[i] == 0;
+  }
+  CHECK(cleared);
+  CHECK(settings.state().frozen && header->tag == 0x5a5a5246);
+
+  // Silent while the codec restarts, then back to full level.
+  CHECK(RunSquare(&r, 990) == 0.0);
+  CHECK(RunSquare(&r, 4000) > 1.0);
+  CHECK(reverb_style_gain == 1.0f);
+  const SpectralProcessor& spectral = processor.spectral_processor_;
+  CHECK(std::isfinite(spectral.previous_sample_.l) &&
+        std::isfinite(spectral.previous_sample_.r));
+
+  // FREEZE holds the spectrum; nothing is saved to flash.
+  const unsigned writes = test_writes;
+  test_freeze_input = true;
+  RunSquare(&r, 4);
+  CHECK(spectral.parameters_.freeze);
+  r.Advance(11000);
+  CHECK(test_writes == writes);
+  test_freeze_input = false;
+  RunSquare(&r, 4);
+
+  // Unpatched inputs do not start the synth, automatically or on a hold.
+  r.left = r.right = false;
+  r.Settle();
+  r.Advance(11000);
+  MainLoopStep();
+  CHECK(!synth_mode);
+  settings.set_self_play_on_request(true);
+  r.HoldMedia();
+  CHECK(!synth_mode && !ui.self_play_requested());
+  r.left = r.right = true;
+
+  // Back to granular: the saved frozen buffer returns, with its own quality
+  // even if another was picked meanwhile.
+  settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
+  RunSquare(&r, 3000);
+  CHECK(processor.spectral() && processor.media() == Processor::MEDIA_CLEAN_TAPE);
+  settings.set_spectral(false);
+  SysTick_Handler();
+  for (int i = 0; i < 400 && processor.spectral(); ++i) {
+    RunSquare(&r, 1);
+  }
+  CHECK(!processor.spectral() && !synth_mode);
+  CHECK(ui.freeze_button_state());
+  CHECK(*processor.mutable_delay_write_ptr() == 1234);
+  RunSquare(&r, 2000);
+  CHECK(reverb_style_gain == 1.0f);
+  CHECK(processor.media() == Processor::MEDIA_DIGITAL);
+  CHECK(settings.state().media == Processor::MEDIA_DIGITAL);
+  CHECK(*processor.mutable_delay_write_ptr() == 1234);
+
+  // Starting in spectral leaves the saved buffer in flash.
+  settings.set_spectral(true);
+  settings.SaveState();
+  r.Reboot();
+  CHECK(processor.spectral() && !ui.freeze_button_state());
+  CHECK(settings.state().frozen && header->tag == 0x5a5a5246);
+  RunSquare(&r, 4000);
+  CHECK(processor.spectral() && !synth_mode);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -1051,5 +1174,6 @@ int main() {
   TestQuantizedPitchChain();
   TestSelfPlayFrozenBackup();
   TestPlaitsSynthSelection();
+  TestSpectralEngine();
   return test_checker.failures() ? 1 : 0;
 }

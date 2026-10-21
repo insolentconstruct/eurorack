@@ -51,9 +51,12 @@ extern const int8_t* lookup_table_i8_table[];
 extern const int16_t* wavetables_table[];
 
 extern const float lut_sine[];
+extern const float lut_sine_window_4096[];
 extern const int16_t wav_integrated_waves[];
 #define LUT_SINE 0
 #define LUT_SINE_SIZE 1281
+#define LUT_SINE_WINDOW_4096 1
+#define LUT_SINE_WINDOW_4096_SIZE 4096
 #define WAV_INTEGRATED_WAVES 0
 #define WAV_INTEGRATED_WAVES_SIZE 50180
 

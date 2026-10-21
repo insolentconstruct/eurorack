@@ -42,6 +42,7 @@ PACKAGES       = beads \
 		beads/drivers \
 		beads/dsp \
 		beads/dsp/fx \
+		beads/dsp/pvoc \
 		plaits/dsp/chords \
 		plaits/dsp/engine \
 		plaits/dsp/engine2 \
@@ -51,8 +52,13 @@ PACKAGES       = beads \
 		stmlib/dsp \
 		stmlib/utils \
 		stmlib/ui \
-		stmlib/system
+		stmlib/system \
+		stmlib/third_party/STM/CMSIS/DSP_Lib/CommonTables \
+		stmlib/third_party/STM/CMSIS/DSP_Lib/TransformFunctions
 RESOURCES      = beads/resources
+
+# The spectral engine uses CMSIS' FFT, faster than ShyFFT on the H7.
+PROJECT_CONFIGURATION = -DUSE_ARM_FFT
 
 # Also tested with latest gcc version (8.3.1). Improvement of code size, no
 # improvement of CPU use, much longer compile time.

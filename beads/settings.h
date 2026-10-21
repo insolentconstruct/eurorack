@@ -72,9 +72,9 @@ struct State {
   uint8_t diffusion;
   uint8_t frozen_feedback;
   uint8_t attacks;
-  uint8_t padding[1];
+  uint8_t engine;
   uint8_t synth_engine;
-  uint8_t padding_end[2];
+  uint8_t padding[2];
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -109,10 +109,10 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(
       offsetof(State, frozen_feedback) == 18, state_frozen_feedback_offset);
   STATIC_ASSERT(offsetof(State, attacks) == 19, state_attacks_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 20, state_padding_offset);
+  STATIC_ASSERT(offsetof(State, engine) == 20, state_engine_offset);
   STATIC_ASSERT(
       offsetof(State, synth_engine) == 21, state_synth_engine_offset);
-  STATIC_ASSERT(offsetof(State, padding_end) == 22, state_padding_end_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 22, state_padding_offset);
 };
 
 const uint8_t kOptionTag = 0xa0;
@@ -145,6 +145,27 @@ class Settings {
 
   inline void set_self_play_on_request(bool on_request) {
     state_.self_play = on_request ? (kOptionTag + 1) : 0;
+  }
+
+  inline bool spectral() const {
+    return state_.engine == (kOptionTag + 1);
+  }
+
+  inline void set_spectral(bool spectral) {
+    state_.engine = spectral ? (kOptionTag + 1) : 0;
+  }
+
+  // Spectral keeps byte 11, which firmware without it reads as before.
+  inline Engine engine() const {
+    return spectral() ? ENGINE_SPECTRAL : (self_play_on_request()
+        ? ENGINE_GRANULAR_MANUAL_SYNTH : ENGINE_GRANULAR);
+  }
+
+  inline void set_engine(Engine engine) {
+    set_spectral(engine == ENGINE_SPECTRAL);
+    if (engine != ENGINE_SPECTRAL) {
+      set_self_play_on_request(engine == ENGINE_GRANULAR_MANUAL_SYNTH);
+    }
   }
 
   inline bool clouds_style() const {

@@ -251,12 +251,11 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="695" y="930" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Frozen feedback</text>
 <circle cx="852.5" cy="1002" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 852.5 1002 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 824.900 1026.642 A 37 37 0 0 1 821.703 981.492" fill="none" stroke="#555" stroke-width="3"/>
-<text x="799.63" y="1010.74" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
-<path d="M 831.992 971.203 A 37 37 0 0 1 873.008 971.203" fill="none" stroke="#555" stroke-width="3"/>
-<text x="852.5" y="954.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Evolving</text>
-<path d="M 822.912 979.784 A 37 37 0 0 1 830.284 972.412" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 874.716 972.412 A 37 37 0 0 1 882.088 979.784" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 824.900 1026.642 A 37 37 0 0 1 845.225 965.722" fill="none" stroke="#555" stroke-width="3"/>
+<text x="802.22" y="990.23" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
+<path d="M 859.775 965.722 A 37 37 0 0 1 880.100 1026.642" fill="none" stroke="#555" stroke-width="3"/>
+<text x="902.78" y="990.23" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Evolving</text>
+<path d="M 847.287 965.369 A 37 37 0 0 1 857.713 965.369" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="704" cy="1047" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
 <text x="720" y="1052" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Stock</text>
 <text x="1007" y="1052" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
@@ -272,20 +271,26 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="329" y="1131" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">R</text>
 <circle cx="329" cy="1148" r="7" fill="white" stroke="#333" stroke-width="2"/>
 <text x="35" y="1193" font-size="16" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK</text>
-<text x="35" y="1216" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth</text>
+<text x="35" y="1216" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Engine</text>
 <circle cx="192.5" cy="1288" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 192.5 1288 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 164.900 1312.642 A 37 37 0 0 1 185.225 1251.722" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.22" y="1276.23" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Automatic</text>
-<path d="M 199.775 1251.722 A 37 37 0 0 1 220.100 1312.642" fill="none" stroke="#555" stroke-width="3"/>
-<text x="242.78" y="1276.23" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Manual</text>
-<path d="M 187.287 1251.369 A 37 37 0 0 1 197.713 1251.369" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 164.900 1312.642 A 37 37 0 0 1 161.703 1267.492" fill="none" stroke="#555" stroke-width="3"/>
+<text x="139.63" y="1296.74" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Granular</text>
+<path d="M 171.992 1257.203 A 37 37 0 0 1 213.008 1257.203" fill="none" stroke="#555" stroke-width="3"/>
+<text x="192.5" y="1240.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Manual synth</text>
+<path d="M 223.297 1267.492 A 37 37 0 0 1 220.100 1312.642" fill="none" stroke="#555" stroke-width="3"/>
+<text x="245.37" y="1296.74" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Spectral</text>
+<path d="M 162.912 1265.784 A 37 37 0 0 1 170.284 1258.412" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 214.716 1258.412 A 37 37 0 0 1 222.088 1265.784" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="44" cy="1333" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="60" y="1338" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Automatic (Stock)</text>
+<text x="60" y="1338" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Granular (Stock)</text>
 <text x="347" y="1338" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
 <circle cx="44" cy="1355" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="60" y="1360" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Manual</text>
+<text x="60" y="1360" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Granular, manual synth</text>
 <text x="347" y="1360" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
+<circle cx="44" cy="1377" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="60" y="1382" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Spectral</text>
+<text x="347" y="1382" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
 <text x="365" y="1193" font-size="16" font-weight="bold" fill="#222" text-anchor="start">DRY/WET</text>
 <text x="365" y="1216" font-size="18" font-weight="bold" fill="#222" text-anchor="start">Limiter</text>
 <circle cx="522.5" cy="1288" r="22" fill="white" stroke="#333" stroke-width="2"/>

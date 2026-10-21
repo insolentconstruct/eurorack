@@ -34,7 +34,7 @@ namespace {
 const char* const kPageNames[] = { "REVERB", "FEEDBACK", "DRY/WET" };
 const char* const kOptionNames[] = {
   "Not used yet", "Pitch scale", "Stereo width", "Reverb character",
-  "Delay mode", "Wavetable synth", "Limiter", "Frozen feedback",
+  "Delay mode", "Engine", "Limiter", "Frozen feedback",
   "Synth engine", "Attacks"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
@@ -61,8 +61,9 @@ const ValueNames kValueNames[] = {
   { "Auto (Stock)", "green" },
   { "Disabled", "yellow" },
   { "Wide/smooth filter", "red" },
-  { "Automatic (Stock)", "green" },
-  { "Manual", "yellow" },
+  { "Granular (Stock)", "green" },
+  { "Granular, manual synth", "yellow" },
+  { "Spectral", "red" },
   { "Stock", "green" },
   { "Fast release", "yellow" },
   { "Off", "red" },

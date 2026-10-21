@@ -54,6 +54,8 @@ void Processor::Init(
   processor_vintage_digital_.Init(32000.0f, buffers);
   processor_clean_tape_.Init(24000.0f, buffers);
   processor_dirty_tape_.Init(24000.0f, buffers);
+  spectral_processor_.Init(buffers);
+  spectral_ = false;
   
   dry_ = 0.0f;
   wet_ = 0.0f;
@@ -108,6 +110,14 @@ void Processor::Configure(Media media, bool mono) {
   }
   
   float sr = sample_rate();
+  if (spectral_) {
+    const Resolution resolution[4] = {
+      RESOLUTION_8_BIT, RESOLUTION_12_BIT, RESOLUTION_12_BIT, RESOLUTION_16_BIT
+    };
+    spectral_processor_.Reset(
+        sr / float(ratio()), ratio(), resolution[media_], mono);
+    delay_mode_transition_ = -kDelayModeTransitionTime;
+  }
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
@@ -127,7 +137,7 @@ void Processor::Process(
     size_t size) {
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
-  const float direction = delay_mode_ != DELAY_MODE_NEVER &&
+  const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
       parameters.size.base > threshold ? 1.0f : -1.0f;
   delay_mode_transition_ += direction * float(size) / sample_rate();
   
@@ -181,50 +191,57 @@ void Processor::Process(
   
   // Granular processing.
   const float feedback = mix_parameters.feedback;
-  switch (media_) {
-    case MEDIA_DIGITAL:
-      processor_digital_.Process(
-          triggers, taps, freeze, parameters, feedback, mono_, in, out, size);
-      copy(&in[0], &in[size], &dry_signal[0]);
-      break;
+  if (spectral_) {
+    QuantizeDrySignal(in, dry_signal, size);
+    spectral_processor_.Process(
+        seed_button_state, seed_input, freeze, density, parameters, feedback,
+        dry_signal, out, size);
+  } else {
+    switch (media_) {
+      case MEDIA_DIGITAL:
+        processor_digital_.Process(
+            triggers, taps, freeze, parameters, feedback, mono_, in, out, size);
+        copy(&in[0], &in[size], &dry_signal[0]);
+        break;
     
-    case MEDIA_VINTAGE_DIGITAL:
-      processor_vintage_digital_.Process(
-          triggers, taps, freeze, parameters, feedback, mono_, in, out, size);
-      for (size_t i = 0; i < size; ++i) {
-        dry_signal[i].l = static_cast<int32_t>(in[i].l * 4096.0f) / 4096.0f;
-        dry_signal[i].r = static_cast<int32_t>(in[i].r * 4096.0f) / 4096.0f;
-      }
-      break;
+      case MEDIA_VINTAGE_DIGITAL:
+        processor_vintage_digital_.Process(
+            triggers, taps, freeze, parameters, feedback, mono_, in, out, size);
+        for (size_t i = 0; i < size; ++i) {
+          dry_signal[i].l = static_cast<int32_t>(in[i].l * 4096.0f) / 4096.0f;
+          dry_signal[i].r = static_cast<int32_t>(in[i].r * 4096.0f) / 4096.0f;
+        }
+        break;
     
-    case MEDIA_CLEAN_TAPE:
-      processor_clean_tape_.Process(
-          triggers, taps, freeze, parameters, feedback, mono_, in, out,
-          size);
-      copy(&in[0], &in[size], &dry_signal[0]);
-      break;
+      case MEDIA_CLEAN_TAPE:
+        processor_clean_tape_.Process(
+            triggers, taps, freeze, parameters, feedback, mono_, in, out,
+            size);
+        copy(&in[0], &in[size], &dry_signal[0]);
+        break;
     
-    case MEDIA_DIRTY_TAPE:
-      processor_dirty_tape_.Process(
-          triggers, taps, freeze, parameters, feedback, mono_, in, out,
-          size);
-      for (size_t i = 0; i < size; ++i) {
-        dry_signal[i].l = MuLaw2Lin(
-            Lin2MuLaw(
-                stmlib::Clip16(static_cast<int32_t>(in[i].l * 32768.0f))));
-        dry_signal[i].r = MuLaw2Lin(
-            Lin2MuLaw(
-                stmlib::Clip16(static_cast<int32_t>(in[i].r * 32768.0f))));
-      }
-      break;
-  }
+      case MEDIA_DIRTY_TAPE:
+        processor_dirty_tape_.Process(
+            triggers, taps, freeze, parameters, feedback, mono_, in, out,
+            size);
+        for (size_t i = 0; i < size; ++i) {
+          dry_signal[i].l = MuLaw2Lin(
+              Lin2MuLaw(
+                  stmlib::Clip16(static_cast<int32_t>(in[i].l * 32768.0f))));
+          dry_signal[i].r = MuLaw2Lin(
+              Lin2MuLaw(
+                  stmlib::Clip16(static_cast<int32_t>(in[i].r * 32768.0f))));
+        }
+        break;
+    }
   
-  if (evolving_feedback_ || !feedback_diffuser_.idle()) {
-    feedback_diffuser_.Process(
-        out, feedback, evolving_feedback_ && freeze[size - 1], size);
-  }
-  if (diffusion_ > 0.0f && !delay_mode) {
-    diffuser_.Process(out, size);
+    if (evolving_feedback_ || !feedback_diffuser_.idle()) {
+      feedback_diffuser_.Process(
+          out, feedback, evolving_feedback_ && freeze[size - 1], size);
+    }
+    if (diffusion_ > 0.0f && !delay_mode) {
+      diffuser_.Process(out, size);
+    }
   }
 
   // Fade-out / Fade-in the dry signal when switching between granular and
@@ -280,6 +297,36 @@ void Processor::Process(
       out[i].l = (out[i].l + out[i].r) * 0.5f;
       out[i].r = gate_out[i] ? -0.8f : 0.0f;
     }
+  }
+}
+
+void Processor::QuantizeDrySignal(
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size) {
+  // As the granular path's dry signal.
+  switch (media_) {
+    case MEDIA_VINTAGE_DIGITAL:
+      for (size_t i = 0; i < size; ++i) {
+        out[i].l = static_cast<int32_t>(in[i].l * 4096.0f) / 4096.0f;
+        out[i].r = static_cast<int32_t>(in[i].r * 4096.0f) / 4096.0f;
+      }
+      break;
+
+    case MEDIA_DIRTY_TAPE:
+      for (size_t i = 0; i < size; ++i) {
+        out[i].l = MuLaw2Lin(
+            Lin2MuLaw(
+                stmlib::Clip16(static_cast<int32_t>(in[i].l * 32768.0f))));
+        out[i].r = MuLaw2Lin(
+            Lin2MuLaw(
+                stmlib::Clip16(static_cast<int32_t>(in[i].r * 32768.0f))));
+      }
+      break;
+
+    default:
+      copy(&in[0], &in[size], &out[0]);
+      break;
   }
 }
 

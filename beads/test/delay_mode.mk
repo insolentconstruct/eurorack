@@ -1,6 +1,11 @@
 TARGET = delay_mode_test
 CC_FILES       = 		delay_mode_test.cc \
 		processor.cc \
+		spectral_processor.cc \
+		phase_vocoder.cc \
+		stft.cc \
+		frame_transformation.cc \
+		atan.cc \
 		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \

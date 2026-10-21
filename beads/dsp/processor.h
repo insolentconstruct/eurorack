@@ -33,6 +33,7 @@
 
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
+#include "beads/dsp/spectral_processor.h"
 #include "beads/dsp/fx/diffuser.h"
 #include "beads/dsp/fx/feedback_diffuser.h"
 #include "beads/dsp/fx/reverb.h"
@@ -86,7 +87,7 @@ class Processor {
 
   // Attacks are marked only while granular playback records.
   inline bool AttackRecording() const {
-    return delay_mode_transition_ <= 0.0f;
+    return delay_mode_transition_ <= 0.0f && !spectral_;
   }
 
   void SetAttackOnset(bool onset) {
@@ -109,6 +110,17 @@ class Processor {
   
   inline Media media() const { return media_; }
   inline bool mono() const { return mono_; }
+
+  // Takes effect at the next Configure, which clears the recording.
+  inline void set_spectral(bool spectral) { spectral_ = spectral; }
+  inline bool spectral() const { return spectral_; }
+
+  // Main loop: the spectral engine's frames.
+  inline void Buffer() {
+    if (spectral_) {
+      spectral_processor_.Buffer();
+    }
+  }
   
   inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
@@ -255,6 +267,7 @@ class Processor {
     processor_vintage_digital_.set_pitch_scale(scale);
     processor_clean_tape_.set_pitch_scale(scale);
     processor_dirty_tape_.set_pitch_scale(scale);
+    spectral_processor_.set_pitch_scale(scale);
   }
 
 #ifdef DWT_CALIBRATION
@@ -264,6 +277,8 @@ class Processor {
 #endif  // DWT_CALIBRATION
 
  private:
+  void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+
   GranularProcessor<
       RESOLUTION_16_BIT,
       kDelayBufferSizeBits / (16 * 2),
@@ -287,6 +302,9 @@ class Processor {
       kDelayBufferSizeBits / (8 * 2),
       2> processor_dirty_tape_;
 #endif  // ENABLE_HARDWARE_24K
+
+  SpectralProcessor spectral_processor_;
+  bool spectral_;
 
   TriggerGenerator trigger_generator_;
   DelayController delay_controller_;

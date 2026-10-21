@@ -35,7 +35,7 @@ namespace beads {
 const OptionPage kOptionPages[kNumOptionPages] = {
   { 2, { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB } },
   { 0, { OPTION_ATTACKS, OPTION_DELAY, OPTION_FROZEN } },
-  { 1, { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_SYNTH } }
+  { 1, { OPTION_ENGINE, OPTION_LIMITER, OPTION_SYNTH } }
 };
 const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0,
@@ -74,10 +74,12 @@ const OptionValue kOptionValues[] = {
     { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_DELAY, 2,
     { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SELF_PLAY, 0,
+  { OPTION_ENGINE, 0,
     { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SELF_PLAY, 1,
+  { OPTION_ENGINE, 1,
     { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ENGINE, 2,
+    { 255, 0, 0 }, PULSE_STEADY },
   { OPTION_LIMITER, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_LIMITER, 1,
@@ -107,8 +109,8 @@ void Options::Init() {
   page_ = 0;
   selected_ = OPTION_PITCH;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
-  self_play_preview_ = clouds_preview_ = evolving_preview_ = false;
-  plaits_preview_ = false;
+  clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
+  engine_preview_ = ENGINE_GRANULAR;
   attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
@@ -267,14 +269,8 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_DELAY:
           delay_preview_ = DelayMode(zone_[i]);
           break;
-        case OPTION_SELF_PLAY:
-          if (pot < kOptionsHalfLow) {
-            self_play_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            self_play_preview_ = true;
-          }
+        case OPTION_ENGINE:
+          engine_preview_ = Engine(zone_[i]);
           break;
         case OPTION_LIMITER:
           limiter_preview_ = OutputLimiterMode(zone_[i]);
@@ -337,7 +333,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
   if (eligible_ && assign &&
       uint32_t(now - press_time_) >= kOptionsHoldTime) {
     limiter_preview_ = settings.output_limiter_mode();
-    self_play_preview_ = settings.self_play_on_request();
+    engine_preview_ = settings.engine();
     clouds_preview_ = settings.clouds_style();
     plaits_preview_ = settings.plaits_synth();
     pitch_preview_ = settings.pitch_scale();
@@ -363,8 +359,8 @@ int Options::Value(OptionSetting setting) const {
       return clouds_preview_;
     case OPTION_DELAY:
       return delay_preview_;
-    case OPTION_SELF_PLAY:
-      return self_play_preview_;
+    case OPTION_ENGINE:
+      return engine_preview_;
     case OPTION_LIMITER:
       return limiter_preview_;
     case OPTION_FROZEN:

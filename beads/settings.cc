@@ -77,10 +77,9 @@ bool Settings::Init(bool recovery_mode) {
   state_.diffusion = 0;
   state_.frozen_feedback = 0;
   state_.attacks = 0;
+  state_.engine = 0;
   state_.synth_engine = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
-  fill(&state_.padding_end[0],
-      &state_.padding_end[sizeof(state_.padding_end)], 0);
   
   if (recovery_mode) {
     chunk_storage_.Recover(&persistent_data_, &state_);
@@ -109,6 +108,7 @@ void Settings::SavePersistentData() {
 void Settings::NormalizeOptions() {
   set_output_limiter_mode(output_limiter_mode());
   set_self_play_on_request(self_play_on_request());
+  set_spectral(spectral());
   set_clouds_style(clouds_style());
   set_pitch_scale(pitch_scale());
   set_stereo_width(stereo_width());
@@ -125,8 +125,6 @@ void Settings::NormalizeOptions() {
 void Settings::SaveState() {
   NormalizeOptions();
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
-  fill(&state_.padding_end[0],
-      &state_.padding_end[sizeof(state_.padding_end)], 0);
   chunk_storage_.SaveState();
 }
 

@@ -387,9 +387,10 @@ cases = [
     'const float max_feedback_gain = taps ? 1.5f : 3.0f;',
     'const float max_feedback_gain = taps ? 0.0f : 3.0f;'),
   ('TestContinuousDelayPlayback', 'delay_mode', 'beads/dsp/processor.cc',
-    'const float direction = delay_mode_ != DELAY_MODE_NEVER &&\n'
+    'delay_mode_ != DELAY_MODE_NEVER &&\n'
     '      parameters.size.base > threshold ? 1.0f : -1.0f;',
-    'const float direction = parameters.size.base > threshold ? -1.0f : -1.0f;'),
+    'delay_mode_ != DELAY_MODE_NEVER &&\n'
+    '      parameters.size.base > threshold ? -1.0f : -1.0f;'),
   ('TestDelayModeFade', 'delay_mode', 'beads/dsp/processor.cc',
     'kDelayModeFadeTime = 0.75f;',
     'kDelayModeFadeTime = 0.5f;'),
@@ -438,15 +439,18 @@ cases = [
   ('TestMonophonicGrains', 'granular', 'beads/dsp/granular_player.h',
     'if (monophonic_mode) {',
     'if (false && monophonic_mode) {'),
-  ('TestOptionsKnobsAndSettling', 'options', 'beads/options.cc',
-    'if (pot > kOptionsHalfHigh) {\n            self_play_preview_ = true;',
-    'if (pot > 0.93f) {\n            self_play_preview_ = true;'),
+  ('TestEngineOption', 'options', 'beads/options.cc',
+    'engine_preview_ = Engine(zone_[i]);',
+    'engine_preview_ = Engine(zone_[i] & 1);'),
+  ('TestEngineStorage', 'options', 'beads/settings.h',
+    'state_.engine == (kOptionTag + 1)',
+    'state_.engine != 0'),
   ('TestSelfPlayStorage', 'options', 'beads/settings.h',
     'state_.self_play == (kOptionTag + 1)',
     'state_.self_play != 0'),
   ('TestSelfPlayHold', 'options', 'beads/ui.cc',
-    'settings_->self_play_on_request() && no_input_',
-    'settings_->self_play_on_request()'),
+    '!spectral_ &&\n                  no_input_ &&',
+    '!spectral_ &&'),
   ('TestModulatedFreeze', 'backup', 'beads/background_buffer_backup.cc',
     '(now - freeze_start_time_) >= backup_delay_',
     '(now - freeze_start_time_) >= kBackupDelay'),
@@ -484,8 +488,26 @@ cases = [
     'if (ui.should_ignore_state_change() || codec_transition_frames) {',
     'if ((ui.should_ignore_state_change() && !ui.freeze_led_state()) || codec_transition_frames) {'),
   ('TestOverwriteIndicator', 'firmware', 'beads/beads.cc',
-    'synth_mode ? 1.0f : processor.overwrite_reserve()',
+    'synth_mode || processor.spectral()\n      ? 1.0f : processor.overwrite_reserve()',
     '1.0f'),
+  ('TestSpectralEngine', 'firmware', 'beads/beads.cc',
+    'if (!processor.spectral() && background_buffer_backup.Load()) {',
+    'if (false) {'),
+  ('TestSpectralEngine', 'firmware', 'beads/beads.cc',
+    'if (normalization_detector.no_input() && !processor.spectral()) {',
+    'if (normalization_detector.no_input()) {'),
+  ('TestCloudsReference', 'spectral', 'beads/dsp/pvoc/stft.cc',
+    'fft_out_[i + fft_size_ / 2] = i ? -fft_in_[2 * i + 1] : fft_in_[1];',
+    'fft_out_[i + fft_size_ / 2] = fft_in_[2 * i + 1];'),
+  ('TestCloudsReference', 'spectral', 'beads/dsp/pvoc/frame_transformation.cc',
+    'float warped = 4.0f * x * (1.0f - x) * (1.0f - x) * (1.0f - x);',
+    'float warped = 4.0f * x * (1.0f - x) * (1.0f - x);'),
+  ('TestFrameControls', 'spectral', 'beads/dsp/spectral_processor.cc',
+    'draw_counter_ += kSpectralHopSize;',
+    'draw_counter_ += kSpectralHopSize / 2;'),
+  ('TestSpectralBypasses', 'spectral', 'beads/dsp/processor.cc',
+    'const float direction = !spectral_ && ',
+    'const float direction = '),
   ('TestTriggerOutput', 'firmware', 'beads/beads.cc',
     'm.output_gate = settings.state().gate_output_mode;',
     'm.output_gate = false;'),
@@ -566,7 +588,7 @@ started = time.monotonic()
 results = []
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   work = pathlib.Path(tmp).resolve()
-  for directory in ('beads', 'plaits', 'stmlib'):
+  for directory in ('beads', 'plaits', 'stmlib', 'clouds'):
     shutil.copytree(root / directory, work / directory,
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))
@@ -620,8 +642,8 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
             ['nice', '-n', '10', 'make', '-s', '-j4', '-f',
                 'beads/test/' + suite + '.mk', 'test'],
             cwd=work, stdout=stream, stderr=subprocess.STDOUT,
-            timeout=240 if suite in (
-                'firmware', 'clouds', 'granular', 'plaits_synth') else 60)
+            timeout=240 if suite in ('firmware', 'clouds', 'granular',
+                'plaits_synth', 'spectral') else 60)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestFinalBankRendering':

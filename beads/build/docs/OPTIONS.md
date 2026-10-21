@@ -48,7 +48,7 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Wavetable synth | Automatic (Stock) / Manual | green; steady / yellow; steady |
+| FEEDBACK | Engine | Granular (Stock) / Granular, manual synth / Spectral | green; steady / yellow; steady / red; steady |
 | DRY/WET | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
 | REVERB | Synth engine | Beads (Stock) / Plaits | green; steady / yellow; steady |
 
@@ -65,7 +65,7 @@ Scale (tap SEED to step through):
 
 Hold the CV-assign button [M] for three seconds, with the mix knobs still, then release. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close.
 
-Move a knob far enough to take it over; small bumps before that are ignored. Pitch scale, Delay mode and Limiter use the knob's three thirds; Reverb character, Wavetable synth and Synth engine use its two halves. Near a boundary, turn a little past it to switch.
+Move a knob far enough to take it over; small bumps before that are ignored. Pitch scale, Delay mode, Engine, Attacks and Limiter use the knob's three thirds; Reverb character, Frozen feedback and Synth engine use its two halves. Near a boundary, turn a little past it to switch.
 
 Stereo width is Stock at the bottom of the knob. Turn clockwise to spread the grains wider, up to a full random spread fully CW. Only new grains are affected. When width is on, short presses of [M] add WIDTH after the three mix destinations of the assignable CV input (7); all three mix LEDs pulse together for WIDTH.
 
@@ -79,7 +79,9 @@ Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays gr
 
 Clouds-style changes the reverb character and, until a diffusion amount is set with [A]+REVERB, adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
-Wavetable synth Manual needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
+Engine, manual wavetable synth: the synth needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
+
+Engine, Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, delay mode or wavetable synth. A new engine takes over when the page closes, clearing the recording; a frozen buffer saved to flash comes back with the granular engine.
 
 Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
 

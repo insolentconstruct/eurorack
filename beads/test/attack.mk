@@ -1,6 +1,11 @@
 TARGET = attack_test
 CC_FILES       = 		attack_test.cc \
 		processor.cc \
+		spectral_processor.cc \
+		phase_vocoder.cc \
+		stft.cc \
+		frame_transformation.cc \
+		atan.cc \
 		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \

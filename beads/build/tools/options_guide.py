@@ -110,7 +110,8 @@ SHORT = {
     "Clouds-style": "Clouds",
     "Auto (Stock)": "Auto",
     "Wide/smooth filter": "Wide",
-    "Automatic (Stock)": "Automatic",
+    "Granular (Stock)": "Granular",
+    "Granular, manual synth": "Manual synth",
     "Fast release": "Fast",
     "Width (wider →)": "wider →",
     "Beads (Stock)": "Beads",
@@ -163,7 +164,7 @@ def zone_bands(rows):
     if setting == "Stereo width":
         return [(CONSTANTS["kWidthStockThreshold"],
                  CONSTANTS["kWidthEnabledThreshold"])]
-    if setting in ("Reverb character", "Wavetable synth", "Synth engine"):
+    if len(rows) == 2:
         return [(CONSTANTS["kOptionsHalfLow"],
                  CONSTANTS["kOptionsHalfHigh"])]
     band = CONSTANTS["kOptionsZoneBand"]
@@ -193,8 +194,8 @@ DETAILS = [
     "page until it is powered off. Hold [M] again, or press another "
     "button, to close.",
     "Move a knob far enough to take it over; small bumps before that are "
-    "ignored. Pitch scale, Delay mode and Limiter "
-    "use the knob's three thirds; Reverb character, Wavetable synth and "
+    "ignored. Pitch scale, Delay mode, Engine, Attacks and Limiter "
+    "use the knob's three thirds; Reverb character, Frozen feedback and "
     "Synth engine use its two halves. Near a boundary, turn a little past "
     "it to switch.",
     "Stereo width is Stock at the bottom of the knob. Turn clockwise to "
@@ -224,9 +225,18 @@ DETAILS = [
     "Clouds-style changes the reverb character and, until a diffusion "
     "amount is set with [A]+REVERB, adds grain diffusion. Switching briefly "
     "fades the sound and clears the tail.",
-    "Wavetable synth Manual needs both audio inputs unpatched and FREEZE "
-    "off: hold the quality button [A] for about a second and a half to start or stop "
-    "it. Patching an input stops it once FREEZE is off.",
+    "Engine, manual wavetable synth: the synth needs both audio inputs "
+    "unpatched and FREEZE off: hold the quality button [A] for about a "
+    "second and a half to start or stop it. Patching an input stops it once "
+    "FREEZE is off.",
+    "Engine, Spectral: Clouds' spectral processing replaces the grains. "
+    "TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and "
+    "PITCH shifts it (following the pitch scale). DENSITY sets how quickly "
+    "the spectrum is renewed, and scrambles its phases towards either end. "
+    "Holding SEED glitches it; FREEZE holds it. There is no grain "
+    "diffusion, delay mode or wavetable synth. A new engine takes over "
+    "when the page closes, clearing the recording; a frozen buffer saved "
+    "to flash comes back with the granular engine.",
     "Attacks: Snap starts grains on the hits in the recording; Snap and "
     "trigger also starts a grain on each hit.",
     "Frozen feedback Evolving runs frozen grains through a slowly moving "

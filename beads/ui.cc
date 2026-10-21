@@ -112,6 +112,7 @@ void Ui::LoadOptions() {
   evolving_feedback_ = settings_->evolving_feedback();
   plaits_synth_ = settings_->plaits_synth();
   attack_mode_ = settings_->attack_mode();
+  spectral_ = settings_->spectral();
   pitch_scale_ = settings_->pitch_scale();
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
@@ -237,6 +238,9 @@ void Ui::Poll() {
       ? options_.pitch_preview() : settings_->pitch_scale();
   output_limiter_mode_ = previewing
       ? options_.limiter_preview() : settings_->output_limiter_mode();
+  if (!previewing) {
+    spectral_ = settings_->spectral();
+  }
   UpdateLeds();
 }
 
@@ -562,8 +566,8 @@ void Ui::OnSwitchReleased(const Event& e) {
             NextCalibrationStep();
           } else {
             if (uint32_t(e.data) >= long_press_duration[SWITCH_MEDIA]) {
-              if (settings_->self_play_on_request() && no_input_ &&
-                  !should_ignore_state_change()) {
+              if (settings_->self_play_on_request() && !spectral_ &&
+                  no_input_ && !should_ignore_state_change()) {
                 self_play_requested_ = true;
               } else {
                 State* state = settings_->mutable_state();
@@ -629,7 +633,7 @@ void Ui::OnSwitchReleased(const Event& e) {
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
     if (options_.limiter_preview() != settings_->output_limiter_mode() ||
-        options_.self_play_preview() != settings_->self_play_on_request() ||
+        options_.engine_preview() != settings_->engine() ||
         options_.clouds_preview() != settings_->clouds_style() ||
         options_.plaits_preview() != settings_->plaits_synth() ||
         options_.pitch_preview() != settings_->pitch_scale() ||
@@ -638,7 +642,7 @@ void Ui::DoEvents() {
         options_.evolving_preview() != settings_->evolving_feedback() ||
         options_.attack_preview() != settings_->attack_mode()) {
       settings_->set_output_limiter_mode(options_.limiter_preview());
-      settings_->set_self_play_on_request(options_.self_play_preview());
+      settings_->set_engine(options_.engine_preview());
       settings_->set_clouds_style(options_.clouds_preview());
       settings_->set_plaits_synth(options_.plaits_preview());
       settings_->set_pitch_scale(options_.pitch_preview());

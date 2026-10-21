@@ -68,8 +68,9 @@ namespace state_layout_test {
 STATIC_ASSERT(offsetof(State, diffusion) == 17, diffusion);
 STATIC_ASSERT(offsetof(State, frozen_feedback) == 18, frozen_feedback);
 STATIC_ASSERT(offsetof(State, attacks) == 19, attacks);
-STATIC_ASSERT(offsetof(State, padding) == 20, options);
+STATIC_ASSERT(offsetof(State, engine) == 20, engine);
 STATIC_ASSERT(offsetof(State, synth_engine) == 21, synth_engine);
+STATIC_ASSERT(offsetof(State, padding) == 22, padding);
 }
 
 struct Rig {
@@ -1016,13 +1017,13 @@ void TestSynthEngineStorage() {
     r.settings.mutable_state()->synth_engine = value;
     CHECK(r.settings.plaits_synth() == (value == 0xa1));
     r.settings.mutable_state()->padding[0] = 0xff;
-    r.settings.mutable_state()->padding_end[1] = 0xff;
+    r.settings.mutable_state()->padding[1] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.plaits_synth() == (value == 0xa1));
     CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
-    CHECK(loaded.state().padding[0] == 0 && loaded.state().padding_end[1] == 0);
+    CHECK(loaded.state().padding[0] == 0 && loaded.state().padding[1] == 0);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->synth_engine = value;
     loaded.chunk_storage_.SaveState();
@@ -1047,6 +1048,98 @@ void TestSynthEngineStorage() {
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.plaits_synth());
   CHECK(loaded.state().synth_engine == 0xa1);
+}
+
+// Byte 20 holds Spectral; byte 11 keeps the granular wavetable synth choice
+// for firmware without the spectral engine.
+void TestEngineStorage() {
+  test_checker.Start("TestEngineStorage");
+  Rig r;
+  for (int i = 0; i < 256; ++i) {
+    r.settings.mutable_state()->engine = i;
+    r.settings.mutable_state()->self_play = 0xa1;
+    CHECK(r.settings.spectral() == (i == 0xa1));
+    CHECK(r.settings.engine() == (i == 0xa1
+        ? ENGINE_SPECTRAL : ENGINE_GRANULAR_MANUAL_SYNTH));
+    // Read unnormalized data from flash, then save it canonically.
+    r.settings.chunk_storage_.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.spectral() == (i == 0xa1));
+    CHECK(loaded.state().engine == (i == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.self_play_on_request());
+  }
+  r.settings.set_engine(ENGINE_SPECTRAL);
+  CHECK(r.settings.state().engine == 0xa1);
+  CHECK(r.settings.state().self_play == 0xa1);
+  r.settings.set_engine(ENGINE_GRANULAR);
+  CHECK(!r.settings.state().engine && !r.settings.state().self_play);
+  r.settings.set_engine(ENGINE_SPECTRAL);
+  CHECK(r.settings.engine() == ENGINE_SPECTRAL);
+  CHECK(!r.settings.state().self_play);
+  r.settings.set_engine(ENGINE_GRANULAR_MANUAL_SYNTH);
+  CHECK(!r.settings.state().engine && r.settings.state().self_play == 0xa1);
+  // Unknown values in bytes 18 and 19 read as stock, and bytes 22-23
+  // stay free: cleared on save.
+  r.settings.set_engine(ENGINE_SPECTRAL);
+  r.settings.mutable_state()->frozen_feedback = 0x12;
+  r.settings.mutable_state()->attacks = 0x34;
+  r.settings.mutable_state()->padding[0] = 0x56;
+  r.settings.SaveState();
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.spectral());
+  CHECK(!loaded.state().frozen_feedback && !loaded.state().attacks);
+  CHECK(!loaded.state().padding[0]);
+  CHECK(loaded.self_play_on_request());  // Kept from Manual.
+  // Stock clears byte 20 on save: the granular engine again.
+  LegacyState legacy_state = { };
+  PersistentData calibration = { };
+  stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
+  CHECK(legacy.Init(&calibration, &legacy_state));
+  CHECK(legacy_state.padding[10] == 0xa1);
+  memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
+  legacy.SaveState();
+  CHECK(loaded.Init(false) && !loaded.spectral());
+}
+
+// Page 3, FEEDBACK: three zones. The saved engine reaches the audio code
+// only once the page has closed.
+void TestEngineOption() {
+  test_checker.Start("TestEngineOption");
+  const float positions[3] = { 0.15f, 0.5f, 0.85f };
+  const uint8_t red[3] = { 0, 255, 255 };
+  const uint8_t green[3] = { 255, 255, 0 };
+  for (int target = 0; target < 3; ++target) {
+    Rig r;
+    r.settings.set_engine(target == 2 ? ENGINE_GRANULAR : ENGINE_SPECTRAL);
+    r.ui.LoadOptions();
+    const bool was_spectral = r.settings.spectral();
+    r.EnterLimiter();
+    CHECK(r.ui.options_.page() == 2);
+    CHECK(r.ui.options_.engine_preview() == r.settings.engine());
+    r.feedback = 0.95f;
+    r.Tick(50);
+    for (int step = 0; step < 20; ++step) {
+      r.feedback = 0.95f + (positions[target] - 0.95f) * (step + 1) / 20.0f;
+      r.Tick(10);
+    }
+    CHECK(r.ui.options_.engine_preview() == Engine(target));
+    const OptionValue& v = r.ui.options_.indication();
+    CHECK(v.setting == OPTION_ENGINE && v.value == target);
+    CHECK(v.color.r == red[target] && v.color.g == green[target]);
+    CHECK(v.color.b == 0 && v.pulses == PULSE_STEADY);
+    r.Tick(1100);
+    CHECK(r.settings.engine() == Engine(target));
+    CHECK(r.ui.spectral() == was_spectral);
+    r.Down(SWITCH_ASSIGN);
+    r.Tick(3000);
+    r.Up(SWITCH_ASSIGN);
+    r.Tick(50);
+    CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+    CHECK(r.ui.spectral() == (target == 2));
+    Settings loaded;
+    CHECK(loaded.Init(false) && loaded.engine() == Engine(target));
+  }
 }
 
 void TestSelfPlayHold() {
@@ -1441,7 +1534,7 @@ void TestOptionsTablesAndLifetime() {
   const OptionSetting expected[3][3] = {
     { OPTION_PITCH, OPTION_WIDTH, OPTION_REVERB },
     { OPTION_ATTACKS, OPTION_DELAY, OPTION_FROZEN },
-    { OPTION_SELF_PLAY, OPTION_LIMITER, OPTION_SYNTH }
+    { OPTION_ENGINE, OPTION_LIMITER, OPTION_SYNTH }
   };
   Rig r;
   r.Enter();
@@ -1522,8 +1615,8 @@ void TestOptionsKnobsAndSettling() {
           ? r.settings.stereo_width() : setting == OPTION_PITCH
           ? int(r.settings.pitch_scale()) : setting == OPTION_DELAY
           ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
-          ? r.settings.clouds_style() : setting == OPTION_SELF_PLAY
-          ? r.settings.self_play_on_request() : setting == OPTION_FROZEN
+          ? r.settings.clouds_style() : setting == OPTION_ENGINE
+          ? int(r.settings.engine()) : setting == OPTION_FROZEN
           ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
           ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
           ? int(r.settings.attack_mode())
@@ -1700,7 +1793,7 @@ void TestOptionsPalette() {
       case OPTION_REVERB: r.ui.options_.clouds_preview_ = v.value; break;
       case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value);
         break;
-      case OPTION_SELF_PLAY: r.ui.options_.self_play_preview_ = v.value; break;
+      case OPTION_ENGINE: r.ui.options_.engine_preview_ = Engine(v.value); break;
       case OPTION_SYNTH: r.ui.options_.plaits_preview_ = v.value; break;
       case OPTION_LIMITER:
         r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
@@ -1929,6 +2022,8 @@ int main() {
   TestSynthEngineStorage();
   TestPitchStorage();
   TestSelfPlayStorage();
+  TestEngineStorage();
+  TestEngineOption();
   TestSelfPlayHold();
   TestTrimGesture();
   TestMonophonicGesture();

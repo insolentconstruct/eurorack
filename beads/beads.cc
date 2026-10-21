@@ -208,7 +208,8 @@ void Process(
     seed_block = true;
   }
   ui.set_seed_led_state(seed_block && !codec_transition_frames);
-  ui.set_overwrite_reserve(synth_mode ? 1.0f : processor.overwrite_reserve());
+  ui.set_overwrite_reserve(synth_mode || processor.spectral()
+      ? 1.0f : processor.overwrite_reserve());
   
   // Conversion of input samples into floats, (with automatic gain control).
   gain_control.Process(
@@ -299,19 +300,25 @@ void Process(
       : (ui.seed_button_state() ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF);
   
   if (ui.trim_flag()) {
-    processor.Trim();
+    if (!processor.spectral()) {
+      processor.Trim();
+    }
     ui.ClearTrimFlag();
   }
-  // Fade to silence before changing delay topology in the shared buffer.
+  // Fade to silence before changing delay topology in the shared buffer,
+  // and before main swaps the engine.
   const bool requested_style = ui.clouds_style();
+  const bool engine_change = ui.spectral() != processor.spectral();
   reverb_style_previous_gain = reverb_style_gain;
-  if (requested_style != clouds_style) {
+  if (requested_style != clouds_style || engine_change) {
     reverb_style_gain = max(0.0f, reverb_style_gain - kReverbStyleFadeStep);
     if (reverb_style_previous_gain == 0.0f) {
-      clouds_style = requested_style;
-      processor.SetCloudsStyle(clouds_style);
-      synth.SetCloudsStyle(clouds_style, false);
-      plaits_synth.SetCloudsStyle(clouds_style, false);
+      if (requested_style != clouds_style) {
+        clouds_style = requested_style;
+        processor.SetCloudsStyle(clouds_style);
+        synth.SetCloudsStyle(clouds_style, false);
+        plaits_synth.SetCloudsStyle(clouds_style, false);
+      }
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
@@ -498,7 +505,9 @@ void Init() {
   }
   ready = true;
   
-  bool was_frozen = background_buffer_backup.Load();
+  // A frozen buffer saved by the granular engine stays in flash.
+  processor.set_spectral(ui.spectral());
+  bool was_frozen = !processor.spectral() && background_buffer_backup.Load();
   if (was_frozen) {
     ui.set_freeze_button_state(was_frozen);
     ConfigureAndStartCodec(false, true);
@@ -512,8 +521,29 @@ void MonitorStateChange() {
     ui.ClearSelfPlayRequest();
     return;
   }
+
+  // Once the audio callback has faded out, swap the engine. This clears the
+  // recording; a frozen buffer saved to flash returns with the granular
+  // engine.
+  if (ui.spectral() != processor.spectral() && reverb_style_gain == 0.0f) {
+    codec.Stop();
+    processor.set_spectral(ui.spectral());
+    if (processor.spectral()) {
+      background_buffer_backup.Init(&processor, &settings);
+    }
+    processor.Configure(Processor::Media(settings.state().media),
+        normalization_detector.mono());
+    if (!processor.spectral() && background_buffer_backup.Load()) {
+      // The restored recording keeps the quality it was saved with.
+      settings.mutable_state()->media = processor.media();
+      ui.set_freeze_button_state(true);
+    }
+    ConfigureAndStartCodec(false, synth_mode);
+    return;
+  }
   
-  if (normalization_detector.no_input()) {
+  // The wavetable synth does not start in spectral mode.
+  if (normalization_detector.no_input() && !processor.spectral()) {
     if (settings.self_play_on_request()) {
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
@@ -571,9 +601,10 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     MonitorStateChange();
-    if (!synth_mode) {
+    if (!synth_mode && !processor.spectral()) {
       background_buffer_backup.Process(ui.freeze_led_state());
     }
+    processor.Buffer();
     processor.WasteCPUCycles(16);
   }
 }

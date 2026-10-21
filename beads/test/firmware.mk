@@ -9,6 +9,11 @@ CC_FILES       = 		firmware_test.cc \
 		factory_test.cc \
 		synth.cc \
 		processor.cc \
+		spectral_processor.cc \
+		phase_vocoder.cc \
+		stft.cc \
+		frame_transformation.cc \
+		atan.cc \
 		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
