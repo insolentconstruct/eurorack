@@ -103,7 +103,7 @@ on the page, then the last knob you took over. A knob must move a little
 before it takes over. Knobs marked Not used yet do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
-1 / FEEDBACK        Pitch scale   Not used yet      Attacks
+1 / FEEDBACK        Pitch scale   Random intervals  Attacks
 2 / DRY/WET         Delay mode    Reverb character  Frozen feedback
 3 / REVERB          Processor     Synth             Synth start
 4 / all three       Not used yet  Not used yet      Limiter
@@ -169,6 +169,13 @@ plus diffusion on the grain wet output until an amount is set with [A]+REVERB
 back in and clears the old tail. The setting is saved; stock firmware ignores
 it and resets it to Stock when saving after a downgrade.
 
+Random intervals: page 1 (FEEDBACK LED), DRY/WET knob. Lower half selects
+Free (default, steady green); upper half selects Fifths and octaves (steady
+yellow). With the PITCH attenurandomizer counter-clockwise, each grain's
+random offset then lands on fifths and octaves around the knob's pitch;
+clockwise it stays continuous. The pitch scale still applies. Grains and
+synth grains only. The setting is saved; stock firmware ignores it.
+
 Attacks: page 1 (FEEDBACK LED), REVERB knob, in thirds. Off (default,
 steady green), Snap (steady yellow): while recording, Beads marks the attacks
 in the input, and a grain that would start just after one starts on it
@@ -221,7 +228,8 @@ page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	FEEDBACK	Pitch scale	Pelog	yellow	fast (3.91 Hz)
 1	FEEDBACK	FEEDBACK	Pitch scale	Raag Bhairav	red	fast (3.91 Hz)
 1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	yellow	2 yellow pulses / 2.048 s
-1	FEEDBACK	DRY/WET	Not used yet	Not used yet	unchanged	steady
+1	FEEDBACK	DRY/WET	Random intervals	Free (Stock)	green	steady
+1	FEEDBACK	DRY/WET	Random intervals	Fifths and octaves	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Off	green	steady
 1	FEEDBACK	REVERB	Attacks	Snap	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Snap and trigger	red	steady

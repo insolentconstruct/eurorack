@@ -79,6 +79,7 @@ bool Settings::Init(bool recovery_mode) {
   state_.attacks = 0;
   state_.engine = 0;
   state_.synth_engine = 0;
+  state_.random_intervals = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   
   if (recovery_mode) {
@@ -116,6 +117,7 @@ void Settings::NormalizeOptions() {
   set_evolving_feedback(evolving_feedback());
   set_attack_mode(attack_mode());
   set_plaits_synth(plaits_synth());
+  set_random_intervals(random_intervals());
   // One store, so the audio interrupt never sees the target cleared.
   state_.width_assigned = width_assigned() && stereo_width() ? 1
       : (diffusion_assigned() && diffusion_assignable() ? 2 : 0);

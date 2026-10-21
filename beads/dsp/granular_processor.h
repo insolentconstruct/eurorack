@@ -240,6 +240,10 @@ class GranularProcessor {
     granular_player_.set_pitch_scale(scale);
   }
 
+  inline void set_random_intervals(bool intervals) {
+    granular_player_.set_random_intervals(intervals);
+  }
+
 #ifdef DWT_CALIBRATION
   void PrepareCalibration(unsigned block) {
     granular_player_.PrepareCalibration(&stereo_delay_line_, block);

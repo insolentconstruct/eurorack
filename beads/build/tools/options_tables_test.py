@@ -179,9 +179,9 @@ assert len(values["Pitch scale"]) == 10
 for setting in ("Delay mode", "Attacks", "Limiter"):
     assert len(values[setting]) == 3, setting
 for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
-                "Synth start"):
+                "Synth start", "Random intervals"):
     assert len(values[setting]) == 2, setting
-assert len(values) == 9 and "Stereo width" not in values
+assert len(values) == 10 and "Stereo width" not in values
 # [A]+DRY/WET width keeps its meter on the guides.
 assert [indication(row) for row in WIDTH_ROWS] == [
     "green; steady", "green → yellow → red"

@@ -275,6 +275,14 @@ class Processor {
     spectral_processor_.set_pitch_scale(scale);
   }
 
+  // Grains only; spectral has no random grain pitch.
+  inline void set_random_intervals(bool intervals) {
+    processor_digital_.set_random_intervals(intervals);
+    processor_vintage_digital_.set_random_intervals(intervals);
+    processor_clean_tape_.set_random_intervals(intervals);
+    processor_dirty_tape_.set_random_intervals(intervals);
+  }
+
 #ifdef DWT_CALIBRATION
   void PrepareCalibration(unsigned block) {
     processor_digital_.PrepareCalibration(block);

@@ -48,7 +48,7 @@ const int kNumOptionPages = 4;
 enum OptionSetting {
   OPTION_RESERVED, OPTION_PITCH, OPTION_REVERB, OPTION_DELAY,
   OPTION_PROCESSOR, OPTION_LIMITER, OPTION_FROZEN, OPTION_SYNTH,
-  OPTION_ATTACKS, OPTION_SYNTH_START, OPTION_LAST
+  OPTION_ATTACKS, OPTION_SYNTH_START, OPTION_INTERVALS, OPTION_LAST
 };
 
 // Pages light the mix LEDs left to right; the last page lights all three.
@@ -92,7 +92,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 30;
+const size_t kNumOptionValues = 32;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -132,6 +132,8 @@ class Options {
   inline bool spectral_preview() const { return spectral_preview_; }
 
   inline bool manual_start_preview() const { return manual_start_preview_; }
+
+  inline bool intervals_preview() const { return intervals_preview_; }
 
   inline bool clouds_preview() const { return clouds_preview_; }
 
@@ -200,6 +202,7 @@ class Options {
   OutputLimiterMode limiter_preview_;
   bool spectral_preview_;
   bool manual_start_preview_;
+  bool intervals_preview_;
   bool clouds_preview_;
   bool plaits_preview_;
   DelayMode delay_preview_;

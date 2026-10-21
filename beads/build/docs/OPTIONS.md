@@ -21,7 +21,7 @@ The quality LED [A] shows the setting value: steady, slow blink, fast blink or t
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Pitch scale | Off / Chromatic / Scale | green; steady / yellow; steady / see scale list |
-| DRY/WET | Not used yet | — | — |
+| DRY/WET | Random intervals | Free (Stock) / Fifths and octaves | green; steady / yellow; steady |
 | REVERB | Attacks | Off / Snap / Snap and trigger | green; steady / yellow; steady / red; steady |
 
 Scale (tap SEED to step through):
@@ -82,6 +82,8 @@ Settings save by themselves about a second after you stop turning. Closing keeps
 After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
+
+Random intervals: with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. The scale still applies.
 
 Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
 

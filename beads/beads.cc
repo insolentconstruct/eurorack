@@ -363,6 +363,7 @@ void Process(
 #endif  // DWT_CALIBRATION
   } else if (synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
+    synth.set_random_intervals(ui.random_intervals());
     synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
@@ -380,6 +381,7 @@ void Process(
 #endif  // DWT_CALIBRATION
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
+    processor.set_random_intervals(ui.random_intervals());
     processor.set_stereo_width(stereo_width, ui.stereo_width() != 0);
     processor.set_delay_mode(ui.delay_mode());
     processor.set_evolving_feedback(ui.evolving_feedback());

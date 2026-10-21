@@ -221,6 +221,9 @@ DETAILS = [
     "wavetable oscillator and delay pitch keep their pitch. The root is "
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
+    "Random intervals: with the PITCH attenurandomizer counter-clockwise, "
+    "each grain's random offset lands on fifths and octaves around the "
+    "knob's pitch; clockwise it stays continuous. The scale still applies.",
     "Attacks: Snap starts grains on the hits in the recording; Snap and "
     "trigger also starts a grain on each hit.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
@@ -489,14 +492,17 @@ class Drawing:
             base += 44 if mobile_card else 21
         return base - y
 
-    def gestures(self, x, y, columns, short=False, gap=10):
-        """Gesture list in one column; the printable uses the short texts
-        and leaves stereo width to its card."""
-        self.text(x, y, "OTHER GESTURES", 20, "bold")
+    def gestures(self, x, y, columns, short=False, gap=10, part=None):
+        """Gesture list in one column; the printable uses the short texts,
+        leaves stereo width to its card and splits the list in two parts."""
+        listed = [g for g in GESTURES if not short or g[0] != "Stereo width"]
+        if part is not None:
+            half = (len(listed) + 1) // 2
+            listed = listed[:half] if part == 0 else listed[half:]
+        if part != 1:
+            self.text(x, y, "OTHER GESTURES", 20, "bold")
         y += 30
-        for title, text, brief in GESTURES:
-            if short and title == "Stereo width":
-                continue
+        for title, text, brief in listed:
             self.text(x, y, title, 16, "bold")
             y = self.lines(x, y + 22, brief if short else text, columns) + gap
         return y
@@ -690,13 +696,17 @@ def svg(pages, mobile=False):
                 for i, k in enumerate(KNOBS)
             ]
             if page == "1":
-                # Gestures and the width card fill page 1's free space.
-                heights[1] = d.gestures(
-                    margin + 330, y + heights[1] + 14, 40, True
-                ) - y
-                heights[2] += 16 + d.card(
-                    margin + 660, y + heights[2] + 16, 315, WIDTH_ROWS
+                # The width card fills the space beside the scale list.
+                heights[1] += 16 + d.card(
+                    margin + 330, y + heights[1] + 16, 315, WIDTH_ROWS
                 )
+            if page == "4":
+                # The gestures fill the two knobs not used yet.
+                for i in range(2):
+                    heights[i] = d.gestures(
+                        margin + i * 330, y + heights[i] + 14, 40, True,
+                        part=i
+                    ) - y
             y += max(heights) + 12
     y -= 16
     for line in textwrap.wrap(

@@ -70,7 +70,8 @@ STATIC_ASSERT(offsetof(State, frozen_feedback) == 18, frozen_feedback);
 STATIC_ASSERT(offsetof(State, attacks) == 19, attacks);
 STATIC_ASSERT(offsetof(State, engine) == 20, engine);
 STATIC_ASSERT(offsetof(State, synth_engine) == 21, synth_engine);
-STATIC_ASSERT(offsetof(State, padding) == 22, padding);
+STATIC_ASSERT(offsetof(State, random_intervals) == 22, random_intervals);
+STATIC_ASSERT(offsetof(State, padding) == 23, padding);
 }
 
 struct Rig {
@@ -1019,14 +1020,14 @@ void TestSynthEngineStorage() {
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->synth_engine = value;
     CHECK(r.settings.plaits_synth() == (value == 0xa1));
+    r.settings.mutable_state()->random_intervals = 0xff;
     r.settings.mutable_state()->padding[0] = 0xff;
-    r.settings.mutable_state()->padding[1] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.plaits_synth() == (value == 0xa1));
     CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
-    CHECK(loaded.state().padding[0] == 0 && loaded.state().padding[1] == 0);
+    CHECK(!loaded.state().random_intervals && !loaded.state().padding[0]);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->synth_engine = value;
     loaded.chunk_storage_.SaveState();
@@ -1079,8 +1080,8 @@ void TestEngineStorage() {
   CHECK(r.settings.state().self_play == 0xa1);
   r.settings.set_spectral(false);
   CHECK(!r.settings.state().engine && r.settings.state().self_play == 0xa1);
-  // Unknown values in bytes 18 and 19 read as stock, and bytes 22-23
-  // stay free: cleared on save.
+  // Unknown values in bytes 18 and 19 read as stock, and byte 23 stays
+  // free: cleared on save.
   r.settings.set_spectral(true);
   r.settings.mutable_state()->frozen_feedback = 0x12;
   r.settings.mutable_state()->attacks = 0x34;
@@ -1146,6 +1147,57 @@ void TestEngineOption() {
 
 // Page 3, REVERB: Automatic / Manual synth start, independent of the
 // processor.
+// Byte 22: Random intervals. Unknown values read as Free (Stock).
+void TestIntervalsStorage() {
+  test_checker.Start("TestIntervalsStorage");
+  Rig r;
+  for (int value = 0; value < 256; ++value) {
+    r.settings.mutable_state()->random_intervals = value;
+    CHECK(r.settings.random_intervals() == (value == 0xa1));
+    r.settings.mutable_state()->padding[0] = 0xff;
+    r.settings.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.random_intervals() == (value == 0xa1));
+    CHECK(loaded.state().random_intervals == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.state().padding[0] == 0);
+    loaded.mutable_state()->random_intervals = value;
+    loaded.chunk_storage_.SaveState();
+    CHECK(loaded.Init(false));
+    CHECK(loaded.state().random_intervals == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(r.settings.Init(false));
+  }
+}
+
+// Page 1, DRY/WET: Free / Fifths and octaves, independent of the scale.
+void TestIntervalsOption() {
+  test_checker.Start("TestIntervalsOption");
+  for (int target = 0; target < 2; ++target) {
+    Rig r;
+    r.settings.set_pitch_scale(PITCH_SCALE_MAJOR);
+    r.settings.set_random_intervals(!target);
+    r.ui.LoadOptions();
+    r.Enter();
+    CHECK(r.ui.options_.intervals_preview() == !target);
+    r.pot = target ? 0.05f : 0.95f;
+    r.Tick(50);
+    r.pot = target ? 0.85f : 0.15f;
+    r.Tick(50);
+    CHECK(r.ui.options_.intervals_preview() == bool(target));
+    CHECK(r.ui.random_intervals() == bool(target));
+    const OptionValue& v = r.ui.options_.indication();
+    CHECK(v.setting == OPTION_INTERVALS && v.value == target);
+    CHECK(v.color.r == (target ? 255 : 0) && v.color.g == 255);
+    r.Tick(1100);
+    CHECK(r.settings.random_intervals() == bool(target));
+    CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.random_intervals() == bool(target));
+    CHECK(loaded.state().random_intervals == (target ? 0xa1 : 0));
+  }
+}
+
 void TestSynthStartOption() {
   test_checker.Start("TestSynthStartOption");
   for (int target = 0; target < 2; ++target) {
@@ -1603,7 +1655,7 @@ void TestWidthGestureAndMeter() {
 void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
   const OptionSetting expected[4][3] = {
-    { OPTION_PITCH, OPTION_RESERVED, OPTION_ATTACKS },
+    { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS },
     { OPTION_DELAY, OPTION_REVERB, OPTION_FROZEN },
     { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
     { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER }
@@ -1692,7 +1744,8 @@ void TestOptionsKnobsAndSettling() {
           ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
           ? r.settings.clouds_style() : setting == OPTION_PROCESSOR
           ? r.settings.spectral() : setting == OPTION_SYNTH_START
-          ? r.settings.self_play_on_request() : setting == OPTION_FROZEN
+          ? r.settings.self_play_on_request() : setting == OPTION_INTERVALS
+          ? r.settings.random_intervals() : setting == OPTION_FROZEN
           ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
           ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
           ? int(r.settings.attack_mode())
@@ -1852,6 +1905,7 @@ void TestOptionsPalette() {
       case OPTION_SYNTH_START:
         r.ui.options_.manual_start_preview_ = v.value;
         break;
+      case OPTION_INTERVALS: r.ui.options_.intervals_preview_ = v.value; break;
       case OPTION_SYNTH: r.ui.options_.plaits_preview_ = v.value; break;
       case OPTION_LIMITER:
         r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
@@ -1952,7 +2006,7 @@ void TestOptionsPreview() {
   CHECK(r.ui.options_.page() == 0);
   CHECK(r.ui.options_.preview_knob() == 0);
   r.Tick(2048);
-  CHECK(r.ui.options_.preview_knob() == 2);  // DRY/WET is not used yet.
+  CHECK(r.ui.options_.preview_knob() == 1);
   r.reverb = .9f;
   r.Tick(1);
   CHECK(r.ui.options_.preview_knob() == -1);
@@ -2086,6 +2140,8 @@ int main() {
   TestEngineStorage();
   TestEngineOption();
   TestSynthStartOption();
+  TestIntervalsStorage();
+  TestIntervalsOption();
   TestSelfPlayHold();
   TestTrimGesture();
   TestMonophonicGesture();

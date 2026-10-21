@@ -774,6 +774,34 @@ void TestQuantizedPitchChain() {
   CHECK(ui.pitch_scale() == PITCH_SCALE_FIFTHS);
 }
 
+// Random intervals reaches the grains: with PITCH's attenurandomizer fully
+// counter-clockwise, grains differ by fifths and octaves only.
+void TestRandomIntervalsChain() {
+  test_checker.Start("TestRandomIntervalsChain");
+  int off_grid[2] = { 0, 0 };
+  for (int intervals = 0; intervals < 2; ++intervals) {
+    Rig r(false, true);
+    PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 0;
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+    settings.set_random_intervals(intervals);
+    r.Settle();
+    CHECK(ui.random_intervals() == bool(intervals));
+    float previous = 12.0f * log2f(NextGrainSpeed(&r));
+    for (int i = 0; i < 20; ++i) {
+      const float pitch = 12.0f * log2f(NextGrainSpeed(&r));
+      // Two offsets on fifths and octaves differ by 0, 5 or 7 semitones,
+      // within the grain's 1/1024 speed step.
+      float step = fmodf(fabsf(pitch - previous) + 0.05f, 12.0f) - 0.05f;
+      off_grid[intervals] += fabsf(step) > 0.04f &&
+          fabsf(step - 5.0f) > 0.04f && fabsf(step - 7.0f) > 0.04f;
+      previous = pitch;
+    }
+  }
+  printf("Random intervals chain: off the grid %d free, %d intervals\n",
+      off_grid[0], off_grid[1]);
+  CHECK(off_grid[0] > 10 && off_grid[1] == 0);
+}
+
 void TestSelfPlayFrozenBackup() {
   test_checker.Start("TestSelfPlayFrozenBackup");
   Rig r(true, true);
@@ -1271,6 +1299,7 @@ int main() {
   TestCallbackCvRouting();
   TestPitchChain();
   TestQuantizedPitchChain();
+  TestRandomIntervalsChain();
   TestSelfPlayFrozenBackup();
   TestPlaitsSynthSelection();
   TestSpectralEngine();
