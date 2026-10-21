@@ -57,12 +57,6 @@ inline float ModulatedStereoWidth(StereoWidth width, float cv) {
 const float kCloudsDiffusion = 0.7f;
 
 // Options page 3, FEEDBACK. Manual starts the wavetable synth on an [A] hold.
-enum Engine {
-  ENGINE_GRANULAR,
-  ENGINE_GRANULAR_MANUAL_SYNTH,
-  ENGINE_SPECTRAL
-};
-
 enum DelayMode {
   DELAY_MODE_AUTO,
   DELAY_MODE_NEVER,

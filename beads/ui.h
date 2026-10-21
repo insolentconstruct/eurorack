@@ -210,7 +210,7 @@ class Ui {
   float mix_pot_value_[MIX_PARAMETER_LAST];
   Options options_;
   volatile uint32_t options_flash_time_;
-  volatile Led options_flash_led_;
+  volatile int options_flash_page_;
   // Entry-only request: main discards events queued before options entry.
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;

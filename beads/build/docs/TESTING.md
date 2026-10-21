@@ -54,7 +54,7 @@ Run any test from the repository root with `make -f beads/test/<name>.mk test`. 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
 Feature checks beyond the table:
-- **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, preview and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.
+- **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, the [A]+DRY/WET gesture, its meter and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.
 - **Delay mode:** every stored byte value, preview and settled saving, Disabled at SIZE fully clockwise in every quality and channel mode, returning from delay to granular, detent boundaries, and neutral playback within 1e-7 FS with SIZE CV inside the detent.
 
 ## Coverage of the manual
@@ -234,9 +234,9 @@ Report problems in [this repository's issues](https://github.com/insolentconstru
 ## Options checks
 
 - `make -f beads/build/tools/options_tables.mk test` builds the TSV exporter and compares README.txt's Options reference with the firmware tables. `./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.
-- The UI host checks all nine page/knob slots, cycling, RAM page memory, inert Not-used knobs, takeover, a sweep with one settled save, idle pages, close gestures, pending saves after closing, width hysteresis, SEED scale cycling, steady-green stock values, and distinct colour/pattern combinations within each setting.
-- Renderer checks cover the full 2.048 s pattern and all 255 enabled width amounts against Beads' meter. Entry, close and save confirmations last 100 ms; idle controls do not repeat the save flash.
-- Regressions: 10 s of ±0.002 width noise at an encoded step boundary (one save, one confirmation); short SEED taps and long holds during a pending save; volatile commit publication; a second FREEZE press before the pending save settles. Closing restores the normal [A] indication immediately.
+- The UI host checks all twelve page/knob slots, cycling, the left-to-right page LEDs, RAM page memory, inert Not-used knobs, the stored-value preview when a page opens, takeover, a sweep with one settled save, idle pages, close gestures, pending saves after closing, SEED scale cycling, steady-green stock values, and distinct colour/pattern combinations within each setting.
+- Renderer checks cover the full 2.048 s pattern, and every width byte on [A]+DRY/WET against Beads' meter. Entry, close and save confirmations last 100 ms; idle controls do not repeat the save flash.
+- Regressions: width hysteresis at the bottom of [A]+DRY/WET; short SEED taps and long holds during a pending save; volatile commit publication; a second FREEZE press before the pending save settles. Closing restores the normal [A] indication immediately.
 - The delay mode test compares the maximum wet-output step when switching Auto (Stock) to Wide with an identical no-switch render at the clockwise filter endpoint.
 - Physical LED colour separation and audio during flash writes still need module checks.
 
