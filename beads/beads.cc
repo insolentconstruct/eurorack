@@ -110,6 +110,8 @@ float reverb_style_gain;
 // Set by main before it restarts the codec: the output fades out first.
 volatile bool codec_fade;
 bool codec_running;
+// The rate the converter runs at; 0 before its first start.
+int codec_sample_rate;
 float reverb_style_previous_gain;
 bool synth_mode;
 int synth_mode_start_time;
@@ -452,7 +454,16 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 
   codec_transition_frames = kBlockRate / 4;
   codec_fade = false;
+  if (codec_running && sr == codec_sample_rate) {
+    // Same clocks: the converter played silence while paused (#53).
+    codec.Resume(&Process);
+    return;
+  }
+  if (codec_sample_rate) {
+    codec.Stop();
+  }
   codec_running = true;
+  codec_sample_rate = sr;
   codec.Start(sr, sr / kBlockRate, &Process);
 }
 
@@ -484,6 +495,7 @@ void Init() {
   reverb_style_previous_gain = 1.0f;
   codec_fade = false;
   codec_running = false;
+  codec_sample_rate = 0;
   background_buffer_backup.Init(&processor, &settings);
 
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
@@ -503,6 +515,7 @@ void Init() {
     factory_test.Start();
     ui.set_factory_test(true);
     normalization_detector.Init(2);
+    codec_sample_rate = 48000;
     codec.Start(48000, 48000 / kBlockRate, &FactoryTest::ProcessFn);
   } else {
 #ifdef PROFILE_INTERRUPT
@@ -543,7 +556,7 @@ void MonitorStateChange() {
   // recording; a frozen buffer saved to flash returns with the granular
   // engine.
   if (ui.spectral() != processor.spectral() && reverb_style_gain == 0.0f) {
-    codec.Stop();
+    codec.Pause();
     processor.set_spectral(ui.spectral());
     if (processor.spectral()) {
       background_buffer_backup.Init(&processor, &settings);
@@ -571,7 +584,7 @@ void MonitorStateChange() {
           return;
         }
         ui.ClearSelfPlayRequest();
-        codec.Stop();
+        codec.Pause();
         if (synth_mode) {
           processor.Configure(Processor::Media(settings.state().media),
               normalization_detector.mono());
@@ -590,7 +603,7 @@ void MonitorStateChange() {
           if (!FadedOut()) {
             return;
           }
-          codec.Stop();
+          codec.Pause();
           ConfigureAndStartCodec(true, true);
         }
       }
@@ -616,7 +629,7 @@ void MonitorStateChange() {
         return;
       }
       // elapsed = system_clock.milliseconds();
-      codec.Stop();
+      codec.Pause();
       processor.Configure(media, mono);
       if (synth_mode) {
         // The synth's reverb tail would otherwise play on.
