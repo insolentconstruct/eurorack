@@ -46,22 +46,33 @@ class Codec {
       const Event*, const Frame*, Frame*, size_t);
   bool Init() {
     callback_ = NULL;
-    starts_ = stops_ = 0;
+    starts_ = stops_ = idle_stops_ = 0;
+    running_ = false;
     return true;
   }
   bool Start(int32_t rate, size_t size, FillBufferCallback callback) {
     sample_rate_ = rate;
     block_size_ = size;
     callback_ = callback;
+    running_ = true;
     ++starts_;
     return true;
   }
-  void Stop() { ++stops_; }
+  // The HAL faults when the SAI is stopped before its first start.
+  void Stop() {
+    idle_stops_ += !running_;
+    running_ = false;
+    ++stops_;
+  }
+  void Pause() { callback_ = NULL; }
+  void Resume(FillBufferCallback callback) { callback_ = callback; }
   int sample_rate_;
   size_t block_size_;
   FillBufferCallback callback_;
   int starts_;
   int stops_;
+  int idle_stops_;
+  bool running_;
 };
 
 }  // namespace beads
