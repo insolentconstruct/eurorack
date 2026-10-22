@@ -281,6 +281,11 @@ void Codec::Stop() {
   block_size_ = 0;
 }
 
+void Codec::Pause() {
+  callback_ = NULL;
+  memset(tx_dma_buffer_, 0, sizeof(tx_dma_buffer_));
+}
+
 void Codec::Fill(size_t offset) {
   if (callback_) {
     offset *= block_size_;
