@@ -48,7 +48,7 @@ void Lfo::Init() {
   parameter_ = 0;
   reset_phase_ = 0;
   sync_ = false;
-  previous_parameter_ = 32767;
+  set_parameter(0);
   sync_counter_ = kSyncCounterMaxTime;
   level_ = 32767;
   pattern_predictor_.Init();
@@ -64,6 +64,25 @@ const int16_t presets[7][2] = {
   { LFO_SHAPE_NOISE, 32767 },
 };
 
+void Lfo::set_parameter(int16_t parameter) {
+  parameter_ = parameter;
+  wf_gain_ = 2048 + (static_cast<int32_t>(parameter) * (65535 - 2048) >> 15);
+  quantization_levels_ = 2 + (((parameter + 32768) * 15) >> 16);
+  quantization_scale_ = 65535 / (quantization_levels_ - 1);
+
+  // The triangle's slopes. They used to be computed in the triangle only when
+  // the parameter changed, so a parameter of 32767 at power-up was missed.
+  uint16_t slope_offset = parameter + 32768;
+  if (slope_offset <= 1) {
+    decay_factor_ = 32768 << kSlopeBits;
+    attack_factor_ = 1 << (kSlopeBits - 1);
+  } else {
+    decay_factor_ = (32768 << kSlopeBits) / slope_offset;
+    attack_factor_ = (32768 << kSlopeBits) / (65536 - slope_offset);
+  }
+  end_of_attack_ = (static_cast<uint32_t>(slope_offset) << 16);
+}
+
 void Lfo::set_shape_parameter_preset(uint16_t value) {
   value = (value >> 8) * 7 >> 8;
   set_shape(static_cast<LfoShape>(presets[value][0]));
@@ -71,6 +90,11 @@ void Lfo::set_shape_parameter_preset(uint16_t value) {
 }
 
 void Lfo::Process(const GateFlags* gate_flags, int16_t* out, size_t size) {
+  (this->*process_fn_table_[shape_])(gate_flags, out, size);
+}
+
+template<Lfo::ComputeSampleFn compute_sample>
+void Lfo::ProcessShape(const GateFlags* gate_flags, int16_t* out, size_t size) {
   if (!sync_) {
     int32_t a = lut_lfo_increments[rate_ >> 8];
     int32_t b = lut_lfo_increments[(rate_ >> 8) + 1];
@@ -104,7 +128,7 @@ void Lfo::Process(const GateFlags* gate_flags, int16_t* out, size_t size) {
       }
     }
     phase_ += phase_increment_;
-    int32_t sample = (this->*compute_sample_fn_table_[shape_])();
+    int32_t sample = (this->*compute_sample)();
     *out++ = sample * level_ >> 15;
   }
 }
@@ -115,11 +139,9 @@ int16_t Lfo::ComputeSampleSine() {
   int16_t sample;
   if (parameter_ > 0) {
     int32_t wf_balance = parameter_;
-    int32_t wf_gain = 2048 + \
-        (static_cast<int32_t>(parameter_) * (65535 - 2048) >> 15);
     int32_t original = sine;
     int32_t folded = Interpolate1022(
-        wav_fold_sine, original * wf_gain + (1UL << 31));
+        wav_fold_sine, original * wf_gain_ + (1UL << 31));
     sample = original + ((folded - original) * wf_balance >> 15);
   } else {
     int32_t wf_balance = -parameter_;
@@ -133,19 +155,6 @@ int16_t Lfo::ComputeSampleSine() {
 }
 
 int16_t Lfo::ComputeSampleTriangle() {
-  if (parameter_ != previous_parameter_) {
-    uint16_t slope_offset = parameter_ + 32768;
-    if (slope_offset <= 1) {
-      decay_factor_ = 32768 << kSlopeBits;
-      attack_factor_ = 1 << (kSlopeBits - 1);
-    } else {
-      decay_factor_ = (32768 << kSlopeBits) / slope_offset;
-      attack_factor_ = (32768 << kSlopeBits) / (65536 - slope_offset);
-    }
-    end_of_attack_ = (static_cast<uint32_t>(slope_offset) << 16);
-    previous_parameter_ = parameter_;
-  }
-  
   uint32_t phase = phase_;
   uint32_t skewed_phase = phase;
   if (phase < end_of_attack_) {
@@ -170,12 +179,11 @@ int16_t Lfo::ComputeSampleSquare() {
 }
 
 int16_t Lfo::ComputeSampleSteps() {
-  uint16_t quantization_levels = 2 + (((parameter_ + 32768) * 15) >> 16);
-  uint16_t scale = 65535 / (quantization_levels - 1);
   uint32_t phase = phase_;
   uint32_t tri_phase = phase;
   uint32_t tri = tri_phase < (1UL << 31) ? tri_phase << 1 : ~(tri_phase << 1);
-  return ((tri >> 16) * quantization_levels >> 16) * scale - 32768;
+  return ((tri >> 16) * quantization_levels_ >> 16) * quantization_scale_ - \
+      32768;
 }
 
 int16_t Lfo::ComputeSampleNoise() {
@@ -201,12 +209,12 @@ int16_t Lfo::ComputeSampleNoise() {
 }
 
 /* static */
-Lfo::ComputeSampleFn Lfo::compute_sample_fn_table_[] = {
-  &Lfo::ComputeSampleSine,
-  &Lfo::ComputeSampleTriangle,
-  &Lfo::ComputeSampleSquare,
-  &Lfo::ComputeSampleSteps,
-  &Lfo::ComputeSampleNoise
+Lfo::ProcessFn Lfo::process_fn_table_[] = {
+  &Lfo::ProcessShape<&Lfo::ComputeSampleSine>,
+  &Lfo::ProcessShape<&Lfo::ComputeSampleTriangle>,
+  &Lfo::ProcessShape<&Lfo::ComputeSampleSquare>,
+  &Lfo::ProcessShape<&Lfo::ComputeSampleSteps>,
+  &Lfo::ProcessShape<&Lfo::ComputeSampleNoise>
 };
 
 }  // namespace peaks
