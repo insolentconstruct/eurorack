@@ -26,14 +26,20 @@ jobs:
           ref: 7ce2692e9fe54be5c12c7169b4da16ccd1f5ff21
           path: mutable-dev-environment
           persist-credentials: false
-      - name: Build the image
-        run: mutable-dev-environment/mutable image
+      - name: Build the images
+        run: |
+          mutable-dev-environment/mutable image
+          mutable-dev-environment/mutable compilers --compiler 15.3.Rel2
       - name: Host render tests
         run: mutable-dev-environment/mutable -C . render peaks
+      # The application and update file use GCC 15.3; the bootloader stays on
+      # the makefile's GCC 4.8.
       - name: Build the application, bootloader and update file
+        env:
+          MUTABLE_IMAGE: mutable-dev:gcc-15.3.Rel2
         run: |
           mutable-dev-environment/mutable -C . make -f peaks/makefile
-          mutable-dev-environment/mutable -C . make -f peaks/bootloader/makefile
+          mutable-dev-environment/mutable -C . make TOOLCHAIN_PATH=/usr/local/arm-4.8.3/ -f peaks/bootloader/makefile
           mutable-dev-environment/mutable -C . make -f peaks/makefile wav
       - name: Check firmware hashes
         run: sha256sum -c peaks/tuneup/expected-hashes.sha256
