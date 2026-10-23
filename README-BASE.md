@@ -9,6 +9,7 @@ pinned GCC 4.8 it builds the same firmware as vanilla. The plan is in
 Changes from vanilla, one line per change:
 
 - Define `__errno` as the function libm calls: GCC 14 and later link Rings; no change in sound ([#75](https://github.com/insolentconstruct/eurorack/pull/75)).
+- Give the decay table (`lut_4_decades`) a second guard point, read when DAMPING is at maximum, and have the string synth's `Init` set each chord and the effect-clear flag: the output and the instructions per block are unchanged.
 
 ## Build and verify
 

@@ -53,7 +53,7 @@ lookup_tables += [('sine', x)]
 Exponentials covering several decades in 256 steps, with safeguard
 ----------------------------------------------------------------------------"""
 
-x = numpy.arange(0, 257) / 256.0
+x = numpy.arange(0, 258) / 256.0
 lookup_tables += [('4_decades', 10 ** (4 * x))]
 
 
