@@ -81,22 +81,25 @@ void PulseRandomizer::Process(
     ++num_pulses_;
   }
     
-  for (uint8_t i = 0; i < kTriggerPulseBufferSize; ++i) {
-    if (delay_counter_[i] == 0xffff) {
+  uint16_t* delay_counter = &delay_counter_[0];
+  size_t n = kTriggerPulseBufferSize;
+  while (n--) {
+    if (*delay_counter == 0xffff) {
       if (new_pulse) {
-        delay_counter_[i] = delay();
+        *delay_counter = delay();
         new_pulse = false;
       }
-    } else if (delay_counter_[i]) {
-      --delay_counter_[i];
+    } else if (*delay_counter) {
+      --*delay_counter;
     } else {
       if ((Random::GetWord() >> 16) < repetition_probability_) {
         ++num_pulses_;
-        delay_counter_[i] = delay();
+        *delay_counter = delay();
       } else {
-        delay_counter_[i] = 0xffff;
+        *delay_counter = 0xffff;
       }
     }
+    ++delay_counter;
   }
     
   if (retrig_counter_) {
