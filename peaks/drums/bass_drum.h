@@ -80,7 +80,7 @@ class BassDrum {
   }
 
   void set_punch(uint16_t punch) {
-    resonator_.set_punch(punch * punch >> 16);
+    resonator_.set_punch(static_cast<uint32_t>(punch) * punch >> 16);
   }
 
  private:

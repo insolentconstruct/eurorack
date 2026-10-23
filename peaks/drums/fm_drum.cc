@@ -179,7 +179,7 @@ void FmDrum::Process(const GateFlags* gate_flags, int16_t* out, size_t size) {
         lut_env_expo, am_envelope_phase);
     mix = mix * am_envelope >> 16;
     if (overdrive_) {
-      uint32_t phi = (static_cast<int32_t>(mix) << 16) + (1L << 31);
+      uint32_t phi = (static_cast<uint32_t>(mix) << 16) + (1L << 31);
       int16_t overdriven = Interpolate1022(wav_overdrive, phi);
       mix = Mix(mix, overdriven, overdrive_);
     }

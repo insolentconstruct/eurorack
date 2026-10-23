@@ -93,10 +93,12 @@ void SnareDrum::Process(
     int32_t noise_sample = Random::GetSample();
     int32_t noise = noise_.Process<SVF_MODE_BP>(noise_sample);
     int32_t noise_envelope = excitation_noise_.Process();
-    int32_t sd = 0;
+    // Fast retriggers stack the envelope past 16 bits and the product
+    // overflows; keep the wrapped value, as on the module.
+    int32_t sd = static_cast<int32_t>(
+        static_cast<uint32_t>(noise_envelope) * noise) >> 15;
     sd += body_1 * gain_1_ >> 15;
     sd += body_2 * gain_2_ >> 15;
-    sd += noise_envelope * noise >> 15;
     CLIP(sd);
     *out++ = sd;
   }

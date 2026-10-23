@@ -94,7 +94,7 @@ void HighHat::Process(const GateFlags* gate_flags, int16_t* out, size_t size) {
     int32_t hh = 0;
     hh += vca_coloration_.Process<SVF_MODE_HP>(vca_noise);
     hh += vca_coloration_.Process<SVF_MODE_HP>(vca_noise);
-    hh <<= 1;
+    hh *= 2;
     CLIP(hh);
     *out++ = hh;
   }
