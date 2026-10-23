@@ -52,34 +52,44 @@ class Svf {
     bp_ = 0;
     frequency_ = 33 << 7;
     resonance_ = 16384;
-    dirty_ = true;
+    f_ = stmlib::Interpolate824(lut_svf_cutoff, frequency_ << 17);
+    damp_ = stmlib::Interpolate824(lut_svf_damp, resonance_ << 17);
     punch_ = 0;
   }
   
   inline void set_frequency(int16_t frequency) {
-    dirty_ = dirty_ || (frequency_ != frequency);
-    frequency_ = frequency;
+    if (frequency_ != frequency) {
+      frequency_ = frequency;
+      f_ = stmlib::Interpolate824(lut_svf_cutoff, frequency_ << 17);
+    }
   }
   
   inline void set_resonance(int16_t resonance) {
     resonance_ = resonance;
-    dirty_ = true;
+    damp_ = stmlib::Interpolate824(lut_svf_damp, resonance_ << 17);
   }
   
   inline void set_punch(uint16_t punch) {
     punch_ = (static_cast<uint32_t>(punch) * punch) >> 24;
   }
   
+  // Only the bass drum sets a punch, so the other filters skip it.
   template<SvfMode mode>
   inline int32_t Process(int32_t in) {
-    if (dirty_) {
-      f_ = stmlib::Interpolate824(lut_svf_cutoff, frequency_ << 17);
-      damp_ = stmlib::Interpolate824(lut_svf_damp, resonance_ << 17);
-      dirty_ = false;
-    }
+    return Render<mode, false>(in);
+  }
+
+  template<SvfMode mode>
+  inline int32_t ProcessWithPunch(int32_t in) {
+    return Render<mode, true>(in);
+  }
+
+ private:
+  template<SvfMode mode, bool punch>
+  inline int32_t Render(int32_t in) {
     int32_t f = f_;
     int32_t damp = damp_;
-    if (punch_) {
+    if (punch && punch_) {
       int32_t punch_signal = lp_ > 4096 ? lp_ : 2048;
       f += ((punch_signal >> 4) * punch_) >> 9;
       damp += ((punch_signal - 2048) >> 3);
@@ -93,10 +103,7 @@ class Svf {
   
     return mode == SVF_MODE_BP ? bp_ : (mode == SVF_MODE_HP ? hp : lp_);
   }
-  
- private:
-  bool dirty_;
-  
+
   int16_t frequency_;
   int16_t resonance_;
   

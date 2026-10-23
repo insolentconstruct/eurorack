@@ -80,7 +80,7 @@ void BassDrum::Process(const GateFlags* gate_flags, int16_t* out, size_t size) {
     resonator_.set_frequency(frequency_ + (attack_fm_.done() ? 0 : 17 << 7));
 
     int32_t resonator_output = (excitation >> 4) + \
-        resonator_.Process<SVF_MODE_BP>(excitation);
+        resonator_.ProcessWithPunch<SVF_MODE_BP>(excitation);
     lp_state_ += (resonator_output - lp_state_) * lp_coefficient_ >> 15;
     int32_t output = lp_state_;
     CLIP(output);
