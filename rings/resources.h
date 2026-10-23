@@ -56,7 +56,7 @@ extern const float lut_fm_frequency_quantizer[];
 #define LUT_SINE 0
 #define LUT_SINE_SIZE 5121
 #define LUT_4_DECADES 1
-#define LUT_4_DECADES_SIZE 257
+#define LUT_4_DECADES_SIZE 258
 #define LUT_SVF_SHIFT 2
 #define LUT_SVF_SHIFT_SIZE 257
 #define LUT_STIFFNESS 3

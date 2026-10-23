@@ -9,6 +9,10 @@ pinned GCC 4.8 it builds the same firmware as vanilla. The plan is in
 Changes from vanilla, one line per change:
 
 - Define `__errno` as the function libm calls: GCC 14 and later link Rings; no change in sound ([#75](https://github.com/insolentconstruct/eurorack/pull/75)).
+- Give the decay table (`lut_4_decades`) a second guard point, read when DAMPING is at maximum, and have the string synth's `Init` set each chord and the effect-clear flag: the output and the instructions per block are unchanged.
+- Clamp the sympathetic strings' and the string synth's notes to the pitch table, as Plaits and Stages do: with V/OCT, FREQUENCY and FM near the ends of their ranges, strings up to 12 semitones below or 24 above the played note read past the table and played wrong pitches. Every other output is unchanged.
+- Keep the FM voice's phase arithmetic in range: the phase modulation's offset is clamped where it would overflow 32 bits (modulation beyond ±4 cycles, with a loud, bright input), as the Cortex-M4 already saturated it, and the carrier stops just below one cycle per sample. On the module the output moves by at most 0.06 LSB where the modulation was clamped, and the carrier stops at 0.99999 cycles per sample; desktop builds now match the module.
+- Update stmlib's F4 CMSIS header as in the later CMSIS stmlib carries for the H7 (no `register` locals, no `sp` clobber): GCC 9 and later build Rings with `-Werror`. The GCC 4.8 firmware is byte-identical.
 
 ## Build and verify
 
