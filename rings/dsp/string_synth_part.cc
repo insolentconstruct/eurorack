@@ -378,7 +378,9 @@ void StringSynthPart::Process(
         amplitudes[2 * (num_harmonics - 1) + 1] += amplitudes[2 * i + 1];
       }
 
-      float frequency = SemitonesToRatio(note - 69.0f) * a3;
+      note -= 69.0f;
+      CONSTRAIN(note, -128.0f, 127.0f);
+      float frequency = SemitonesToRatio(note) * a3;
       voice_[group * chord_size + chord_note].Render(
           frequency,
           amplitudes,

@@ -10,6 +10,7 @@ Changes from vanilla, one line per change:
 
 - Define `__errno` as the function libm calls: GCC 14 and later link Rings; no change in sound ([#75](https://github.com/insolentconstruct/eurorack/pull/75)).
 - Give the decay table (`lut_4_decades`) a second guard point, read when DAMPING is at maximum, and have the string synth's `Init` set each chord and the effect-clear flag: the output and the instructions per block are unchanged.
+- Clamp the sympathetic strings' and the string synth's notes to the pitch table, as Plaits and Stages do: with V/OCT, FREQUENCY and FM near the ends of their ranges, strings up to 12 semitones below or 24 above the played note read past the table and played wrong pitches. Every other output is unchanged.
 
 ## Build and verify
 
