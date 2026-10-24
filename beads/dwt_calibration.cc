@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// DWT capture storage.
+// DWT capture storage and the timed spectral frames.
 
 #include "beads/dwt_calibration.h"
 
@@ -35,5 +35,16 @@ namespace dwt_calibration {
 volatile Stats stats __attribute__((section(".dwt_calibration"), aligned(8)));
 
 }  // namespace dwt_calibration
+
+// The spectral engine's main-loop frames, timed per channel. Defined here so
+// that the release build's phase_vocoder.cc keeps its line numbers.
+void PhaseVocoder::Buffer() {
+  for (int32_t i = 0; i < num_channels_; ++i) {
+    dwt_calibration::FrameTimer calibration_frame(stft_[i].done());
+    stft_[i].Buffer();
+    calibration_frame.Stop(i, stft_[i].ready(), stft_[i].done());
+  }
+}
+
 }  // namespace beads
 #endif  // DWT_CALIBRATION

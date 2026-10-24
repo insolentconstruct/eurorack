@@ -51,7 +51,7 @@ enum BracketIndex {
 const uint8_t kResetPanel = 1;
 const uint8_t kResetSynthetic = 3;
 const uint32_t kMagic = 0x44575443;
-const uint32_t kVersion = 1;
+const uint32_t kVersion = 2;
 const unsigned kHistogramBinWidth = 2000;
 const unsigned kHistogramBins = 64;
 const unsigned kSyntheticBlocks = 4096;
@@ -63,12 +63,39 @@ const unsigned kRightMultiplier = 137;
 const unsigned kStimulusPeriod = 2048;
 const int kStimulusOffset = 1024;
 const float kStimulusScale = 8192.0f;
+const unsigned kFrameChannels = 2;
 
 struct Bracket {
   uint32_t maximum;
   uint32_t count;
   uint64_t sum;
   uint32_t histogram[kHistogramBins];
+};
+
+// Main-loop spectral frames of one channel. Frame times are DWT cycles from
+// before STFT::Buffer to after it: wall includes interrupts, exclusive
+// subtracts the callback bracket that interrupted the frame. Discontinuities
+// count frames that do not follow the channel's last one (an STFT restart).
+struct FrameChannel {
+  uint32_t generation;
+  uint32_t produced;
+  uint32_t completed;
+  uint32_t skipped;
+  uint32_t backlog_maximum;
+  uint32_t wall_maximum;
+  uint32_t exclusive_maximum;
+  uint32_t done;
+  uint32_t discontinuities;
+  uint32_t reserved;
+  uint64_t wall_sum;
+  uint64_t exclusive_sum;
+};
+
+// Written by the main loop only, under its own sequence counter.
+struct Frames {
+  uint32_t sequence;
+  uint32_t reserved;
+  FrameChannel channel[kFrameChannels];
 };
 
 struct Stats {
@@ -81,6 +108,7 @@ struct Stats {
   uint32_t generation;
   uint32_t block;
   Bracket bracket[BRACKET_LAST];
+  Frames frames;
 };
 
 extern volatile Stats stats;
@@ -119,6 +147,11 @@ inline void Init() {
   stats.synthetic = 0;
   stats.reserved[0] = 0;
   stats.reserved[1] = 0;
+  stats.frames.sequence = 0;
+  stats.frames.reserved = 0;
+  for (unsigned c = 0; c < kFrameChannels; ++c) {
+    stats.frames.channel[c].generation = 0;
+  }
   Clear();
   stats.sequence = 2;
 }
@@ -181,6 +214,87 @@ class ScopedBlockTimer {
   bool active_;
 
   DISALLOW_COPY_AND_ASSIGN(ScopedBlockTimer);
+};
+
+// Low word of the callback bracket's cycle sum: one atomic read; differences
+// are exact while a frame lasts less than 2^32 cycles.
+inline uint32_t CallbackCycles() {
+  return *reinterpret_cast<volatile uint32_t*>(
+      &stats.bracket[BRACKET_CALLBACK].sum);
+}
+
+// Main loop: one channel's call to STFT::Buffer. Only panel acquisitions
+// record frames, and only frames that start and end inside one.
+class FrameTimer {
+ public:
+  FrameTimer(size_t done) {
+    generation_ = stats.generation;
+    done_ = done;
+    // No callback between the two reads: exclusive time is exact.
+    __disable_irq();
+    start_ = Read();
+    callback_ = CallbackCycles();
+    __enable_irq();
+  }
+
+  void Stop(unsigned channel, size_t ready, size_t done) {
+    __disable_irq();
+    const uint32_t callback = CallbackCycles() - callback_;
+    const uint32_t wall = Read() - start_;
+    __enable_irq();
+    const uint32_t exclusive = wall - callback;
+    if (done == done_ || stats.generation != generation_ ||
+        stats.synthetic ||
+        stats.bracket[BRACKET_CALLBACK].count >= kPanelBlocks) {
+      return;
+    }
+    volatile FrameChannel& s = stats.frames.channel[channel];
+    ++stats.frames.sequence;
+    __asm volatile("dmb" ::: "memory");
+    if (s.generation != generation_) {
+      // First frame since the reset.
+      s.generation = generation_;
+      s.completed = 0;
+      s.skipped = 0;
+      s.backlog_maximum = 0;
+      s.wall_maximum = 0;
+      s.exclusive_maximum = 0;
+      s.discontinuities = 0;
+      s.reserved = 0;
+      s.wall_sum = 0;
+      s.exclusive_sum = 0;
+    } else if (done_ != s.done) {
+      ++s.discontinuities;
+    }
+    // Frames STFT::Buffer took in this call: the one it computed and those
+    // it skipped as overdue.
+    const uint32_t taken = done - done_;
+    ++s.completed;
+    s.skipped += taken - 1;
+    s.produced = s.completed + s.skipped + (ready - done);
+    s.done = done;
+    if (taken > s.backlog_maximum) {
+      s.backlog_maximum = taken;
+    }
+    if (wall > s.wall_maximum) {
+      s.wall_maximum = wall;
+    }
+    if (exclusive > s.exclusive_maximum) {
+      s.exclusive_maximum = exclusive;
+    }
+    s.wall_sum += wall;
+    s.exclusive_sum += exclusive;
+    __asm volatile("dmb" ::: "memory");
+    ++stats.frames.sequence;
+  }
+
+ private:
+  uint32_t generation_;
+  uint32_t callback_;
+  uint32_t start_;
+  size_t done_;
+
+  DISALLOW_COPY_AND_ASSIGN(FrameTimer);
 };
 
 const float kSyntheticMidpoint = 0.5f;

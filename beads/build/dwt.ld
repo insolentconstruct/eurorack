@@ -7,5 +7,5 @@ SECTIONS {
   }
 }
 INSERT AFTER .dma;
-ASSERT(SIZEOF(.dwt_calibration) == 1112, "DWT ABI changed")
+ASSERT(SIZEOF(.dwt_calibration) == 1232, "DWT ABI changed")
 ASSERT(_eramd2dma <= 0x30041000, "DWT overlaps DMA")

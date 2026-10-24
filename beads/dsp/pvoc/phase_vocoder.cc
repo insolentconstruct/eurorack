@@ -97,11 +97,12 @@ void PhaseVocoder::Process(
         2);
   }
 }
-
+#ifndef DWT_CALIBRATION
 void PhaseVocoder::Buffer() {
   for (int32_t i = 0; i < num_channels_; ++i) {
     stft_[i].Buffer();
   }
 }
+#endif  // DWT_CALIBRATION: timed in dwt_calibration.cc
 
 }  // namespace beads

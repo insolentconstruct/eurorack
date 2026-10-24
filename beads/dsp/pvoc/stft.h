@@ -109,6 +109,12 @@ class STFT {
   Modifier* modifier_;
 
   DISALLOW_COPY_AND_ASSIGN(STFT);
+
+#ifdef DWT_CALIBRATION
+ public:
+  inline size_t ready() const { return ready_; }
+  inline size_t done() const { return done_; }
+#endif  // DWT_CALIBRATION
 };
 
 }  // namespace beads
