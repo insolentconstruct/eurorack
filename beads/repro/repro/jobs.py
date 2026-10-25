@@ -23,8 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
 """How many worker processes to use."""
 
 import os
@@ -34,44 +32,44 @@ DEFAULT_CAP = 4
 
 
 def cgroup_cpus(root="/sys/fs/cgroup"):
-    """CPU limit from the cgroup (v2 cpu.max, then v1 cfs quota), or None."""
-    root = Path(root)
-    try:
-        quota, period = (root / "cpu.max").read_text().split()
-        if quota != "max":
-            return max(1, int(quota) // int(period))
-    except (OSError, ValueError):
-        pass
-    try:
-        quota = int((root / "cpu" / "cpu.cfs_quota_us").read_text())
-        period = int((root / "cpu" / "cpu.cfs_period_us").read_text())
-        if quota > 0:
-            return max(1, quota // period)
-    except (OSError, ValueError):
-        pass
-    return None
+  """CPU limit from the cgroup (v2 cpu.max, then v1 cfs quota), or None."""
+  root = Path(root)
+  try:
+    quota, period = (root / "cpu.max").read_text().split()
+    if quota != "max":
+      return max(1, int(quota) // int(period))
+  except (OSError, ValueError):
+    pass
+  try:
+    quota = int((root / "cpu" / "cpu.cfs_quota_us").read_text())
+    period = int((root / "cpu" / "cpu.cfs_period_us").read_text())
+    if quota > 0:
+      return max(1, quota // period)
+  except (OSError, ValueError):
+    pass
+  return None
 
 
 def usable_cores(cgroup_root="/sys/fs/cgroup"):
-    try:
-        cores = len(os.sched_getaffinity(0))
-    except AttributeError:
-        cores = os.cpu_count() or 1
-    limit = cgroup_cpus(cgroup_root)
-    return max(1, min(cores, limit) if limit else cores)
+  try:
+    cores = len(os.sched_getaffinity(0))
+  except AttributeError:
+    cores = os.cpu_count() or 1
+  limit = cgroup_cpus(cgroup_root)
+  return max(1, min(cores, limit) if limit else cores)
 
 
 def resolve(cli_value=None, environ=None, cgroup_root="/sys/fs/cgroup"):
-    """--jobs beats BEADS_JOBS beats min(4, usable cores)."""
-    environ = os.environ if environ is None else environ
-    for source, value in (("--jobs", cli_value),
-                          ("BEADS_JOBS", environ.get("BEADS_JOBS"))):
-        if value not in (None, ""):
-            try:
-                jobs = int(value)
-            except ValueError:
-                raise SystemExit(f"{source} must be a whole number, got {value!r}")
-            if jobs < 1:
-                raise SystemExit(f"{source} must be at least 1, got {jobs}")
-            return jobs
-    return min(DEFAULT_CAP, usable_cores(cgroup_root))
+  """--jobs beats BEADS_JOBS beats min(4, usable cores)."""
+  environ = os.environ if environ is None else environ
+  for source, value in (("--jobs", cli_value), ("BEADS_JOBS",
+                                                environ.get("BEADS_JOBS"))):
+    if value not in (None, ""):
+      try:
+        jobs = int(value)
+      except ValueError:
+        raise SystemExit(f"{source} must be a whole number, got {value!r}")
+      if jobs < 1:
+        raise SystemExit(f"{source} must be at least 1, got {jobs}")
+      return jobs
+  return min(DEFAULT_CAP, usable_cores(cgroup_root))

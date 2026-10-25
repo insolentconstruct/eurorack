@@ -23,7 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
 """Golden hashes: the emulator must reproduce the recorded output of the
 fixed fixtures on a firmware build whose audio path they were taken from.
 
@@ -49,79 +48,98 @@ KNOWN_ELFS = {
 
 
 def read_table():
-    rows = {}
-    for line in TABLE.read_text().splitlines():
-        if line.startswith(("#", "quality")) or not line.strip():
-            continue
-        q, mode, digest = line.split()
-        rows[(int(q), mode)] = digest
-    return rows
+  rows = {}
+  for line in TABLE.read_text().splitlines():
+    if line.startswith(("#", "quality")) or not line.strip():
+      continue
+    q, mode, digest = line.split()
+    rows[(int(q), mode)] = digest
+  return rows
 
 
 def _fixture(args):
-    from repro.emu import elf as elf_mod, golden, itcm
-    path, quality, mode = args
-    elf = elf_mod.Elf(path)
-    digest, _ = golden.run_fixture(elf, quality, mode, itcm.itcm_image(elf))
-    return quality, mode, digest
+  from repro.emu import elf as elf_mod, golden, itcm
+  path, quality, mode = args
+  elf = elf_mod.Elf(path)
+  digest, _ = golden.run_fixture(elf, quality, mode, itcm.itcm_image(elf))
+  return quality, mode, digest
 
 
 class Golden(unittest.TestCase):
-    def test_table_lists_every_fixture_once(self):
-        from repro.emu import golden
-        self.assertEqual(sorted(read_table()), sorted(
-            (q, m) for q in golden.QUALITIES for m in golden.MODES))
 
-    @unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
-    def test_fixtures_reproduce_the_recorded_hashes(self):
-        import hashlib
-        path = os.environ["BEADS_ELF"]
-        sha = hashlib.sha256(Path(path).read_bytes()).hexdigest()
-        if sha not in KNOWN_ELFS:
-            self.skipTest(f"ELF {sha[:12]} is not one the table was "
-                          "recorded on")
-        want = read_table()
-        jobs = [(path, q, m) for q, m in sorted(want)]
-        ctx = multiprocessing.get_context("spawn")
-        with concurrent.futures.ProcessPoolExecutor(
-                min(len(jobs), os.cpu_count() or 1), mp_context=ctx) as pool:
-            got = {(q, m): d for q, m, d in pool.map(_fixture, jobs)}
-        self.assertEqual(got, want)
+  def test_table_lists_every_fixture_once(self):
+    from repro.emu import golden
+    self.assertEqual(
+        sorted(read_table()),
+        sorted((q, m) for q in golden.QUALITIES for m in golden.MODES))
+
+  @unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
+  def test_fixtures_reproduce_the_recorded_hashes(self):
+    import hashlib
+    path = os.environ["BEADS_ELF"]
+    sha = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    if sha not in KNOWN_ELFS:
+      self.skipTest(f"ELF {sha[:12]} is not one the table was "
+                    "recorded on")
+    want = read_table()
+    jobs = [(path, q, m) for q, m in sorted(want)]
+    ctx = multiprocessing.get_context("spawn")
+    with concurrent.futures.ProcessPoolExecutor(min(len(jobs),
+                                                    os.cpu_count() or 1),
+                                                mp_context=ctx) as pool:
+      got = {(q, m): d for q, m, d in pool.map(_fixture, jobs)}
+    self.assertEqual(got, want)
 
 
 OPTION_PANELS = [
-    dict(limiter="fast"), dict(limiter="off"), dict(pitch_scale="shri"),
+    dict(limiter="fast"),
+    dict(limiter="off"),
+    dict(pitch_scale="shri"),
     dict(pitch_scale="fifths", assign_destination="reverb"),
-    dict(self_play="on_request"), dict(reverb_style="clouds"),
-    dict(delay_mode="never"), dict(delay_mode="wide_detent"),
-    dict(stereo_width=100), dict(stereo_width=255, width_assigned=True),
+    dict(self_play="on_request"),
+    dict(reverb_style="clouds"),
+    dict(delay_mode="never"),
+    dict(delay_mode="wide_detent"),
+    dict(stereo_width=100),
+    dict(stereo_width=255, width_assigned=True),
     dict(mono=True, media="clean_tape"),
     dict(media="dirty_tape", assign_destination="dry_wet"),
-    dict(limiter="fast", pitch_scale="bhairav", self_play="on_request",
-         reverb_style="clouds", delay_mode="never", stereo_width=7,
+    dict(limiter="fast",
+         pitch_scale="bhairav",
+         self_play="on_request",
+         reverb_style="clouds",
+         delay_mode="never",
+         stereo_width=7,
          assign_destination="reverb"),
 ]
 
 
 class Options(unittest.TestCase):
-    @unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
-    def test_every_panel_option_is_read_back_by_the_firmware(self):
-        """Settings::Init must load each encoded option as written (the boot
+
+  @unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
+  def test_every_panel_option_is_read_back_by_the_firmware(self):
+    """Settings::Init must load each encoded option as written (the boot
         checks the state bytes), and the media sets the codec rate."""
-        from repro import scenario
-        from repro.emu import elf as elf_mod, firmware, itcm, panel
-        elf = elf_mod.Elf(os.environ["BEADS_ELF"])
-        image = itcm.itcm_image(elf)
-        rates = {"dirty_tape": 24000, "clean_tape": 48000,
-                 "vintage_digital": 32000, "digital": 48000}
-        for opts in OPTION_PANELS:
-            with self.subTest(**opts):
-                p = dict(scenario.PANEL_DEFAULTS, **opts)
-                fw = firmware.Firmware(
-                    elf, panel.state_for(p, elf.layout()), itcm=image,
-                    cal=panel.IDEAL_CAL, autostart=True)
-                self.assertEqual(fw.codec[-1][1], rates[p["media"]])
+    from repro import scenario
+    from repro.emu import elf as elf_mod, firmware, itcm, panel
+    elf = elf_mod.Elf(os.environ["BEADS_ELF"])
+    image = itcm.itcm_image(elf)
+    rates = {
+        "dirty_tape": 24000,
+        "clean_tape": 48000,
+        "vintage_digital": 32000,
+        "digital": 48000
+    }
+    for opts in OPTION_PANELS:
+      with self.subTest(**opts):
+        p = dict(scenario.PANEL_DEFAULTS, **opts)
+        fw = firmware.Firmware(elf,
+                               panel.state_for(p, elf.layout()),
+                               itcm=image,
+                               cal=panel.IDEAL_CAL,
+                               autostart=True)
+        self.assertEqual(fw.codec[-1][1], rates[p["media"]])
 
 
 if __name__ == "__main__":
-    unittest.main()
+  unittest.main()

@@ -23,23 +23,20 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
-
 """Pitch scales and the grain schedule of the beta scenarios. Plain data, so
 tools that must not need numpy can import it."""
 
 SCALES = (
-    ('chromatic', tuple(range(12))), ('fifths', (0,7)),
-    ('major', (0,2.0004,3.9996,5.0004,6.9996,9,11.0004)),
-    ('minor', (0,2.0004,3,5.0004,6.9996,8.0004,9.9996)),
-    ('major-pentatonic', (0,2.0004,3.9996,6.9996,9)),
-    ('minor-pentatonic', (0,3,5.0004,6.9996,9.9996)),
-    ('pelog', (0,1.53,7.0596,8.4804)),
-    ('bhairav', (0,.9024,3.8628,4.98,7.02,7.9212,10.8828)),
-    ('shri', (0,2.0388,3.156,4.98,7.02,9.0588,10.1748)),
+    ('chromatic', tuple(range(12))),
+    ('fifths', (0, 7)),
+    ('major', (0, 2.0004, 3.9996, 5.0004, 6.9996, 9, 11.0004)),
+    ('minor', (0, 2.0004, 3, 5.0004, 6.9996, 8.0004, 9.9996)),
+    ('major-pentatonic', (0, 2.0004, 3.9996, 6.9996, 9)),
+    ('minor-pentatonic', (0, 3, 5.0004, 6.9996, 9.9996)),
+    ('pelog', (0, 1.53, 7.0596, 8.4804)),
+    ('bhairav', (0, .9024, 3.8628, 4.98, 7.02, 7.9212, 10.8828)),
+    ('shri', (0, 2.0388, 3.156, 4.98, 7.02, 9.0588, 10.1748)),
 )
 
-
 # One isolated grain per second: the trigger times of the random-side scenarios.
-TRIGGERS = tuple(3.+i for i in range(24))
+TRIGGERS = tuple(3. + i for i in range(24))

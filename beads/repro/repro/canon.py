@@ -23,33 +23,32 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
 """The one JSON writer: serial and parallel runs both go through it."""
 
 import json
 import math
 
-import numpy as np
+import numpy
 
 
 def _plain(value):
-    if isinstance(value, np.generic):
-        value = value.item()
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            return None
-        return float(format(value, ".9g"))
-    if isinstance(value, dict):
-        return {str(k): _plain(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_plain(v) for v in value]
-    if isinstance(value, np.ndarray):
-        return [_plain(v) for v in value.tolist()]
-    return value
+  if isinstance(value, numpy.generic):
+    value = value.item()
+  if isinstance(value, float):
+    if not math.isfinite(value):
+      return None
+    return float(format(value, ".9g"))
+  if isinstance(value, dict):
+    return {str(k): _plain(v) for k, v in value.items()}
+  if isinstance(value, (list, tuple)):
+    return [_plain(v) for v in value]
+  if isinstance(value, numpy.ndarray):
+    return [_plain(v) for v in value.tolist()]
+  return value
 
 
 def dumps(value):
-    """Sorted keys, nine significant digits, NaN as null, one trailing newline."""
-    return json.dumps(_plain(value), sort_keys=True, separators=(",", ":"),
-                      allow_nan=False) + "\n"
+  """Sorted keys, nine significant digits, NaN as null, one trailing newline."""
+  return json.dumps(
+      _plain(value), sort_keys=True, separators=(",", ":"),
+      allow_nan=False) + "\n"

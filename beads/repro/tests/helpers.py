@@ -23,8 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
 """Shared test setup: build the desktop driver once per test process."""
 
 import os
@@ -41,12 +39,13 @@ _state = {}
 
 
 def scratch():
-    """One scratch directory per process (BEADS_REPRO_SCRATCH to override)."""
-    if "dir" not in _state:
-        _state["dir"] = Path(os.environ.get("BEADS_REPRO_SCRATCH")
-                             or tempfile.mkdtemp(prefix="repro-tests-"))
-    return _state["dir"]
+  """One scratch directory per process (BEADS_REPRO_SCRATCH to override)."""
+  if "dir" not in _state:
+    _state["dir"] = Path(
+        os.environ.get("BEADS_REPRO_SCRATCH") or
+        tempfile.mkdtemp(prefix="repro-tests-"))
+  return _state["dir"]
 
 
 def run(out_name, jobs, set_name="p0", **kw):
-    return runner.run_set(set_name, "desktop", scratch() / out_name, jobs, **kw)
+  return runner.run_set(set_name, "desktop", scratch() / out_name, jobs, **kw)
