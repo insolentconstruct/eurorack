@@ -48,12 +48,12 @@ const float kRate = 48000.0f;
 const float kScale = 1.0f / 2147483648.0f;
 
 // One block at a level (fraction of full scale).
-bool Feed(AttackInput* input, float level, bool left_only = false) {
+bool Feed(AttackInput* input, float level) {
   CodecFrame in[kBlockSize];
   for (size_t i = 0; i < kBlockSize; ++i) {
     const int32_t v = int32_t(level * 2147483647.0f) * (i & 1 ? -1 : 1);
     in[i].l = v;
-    in[i].r = left_only ? 0 : v;
+    in[i].r = v;
   }
   return input->Process(in, kBlockSize, kScale, 0.0f, kRate, false, false);
 }
@@ -168,8 +168,14 @@ void TestAttackProcessor() {
     p.time.base = 0.05f;
     p.size.base = 0.3f;
     p.shape.base = 0.3f;
-    ModulatedParameter density = { 0.95f, 0.0f };
-    Processor::MixParameters mix = { 0.0f, 1.0f, 0.0f, false };
+    ModulatedParameter density;
+    density.base = 0.95f;
+    density.cv = 0.0f;
+    Processor::MixParameters mix;
+    mix.feedback = 0.0f;
+    mix.dry_wet = 1.0f;
+    mix.reverb_amount = 0.0f;
+    mix.output_gate = false;
     uint32_t hash = 2166136261U;
     double energy = 0.0;
     for (int block = 0; block < 8000; ++block) {

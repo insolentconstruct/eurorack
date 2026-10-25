@@ -205,9 +205,8 @@ class FeedbackDiffuser {
   typedef E::DelayLine<DelayMemory, 0> DelayL;
   typedef E::DelayLine<DelayMemory, 1> DelayR;
 
-  enum {
-    kClearEnd = kFeedbackDelayBufferSize + kDiffuserBufferSize
-  };
+  static const size_t kClearEnd = \
+      kFeedbackDelayBufferSize + kDiffuserBufferSize;
 
   static inline float LoopGain(float feedback) {
     float gain = kFeedbackLoopGain * feedback;
