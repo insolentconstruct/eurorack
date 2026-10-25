@@ -1,13 +1,13 @@
 # Code style
 
-**TL;DR:** follow upstream Mutable Instruments master: Beads (2021) first, then Plaits, Stages and Marbles; Clouds effects for diffuser/reverb. Rules marked (Drizzlet) are ours. Leave unrelated existing code alone. This branch shares Drizzlet's style guide.
+**TL;DR:** follow upstream Mutable Instruments master: Beads (2021) first, then Plaits, Stages and Marbles; Clouds for the diffuser, reverb and phase vocoder. Rules marked (Drizzlet) are ours. Leave unrelated existing code alone. This branch shares Drizzlet's style guide.
 
 ## Layout
 
 - 2-space indent, no tabs in C/C++. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
-- Put firmware code in `namespace beads` and close it with `}  // namespace beads`. Host test functions may be global, as in MI tests.
+- Put module code in `namespace beads` and close it with `}  // namespace beads`. Entry points (`beads.cc`, the bootloader) and host test functions stay global; specializations of stmlib templates go in `namespace stmlib` (`dsp/sample_rate_conversion_filters.h`).
 - New headers use `BEADS_<PATH>_H_` guards, closed by `#endif  // BEADS_<PATH>_H_`.
-- Includes: the file's own header, then `<system>`, `stmlib/...`, `beads/...`, with blank lines between groups. `using namespace std;` / `stmlib` go inside the module namespace, usually in `.cc` files.
+- Includes: usually the file's own header, then `<system>`, `stmlib/...`, `beads/...`, with blank lines between groups. Upstream grouping varies (`stmlib/stmlib.h` alone, HAL headers last in drivers); follow the nearby or ported file. `using namespace std;` / `stmlib` go inside the module namespace in module `.cc` files; entry points and host tests put them at global scope.
 
 ## File and folder structure
 
@@ -27,9 +27,9 @@
 
 ## Names
 
-- Types and methods: `PascalCase` (`Process`, `Init`). Accessors, locals and parameters: `lower_case`. Common accessors are `inline T name() const`, setters `set_name(...)`, and mutable storage access `mutable_name()`; some getters omit `const`.
+- Types and methods: `PascalCase` (`Process`, `Init`). Accessors, locals and parameters: `lower_case`. Ported helpers keep their names (`fast_p2r` in the phase vocoder). Common accessors are `inline T name() const`, setters `set_name(...)`, and mutable storage access `mutable_name()`; some getters omit `const`.
 - Private members end in `_` (`peak_lp_`); public struct fields usually don't.
-- Named constants use `kPascalCase`, at namespace scope or as class-local `static const`. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`.
+- Named scalar constants use `kPascalCase`, at namespace scope or as class-local `static const`. Local constants, tables and class-static arrays are often `lower_case` (`switch_definitions`, `long_press_duration`); follow the owning file. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`. Anonymous enums for compile-time traits use `lower_case` (`bundle_size` in `dsp/delay_line.h`, `length` in `dsp/fx/fx_engine.h`).
 
 ## Classes
 
@@ -44,12 +44,12 @@
 
 - (Drizzlet) Pass new arguments explicitly rather than adding default arguments.
 - C++98-era subset: no `auto`, `nullptr`, lambdas or `constexpr`; no exceptions or RTTI; no STL containers or virtual dispatch in per-sample code (`std::min`/`std::max` as in `limiter.h` and `std::fill` as in `gain_control.cc` are fine).
-- Prefer `const` for locals that don't change, and `bool` for flags.
+- (Drizzlet) Prefer `const` for new locals that don't change; upstream is not consistent. Use `bool` for flags.
 - Loops: `while (size--)` with a pointer, or an indexed `for`; indices are usually `size_t` or `int`.
 - Use the stmlib helpers: `CONSTRAIN`, `ONE_POLE`, `SLOPE`, `ParameterInterpolator`, the `Interpolate*` functions and lookup tables.
-- Numeric casts commonly use `T(x)` or `static_cast<T>(x)`. Drivers also use C casts for register and DMA addresses.
+- Numeric casts commonly use `T(x)` or `static_cast<T>(x)`. Drivers use C casts for register and DMA addresses, and the phase vocoder for reinterpreting its spectral storage.
 - (Drizzlet) New float math uses `f` (`0.5f`). The existing code isn't strict about this, so leave existing literals alone.
-- Initialize struct fields one by one, as in Beads codec frames.
+- Set runtime frames, controls and settings field by field, as in Beads codec frames. Constant tables use aggregate initialization (`switch_definitions`, `Ui::media_palette_`).
 - Name a constant when it has meaning; small obvious numbers can stay inline.
 
 ## Performance
@@ -68,13 +68,13 @@ Observed upstream DSP conventions and design principles:
 ## Comments
 
 - Brief `//` comments explain intent; trailing comments usually have two spaces before `//`. Short labels and units are fine. Measured-cost comments, honest hack labels, owned `TODO(...)` notes and retained commented profiling switches are useful upstream idioms, not required boilerplate.
-- (Drizzlet) New files use the existing header format with Insolent Construct attribution: `// Copyright YEAR Insolent Construct.`, `// Author: Insolent Construct`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
+- (Drizzlet) New files use the existing header format (`//` in C/C++, `#` in Python, shell and makefiles) with Insolent Construct attribution: `// Copyright YEAR Insolent Construct.`, `// Author: Insolent Construct`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
 
 ## Project policy
 
 - Don't edit the copyright headers of existing files.
 - (Drizzlet) Keep stock behaviour unchanged unless the change is the point. New options default to stock.
-- MI uses `packed`, `aligned`, section placement (`IN_RAM`, `.ramd*`, `.dma`) and `always_inline` on a separate declaration. MI module code never uses `__builtin_expect`, `noinline` or `flatten`; keep that restriction.
+- MI puts `packed`, `aligned` and section attributes directly on the type or declaration (`drivers/codec.h`, the buffers in `beads.cc`); stmlib's `IN_RAM` places code in RAM (Tides 2), and its interpolation helpers put `always_inline` on a separate declaration (`stmlib/utils/dsp.h`). MI module code never uses `__builtin_expect`, `noinline` or `flatten`; keep that restriction.
 - (Drizzlet) Behaviour changes get a line in CHANGELOG.md.
 
 ## Tests
@@ -82,10 +82,15 @@ Observed upstream DSP conventions and design principles:
 - MI host programs render WAVs or print values for listening/plotting; Beads comments out its test calls in `main()`.
 - (Drizzlet) CI programs use `void TestXxx()` functions, print `ERROR: <test>: <condition>`, count failures and return non-zero; this adapts the printed-error checker idiom.
 - (Drizzlet) Keep compile-time layout checks and sanitizer coverage.
-- Preserve the file's licence. For new host files, use the Beads/Clouds MIT
-  header, separator and brief description. Upstream Plaits, Marbles and Stages
-  tests instead retain GPL headers without a separator; do not replace them.
+- Preserve the file's licence. New host files use the Beads/Clouds MIT header
+  and separator; (Drizzlet) add a brief description. Upstream Plaits, Marbles
+  and Stages tests instead retain GPL headers without a separator; do not
+  replace them.
 - (Drizzlet) Add a test program by including `beads/test/suite.mk` from its own `<name>.mk`; see the [host test README](../../test/README.md).
 - (Drizzlet) CI runs the host tests in one job, next to two parallel release builds that must match.
 - Make recipes use tabs, as in upstream test makefiles.
 - Firmware makefiles commonly keep the MIT header, aligned assignments, `PACKAGES` and `include stmlib/makefile.inc`; Beads gives an overridable `TOOLCHAIN_PATH ?=` default with compiler comparison comments. Host makefiles list sources explicitly and need not have the firmware header, toolchain default or include.
+
+## Python
+
+- Resource scripts follow MI's own (`beads/resources/wavetables.py`, Plaits and Stages `resources/`): two-space indent, `snake_case` functions, `UPPER_CASE` constants, `import numpy` (not `np`), one statement per line.
