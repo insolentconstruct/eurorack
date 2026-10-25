@@ -23,6 +23,4 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
 """Drizzlet repro kit."""

@@ -23,8 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
 """Desktop tier: the host build of the processor, fed block by block.
 
 It runs x86 floats, so a render never matches firmware bit for bit; only
@@ -39,7 +37,7 @@ import shutil
 import subprocess
 import tempfile
 
-import numpy as np
+import numpy
 
 from repro import jobs
 from repro.scenario import INT_PANEL, OPTIONAL_PANEL
@@ -55,77 +53,89 @@ SEED_BUTTON = {"off": 0, "on": 1, "locked": 2}
 
 @dataclass
 class Render:
-    audio: np.ndarray       # (n, 2) float32 at sr
-    sr: int
-    delay_mode: np.ndarray  # (blocks,) uint8, 1 while in delay mode
-    info: dict
+  audio: numpy.ndarray  # (n, 2) float32 at sr
+  sr: int
+  delay_mode: numpy.ndarray  # (blocks,) uint8, 1 while in delay mode
+  info: dict
 
 
 class DesktopTier:
-    name = "desktop"
-    sr = SAMPLE_RATE
+  name = "desktop"
+  sr = SAMPLE_RATE
 
-    def __init__(self):
-        self.binary = None
-        self.toolchain = ""
+  def __init__(self):
+    self.binary = None
+    self.toolchain = ""
 
-    def prepare(self, build_dir):
-        """Build the driver once, before any worker starts. Returns the state
+  def prepare(self, build_dir):
+    """Build the driver once, before any worker starts. Returns the state
         a worker needs to rebuild this tier object."""
-        build_dir = Path(build_dir).resolve()
-        build_dir.mkdir(parents=True, exist_ok=True)
-        env = dict(os.environ)
-        subprocess.run(
-            ["make", "-s", f"-j{jobs.usable_cores()}", "-f", MAKEFILE,
-             f"BUILD_ROOT={build_dir}/obj/", BINARY],
-            cwd=REPO, check=True, env=env)
-        built = REPO / BINARY
-        target = build_dir / BINARY
-        shutil.move(str(built), str(target))
-        self.binary = target
-        self.toolchain = subprocess.run(
-            ["g++", "--version"], capture_output=True, text=True,
-            check=True).stdout.splitlines()[0]
-        return {"binary": str(target), "toolchain": self.toolchain}
+    build_dir = Path(build_dir).resolve()
+    build_dir.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    subprocess.run([
+        "make", "-s", f"-j{jobs.usable_cores()}", "-f", MAKEFILE,
+        f"BUILD_ROOT={build_dir}/obj/", BINARY
+    ],
+                   cwd=REPO,
+                   check=True,
+                   env=env)
+    built = REPO / BINARY
+    target = build_dir / BINARY
+    shutil.move(str(built), str(target))
+    self.binary = target
+    self.toolchain = subprocess.run(["g++", "--version"],
+                                    capture_output=True,
+                                    text=True,
+                                    check=True).stdout.splitlines()[0]
+    return {"binary": str(target), "toolchain": self.toolchain}
 
-    def restore(self, state):
-        self.binary = Path(state["binary"])
-        self.toolchain = state["toolchain"]
+  def restore(self, state):
+    self.binary = Path(state["binary"])
+    self.toolchain = state["toolchain"]
 
-    def provenance(self):
-        return {"tier": self.name, "sr": self.sr, "block": BLOCK,
-                "toolchain": self.toolchain}
+  def provenance(self):
+    return {
+        "tier": self.name,
+        "sr": self.sr,
+        "block": BLOCK,
+        "toolchain": self.toolchain
+    }
 
-    def run(self, scenario, stimulus, seed):
-        if any(e["kind"] == "cv" and e["channel"] == "assign"
-               for e in scenario.events):
-            raise RuntimeError(
-                f"{scenario.name}: the desktop driver does not route the "
-                "ASSIGN CV; use another tier for it")
-        unsupported = sorted(
-            set(scenario.panel) & (set(OPTIONAL_PANEL) | set(INT_PANEL)))
-        if unsupported:
-            raise RuntimeError(
-                f"{scenario.name}: the desktop driver has no panel setting "
-                f"for {', '.join(unsupported)}; use another tier")
-        panel = dict(scenario.panel)
-        args = [f"{k}={v}" for k, v in (
-            ("media", MEDIA[panel.pop("media")]),
-            ("mono", int(panel.pop("mono"))),
-            ("seed_button", SEED_BUTTON[panel.pop("seed_button")]),
-            ("seed", seed)) + tuple(panel.items())]
-        with tempfile.TemporaryDirectory(prefix="repro-") as tmp:
-            stim = Path(tmp) / "stimulus.bin"
-            stim.write_bytes(stimulus.pack())
-            prefix = Path(tmp) / "out"
-            done = subprocess.run(
-                [str(self.binary), str(stim), str(prefix)] + args,
-                capture_output=True, text=True,
-                env={**os.environ, "ASAN_OPTIONS": "detect_leaks=0"})
-            if done.returncode != 0:
-                raise RuntimeError(
-                    f"{scenario.name}: driver exited {done.returncode}: "
-                    f"{done.stderr.strip()[:2000]}")
-            audio = np.fromfile(f"{prefix}.f32", "<f4").reshape(-1, 2)
-            delay = np.fromfile(f"{prefix}.delay", np.uint8)
-        return Render(audio, self.sr, delay, {"blocks": int(len(delay))})
+  def run(self, scenario, stimulus, seed):
+    if any(e["kind"] == "cv" and e["channel"] == "assign"
+           for e in scenario.events):
+      raise RuntimeError(
+          f"{scenario.name}: the desktop driver does not route the "
+          "ASSIGN CV; use another tier for it")
+    unsupported = sorted(
+        set(scenario.panel) & (set(OPTIONAL_PANEL) | set(INT_PANEL)))
+    if unsupported:
+      raise RuntimeError(
+          f"{scenario.name}: the desktop driver has no panel setting "
+          f"for {', '.join(unsupported)}; use another tier")
+    panel = dict(scenario.panel)
+    args = [
+        f"{k}={v}"
+        for k, v in (("media", MEDIA[panel.pop("media")]),
+                     ("mono", int(panel.pop("mono"))),
+                     ("seed_button", SEED_BUTTON[panel.pop("seed_button")]),
+                     ("seed", seed)) + tuple(panel.items())
+    ]
+    with tempfile.TemporaryDirectory(prefix="repro-") as tmp:
+      stim = Path(tmp) / "stimulus.bin"
+      stim.write_bytes(stimulus.pack())
+      prefix = Path(tmp) / "out"
+      done = subprocess.run([str(
+          self.binary), str(stim), str(prefix)] + args,
+                            capture_output=True,
+                            text=True,
+                            env={
+                                **os.environ, "ASAN_OPTIONS": "detect_leaks=0"
+                            })
+      if done.returncode != 0:
+        raise RuntimeError(f"{scenario.name}: driver exited {done.returncode}: "
+                           f"{done.stderr.strip()[:2000]}")
+      audio = numpy.fromfile(f"{prefix}.f32", "<f4").reshape(-1, 2)
+      delay = numpy.fromfile(f"{prefix}.delay", numpy.uint8)
+    return Render(audio, self.sr, delay, {"blocks": int(len(delay))})

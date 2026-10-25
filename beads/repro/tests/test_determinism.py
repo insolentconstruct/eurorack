@@ -23,8 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
-
 """The merged results must not depend on the job count."""
 
 import os
@@ -35,50 +33,51 @@ from tests import helpers
 
 
 class Determinism(unittest.TestCase):
-    def test_jobs_1_and_4_are_byte_identical(self):
-        serial, _ = helpers.run("serial", 1)
-        parallel, _ = helpers.run("parallel", 4)
-        for name in ("merged.json", "merged.tsv"):
-            self.assertEqual((serial / name).read_bytes(),
-                             (parallel / name).read_bytes(), name)
-        # Everything but wall-clock timing, per scenario, byte for byte.
-        for d in sorted(p for p in serial.iterdir() if p.is_dir()):
-            for f in sorted(d.iterdir()):
-                if f.name == "timing.json":
-                    continue
-                self.assertEqual(f.read_bytes(),
-                                 (parallel / d.name / f.name).read_bytes(),
-                                 f"{d.name}/{f.name}")
 
-    def test_merged_json_is_canonical(self):
-        serial, doc = helpers.run("serial2", 1)
-        text = (serial / "merged.json").read_text()
-        self.assertEqual(text, canon.dumps(doc))
-        self.assertNotIn("\n  ", text)  # one serializer, no indent
+  def test_jobs_1_and_4_are_byte_identical(self):
+    serial, _ = helpers.run("serial", 1)
+    parallel, _ = helpers.run("parallel", 4)
+    for name in ("merged.json", "merged.tsv"):
+      self.assertEqual((serial / name).read_bytes(),
+                       (parallel / name).read_bytes(), name)
+    # Everything but wall-clock timing, per scenario, byte for byte.
+    for d in sorted(p for p in serial.iterdir() if p.is_dir()):
+      for f in sorted(d.iterdir()):
+        if f.name == "timing.json":
+          continue
+        self.assertEqual(f.read_bytes(),
+                         (parallel / d.name / f.name).read_bytes(),
+                         f"{d.name}/{f.name}")
+
+  def test_merged_json_is_canonical(self):
+    serial, doc = helpers.run("serial2", 1)
+    text = (serial / "merged.json").read_text()
+    self.assertEqual(text, canon.dumps(doc))
+    self.assertNotIn("\n  ", text)  # one serializer, no indent
 
 
 @unittest.skipUnless(os.environ.get("BEADS_ELF"), "BEADS_ELF not set")
 class EmulatorDeterminism(unittest.TestCase):
-    """The emulator tier too: one process or several, the same bytes."""
+  """The emulator tier too: one process or several, the same bytes."""
 
-    def test_jobs_1_and_2_are_byte_identical(self):
-        kw = dict(only={"b-seed-trigger", "b-density-gated"},
-                  tier_options=dict(elf=os.environ["BEADS_ELF"], window=1.0))
-        outs = []
-        for name, jobs in (("emu1", 1), ("emu2", 2)):
-            base, _ = runner.run_set("p0", "emulator", helpers.scratch() / name,
-                                     jobs, **kw)
-            outs.append(base)
-        for name in ("merged.json", "merged.tsv"):
-            self.assertEqual((outs[0] / name).read_bytes(),
-                             (outs[1] / name).read_bytes(), name)
-        for d in sorted(p for p in outs[0].iterdir() if p.is_dir()):
-            for f in sorted(d.iterdir()):
-                if f.name != "timing.json":
-                    self.assertEqual(f.read_bytes(),
-                                     (outs[1] / d.name / f.name).read_bytes(),
-                                     f"{d.name}/{f.name}")
+  def test_jobs_1_and_2_are_byte_identical(self):
+    kw = dict(only={"b-seed-trigger", "b-density-gated"},
+              tier_options=dict(elf=os.environ["BEADS_ELF"], window=1.0))
+    outs = []
+    for name, jobs in (("emu1", 1), ("emu2", 2)):
+      base, _ = runner.run_set("p0", "emulator",
+                               helpers.scratch() / name, jobs, **kw)
+      outs.append(base)
+    for name in ("merged.json", "merged.tsv"):
+      self.assertEqual((outs[0] / name).read_bytes(),
+                       (outs[1] / name).read_bytes(), name)
+    for d in sorted(p for p in outs[0].iterdir() if p.is_dir()):
+      for f in sorted(d.iterdir()):
+        if f.name != "timing.json":
+          self.assertEqual(f.read_bytes(),
+                           (outs[1] / d.name / f.name).read_bytes(),
+                           f"{d.name}/{f.name}")
 
 
 if __name__ == "__main__":
-    unittest.main()
+  unittest.main()

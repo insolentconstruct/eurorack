@@ -23,7 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
 """Cortex-M7 emulation of the firmware ELF: Unicorn, the ELF's own symbols
 and DWARF, and nothing else.
 

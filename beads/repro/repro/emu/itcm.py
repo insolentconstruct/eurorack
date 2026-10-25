@@ -23,7 +23,6 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # -----------------------------------------------------------------------------
-
 """The application's C ITCM copy, qualified.
 
 `System::Init` copies the hot code into ITCM, and the emulator stubs that
@@ -38,28 +37,28 @@ SYSTEM_INIT = "_ZN5beads6System4InitEb"
 
 
 def itcm_image(elf):
-    """The expected ITCM bytes, or b"" when the ELF has no ITCM section."""
-    if not elf.has("_sdsp"):
-        return b""
-    lo, hi, src = (elf.defined(n, "NOTYPE").value
-                   for n in ("_sdsp", "_edsp", "_sidsp"))
-    if hi == lo:
-        return b""
-    if not (lo == 0 and 0 < hi <= 65536):
-        raise ElfError(f"ITCM window {lo:#x}..{hi:#x} is not at address 0")
-    import capstone
-    base, image = elf.flash_image()
-    sym = elf.defined(SYSTEM_INIT, "FUNC")
-    entry = sym.value & ~1
-    code = image[entry - base:entry - base + sym.size]
-    md = capstone.Cs(capstone.CS_ARCH_ARM,
-                     capstone.CS_MODE_THUMB | capstone.CS_MODE_MCLASS)
-    barrier = next(i for i in md.disasm(code, entry) if i.mnemonic == "isb")
-    m = M.Machine("itcm-startup", image, base)
-    m.uc.reg_write(m.UA.UC_ARM_REG_R1, 1)
-    m.run(entry, barrier.address + barrier.size, sp=m.call_sp, budget=1000000)
-    expected = image[src - base:src - base + hi - lo]
-    if m.read(lo, hi - lo) != expected:
-        raise ElfError("the C startup did not initialize ITCM as the load "
-                       "image says")
-    return expected
+  """The expected ITCM bytes, or b"" when the ELF has no ITCM section."""
+  if not elf.has("_sdsp"):
+    return b""
+  lo, hi, src = (elf.defined(n, "NOTYPE").value
+                 for n in ("_sdsp", "_edsp", "_sidsp"))
+  if hi == lo:
+    return b""
+  if not (lo == 0 and 0 < hi <= 65536):
+    raise ElfError(f"ITCM window {lo:#x}..{hi:#x} is not at address 0")
+  import capstone
+  base, image = elf.flash_image()
+  sym = elf.defined(SYSTEM_INIT, "FUNC")
+  entry = sym.value & ~1
+  code = image[entry - base:entry - base + sym.size]
+  md = capstone.Cs(capstone.CS_ARCH_ARM,
+                   capstone.CS_MODE_THUMB | capstone.CS_MODE_MCLASS)
+  barrier = next(i for i in md.disasm(code, entry) if i.mnemonic == "isb")
+  m = M.Machine("itcm-startup", image, base)
+  m.uc.reg_write(m.UA.UC_ARM_REG_R1, 1)
+  m.run(entry, barrier.address + barrier.size, sp=m.call_sp, budget=1000000)
+  expected = image[src - base:src - base + hi - lo]
+  if m.read(lo, hi - lo) != expected:
+    raise ElfError("the C startup did not initialize ITCM as the load "
+                   "image says")
+  return expected
