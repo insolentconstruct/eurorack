@@ -40,7 +40,7 @@ using namespace std;
 #define FIX_OUTLIER(destination, expected_value) if (fabsf(destination / expected_value - 1.0f) > 0.25f) { destination = expected_value; }
 #define FIX_OUTLIER_ABSOLUTE(destination, expected_value) if (fabsf(destination - expected_value) > 0.1f) { destination = expected_value; }
 
-bool Settings::Init(bool recovery_mode) {
+bool Settings::Init() {
   AdcCalibrationData calibration;
   calibration.scale = -2.0f;
   calibration.offset = 1.0f;
@@ -67,10 +67,6 @@ bool Settings::Init(bool recovery_mode) {
   state_.frozen = 0;
   state_.disable_autosave = 0;
   state_.monophonic_mode = 0;
-  
-  if (recovery_mode) {
-    chunk_storage_.Recover(&persistent_data_, &state_);
-  }
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
   

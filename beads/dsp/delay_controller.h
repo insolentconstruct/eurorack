@@ -228,7 +228,6 @@ class DelayController {
   
   stmlib::HysteresisFilter density_filter_;
   stmlib::HysteresisFilter fm_filter_;
-  stmlib::HysteresisFilter slice_index_filter_;
   
   float multiplier_lp_;
   float shape_;

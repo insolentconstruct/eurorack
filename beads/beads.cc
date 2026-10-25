@@ -324,8 +324,7 @@ void Init() {
   
   gain_control.Init(48000.0f, GainControl::SOFT_CLIPPING_MODE_OFF, true);
 
-  const bool recovery_mode = ui.pressed_immediate(SWITCH_SEED);
-  const bool freshly_baked = !settings.Init(recovery_mode);
+  const bool freshly_baked = !settings.Init();
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);

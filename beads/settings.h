@@ -65,7 +65,7 @@ class Settings {
   Settings() { }
   ~Settings() { }
   
-  bool Init(bool recovery_mode);
+  bool Init();
 
   void SavePersistentData();
   void SaveState();

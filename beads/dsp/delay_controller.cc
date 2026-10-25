@@ -62,10 +62,9 @@ void DelayController::Init(float sample_rate, int max_delay) {
   tap_modulation_.Init(0.17f / sample_rate);
   
   
-  const float kFilterCoefficient = 0.0025f;
+  const float kFilterCoefficient = 0.005f;
   density_filter_.Init(kFilterCoefficient);
-  slice_index_filter_.Init(kFilterCoefficient);
-  fm_filter_.Init(kFilterCoefficient);
+  fm_filter_.Init(kFilterCoefficient, 8);
 
   multiplier_lp_ = 0.0f;
   shape_ = 0.0f;
@@ -151,14 +150,6 @@ void DelayController::RenderInternal(
     const RandomizedParameter& shape,
     Output* out,
     size_t size) {
-  if (synchronized) {
-    // We don't make any difference between linear and expo FM when the CV
-    // is only selecting a divider: the CV is swinging the knob, end of the
-    // story.
-    linear_fm += exponential_fm;
-    exponential_fm = 0.0f;
-  }
-  
   // Add more filtering to the CV. Because.
   ONE_POLE(linear_fm_, linear_fm, 0.05f);
   
@@ -257,8 +248,6 @@ void DelayController::RenderInternal(
         }
       }
       
-      float slice_index_smooth = slice_index_filter_.Process(slice_modulation);
-      
       for (int i = 0; i < NUM_HEADS; ++i) {
         PlayHead* new_head = NULL;
         
@@ -283,7 +272,7 @@ void DelayController::RenderInternal(
           }
           
           const int slice_index = numerator_quantizer_[i].Process(
-              slice_index_smooth);
+              slice_modulation);
           
           new_head->Start(
               slice_duration * slice_index + kMinDelay,
