@@ -65,7 +65,6 @@ class GranularPlayer {
   inline void Init(float sample_rate) {
     instant_crossfade_time_ = int(sample_rate * kInstantCrossfadeTime);
     preemptive_crossfade_time_ = int(sample_rate * kPreemptiveCrossfadeTime);
-    simple_scheduler_threshold_ = int(sample_rate * kSimpleSchedulerThreshold);
     
     grain_interval_ = 1;
     
@@ -151,7 +150,7 @@ class GranularPlayer {
       const int num_safety_grains = 4;
       int fade_time[num_safety_grains];
     
-      if (grain_interval_ < simple_scheduler_threshold_) {
+      if (grain_interval_ < instant_crossfade_time_) {
         // When the grains are arriving very fast, we simply assume that the
         // first grain will be done or close to completion, and we steal it.
         //
@@ -166,9 +165,6 @@ class GranularPlayer {
         fade_time[2] = instant_crossfade_time_;
         fade_time[3] = preemptive_crossfade_time_;
         
-        if (grain_interval_ > instant_crossfade_time_) {
-          std::swap(fade_time[0], fade_time[2]);
-        }
       } else {
         // The grains are generated at a rate not too high to allow the grain
         // list to be resorted. The sorting criterion is how much time
@@ -207,7 +203,6 @@ class GranularPlayer {
  
   int preemptive_crossfade_time_;
   int instant_crossfade_time_;
-  int simple_scheduler_threshold_;
   
   float max_grain_duration_;
   float sample_rate_;
