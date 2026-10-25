@@ -74,7 +74,7 @@ Observed upstream DSP conventions and design principles:
 
 - Don't edit the copyright headers of existing files.
 - (Drizzlet) Keep stock behaviour unchanged unless the change is the point. New options default to stock.
-- MI puts `packed`, `aligned` and section attributes directly on the type or declaration (`drivers/codec.h`, the buffers in `beads.cc`); stmlib's `IN_RAM` places code in RAM (Tides 2). MI module code never uses `always_inline`, `__builtin_expect`, `noinline` or `flatten`; keep that restriction.
+- MI puts `packed`, `aligned` and section attributes directly on the type or declaration (`drivers/codec.h`, the buffers in `beads.cc`); stmlib's `IN_RAM` places code in RAM (Tides 2), and its interpolation helpers put `always_inline` on a separate declaration (`stmlib/utils/dsp.h`). MI module code never uses `__builtin_expect`, `noinline` or `flatten`; keep that restriction.
 - (Drizzlet) Behaviour changes get a line in CHANGELOG.md.
 
 ## Tests
