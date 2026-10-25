@@ -89,7 +89,7 @@ static uint16_t reverb[32768];
 
 // A negative diffusion follows the reverb character, as a saved zero does.
 uint32_t Render(int quality, int mode, bool clouds, bool reconfigure,
-                float diffusion = -1.0f, float time = 0.5f) {
+                float diffusion, float time) {
   memset(static_cast<void*>(&processor), 0, sizeof(processor));
   memset(static_cast<void*>(&synth), 0, sizeof(synth));
   memset(banks, 0, sizeof(banks));
@@ -169,7 +169,7 @@ void TestStockHashes() {
   test_checker.Start("TestStockHashes");
   for (int q = 0; q < 4; ++q) {
     for (int mode = 0; mode < 3; ++mode) {
-      const uint32_t hash = Render(q, mode, false, false);
+      const uint32_t hash = Render(q, mode, false, false, -1.0f, 0.5f);
       printf("Stock q%d mode%d %08x\n", q, mode, hash);
 #if !defined(REFERENCE_CAPTURE) && !defined(GOLDEN_CAPTURE)
       CHECK(hash == (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
@@ -184,7 +184,7 @@ void TestCloudsOutput() {
 #ifndef REFERENCE_CAPTURE
   for (int q = 0; q < 4; ++q) {
     for (int mode = 0; mode < 3; ++mode) {
-      const uint32_t hash = Render(q, mode, true, false);
+      const uint32_t hash = Render(q, mode, true, false, -1.0f, 0.5f);
       printf("Clouds q%d mode%d %08x\n", q, mode, hash);
       CHECK(hash != (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
 #ifndef GOLDEN_CAPTURE
@@ -192,7 +192,7 @@ void TestCloudsOutput() {
           ? kCloudsSynthHashes[q] : kCloudsHashes[q][mode]));
 #endif
       if (mode == 0) {
-        CHECK(hash == Render(q, mode, true, true));
+        CHECK(hash == Render(q, mode, true, true, -1.0f, 0.5f));
       }
     }
   }
@@ -251,7 +251,7 @@ void TestDiffusionAmount() {
     CHECK(diffused != stock);
     CHECK(clouds_dry != clouds);
     // Delay mode bypasses the diffuser, as before.
-    CHECK(Render(q, 1, false, false, 0.5f) == kStockHashes[q][1]);
+    CHECK(Render(q, 1, false, false, 0.5f, 0.5f) == kStockHashes[q][1]);
   }
 #endif
 }

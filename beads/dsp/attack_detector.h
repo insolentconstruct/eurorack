@@ -21,6 +21,7 @@
 // THE SOFTWARE.
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
+//
 // -----------------------------------------------------------------------------
 //
 // Attacks in the recorded audio (#58), and grains triggered by them (#47).

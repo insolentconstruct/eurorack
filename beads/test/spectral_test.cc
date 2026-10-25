@@ -300,7 +300,7 @@ void DefaultControls(Parameters* p, ModulatedParameter* density,
 // Three seconds through the whole processor, frames computed as the main
 // loop would after every block.
 uint32_t RenderSpectral(int quality, bool mono, double* rms,
-                        float diffusion = 0.0f, float size = 0.7f) {
+                        float diffusion, float size) {
   InitProcessor(quality, mono, true);
   processor.set_diffusion(diffusion);
   stmlib::Random::Seed(0x12345678);
@@ -356,9 +356,10 @@ void TestSpectralRender() {
     const bool mono = q == 4;
     const int quality = mono ? 3 : q;
     double rms = 0.0;
-    const uint32_t hash = RenderSpectral(quality, mono, &rms);
+    const uint32_t hash = RenderSpectral(quality, mono, &rms, 0.0f, 0.7f);
     double again_rms = 0.0;
-    const uint32_t again = RenderSpectral(quality, mono, &again_rms);
+    const uint32_t again = RenderSpectral(
+        quality, mono, &again_rms, 0.0f, 0.7f);
     printf("Spectral q%d%s %08x RMS %.4f\n", quality, mono ? " mono" : "",
            hash, rms);
     CHECK(rms > 0.02 && rms < 1.0);
@@ -373,8 +374,8 @@ void TestSpectralRender() {
 void TestSpectralBypasses() {
   test_checker.Start("TestSpectralBypasses");
   double rms = 0.0;
-  const uint32_t plain = RenderSpectral(3, false, &rms);
-  CHECK(RenderSpectral(3, false, &rms, 1.0f) == plain);
+  const uint32_t plain = RenderSpectral(3, false, &rms, 0.0f, 0.7f);
+  CHECK(RenderSpectral(3, false, &rms, 1.0f, 0.7f) == plain);
   RenderSpectral(3, false, &rms, 0.0f, 1.0f);
   CHECK(processor.delay_mode_transition_ < 0.0f);
   CHECK(rms > 0.02);
@@ -458,7 +459,7 @@ void TestEngineBuffers() {
   }
   CHECK(clear);
   double rms = 0.0;
-  RenderSpectral(3, false, &rms);
+  RenderSpectral(3, false, &rms, 0.0f, 0.7f);
   memset(banks, 0x5a, sizeof(banks));
   processor.set_spectral(false);
   processor.Configure(Processor::MEDIA_DIGITAL, false);

@@ -1,6 +1,6 @@
-// Copyright 2026 Insolent Construct.
+// Copyright 2014 Emilie Gillet.
 //
-// Author: Insolent Construct
+// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The part of Clouds' parameters read by the phase vocoder.
+// The part of Clouds' parameters read by the phase vocoder (from
+// clouds/dsp/parameters.h).
 
 #ifndef BEADS_DSP_PVOC_SPECTRAL_PARAMETERS_H_
 #define BEADS_DSP_PVOC_SPECTRAL_PARAMETERS_H_

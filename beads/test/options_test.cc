@@ -1145,8 +1145,6 @@ void TestEngineOption() {
   }
 }
 
-// Page 3, REVERB: Automatic / Manual synth start, independent of the
-// processor.
 // Byte 22: Random intervals. Unknown values read as Free (Stock).
 void TestIntervalsStorage() {
   test_checker.Start("TestIntervalsStorage");
@@ -1198,6 +1196,8 @@ void TestIntervalsOption() {
   }
 }
 
+// Page 3, REVERB: Automatic / Manual synth start, independent of the
+// processor.
 void TestSynthStartOption() {
   test_checker.Start("TestSynthStartOption");
   for (int target = 0; target < 2; ++target) {
