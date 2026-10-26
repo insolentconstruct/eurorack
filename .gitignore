@@ -45,3 +45,6 @@ build
 *_BETA.sch
 *_beta.brd
 *_BETA.brd
+
+# Toolchain archives cached by CI
+/beads/build/.toolchains/

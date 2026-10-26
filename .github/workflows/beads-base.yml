@@ -15,9 +15,41 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
+      # Toolchain archives are cached by their pinned sha256, so a Launchpad outage does not fail CI.
+      - name: Read the pinned toolchain hashes
+        id: toolchains
+        run: |
+          tc=$(sed -n 's/^ARG TC_SHA256=//p' beads/build/Dockerfile)
+          gcc9=$(sed -n 's/^ARG GCC9_SHA256=//p' beads/build/Dockerfile)
+          echo "key=toolchains-$tc-$gcc9" >> "$GITHUB_OUTPUT"
+      - name: Restore the toolchain archives
+        id: restore-toolchains
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: beads/build/.toolchains
+          key: ${{ steps.toolchains.outputs.key }}
+      - name: Download the toolchain archives
+        if: steps.restore-toolchains.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p beads/build/.toolchains
+          for name in TC GCC9; do
+            url=$(sed -n "s/^ARG ${name}_URL=//p" beads/build/Dockerfile)
+            sha=$(sed -n "s/^ARG ${name}_SHA256=//p" beads/build/Dockerfile)
+            curl -fsSL --retry 10 --retry-all-errors --retry-delay 30 --connect-timeout 30 --max-time 900 \
+              -o "beads/build/.toolchains/$name.tar.bz2" "$url"
+            echo "$sha  beads/build/.toolchains/$name.tar.bz2" | sha256sum -c -
+          done
+      - name: Save the toolchain archives
+        if: steps.restore-toolchains.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: beads/build/.toolchains
+          key: ${{ steps.toolchains.outputs.key }}
       - name: Build shared kit
         run: |
-          docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
+          docker build --platform linux/amd64 \
+            --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
+            -t beads-build-kit:gcc9 beads/build
           docker save --output /tmp/beads-build-kit.tar beads-build-kit:gcc9
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
