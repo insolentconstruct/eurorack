@@ -50,3 +50,6 @@ build
 /*_test
 /*_test_advanced
 /beads/test/.mutation-*
+
+# Toolchain archives cached by CI
+/beads/build/.toolchains/
