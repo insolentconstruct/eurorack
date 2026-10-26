@@ -130,8 +130,12 @@ void FMVoice::Process(const float* in, float* out, float* aux, size_t size) {
     float phase_feedback = feedback < 0.0f ? 0.5f * feedback * feedback : 0.0f;
     modulator_phase += static_cast<uint32_t>(4294967296.0f * \
       modulator_increment.Next() * (1.0f + previous_sample * phase_feedback));
+#ifdef TEST
+    carrier_phase += Saturate(4294967296.0f * carrier_increment.Next());
+#else
     carrier_phase += static_cast<uint32_t>(4294967296.0f * \
         carrier_increment.Next());
+#endif  // TEST
 
     float feedback = feedback_amount.Next();
     float modulator_fb = feedback > 0.0f ? 0.25f * feedback * feedback : 0.0f;

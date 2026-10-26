@@ -41,6 +41,7 @@ void StringSynthPart::Init(uint16_t* reverb_buffer) {
   
   polyphony_ = 1;
   fx_type_ = FX_ENSEMBLE;
+  clear_fx_ = false;
 
   for (int32_t i = 0; i < kStringSynthVoices; ++i) {
     voice_[i].Init();
@@ -48,6 +49,7 @@ void StringSynthPart::Init(uint16_t* reverb_buffer) {
   
   for (int32_t i = 0; i < kMaxStringSynthPolyphony; ++i) {
     group_[i].tonic = 0.0f;
+    group_[i].chord = 0;
     group_[i].envelope.Init();
   }
   
@@ -376,7 +378,9 @@ void StringSynthPart::Process(
         amplitudes[2 * (num_harmonics - 1) + 1] += amplitudes[2 * i + 1];
       }
 
-      float frequency = SemitonesToRatio(note - 69.0f) * a3;
+      note -= 69.0f;
+      CONSTRAIN(note, -128.0f, 127.0f);
+      float frequency = SemitonesToRatio(note) * a3;
       voice_[group * chord_size + chord_note].Render(
           frequency,
           amplitudes,

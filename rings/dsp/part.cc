@@ -371,7 +371,9 @@ void Part::RenderStringVoice(
         frequencies,
         num_strings);
     for (int32_t i = 0; i < num_strings; ++i) {
-      frequencies[i] = SemitonesToRatio(frequencies[i] - 69.0f) * a3;
+      float note = frequencies[i] - 69.0f;
+      CONSTRAIN(note, -128.0f, 127.0f);
+      frequencies[i] = SemitonesToRatio(note) * a3;
     }
   } else {
     frequencies[0] = frequency;
