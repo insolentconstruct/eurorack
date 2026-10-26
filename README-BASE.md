@@ -8,7 +8,7 @@ pinned GCC 4.8 it builds the same firmware as vanilla. The plan is in
 
 Changes from vanilla, one line per change:
 
-- None yet.
+- Define `__errno` as the function libm calls: GCC 14 and later link Rings; no change in sound ([#75](https://github.com/insolentconstruct/eurorack/pull/75)).
 
 ## Build and verify
 
