@@ -1,2 +1,3 @@
 *
 !*.tar.bz2
+!.toolchains/*.tar.bz2
