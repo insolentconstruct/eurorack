@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 # 
 # See http://creativecommons.org/licenses/MIT/ for more information.
-#
+# 
 # Reconstruction build: beads/makefile with a fixed link order, and the
 # application padded to its flash slot. See beads/RECONSTRUCTION.md.
 
@@ -29,10 +29,10 @@ include beads/makefile
 
 # Sort the sources of each package and keep the package order. GNU make 3.81
 # and 4.3+ sort wildcard results; 3.82 to 4.2 do not.
-CC_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.cc))))
-C_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) \
+CC_FILES       = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.cc))))
+C_FILES        = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) \
 		$(sort $(CORE_C_FILES)) $(sort $(DRIVERS_C_FILES))
-AS_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.s))))
+AS_FILES       = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.s))))
 
 # The application slot is 0x50000 bytes, erased to 0xff.
 PADDED_BIN = $(BUILD_DIR)$(TARGET)_padded.bin
