@@ -86,10 +86,11 @@ class FMVoice {
   }
   
   inline float SineFm(uint32_t phase, float fm) const {
-    // The phase offset fits in 32 bits for modulation in [-4, 4).
-    float offset = fm + 4.0f;
-    CONSTRAIN(offset, 0.0f, 7.9999995f);
-    phase += (static_cast<uint32_t>(offset * 536870912.0f)) << 3;
+#ifdef TEST
+    phase += Saturate((fm + 4.0f) * 536870912.0f) << 3;
+#else
+    phase += (static_cast<uint32_t>((fm + 4.0f) * 536870912.0f)) << 3;
+#endif  // TEST
     uint32_t integral = phase >> 20;
     float fractional = static_cast<float>(phase << 12) / 4294967296.0f;
     float a = lut_sine[integral];
@@ -98,6 +99,17 @@ class FMVoice {
   }
   
  private:
+#ifdef TEST
+  // Past +/-4 cycles of modulation, or one cycle per sample, the phase
+  // arithmetic converts out-of-range floats to uint32_t. C leaves this
+  // undefined; the Cortex-M4 saturates, and desktop builds do the same.
+  static inline uint32_t Saturate(float x) {
+    return !(x > 0.0f) ? 0 : (x >= 4294967296.0f
+        ? 4294967295u
+        : static_cast<uint32_t>(x));
+  }
+#endif  // TEST
+
   float carrier_frequency_;
   float ratio_;
   float brightness_;

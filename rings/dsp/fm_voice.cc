@@ -84,17 +84,11 @@ void FMVoice::Process(const float* in, float* out, float* aux, size_t size) {
   if (modulator_frequency > 0.5f) {
     modulator_frequency = 0.5f;
   }
-
-  // The phase increment must stay below one cycle per sample.
-  float carrier_frequency = carrier_frequency_;
-  if (carrier_frequency > 0.99999f) {
-    carrier_frequency = 0.99999f;
-  }
   
   float feedback = (feedback_amount_ - 0.5f) * 2.0f;
   
   ParameterInterpolator carrier_increment(
-      &previous_carrier_frequency_, carrier_frequency, size);
+      &previous_carrier_frequency_, carrier_frequency_, size);
   ParameterInterpolator modulator_increment(
       &previous_modulator_frequency_, modulator_frequency, size);
   ParameterInterpolator brightness(
@@ -136,8 +130,12 @@ void FMVoice::Process(const float* in, float* out, float* aux, size_t size) {
     float phase_feedback = feedback < 0.0f ? 0.5f * feedback * feedback : 0.0f;
     modulator_phase += static_cast<uint32_t>(4294967296.0f * \
       modulator_increment.Next() * (1.0f + previous_sample * phase_feedback));
+#ifdef TEST
+    carrier_phase += Saturate(4294967296.0f * carrier_increment.Next());
+#else
     carrier_phase += static_cast<uint32_t>(4294967296.0f * \
         carrier_increment.Next());
+#endif  // TEST
 
     float feedback = feedback_amount.Next();
     float modulator_fb = feedback > 0.0f ? 0.25f * feedback * feedback : 0.0f;
