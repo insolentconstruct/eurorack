@@ -4,7 +4,7 @@ Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable
 
 **TL;DR:** Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode, on an options page that saves by itself. New settings default to stock behaviour. The grain engine needs about 6,900 fewer cycles per block in the heaviest stock case, with the same sound.
 
-Tested on one module so far. Please report problems, and what works, in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
+Tested on one module so far. Please report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); questions, ideas and what works go in [Discussions](https://github.com/insolentconstruct/eurorack/discussions). Do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
 
 What's planned: the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32). Most requested features: [feature requests](https://github.com/insolentconstruct/eurorack/issues/130).
 
