@@ -158,6 +158,7 @@ struct Rig {
     test_down[SWITCH_SEED] = seed;
     test_freeze_input = test_seed_input = false;
     Init();
+    CHECK(codec.idle_stops_ == 0);
   }
 
   void Block() {
@@ -218,7 +219,10 @@ struct Rig {
   }
 
   // Eight 32 ms probe windows plus 250 ms of codec blanking.
-  void Settle() { Tick(600); }
+  void Settle() {
+    Tick(600);
+    CHECK(codec.idle_stops_ == 0);
+  }
 };
 
 std::string Compact(const std::string& source) {
@@ -643,6 +647,38 @@ void TestPitchChain() {
 
 
 
+// A change at the same sample rate keeps the converter clocked (#53): only
+// the 24 and 32 kHz qualities stop and restart it.
+void TestCodecKeepsClocks() {
+  test_checker.Start("TestCodecKeepsClocks");
+  Rig r(false);
+  r.Settle();
+  const Processor::Media media[] = {
+    Processor::MEDIA_DIGITAL,
+    Processor::MEDIA_CLEAN_TAPE,
+    Processor::MEDIA_VINTAGE_DIGITAL,
+    Processor::MEDIA_DIRTY_TAPE,
+    Processor::MEDIA_DIGITAL,
+  };
+  for (size_t i = 0; i < sizeof(media) / sizeof(media[0]); ++i) {
+    const int previous_rate = codec.sample_rate_;
+    const int starts = codec.starts_;
+    const int stops = codec.stops_;
+    settings.mutable_state()->media = media[i];
+    for (int j = 0; j < 200 && processor.media() != media[i]; ++j) {
+      r.Tick(1);
+    }
+    CHECK(processor.media() == media[i]);
+    CHECK(codec.callback_ == &Process);
+    const int rate = int(processor.sample_rate());
+    const int restarts = rate == previous_rate ? 0 : 1;
+    CHECK(codec.sample_rate_ == rate);
+    CHECK(codec.starts_ == starts + restarts);
+    CHECK(codec.stops_ == stops + restarts);
+    r.Settle();
+  }
+}
+
 int main() {
   InitTestFpu();
   setbuf(stdout, NULL);
@@ -658,5 +694,6 @@ int main() {
   TestStartupBranches();
   TestCallbackCvRouting();
   TestPitchChain();
+  TestCodecKeepsClocks();
   return test_checker.failures() ? 1 : 0;
 }

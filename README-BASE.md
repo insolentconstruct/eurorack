@@ -28,6 +28,7 @@ Changes from master, one line per change:
 - Initialize dummy grain triggers: background CPU padding no longer reads undefined fields ([#34](https://github.com/insolentconstruct/eurorack/issues/34)).
 - Pad the wavetable with a duplicate final row: interpolation at the last wave stays within the table ([#35](https://github.com/insolentconstruct/eurorack/issues/35)).
 - **Behaviour fix:** interrupted FREEZE saves double the next wait from 10 s up to 320 s, reducing flash wear; completion, one minute unfrozen or reboot resets the wait ([#56](https://github.com/insolentconstruct/eurorack/issues/56)).
+- **Behaviour fix:** quality, mono/stereo and synth changes that keep the sample rate leave the converter running on silence instead of stopping it, which removes the pop it made; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
 - Compile the app with pinned GCC 9 and the bootloader with pinned GCC 4.9.3; explicit `fmaf` preserves random-pan rounding.
 - Round pan, shape and speed explicitly: sound is identical to the previous build in 20 emulated scenarios, and GCC 9-16 now match as measured on Drizzlet.
 - Select mono/stereo processing once per block with a template, sum grains locally and use unsigned read-index modulo; audio stays bit-identical.
