@@ -175,7 +175,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="704" cy="520" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
 <text x="720" y="525" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Snap and trigger</text>
 <text x="1007" y="525" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
-<text x="365" y="541" font-size="17" font-weight="bold" fill="#222" text-anchor="start">[A] + DRY/WET: Stereo width</text>
+<text x="365" y="541" font-size="17" font-weight="bold" fill="#222" text-anchor="start">Off the pages: [A] + DRY/WET</text>
 <circle cx="522.5" cy="613" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 522.5 613 v -16" stroke="#222" stroke-width="2"/>
 <path d="M 494.900 637.642 A 37 37 0 0 1 490.246 631.130" fill="none" stroke="#555" stroke-width="3"/>
@@ -189,6 +189,10 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="374" cy="691" r="8" fill="#777" stroke="#333" stroke-width="2"/>
 <text x="390" y="696" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Width (wider →)</text>
 <text x="677" y="696" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green → yellow → red</text>
+<text x="695" y="562" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Off the pages: Manual gain</text>
+<text x="695" y="584" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], turn FEEDBACK. With an input</text>
+<text x="695" y="605" font-size="15" font-weight="normal" fill="#222" text-anchor="start">patched, a long [A] press returns to</text>
+<text x="695" y="626" font-size="15" font-weight="normal" fill="#222" text-anchor="start">automatic.</text>
 <text x="35" y="731" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 2</text>
 <text x="135" y="731" font-size="15" font-weight="normal" fill="#222" text-anchor="start">F</text>
 <circle cx="156" cy="726" r="7" fill="white" stroke="#333" stroke-width="2"/>
@@ -253,6 +257,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="256" y="957" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
 <circle cx="278" cy="952" r="7" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="291" y="957" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pulsing</text>
+<text x="1065" y="957" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="end">Processor: switching clears the recording.</text>
 <text x="35" y="991" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Processor</text>
 <circle cx="192.5" cy="1063" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 192.5 1063 v -16" stroke="#222" stroke-width="2"/>
@@ -336,8 +341,8 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="365" y="1288" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], turn REVERB; fully CCW is</text>
 <text x="365" y="1309" font-size="15" font-weight="normal" fill="#222" text-anchor="start">none. [M] can route CV to it.</text>
 <text x="365" y="1340" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth (Manual)</text>
-<text x="365" y="1362" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Synth start Manual: no inputs, FREEZE</text>
-<text x="365" y="1383" font-size="15" font-weight="normal" fill="#222" text-anchor="start">off, hold [A] to start or stop.</text>
+<text x="365" y="1362" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Synth start Manual, no inputs, FREEZE</text>
+<text x="365" y="1383" font-size="15" font-weight="normal" fill="#222" text-anchor="start">off: hold [A] 1.5 s.</text>
 <text x="35" y="1431" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch • Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).</text>
 </g>
 </svg>

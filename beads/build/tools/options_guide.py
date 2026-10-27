@@ -116,6 +116,11 @@ SHORT = {
     "Beads (Stock)": "Beads",
     "Automatic (Stock)": "Auto",
 }
+# On the printable, with width's card on page 1: [A] gestures off the pages.
+PAGE_GESTURES = ("Manual gain",)
+OFF_PAGES = "Off the pages: "
+# A line under a setting's card in the guides.
+CARD_NOTES = {"Processor": "Switching clears the recording."}
 # Stereo width is set with [A]+DRY/WET, outside the pages.
 WIDTH_ROWS = [
     dict(knob="[A] + DRY/WET", setting="Stereo width", value=value,
@@ -286,6 +291,14 @@ GESTURES = [
         "Hold [A], turn DRY/WET; fully CCW is Stock. [M] can route CV to it.",
     ),
     (
+        "Manual gain",
+        "Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] "
+        "LED shows it as a meter. With an input patched, a long press of [A] "
+        "returns to automatic gain.",
+        "Hold [A], turn FEEDBACK. With an input patched, a long [A] press "
+        "returns to automatic.",
+    ),
+    (
         "Grain diffusion",
         "Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can "
         "route CV to it (REVERB LED pulsing).",
@@ -295,7 +308,7 @@ GESTURES = [
         "Wavetable synth (Manual)",
         "With Synth start on Manual, both inputs unplugged and FREEZE off, "
         "hold [A] for about a second and a half to start or stop it.",
-        "Synth start Manual: no inputs, FREEZE off, hold [A] to start or stop.",
+        "Synth start Manual, no inputs, FREEZE off: hold [A] 1.5 s.",
     ),
 ]
 WARNING = (
@@ -361,6 +374,10 @@ def markdown(rows, pages):
                 f"| {knob} | {setting} | {' / '.join(names)} | "
                 f"{' / '.join(leds)} |"
             )
+        notes = [f"**{v[0]['setting']}:** {CARD_NOTES[v[0]['setting']]}"
+                 for v in knobs.values() if v[0]["setting"] in CARD_NOTES]
+        if notes:
+            out += ["", *notes]
         if page == "1":
             out += ["", "Scale (tap SEED to step through):", ""]
             out += [
@@ -435,13 +452,14 @@ class Drawing:
             )
         )
 
-    def card(self, x, y, width, rows, mobile_card=False):
+    def card(self, x, y, width, rows, mobile_card=False, title=None):
         if rows[0]["setting"] == "Not used yet":
             self.text(
                 x, y, rows[0]["knob"] + ": Not used yet", colour="#737373"
             )
             return 26
-        self.text(x, y, f'{rows[0]["knob"]}: {rows[0]["setting"]}', 17, "bold")
+        title = title or f'{rows[0]["knob"]}: {rows[0]["setting"]}'
+        self.text(x, y, title, 17, "bold")
         cx, cy = x + width / 2, y + 72
         self.circle(cx, cy, 22)
         self.items.append(
@@ -490,19 +508,27 @@ class Drawing:
                     anchor="end",
                 )
             base += 44 if mobile_card else 21
+        note = CARD_NOTES.get(rows[0]["setting"])
+        if note and mobile_card:
+            self.text(x, base, note, 15, "bold", COLOURS["red"])
+            base += 26
         return base - y
 
     def gestures(self, x, y, columns, short=False, gap=10, part=None):
         """Gesture list in one column; the printable uses the short texts,
-        leaves stereo width to its card and splits the list in two parts."""
-        listed = [g for g in GESTURES if not short or g[0] != "Stereo width"]
-        if part is not None:
+        shows stereo width and manual gain on page 1 (part "page") and
+        splits the rest in two parts."""
+        listed = [g for g in GESTURES if not short or g[0] != "Stereo width"
+                  and (g[0] in PAGE_GESTURES) == (part == "page")]
+        if part in (0, 1):
             half = (len(listed) + 1) // 2
             listed = listed[:half] if part == 0 else listed[half:]
-        if part != 1:
+        if part in (None, 0):
             self.text(x, y, "OTHER GESTURES", 20, "bold")
         y += 30
         for title, text, brief in listed:
+            if part == "page":
+                title = OFF_PAGES + title
             self.text(x, y, title, 16, "bold")
             y = self.lines(x, y + 22, brief if short else text, columns) + gap
         return y
@@ -683,6 +709,12 @@ def svg(pages, mobile=False):
     for page, knobs in pages.items():
         d.text(margin, y, f"PAGE {page}", 20, "bold")
         d.marker(margin + 100, y, next(iter(knobs.values()))[0]["LED"])
+        if not mobile:
+            for rows in knobs.values():
+                if rows[0]["setting"] in CARD_NOTES:
+                    d.text(width - margin, y, rows[0]["setting"] + ": " +
+                           CARD_NOTES[rows[0]["setting"]].lower(), 15,
+                           "bold", COLOURS["red"], "end")
         y += 34
         if mobile:
             for knob in KNOBS:
@@ -696,10 +728,14 @@ def svg(pages, mobile=False):
                 for i, k in enumerate(KNOBS)
             ]
             if page == "1":
-                # The width card fills the space beside the scale list.
+                # Beside the scale list: the [A] gestures off the pages.
                 heights[1] += 16 + d.card(
-                    margin + 330, y + heights[1] + 16, 315, WIDTH_ROWS
+                    margin + 330, y + heights[1] + 16, 315, WIDTH_ROWS,
+                    title=OFF_PAGES + "[A] + DRY/WET"
                 )
+                heights[2] = d.gestures(
+                    margin + 660, y + heights[2] - 14, 40, True, part="page"
+                ) - y
             if page == "4":
                 # The gestures fill the two knobs not used yet.
                 for i in range(2):
