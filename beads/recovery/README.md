@@ -22,19 +22,19 @@
 > directly ([ST-Link recovery](https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/README.md#st-link-recovery)).
 > You will have to learn and do that yourself; we cannot help with it.
 
+**Why this exists:** ModWiggler users reported the same startup failure with
+Mutable Instruments' own firmware in 2023–2024, before Drizzlet existed, and
+quoted Mutable Instruments putting it down to corrupted settings /
+frozen-buffer flash. Installing a firmware update does not directly overwrite that
+area. We have no evidence that Drizzlet causes it, but we have not ruled it
+out.
+
 TL;DR: play `storage-recovery.wav` into the module the usual way. It erases the
 settings and the saved frozen buffer, keeps the CV calibration only when it
 reads back cleanly and is within 25% of the factory values, and blinks green
 when done. Then install a normal firmware: Mutable
 Instruments' Beads 1.7 (2021), the early-2024 patch firmware, or a Drizzlet
 release, again with FREEZE held at power-on.
-
-**Why this exists:** ModWiggler users reported the same startup failure with
-Mutable Instruments' own firmware in 2023–2024, before Drizzlet existed, and
-quoted Mutable Instruments putting it down to corrupted settings / frozen-
-buffer flash. Installing a firmware update does not directly overwrite that
-area. We have no evidence that Drizzlet causes it, but we have not ruled it
-out.
 
 This is an Insolent Construct tool. It does not come from Mutable Instruments.
 **Do not contact Mutable Instruments about it.** You can say whether it
