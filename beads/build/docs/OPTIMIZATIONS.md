@@ -117,7 +117,11 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 **Result.** On the development board the stock worst block goes 97,255 (GCC 9 baseline) to 90,333 with the first three changes, and to 83,345 (69.5%) with the integer Hermite read; the worst of all 28 scenarios is 84,567 (70.5%), under the 90,000-cycle (75%) DSP-only target. On the module the whole callback is in the TL;DR table.
 
-**Untried ideas** (none fits the rules below): whole-block rendering per grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
+**Synth grains, block per grain (tried 2026-10-27, not kept).** Rendering each wavetable grain across the whole block, split at each grain start so the sound stays bit-identical, was slower in all three versions tried on the development board: the stock heavy synth's median went from 83,099 to between 84,332 and 87,093 cycles. Keeping grain state across the block gave no measured benefit.
+
+**One Hermite read per synth sample (untried).** The synth reads two neighbouring waves with Hermite interpolation and crossfades them (`WavetableGrain::ReadSample`; Plaits does the same with linear reads). Hermite is linear in its four samples, so crossfading the samples first and interpolating once gives the same value in exact arithmetic, with about six fewer float operations per grain per sample: an estimated 2% of the budget with 32 grains. The rounding differs, and the tables are integrated and differentiated on playback, which can magnify rounding differences, so the difference must be measured and reported before it is offered.
+
+**Untried ideas** (none fits the rules below): whole-block rendering per granular grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
 
 ## Method
 
