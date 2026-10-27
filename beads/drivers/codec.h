@@ -70,6 +70,10 @@ class Codec {
   bool Init();
   bool Start(int32_t sample_rate, size_t block_size, FillBufferCallback callback = NULL);
   void Stop();
+  // Detach the callback while the converter keeps running on silence, so that
+  // a change at the same sample rate does not stop its clocks (#53).
+  void Pause();
+  void Resume(FillBufferCallback callback) { callback_ = callback; }
   
   void Fill(size_t offset);
   inline static Codec* GetInstance() { return instance_; }

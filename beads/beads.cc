@@ -95,6 +95,8 @@ void SysTick_Handler() {
 // the AGC while the normalization detection system is still catching up with
 // a codec restart.
 int codec_transition_frames;
+// The rate the converter runs at; 0 before its first start.
+int codec_sample_rate;
 bool synth_mode;
 int synth_mode_start_time;
 
@@ -290,6 +292,15 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   event_delay.Init();
 
   codec_transition_frames = kBlockRate / 4;
+  if (sr == codec_sample_rate) {
+    // Same clocks: the converter played silence while paused (#53).
+    codec.Resume(&Process);
+    return;
+  }
+  if (codec_sample_rate) {
+    codec.Stop();
+  }
+  codec_sample_rate = sr;
   codec.Start(sr, sr / kBlockRate, &Process);
 }
 
@@ -301,6 +312,7 @@ void Init() {
   freeze_input.Init();
   seed_input.Init();
   codec.Init();
+  codec_sample_rate = 0;
 
   cv_reader.Init(&settings);
   calibrator.Init(&settings, &cv_reader, &normalization_detector);
@@ -330,6 +342,7 @@ void Init() {
     factory_test.Start();
     ui.set_factory_test(true);
     normalization_detector.Init(2);
+    codec_sample_rate = 48000;
     codec.Start(48000, 48000 / kBlockRate, &FactoryTest::ProcessFn);
   } else {
 #ifdef PROFILE_INTERRUPT
@@ -363,7 +376,7 @@ void MonitorStateChange() {
         if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
           // If 10 seconds have elapsed with nothing patched in the audio
           // inputs, enable the synth mode.
-          codec.Stop();
+          codec.Pause();
           ConfigureAndStartCodec(true, true);
         }
       }
@@ -386,7 +399,7 @@ void MonitorStateChange() {
     
     if (synth_mode || mono_changed || media_changed) {
       // elapsed = system_clock.milliseconds();
-      codec.Stop();
+      codec.Pause();
       processor.Configure(media, mono);
       ConfigureAndStartCodec(false, mono_changed || synth_mode);
     }
