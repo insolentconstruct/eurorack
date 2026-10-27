@@ -1,4 +1,6 @@
-# Drizzlet builder
+# Drizzlet Hygrostat
+
+The Drizzlet Hygrostat: set your firmware's climate. (A hygrostat is the industrial humidity controller; this one controls drizzle.)
 
 A static page that makes the Beads firmware update file (`.wav`) in the browser, from a release's app image. Nothing is uploaded; no server or build step.
 

@@ -1,4 +1,4 @@
-name: Drizzlet builder site
+name: Drizzlet Hygrostat site
 
 on:
   push:
