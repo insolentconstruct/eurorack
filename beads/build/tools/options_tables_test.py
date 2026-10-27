@@ -275,8 +275,9 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     warning = ("Don't hold SEED while powering on: it resets all settings "
                "to defaults (calibration is kept).")
     assert "## Other gestures" in markdown and warning in markdown
-    for phrase in ("Monophonic grains", "Buffer trim",
-                   "Wavetable synth (Manual)", "FREEZE [B]"):
+    for phrase in ("Monophonic grains", "Buffer trim", "Manual gain",
+                   "Wavetable synth (Manual)", "FREEZE [B]",
+                   "Switching clears the recording."):
         assert phrase in markdown.split("## Details")[0], phrase
     assert "erase" not in markdown.lower()
     for name in ("options-guide.svg", "options-guide-mobile.svg"):
@@ -287,7 +288,17 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         assert labels.count("pulsing") == markers
         assert all(labels.count(label) == markers for label in ("D/W", "R"))
         assert labels.count("F") == markers + 1  # page markers + panel knob F
-        assert labels.count("[A] + DRY/WET: Stereo width") == 1
+        printable = name == "options-guide.svg"
+        # The printable shows the [A] gestures off the pages on page 1.
+        assert labels.count("Off the pages: [A] + DRY/WET" if printable
+                            else "[A] + DRY/WET: Stereo width") == 1
+        assert labels.count("Off the pages: Manual gain" if printable
+                            else "Manual gain") == 1
+        assert labels.count("Processor: switching clears the recording."
+                            if printable
+                            else "Switching clears the recording.") == 1
+        assert ("hold [A] 1.5 s" if printable
+                else "about a second and a half") in " ".join(labels)
         assert labels.count("READ THE [A] LED") == 1
         assert labels.count("OTHER GESTURES") == 1
         for title in ("Monophonic grains", "Buffer trim",

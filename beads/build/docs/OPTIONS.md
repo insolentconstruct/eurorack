@@ -51,6 +51,8 @@ Scale (tap SEED to step through):
 | DRY/WET | Synth | Beads (Stock) / Plaits | green; steady / yellow; steady |
 | REVERB | Synth start | Automatic (Stock) / Manual | green; steady / yellow; steady |
 
+**Processor:** Switching clears the recording.
+
 ## Page 4 — all three LEDs pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
@@ -64,6 +66,7 @@ Scale (tap SEED to step through):
 - **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
 - **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
 - **Stereo width:** Hold [A] and turn DRY/WET; fully CCW is Stock. The [A] LED shows the width as a meter; releasing [A] saves it. Once on, [M] can route CV to it (all three mix LEDs pulsing).
+- **Manual gain:** Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] LED shows it as a meter. With an input patched, a long press of [A] returns to automatic gain.
 - **Grain diffusion:** Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can route CV to it (REVERB LED pulsing).
 - **Wavetable synth (Manual):** With Synth start on Manual, both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
 
