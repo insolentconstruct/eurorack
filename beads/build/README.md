@@ -6,7 +6,7 @@ Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable
 
 Tested on one module so far. Please report problems, and what works, in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
 
-What's planned, and the most requested features: the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
+What's planned: the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32). Most requested features: [feature requests](https://github.com/insolentconstruct/eurorack/issues/130).
 
 From the [Mutable Instruments eurorack README](https://github.com/pichenettes/eurorack/blob/master/README.md):
 
