@@ -29,6 +29,13 @@ when done. Then install a normal firmware: Mutable
 Instruments' Beads 1.7 (2021), the early-2024 patch firmware, or a Drizzlet
 release, again with FREEZE held at power-on.
 
+**Why this exists:** ModWiggler users reported the same startup failure with
+Mutable Instruments' own firmware in 2023–2024, before Drizzlet existed, and
+quoted Mutable Instruments putting it down to corrupted settings / frozen-
+buffer flash. Installing a firmware update does not directly overwrite that
+area. We have no evidence that Drizzlet causes it, but we have not ruled it
+out.
+
 This is an Insolent Construct tool. It does not come from Mutable Instruments.
 **Do not contact Mutable Instruments about it.** You can say whether it
 worked on this repository's [issues page](https://github.com/insolentconstruct/eurorack/issues),
