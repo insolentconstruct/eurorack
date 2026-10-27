@@ -4,6 +4,8 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+
+## 2026.10.27 (tag `drizzlet-2026.10.27`, beta 2 "Fog")
 - A module whose settings flash is damaged no longer crashes at every start. The calibration is kept in a second sector and restored from it when needed, and an interrupted save only loses that save, so a power cut while saving no longer resets anything. If both copies of the calibration are lost, the module plays on the factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing to flash; hold SEED at power-up to repair it, then recalibrate. A damaged frozen buffer is skipped instead of crashing (#148).
 - The build refuses an application large enough to reach the frozen buffer and settings flash (#155).
 - Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Mutable Instruments' firmware has the same code. Each flash operation is now checked, and settings are only written onto erased flash (#149).

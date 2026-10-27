@@ -4,8 +4,8 @@
 
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, a full run on the release code: quality changes, the quality button, CPU load and CV calibration.
-- **Totals:** 100 firmware installs on the test module, none failed to boot; about 28 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
+- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, two runs on the release code: quality changes, the quality button, CPU load, CV calibration, installing over Beta 1 and [M] CV.
+- **Totals:** 107 firmware and settings installs on the test module, none failed to boot; about 29 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
 
 Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build and spectral a ShyFFT build, each counted once. Assertions inside loops run more than once.
 
@@ -236,27 +236,33 @@ The release code, including the converter fix, on 2026-10-27. Outputs recorded w
 | Converter pop at changes that keep the sample rate, 12 per build (separate comparison, 2026-10-25) | About +18 dB above a −34 dBFS test tone before the fix, about −50 dB after (median; worst −35 dB) |
 | CV calibration with Intellijel Scales | Saved, then the factory calibration restored (below) |
 | Install by audio file; storage recovery tool; SEED at power-on (2026-10-25) | Pass: settings and frozen buffer erased, calibration kept |
+| Installing over Beta 1, with every Beta 1 option saved away from stock | Pass: all kept, live and saved; the new options at stock |
+| [M] CV at 0 V and 2 V, assigned to stereo width, then to grain diffusion | Pass: each rose by 0.40 of its range (0.2 needed) |
 
 | Settings | Peak audio load |
 |---|---:|
+| Wavetable synth, width at maximum, a pitch scale | 85.8% |
 | Evolving frozen feedback | 83.3% |
+| Granular features together, frozen: Clouds-style reverb, diffusion and width at maximum, a pitch scale, Evolving frozen feedback | 83.0% |
+| Granular features together, recording: as above with attacks (Snap and trigger) instead of Evolving | 81.3% |
 | Plaits synth, string model | 69.8% |
 | Spectral, Sunny tape | 23.6% |
 | Spectral | 17.9% |
 
 No audio underruns. Not yet checked on the module: random intervals, attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
 
-**Test module totals** (2026-10-18 to 2026-10-27). Firmware installs:
+**Test module totals** (2026-10-18 to 2026-10-27). Firmware and settings installs:
 
 | Firmware | Debug probe | Audio file |
 |---|---:|---:|
-| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 43 | 2 |
+| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 46 | 2 |
 | Vanilla source (timing build) | 2 | 0 |
-| Settings sector restore (factory calibration and settings) | 3 | – |
+| Settings sector restore (factory calibration and settings) | 4 | – |
+| Settings sector test images (Beta 1 settings, [M] assignments) | 3 | – |
 | Storage recovery tool | 0 | 2 |
-| **Total** | **48** | **4** |
+| **Total** | **55** | **4** |
 
-Since 2026-10-11: 100 installs (83 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 15 more hours of automated runs, 28 in all, counted as above.
+Since 2026-10-11: 107 installs (90 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 16 more hours of automated runs, 29 in all, counted as above.
 
 **CV calibration** ([M]+[A]):
 
