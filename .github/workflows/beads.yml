@@ -65,6 +65,7 @@ jobs:
       - name: Browser encoder makes the same WAV
         run: |
           node --version
+          git fetch --no-tags --depth=1 origin '+refs/tags/drizzlet-*:refs/tags/drizzlet-*'
           node palette/test/golden.js artifacts/app.bin "$(cut -c1-64 beads/build/expected-wav.sha256)"
           node palette/test/manifest.js
       - name: Build the unchanged 4.9.3 golden app
