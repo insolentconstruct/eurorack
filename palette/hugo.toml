@@ -1,4 +1,4 @@
-# Drizzlet builder. Hugo copies static/ unchanged: no content or templates yet,
+# Drizzlet Hygrostat. Hugo copies static/ unchanged: no content or templates yet,
 # and nothing is minified (the encoder must stay the file the tests check).
 baseURL = 'https://insolentconstruct.github.io/eurorack/'
 # Disabling the page kind too crashes Hugo 0.167-0.168 (index out of range).
