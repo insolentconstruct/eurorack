@@ -1,0 +1,81 @@
+**Beta 2 "Fog".** Plaits as a second synth, a spectral processor, adjustable grain diffusion and more, on a new four-page options page. Settings saved by Beta 1 are kept, but most options have moved (below). Tested on one module so far; please try it on yours and [report what you find](https://github.com/insolentconstruct/eurorack/issues).
+
+## Upgrading from Beta 1
+
+Your settings carry over. The options page now has four pages, and its page LEDs light left to right: FEEDBACK, DRY/WET, REVERB, then all three. Where the Beta 1 options went:
+
+| Option | Beta 1 | Beta 2 |
+|---|---|---|
+| Pitch scale | Page 1, FEEDBACK | Page 1, FEEDBACK |
+| Stereo width | Page 1, DRY/WET | Off the pages: hold [A], turn DRY/WET |
+| Reverb character | Page 1, REVERB | Page 2, DRY/WET |
+| Delay mode | Page 2, DRY/WET | Page 2, FEEDBACK |
+| Wavetable synth | Page 3, FEEDBACK | Page 3, REVERB, now called Synth start |
+| Limiter | Page 3, DRY/WET | Page 4, REVERB |
+
+Delay mode's values are renamed, with the same behaviour: Never is now Disabled, Wide detent is now Wide/smooth filter. Guides: [printable](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/options-guide.svg), [phone](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/options-guide-mobile.svg), [text](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/OPTIONS.md).
+
+## New in Beta 2
+
+Listed by the number of requests ([feature requests](https://github.com/insolentconstruct/eurorack/issues/130), [roadmap](https://github.com/insolentconstruct/eurorack/issues/32)).
+
+- **Grain diffusion** (7 requests, #2): hold [A] and turn REVERB, with either reverb; also an [M] destination for CV. Clouds-style reverb keeps its Beta 1 diffusion until you set an amount.
+- **Plaits synth** (page 3; 6 requests, #50): six Plaits voices in place of the wavetable synth. FEEDBACK picks one of 24 models; TIME, SIZE and SHAPE are HARMONICS, TIMBRE and MORPH.
+- **Spectral processor** (page 3; 4 requests, #3): Clouds' spectral processing in place of the grains. Switching processor clears the recording.
+- **Frozen feedback** (page 2; 3 requests, #4): Evolving lets a frozen sound drift and soften instead of repeating exactly.
+- **Random intervals** (page 1; 2 requests, #8): with the PITCH attenurandomizer counter-clockwise, random pitch lands on fifths and octaves. Works with any pitch scale.
+- **Attacks** (page 1; #58, #47): Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
+- **Quieter quality changes** (#53): the output fades out before the codec restarts, and the synth's reverb tail stops with it.
+- **Less CPU** for Clouds-style reverb and the grains, with the same sound.
+
+## Everything Drizzlet adds
+
+Compared with the Mutable Instruments firmware. Every option defaults to stock behaviour.
+
+| Feature | Where | Since |
+|---|---|---|
+| Pitch scale: Chromatic or eight Marbles scales | Page 1, FEEDBACK | Beta 1 |
+| Random intervals | Page 1, DRY/WET | Beta 2 |
+| Attacks | Page 1, REVERB | Beta 2 |
+| Delay mode: Auto, Disabled or Wide/smooth filter | Page 2, FEEDBACK | Beta 1 |
+| Clouds-style reverb | Page 2, DRY/WET | Beta 1 |
+| Evolving frozen feedback | Page 2, REVERB | Beta 2 |
+| Spectral processor | Page 3, FEEDBACK | Beta 2 |
+| Plaits synth | Page 3, DRY/WET | Beta 2 |
+| Wavetable synth started by hand | Page 3, REVERB | Alpha 2 |
+| Output limiter: Stock, Fast release or Off | Page 4, REVERB | Alpha 1 |
+| Stereo width, with CV | Hold [A], turn DRY/WET | Beta 1 |
+| Grain diffusion, with CV | Hold [A], turn REVERB | Beta 2 |
+| Monophonic grains (Mutable Instruments' code) | Hold [A], press SEED | Alpha 2 |
+| Buffer trim | Hold [A], press FREEZE | Beta 1 |
+| Safer frozen-buffer saves | Automatic | Alpha 1 |
+| Less flash wear from a modulated FREEZE | Automatic | Alpha 2 |
+| More CPU headroom, same sound | Automatic | Alpha 2 |
+
+How each works: [README](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/README.md). Every change, including bug fixes: [CHANGELOG.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/CHANGELOG.md).
+
+## Coming from the 2021 or 2024 firmware
+
+Drizzlet includes everything Mutable Instruments changed after those releases: settings recovery for modules stuck on boot, smoother knobs and delay controls, and the grain-scheduling change after which our module no longer crackled at high DENSITY.
+
+## How it was tested
+
+Host tests on every push, reproducible builds, and about 28 hours of automated runs on a module. 100 firmware installs, none failed to boot. CV calibration was checked twice against an Intellijel Scales reference. Details: [TESTING.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/TESTING.md).
+
+## Downgrading
+
+- Turn monophonic grains off first.
+- Beta 1 ignores the new options and drops grain diffusion's CV assignment. Saving settings on Beta 1 clears the new options.
+- Stock firmware loads trimmed saves at full length. Saving settings on stock firmware clears the Drizzlet options.
+
+## Known limits
+
+- Tested on one module only.
+- Settings are stored as in Mutable Instruments' firmware. About once every 4,000 saves, the settings sector is erased and rewritten. A power cut during that moment can reset calibration and settings. The README shows how to back up calibration.
+- Where the Beads manual and the firmware disagree: [MANUAL_ERRATA.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/MANUAL_ERRATA.md).
+
+## Reporting problems
+
+Open an [issue](https://github.com/insolentconstruct/eurorack/issues) with the release tag, your options page settings, what you did, what you heard, and a recording if you can. Please do not contact Mutable Instruments about this firmware.
+
+Built on the Beads source Mutable Instruments released under the MIT licence.
