@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Drizzlet builder</title>
+<style>
+  :root {
+    --bg: #fafaf8; --fg: #1d1d1b; --muted: #5c5c58; --line: #d8d8d2;
+    --accent: #2f6f4f; --ok: #2f6f4f; --error: #a3302a; --panel: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --fg: #ecece8; --muted: #a6a6a0; --line: #3a3a37;
+      --accent: #7cc39a; --ok: #7cc39a; --error: #f08a80; --panel: #1f1f1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 2rem 16px 3rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  .lead { color: var(--muted); margin: 0 0 1.5rem; }
+  section {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 1rem 1.25rem; margin-bottom: 1rem;
+  }
+  label { display: block; font-weight: 600; margin-bottom: .35rem; }
+  select, button { font: inherit; }
+  select { width: 100%; padding: .45rem; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--fg); }
+  button, a.button {
+    display: inline-block; margin-top: .75rem; padding: .55rem 1rem; border: 0;
+    border-radius: 6px; background: var(--accent); color: var(--bg); font-weight: 600;
+    text-decoration: none; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  progress { width: 100%; margin-top: .75rem; }
+  #status { margin: .75rem 0 0; min-height: 1.5em; }
+  #status.ok { color: var(--ok); }
+  #status.error { color: var(--error); font-weight: 600; }
+  dl { margin: 0; font-size: .85rem; }
+  dt { color: var(--muted); margin-top: .5rem; }
+  dd { margin: 0; font-family: ui-monospace, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+  details { margin-top: .75rem; color: var(--muted); }
+  small, .note { color: var(--muted); font-size: .9rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Drizzlet builder</h1>
+  <p class="lead">Makes the firmware update file for Mutable Instruments Beads in your browser. Nothing is uploaded.</p>
+
+  <section>
+    <label for="release">Release</label>
+    <select id="release"></select>
+    <button id="build" disabled>Make the update file</button>
+    <progress id="progress" max="1" value="0" aria-label="Encoding progress" hidden></progress>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div id="result" hidden>
+      <a id="download" class="button" href="#">Download</a>
+      <dl>
+        <dt>App image (SHA-256)</dt><dd id="app-hash"></dd>
+        <dt>Update file (SHA-256)</dt><dd id="wav-hash"></dd>
+        <dt>Release update file (SHA-256)</dt><dd id="expected-hash"></dd>
+      </dl>
+    </div>
+    <details>
+      <summary>Use an app image you already have</summary>
+      <p class="note">It must be the selected release's <code>app.bin</code>; anything else is refused.</p>
+      <label for="local">App image file</label>
+      <input id="local" type="file" accept=".bin,application/octet-stream">
+    </details>
+  </section>
+
+  <section>
+    <p class="note">For now this makes exactly the update file published with each release, so you can check it. Choosing which features your firmware has comes later.</p>
+    <p class="note">Install it as described in the <a href="https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/README.md#updating-your-module">README</a>. Drizzlet is community firmware; it is not a Mutable Instruments product, so please do not contact Mutable Instruments about it.</p>
+    <small>Insolent Construct · <a href="https://github.com/insolentconstruct/eurorack">Source</a> · Encoder based on Mutable Instruments' (MIT); sine and cosine from the GNU C Library (LGPL 2.1 or later).</small>
+  </section>
+</main>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
