@@ -17,7 +17,7 @@ DC-coupled audio interfaces (Expert Sleepers ES-8, ES-9) are not calibrated sour
 
 ## Before you start
 
-- Back up the settings sector ([README](../README.md#calibration-backup-and-restore)). It holds the calibration.
+- Back up the settings sector ([README](../README.md#backup-and-restore)). It holds the calibration.
 - Unplug every CV input except the reference. The first [A] press also stores the 0 V point of TIME, SIZE, SHAPE and the [M] CV input.
 
 ## Steps
@@ -32,7 +32,7 @@ DC-coupled audio interfaces (Expert Sleepers ES-8, ES-9) are not calibrated sour
 
 The calibration is saved only after the last press. If the computed scale is more than 10% from nominal (the step from 1 V to 3 V measures outside about 1.8–2.2 V), all LEDs blink for about a second and Beads returns to normal without saving. The stored calibration is kept, but power-cycle Beads to reload it: the refused attempt can leave new values in use until then. The check catches only gross errors, such as an unplugged cable. 2 V and 4 V would pass, and so would a slightly wrong reference.
 
-To undo a calibration, restore the backup.
+To undo a calibration, restore only the calibration from the backup ([README](../README.md#backup-and-restore)); your settings stay as they are.
 
 ## Tested
 

@@ -279,6 +279,10 @@ Everything above used one module. Also done on it for release candidate 3 (2026-
 
 Report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues).
 
+## Settings sector tool
+
+`make -f beads/build/tools/settings_sector.mk test` builds images with `settings_sector.py` (calibration only, settings only, both, a full sector) and loads each with stmlib's own storage code, as the firmware does at boot; dumps the firmware would not read are refused.
+
 ## Options checks
 
 - `make -f beads/build/tools/options_tables.mk test` builds the TSV exporter and compares README.txt's Options reference with the firmware tables. `./build/options_tables` prints page, LED, knob, setting, value, colour and pulse.

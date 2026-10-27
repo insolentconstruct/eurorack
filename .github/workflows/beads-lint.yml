@@ -100,3 +100,5 @@ jobs:
         run: git submodule update --init stmlib
       - name: Check exported tables and generated guides
         run: make -j"$(nproc)" -f beads/build/tools/options_tables.mk test
+      - name: Check the settings sector tool
+        run: make -f beads/build/tools/settings_sector.mk test
