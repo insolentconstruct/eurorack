@@ -231,7 +231,7 @@ Follow the [official Beads firmware update procedure](https://pichenettes.github
 
 ### Calibration backup and restore
 
-Back up the settings/calibration sector with ST-Link + OpenOCD (same unit only):
+Back up the settings/calibration sector with ST-Link + OpenOCD (same unit only). Recalibrating the CV inputs: [CALIBRATION.md](docs/CALIBRATION.md).
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
