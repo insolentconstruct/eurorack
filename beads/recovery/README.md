@@ -24,7 +24,7 @@ On start-up, before reading any settings:
 - Erases flash sectors 8 to 14 (bank 2 sectors 0 to 6, 0x08100000 to
   0x081dffff): the saved frozen buffer. They are not read first.
 - Reads the CV calibration from sector 15 (bank 2 sector 7, 0x081e0000). It
-  is kept if it reads back without errors and is within 25% of the factory
+  is kept if it reads back without uncorrectable errors and is within 25% of the factory
   values; otherwise it is reset to the factory values.
 - Erases sector 15 and rewrites it: the calibration, and the settings at
   their factory values.

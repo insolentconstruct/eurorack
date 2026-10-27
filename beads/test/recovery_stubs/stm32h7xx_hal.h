@@ -47,6 +47,10 @@ struct SCB_Type {
 extern SCB_Type test_scb;
 extern bool test_locked;
 extern bool test_ecc_error;  // Every masked read hits a double ECC error.
+extern int test_ecc_read;  // Only this masked read (counting from 1) does.
+extern int test_masked_reads;
+extern int test_fail_programs;  // Writes that report failure, writing nothing.
+extern int test_silent_programs;  // Writes that report success, writing nothing.
 extern uint32_t test_faultmask;
 extern uint32_t test_sr2;  // Sticky error flags.
 extern int test_fail_sector;  // The sector number given, or -1 for any.
@@ -100,6 +104,14 @@ inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
     return 1;
   }
   ++test_programs;
+  if (test_fail_programs) {
+    --test_fail_programs;
+    return 1;
+  }
+  if (test_silent_programs) {
+    --test_silent_programs;
+    return 0;
+  }
   uint8_t* dst = reinterpret_cast<uint8_t*>(uintptr_t(address));
   const uint8_t* src = reinterpret_cast<const uint8_t*>(uintptr_t(source));
   for (int i = 0; i < 32; ++i) {
@@ -109,8 +121,8 @@ inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
 }
 // Reads made with bus faults masked raise the error flag.
 inline void __DSB() {
-  if (test_ecc_error && test_faultmask && \
-      (test_scb.CCR & SCB_CCR_BFHFNMIGN_Msk)) {
+  if (test_faultmask && (test_scb.CCR & SCB_CCR_BFHFNMIGN_Msk) && \
+      (++test_masked_reads == test_ecc_read || test_ecc_error)) {
     test_sr2 |= FLASH_FLAG_DBECCERR_BANK2;
   }
 }

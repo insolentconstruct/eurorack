@@ -38,6 +38,10 @@
 SCB_Type test_scb;
 bool test_locked = true;
 bool test_ecc_error = false;
+int test_ecc_read = 0;
+int test_masked_reads = 0;
+int test_fail_programs = 0;
+int test_silent_programs = 0;
 uint32_t test_faultmask = 0;
 uint32_t test_sr2 = 0;
 int test_fail_sector = -1;
@@ -68,6 +72,10 @@ const size_t kSettingsOffset = 7 * 0x20000;
 
 void Reset() {
   test_ecc_error = false;
+  test_ecc_read = 0;
+  test_masked_reads = 0;
+  test_fail_programs = 0;
+  test_silent_programs = 0;
   test_faultmask = 0;
   test_scb.CCR = 0;
   test_sr2 = 0;
@@ -291,6 +299,52 @@ void TestEraseErrors() {
   CHECK(test_programs == 0);
 }
 
+void TestProgramErrors() {
+  test_name = "TestProgramErrors";
+  Prepare(1.0f, 1.0f);
+  test_fail_programs = 1;
+  CHECK(RunRecovery() == RECOVERY_FAILED);
+  Prepare(1.0f, 1.0f);
+  test_silent_programs = 1;
+  CHECK(RunRecovery() == RECOVERY_FAILED);
+}
+
+// One double ECC error at each masked read in turn: recovery fails, or
+// leaves a sector the firmware loads with either calibration.
+void TestSingleEccError() {
+  test_name = "TestSingleEccError";
+  Prepare(1.1f, 1.1f);
+  Settings original;
+  CHECK(Loads(&original));
+  Prepare(1.1f, 1.1f);
+  CHECK(RunRecovery() == RECOVERY_CALIBRATION_KEPT);
+  const int reads = test_masked_reads;
+  Settings defaults;
+  LoadDefaults(&defaults);
+  int resets = 0;
+  for (int read = 1; read <= reads; ++read) {
+    Prepare(1.1f, 1.1f);
+    test_ecc_read = read;
+    const RecoveryResult result = RunRecovery();
+    if (result == RECOVERY_FAILED) {
+      continue;
+    }
+    Settings loaded;
+    const Settings& expected = result == RECOVERY_CALIBRATION_KEPT
+        ? original : defaults;
+    resets += result == RECOVERY_CALIBRATION_RESET;
+    if (!CHECK(Loads(&loaded) && !memcmp(
+        loaded.persistent_data().adc_calibration,
+        expected.persistent_data().adc_calibration,
+        sizeof(expected.persistent_data().adc_calibration)) &&
+        SameState(loaded.state(), defaults.state()))) {
+      printf("  at masked read %d of %d\n", read, reads);
+      break;
+    }
+  }
+  CHECK(resets > 0);
+}
+
 int main() {
   setvbuf(stdout, NULL, _IONBF, 0);
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -304,5 +358,7 @@ int main() {
   TestCorruptSettings();
   TestEccError();
   TestEraseErrors();
+  TestProgramErrors();
+  TestSingleEccError();
   return test_failures ? 1 : 0;
 }
