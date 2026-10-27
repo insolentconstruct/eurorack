@@ -97,14 +97,14 @@ STEPS = [
     "Open: hold the CV-assign button [M] {hold}, release.",
     "Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, "
     "then all three.",
-    "[A] shows each stored value in turn. Turn a knob to change it; it "
-    "saves by itself.",
-    "Close: hold [M] {hold} or press another button. With Scale selected, "
-    "SEED taps step the scale.",
+    "[A] shows each stored value in turn. Turn a mix knob (not a big "
+    "knob) to change it.",
+    "Close: hold [M] {hold} or press another button. On page 1 with Pitch "
+    "scale on Scale, tap SEED to step the scale.",
 ]
 NOTES = [
-    "Move a knob a little before it responds. Wait a moment before "
-    "powering off.",
+    "It saves by itself; wait before powering off. Move a knob a little "
+    "before it responds.",
 ]
 SHORT = {
     "Clouds-style": "Clouds",
