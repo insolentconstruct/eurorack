@@ -63,7 +63,7 @@ async function build(release, app) {
   if (app.length !== release.app_size || appHash !== release.app_sha256) {
     throw new Error(`the app image does not match ${release.tag}: ${appHash}`);
   }
-  status('Encoding…');
+  status('Encoding… halcyon and on and on.');  // Orbital, 1993
   const wav = await encodeInWorker(app.slice());
   const wavHash = await sha256(wav);
   $('app-hash').textContent = appHash;
