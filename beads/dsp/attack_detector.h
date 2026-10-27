@@ -49,7 +49,7 @@ const float kAttackRefractoryTime = 0.030f;  // seconds
 const float kAttackReleaseRate = 20.0f;  // Hz
 // Grain starts move back by up to this much to land on an attack.
 const float kAttackSnapTime = 0.100f;  // seconds
-const unsigned kNumAttackMarks = 64;
+const uint32_t kNumAttackMarks = 64;
 
 // Finds attacks in the codec input, one decision per block.
 class AttackInput {
@@ -109,9 +109,10 @@ class AttackInput {
         peak > kAttackFloor;
 
     // Instant attack, release at the block rate.
-    SLOPE(reference_, peak, 1.0f, kAttackReleaseRate * float(size) / sample_rate);
+    SLOPE(reference_, peak, 1.0f,
+          kAttackReleaseRate * float(size) / sample_rate);
     if (onset) {
-      refractory_ = unsigned(sample_rate * kAttackRefractoryTime);
+      refractory_ = uint32_t(sample_rate * kAttackRefractoryTime);
     }
     return onset;
   }
@@ -124,7 +125,7 @@ class AttackInput {
   int mode_;
   float threshold_;
   float reference_;
-  unsigned refractory_;
+  uint32_t refractory_;
 
   DISALLOW_COPY_AND_ASSIGN(AttackInput);
 };
@@ -158,7 +159,11 @@ class AttackDetector {
 
   inline void SetOnset(bool onset) { pending_ = onset; }
 
-  void BeginBlock(int write_ptr, unsigned capacity, bool granular, bool frozen) {
+  void BeginBlock(
+      int write_ptr,
+      uint32_t capacity,
+      bool granular,
+      bool frozen) {
     start_ptr_ = write_ptr;
     capacity_ = capacity;
     // Forget the marks the recording has overwritten.
@@ -178,7 +183,7 @@ class AttackDetector {
     pending_ = false;
   }
 
-  inline void EndBlock(unsigned writes) { clock_ += writes; }
+  inline void EndBlock(uint32_t writes) { clock_ += writes; }
 
   // The nearest attack at or before the requested start, within
   // kAttackSnapTime; otherwise the requested start.
@@ -190,22 +195,22 @@ class AttackDetector {
     if (delta < 0) {
       delta += capacity_;
     }
-    const uint32_t now = clock_ + unsigned(delta);
+    const uint32_t now = clock_ + uint32_t(delta);
     // The oldest mark bounds the others.
     if (float(now - marks_[Older(count_)]) < delay) {
       return delay;
     }
-    unsigned first = unsigned(delay);
+    uint32_t first = uint32_t(delay);
     if (float(first) < delay) {
       ++first;
     }
-    const unsigned limit = unsigned(
+    const uint32_t limit = uint32_t(
         std::min(delay + sample_rate_ * kAttackSnapTime, max_delay));
     // Ages grow from the newest mark to the oldest, even across a clock wrap.
-    unsigned low = 0;
-    unsigned high = count_;
+    uint32_t low = 0;
+    uint32_t high = count_;
     while (low < high) {
-      const unsigned middle = (low + high) >> 1;
+      const uint32_t middle = (low + high) >> 1;
       if (now - marks_[Older(middle + 1)] < first) {
         low = middle + 1;
       } else {
@@ -213,7 +218,7 @@ class AttackDetector {
       }
     }
     if (low < count_) {
-      const unsigned age = now - marks_[Older(low + 1)];
+      const uint32_t age = now - marks_[Older(low + 1)];
       if (age <= limit) {
         return float(age);
       }
@@ -223,15 +228,15 @@ class AttackDetector {
 
  private:
   // The mark written n marks ago (n = 1 is the newest).
-  inline unsigned Older(unsigned n) const {
+  inline uint32_t Older(uint32_t n) const {
     return (head_ + kNumAttackMarks - n) % kNumAttackMarks;
   }
 
   int mode_;
   int start_ptr_;
-  unsigned capacity_;
-  unsigned head_;
-  unsigned count_;
+  uint32_t capacity_;
+  uint32_t head_;
+  uint32_t count_;
   uint32_t clock_;
   uint32_t marks_[kNumAttackMarks];
   float sample_rate_;
