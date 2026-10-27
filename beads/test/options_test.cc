@@ -924,6 +924,65 @@ void TestSelfPlayStorage() {
   CHECK(loaded.state().self_play == 0);
 }
 
+// Beta 1's state record (drizzlet-2026.10.18): bytes 17-23 were padding.
+struct Beta1State {
+  uint8_t media;
+  uint8_t assignable_cv_destination;
+  uint8_t assignable_cv_amount[3];
+  uint8_t gain;
+  uint8_t gate_output_mode;
+  uint8_t frozen;
+  uint8_t disable_autosave;
+  uint8_t monophonic_mode;
+  uint8_t output_limiter_mode;
+  uint8_t self_play;
+  uint8_t pitch_scale;
+  uint8_t reverb_style;
+  uint8_t stereo_width;
+  uint8_t delay_mode;
+  uint8_t width_assigned;
+  uint8_t padding[7];
+  enum { tag = 0x54415453 };  // STAT
+};
+
+void TestBeta1SettingsCarryOver() {
+  test_checker.Start("TestBeta1SettingsCarryOver");
+  Rig r;
+  PersistentData calibration = r.settings.persistent_data();
+  Beta1State beta1 = { };
+  stmlib::ChunkStorage<15, PersistentData, Beta1State> storage;
+  storage.Init(&calibration, &beta1);  // Reads the newest record: set after.
+  beta1 = Beta1State();
+  beta1.media = 2;
+  beta1.assignable_cv_amount[0] = 77;
+  beta1.gain = 40;
+  beta1.gate_output_mode = 1;
+  beta1.monophonic_mode = 1;
+  beta1.output_limiter_mode = 0xa1;  // Fast release
+  beta1.self_play = 0xa1;  // On request: Synth start Manual
+  beta1.pitch_scale = 0xa9;  // Raag Shri
+  beta1.reverb_style = 0xa2;  // Clouds-style
+  beta1.stereo_width = 200;
+  beta1.delay_mode = 0xa2;  // Wide detent: Wide/smooth filter
+  beta1.width_assigned = 1;
+  storage.SaveState();
+
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(!memcmp(&loaded.state(), &beta1, offsetof(Beta1State, padding)));
+  CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_FAST);
+  CHECK(loaded.self_play_on_request());
+  CHECK(loaded.pitch_scale() == PITCH_SCALE_SHRI);
+  CHECK(loaded.clouds_style());
+  CHECK(loaded.stereo_width() == 200 && loaded.width_assigned());
+  CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
+  // Beta 2's options start at stock; Clouds-style keeps Beta 1's diffusion.
+  CHECK(!loaded.diffusion_set() && loaded.diffusion() == kCloudsDiffusion);
+  CHECK(!loaded.evolving_feedback() && !loaded.spectral());
+  CHECK(!loaded.plaits_synth() && !loaded.random_intervals());
+  CHECK(loaded.attack_mode() == ATTACK_MODE_OFF);
+}
+
 void TestAttackStorage() {
   test_checker.Start("TestAttackStorage");
   Rig r;
@@ -2137,6 +2196,7 @@ int main() {
   TestSynthEngineStorage();
   TestPitchStorage();
   TestSelfPlayStorage();
+  TestBeta1SettingsCarryOver();
   TestEngineStorage();
   TestEngineOption();
   TestSynthStartOption();
