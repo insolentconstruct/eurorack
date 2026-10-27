@@ -5,7 +5,7 @@
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
 - **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns.
-- **Totals:** 48 firmware installs on the test module, none failed to boot; about 13 hours of automated runs.
+- **Totals:** 100 firmware installs on the test module, none failed to boot; about 28 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
 
 Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build and spectral a ShyFFT build, each counted once. Assertions inside loops run more than once.
 
@@ -218,6 +218,27 @@ audio in every scenario with default options. A short run checked them on the mo
 Every probe install was read back and checked; the module never failed to boot. Once, an update file played too quietly stopped partway; the bootloader was untouched and replaying at full volume fixed it.
 
 About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 sessions), counted from run logs, excluding waits for a control to be moved; a run recorded by several instruments counts once.
+
+**Test module totals** (2026-10-18 to 2026-10-27). Firmware installs:
+
+| Firmware | Debug probe | Audio file |
+|---|---:|---:|
+| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 43 | 2 |
+| Vanilla source (timing build) | 2 | 0 |
+| Settings sector restore (factory calibration and settings) | 3 | – |
+| Storage recovery tool | 0 | 2 |
+| **Total** | **48** | **4** |
+
+Since 2026-10-11: 100 installs (83 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 15 more hours of automated runs, 28 in all, counted as above.
+
+**CV calibration** ([M]+[A]):
+
+| Run | Result |
+|---|---|
+| 2026-10-26, Intellijel Scales | Saved: PITCH scale 0.11% from the factory calibration, within 9 cents from 0 to 5 V |
+| 2026-10-27, Intellijel Scales | Saved: PITCH scale 0.08% from the factory calibration, within 8 cents from 0 to 5 V |
+
+The factory calibration was restored by debug probe after each saved run. Before calibrating, the Module Tester's 1 V and 3 V read about 2.5 mV low and Scales' 2–4 mV high, against the factory calibration.
 
 ## Not tested
 
