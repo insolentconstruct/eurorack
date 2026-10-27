@@ -170,7 +170,7 @@ void SpectralProcessor::DrawParameters(
   parameters_.spectral.quantization = parameters.shape.value();
   const float d = density.value();
   parameters_.spectral.refresh_rate = 0.01f + 0.99f * d;
-  float warp = parameters.size.value() - 0.5f;
+  const float warp = parameters.size.value() - 0.5f;
   parameters_.spectral.warp = 4.0f * warp * warp * warp + 0.5f;
 
   float randomization = d - 0.5f;
