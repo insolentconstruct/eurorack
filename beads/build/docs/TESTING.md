@@ -1,10 +1,10 @@
 # Testing
 
-**TL;DR:** 174 host tests in 14 programs cover 110 of 117 manual behaviours (3 only in part), backed by 161 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
+**TL;DR:** 203 host tests in 17 programs cover 110 of 117 manual behaviours (3 only in part), backed by 190 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
 
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns.
+- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, a full run on the release code: quality changes, the quality button, CPU load and CV calibration.
 - **Totals:** 100 firmware installs on the test module, none failed to boot; about 28 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
 
 Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build and spectral a ShyFFT build, each counted once. Assertions inside loops run more than once.
@@ -28,24 +28,30 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 | `beads/test/firmware.mk` | The firmware's own start-up, main loop and audio callback (`beads.cc`, unmodified) with hardware stubs and sanitizers: the wavetable synth after 10 s and on a [A] hold, mono/stereo switching, the quality lock while frozen, the overwrite indicator, the trigger output, CV routing, the power-on reset and corrupted-calibration branches, the pitch chain from CV input, and leaving the wavetable synth with a frozen buffer; pitch-scale CV routing and reverb switching; a saved pitch scale reaching wavetable synth grains (Automatic and Manual, random and CV, across a reboot) while the continuous oscillator stays unquantized; switching to and from the spectral engine (fade, cleared recording, frozen buffer kept in flash and restored with granular, no wavetable synth, no flash writes while frozen). A check keeps the test's copy of the main loop identical to `main()`'s |
 | `beads/test/spectral.mk` | Spectral engine with sanitizers: CMSIS and ShyFFT conventions (imaginary sign, Nyquist slot, inverse scaling); the port against Clouds' own phase vocoder fed the same input and parameters: identical with ShyFFT, 94/77/63 dB agreement with CMSIS in plain settings (coarse quantization and glitches turn rounding into whole steps); every quality, mono and stereo, through the whole processor with pinned hashes; diffuser and delay mode off; controls drawn once per frame, freeze, glitch and the pitch scale; the recording cleared on engine changes |
 | `beads/test/delay_mode.mk` | Delay mode through the processor with sanitizers: continuous playback with SIZE fully clockwise, the fade when switching modes, the pitch shifter and its bypass at noon, the delay bandwidth control and SIZE CV |
+| `beads/test/attack.mk` | Attacks: hit detection on the input, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
+| `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
+| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, model detents on FEEDBACK, FREEZE sustain, RAM bounds |
 
 | Program | Tests | Assertion sites |
 |---|---:|---:|
+| attack | 3 | 20 |
 | backup | 16 | 106 |
-| clouds | 4 | 12 |
+| clouds | 5 | 17 |
 | delay | 11 | 46 |
 | delay_mode | 9 | 40 |
-| firmware | 16 | 145 |
+| feedback_diffuser | 3 | 17 |
+| firmware | 21 | 177 |
 | gain | 5 | 21 |
-| granular | 23 | 113 |
+| granular | 24 | 114 |
 | mix | 7 | 28 |
-| options | 44 | 416 |
-| pitch_quantizer | 2 | 23 |
+| options | 53 | 536 |
+| pitch_quantizer | 3 | 29 |
+| plaits_synth | 4 | 31 |
 | processor | 10 | 36 |
-| spectral | 6 | 28 |
+| spectral | 7 | 34 |
 | trigger | 10 | 27 |
-| wavetable | 11 | 60 |
-| **Total** | **165** | **1022** |
+| wavetable | 12 | 61 |
+| **Total** | **203** | **1340** |
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
@@ -218,6 +224,27 @@ audio in every scenario with default options. A short run checked them on the mo
 Every probe install was read back and checked; the module never failed to boot. Once, an update file played too quietly stopped partway; the bootloader was untouched and replaying at full volume fixed it.
 
 About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 sessions), counted from run logs, excluding waits for a control to be moved; a run recorded by several instruments counts once.
+
+### Beta 2
+
+The release code, including the converter fix, on 2026-10-27. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
+
+| Check | Result |
+|---|---|
+| Audio after changes between all four qualities | Pass: right pitch and level each time |
+| Eight presses of the quality button | Pass: each fades out and back in. Every press changed the sample rate, so the converter still restarted |
+| Converter pop at changes that keep the sample rate, 12 per build (separate comparison, 2026-10-25) | About +18 dB above a −34 dBFS test tone before the fix, about −50 dB after (median; worst −35 dB) |
+| CV calibration with Intellijel Scales | Saved, then the factory calibration restored (below) |
+| Install by audio file; storage recovery tool; SEED at power-on (2026-10-25) | Pass: settings and frozen buffer erased, calibration kept |
+
+| Settings | Peak audio load |
+|---|---:|
+| Evolving frozen feedback | 83.3% |
+| Plaits synth, string model | 69.8% |
+| Spectral, Sunny tape | 23.6% |
+| Spectral | 17.9% |
+
+No audio underruns. Not yet checked on the module: random intervals, attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
 
 **Test module totals** (2026-10-18 to 2026-10-27). Firmware installs:
 

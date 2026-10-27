@@ -25,7 +25,7 @@ Listed by the number of requests ([feature requests](https://github.com/insolent
 - **Frozen feedback** (page 2; 3 requests, #4): Evolving lets a frozen sound drift and soften instead of repeating exactly.
 - **Random intervals** (page 1; 2 requests, #8): with the PITCH attenurandomizer counter-clockwise, random pitch lands on fifths and octaves. Works with any pitch scale.
 - **Attacks** (page 1; #58, #47): Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
-- **Quieter quality changes** (#53): the output fades out before the codec restarts, and the synth's reverb tail stops with it.
+- **Quieter quality changes** (#53): the output fades out first, and changes that keep the sample rate no longer pop. The pop came from the converter restarting, in every earlier firmware. The synth's reverb tail now stops with it.
 - **Less CPU** for Clouds-style reverb and the grains, with the same sound.
 
 ## Everything Drizzlet adds
@@ -71,6 +71,7 @@ Host tests on every push, reproducible builds, and about 28 hours of automated r
 ## Known limits
 
 - Tested on one module only.
+- A module that no longer starts after an update, even after reinstalling: see the [storage recovery tool](https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27) and its warnings first.
 - Settings are stored as in Mutable Instruments' firmware. About once every 4,000 saves, the settings sector is erased and rewritten. A power cut during that moment can reset calibration and settings. The README shows how to back up calibration.
 - Where the Beads manual and the firmware disagree: [MANUAL_ERRATA.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/MANUAL_ERRATA.md).
 
