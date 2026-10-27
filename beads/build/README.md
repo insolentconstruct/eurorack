@@ -231,21 +231,29 @@ Follow the [official Beads firmware update procedure](https://pichenettes.github
 
 **Do not hold SEED at power-on unless you mean to: it resets the settings (a valid calibration is kept).**
 
-### Calibration backup and restore
+### Backup and restore
 
-Back up the settings/calibration sector with ST-Link + OpenOCD (same unit only). Recalibrating the CV inputs: [CALIBRATION.md](docs/CALIBRATION.md).
+The settings sector holds the CV calibration and the settings. Back it up with ST-Link + OpenOCD; use a backup on the same unit only. Recalibrating the CV inputs: [CALIBRATION.md](docs/CALIBRATION.md).
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; dump_image beads-settings.bin 0x081E0000 0x20000; reset run; shutdown"
 ```
 
-Restore the backup to the same unit only:
+To restore, build an image with Python 3 from the backup and, for a partial restore, a dump of the sector as it is now (`beads-now.bin`, made with the backup command):
+
+- **Both:** `python3 beads/build/tools/settings_sector.py --calibration beads-settings.bin --settings beads-settings.bin beads-restore.bin`
+- **Calibration only**, keeping today's settings, e.g. to undo a recalibration: `python3 beads/build/tools/settings_sector.py --calibration beads-settings.bin --settings beads-now.bin beads-restore.bin`
+- **Settings only**, keeping today's calibration: `python3 beads/build/tools/settings_sector.py --calibration beads-now.bin --settings beads-settings.bin beads-restore.bin`
+
+Then write it:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-    -c "init; halt; flash write_image erase beads-settings.bin 0x081E0000; verify_image beads-settings.bin 0x081E0000; reset run; shutdown"
+    -c "init; halt; flash write_image erase beads-restore.bin 0x081E0000; verify_image beads-restore.bin 0x081E0000; reset run; shutdown"
 ```
+
+The image holds only the calibration and the latest settings. OpenOCD erases the whole sector and programs just those, so later saves land on erased flash; don't write the 128 KB backup itself back. The tool refuses a dump the firmware would not read and never overwrites a file. To reset the settings to defaults instead, hold SEED while powering on; calibration is kept.
 
 ### ST-Link recovery
 
