@@ -2,20 +2,37 @@
 
 > **WARNING: use this ONLY if your module is stuck and does not start, and
 > ONLY if its updater still works: power on with the FREEZE button (B) held,
-> and the module must show the firmware update screen instead of starting.**
+> and the FREEZE and SEED LEDs must flash alternately instead of the module
+> starting.**
 >
 > **This is not a working firmware.** When it has finished, the module does
 > nothing else. You must then install a normal firmware update file.
+>
+> **YOUR SETTINGS WILL BE ERASED, AND POSSIBLY YOUR CALIBRATION.** If the CV
+> calibration cannot be read cleanly, or looks wrong, it is reset to the
+> factory defaults (the three ASSIGN LEDs stay lit at the end). You MUST then
+> recalibrate the CV inputs, and that needs accurately calibrated 1 V and 3 V
+> reference voltages ([CALIBRATION.md](https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/docs/CALIBRATION.md)).
+> Without them, PITCH CV will not track 1 V/octave. Do not run this tool
+> unless you can do that.
+>
+> **WE CANNOT SUPPORT YOUR HARDWARE.** If this tool does not fix your module,
+> the only remaining route is an ST-LINK debug probe and a stable wire harness
+> soldered or clipped to the module's debug header, to erase and reflash it
+> directly ([ST-Link recovery](https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/README.md#st-link-recovery)).
+> You will have to learn and do that yourself; we cannot help with it.
 
 TL;DR: play `storage-recovery.wav` into the module the usual way. It erases the
-settings and the saved frozen buffer, keeps the CV calibration when it can,
-and blinks green when done. Then install a normal firmware: Mutable
+settings and the saved frozen buffer, keeps the CV calibration only when it
+reads back cleanly and is within 25% of the factory values, and blinks green
+when done. Then install a normal firmware: Mutable
 Instruments' Beads 1.7 (2021), the early-2024 patch firmware, or a Drizzlet
 release, again with FREEZE held at power-on.
 
 This is an Insolent Construct tool. It does not come from Mutable Instruments.
-**Do not contact Mutable Instruments for support with it: report problems on
-this repository's [issues page](https://github.com/insolentconstruct/eurorack/issues).**
+**Do not contact Mutable Instruments about it.** You can say whether it
+worked on this repository's [issues page](https://github.com/insolentconstruct/eurorack/issues),
+but we cannot diagnose or repair modules.
 
 ## What it does
 
