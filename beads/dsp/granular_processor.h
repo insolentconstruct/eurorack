@@ -371,7 +371,7 @@ class GranularProcessor {
     const float soft_limit_gain = soft_limit_gains[resolution];
     
     // Attack marks follow the recording, in samples written.
-    AttackDetector* attacks = attacks_.mode() ? &attacks_ : NULL;
+    AttackDetector* const attacks = attacks_.mode() ? &attacks_ : NULL;
     granular_player_.SetAttacks(attacks);
     unsigned writes = 0;
     if (attacks) {

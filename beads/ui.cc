@@ -264,9 +264,9 @@ void Ui::UpdateLeds() {
 
   bool adjusting_manual_gain = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].editing_hidden_parameter();
-  bool adjusting_width = switches_.pressed(SWITCH_MEDIA) && \
+  const bool adjusting_width = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_DRY_WET].editing_hidden_parameter();
-  bool adjusting_diffusion = switches_.pressed(SWITCH_MEDIA) && \
+  const bool adjusting_diffusion = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_REVERB].editing_hidden_parameter();
   
   switch (mode_) {
