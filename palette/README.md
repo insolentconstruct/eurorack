@@ -20,4 +20,8 @@ node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
 
 CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
 
+**Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
+
+**Counting:** each update file made sends one request to GoatCounter with the release tag only (`/render/<tag>`), from `app.js`, with no cookies and no GoatCounter script; it is skipped when the browser sends "do not track". The page says so.
+
 To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d palette/static`); the hash check needs a secure context, which `localhost` is.

@@ -41,6 +41,19 @@ function encodeInWorker(app) {
 let manifest;
 let download;
 
+// One count per update file made, with the release tag only (GoatCounter: no
+// cookies, no script of theirs). Skipped when the browser asks not to be
+// tracked; a failed count changes nothing.
+const COUNTER = 'https://insolentconstruct.goatcounter.com/count';
+
+function count(tag) {
+  if (navigator.doNotTrack === '1') return;
+  const query = new URLSearchParams({ p: `/render/${tag}`, t: tag,
+      rnd: Math.random().toString(36).slice(2) });
+  fetch(`${COUNTER}?${query}`, { mode: 'no-cors', credentials: 'omit',
+      referrerPolicy: 'no-referrer' }).catch(() => {});
+}
+
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
   $('result').hidden = true;
@@ -65,6 +78,7 @@ async function build(release, app) {
   $('download').textContent = `Download ${release.tag}.wav (${(wav.length / 1e6).toFixed(1)} MB)`;
   $('result').hidden = false;
   status('Done: identical to the release update file.', 'ok');
+  count(release.tag);
 }
 
 function selected() {
