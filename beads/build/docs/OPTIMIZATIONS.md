@@ -121,6 +121,8 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 **One Hermite read per synth sample (untried).** The synth reads two neighbouring waves with Hermite interpolation and crossfades them (`WavetableGrain::ReadSample`; Plaits does the same with linear reads). Hermite is linear in its four samples, so crossfading the samples first and interpolating once gives the same value in exact arithmetic, with about six fewer float operations per grain per sample: an estimated 2% of the budget with 32 grains. The rounding differs, and the tables are integrated and differentiated on playback, which can magnify rounding differences, so the difference must be measured and reported before it is offered.
 
+**Attack template (prototyped, not measured).** Templating the granular paths on the attack setting was prototyped but not kept: attacks already cost nothing when Off (worst block 84,434 against 84,643 without the feature).
+
 **Untried ideas** (none fits the rules below): whole-block rendering per granular grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
 
 ## Method
