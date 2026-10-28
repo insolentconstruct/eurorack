@@ -46,9 +46,21 @@
 #define FLASH_FLAG_SNECCERR_BANK2 (FLASH_SR_SNECCERR | 0x80000000U)
 #define FLASH_FLAG_DBECCERR_BANK2 (FLASH_SR_DBECCERR | 0x80000000U)
 #define SCB_CCR_BFHFNMIGN_Msk (1U << 8)
+#define SCB_CFSR_PRECISERR_Msk (1U << 9)
+#define SCB_CFSR_BFARVALID_Msk (1U << 15)
+
+// A write-1-to-clear status register.
+struct TestStatusRegister {
+  uint32_t value;
+  TestStatusRegister& operator=(uint32_t bits) {
+    value &= ~bits;
+    return *this;
+  }
+};
 
 struct SCB_Type {
   uint32_t CCR;
+  TestStatusRegister CFSR;
 };
 
 const int kTestDamagedWordsMax = 64;
@@ -73,6 +85,8 @@ struct TestFlashState {
   // long, flash operations started with faults masked.
   int violations;
   int masked_reads;
+  // Faults unmasked while a bus fault status was still latched.
+  int stale_fault_status;
 };
 
 inline TestFlashState& TestFlash() {
@@ -161,6 +175,9 @@ inline void __set_FAULTMASK(uint32_t faultmask) {
   const bool masked = faultmask && (f.scb.CCR & SCB_CCR_BFHFNMIGN_Msk);
   if (masked) {
     ++f.masked_reads;
+  } else if (f.scb.CFSR.value &
+      (SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk)) {
+    ++f.stale_fault_status;
   }
   TestFlashExpose(masked);
 }
@@ -184,6 +201,8 @@ inline bool TestFlashGetFlag(uint32_t flag) {
     if (!f.faultmask || !(f.scb.CCR & SCB_CCR_BFHFNMIGN_Msk)) {
       ++f.violations;
     }
+    // The ignored precise bus fault, as the Seed3 shows it.
+    f.scb.CFSR.value |= SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;
     f.errors |= FLASH_SR_DBECCERR;
     f.stale = true;
     f.stale_start = f.range_start;

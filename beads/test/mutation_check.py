@@ -651,6 +651,20 @@ cases = [
     '      WriteChunk(chunk_address(next_state_chunk_index_), state_data_);\n'
     '      if (true) {'),
   ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;',
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk;'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;\n'
+    '      __DSB();\n'
+    '    }\n'
+    '    __set_FAULTMASK(faultmask);',
+    '      __DSB();\n'
+    '    }\n'
+    '    __set_FAULTMASK(faultmask);\n'
+    '    if (!clean) {\n'
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;\n'
+    '    }'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
     '    __set_FAULTMASK(1);',
     '    __set_FAULTMASK(0);'),
   ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',

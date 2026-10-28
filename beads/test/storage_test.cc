@@ -214,8 +214,12 @@ void TestMaskedReader() {
   CHECK(Flash::Read(base, words, 32));
 
   TestFlashDamage(base + 64);
+  TestFlash().scb.CFSR.value = 1;  // An unrelated status bit stays.
   CHECK(!Flash::Read(base, words, 128));
   CHECK(!TestFlash().stale);  // The undefined words aren't left cached.
+  CHECK(TestFlash().scb.CFSR.value == 1);  // Nor the bus fault status,
+  CHECK(TestFlash().stale_fault_status == 0);  // cleared before unmasking.
+  TestFlash().scb.CFSR.value = 0;
   CHECK(TestFlashErrors() == 0);
   CHECK(TestFlash().faultmask == 0 && TestFlash().scb.CCR == 0);
   // Neighbouring words read clean, across a word boundary too.
