@@ -1425,6 +1425,177 @@ void TestSettingsRollover() {
   }
 }
 
+// Settings saves until the next one rewrites the sector.
+void FillSettingsSector(Settings* settings) {
+  while (settings->chunk_storage_.next_state_chunk_index_ <= kStateChunks) {
+    settings->SaveState();
+  }
+}
+
+bool SettingsLoad(const State& state, const PersistentData& calibration) {
+  Settings loaded;
+  return loaded.Init(false) && \
+      !memcmp(&loaded.state(), &state, sizeof(State)) && \
+      !memcmp(loaded.persistent_data().adc_calibration,
+          calibration.adc_calibration, sizeof(calibration.adc_calibration));
+}
+
+void TestStorageStaleErrorFlag() {
+  test_checker.Start("TestStorageStaleErrorFlag");
+  // A corrected ECC error left by an earlier read: stmlib's rewrite skips the
+  // erase and programs the records over the old ones.
+  {
+    Rig r;
+    FillSettingsSector(&r.settings);
+    PersistentData calibration = r.settings.persistent_data();
+    State state = r.settings.state();
+    stmlib::ChunkStorage<15, PersistentData, State> stock;
+    stock.Init(&calibration, &state);
+    const unsigned overwrites = TestFlashOverwrites();
+    TestFlashErrors() = FLASH_SR_SNECCERR;
+    stock.SavePersistentData();
+    CHECK(TestFlashOverwrites() > overwrites);
+  }
+  // The Beads storage clears the flag first: one erase, no overwrite.
+  Rig r;
+  FillSettingsSector(&r.settings);
+  r.settings.mutable_state()->media = 1;
+  const unsigned overwrites = TestFlashOverwrites();
+  const unsigned erases = TestFlashErases();
+  const unsigned refusals = TestFlashRefusals();
+  TestFlashErrors() = FLASH_SR_SNECCERR;
+  r.settings.SaveState();
+  CHECK(TestFlashErrors() == 0);
+  CHECK(TestFlashRefusals() == refusals);  // Cleared before the erase.
+  CHECK(TestFlashOverwrites() == overwrites);
+  CHECK(TestFlashErases() == erases + 1);
+  CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == 2);
+  CHECK(SettingsLoad(r.settings.state(), r.settings.persistent_data()));
+  // The same on an ordinary save, which appends a record.
+  r.settings.mutable_state()->media = 2;
+  TestFlashErrors() = FLASH_SR_SNECCERR;
+  r.settings.SaveState();
+  CHECK(TestFlashRefusals() == refusals);  // Cleared before the program.
+  CHECK(TestFlashOverwrites() == overwrites);
+  CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == 3);
+  CHECK(SettingsLoad(r.settings.state(), r.settings.persistent_data()));
+}
+
+void TestStorageFailedErase() {
+  test_checker.Start("TestStorageFailedErase");
+  for (int stuck = 0; stuck < 2; ++stuck) {
+    Rig r;
+    FillSettingsSector(&r.settings);
+    const State old_state = r.settings.state();
+    const PersistentData calibration = r.settings.persistent_data();
+    r.settings.mutable_state()->media = 1;
+    const unsigned overwrites = TestFlashOverwrites();
+    // Every attempt refused, or reported done with the sector unchanged.
+    if (stuck) {
+      TestFlashStuckErases() = 100;
+    } else {
+      TestFlashFailures() = 100;
+    }
+    r.settings.SaveState();
+    TestFlashStuckErases() = 0;
+    TestFlashFailures() = 0;
+    // Nothing programmed over the old records, which still load.
+    CHECK(TestFlashOverwrites() == overwrites);
+    CHECK(SettingsLoad(old_state, calibration));
+    // The settings stay in RAM and the next save rewrites the sector.
+    r.settings.SaveState();
+    CHECK(TestFlashOverwrites() == overwrites);
+    CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == 2);
+    CHECK(SettingsLoad(r.settings.state(), calibration));
+  }
+}
+
+void TestStorageNonBlankSlot() {
+  test_checker.Start("TestStorageNonBlankSlot");
+  // A record is never programmed over a free chunk that isn't blank.
+  Rig r;
+  r.settings.SaveState();
+  const uint16_t index = r.settings.chunk_storage_.next_state_chunk_index_;
+  uint8_t* slot = reinterpret_cast<uint8_t*>(
+      0x081e0000 + kCalibrationChunk + kStateChunk * (index - 1));
+  slot[5] = 0;
+  r.settings.mutable_state()->media = 1;
+  const unsigned overwrites = TestFlashOverwrites();
+  r.settings.SaveState();
+  CHECK(TestFlashOverwrites() == overwrites);
+  CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == 2);
+  CHECK(SettingsLoad(r.settings.state(), r.settings.persistent_data()));
+}
+
+void TestStorageFailedProgram() {
+  test_checker.Start("TestStorageFailedProgram");
+  for (int failures = 1; failures <= 100; failures += 99) {
+    Rig r;
+    r.settings.mutable_state()->media = 1;
+    r.settings.SaveState();
+    const State old_state = r.settings.state();
+    const PersistentData calibration = r.settings.persistent_data();
+    const uint16_t index = r.settings.chunk_storage_.next_state_chunk_index_;
+    r.settings.mutable_state()->media = 2;
+    const unsigned overwrites = TestFlashOverwrites();
+    TestFlashFailures() = failures;
+    r.settings.SaveState();
+    TestFlashFailures() = 0;
+    CHECK(TestFlashOverwrites() == overwrites);
+    if (failures == 1) {
+      // A refused program is retried in place.
+      CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == index + 1);
+      CHECK(SettingsLoad(r.settings.state(), calibration));
+    } else {
+      // Refused every time: the previous record still loads.
+      CHECK(SettingsLoad(old_state, calibration));
+      r.settings.SaveState();
+      CHECK(TestFlashOverwrites() == overwrites);
+      CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == 2);
+      CHECK(SettingsLoad(r.settings.state(), calibration));
+    }
+  }
+}
+
+void TestStorageMatchesStmlib() {
+  test_checker.Start("TestStorageMatchesStmlib");
+  // Normal saves leave the sector byte for byte as stmlib's storage does.
+  static uint8_t ours[0x20000];
+  uint8_t* sector = reinterpret_cast<uint8_t*>(0x081e0000);
+  for (int pass = 0; pass < 2; ++pass) {
+    memset(sector, 255, 0x20000);
+    PersistentData calibration;
+    State state;
+    memset(&calibration, 0, sizeof(calibration));
+    memset(&state, 0, sizeof(state));
+    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+      calibration.adc_calibration[i].scale = -2.5f - 0.125f * i;
+      calibration.adc_calibration[i].offset = 0.75f + 0.0625f * i;
+    }
+    if (pass == 0) {
+      ChunkStorage<15, PersistentData, State> storage;
+      storage.Init(&calibration, &state);
+      for (int i = 0; i < kStateChunks + 10; ++i) {
+        state.media = i & 3;
+        state.gain = uint8_t(i);
+        storage.SaveState();
+      }
+      storage.SavePersistentData();
+      memcpy(ours, sector, sizeof(ours));
+    } else {
+      stmlib::ChunkStorage<15, PersistentData, State> storage;
+      storage.Init(&calibration, &state);
+      for (int i = 0; i < kStateChunks + 10; ++i) {
+        state.media = i & 3;
+        state.gain = uint8_t(i);
+        storage.SaveState();
+      }
+      storage.SavePersistentData();
+      CHECK(!memcmp(ours, sector, sizeof(ours)));
+    }
+  }
+}
+
 void TestPitchStorage() {
   test_checker.Start("TestPitchStorage");
   Rig r;
@@ -2211,6 +2382,11 @@ int main() {
   TestOverwriteReserveDisplay();
   TestCorruptCalibrationRewritesOnce();
   TestSettingsRollover();
+  TestStorageStaleErrorFlag();
+  TestStorageFailedErase();
+  TestStorageNonBlankSlot();
+  TestStorageFailedProgram();
+  TestStorageMatchesStmlib();
   TestQualityTapCycle();
   TestManualGainGestureAndMeter();
   TestSeedStartupLatch();
