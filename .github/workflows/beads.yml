@@ -82,6 +82,7 @@ jobs:
             artifacts/bootloader-padded.bin
             artifacts/combo.bin
             artifacts/drizzlet-*-combo.bin
+            artifacts/drizzlet-*-combo.hex
             artifacts/NOTICE.txt
             artifacts/OPTIONS.md
             artifacts/options-guide.svg

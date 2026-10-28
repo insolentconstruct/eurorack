@@ -27,7 +27,8 @@ Hold the CV-assign button [M] for three seconds, then release, to open the optio
 From [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases):
 
 - `<tag>-wav.zip`: audio update, with `README.txt`, `NOTICE.txt` and the options guides.
-- `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
+- `<tag>-combo.zip`: bootloader + app for ST-Link recovery, as `.hex` and `.bin`.
+- `<tag>-combo.hex`: the same image on its own.
 - `options-guide.svg`, `options-guide-mobile.svg` and `OPTIONS.md`: the options guides, also on their own.
 
 Module manual: [Beads manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/) and [development history](https://pichenettes.github.io/mutable-instruments-documentation/trivia_and_history/beads_history/). Changes, including against older firmware back to the factory release: [CHANGELOG.md](CHANGELOG.md). Where the manual and the firmware disagree: [MANUAL_ERRATA.md](docs/MANUAL_ERRATA.md).
@@ -257,11 +258,20 @@ The image holds only the calibration and the latest settings. OpenOCD erases the
 
 ### ST-Link recovery
 
-Back up calibration first, then flash the combo `.bin` from `<tag>-combo.zip`; this command doesn't touch the settings sector. Use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
+Back up calibration first, then flash the combo image from `<tag>-combo.zip`.
+Erase only the sectors being written, as OpenOCD's `write_image erase` does.
+Never use a full-chip or mass erase (STM32CubeProgrammer's "Full chip erase"): it also wipes calibration and settings.
+The `.hex` carries its address, so STM32CubeProgrammer and most programmers need none; the `.bin` goes at 0x08000000. With OpenOCD, use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
   -c "init; halt; flash write_image erase drizzlet-YYYY.MM.DD-combo.bin 0x08000000; verify_image drizzlet-YYYY.MM.DD-combo.bin 0x08000000; reset run; shutdown"
+```
+
+Older releases have no `.hex`; make one from the `.bin`:
+
+```sh
+arm-none-eabi-objcopy -I binary -O ihex --change-addresses 0x08000000 drizzlet-YYYY.MM.DD-combo.bin drizzlet-YYYY.MM.DD-combo.hex
 ```
 
 ## Saved data

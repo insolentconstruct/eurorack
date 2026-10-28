@@ -303,8 +303,11 @@ Notes
 * The audio update writes only the application area. It leaves the
   bootloader and settings/calibration sector untouched.
 * If updates keep failing, set the computer's output to 44.1 kHz or try
-  another device. As a last resort, flash the -combo.bin from -combo.zip
-  via ST-Link; see the build kit README for the command.
+  another device. As a last resort, flash the combo image from -combo.zip
+  via ST-Link: the -combo.hex needs no address; the -combo.bin goes at
+  0x08000000. See the build kit README for the command.
+  Erase only the sectors written: a full-chip or mass erase also wipes
+  calibration and settings.
 
 Calibration backup and restore (ST-Link + OpenOCD; same unit only)
 ----------------------------------------------------------------
