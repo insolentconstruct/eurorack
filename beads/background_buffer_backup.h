@@ -77,6 +77,8 @@ class BackgroundBufferBackup {
   size_t remaining_bytes_;
   size_t remaining_sectors_;
   uint32_t crc_;
+  // The trim of the backup in flash, kept from its header.
+  uint32_t saved_trimmed_frames_;
   uint32_t freeze_start_time_;
   
   uint32_t backup_delay_;

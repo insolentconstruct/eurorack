@@ -143,7 +143,7 @@ class ChunkStorage {
         !Flash::IsBlank(
             chunk_address(2), FLASH_STORAGE_LAST - chunk_address(2));
     if (locked_) {
-      next_state_chunk_index_ = kRewriteNeeded;
+      next_state_chunk_index_ = REWRITE_NEEDED;
     }
     return !locked_;
   }
@@ -182,7 +182,7 @@ class ChunkStorage {
       PersistentData* persistent_data,
       StateData* state_data,
       uint16_t* next_index) {
-    *next_index = kRewriteNeeded;
+    *next_index = REWRITE_NEEDED;
     const ChunkStatus calibration = ReadChunk(
         chunk_address(0), persistent_data);
     if (calibration == CHUNK_UNREADABLE) {
@@ -230,7 +230,7 @@ class ChunkStorage {
       next_state_chunk_index_ = 2;
     } else {
       // Settings stay in RAM; the next save tries the whole sector again.
-      next_state_chunk_index_ = kRewriteNeeded;
+      next_state_chunk_index_ = REWRITE_NEEDED;
     }
     HAL_FLASH_Lock();
   }
@@ -378,7 +378,7 @@ class ChunkStorage {
 
   enum {
     // Past the end of the sector: the next save rewrites it.
-    kRewriteNeeded = 0xffff
+    REWRITE_NEEDED = 0xffff
   };
 
   PersistentData* persistent_data_;

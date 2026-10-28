@@ -40,7 +40,7 @@
 #undef private
 
 bool test_down[4];
-unsigned test_writes;
+uint32_t test_writes;
 
 using namespace beads;
 
@@ -80,8 +80,8 @@ void Wipe() {
 struct Snapshot {
   uint8_t sector[kSectorSize];
   uint8_t mirror[kSectorSize];
-  unsigned writes;
-  unsigned erases;
+  uint32_t writes;
+  uint32_t erases;
 };
 
 void Take(Snapshot* s) {
@@ -349,7 +349,7 @@ void TestInterruptedAppend() {
   CHECK(s.Init(false));
   CHECK(!s.write_locked());
   CHECK(SameState(s, saved));
-  const unsigned erases = TestFlashErases();
+  const uint32_t erases = TestFlashErases();
   s.mutable_state()->gain = 78;
   s.SaveState();
   CHECK(TestFlashErases() == erases + 1);
@@ -490,7 +490,7 @@ void TestBlankSector() {
     CHECK(!s.write_locked());
     CHECK(SameState(s, saved));
     CHECK(Unchanged(snapshot));
-    const unsigned erases = TestFlashErases();
+    const uint32_t erases = TestFlashErases();
     s.SavePersistentData();
     CHECK(TestFlashErases() == erases + 2);
     CHECK(TestFlash().num_damaged == 0);
@@ -695,7 +695,7 @@ void TestRepairFailures() {
     Setup(calibration, 5);
     TestFlashDamage(StateChunk(2));
     TestFlashStuckErases() = 1000;
-    const unsigned overwrites = TestFlashOverwrites();
+    const uint32_t overwrites = TestFlashOverwrites();
     Settings s;
     CHECK(s.Init(true));
     TestFlashStuckErases() = 0;
@@ -782,7 +782,7 @@ void TestMirrorWrites() {
   CHECK(!s.write_locked());
   CHECK(Unchanged(snapshot));
   // Its next rewrite writes the mirror once.
-  unsigned erases = TestFlashErases();
+  uint32_t erases = TestFlashErases();
   while (s.chunk_storage_.next_state_chunk_index_ <= kStateChunks) {
     s.SaveState();
   }

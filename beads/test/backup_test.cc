@@ -260,6 +260,11 @@ void TestFrozenTrimBackup() {
     CHECK(!r.backup.previous_freeze_state_);
     CHECK(r.Freeze(0));
     CHECK(kHeader->trimmed_frames == uint32_t(kMaxDelay[3]));
+    // The saved trim is kept: no save follows while the gate holds.
+    for (int i = 0; i < 10; ++i) {
+      r.backup.Process(true);
+    }
+    CHECK(r.settings.state().frozen && !r.backup.busy());
     CHECK(r.Boot());
     CHECK(processor.duration_ == 0);
     CHECK(Restored(7));
@@ -667,17 +672,37 @@ void TestDamagedBuffer() {
       CHECK(after.Boot() && Restored(8));
     }
   }
-  // A damaged header while frozen with a gate held: saved again.
-  Wipe();
-  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
-  Rig r;
-  CHECK(r.Boot());
-  r.backup.Process(true);
-  CHECK(r.settings.state().frozen);
-  TestFlashDamage(0x08100000);
-  r.backup.Process(true);
-  CHECK(!r.settings.state().frozen);
   CHECK(TestFlash().violations == 0);
+}
+
+void TestFrozenNoReads() {
+  test_checker.Start("TestFrozenNoReads");
+  // Frozen after a load, or after a save, the main loop reads no flash, and
+  // an unchanged trim (here not the full length) saves nothing.
+  for (int stock = 0; stock < 2; ++stock) {
+    Wipe();
+    if (stock) {
+      WriteStock(3, 0, 123, 7);
+    } else {
+      Rig r;
+      r.Boot();
+      processor.Configure(Processor::MEDIA_DIGITAL, false);
+      processor.duration_ = 1000;
+      Fill(7);
+      CHECK(r.Freeze(0));
+    }
+    Rig r;
+    CHECK(r.Boot());
+    const int reads = TestFlash().masked_reads;
+    const int ops = test_ops;
+    for (int i = 0; i < 100; ++i) {
+      r.backup.Process(true);
+    }
+    CHECK(TestFlash().masked_reads == reads);
+    CHECK(test_ops == ops);
+    CHECK(r.settings.state().frozen);
+    CHECK(!r.backup.busy());
+  }
 }
 
 void TestStaleFlags() {
@@ -782,6 +807,7 @@ int main() {
   TestFailedOperations();
   TestSettingsSaves();
   TestDamagedBuffer();
+  TestFrozenNoReads();
   TestStaleFlags();
   TestLockedBackup();
   TestEraseDamagedSectors();

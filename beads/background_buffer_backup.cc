@@ -71,6 +71,7 @@ void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
   remaining_sectors_ = 0;
   remaining_bytes_ = 0;
   write_offset_ = 0;
+  saved_trimmed_frames_ = 0;
 }
 
 bool BackgroundBufferBackup::Load() {
@@ -100,6 +101,8 @@ bool BackgroundBufferBackup::Load() {
 
       if (readable) {
         *processor_->mutable_delay_write_ptr() = header.write_ptr;
+        saved_trimmed_frames_ = header.crc_tag == kCrcTag
+            ? header.trimmed_frames : 0;
         if (header.crc_tag == kCrcTag) {
           *processor_->mutable_delay_duration() =
               (kMaxDelay[header.media] << header.mono) - header.trimmed_frames;
@@ -229,6 +232,7 @@ void BackgroundBufferBackup::WriteBlock() {
       }
       // We've saved everything, we are now sure that we can restart with
       // the FREEZE button enabled!
+      saved_trimmed_frames_ = header.trimmed_frames;
       save_started_ = false;
       backup_delay_ = kBackupDelay;
       SaveState(true);
@@ -259,16 +263,10 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
   } else {
     // A trim can change the length while a gate keeps FREEZE on.
     if (previous_freeze_state_ && !busy() && settings_->state().frozen) {
-      BufferBackupHeader header;
-      const bool readable = Flash::Read(
-          Sector<8>::start, &header, sizeof(header));
-      const uint32_t saved_trimmed_frames = header.crc_tag == kCrcTag
-          ? header.trimmed_frames : 0;
       const uint32_t trimmed_frames =
           (kMaxDelay[processor_->media()] << processor_->mono()) -
           *processor_->mutable_delay_duration();
-      // An unreadable header is saved again.
-      if (!readable || trimmed_frames != saved_trimmed_frames) {
+      if (trimmed_frames != saved_trimmed_frames_) {
         previous_freeze_state_ = false;
         freeze_start_time_ = now;
         SaveState(false);
