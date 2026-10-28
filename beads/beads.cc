@@ -510,6 +510,9 @@ void Init() {
 
   const bool recovery_mode = ui.pressed_immediate(SWITCH_SEED);
   const bool freshly_baked = !settings.Init(recovery_mode);
+  if (settings.repair() != STORAGE_REPAIR_NONE) {
+    background_buffer_backup.EraseDamagedSectors();
+  }
   ui.LoadOptions();
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
@@ -522,6 +525,7 @@ void Init() {
     DebugPin::Init();
 #endif  // PROFILE_INTERRUPT
     ui.set_factory_test(false);
+    ui.ShowStorageStatus();
     synth_mode_start_time = 0;
     synth_mode = true;
   }

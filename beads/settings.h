@@ -120,11 +120,20 @@ struct StateLayoutAssertions {
 
 const uint8_t kOptionTag = 0xa0;
 
+// SEED held at power-up on damaged storage.
+enum StorageRepair {
+  STORAGE_REPAIR_NONE,
+  STORAGE_REPAIR_CALIBRATION_KEPT,
+  STORAGE_REPAIR_CALIBRATION_RESET,
+  STORAGE_REPAIR_FAILED
+};
+
 class Settings {
  public:
   Settings() { }
   ~Settings() { }
   
+  // False on a new module's blank storage: the factory test runs.
   bool Init(bool recovery_mode);
 
   void SavePersistentData();
@@ -288,12 +297,20 @@ class Settings {
     return persistent_data_;
   }
 
+  // Damaged storage found at power-up: settings change in RAM only.
+  inline bool write_locked() const { return chunk_storage_.locked(); }
+
+  inline StorageRepair repair() const { return repair_; }
+
  private:
   void NormalizeOptions();
+  bool CalibrationPlausible(const PersistentData& factory) const;
 
   PersistentData persistent_data_;
   State state_;
-  ChunkStorage<15, PersistentData, State> chunk_storage_;
+  // Bank 2: the settings in sector 7, the calibration mirror in sector 6.
+  ChunkStorage<15, 14, PersistentData, State> chunk_storage_;
+  StorageRepair repair_;
   
   DISALLOW_COPY_AND_ASSIGN(Settings);
 };

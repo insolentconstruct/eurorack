@@ -46,6 +46,7 @@ using namespace stmlib;
 
 // Keep the width meter below set_meter's wrap at 1.0.
 const float kWidthMeterSpan = 0.749f;
+const uint32_t kStorageStatusTime = 3000;
 
 /* static */
 const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
@@ -77,6 +78,7 @@ void Ui::Init(
   background_buffer_backup_ = background_buffer_backup;
   
   mode_ = MODE_NORMAL;
+  storage_status_time_ = 0;
   options_.Init();
   flush_options_events_ = false;
   options_flash_time_ = 0;
@@ -103,6 +105,27 @@ void Ui::Init(
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
     assignable_cv_pot_[i].Init(1.0f, 0.0f);
   }
+}
+
+void Ui::ShowStorageStatus() {
+  switch (settings_->repair()) {
+    case STORAGE_REPAIR_CALIBRATION_KEPT:
+      mode_ = MODE_REPAIR_CALIBRATION_KEPT;
+      break;
+    case STORAGE_REPAIR_CALIBRATION_RESET:
+      mode_ = MODE_REPAIR_CALIBRATION_RESET;
+      break;
+    case STORAGE_REPAIR_FAILED:
+      mode_ = MODE_REPAIR_FAILED;
+      break;
+    default:
+      if (!settings_->write_locked()) {
+        return;
+      }
+      mode_ = MODE_STORAGE_WARNING;
+      break;
+  }
+  storage_status_time_ = system_clock.milliseconds();
 }
 
 void Ui::LoadOptions() {
@@ -168,9 +191,10 @@ void Ui::Poll() {
     }
   }
 
-  // Ignore switch events while options are open or draining.
+  // Ignore switch events while options are open or draining, and buttons
+  // held through the storage status shown at power-up.
   const bool accept_switch_events = !was_active && !options_.active() &&
-      options_.stage() != Options::STAGE_DRAIN;
+      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
@@ -271,6 +295,7 @@ void Ui::UpdateLeds() {
   
   switch (mode_) {
     case MODE_PANIC:
+    case MODE_STORAGE_WARNING:
       {
         bool blink = system_clock.milliseconds() & 64;
         for (int i = 0; i < LED_LAST; ++i) {
@@ -358,6 +383,36 @@ void Ui::UpdateLeds() {
         leds_.set(Led(i), triangle);
       }
       break;
+
+    case MODE_REPAIR_CALIBRATION_KEPT:
+    case MODE_REPAIR_CALIBRATION_RESET:
+    case MODE_REPAIR_FAILED:
+      {
+        // As the recovery firmware shows its result.
+        const uint32_t elapsed = system_clock.milliseconds() - \
+            storage_status_time_;
+        const bool blink = (elapsed % 1000) < 500;
+        const bool fast_blink = (elapsed % 250) < 125;
+        Leds::Color color;
+        color.r = 0;
+        color.g = 0;
+        color.b = 0;
+        if (mode_ == MODE_REPAIR_FAILED) {
+          color.r = fast_blink ? 255 : 0;
+          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+            leds_.set(Led(LED_ASSIGN_1 + i), fast_blink ? 255 : 0);
+          }
+        } else {
+          color.g = blink ? 255 : 0;
+          if (mode_ == MODE_REPAIR_CALIBRATION_RESET) {
+            for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+              leds_.set(Led(LED_ASSIGN_1 + i), 255);
+            }
+          }
+        }
+        leds_.set_media(color);
+      }
+      break;
   }
   
   if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
@@ -398,7 +453,7 @@ void Ui::UpdateLeds() {
     }
   }
 
-  if (mode_ != MODE_FACTORY_TEST) {
+  if (mode_ != MODE_FACTORY_TEST && !showing_storage_status()) {
     if (gain_control_->adjusting()) {
       leds_.set(LED_VU_METER, (system_clock.milliseconds() & 128) ? 128 : 0);
     } else {
@@ -695,6 +750,12 @@ void Ui::DoEvents() {
   }
   
   if (queue_.idle_time() > 1000 && (mode_ == MODE_PANIC || mode_ == MODE_DISPLAY_AUTOSAVE)) {
+    mode_ = MODE_NORMAL;
+  }
+
+  if (showing_storage_status() &&
+      system_clock.milliseconds() - storage_status_time_ >=
+          kStorageStatusTime) {
     mode_ = MODE_NORMAL;
   }
 
