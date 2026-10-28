@@ -70,8 +70,7 @@ void Lfo::set_parameter(int16_t parameter) {
   quantization_levels_ = 2 + (((parameter + 32768) * 15) >> 16);
   quantization_scale_ = 65535 / (quantization_levels_ - 1);
 
-  // The triangle's slopes. They used to be computed in the triangle only when
-  // the parameter changed, so a parameter of 32767 at power-up was missed.
+  // The triangle's slopes.
   uint16_t slope_offset = parameter + 32768;
   if (slope_offset <= 1) {
     decay_factor_ = 32768 << kSlopeBits;
