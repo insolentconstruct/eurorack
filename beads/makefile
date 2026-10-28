@@ -69,6 +69,9 @@ GOLDEN_FIRMWARE = beads/hardware_design/golden_firmware/beads_golden_bootloader_
 
 include stmlib/makefile.inc
 
+# Keep the application out of bank 2.
+LDFLAGS += beads/build/flash_bound.ld
+
 # Rule for building the firmware update file
 wav:  $(TARGET_BIN)
 	python stm_audio_bootloader/qpsk/encoder.py \
