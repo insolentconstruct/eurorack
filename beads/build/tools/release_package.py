@@ -27,7 +27,10 @@
 """Reproducible release archives and checksums."""
 
 import hashlib
+import os
+from pathlib import Path
 import subprocess
+import tempfile
 import zipfile
 
 
@@ -47,16 +50,31 @@ def write_zip(path, names):
             z.writestr(info, (path.parent / name).read_bytes())
 
 
-def package(out, here, wav, wav_zip, combo, combo_zip):
+def hex_image(path):
+    # Lowest address and contents of an Intel HEX file, as objcopy reads it.
+    tools = os.environ["TOOLCHAIN_PATH"] + "bin/arm-none-eabi-"
+    sections = subprocess.check_output([tools + "objdump", "-h", str(path)], text=True)
+    start = min(line.split()[3] for line in sections.splitlines() if " .sec" in line)
+    with tempfile.TemporaryDirectory() as temp:
+        image = Path(temp) / "image.bin"
+        subprocess.run([tools + "objcopy", "-I", "ihex", "-O", "binary", str(path), str(image)], check=True)
+        return start, image.read_bytes()
+
+
+def package(out, here, wav, wav_zip, combo, combo_hex, combo_zip):
     guides = ["OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"]
-    assets = [wav_zip, combo_zip, "NOTICE.txt"] + guides
+    assets = [wav_zip, combo_zip, combo_hex, "NOTICE.txt"] + guides
     (out / "README.txt").write_bytes((here / "README.txt").read_bytes())
     for name in guides:
         (out / name).write_bytes((here / "docs" / name).read_bytes())
     write_zip(out / wav_zip, [wav, "README.txt", "NOTICE.txt"] + guides)
     # Combo image, named after the release.
     (out / combo).write_bytes((out / "combo.bin").read_bytes())
-    write_zip(out / combo_zip, [combo, "README.txt", "NOTICE.txt"] + guides)
+    # stmlib's merged combo HEX; it carries the 0x08000000 address.
+    (out / combo_hex).write_bytes((out / "objects/beads/beads_bootloader_combo.hex").read_bytes())
+    if hex_image(out / combo_hex) != ("08000000", (out / combo).read_bytes()):
+        raise ValueError("combo HEX does not program the combo image at 0x08000000")
+    write_zip(out / combo_zip, [combo, combo_hex, "README.txt", "NOTICE.txt"] + guides)
     (out / "SHA256SUMS").write_text(
         "".join(sha(out / name) + "  " + name + "\n" for name in assets)
     )

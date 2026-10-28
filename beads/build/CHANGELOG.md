@@ -16,6 +16,7 @@ heading; a release turns it into a dated heading.
 - Add adjustable grain diffusion: hold [A] and turn REVERB, with either reverb. Once set, it is also an [M] destination for CV. Clouds-style reverb keeps its Beta 1 diffusion until you set an amount (#2).
 - Clouds-style reverb uses less CPU; the sound is unchanged.
 - Grains use less CPU (about 6% of the audio budget in the busiest case); the sound is unchanged.
+- Releases add `<tag>-combo.hex`, the ST-Link recovery image as Intel HEX: it carries its flash address, so programmers need none.
 
 ## 2026.10.18 (tag `drizzlet-2026.10.18`, beta 1 "Mist")
 - New options page layout on three pages. Page 1 (REVERB LED): pitch scale, stereo width, reverb character. Page 2 (FEEDBACK LED): delay mode. Page 3 (DRY/WET LED): wavetable synth (formerly self-play) and limiter. Changes save by themselves about a second after you stop turning; close by holding [M] for three seconds or pressing another button. Values show on the quality LED [A] in green, yellow and red, steady or blinking; stock values are steady green.

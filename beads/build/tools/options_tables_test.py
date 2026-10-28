@@ -26,6 +26,7 @@
 
 """Keep the plain-text Options page's reference table tied to firmware."""
 
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -35,6 +36,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 sys.path.insert(0, str(Path("beads/build/tools").resolve()))
+import release_package
 from release_package import package
 from options_guide import SHORT, WIDTH_ROWS, indication, generate
 
@@ -399,20 +401,63 @@ with tempfile.TemporaryDirectory(prefix="options-boundary-") as directory:
             assert changed[name] != original[name], (boundary, name)
 print("Exported boundary mutations change both SVGs: PASS")
 
+
+
+def hex_image(path):
+    # Stand-in for objcopy where the ARM toolchain is absent: lowest address
+    # and contents, gaps zero-filled.
+    image = {}
+    upper = 0
+    for line in path.read_text().splitlines():
+        record = bytes.fromhex(line[1:])
+        assert line[0] == ":" and len(record) == record[0] + 5 and not sum(record) & 0xFF
+        if record[3] == 4:
+            upper = int.from_bytes(record[4:6], "big") << 16
+        elif record[3] == 0:
+            address = upper + (record[1] << 8 | record[2])
+            for i, byte in enumerate(record[4:-1]):
+                image[address + i] = byte
+    start = min(image)
+    data = bytes(image.get(a, 0) for a in range(start, max(image) + 1))
+    return "%08x" % start, data
+
+
+if "TOOLCHAIN_PATH" not in os.environ:
+    release_package.hex_image = hex_image
+
 # Exercise the real ZIP packager with tiny stand-ins, without firmware builds
 # or importing its audio decoder dependencies.
+COMBO_HEX = ":020000040800F2\n:0700000066697874757265F2\n:00000001FF\n"
+WRONG_CONTENT = ":020000040800F2\n:0700000066697874757266F1\n:00000001FF\n"
+WRONG_ADDRESS = ":020000040802F0\n:0700000066697874757265F2\n:00000001FF\n"
 with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
     out = Path(directory)
     for name in ("test.wav", "combo.bin", "NOTICE.txt"):
         (out / name).write_bytes(b"fixture")
+    (out / "objects/beads").mkdir(parents=True)
+    combo_hex = out / "objects/beads/beads_bootloader_combo.hex"
+    for wrong in (WRONG_CONTENT, WRONG_ADDRESS):
+        combo_hex.write_text(wrong)
+        try:
+            package(out, Path("beads/build"), "test.wav", "test-wav.zip",
+                    "test-combo.bin", "test-combo.hex", "test-combo.zip")
+        except ValueError:
+            continue
+        raise AssertionError("wrong combo HEX was packaged")
+    combo_hex.write_text(COMBO_HEX)
     package(
         out,
         Path("beads/build"),
         "test.wav",
         "test-wav.zip",
         "test-combo.bin",
+        "test-combo.hex",
         "test-combo.zip",
     )
+    with zipfile.ZipFile(out / "test-combo.zip") as archive:
+        assert archive.read("test-combo.hex") == COMBO_HEX.encode()
+        assert archive.read("test-combo.bin") == b"fixture"
+    assert "test-combo.hex" in (out / "SHA256SUMS").read_text()
     for name in ("test-wav.zip", "test-combo.zip"):
         with zipfile.ZipFile(out / name) as archive:
             for guide in (
@@ -428,4 +473,4 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
     for guide in ("OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"):
         assert guide in listed, guide
         assert (out / guide).read_bytes() == Path("beads/build/docs", guide).read_bytes()
-print("Release ZIPs include the generated guides: PASS")
+print("Release ZIPs include the generated guides and the combo HEX; wrong HEX rejected: PASS")

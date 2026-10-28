@@ -31,6 +31,7 @@ if not re.fullmatch(r'drizzlet-[A-Za-z0-9._-]+', NAME):
 WAV = NAME + '.wav'
 ZIP = NAME + '-wav.zip'
 COMBO = NAME + '-combo.bin'
+COMBO_HEX = NAME + '-combo.hex'
 COMBO_ZIP = NAME + '-combo.zip'
 
 
@@ -180,4 +181,4 @@ if __name__ == '__main__':
     out=Path(sys.argv[1])
     proof(out)
     notices(out)
-    package(out, HERE, WAV, ZIP, COMBO, COMBO_ZIP)
+    package(out, HERE, WAV, ZIP, COMBO, COMBO_HEX, COMBO_ZIP)
