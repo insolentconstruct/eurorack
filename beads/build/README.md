@@ -258,7 +258,7 @@ The image holds only the calibration and the latest settings. OpenOCD erases the
 
 ### ST-Link recovery
 
-Back up calibration first, then flash the combo image from `<tag>-combo.zip`; it doesn't touch the settings sector. The `.hex` carries its address, so STM32CubeProgrammer and most programmers need none; the `.bin` goes at 0x08000000. With OpenOCD, use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
+Back up calibration first, then flash the combo image from `<tag>-combo.zip`; erase only the sectors being written, as OpenOCD's `write_image erase` does; never use a full-chip or mass erase (STM32CubeProgrammer's "Full chip erase"), which also wipes calibration and settings. The `.hex` carries its address, so STM32CubeProgrammer and most programmers need none; the `.bin` goes at 0x08000000. With OpenOCD, use your downloaded filename in place of `drizzlet-YYYY.MM.DD-combo.bin`:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
