@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Releases add `<tag>-combo.hex`, the ST-Link recovery image as Intel HEX: it carries its flash address, so programmers need none.
+
 ## 2026.10.11 (tag `beads-2026.10.11`)
 - First build: the vanilla Mutable Instruments Beads source, unmodified.
 

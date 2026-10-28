@@ -13,7 +13,8 @@ Install at your own risk. Please do not contact Mutable Instruments about it; re
 Get the files from [GitHub Releases](https://github.com/insolentconstruct/eurorack/releases).
 
 - `<tag>-wav.zip`: audio update, with `README.txt` and `NOTICE.txt`.
-- `<tag>-combo.zip`: bootloader + app for ST-Link recovery.
+- `<tag>-combo.zip`: bootloader + app for ST-Link recovery, as `.hex` and `.bin`.
+- `<tag>-combo.hex`: the same image on its own.
 
 For changes compared with older firmware, see [CHANGELOG.md](CHANGELOG.md).
 Contributing code: follow [STYLE.md](docs/STYLE.md).
@@ -42,7 +43,10 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 
 ### ST-Link recovery
 
-Back up calibration first, then flash the combo `.bin` from `<tag>-combo.zip`; this command doesn't touch the settings sector.
+Back up calibration first, then flash the combo image from `<tag>-combo.zip`.
+Erase only the sectors being written, as OpenOCD's `write_image erase` does.
+Never use a full-chip or mass erase (STM32CubeProgrammer's "Full chip erase"): it also wipes calibration and settings.
+The `.hex` carries its address, so STM32CubeProgrammer and most programmers need none; the `.bin` goes at 0x08000000.
 
 Use your downloaded filename in place of `beads-2026.10.11-combo.bin`:
 
