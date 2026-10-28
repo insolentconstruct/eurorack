@@ -257,7 +257,7 @@ The release code, including the converter fix, on 2026-10-27, and with the stora
 | Spectral, Sunny tape | 23.6% |
 | Spectral | 17.9% |
 
-No audio underruns. Not yet checked on the module: attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
+No audio underruns. Not yet checked on the module: a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
 
 **Test module totals** (2026-10-18 to 2026-10-28). Firmware and settings installs:
 
