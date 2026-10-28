@@ -48,15 +48,15 @@ struct FLASH_EraseInitTypeDef {
   uint32_t VoltageRange;
 };
 extern bool test_down[4];
-extern unsigned test_writes;
+extern uint32_t test_writes;
 // Power loss: flash operations left before it (-1: never) and the erases done.
 // Function statics, so every program shares one definition.
 inline int& TestFlashBudget() {
   static int budget = -1;
   return budget;
 }
-inline unsigned& TestFlashErases() {
-  static unsigned erases = 0;
+inline uint32_t& TestFlashErases() {
+  static uint32_t erases = 0;
   return erases;
 }
 inline bool TestFlashOperation() {
@@ -87,12 +87,12 @@ inline int& TestFlashStuckErases() {
 }
 // Programs onto flash that isn't blank: an uncorrectable ECC error on the
 // chip.
-inline unsigned& TestFlashOverwrites() {
-  static unsigned overwrites = 0;
+inline uint32_t& TestFlashOverwrites() {
+  static uint32_t overwrites = 0;
   return overwrites;
 }
-inline unsigned& TestFlashRefusals() {
-  static unsigned refusals = 0;
+inline uint32_t& TestFlashRefusals() {
+  static uint32_t refusals = 0;
   return refusals;
 }
 inline bool TestFlashRefused() {

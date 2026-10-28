@@ -50,7 +50,7 @@
 #include "beads/normalization_detector.cc"
 
 bool test_down[4] = { };
-unsigned test_writes = 0;
+uint32_t test_writes = 0;
 #include "beads/test/firmware_shims.h"
 
 using namespace beads;
@@ -193,7 +193,7 @@ void TestMonophonicGesture() {
       }
       const bool seed = r.ui.seed_button_state_;
       const uint8_t media = r.settings.state().media;
-      unsigned writes = test_writes;
+      uint32_t writes = test_writes;
       for (int toggle = 0; toggle < 2; ++toggle) {
         r.Down(SWITCH_MEDIA);
         r.Down(SWITCH_SEED);
@@ -279,7 +279,7 @@ void TestQueueRace() {
   r.Tick(7, false);  // Debounce 0x7f: release; next tick 0xff exits DRAIN.
   CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
   uint8_t media = r.settings.state().media;
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   interrupted_rig = &r;
   r.ui.DoEvents();
   if (interrupted_rig) { // Fixed ISR did not queue a release to dispatch.
@@ -454,7 +454,7 @@ void TestStockAssignAmounts() {
     r.settings.set_stereo_width(128);
     r.settings.set_width_assigned(true);
     const State before = r.settings.state();
-    unsigned writes = test_writes;
+    uint32_t writes = test_writes;
     r.Down(SWITCH_ASSIGN);
     if (i == 0) {
       r.feedback = 0.25f;
@@ -488,7 +488,7 @@ void TestAutosaveChordAndDisplay() {
   test_checker.Start("TestAutosaveChordAndDisplay");
   Rig r;
   for (int i = 0; i < 2; ++i) {
-    unsigned writes = test_writes;
+    uint32_t writes = test_writes;
     const bool before = r.settings.state().disable_autosave;
     r.Down(SWITCH_ASSIGN);
     r.Down(SWITCH_FREEZE);
@@ -546,7 +546,7 @@ void TestGainHoldThresholdAndReload() {
   CHECK(r.settings.state().media == (media + 3) % 4);
   r.settings.mutable_state()->gain = 123;
   r.settings.SaveState();
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   media = r.settings.state().media;
   r.Down(SWITCH_MEDIA);
   uint32_t start = r.ui.press_time_[SWITCH_MEDIA];
@@ -657,7 +657,7 @@ void TestQualityTapCycle() {
   test_checker.Start("TestQualityTapCycle");
   Rig r;
   const int media[] = { 2, 1, 0, 3 };
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   for (int i = 0; i < 4; ++i) {
     r.Down(SWITCH_MEDIA);
     CHECK(r.settings.state().media == (i == 0 ? 3 : media[i - 1]));
@@ -678,7 +678,7 @@ void TestManualGainGestureAndMeter() {
   const int red[] = { 0, 160, 255 };
   const int green[] = { 172, 255, 121 };
   const uint8_t media = r.settings.state().media;
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   r.Down(SWITCH_MEDIA);
   for (int i = 0; i < 3; ++i) {
     r.feedback = positions[i];
@@ -823,7 +823,7 @@ void TestFrozenStateChangeGuard() {
 void TestGateOutputChordPersistence() {
   test_checker.Start("TestGateOutputChordPersistence");
   Rig r;
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   const State before = r.settings.state();
   for (int i = 0; i < 2; ++i) {
     r.Down(SWITCH_ASSIGN);
@@ -877,7 +877,7 @@ void TestCorruptCalibrationLocks() {
   flash[8] ^= 1;  // Corrupt CALI payload without changing its checksum.
   static uint8_t sector[0x20000];
   memcpy(sector, flash, sizeof(sector));
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   // Stock firmware rewrites the factory values and runs the factory test;
   // here every boot plays on the defaults and writes nothing.
   for (int i = 0; i < 3; ++i) {
@@ -1294,7 +1294,7 @@ void TestSelfPlayHold() {
         r.ui.set_no_input(no_input);
         r.ui.freeze_led_state_ = frozen;
         r.settings.mutable_state()->gain = 123;
-        unsigned writes = test_writes;
+        uint32_t writes = test_writes;
         uint8_t media = r.settings.state().media;
         // While frozen, the hold restarts automatic gain as in stock.
         const bool request = mode && no_input && !frozen;
@@ -1353,9 +1353,9 @@ void TestSettingsRollover() {
     r.EnterPage(1);
     CHECK(!r.ui.options_.clouds_preview());
     // Real settled saves: the DRY/WET knob alone flips the style each time.
-    const unsigned erases = TestFlashErases();
+    const uint32_t erases = TestFlashErases();
     for (int i = 0; i < 2; ++i) {
-      const unsigned writes = test_writes;
+      const uint32_t writes = test_writes;
       r.pot = i ? .1f : .9f;
       r.Tick(1100);
       CHECK(test_writes == writes + 1);
@@ -1370,7 +1370,7 @@ void TestSettingsRollover() {
     State new_state = old_state;
     new_state.reverb_style = kOptionTag + 2;
 
-    const unsigned writes = test_writes;
+    const uint32_t writes = test_writes;
     TestFlashBudget() = cut;
     r.pot = .9f;
     r.Tick(1100);
@@ -1459,7 +1459,7 @@ void TestStorageStaleErrorFlag() {
     State state = r.settings.state();
     stmlib::ChunkStorage<15, PersistentData, State> stock;
     stock.Init(&calibration, &state);
-    const unsigned overwrites = TestFlashOverwrites();
+    const uint32_t overwrites = TestFlashOverwrites();
     TestFlashErrors() = kStaleFlag;
     stock.SavePersistentData();
     CHECK(TestFlashOverwrites() > overwrites);
@@ -1468,9 +1468,9 @@ void TestStorageStaleErrorFlag() {
   Rig r;
   FillSettingsSector(&r.settings);
   r.settings.mutable_state()->media = 1;
-  const unsigned overwrites = TestFlashOverwrites();
-  const unsigned erases = TestFlashErases();
-  const unsigned refusals = TestFlashRefusals();
+  const uint32_t overwrites = TestFlashOverwrites();
+  const uint32_t erases = TestFlashErases();
+  const uint32_t refusals = TestFlashRefusals();
   TestFlashErrors() = kStaleFlag;
   r.settings.SaveState();
   CHECK(TestFlashErrors() == 0);
@@ -1497,7 +1497,7 @@ void TestStorageFailedErase() {
     const State old_state = r.settings.state();
     const PersistentData calibration = r.settings.persistent_data();
     r.settings.mutable_state()->media = 1;
-    const unsigned overwrites = TestFlashOverwrites();
+    const uint32_t overwrites = TestFlashOverwrites();
     // Every attempt refused, or reported done with the sector unchanged.
     if (stuck) {
       TestFlashStuckErases() = 100;
@@ -1528,7 +1528,7 @@ void TestStorageNonBlankSlot() {
       0x081e0000 + kCalibrationChunk + kStateChunk * (index - 1));
   slot[5] = 0;
   r.settings.mutable_state()->media = 1;
-  const unsigned overwrites = TestFlashOverwrites();
+  const uint32_t overwrites = TestFlashOverwrites();
   r.settings.SaveState();
   CHECK(TestFlashOverwrites() == overwrites);
   CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == 2);
@@ -1545,7 +1545,7 @@ void TestStorageFailedProgram() {
     const PersistentData calibration = r.settings.persistent_data();
     const uint16_t index = r.settings.chunk_storage_.next_state_chunk_index_;
     r.settings.mutable_state()->media = 2;
-    const unsigned overwrites = TestFlashOverwrites();
+    const uint32_t overwrites = TestFlashOverwrites();
     TestFlashFailures() = failures;
     r.settings.SaveState();
     TestFlashFailures() = 0;
@@ -1700,7 +1700,7 @@ void TestDiffusionGestureAndMeter() {
   const uint8_t gain = r.settings.state().gain;
   CHECK(r.settings.state().diffusion == 0);
   CHECK(r.settings.diffusion() == 0.0f);
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   r.Down(SWITCH_MEDIA);
   const float positions[] = { 0.125f, 0.75f, 0.0f };
   for (int i = 0; i < 3; ++i) {
@@ -1830,7 +1830,7 @@ void TestWidthGestureAndMeter() {
   r.settings.set_stereo_width(128);
   r.settings.mutable_state()->assignable_cv_destination = 2;
   r.settings.set_width_assigned(true);
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   r.Down(SWITCH_MEDIA);
   r.pot = .9f;
   r.Tick(20);
@@ -1951,7 +1951,7 @@ void TestOptionsKnobsAndSettling() {
       float* pot = knob == 0 ? &r.feedback : knob == 1 ? &r.pot : &r.reverb;
       const OptionSetting setting = kOptionPages[page].knobs[knob];
       const State state = r.settings.state();
-      const unsigned writes = test_writes;
+      const uint32_t writes = test_writes;
       *pot = 0.59f;
       r.Tick(1500);
       CHECK(!r.ui.options_.qualified_[knob]);
@@ -1998,7 +1998,7 @@ void TestOptionsKnobsAndSettling() {
     if (button == SWITCH_ASSIGN) continue;
     Rig r;
     r.Enter();
-    const unsigned writes = test_writes;
+    const uint32_t writes = test_writes;
     r.reverb = .9f;
     r.Tick(10);
     r.Down(Switch(button));
@@ -2081,7 +2081,7 @@ void TestOptionsZonesAndSaveBatch() {
     halves.pot = .46f; halves.Tick(1);
     CHECK(!halves.ui.options_.clouds_preview());
     halves.pot = .54f; halves.Tick(1);
-    const unsigned writes = test_writes;
+    const uint32_t writes = test_writes;
     halves.reverb = .9f; halves.Tick(1001);
     CHECK(test_writes == writes + 1);
     CHECK(halves.settings.clouds_style());
@@ -2183,7 +2183,7 @@ void TestOptionsConfirmations() {
   r.Enter();
   CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
   const uint32_t entry = r.ui.options_flash_time_;
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   r.reverb = .9f;  // Ends the preview.
   r.Tick(1010);
   CHECK(r.ui.options_.preview_knob() == -1);
@@ -2249,7 +2249,7 @@ void TestOptionsPreview() {
   r.Tick(1);
   CHECK(r.ui.options_.preview_knob() == -1);
   CHECK(r.ui.options_.indication().setting == OPTION_ATTACKS);
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   r.Tick(1100);
   CHECK(test_writes == writes + 1);
   // Each shown value starts its blink pattern, even on the same setting.
@@ -2264,7 +2264,7 @@ void TestOptionsPreview() {
   }
   // The preview alone never writes.
   Rig idle;
-  const unsigned idle_writes = test_writes;
+  const uint32_t idle_writes = test_writes;
   idle.Enter();
   idle.Tick(10000);
   CHECK(test_writes == idle_writes);
@@ -2326,7 +2326,7 @@ void TestPendingExitButtons() {
   test_checker.Start("TestPendingExitButtons");
   Rig r;
   r.Enter();
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   r.reverb = .9f;
   r.Tick(10);
   r.Down(SWITCH_FREEZE);

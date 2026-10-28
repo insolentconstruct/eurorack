@@ -57,7 +57,7 @@ using namespace beads;
 using namespace stmlib;
 
 bool test_down[4];
-unsigned test_writes;
+uint32_t test_writes;
 namespace beads {
 bool test_probe;
 bool test_freeze_input;
@@ -542,7 +542,7 @@ void TestStartupBranches() {
   CHECK(ui.mode_ == Ui::MODE_FACTORY_TEST);
   CHECK(codec.callback_ == &FactoryTest::ProcessFn);
   r.Tick(20);
-  unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   r.Reboot();
   CHECK(!factory_test.running());
   CHECK(ui.mode_ == Ui::MODE_NORMAL);
@@ -586,7 +586,7 @@ void TestStorageWarning() {
   DamageState();
   static uint8_t sector[0x20000];
   memcpy(sector, reinterpret_cast<void*>(0x081e0000), sizeof(sector));
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   for (int boot = 0; boot < 2; ++boot) {
     r.Reboot();
     CHECK(settings.write_locked());
@@ -991,7 +991,7 @@ void TestSelfPlayFrozenBackup() {
   CHECK(synth_mode);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   r.Settle();
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   test_freeze_input = true;
   r.Block();
   r.Advance(10100);
@@ -1315,7 +1315,7 @@ void TestSpectralEngine() {
         std::isfinite(spectral.previous_sample_.r));
 
   // FREEZE holds the spectrum; nothing is saved to flash.
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   test_freeze_input = true;
   RunSquare(&r, 4);
   CHECK(spectral.parameters_.freeze);
