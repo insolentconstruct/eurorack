@@ -96,4 +96,4 @@ Observed upstream DSP conventions and design principles:
 
 ## Python
 
-- Resource scripts follow MI's own (`beads/resources/wavetables.py`, Plaits and Stages `resources/`): two-space indent, `snake_case` functions, `UPPER_CASE` constants, `import numpy` (not `np`), one statement per line.
+- Python follows MI's own, tools included (`beads/resources/wavetables.py`, `beads/tools/generate_src_filters.py`, `stmlib/tools/resources_compiler.py`, `stm_audio_bootloader/qpsk/encoder.py`): two-space indent, `snake_case` functions, `UPPER_CASE` constants, `import numpy` (not `np`), one statement per line. (Drizzlet) The four-space scripts in `build/tools/` predate this rule; reindent one only when rewriting it.
