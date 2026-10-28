@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
       mix.feedback = 0.21f;
       mix.dry_wet = 0.85f;
       mix.reverb_amount = 0.31f;
-      unsigned sample = 0;
+      uint32_t sample = 0;
       bool nonzero = false;
       for (int block = 0; block < 4400; ++block) {
         FloatFrame input[12], output[12];

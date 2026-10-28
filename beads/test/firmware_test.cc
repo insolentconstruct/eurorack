@@ -472,7 +472,7 @@ void TestStartupBranches() {
   CHECK(ui.mode_ == Ui::MODE_FACTORY_TEST);
   CHECK(codec.callback_ == &FactoryTest::ProcessFn);
   r.Tick(20);
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   r.Reboot();
   CHECK(!factory_test.running());
   CHECK(ui.mode_ == Ui::MODE_NORMAL);
