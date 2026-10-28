@@ -51,6 +51,9 @@ The output directory must be empty. Named releases check every firmware hash
 against `beads/build/expected-hashes.sha256`, checks the encoded WAV against
 `expected-wav.sha256`, decodes the WAV through the bootloader decoder and
 collects source and compiler-runtime notices. It produces WAV and combo ZIPs.
+The combo ZIP holds bootloader + app as `.hex`, which needs no address, and
+`.bin`, which goes at 0x08000000. Erase only the sectors being written: a
+full-chip or mass erase also wipes calibration and settings.
 `DOCKER_CONTEXT` works with remote contexts: source and outputs travel through
 Docker's copy API. Compiler archive hashes and the base image digest are in
 `beads/build/Dockerfile`; local verified archives can be supplied with its
