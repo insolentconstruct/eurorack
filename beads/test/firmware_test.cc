@@ -658,10 +658,12 @@ void TestStorageRepair() {
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
     CHECK(!settings.write_locked());
   }
-  // Calibration reset: the three ASSIGN LEDs lit as well.
+  // Calibration reset (and its mirror lost): the three ASSIGN LEDs lit as
+  // well.
   {
     Rig r(false, true);
     TestFlashDamage(0x081e0000 + 32);
+    TestFlashDamage(0x081c0000 + 32);
     r.Reboot(true);
     CHECK(settings.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
     CHECK(ui.mode_ == Ui::MODE_REPAIR_CALIBRATION_RESET);

@@ -93,11 +93,16 @@ bool Settings::Init(bool recovery_mode) {
   
   if (chunk_storage_.locked()) {
     // Damaged: play on safe settings held in RAM, unfrozen since the stored
-    // flag can't be trusted. Only SEED at power-up writes, keeping the
-    // calibration if it read clean and plausible.
+    // flag can't be trusted. Only SEED at power-up writes. The calibration
+    // is the stored one if it read clean and plausible, else the mirror's,
+    // else the factory values.
     state_ = defaults;
-    const bool keep = status == STORAGE_DAMAGED_STATE && \
+    bool keep = status == STORAGE_DAMAGED_STATE && \
         CalibrationPlausible(factory);
+    if (!keep) {
+      keep = chunk_storage_.ReadMirror(&persistent_data_) && \
+          CalibrationPlausible(factory);
+    }
     if (!keep) {
       persistent_data_ = factory;
     }

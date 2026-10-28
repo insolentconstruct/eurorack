@@ -251,7 +251,7 @@ void TestCalibrationErrors() {
     CHECK(s.write_locked());
     CHECK(s.repair() == STORAGE_REPAIR_NONE);
     CHECK(SameState(s, defaults));
-    CHECK(SameCalibration(s, Factory()));
+    CHECK(SameCalibration(s, calibration));  // The mirror's.
     CHECK(Unchanged(snapshot));
   }
   // A clean calibration that fails its checks, in a sector that isn't
@@ -267,7 +267,7 @@ void TestCalibrationErrors() {
     CHECK(s.Init(false));
     CHECK(s.write_locked());
     CHECK(SameState(s, defaults));
-    CHECK(SameCalibration(s, Factory()));
+    CHECK(SameCalibration(s, calibration));
     CHECK(Unchanged(snapshot));
   }
 }
@@ -391,10 +391,10 @@ void TestInterruptedRewrite() {
       CHECK(SameState(loaded, defaults));
       CHECK(SameCalibration(loaded, new_calibration));
     } else if (cut < 10) {
-      // A partly written calibration: damaged.
+      // A partly written calibration: damaged, the mirror's calibration.
       CHECK(loaded.write_locked());
       CHECK(SameState(loaded, defaults));
-      CHECK(SameCalibration(loaded, Factory()));
+      CHECK(SameCalibration(loaded, new_calibration));
     } else {
       CHECK(!loaded.write_locked());
       CHECK(SameState(loaded, saved));
@@ -556,16 +556,18 @@ void TestRepair() {
     loaded.SaveState();
     CHECK(loaded.chunk_storage_.next_state_chunk_index_ == 3);
   }
-  // A damaged or invalid calibration: the factory values, mirrored first
-  // over the older calibration there.
+  // A damaged or invalid calibration with a damaged mirror, or both
+  // implausible: the factory values, mirrored first.
   for (int damage = 0; damage < 3; ++damage) {
     Setup(calibration, 5);
     CHECK(MirrorHolds(calibration));
     if (damage == 0) {
       TestFlashDamage(kSector + 64);
+      TestFlashDamage(kMirror + 32);
     } else if (damage == 1) {
       uint8_t byte = 0x12;
       Poke(kSector + 40, &byte, 1);
+      Poke(kMirror + 40, &byte, 1);
     } else {
       // Read clean but implausible.
       PersistentData wild = calibration;
@@ -593,6 +595,80 @@ void TestRepair() {
   }
 }
 
+// The calibration a repair keeps: the stored one if it reads clean and
+// plausible, else the mirror's, else the factory values.
+void TestRepairCalibrationOrder() {
+  test_checker.Start("TestRepairCalibrationOrder");
+  const State defaults = Defaults();
+  const PersistentData calibration = Calibration(0.1f);
+  // A torn calibration and a valid mirror: the mirror's, byte for byte.
+  {
+    Setup(calibration, 5);
+    uint8_t mirror[kCalibrationChunk];
+    Peek(mirror, kMirror, sizeof(mirror));
+    uint8_t torn[32];
+    memset(torn, 255, sizeof(torn));
+    Poke(kSector + 64, torn, sizeof(torn));
+    Settings guarded;
+    CHECK(guarded.Init(false) && guarded.write_locked());
+    CHECK(SameCalibration(guarded, calibration));
+    Settings s;
+    CHECK(s.Init(true));
+    CHECK(s.repair() == STORAGE_REPAIR_CALIBRATION_KEPT);
+    CHECK(!s.write_locked());
+    uint8_t stored[kCalibrationChunk];
+    Peek(stored, kSector, sizeof(stored));
+    CHECK(!memcmp(stored, mirror, sizeof(stored)));
+    CHECK(StockLoads(calibration, defaults));
+  }
+  // A torn calibration and a mirror that is damaged or implausible: the
+  // factory values.
+  for (int damage = 0; damage < 2; ++damage) {
+    PersistentData wild = calibration;
+    wild.adc_calibration[CV_ADC_CHANNEL_SHAPE].scale *= 1.5f;
+    Setup(damage ? wild : calibration, 5);
+    if (!damage) {
+      TestFlashDamage(kMirror + 96);
+    }
+    TestFlashDamage(kSector + 32);
+    Settings guarded;
+    CHECK(guarded.Init(false) && guarded.write_locked());
+    CHECK(SameCalibration(guarded, Factory()));
+    Settings s;
+    CHECK(s.Init(true));
+    CHECK(s.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+    CHECK(SameCalibration(s, Factory()));
+    CHECK(MirrorHolds(Factory()));
+  }
+  // A clean calibration that differs from the mirror: the calibration wins,
+  // and is mirrored before the erase (a cut right after the erase restores
+  // it from the mirror).
+  const PersistentData older = Calibration(-0.1f);
+  for (int cut = 6; cut <= 12; cut += 6) {
+    Setup(older, 1);
+    uint8_t mirror[kCalibrationChunk];
+    Peek(mirror, kMirror, sizeof(mirror));
+    Setup(calibration, 5);
+    Poke(kMirror, mirror, sizeof(mirror));
+    CHECK(MirrorHolds(older));
+    TestFlashDamage(StateChunk(3));
+    Settings guarded;
+    CHECK(guarded.Init(false) && guarded.write_locked());
+    CHECK(SameCalibration(guarded, calibration));
+    TestFlashBudget() = cut;
+    Settings s;
+    CHECK(s.Init(true));
+    TestFlashBudget() = -1;
+    CHECK(MirrorHolds(calibration));
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(loaded, calibration));
+    if (cut == 12) {
+      CHECK(s.repair() == STORAGE_REPAIR_CALIBRATION_KEPT);
+    }
+  }
+}
+
 void TestRepairFailures() {
   test_checker.Start("TestRepairFailures");
   const State defaults = Defaults();
@@ -608,7 +684,7 @@ void TestRepairFailures() {
     TestFlashFailures() = 0;
     CHECK(s.repair() == STORAGE_REPAIR_FAILED);
     CHECK(s.write_locked());
-    CHECK(SameCalibration(s, Factory()));
+    CHECK(SameCalibration(s, calibration));  // The mirror's.
     snapshot.erases = TestFlashErases();
     CHECK(Unchanged(snapshot));
     s.SaveState();
@@ -651,8 +727,8 @@ void TestRepairPowerLoss() {
   test_checker.Start("TestRepairPowerLoss");
   const State defaults = Defaults();
   const PersistentData calibration = Calibration(0.1f);
-  // Calibration kept: sector erase, four calibration words, the state. Reset:
-  // mirror erase and four words first.
+  // Calibration kept: sector erase, four calibration words, the state. Reset
+  // (calibration and mirror damaged): mirror erase and four words first.
   for (int reset = 0; reset < 2; ++reset) {
     const int steps = reset ? 11 : 6;
     const int erase = reset ? 6 : 1;
@@ -660,6 +736,9 @@ void TestRepairPowerLoss() {
     for (int cut = 0; cut <= steps; ++cut) {
       Setup(calibration, 5);
       TestFlashDamage(reset ? kSector + 96 : StateChunk(3));
+      if (reset) {
+        TestFlashDamage(kMirror + 32);
+      }
       TestFlashBudget() = cut;
       Settings s;
       CHECK(s.Init(true));
@@ -674,8 +753,7 @@ void TestRepairPowerLoss() {
       if (cut < erase || (cut > erase && cut < erase + 4)) {
         // Still damaged, or a partly written calibration.
         CHECK(loaded.write_locked());
-        CHECK(SameCalibration(loaded, reset || cut > erase
-            ? Factory() : calibration));
+        CHECK(SameCalibration(loaded, reset ? Factory() : calibration));
       } else {
         CHECK(!loaded.write_locked());
         CHECK(SameCalibration(loaded, written));
@@ -767,6 +845,7 @@ int main() {
   TestBlankSector();
   TestWriteLock();
   TestRepair();
+  TestRepairCalibrationOrder();
   TestRepairFailures();
   TestRepairPowerLoss();
   TestMirrorWrites();

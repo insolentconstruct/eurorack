@@ -238,8 +238,8 @@ If the settings flash can't be read, the module still starts: all LEDs blink fas
 
 To repair, power on while holding SEED. After a few seconds the LEDs show the result for 3 seconds:
 
-- Green quality LED blinking: repaired, calibration kept.
-- Green quality LED blinking, the three mix LEDs lit: repaired with the factory calibration. [Recalibrate](docs/CALIBRATION.md).
+- Green quality LED blinking: repaired, calibration kept (from the settings, or from the copy described below).
+- Green quality LED blinking, the three mix LEDs lit: repaired with the factory calibration, as neither copy was intact. [Recalibrate](docs/CALIBRATION.md).
 - Red quality LED and mix LEDs blinking fast: the repair failed, nothing was changed. Try again; if it keeps failing, use the storage recovery tool.
 
 The calibration is only replaced here, or by calibrating. Drizzlet also keeps a copy of it in the flash sector before the settings (0x081C0000), so a power cut while the settings are being rewritten doesn't lose it.

@@ -1399,7 +1399,9 @@ void TestSettingsRollover() {
           sizeof(old_calibration.adc_calibration)));
     } else if (cut < 5) {
       // A partly written calibration: damaged, so the defaults play from
-      // RAM until SEED at power-up repairs the sector.
+      // RAM until SEED at power-up repairs the sector. The mirrored
+      // calibration is more than 25% from the factory values here, so the
+      // factory values play.
       CHECK(loaded.write_locked());
       CHECK(!memcmp(&state, &defaults, sizeof(State)));
       CHECK(!memcmp(data, factory.adc_calibration,

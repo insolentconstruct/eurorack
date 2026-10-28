@@ -167,6 +167,11 @@ class ChunkStorage {
     RewriteSector();
   }
 
+  // The mirrored calibration, if it reads clean and passes its checks.
+  bool ReadMirror(PersistentData* persistent_data) {
+    return ReadChunk(MIRROR_BASE, persistent_data) == CHUNK_VALID;
+  }
+
   inline bool locked() const { return locked_; }
 
  private:
