@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -30,8 +30,8 @@
 // records are then written over unerased flash, which reads back as an
 // uncorrectable error and crashes the module at every start. Here the error
 // flags are cleared first, every result is checked, and a record is only
-// programmed onto blank flash and read back. Same layout and records as
-// stmlib's.
+// programmed onto blank flash and read back, past the D-cache. Same layout
+// and records as stmlib's.
 
 #ifndef BEADS_SETTINGS_STORAGE_H_
 #define BEADS_SETTINGS_STORAGE_H_
@@ -64,7 +64,7 @@ class ChunkStorage {
     FLASH_STORAGE_BASE = stmlib::Sector<sector_index>::start,
     FLASH_STORAGE_LAST = stmlib::Sector<sector_index + 1>::start,
   };
-  
+
   enum {
     BLOCK_SIZE = 32,  // Must be a power of 2!
   };
@@ -77,7 +77,7 @@ class ChunkStorage {
   bool Init(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
-  
+
     if (ReadChunk(0, persistent_data)) {
       for (next_state_chunk_index_ = 1;
            chunk_address(next_state_chunk_index_ + 1) <= FLASH_STORAGE_LAST;
@@ -93,7 +93,7 @@ class ChunkStorage {
     RewriteSector();
     return false;
   }
-  
+
   void Recover(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
@@ -115,7 +115,7 @@ class ChunkStorage {
       }
     }
   }
-  
+
   void SavePersistentData() {
     RewriteSector();
   }
@@ -143,9 +143,13 @@ class ChunkStorage {
       erase_params.Sector = sector_index;
       erase_params.NbSectors = 1;
       erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
-    
+
       uint32_t sector_error;
       if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK) {
+        // The D-cache may still hold the records read before the erase.
+        SCB_InvalidateDCache_by_Addr(
+            (uint32_t*)(FLASH_STORAGE_BASE),
+            FLASH_STORAGE_LAST - FLASH_STORAGE_BASE);
         return true;
       }
     }
@@ -173,25 +177,25 @@ class ChunkStorage {
     h.tag = T::tag;
     h.size = sizeof(T);
     h.checksum = Checksum(data, sizeof(T));
-    
+
     size_t num_flash_words = ChunkSize<T>() / BLOCK_SIZE;
     uint32_t flash_address = chunk_address(index);
 
     size_t data_size = sizeof(T);
     const uint8_t* data_source = (const uint8_t*)(data);
-    
+
     for (size_t i = 0; i < num_flash_words; ++i) {
       size_t header_size = i == 0 ? sizeof(ChunkHeader) : 0;
       size_t size = std::min(data_size, BLOCK_SIZE - header_size);
-      
+
       uint8_t buffer[BLOCK_SIZE];
       memcpy(&buffer[0], &h, header_size);
       memcpy(&buffer[header_size], data_source, size);
-      
+
       if (!ProgramWord(flash_address, &buffer[0])) {
         return false;
       }
-      
+
       data_size -= size;
       data_source += size;
       flash_address += BLOCK_SIZE;
@@ -201,6 +205,7 @@ class ChunkStorage {
 
   bool ProgramWord(uint32_t address, const uint8_t* buffer) {
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
+      SCB_InvalidateDCache_by_Addr((uint32_t*)(address), BLOCK_SIZE);
       if (!IsBlank(address, BLOCK_SIZE)) {
         return false;
       }
@@ -209,6 +214,7 @@ class ChunkStorage {
               FLASH_TYPEPROGRAM_FLASHWORD,
               address,
               (uint64_t)(&buffer[0])) == HAL_OK) {
+        SCB_InvalidateDCache_by_Addr((uint32_t*)(address), BLOCK_SIZE);
         return !memcmp((const void*)(address), buffer, BLOCK_SIZE);
       }
     }
@@ -230,7 +236,7 @@ class ChunkStorage {
         ? FLASH_FLAG_ALL_ERRORS_BANK1
         : FLASH_FLAG_ALL_ERRORS_BANK2);
   }
- 
+
   template<typename T>
   inline size_t ChunkSize() {
     return (sizeof(ChunkHeader) + sizeof(T) + BLOCK_SIZE - 1) & \
