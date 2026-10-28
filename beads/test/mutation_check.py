@@ -27,6 +27,7 @@
 #
 # Firmware mutation checks in a disposable host test copy.
 
+import json
 import pathlib
 import re
 import resource
@@ -649,21 +650,64 @@ for name, suite, source, before, after in cases:
   pattern = before if before is not None else (
       'const int16_t wav_integrated_waves[] = {')
   assert (root / source).read_text().count(pattern) == 1, (name, pattern)
+
+
+def shard_indices(count, shard, shards):
+  # Shard K of N runs every case whose 1-based index is K modulo N, so the
+  # N shards together run each case exactly once.
+  return [i for i in range(1, count + 1) if (i - 1) % shards == shard - 1]
+
+
+for shards in range(1, 17):
+  indices = sorted(i for shard in range(1, shards + 1)
+      for i in shard_indices(len(cases), shard, shards))
+  assert indices == list(range(1, len(cases) + 1)), shards
 if '--patterns-only' in sys.argv:
   print('All %d mutation patterns occur exactly once' % len(cases))
   raise SystemExit(0)
 
+if '--merge' in sys.argv:
+  # Joins shard reports into one, as a serial run writes it; every case must
+  # appear exactly once.
+  arguments = sys.argv[sys.argv.index('--merge') + 1:]
+  out = pathlib.Path(arguments[0]).resolve()
+  out.mkdir(parents=True, exist_ok=True)
+  merged = {}
+  for directory in map(pathlib.Path, arguments[1:]):
+    for index, result in json.loads((directory / 'results.json').read_text()):
+      assert index not in merged, index
+      merged[index] = result
+    for log in directory.glob('*.log'):
+      shutil.copy(log, out / log.name)
+  missing = sorted(set(range(1, len(cases) + 1)) - set(merged))
+  assert not missing, 'cases not run: %s' % missing
+  results = [merged[index] for index in sorted(merged)]
+  (out / 'mutations.txt').write_text('\n'.join(results) + '\n')
+  print('Merged %d mutation results' % len(results))
+  raise SystemExit(0)
+
+assert not ('--only' in sys.argv and '--shard' in sys.argv), \
+    '--only and --shard select cases differently; use one'
 if '--only' in sys.argv:
   selected = sys.argv[sys.argv.index('--only') + 1]
   cases = [case for case in cases if case[0] == selected]
   assert cases, selected
   del sys.argv[sys.argv.index('--only'):sys.argv.index('--only') + 2]
 
+selected_indices = set(range(1, len(cases) + 1))
+if '--shard' in sys.argv:
+  shard, shards = map(int,
+      sys.argv[sys.argv.index('--shard') + 1].split('/'))
+  assert 1 <= shard <= shards, (shard, shards)
+  selected_indices = set(shard_indices(len(cases), shard, shards))
+  del sys.argv[sys.argv.index('--shard'):sys.argv.index('--shard') + 2]
+
 out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
     'beads/test/.runs/mutations').resolve()
 out.mkdir(parents=True, exist_ok=True)
 started = time.monotonic()
 results = []
+indexed = []
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   work = pathlib.Path(tmp).resolve()
   for directory in ('beads', 'plaits', 'stmlib', 'clouds'):
@@ -671,6 +715,8 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))
   for index, (name, suite, source, before, after) in enumerate(cases, 1):
+    if index not in selected_indices:
+      continue
     path = work / source
     original = path.read_text()
     if before is not None:
@@ -738,9 +784,11 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
       evidence = next(x for x in failure.splitlines()
           if 'ERROR: ' in x or 'runtime error: ' in x)
       results.append(f'{name}: {source}:{line}: {change}\n  {evidence}')
+      indexed.append((index, results[-1]))
       print(results[-1], flush=True)
     finally:
       path.write_text(original)
       test.write_text(original_test)
 (out / 'mutations.txt').write_text('\n'.join(results) + '\n')
+(out / 'results.json').write_text(json.dumps(indexed) + '\n')
 print('Mutation runtime: %.2f s' % (time.monotonic() - started))
