@@ -4,6 +4,8 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- A module whose settings flash is damaged no longer crashes at every start. It plays on default settings, blinks all LEDs for 3 s at each power-up, and writes nothing to flash. Hold SEED at power-up to repair it: the calibration is kept if it reads back intact, otherwise reset to the factory values (recalibrate). The calibration is also kept in a second sector, so a power cut while the settings are rewritten no longer resets it. A damaged frozen buffer is skipped instead of crashing (#148).
+- The build refuses an application large enough to reach the frozen buffer and settings flash (#155).
 - Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Mutable Instruments' firmware has the same code. Each flash operation is now checked, and settings are only written onto erased flash (#149).
 - Add random intervals (page 1, DRY/WET): with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. It works with any pitch scale (#8).
 - The options page now has four pages, lighting the mix LEDs left to right, then all three: 1 pitch scale, random intervals and attacks; 2 delay mode, reverb character and frozen feedback; 3 processor, synth and synth start; 4 limiter. Opening a page shows each stored value on [A] in turn. The wavetable synth's start (Automatic or Manual) is now its own setting, Synth start.

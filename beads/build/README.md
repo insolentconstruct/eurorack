@@ -232,6 +232,18 @@ Follow the [official Beads firmware update procedure](https://pichenettes.github
 
 **Do not hold SEED at power-on unless you mean to: it resets the settings (a valid calibration is kept).**
 
+### Damaged settings
+
+If the settings flash can't be read, the module still starts: all LEDs blink fast for 3 seconds at each power-up, then it plays on default settings. Changes work until power-off but nothing is saved, and a frozen buffer is not restored.
+
+To repair, power on while holding SEED. After a few seconds the LEDs show the result for 3 seconds:
+
+- Green quality LED blinking: repaired, calibration kept.
+- Green quality LED blinking, the three mix LEDs lit: repaired with the factory calibration. [Recalibrate](docs/CALIBRATION.md).
+- Red quality LED and mix LEDs blinking fast: the repair failed, nothing was changed. Try again; if it keeps failing, use the storage recovery tool.
+
+The calibration is only replaced here, or by calibrating. Drizzlet also keeps a copy of it in the flash sector before the settings (0x081C0000), so a power cut while the settings are being rewritten doesn't lose it.
+
 ### Backup and restore
 
 The settings sector holds the CV calibration and the settings. Back it up with ST-Link + OpenOCD; use a backup on the same unit only. Recalibrating the CV inputs: [CALIBRATION.md](docs/CALIBRATION.md).
@@ -254,7 +266,7 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; flash write_image erase beads-restore.bin 0x081E0000; verify_image beads-restore.bin 0x081E0000; reset run; shutdown"
 ```
 
-The image holds only the calibration and the latest settings. OpenOCD erases the whole sector and programs just those, so later saves land on erased flash; don't write the 128 KB backup itself back. The tool refuses a dump the firmware would not read and never overwrites a file. To reset the settings to defaults instead, hold SEED while powering on; calibration is kept.
+The image holds only the calibration and the latest settings. If the module showed the damaged-settings warning, restoring a backup this way also repairs it. OpenOCD erases the whole sector and programs just those, so later saves land on erased flash; don't write the 128 KB backup itself back. The tool refuses a dump the firmware would not read and never overwrites a file. To reset the settings to defaults instead, hold SEED while powering on; calibration is kept.
 
 ### ST-Link recovery
 
