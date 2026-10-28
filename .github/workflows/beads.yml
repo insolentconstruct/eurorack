@@ -68,6 +68,7 @@ jobs:
             artifacts/bootloader-padded.bin
             artifacts/combo.bin
             artifacts/beads-*-combo.bin
+            artifacts/beads-*-combo.hex
             artifacts/NOTICE.txt
             artifacts/SHA256SUMS
             artifacts/beads-*.wav

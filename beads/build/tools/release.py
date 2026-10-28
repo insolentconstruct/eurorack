@@ -23,8 +23,9 @@ if not re.fullmatch(r'beads-[A-Za-z0-9._-]+', NAME):
 WAV = NAME + '.wav'
 ZIP = NAME + '-wav.zip'
 COMBO = NAME + '-combo.bin'
+COMBO_HEX = NAME + '-combo.hex'
 COMBO_ZIP = NAME + '-combo.zip'
-ASSETS = [ZIP, COMBO_ZIP, 'NOTICE.txt']
+ASSETS = [ZIP, COMBO_ZIP, COMBO_HEX, 'NOTICE.txt']
 
 
 def sha(path):
@@ -170,12 +171,27 @@ def write_zip(path, names):
       info.external_attr=0  # writestr defaults Unix permissions; the central directory is written on close
 
 
+def hex_image(path):
+  # Lowest address and contents of an Intel HEX file, as objcopy reads it.
+  tools = os.environ['TOOLCHAIN_PATH'] + 'bin/arm-none-eabi-'
+  sections = subprocess.check_output([tools+'objdump', '-h', str(path)], text=True)
+  start = min(line.split()[3] for line in sections.splitlines() if ' .sec' in line)
+  with tempfile.TemporaryDirectory() as temp:
+    image = Path(temp)/'image.bin'
+    subprocess.run([tools+'objcopy', '-I', 'ihex', '-O', 'binary', str(path), str(image)], check=True)
+    return start, image.read_bytes()
+
+
 def package(out):
   (out/'README.txt').write_bytes((HERE/'README.txt').read_bytes())
   write_zip(out/ZIP, [WAV, 'README.txt', 'NOTICE.txt'])
   # Combo image, named after the release.
   (out/COMBO).write_bytes((out/'combo.bin').read_bytes())
-  write_zip(out/COMBO_ZIP, [COMBO, 'README.txt', 'NOTICE.txt'])
+  # stmlib's merged combo HEX; it carries the 0x08000000 address.
+  (out/COMBO_HEX).write_bytes((out/'objects/beads/beads_bootloader_combo.hex').read_bytes())
+  if hex_image(out/COMBO_HEX) != ('08000000', (out/COMBO).read_bytes()):
+    raise ValueError('combo HEX does not program the combo image at 0x08000000')
+  write_zip(out/COMBO_ZIP, [COMBO, COMBO_HEX, 'README.txt', 'NOTICE.txt'])
   (out/'SHA256SUMS').write_text(''.join(sha(out/name)+'  '+name+'\n' for name in ASSETS))
   subprocess.run(['sha256sum','-c','SHA256SUMS'],cwd=out,check=True)
 

@@ -9,7 +9,8 @@ repo=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 
 title="Unofficial Beads build ${tag#beads-}"
 notes="Unofficial build of the vanilla Mutable Instruments Beads firmware; not a Mutable Instruments product. Install at your own risk; read the [README](https://github.com/$repo/blob/$tag/beads/build/README.md) first."
-assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/NOTICE.txt" "$dir/SHA256SUMS")
+assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/$tag-combo.hex" "$dir/NOTICE.txt"
+  "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
 
