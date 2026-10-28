@@ -4,8 +4,8 @@
 
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, two runs on the release code: quality changes, the quality button, CPU load, CV calibration, installing over Beta 1 and [M] CV.
-- **Totals:** 107 firmware and settings installs on the test module, none failed to boot; about 29 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
+- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, runs on the release code: quality changes, the quality button, CPU load, CV calibration, installing over Beta 1, [M] CV, and settings and frozen-buffer saves with the storage fix.
+- **Totals:** 123 firmware and settings installs on the test module, none failed to boot; about 31 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
 
 Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build and spectral a ShyFFT build, each counted once. Assertions inside loops run more than once.
 
@@ -227,7 +227,7 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 
 ### Beta 2
 
-The release code, including the converter fix, on 2026-10-27. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
+The release code, including the converter fix, on 2026-10-27, and with the storage fix (#149) on 2026-10-28. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
 
 | Check | Result |
 |---|---|
@@ -238,31 +238,39 @@ The release code, including the converter fix, on 2026-10-27. Outputs recorded w
 | Install by audio file; storage recovery tool; SEED at power-on (2026-10-25) | Pass: settings and frozen buffer erased, calibration kept |
 | Installing over Beta 1, with every Beta 1 option saved away from stock | Pass: all kept, live and saved; the new options at stock |
 | [M] CV at 0 V and 2 V, assigned to stereo width, then to grain diffusion | Pass: each rose by 0.40 of its range (0.2 needed) |
+| Storage fix: the firmware's own settings saves (FREEZE held 60 s, then released) | Pass: two records appended, calibration unchanged |
+| Storage fix: the settings sector full, so the next save rewrites it | Pass: calibration byte-identical, one new settings record, the rest erased |
+| Storage fix: frozen buffer restored after a reset | Pass |
 
 | Settings | Peak audio load |
 |---|---:|
+| Wavetable synth, Clouds-style reverb, width at maximum, a pitch scale, SIZE near maximum | 86.3% (87.2% with the storage fix, within session-to-session spread) |
+| Wavetable synth, Clouds-style reverb, width at maximum, a pitch scale | 86.1% |
 | Wavetable synth, width at maximum, a pitch scale | 85.8% |
 | Evolving frozen feedback | 83.3% |
 | Granular features together, frozen: Clouds-style reverb, diffusion and width at maximum, a pitch scale, Evolving frozen feedback | 83.0% |
 | Granular features together, recording: as above with attacks (Snap and trigger) instead of Evolving | 81.3% |
+| Granular, random intervals drawing | 79.6% |
+| Plaits synth with Clouds-style reverb | 69.4% |
+| Spectral with Clouds-style reverb | 17.4% |
 | Plaits synth, string model | 69.8% |
 | Spectral, Sunny tape | 23.6% |
 | Spectral | 17.9% |
 
-No audio underruns. Not yet checked on the module: random intervals, attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
+No audio underruns. Not yet checked on the module: attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
 
-**Test module totals** (2026-10-18 to 2026-10-27). Firmware and settings installs:
+**Test module totals** (2026-10-18 to 2026-10-28). Firmware and settings installs:
 
 | Firmware | Debug probe | Audio file |
 |---|---:|---:|
-| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 46 | 2 |
+| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 52 | 2 |
 | Vanilla source (timing build) | 2 | 0 |
-| Settings sector restore (factory calibration and settings) | 4 | – |
-| Settings sector test images (Beta 1 settings, [M] assignments) | 3 | – |
+| Settings sector restore (factory calibration and settings) | 7 | – |
+| Settings sector test images (Beta 1 settings, [M] assignments, synth settings, storage tests) | 10 | – |
 | Storage recovery tool | 0 | 2 |
-| **Total** | **55** | **4** |
+| **Total** | **71** | **4** |
 
-Since 2026-10-11: 107 installs (90 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 16 more hours of automated runs, 29 in all, counted as above.
+Since 2026-10-11: 123 installs (106 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 18 more hours of automated runs, 31 in all, counted as above.
 
 **CV calibration** ([M]+[A]):
 
