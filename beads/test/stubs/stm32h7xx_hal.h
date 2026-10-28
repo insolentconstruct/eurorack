@@ -79,5 +79,9 @@ inline void HAL_IncTick() { }
 #define FLASH_BANK_2 1
 #define FLASH_VOLTAGE_RANGE_4 0
 #define FLASH_TYPEPROGRAM_FLASHWORD 0
+inline void SCB_InvalidateDCache_by_Addr(uint32_t*, int32_t) { }
+#define FLASH_FLAG_ALL_ERRORS_BANK1 0x07ee0000U
+#define FLASH_FLAG_ALL_ERRORS_BANK2 0x87ee0000U
+#define __HAL_FLASH_CLEAR_FLAG(flags) ((void)(flags))
 
 #endif  // BEADS_TEST_HARDWARE_STUBS_STM32H7XX_HAL_H_
