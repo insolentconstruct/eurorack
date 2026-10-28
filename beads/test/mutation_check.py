@@ -128,6 +128,23 @@ cases = [
   ('TestDryWetEndpoints', 'mix', 'beads/dsp/delay_granular_player.h',
     '    *out += sum;',
     '    out->l += sum.l;'),
+  # #149: settings saves check every flash operation and only program erased
+  # flash.
+  ('TestStaleErrorFlag', 'storage', 'beads/settings_storage.h',
+    '      ClearErrors();\n      FLASH_EraseInitTypeDef',
+    '      FLASH_EraseInitTypeDef'),
+  ('TestStaleErrorFlag', 'storage', 'beads/settings_storage.h',
+    '      ClearErrors();\n      if (HAL_FLASH_Program(',
+    '      if (HAL_FLASH_Program('),
+  ('TestFailedErase', 'storage', 'beads/settings_storage.h',
+    '      if (!IsBlank(address, BLOCK_SIZE)) {\n        return false;\n      }\n',
+    ''),
+  ('TestFailedProgram', 'storage', 'beads/settings_storage.h',
+    'const int kFlashAttempts = 3;',
+    'const int kFlashAttempts = 1;'),
+  ('TestNonBlankSlot', 'storage', 'beads/settings_storage.h',
+    '      if (WriteChunk(next_state_chunk_index_, state_data_)) {',
+    '      WriteChunk(next_state_chunk_index_, state_data_);\n      if (true) {'),
 ]
 GUARD = 'const int16_t wav_integrated_waves[] = {'
 # A case with several edits gives tuples of equal length.

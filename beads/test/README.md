@@ -1,10 +1,10 @@
 # Base tests
 
 Run `beads/test/run.sh OUTPUT_DIR` from the repository root. It wraps the
-build kit Docker image and runs ten suites, bidirectional stock storage
+build kit Docker image and runs eleven suites, bidirectional stock storage
 compatibility, a golden audio hash and the optional optimization comparison.
-Most suites use address and undefined-behaviour sanitizers. Backup uses a
-mapped flash model with injected failures. No module is needed.
+Most suites use address and undefined-behaviour sanitizers. Backup and storage
+use mapped flash models with injected failures. No module is needed.
 
 `storage_compat.sh OUTPUT_DIR [STOCK_SOURCE_DIR]` builds actual stock and base
 readers and exchanges settings and frozen buffers in both directions for all
@@ -36,6 +36,7 @@ Keep overrides limited to the hardware or dependencies a suite touches.
 | `backup_stubs/` | Processor fixture and flash with lock, failure, power-loss and partial erase injection |
 | `hardware_stubs/` | Processor/audio fixtures: codec, calibrator, gain and backup |
 | `firmware_stubs/` | Callback ADC/codec, inputs, system/debug/watchdog; sector-aware shared flash model |
+| `storage_stubs/` | Settings-sector flash with sticky error flags, refused or stuck operations and overwrite counting |
 | `delay_mode_stubs/` | Codec handle declarations |
 | `gain_stubs/` | Codec gain writes |
 

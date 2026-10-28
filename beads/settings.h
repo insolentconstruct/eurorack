@@ -30,9 +30,9 @@
 #define BEADS_SETTINGS_H_
 
 #include "stmlib/stmlib.h"
-#include "stmlib/system/storage.h"
 
 #include "beads/drivers/cv_adc.h"
+#include "beads/settings_storage.h"
 
 namespace beads {
 
@@ -89,7 +89,7 @@ class Settings {
  private:
   PersistentData persistent_data_;
   State state_;
-  stmlib::ChunkStorage<15, PersistentData, State> chunk_storage_;
+  ChunkStorage<15, PersistentData, State> chunk_storage_;
   
   DISALLOW_COPY_AND_ASSIGN(Settings);
 };
