@@ -88,7 +88,7 @@ struct Rig {
       : pot(0.5f), feedback(0.5f), reverb(0.5f) {
     std::fill(test_down, test_down + 4, false);
     test_down[SWITCH_ASSIGN] = startup_assign;
-    memset(reinterpret_cast<void*>(0x081e0000), 255, 0x20000);
+    memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
     settings.Init(false);
     ui.Init(&settings, &gain, &calibration, &backup);
     Tick(40);
@@ -352,7 +352,7 @@ struct LegacyState {
 void TestStorage() {
   test_checker.Start("TestStorage");
   Settings s;
-  memset(reinterpret_cast<void*>(0x081e0000), 255, 0x20000);
+  memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
   CHECK(!s.Init(false));
   CHECK(s.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
   Settings old_record;
@@ -866,8 +866,8 @@ void TestOverwriteReserveDisplay() {
   }
 }
 
-void TestCorruptCalibrationRewritesOnce() {
-  test_checker.Start("TestCorruptCalibrationRewritesOnce");
+void TestCorruptCalibrationLocks() {
+  test_checker.Start("TestCorruptCalibrationLocks");
   Rig r;
   const State defaults = r.settings.state();
   const PersistentData calibration = r.settings.persistent_data();
@@ -875,21 +875,22 @@ void TestCorruptCalibrationRewritesOnce() {
   r.settings.SaveState();
   uint8_t* flash = reinterpret_cast<uint8_t*>(0x081e0000);
   flash[8] ^= 1;  // Corrupt CALI payload without changing its checksum.
-  unsigned writes = test_writes;
-  Settings first;
-  CHECK(!first.Init(false));
-  CHECK(test_writes > writes);
-  CHECK(!memcmp(&first.state(), &defaults, sizeof(State)));
-  CHECK(!memcmp(first.persistent_data().adc_calibration,
-      calibration.adc_calibration, sizeof(calibration.adc_calibration)));
-  writes = test_writes;
+  static uint8_t sector[0x20000];
+  memcpy(sector, flash, sizeof(sector));
+  const unsigned writes = test_writes;
+  // Stock firmware rewrites the factory values and runs the factory test;
+  // here every boot plays on the defaults and writes nothing.
   for (int i = 0; i < 3; ++i) {
     Settings next;
     CHECK(next.Init(false));
-    CHECK(test_writes == writes);
+    CHECK(next.write_locked());
     CHECK(!memcmp(&next.state(), &defaults, sizeof(State)));
     CHECK(!memcmp(next.persistent_data().adc_calibration,
         calibration.adc_calibration, sizeof(calibration.adc_calibration)));
+    next.mutable_state()->media = 1;
+    next.SaveState();
+    CHECK(test_writes == writes);
+    CHECK(!memcmp(sector, flash, sizeof(sector)));
   }
 }
 
@@ -1379,31 +1380,32 @@ void TestSettingsRollover() {
     CHECK(test_writes == writes + (cut > 1 ? cut - 1 : 0));
 
     Settings loaded;
-    const bool valid = loaded.Init(false);
+    // Never the factory test.
+    CHECK(loaded.Init(false));
     const State& state = loaded.state();
     const AdcCalibrationData* data = loaded.persistent_data().adc_calibration;
     if (cut == 0) {
       // Power went before the erase: the previous record is untouched.
-      CHECK(valid);
+      CHECK(!loaded.write_locked());
       CHECK(!memcmp(&state, &old_state, sizeof(State)));
       CHECK(!memcmp(data, old_calibration.adc_calibration,
           sizeof(old_calibration.adc_calibration)));
-    } else if (cut < 5) {
-      // Stock stmlib window: from the erase to the last calibration block no
-      // copy of the calibration exists, so both come back as the defaults.
-      CHECK(!valid);
-      CHECK(!memcmp(&state, &defaults, sizeof(State)));
-      CHECK(!memcmp(data, factory.adc_calibration,
-          sizeof(factory.adc_calibration)));
-    } else if (cut == 5) {
-      // Stock window: calibration is whole but no state followed it, so the
-      // options come back as the defaults while the calibration survives.
-      CHECK(!valid);
+    } else if (cut == 1 || cut == 5) {
+      // Erased, or the calibration written but no state: the calibration
+      // survives (from the mirror after the erase), the options reset.
+      CHECK(!loaded.write_locked());
       CHECK(!memcmp(&state, &defaults, sizeof(State)));
       CHECK(!memcmp(data, old_calibration.adc_calibration,
           sizeof(old_calibration.adc_calibration)));
+    } else if (cut < 5) {
+      // A partly written calibration: damaged, so the defaults play from
+      // RAM until SEED at power-up repairs the sector.
+      CHECK(loaded.write_locked());
+      CHECK(!memcmp(&state, &defaults, sizeof(State)));
+      CHECK(!memcmp(data, factory.adc_calibration,
+          sizeof(factory.adc_calibration)));
     } else {
-      CHECK(valid);
+      CHECK(!loaded.write_locked());
       CHECK(!memcmp(&state, &new_state, sizeof(State)));
       CHECK(!memcmp(data, old_calibration.adc_calibration,
           sizeof(old_calibration.adc_calibration)));
@@ -1416,9 +1418,10 @@ void TestSettingsRollover() {
       CHECK(loaded.width_assigned());
       CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     }
-    // Whatever came back is stable: a second boot finds a valid record.
+    // Whatever came back is stable.
     Settings again;
     CHECK(again.Init(false));
+    CHECK(again.write_locked() == loaded.write_locked());
     CHECK(!memcmp(&again.state(), &state, sizeof(State)));
     CHECK(!memcmp(again.persistent_data().adc_calibration, data,
         sizeof(old_calibration.adc_calibration)));
@@ -1440,10 +1443,13 @@ bool SettingsLoad(const State& state, const PersistentData& calibration) {
           calibration.adc_calibration, sizeof(calibration.adc_calibration));
 }
 
+const uint32_t kStaleFlag = 0x00040000;  // PGSERR
+
 void TestStorageStaleErrorFlag() {
   test_checker.Start("TestStorageStaleErrorFlag");
-  // A corrected ECC error left by an earlier read: stmlib's rewrite skips the
-  // erase and programs the records over the old ones.
+  // An error flag left by an earlier operation: stmlib's rewrite skips the
+  // erase and programs the records over the old ones. (The masked reader
+  // clears the ECC flags its own reads raise.)
   {
     Rig r;
     FillSettingsSector(&r.settings);
@@ -1452,7 +1458,7 @@ void TestStorageStaleErrorFlag() {
     stmlib::ChunkStorage<15, PersistentData, State> stock;
     stock.Init(&calibration, &state);
     const unsigned overwrites = TestFlashOverwrites();
-    TestFlashErrors() = FLASH_SR_SNECCERR;
+    TestFlashErrors() = kStaleFlag;
     stock.SavePersistentData();
     CHECK(TestFlashOverwrites() > overwrites);
   }
@@ -1463,7 +1469,7 @@ void TestStorageStaleErrorFlag() {
   const unsigned overwrites = TestFlashOverwrites();
   const unsigned erases = TestFlashErases();
   const unsigned refusals = TestFlashRefusals();
-  TestFlashErrors() = FLASH_SR_SNECCERR;
+  TestFlashErrors() = kStaleFlag;
   r.settings.SaveState();
   CHECK(TestFlashErrors() == 0);
   CHECK(TestFlashRefusals() == refusals);  // Cleared before the erase.
@@ -1473,7 +1479,7 @@ void TestStorageStaleErrorFlag() {
   CHECK(SettingsLoad(r.settings.state(), r.settings.persistent_data()));
   // The same on an ordinary save, which appends a record.
   r.settings.mutable_state()->media = 2;
-  TestFlashErrors() = FLASH_SR_SNECCERR;
+  TestFlashErrors() = kStaleFlag;
   r.settings.SaveState();
   CHECK(TestFlashRefusals() == refusals);  // Cleared before the program.
   CHECK(TestFlashOverwrites() == overwrites);
@@ -1563,7 +1569,7 @@ void TestStorageMatchesStmlib() {
   static uint8_t ours[0x20000];
   uint8_t* sector = reinterpret_cast<uint8_t*>(0x081e0000);
   for (int pass = 0; pass < 2; ++pass) {
-    memset(sector, 255, 0x20000);
+    memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
     PersistentData calibration;
     State state;
     memset(&calibration, 0, sizeof(calibration));
@@ -1573,7 +1579,7 @@ void TestStorageMatchesStmlib() {
       calibration.adc_calibration[i].offset = 0.75f + 0.0625f * i;
     }
     if (pass == 0) {
-      ChunkStorage<15, PersistentData, State> storage;
+      ChunkStorage<15, 14, PersistentData, State> storage;
       storage.Init(&calibration, &state);
       for (int i = 0; i < kStateChunks + 10; ++i) {
         state.media = i & 3;
@@ -2340,9 +2346,9 @@ void TestPendingExitButtons() {
 }
 
 int main() {
-  if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
+  if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
-      -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
+      -1, 0) == reinterpret_cast<void*>(0x08100000))) {
     return 1;
   }
   TestCommitPublication();
@@ -2380,7 +2386,7 @@ int main() {
   TestFrozenStateChangeGuard();
   TestGateOutputChordPersistence();
   TestOverwriteReserveDisplay();
-  TestCorruptCalibrationRewritesOnce();
+  TestCorruptCalibrationLocks();
   TestSettingsRollover();
   TestStorageStaleErrorFlag();
   TestStorageFailedErase();
