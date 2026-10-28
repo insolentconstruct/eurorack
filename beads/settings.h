@@ -32,13 +32,13 @@
 #include <stddef.h>
 
 #include "stmlib/stmlib.h"
-#include "stmlib/system/storage.h"
 
 #include "beads/drivers/cv_adc.h"
 #include "beads/dsp/limiter.h"
 #include "beads/dsp/attack_detector.h"
 #include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
+#include "beads/settings_storage.h"
 
 namespace beads {
 
@@ -293,7 +293,7 @@ class Settings {
 
   PersistentData persistent_data_;
   State state_;
-  stmlib::ChunkStorage<15, PersistentData, State> chunk_storage_;
+  ChunkStorage<15, PersistentData, State> chunk_storage_;
   
   DISALLOW_COPY_AND_ASSIGN(Settings);
 };

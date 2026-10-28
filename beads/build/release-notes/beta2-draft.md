@@ -28,6 +28,10 @@ Listed by the number of requests ([feature requests](https://github.com/insolent
 - **Quieter quality changes** (#53): the output fades out first, and changes that keep the sample rate no longer pop. The pop came from the converter restarting, in every earlier firmware. The synth's reverb tail now stops with it.
 - **Less CPU** for Clouds-style reverb and the grains, with the same sound.
 
+## Fixes
+
+- **Settings saves:** a save could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start (#149). Mutable Instruments' firmware has the same code. Each flash operation is now checked, and settings are only written onto erased flash.
+
 ## Everything Drizzlet adds
 
 Compared with the Mutable Instruments firmware. Every option defaults to stock behaviour.
