@@ -5,6 +5,7 @@
 ## Layout
 
 - 2-space indent, no tabs in C/C++. `public:` and `private:` get one space. Braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
+- Bodies of `if`, `for` and `while` are braced on their own lines, one statement per line, and each data member has its own line. Beads has a few one-line `if`s (e.g. `drivers/codec.cc:221`, `beads.cc:361`, `dsp/mu_law.h:61`); don't add more.
 - Put module code in `namespace beads` and close it with `}  // namespace beads`. Entry points (`beads.cc`, the bootloader) and host test functions stay global; specializations of stmlib templates go in `namespace stmlib` (`dsp/sample_rate_conversion_filters.h`).
 - New headers use `BEADS_<PATH>_H_` guards, closed by `#endif  // BEADS_<PATH>_H_`.
 - Includes: usually the file's own header, then `<system>`, `stmlib/...`, `beads/...`, with blank lines between groups. Upstream grouping varies (`stmlib/stmlib.h` alone, HAL headers last in drivers); follow the nearby or ported file. `using namespace std;` / `stmlib` go inside the module namespace in module `.cc` files; entry points and host tests put them at global scope.
@@ -43,6 +44,8 @@
 ## Code
 
 - (Drizzlet) Pass new arguments explicitly rather than adding default arguments.
+- Use `uint32_t`, `int32_t` and `size_t`, not `unsigned`, in new code (Beads has none outside a comment in `dsp/mu_law.h`).
+- (Drizzlet) Keep `RandomizedParameter::value()` calls where they are in an argument list: a call may draw a random number, so moving one can change the sound.
 - C++98-era subset: no `auto`, `nullptr`, lambdas or `constexpr`; no exceptions or RTTI; no STL containers or virtual dispatch in per-sample code (`std::min`/`std::max` as in `limiter.h` and `std::fill` as in `gain_control.cc` are fine).
 - (Drizzlet) Prefer `const` for new locals that don't change; upstream is not consistent. Use `bool` for flags.
 - Loops: `while (size--)` with a pointer, or an indexed `for`; indices are usually `size_t` or `int`.
