@@ -33,11 +33,11 @@
 // programmed onto blank flash and read back, past the D-cache. Same layout
 // and records as stmlib's.
 //
-// Every read is masked (beads/drivers/flash.h): an unreadable record, or an
-// invalid calibration in a sector that isn't blank, locks all writes to bank
-// 2 instead of crashing or being replaced. Before each erase of the sector,
-// the calibration about to be written is verified in a mirror sector, so a
-// power cut after the erase can't lose it.
+// Every read is masked (beads/drivers/flash.h), so an uncorrectable ECC word
+// no longer crashes the module. Before each erase of the sector, the
+// calibration about to be written is verified in a mirror sector, so a power
+// cut after the erase can't lose it. Settings decides what a lost
+// calibration means; Lock stops all writes to bank 2 until a repair.
 
 #ifndef BEADS_SETTINGS_STORAGE_H_
 #define BEADS_SETTINGS_STORAGE_H_
@@ -64,9 +64,11 @@ enum StorageStatus {
   // The calibration survived, in the sector or in its mirror, but no state
   // did: the calibration was written again with the default state.
   STORAGE_RESTORED,
-  // A state record is unreadable; the calibration loaded. Writes locked.
-  STORAGE_DAMAGED_STATE,
-  // The calibration is unreadable or invalid. Writes locked.
+  // The calibration is unreadable or invalid in a sector that isn't blank;
+  // the states before the first bad one loaded. Nothing written.
+  STORAGE_CALIBRATION_LOST,
+  // Blank sector, and a mirror that isn't blank but holds no calibration.
+  // Nothing written.
   STORAGE_DAMAGED
 };
 
@@ -104,7 +106,7 @@ class ChunkStorage {
   ChunkStorage() { }
   ~ChunkStorage() { }
   // Loads the latest saved data. A blank sector is rewritten, from the
-  // mirrored calibration if there is one; a damaged one locks all writes.
+  // mirrored calibration if there is one; a damaged one is left as it is.
   StorageStatus Init(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
@@ -112,12 +114,16 @@ class ChunkStorage {
 
     const StorageStatus status = Load(
         persistent_data, state_data, &next_state_chunk_index_);
-    if (status == STORAGE_DAMAGED || status == STORAGE_DAMAGED_STATE) {
-      locked_ = true;
-    } else if (status != STORAGE_OK) {
+    if (status == STORAGE_NEW || status == STORAGE_RESTORED) {
       RewriteSector();
     }
     return status;
+  }
+
+  // Damaged storage: nothing is erased or programmed until Repair.
+  void Lock() {
+    locked_ = true;
+    next_state_chunk_index_ = REWRITE_NEEDED;
   }
 
   void Recover(PersistentData* persistent_data, StateData* state_data) {
@@ -176,8 +182,8 @@ class ChunkStorage {
 
  private:
   // Reads the sector as stmlib's loader does: the calibration, then the
-  // states up to the first one that fails its checks. Nothing past that one
-  // is read.
+  // states up to the first one that fails its checks or can't be read, as
+  // an interrupted save leaves it. Nothing past that one is read.
   StorageStatus Load(
       PersistentData* persistent_data,
       StateData* state_data,
@@ -185,13 +191,8 @@ class ChunkStorage {
     *next_index = REWRITE_NEEDED;
     const ChunkStatus calibration = ReadChunk(
         chunk_address(0), persistent_data);
-    if (calibration == CHUNK_UNREADABLE) {
-      return STORAGE_DAMAGED;
-    } else if (calibration == CHUNK_INVALID) {
-      if (!Flash::IsBlank(
-              FLASH_STORAGE_BASE, FLASH_STORAGE_LAST - FLASH_STORAGE_BASE)) {
-        return STORAGE_DAMAGED;
-      }
+    if (calibration == CHUNK_INVALID && Flash::IsBlank(
+            FLASH_STORAGE_BASE, FLASH_STORAGE_LAST - FLASH_STORAGE_BASE)) {
       // Erased, then the power went: the mirror holds the calibration.
       const ChunkStatus mirror = ReadChunk(MIRROR_BASE, persistent_data);
       if (mirror == CHUNK_VALID) {
@@ -206,14 +207,13 @@ class ChunkStorage {
 
     uint16_t index = 1;
     for (; chunk_address(index + 1) <= FLASH_STORAGE_LAST; ++index) {
-      const ChunkStatus state = ReadChunk(chunk_address(index), state_data);
-      if (state == CHUNK_UNREADABLE) {
-        return STORAGE_DAMAGED_STATE;
-      } else if (state == CHUNK_INVALID) {
+      if (ReadChunk(chunk_address(index), state_data) != CHUNK_VALID) {
         break;
       }
     }
-    if (index == 1) {
+    if (calibration != CHUNK_VALID) {
+      return STORAGE_CALIBRATION_LOST;
+    } else if (index == 1) {
       // Rewritten, then the power went before the first state.
       return STORAGE_RESTORED;
     }
@@ -258,7 +258,7 @@ class ChunkStorage {
       FLASH_EraseInitTypeDef erase_params;
       erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
       erase_params.Banks = (index < 8) ? FLASH_BANK_1 : FLASH_BANK_2;
-      erase_params.Sector = index;
+      erase_params.Sector = index % 8;  // Within its bank.
       erase_params.NbSectors = 1;
       erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
 

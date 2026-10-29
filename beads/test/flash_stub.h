@@ -87,11 +87,23 @@ struct TestFlashState {
   int masked_reads;
   // Faults unmasked while a bus fault status was still latched.
   int stale_fault_status;
+  // Erases given a sector number the HAL's three-bit field can't hold, or
+  // outside bank 2.
+  int wide_sectors;
 };
+
 
 inline TestFlashState& TestFlash() {
   static TestFlashState state;
   return state;
+}
+
+// Erases take the sector within its bank.
+inline uint32_t TestFlashSectorStart(uint32_t banks, uint32_t sector) {
+  if (banks != 1 || sector > 7) {  // FLASH_BANK_2
+    ++TestFlash().wide_sectors;
+  }
+  return 0x08100000 + (sector & 7) * 0x20000;
 }
 
 // Error flags left by an earlier read or operation. As in the HAL, an erase

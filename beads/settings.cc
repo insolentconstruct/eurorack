@@ -89,32 +89,41 @@ bool Settings::Init(bool recovery_mode) {
   const State defaults = state_;
   repair_ = STORAGE_REPAIR_NONE;
   
-  const StorageStatus status = chunk_storage_.Init(&persistent_data_, &state_);
+  StorageStatus status = chunk_storage_.Init(&persistent_data_, &state_);
   
-  if (chunk_storage_.locked()) {
-    // Damaged: play on safe settings held in RAM, unfrozen since the stored
-    // flag can't be trusted. Only SEED at power-up writes. The calibration
-    // is the stored one if it read clean and plausible, else the mirror's,
-    // else the factory values.
+  // A lost or implausible calibration comes back from the mirror, the
+  // module's own calibration, with the states that loaded.
+  const bool lost = status == STORAGE_CALIBRATION_LOST;
+  const bool implausible = status == STORAGE_OK && \
+      !CalibrationPlausible(persistent_data_, factory);
+  PersistentData mirror;
+  if ((lost || implausible) && \
+      chunk_storage_.ReadMirror(&mirror) && \
+      CalibrationPlausible(mirror, factory)) {
+    persistent_data_ = mirror;
+    if (recovery_mode) {
+      state_ = defaults;
+    }
+    chunk_storage_.SavePersistentData();
+    status = STORAGE_RESTORED;
+  } else if (lost) {
+    status = STORAGE_DAMAGED;
+  }
+  
+  if (status == STORAGE_DAMAGED) {
+    // Neither copy of the calibration is usable: play on the factory values
+    // and default settings held in RAM, unfrozen since the stored flag can't
+    // be trusted. Only SEED at power-up writes.
+    chunk_storage_.Lock();
     state_ = defaults;
-    bool keep = status == STORAGE_DAMAGED_STATE && \
-        CalibrationPlausible(factory);
-    if (!keep) {
-      keep = chunk_storage_.ReadMirror(&persistent_data_) && \
-          CalibrationPlausible(factory);
-    }
-    if (!keep) {
-      persistent_data_ = factory;
-    }
+    persistent_data_ = factory;
     if (recovery_mode) {
-      repair_ = !chunk_storage_.Repair()
-          ? STORAGE_REPAIR_FAILED
-          : (keep
-              ? STORAGE_REPAIR_CALIBRATION_KEPT
-              : STORAGE_REPAIR_CALIBRATION_RESET);
+      repair_ = chunk_storage_.Repair()
+          ? STORAGE_REPAIR_CALIBRATION_RESET
+          : STORAGE_REPAIR_FAILED;
     }
-  } else if (status == STORAGE_OK) {
-    if (recovery_mode) {
+  } else {
+    if (recovery_mode && status == STORAGE_OK) {
       state_ = defaults;
       chunk_storage_.Recover(&persistent_data_, &state_);
     }
@@ -128,10 +137,13 @@ bool Settings::Init(bool recovery_mode) {
   return status != STORAGE_NEW || recovery_mode;
 }
 
-bool Settings::CalibrationPlausible(const PersistentData& factory) const {
+/* static */
+bool Settings::CalibrationPlausible(
+    const PersistentData& data,
+    const PersistentData& factory) {
   // Within 25% of the factory values, as FIX_OUTLIER checks.
   for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
-    const AdcCalibrationData& c = persistent_data_.adc_calibration[i];
+    const AdcCalibrationData& c = data.adc_calibration[i];
     const AdcCalibrationData& f = factory.adc_calibration[i];
     // Written so that NaN fails.
     if (!(fabsf(c.scale / f.scale - 1.0f) <= 0.25f) || \

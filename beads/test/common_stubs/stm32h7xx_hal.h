@@ -117,7 +117,7 @@ inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
     --TestFlashStuckErases();
     return 0;
   }
-  const uint32_t start = 0x08100000 + (e->Sector - 8) * 0x20000;
+  const uint32_t start = TestFlashSectorStart(e->Banks, e->Sector);
   TestFlashBeginOperation();
   memset(reinterpret_cast<void*>(start), 255, 0x20000 * e->NbSectors);
   TestFlashErased(start, 0x20000 * e->NbSectors);

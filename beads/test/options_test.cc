@@ -875,6 +875,7 @@ void TestCorruptCalibrationLocks() {
   r.settings.SaveState();
   uint8_t* flash = reinterpret_cast<uint8_t*>(0x081e0000);
   flash[8] ^= 1;  // Corrupt CALI payload without changing its checksum.
+  reinterpret_cast<uint8_t*>(0x081c0000)[8] ^= 1;  // And its mirror.
   static uint8_t sector[0x20000];
   memcpy(sector, flash, sizeof(sector));
   const uint32_t writes = test_writes;

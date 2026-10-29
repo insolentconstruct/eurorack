@@ -123,7 +123,6 @@ const uint8_t kOptionTag = 0xa0;
 // SEED held at power-up on damaged storage.
 enum StorageRepair {
   STORAGE_REPAIR_NONE,
-  STORAGE_REPAIR_CALIBRATION_KEPT,
   STORAGE_REPAIR_CALIBRATION_RESET,
   STORAGE_REPAIR_FAILED
 };
@@ -304,7 +303,9 @@ class Settings {
 
  private:
   void NormalizeOptions();
-  bool CalibrationPlausible(const PersistentData& factory) const;
+  static bool CalibrationPlausible(
+      const PersistentData& data,
+      const PersistentData& factory);
 
   PersistentData persistent_data_;
   State state_;

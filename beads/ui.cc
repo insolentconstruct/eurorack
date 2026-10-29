@@ -109,9 +109,6 @@ void Ui::Init(
 
 void Ui::ShowStorageStatus() {
   switch (settings_->repair()) {
-    case STORAGE_REPAIR_CALIBRATION_KEPT:
-      mode_ = MODE_REPAIR_CALIBRATION_KEPT;
-      break;
     case STORAGE_REPAIR_CALIBRATION_RESET:
       mode_ = MODE_REPAIR_CALIBRATION_RESET;
       break;
@@ -384,7 +381,6 @@ void Ui::UpdateLeds() {
       }
       break;
 
-    case MODE_REPAIR_CALIBRATION_KEPT:
     case MODE_REPAIR_CALIBRATION_RESET:
     case MODE_REPAIR_FAILED:
       {
@@ -404,10 +400,8 @@ void Ui::UpdateLeds() {
           }
         } else {
           color.g = blink ? 255 : 0;
-          if (mode_ == MODE_REPAIR_CALIBRATION_RESET) {
-            for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-              leds_.set(Led(LED_ASSIGN_1 + i), 255);
-            }
+          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+            leds_.set(Led(LED_ASSIGN_1 + i), 255);
           }
         }
         leds_.set_media(color);
