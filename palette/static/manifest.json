@@ -1,13 +1,405 @@
 {
-  "format": 1,
+  "format": 2,
   "releases": [
     {
-      "tag": "drizzlet-2026.10.18",
-      "name": "Drizzlet 2026.10.18 (Beta 1 \"Mist\")",
-      "app": "images/drizzlet-2026.10.18/app.bin",
-      "app_size": 275068,
-      "app_sha256": "ab2a03906f3c1395d76f93f60822ad30d18dd11d31bbe87f5a208ea1dec3f043",
-      "wav_sha256": "15622f5add8b99835c46071291a8e00784c591bfd39be5307bdf734e44f3a298"
+      "tag": "drizzlet-2026.10.29",
+      "name": "Drizzlet Beta 2 \u2014 development (unreleased)",
+      "development": true,
+      "source_commit": "a70e669a7da5a582b5fd2182b351e49f8b853480",
+      "app": "images/drizzlet-2026.10.29/app.bin",
+      "profile": {
+        "offset": 1024,
+        "size": 512,
+        "version": 1,
+        "release_id": 2770241376,
+        "features": [
+          {
+            "id": 1,
+            "name": "Pitch scale",
+            "values": [
+              "Off",
+              "Chromatic",
+              "Fifths and octaves",
+              "Major",
+              "Minor",
+              "Major pentatonic",
+              "Minor pentatonic",
+              "Pelog",
+              "Raag Bhairav",
+              "Raag Shri"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0.1,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              1,
+              2,
+              0,
+              1,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 2,
+            "name": "Reverb character",
+            "values": [
+              "Stock",
+              "Clouds-style"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0.5,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              2,
+              2,
+              0,
+              5,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 3,
+            "name": "Delay mode",
+            "values": [
+              "Auto (Stock)",
+              "Disabled",
+              "Wide/smooth filter"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": false,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              3,
+              2,
+              0,
+              4,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 4,
+            "name": "Processor",
+            "values": [
+              "Granular (Stock)",
+              "Spectral"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              4,
+              2,
+              0,
+              7,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 5,
+            "name": "Limiter",
+            "values": [
+              "Stock",
+              "Fast release",
+              "Off"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              5,
+              2,
+              0,
+              12,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 6,
+            "name": "Frozen feedback",
+            "values": [
+              "Stock",
+              "Evolving"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": false,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              6,
+              2,
+              0,
+              6,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 7,
+            "name": "Synth",
+            "values": [
+              "Beads (Stock)",
+              "Plaits"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 1,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              7,
+              2,
+              0,
+              8,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "name": "Attacks",
+            "values": [
+              "Off",
+              "Snap",
+              "Snap and trigger"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0.1,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              8,
+              2,
+              0,
+              3,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 9,
+            "name": "Synth start",
+            "values": [
+              "Automatic (Stock)",
+              "Manual"
+            ],
+            "page": true,
+            "amount": false,
+            "action": true,
+            "stateless": true,
+            "synth_path": false,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              9,
+              2,
+              0,
+              9,
+              0,
+              3
+            ]
+          },
+          {
+            "id": 10,
+            "name": "Random intervals",
+            "values": [
+              "Free (Stock)",
+              "Fifths and octaves"
+            ],
+            "page": true,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0.1,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              10,
+              2,
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 11,
+            "name": "Stereo width",
+            "values": null,
+            "page": false,
+            "amount": true,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 0.1,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              11,
+              2,
+              0,
+              0,
+              1,
+              0
+            ]
+          },
+          {
+            "id": 12,
+            "name": "Diffusion",
+            "values": null,
+            "page": false,
+            "amount": true,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "percent": 1,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              12,
+              2,
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          {
+            "id": 13,
+            "name": "Monophonic grains",
+            "values": [
+              "Off",
+              "On"
+            ],
+            "page": false,
+            "amount": false,
+            "action": true,
+            "stateless": false,
+            "synth_path": false,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              13,
+              2,
+              0,
+              0,
+              0,
+              1
+            ]
+          },
+          {
+            "id": 14,
+            "name": "Buffer trim",
+            "values": [
+              "Off",
+              "On"
+            ],
+            "page": false,
+            "amount": false,
+            "action": true,
+            "stateless": true,
+            "synth_path": false,
+            "cpu": {
+              "percent": 0,
+              "kind": "estimated",
+              "placeholder": true
+            },
+            "default": [
+              14,
+              1,
+              1,
+              0,
+              0,
+              2
+            ]
+          }
+        ]
+      },
+      "cpu": {
+        "baseline": {
+          "percent": 83,
+          "kind": "estimated",
+          "placeholder": true
+        },
+        "ceiling": 92,
+        "ceiling_kind": "measured",
+        "provisional": true,
+        "warning": 86,
+        "margin": 5,
+        "combinations": []
+      },
+      "app_sha256": "1c557891bacf9715b9046dfc2af7c8303bc93fc18dd1dd25733565809f50aa94",
+      "app_size": 633232,
+      "wav_sha256": "0fb983cac9f32797b063ebf6f785846b00b3d0496523aa20b9d010a5ab882208"
     }
   ]
 }

@@ -13,6 +13,8 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { defaults, encodeProfile, equal } from '../static/js/profile.js';
+import { decode } from '../static/js/decoder.js';
 import { encode, MAX_APP_SIZE } from '../static/js/encoder.js';
 
 const root = new URL('../static/', import.meta.url);
@@ -24,21 +26,32 @@ const check = (ok, text) => {
   failures += !ok;
 };
 
-check(manifest.format === 1 && manifest.releases.length > 0, 'manifest format 1 with releases');
+check(manifest.format === 2 && manifest.releases.length > 0, 'manifest format 2 with releases');
 for (const release of manifest.releases) {
   const app = readFileSync(new URL(release.app, root));
   check(app.length === release.app_size && app.length <= MAX_APP_SIZE,
       `${release.tag}: app size ${app.length}`);
   check(hash(app) === release.app_sha256, `${release.tag}: app SHA-256`);
-  check(hash(encode(app)) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
-  // The hashes the release was built against, from the tag itself.
-  const pinned = (file) => execFileSync('git',
-      ['show', `refs/tags/${release.tag}:beads/build/${file}`],
-      { encoding: 'utf8' }).split('\n');
-  check(pinned('expected-hashes.sha256').includes(`${release.app_sha256}  app.bin`),
-      `${release.tag}: app SHA-256 pinned at the tag`);
-  check(pinned('expected-wav.sha256').includes(`${release.wav_sha256}  app.wav`),
-      `${release.tag}: .wav SHA-256 pinned at the tag`);
+  check(release.profile && release.profile.offset === 1024 && release.profile.size === 512, `${release.tag}: profile metadata`);
+  check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1536)), `${release.tag}: default profile equals firmware`);
+  const wav = encode(app);
+  check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
+  check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
+  if (release.development) {
+    // Development builds have no release tag. Bind their format to the
+    // recorded source commit; the independently encoded WAV pins the build.
+    const source = execFileSync('git', ['show', `${release.source_commit}:beads/profile.h`], { encoding: 'utf8' });
+    check(source.includes(`kProfileReleaseId = 0x${release.profile.release_id.toString(16)}`),
+        `${release.tag}: profile release id pinned at source commit`);
+  } else {
+    const pinned = (file) => execFileSync('git',
+        ['show', `refs/tags/${release.tag}:beads/build/${file}`],
+        { encoding: 'utf8' }).split('\n');
+    check(pinned('expected-hashes.sha256').includes(`${release.app_sha256}  app.bin`),
+        `${release.tag}: app SHA-256 pinned at the tag`);
+    check(pinned('expected-wav.sha256').includes(`${release.wav_sha256}  app.wav`),
+        `${release.tag}: .wav SHA-256 pinned at the tag`);
+  }
 }
 let refused = false;
 try {
