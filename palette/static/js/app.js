@@ -9,7 +9,7 @@
 
 import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta } from './profile.js';
 import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js';
-import { downloadCounts, countLine, recordDownload } from './downloads.js';
+import { downloadCounts, countLine, recordDownload, afterInteraction } from './downloads.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -88,6 +88,13 @@ async function build(release, app) {
   status(isDefault ? 'Done: identical to the release update file. WAV decoded and checked.' : `Done: profile ${fp}. WAV decoded and checked.`, 'ok');
   await updateGuides(release, chosen, fp, names);
   $('download').onclick = () => recordDownload(release);
+  if (navigator.doNotTrack !== '1') {
+    const query = new URLSearchParams({ p: `/render/${release.tag}`, t: release.tag,
+      rnd: Math.random().toString(36).slice(2) });
+    fetch(`https://insolentconstruct.goatcounter.com/count?${query}`, {
+      mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer'
+    }).catch(() => {});
+  }
 }
 
 function selected() {
@@ -220,7 +227,7 @@ async function refresh() {
   const cpu = cpuUsage(entries, release);
   document.body.classList.toggle('cpu-warning', cpu.warning);
   $('cpu').textContent = `${cpu.percent.toFixed(1)}% ${cpu.kind}: ${cpu.names}. ` +
-      cpu.engines.map((e) => `${e.engine}: ${e.percent.toFixed(1)}%; baseline ${e.baseline.percent}% ${e.baseline.kind}${e.baseline.placeholder ? ' (placeholder)' : ''}${e.baseline.provisional ? ' (provisional)' : ''}.`).join(' ') +
+      cpu.engines.map((e) => `${e.engine}: ${e.percent.toFixed(1)}%; baseline ${e.baseline.percent}% ${e.baseline.kind}${e.baseline.placeholder ? ' (placeholder)' : ''}${e.baseline.provisional ? ' (provisional)' : ''}: ${e.baseline.provenance}.`).join(' ') +
       `Stock ceiling ${release.cpu.ceiling}% ${release.cpu.ceiling_kind} (provisional). ` +
       (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
   $('build').disabled = $('local').disabled = busy || cpu.blocked;
@@ -252,9 +259,9 @@ async function init() {
     const line = document.createElement('p'); line.className = 'note';
     line.textContent = release.date || ''; line.hidden = !line.textContent;
     $('download-counts').append(line);
-    counts(release).then((total) => {
+    afterInteraction(document, () => counts(release).then((total) => {
       line.textContent = countLine(release, total); line.hidden = !line.textContent;
-    }).catch(() => {});
+    }).catch(() => {}));
   }
   $('release').selectedIndex = manifest.releases.length - 1;
   entries = defaults(selected().profile);

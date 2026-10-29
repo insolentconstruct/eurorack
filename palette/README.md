@@ -11,19 +11,19 @@ firmware profiles are refused. Older plain-WAV releases are not offered.
 
 The current entry is an **unreleased development build** pinned in the manifest. All
 feature CPU deltas are placeholder estimates until the per-feature cost table exists.
-The baseline is the release DEFAULT profile's measured module worst case:
-85.8% synth and 83.0% granular, flagged `measured-provisional`, from the
-2026-10-27/28 release sessions. Each feature's `cpu.off`, `fixed` and
-`adjustable` values are signed deltas versus its default setting, not extra
-costs added on top of an already measured default. Arrays index the setting;
-continuous values interpolate provisionally between zero and maximum. Off or
-lighter settings subtract cost; heavier settings add cost. These estimates do not claim a measured
-cost for any individual feature. Synth-path deltas apply to synth; all deltas
-apply conservatively to granular.
+The baseline is **partly measured**: synth 85.8% is the Beta 2 wavetable row
+with stock reverb measured in the 2026-10-27/28 sessions; synth with Clouds-style
+reverb was never measured and is estimated at about 87%. Granular was measured
+at 83.0%. The release entry still needs the measured worst case of the default
+profile, including Clouds-style reverb in synth mode. The exact DEFAULT profile
+is always allowed; this allowance does not imply a fully measured baseline.
 
-The byte-identical DEFAULT block is a measured combination and builds with these
-baselines. Other measured combinations key on the complete encoded 512-byte
-profile (`cpu.combinations[].profile`, hex), with worst-case `synth` and `granular`
+The current deltas are provisional signed estimates against default settings.
+The intended worst-case model gives Adjustable features zero delta and lets
+Fixed settings only lower the baseline; settle this with the cost table.
+The current code and placeholder table retain their existing model meanwhile.
+Other measured combinations key on the complete encoded 512-byte profile
+(`cpu.combinations[].profile`, hex), with worst-case `synth` and `granular`
 percentages. Placement or default changes require another exact match.
 Each engine rounds to 0.1% before checking: warn from 86%, block unmeasured
 combinations above 87% (provisional ceiling 92% minus 5% margin), and allow
@@ -83,17 +83,19 @@ CI also encodes every build's `app.bin` and checks it against `beads/build/expec
 **Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 
 **Counting:** WAV download clicks (not builds or guide downloads) send one
-`download/<release-slug>` event through GoatCounter's script. The event name is
+`download/<release-slug>` event through GoatCounter's scriptless `/count` endpoint (`p` is the event
+path and `e=true` marks an event). The event name is
 the only application data sent: no profile, fingerprint, custom/default marker,
 page URL, referrer or personal data. The request necessarily exposes the browser
-and IP address to the service. “Do not track” is respected; no automatic pageview
-is sent. Custom and default downloads share one event per version because
+and IP address to the service. “Do not track” is respected. The pre-existing scriptless `/render/<tag>`
+count after a successful build is retained. Custom and default downloads share one event per version because
 GoatCounter has no separate event properties that preserve that count page.
-See the [GoatCounter JavaScript API](https://www.goatcounter.com/help/js).
+See the [GoatCounter endpoint parameters](https://www.goatcounter.com/help/pixel).
 
 The owner must enable **Allow adding visitor counts** in GoatCounter settings.
-The page reads `/counter/<encoded-event-name>.json` and adds GitHub release asset
-`download_count` values for names ending `-wav.zip`. Counts may merge repeat
+After the first pointer or keyboard interaction, the page reads `/counter/<encoded-event-name>.json` and adds GitHub release asset
+`download_count` values from api.github.com for names ending `-wav.zip`.
+Both services receive the browser and IP address. Counts may merge repeat
 downloads by the same visitor on the same day. Totals of at least 10 are shown;
 otherwise the manifest date is shown, or the line is hidden if no date exists.
 Either source can fail independently; results (including failures) are cached

@@ -7,12 +7,24 @@
 // Public, per-release counts. Failures never affect the WAV builder.
 export const eventName = (release) => `download/${release.slug || release.tag.replace(/^drizzlet-/, '')}`;
 
-export function recordDownload(release, counter = globalThis.goatcounter, dnt = globalThis.navigator?.doNotTrack) {
+export function recordDownload(release, fetcher = globalThis.fetch, dnt = globalThis.navigator?.doNotTrack) {
   if (dnt === '1') return;
   try {
-    // One event per version: GoatCounter has no separate event properties.
-    counter?.count({ path: eventName(release), event: true, title: '', referrer: '' });
+    const query = new URLSearchParams({ p: eventName(release), e: 'true' });
+    Promise.resolve(fetcher(`https://insolentconstruct.goatcounter.com/count?${query}`, {
+      mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
+    })).catch(() => {});
   } catch {} // A blocked or unavailable counter must not interrupt a download.
+}
+
+// Defer optional third-party count requests until the page is being used.
+export function afterInteraction(target, callback) {
+  const events = ['pointerdown', 'keydown'];
+  const start = () => {
+    for (const event of events) target.removeEventListener(event, start);
+    callback();
+  };
+  for (const event of events) target.addEventListener(event, start, { once: true });
 }
 
 function number(value) {

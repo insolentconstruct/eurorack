@@ -134,8 +134,11 @@ const changedPlacement = measuredEntries.map((e) => e.slice()); changedPlacement
 assert.equal(cpuUsage(changedPlacement, measuredRelease).kind, 'estimated');
 for (const r of manifest.releases) {
   const usage = cpuUsage(defaults(r.profile), r);
-  assert.equal(usage.kind, 'measured'); assert(!usage.blocked);
+  assert.equal(usage.kind, 'partly measured'); assert(!usage.blocked);
   assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 85.8);
+  const highDefault = structuredClone(r);
+  highDefault.cpu.baselines.synth.percent = 99;
+  assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
   for (const [name, candidate] of Object.entries(templates(r.profile))) {
     const result = cpuUsage(candidate, r);
     assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 87), name);

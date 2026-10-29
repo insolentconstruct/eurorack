@@ -149,11 +149,11 @@ export function cpuUsage(entries, release) {
     const percent = Math.round((measured ? measured[engine] : baseline.percent +
         contributing.reduce((sum, f) => sum + f.delta, 0)) * 10) / 10;
     return { engine, baseline, percent,
-      blocked: percent > release.cpu.ceiling - (measured ? 0 : release.cpu.margin),
+      blocked: !isDefault && percent > release.cpu.ceiling - (measured ? 0 : release.cpu.margin),
       warning: percent >= release.cpu.warning };
   });
   return { engines, percent: Math.max(...engines.map((e) => e.percent)),
     blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
-    kind: measured ? 'measured' : 'estimated',
+    kind: isDefault ? 'partly measured' : measured ? 'measured' : 'estimated',
     names: deltas.filter((f) => f.delta).map((f) => f.feature.name).join(', ') || 'Release default settings' };
 }

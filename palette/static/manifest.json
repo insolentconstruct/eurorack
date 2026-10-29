@@ -539,18 +539,19 @@
         "warning": 86,
         "margin": 5,
         "combinations": [],
+        "release_note": "Before release, measure the worst case of the default profile, including Clouds-style reverb in synth mode. The default profile is always allowed.",
         "baselines": {
           "synth": {
             "percent": 85.8,
-            "kind": "measured-provisional",
+            "kind": "partly measured",
             "provisional": true,
-            "provenance": "Release DEFAULT profile module worst case, release sessions 2026-10-27/28."
+            "provenance": "Beta 2 wavetable row measured 85.8% with stock reverb in the 2026-10-27/28 sessions. Synth with Clouds-style reverb was not measured; estimated about 87%."
           },
           "granular": {
             "percent": 83.0,
-            "kind": "measured-provisional",
+            "kind": "partly measured",
             "provisional": true,
-            "provenance": "Release DEFAULT profile module worst case, release sessions 2026-10-27/28."
+            "provenance": "Granular measured 83.0% in the 2026-10-27/28 sessions; the default profile baseline is partly measured because synth with Clouds-style reverb remains estimated (about 87%)."
           }
         }
       },

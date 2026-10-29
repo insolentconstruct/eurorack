@@ -6,7 +6,24 @@
 //
 // All network access is stubbed; never contact analytics from tests.
 import assert from 'node:assert/strict';
-import { downloadCounts, countLine, eventName, recordDownload } from '../static/js/downloads.js';
+import { readFileSync } from 'node:fs';
+import { downloadCounts, countLine, eventName, recordDownload, afterInteraction } from '../static/js/downloads.js';
+const html = readFileSync(new URL('../static/index.html', import.meta.url), 'utf8');
+function checkScripts(source) {
+  for (const tag of source.matchAll(/<script\b[^>]*>/gi)) {
+    const src = tag[0].match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    if (src) assert.equal(new URL(src[1] ?? src[2] ?? src[3], 'https://local.invalid/').origin,
+      'https://local.invalid', 'scripts must be local');
+  }
+  const csp = source.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/i)[1];
+  const directives = csp.split(';').map((d) => d.trim().split(/\s+/)).filter((d) => d[0] === 'script-src');
+  assert.deepEqual(directives, [['script-src', "'self'"]]);
+}
+checkScripts(html);
+for (const script of ['<script src="https://external.invalid/a.js"></script>', '<script src=//external.invalid/a.js></script>']) {
+  assert.throws(() => checkScripts(html + script));
+}
+assert.throws(() => checkScripts(html.replace("script-src 'self'", "script-src 'self' https://external.invalid")));
 globalThis.fetch = () => { throw new Error('Live network forbidden'); };
 const release = { name: 'Beta 2 (Fog)', tag: 'drizzlet-test', slug: 'beta-2-fog', date: '2026-10-29' };
 assert.equal(eventName(release), 'download/beta-2-fog');
@@ -38,12 +55,28 @@ assert.equal(countLine(release, 10), 'Beta 2 (Fog): downloaded 10 times');
 assert.equal(countLine(release, null), release.date);
 assert.equal(countLine({ name: 'Unknown' }, null), '');
 const events = [];
-recordDownload(release, { count: (event) => events.push(event) }, '1');
+const send = async (...args) => events.push(args);
+recordDownload(release, send, '1');
 assert.equal(events.length, 0);
-recordDownload(release, { count: (event) => events.push(event) }, '0');
-assert.deepEqual(events, [{ path: 'download/beta-2-fog', event: true, title: '', referrer: '' }]);
-recordDownload(release, undefined, '0');
-recordDownload(release, { count: () => { throw new Error('blocked'); } }, '0');
+recordDownload(release, send, '0');
+assert.equal(events.length, 1);
+const [url, options] = events[0];
+const query = new URL(url).searchParams;
+assert.deepEqual([...query], [['p', 'download/beta-2-fog'], ['e', 'true']]);
+assert.deepEqual(options, { mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
+recordDownload(release, () => { throw new Error('blocked'); }, '0');
+recordDownload(release, async () => { throw new Error('offline'); }, '0');
+const target = new EventTarget();
+let starts = 0;
+afterInteraction(target, () => starts++);
+assert.equal(starts, 0, 'no count request during load');
+target.dispatchEvent(new Event('pointerdown'));
+target.dispatchEvent(new Event('keydown'));
+assert.equal(starts, 1, 'count requests start once on first interaction');
+const keyboard = new EventTarget();
+afterInteraction(keyboard, () => starts++);
+keyboard.dispatchEvent(new Event('keydown'));
+assert.equal(starts, 2, 'keyboard interaction also starts counts');
 const stored = new Map();
 const storage = { getItem: (key) => stored.has(key) ? stored.get(key) : null,
   setItem: (key, value) => stored.set(key, value) };
