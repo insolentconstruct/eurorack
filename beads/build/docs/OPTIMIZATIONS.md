@@ -6,7 +6,7 @@ Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overloa
 
 ## TL;DR
 
-On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. These figures were not measured on a module.
+On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These figures were not measured on a module.
 
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|
@@ -24,6 +24,7 @@ Headroom gained per change, in points of the budget on the busiest stock block. 
 | Unsigned modulo for the delay-line read | 0.6 |
 | Grains interpolate the stored integers (integer Hermite) | 5.6 |
 | Total, measured on this branch | 13.8 |
+| Synth grains computed in pairs (synth only, its busiest case; not in the total) | 5.7 |
 
 Plain GCC 11 to 16 builds are 5,800 to 9,300 cycles slower than GCC 9 on the stock peak (GCC 10.3, from an unverified archive, 10,200); raising the inlining limit brings GCC 11 within noise of GCC 9. An explicit fused multiply-add in the random pan spread keeps GCC 9's audio identical to 4.9.3's. Another in the grain pan mix, and two values rounded separately, make newer compilers round as GCC 9 does (emulated audio identical in 20 scenarios). The bootloader stays on 4.9.3.
 
@@ -83,6 +84,7 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 | Unsigned modulo for the delay-line read index | Mutable Instruments: the same file's `LoadQuad` already uses `size_t(i) % items_per_bank()` | local frame | 739 / 556 (run 2: 636 / 550) | -272 B | 0 | gates run on the combined tree | kept |
 | Both pass-2 changes together | the two rows above | template | 4,369 / 4,281 | +1,376 B | 0 | 28/28, 20/20, 13/13, error 0 | kept |
 | Grain Hermite read on the stored integers, scaled once | Mutable Instruments: Clouds' `ReadHermite` interpolates the unscaled samples and multiplies by `scale` once (`clouds/dsp/audio_buffer.h:241-277`) | the three changes | 6,775 / 7,140 (run 2: 6,840 / 7,130) | -504 B | 0 | 28/28 development board hashes (audio and buffers); host tests | kept |
+| Synth: two playing grains computed side by side, mixed in index order | Port from Drizzlet: the in-order core overlaps two grains' independent sample and envelope chains; each grain's arithmetic is unchanged | integer Hermite, on this branch | unchanged (synth only) | +2,712 B | 0 | 14/14 synth development board hashes (audio and reverb); granular image byte-identical; host tests, `TestSynthGrainPairs` | kept |
 | All sample loops in ITCM | Mutable Instruments: stmlib's `IN_RAM` placement | GCC 9 | -765 / -770 | +336 B | +21,440 B ITCM | 28/28 development board | rejected |
 | ITCM on top of the template | Mutable Instruments: stmlib's `IN_RAM` placement | template | -611 / -505 | +360 B | +23,448 B ITCM | 28/28 development board | rejected |
 | Extra grain/delay template | Mutable Instruments: template specialization | GCC 9 | -1,693 / -1,812 | -336 B | 0 | 28/28 development board | rejected |
@@ -102,12 +104,14 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 
 **Integer Hermite.** Grain reads converted four stored samples to float and scaled each one before the Hermite polynomial. Like Clouds' `ReadHermite` (`clouds/dsp/audio_buffer.h:241-277`), they now interpolate the stored integers (`Item::raw`) and scale the result once: two multiplies per stereo read instead of eight. 8-bit µ-law lines and the delay taps keep the float read. Identical sound depends on keeping each rounding step in place: `c` stays `float(c) * 0.5f`, computed first, otherwise GCC fuses a different multiply-add and 10 of 28 hashes change (the delay taps differed the same way, so they keep the old read). `TestHermiteRawMatchesScaled` checks it on the host.
 
+**Synth pairs.** Measured on this branch (before the fade change) with a 14-scenario synth probe, cycles saved peak / median: busiest synth case (SIZE 0.97, DENSITY 0.95, reverb 0.7) 6,825 / 6,649 (5.7 / 5.5 points); 32 grains 7,032 / 6,479; 32 grains with FREEZE held 5,302 / 5,279; stock synth (SIZE 0.85, +24 st, 16-bit) 6,063 / 5,369 (5.1 / 4.5 points). Two runs agree to the cycle. When both grains of a fixed pair play, both samples are computed, then both envelopes, then both are mixed; otherwise each grain renders alone.
+
 **Untried ideas** (none fits the rules below): whole-block rendering per grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
 
 ## Method
 
 - **Development-board probe.** The real `Processor::Process` at 480 MHz with caches on and memory placed as in the firmware (state and stack in DTCM, delay buffers in AXI and D2 SRAM, reverb in D3 SRAM). 16,000 warm blocks, then 4,096 measured; median is the upper middle. Scenarios: q0 to q3, stereo and mono, dense, stress32 and delay (24 on this branch; 28 on the tree above, which adds option cases). Stress32 holds all 32 grains active at +4x speed. Peaks are finite-sample maxima, not proven bounds.
-- **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, wavetable synth mode. The full callback on a module is higher.
+- **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, wavetable synth mode (measured separately: Synth pairs). The full callback on a module is higher.
 - **Bit-identical checks.** Development-board output and buffer hashes; 20 short and 13 long emulator scenarios (272,000 blocks in all) compared sample by sample. CI compares native-host audio byte for byte against checked-in pre-optimization DSP headers across 20 scenarios, including all four recording qualities and synth resolutions; host floating-point comparisons do not establish linked-ARM equivalence. See `beads/test/README.md` for the exact checks and limits.
 
 ## Rules for future changes
