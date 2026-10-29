@@ -265,6 +265,46 @@ void TestSynthFreeze() {
   CHECK(grain.remaining_samples() == remaining - 1);
 }
 
+void TestSynthGrainPairs() {
+  test_checker.Start("TestSynthGrainPairs");
+  static SynthHarness h;
+  static WavetableGrain reference[32];
+  h.Init();
+  h.parameters.size.base = 0.5f;
+  WavetableGranularPlayer* player = &h.synth.wavetable_granular_player_;
+  TriggerGenerator::Output no_trigger;
+  memset(&no_trigger, 0, sizeof(no_trigger));
+  int playing_pairs = 0;
+  int other_pairs = 0;
+  int stolen = 0;
+  for (int i = 0; i < 3 * 2600; ++i) {
+    const int t = i % 2600;
+    const bool freeze = i >= 2600 && i < 5200 && t >= 400 && t < 1400;
+    if (t < 72) {
+      const int active = player->CountActiveGrains();
+      h.Tick(i & 1, false);
+      stolen += active == 32 && (i & 1);
+    }
+    // Pairs against one grain at a time, in index order: same mix and state.
+    memcpy(static_cast<void*>(reference), player->grain_, sizeof(reference));
+    for (int g = 0; g < 32; g += 2) {
+      const bool both = !reference[g].done() && !reference[g + 1].done();
+      playing_pairs += both;
+      other_pairs += !both;
+    }
+    FloatFrame paired = { 0.0f, 0.0f };
+    player->Render(0, 0, no_trigger, freeze, h.parameters, &paired);
+    FloatFrame single = { 0.0f, 0.0f };
+    for (int g = 0; g < 32; ++g) {
+      reference[g].Render(&single, freeze);
+    }
+    CHECK(paired.l == single.l && paired.r == single.r);
+    CHECK(!memcmp(static_cast<void*>(reference), player->grain_,
+        sizeof(reference)));
+  }
+  CHECK(playing_pairs > 50000 && other_pairs > 30000 && stolen > 0);
+}
+
 void TestSynthResolution() {
   test_checker.Start("TestSynthResolution");
   const int dry_bits[] = { 4, 16, 7, 16 };
@@ -547,6 +587,7 @@ void TestSynthStereoWidth() {
 int main() {
   TestSynthMixEndpoints();
   TestSynthFreeze();
+  TestSynthGrainPairs();
   TestQuantizedSynthGrains();
   TestRandomIntervalSynthGrains();
   TestSynthStereoWidth();
