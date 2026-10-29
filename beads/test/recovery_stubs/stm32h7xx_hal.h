@@ -50,7 +50,7 @@ extern bool test_ecc_error;  // Every masked read hits a double ECC error.
 extern int test_ecc_read;  // Only this masked read (counting from 1) does.
 extern int test_masked_reads;
 extern int test_fail_programs;  // Writes that report failure, writing nothing.
-extern int test_silent_programs;  // Writes that report success, writing nothing.
+extern int test_silent_programs;  // Writes that succeed, writing nothing.
 extern uint32_t test_faultmask;
 extern uint32_t test_sr2;  // Sticky error flags.
 extern int test_fail_sector;  // The sector number given, or -1 for any.
