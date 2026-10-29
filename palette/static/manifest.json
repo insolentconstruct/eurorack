@@ -34,9 +34,34 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0.1,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -0.1,
+              "fixed": [
+                -0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1
+              ],
+              "adjustable": [
+                0,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1
+              ]
             },
             "default": [
               1,
@@ -60,9 +85,18 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0.5,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -0.5,
+              "fixed": [
+                -0.5,
+                0.5
+              ],
+              "adjustable": [
+                0,
+                0.5
+              ]
             },
             "default": [
               2,
@@ -87,9 +121,20 @@
             "stateless": false,
             "synth_path": false,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0,
+                0
+              ]
             },
             "default": [
               3,
@@ -113,9 +158,18 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0
+              ]
             },
             "default": [
               4,
@@ -140,9 +194,20 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0,
+                0
+              ]
             },
             "default": [
               5,
@@ -166,9 +231,18 @@
             "stateless": false,
             "synth_path": false,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0
+              ]
             },
             "default": [
               6,
@@ -192,9 +266,18 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 1,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -1,
+              "fixed": [
+                -1,
+                1
+              ],
+              "adjustable": [
+                0,
+                1
+              ]
             },
             "default": [
               7,
@@ -219,9 +302,20 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0.1,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -0.1,
+              "fixed": [
+                -0.1,
+                0.1,
+                0.1
+              ],
+              "adjustable": [
+                0,
+                0.1,
+                0.1
+              ]
             },
             "default": [
               8,
@@ -245,9 +339,18 @@
             "stateless": true,
             "synth_path": false,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0
+              ]
             },
             "default": [
               9,
@@ -271,9 +374,18 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0.1,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -0.1,
+              "fixed": [
+                -0.1,
+                0.1
+              ],
+              "adjustable": [
+                0,
+                0.1
+              ]
             },
             "default": [
               10,
@@ -294,9 +406,18 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 0.1,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -0.1,
+              "fixed": {
+                "zero": -0.1,
+                "maximum": 0.1
+              },
+              "adjustable": {
+                "zero": 0,
+                "maximum": 0.1
+              }
             },
             "default": [
               11,
@@ -317,9 +438,18 @@
             "stateless": false,
             "synth_path": true,
             "cpu": {
-              "percent": 1,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": -1,
+              "fixed": {
+                "zero": -1,
+                "maximum": 1
+              },
+              "adjustable": {
+                "zero": 0,
+                "maximum": 1
+              }
             },
             "default": [
               12,
@@ -343,9 +473,18 @@
             "stateless": false,
             "synth_path": false,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0
+              ]
             },
             "default": [
               13,
@@ -369,9 +508,18 @@
             "stateless": true,
             "synth_path": false,
             "cpu": {
-              "percent": 0,
-              "kind": "estimated",
-              "placeholder": true
+              "kind": "estimate",
+              "placeholder": true,
+              "reference": "release-default",
+              "off": 0,
+              "fixed": [
+                0,
+                0
+              ],
+              "adjustable": [
+                0,
+                0
+              ]
             },
             "default": [
               14,
@@ -393,24 +541,24 @@
         "combinations": [],
         "baselines": {
           "synth": {
-            "percent": 86,
-            "kind": "estimated",
-            "placeholder": true,
+            "percent": 85.8,
+            "kind": "measured-provisional",
             "provisional": true,
-            "provenance": "Provisional lower bound of measured module worst-case range 86\u201387%; feature increments are placeholders."
+            "provenance": "Release DEFAULT profile module worst case, release sessions 2026-10-27/28."
           },
           "granular": {
-            "percent": 83,
-            "kind": "estimated",
-            "placeholder": true,
+            "percent": 83.0,
+            "kind": "measured-provisional",
             "provisional": true,
-            "provenance": "Provisional upper bound of measured module worst-case range 81\u201383%; feature increments are placeholders."
+            "provenance": "Release DEFAULT profile module worst case, release sessions 2026-10-27/28."
           }
         }
       },
       "app_sha256": "1c557891bacf9715b9046dfc2af7c8303bc93fc18dd1dd25733565809f50aa94",
       "app_size": 633232,
-      "wav_sha256": "0fb983cac9f32797b063ebf6f785846b00b3d0496523aa20b9d010a5ab882208"
+      "wav_sha256": "0fb983cac9f32797b063ebf6f785846b00b3d0496523aa20b9d010a5ab882208",
+      "slug": "beta-2-fog",
+      "date": "2026-10-29"
     }
   ]
 }

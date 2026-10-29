@@ -129,14 +129,25 @@ export function templates(profile) {
 }
 export const profileKey = (entries, profile) => Array.from(encodeProfile(entries, profile),
     (v) => v.toString(16).padStart(2, '0')).join('');
+// Provisional per-setting deltas relative to the release DEFAULT feature setting.
+export function featureDelta(entry, feature) {
+  const e = entry || [feature.id, 0];
+  if (e[1] === 0) return feature.cpu.off;
+  const costs = feature.cpu[e[1] === 1 ? 'fixed' : 'adjustable'];
+  return Array.isArray(costs) ? costs[e[2]] : costs.zero + (costs.maximum - costs.zero) * e[2] / 255;
+}
 export function cpuUsage(entries, release) {
-  const active = entries.filter((e) => e[1] === 2 || (e[1] === 1 && e[2]));
-  const features = active.map((e) => release.profile.features.find((f) => f.id === e[0]));
-  const measured = release.cpu.combinations.find((c) => c.profile === profileKey(entries, release.profile));
+  const key = profileKey(entries, release.profile);
+  const isDefault = key === profileKey(defaults(release.profile), release.profile);
+  const measured = isDefault ?
+    Object.fromEntries(Object.entries(release.cpu.baselines).map(([e, b]) => [e, b.percent])) :
+    release.cpu.combinations.find((c) => c.profile === key);
+  const deltas = release.profile.features.map((f) => ({ feature: f,
+    delta: featureDelta(entries.find((e) => e[0] === f.id), f) }));
   const engines = Object.entries(release.cpu.baselines).map(([engine, baseline]) => {
-    const contributing = features.filter((f) => engine === 'synth' ? f.synth_path : true);
+    const contributing = deltas.filter(({ feature: f }) => engine === 'synth' ? f.synth_path : true);
     const percent = Math.round((measured ? measured[engine] : baseline.percent +
-        contributing.reduce((sum, f) => sum + f.cpu.percent, 0)) * 10) / 10;
+        contributing.reduce((sum, f) => sum + f.delta, 0)) * 10) / 10;
     return { engine, baseline, percent,
       blocked: percent > release.cpu.ceiling - (measured ? 0 : release.cpu.margin),
       warning: percent >= release.cpu.warning };
@@ -144,5 +155,5 @@ export function cpuUsage(entries, release) {
   return { engines, percent: Math.max(...engines.map((e) => e.percent)),
     blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
     kind: measured ? 'measured' : 'estimated',
-    names: features.filter((f) => f.cpu.percent).map((f) => f.name).join(', ') || 'Stock settings' };
+    names: deltas.filter((f) => f.delta).map((f) => f.feature.name).join(', ') || 'Release default settings' };
 }

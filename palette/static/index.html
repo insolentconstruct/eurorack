@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://insolentconstruct.goatcounter.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://insolentconstruct.goatcounter.com; connect-src 'self' https://insolentconstruct.goatcounter.com https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Drizzlet Hygrostat</title>
 <style>
   :root {
@@ -67,7 +67,8 @@
   <section>
     <label for="release">Release</label>
     <select id="release"></select>
-    <p id="development" class="note" hidden>Development build for Beta 2. Unreleased. CPU costs are placeholder estimates.</p>
+    <div id="download-counts" aria-live="polite"></div>
+    <p id="development" class="note" hidden>Development build for Beta 2. Unreleased. Feature CPU deltas are placeholder estimates; default CPU measurements are provisional.</p>
     <fieldset id="editor">
       <label for="template">Start from</label><select id="template"></select>
       <p class="note">Off uses stock behaviour. Fixed keeps the chosen default. Adjustable uses the controls below. Other stock gestures keep their meaning.</p>
@@ -98,10 +99,11 @@
   <section>
     <p class="note">The default Drizzlet profile makes the release update file byte for byte. Each generated WAV is decoded and checked before download.</p>
     <p class="note">Install it as described in the <a href="https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/README.md#updating-your-module">README</a>. Drizzlet is community firmware; it is not a Mutable Instruments product, so please do not contact Mutable Instruments about it.</p>
-    <p class="note">Each update file made is counted, by version only, with <a href="https://www.goatcounter.com">GoatCounter</a>: no cookies, and your browser's "do not track" setting is respected. Like any web request, it sees your IP address and browser.</p>
+    <p class="note">WAV download clicks are counted by version with <a href="https://www.goatcounter.com">GoatCounter</a>, respecting “do not track”. The event contains only the version's download event name; no profile or personal data is added. Requests expose your IP address and browser to the service. Totals include GitHub WAV downloads and may merge repeat downloads by the same visitor on the same day.</p>
     <small>Insolent Construct · <a href="https://github.com/insolentconstruct/eurorack">Source</a> · Encoder based on Mutable Instruments' (MIT); sine and cosine from the GNU C Library (LGPL 2.1 or later).<br>Not an ultrasonic humidifier. Please do not fill with water.</small>
   </section>
 </main>
 <script type="module" src="js/app.js"></script>
+<script data-goatcounter="https://insolentconstruct.goatcounter.com/count" data-goatcounter-settings='{"no_onload":true}' async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>

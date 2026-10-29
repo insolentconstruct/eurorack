@@ -10,15 +10,24 @@ templates, share links and desktop/phone SVG guides. Conflicts and invalid
 firmware profiles are refused. Older plain-WAV releases are not offered.
 
 The current entry is an **unreleased development build** pinned in the manifest. All
-feature CPU costs and per-engine baselines are placeholder estimates. Replace them with
-module measurements before publishing a release. The provisional baselines use
-86% for synth (measured range 86–87%) and 83% for granular (81–83%).
-Synth-path costs apply to synth; all active costs apply conservatively to granular.
-Estimates are rounded to 0.1% before each engine is checked. The provisional stock ceiling
-is 92%; unmeasured combinations warn from 86% and are blocked above 87%.
-A measured combination at or below 92% is allowed. A measurement is tied to the
-complete encoded 512-byte profile block (`cpu.combinations[].profile`, hex), with
-its worst-case `synth` and `granular` percentages; placement or default changes require another match.
+feature CPU deltas are placeholder estimates until the per-feature cost table exists.
+The baseline is the release DEFAULT profile's measured module worst case:
+85.8% synth and 83.0% granular, flagged `measured-provisional`, from the
+2026-10-27/28 release sessions. Each feature's `cpu.off`, `fixed` and
+`adjustable` values are signed deltas versus its default setting, not extra
+costs added on top of an already measured default. Arrays index the setting;
+continuous values interpolate provisionally between zero and maximum. Off or
+lighter settings subtract cost; heavier settings add cost. These estimates do not claim a measured
+cost for any individual feature. Synth-path deltas apply to synth; all deltas
+apply conservatively to granular.
+
+The byte-identical DEFAULT block is a measured combination and builds with these
+baselines. Other measured combinations key on the complete encoded 512-byte
+profile (`cpu.combinations[].profile`, hex), with worst-case `synth` and `granular`
+percentages. Placement or default changes require another exact match.
+Each engine rounds to 0.1% before checking: warn from 86%, block unmeasured
+combinations above 87% (provisional ceiling 92% minus 5% margin), and allow
+measured combinations up to the 92% ceiling.
 
 Layout: everything served as-is is under `static/`, where a Hugo site expects it, so moving to Hugo later only adds configuration and templates. Tests are outside it.
 
@@ -45,6 +54,7 @@ Tests (Node 18 or later, g++, and the pinned stmlib submodule):
 ```sh
 node palette/test/manifest.js
 node palette/test/profile.js
+node palette/test/downloads.js
 node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
 ```
 
@@ -72,6 +82,23 @@ CI also encodes every build's `app.bin` and checks it against `beads/build/expec
 
 **Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 
-**Counting:** each update file made sends one request to GoatCounter with the release tag only (`/render/<tag>`), from `app.js`, with no cookies and no GoatCounter script; it is skipped when the browser sends "do not track". The page says so.
+**Counting:** WAV download clicks (not builds or guide downloads) send one
+`download/<release-slug>` event through GoatCounter's script. The event name is
+the only application data sent: no profile, fingerprint, custom/default marker,
+page URL, referrer or personal data. The request necessarily exposes the browser
+and IP address to the service. “Do not track” is respected; no automatic pageview
+is sent. Custom and default downloads share one event per version because
+GoatCounter has no separate event properties that preserve that count page.
+See the [GoatCounter JavaScript API](https://www.goatcounter.com/help/js).
+
+The owner must enable **Allow adding visitor counts** in GoatCounter settings.
+The page reads `/counter/<encoded-event-name>.json` and adds GitHub release asset
+`download_count` values for names ending `-wav.zip`. Counts may merge repeat
+downloads by the same visitor on the same day. Totals of at least 10 are shown;
+otherwise the manifest date is shown, or the line is hidden if no date exists.
+Either source can fail independently; results (including failures) are cached
+in sessionStorage for the browser tab session, with an in-memory fallback.
+Requests time out after five seconds and never delay or block building. Tests use only stubbed fetches; the Docker test container runs
+without network access. See [public counter setup](https://www.goatcounter.com/help/visitor-counter).
 
 To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d palette/static`); the hash check needs a secure context, which `localhost` is.

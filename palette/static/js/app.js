@@ -7,8 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage } from './profile.js';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta } from './profile.js';
 import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js';
+import { downloadCounts, countLine, recordDownload } from './downloads.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,19 +42,6 @@ let download;
 let entries;
 let revision = 0;
 const guideURLs = [];
-
-// One count per update file made, with the release tag only (GoatCounter: no
-// cookies, no script of theirs). Skipped when the browser asks not to be
-// tracked; a failed count changes nothing.
-const COUNTER = 'https://insolentconstruct.goatcounter.com/count';
-
-function count(tag) {
-  if (navigator.doNotTrack === '1') return;
-  const query = new URLSearchParams({ p: `/render/${tag}`, t: tag,
-      rnd: Math.random().toString(36).slice(2) });
-  fetch(`${COUNTER}?${query}`, { mode: 'no-cors', credentials: 'omit',
-      referrerPolicy: 'no-referrer' }).catch(() => {});
-}
 
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
@@ -99,7 +87,7 @@ async function build(release, app) {
   $('result').hidden = false;
   status(isDefault ? 'Done: identical to the release update file. WAV decoded and checked.' : `Done: profile ${fp}. WAV decoded and checked.`, 'ok');
   await updateGuides(release, chosen, fp, names);
-  count(release.tag);
+  $('download').onclick = () => recordDownload(release);
 }
 
 function selected() {
@@ -219,7 +207,8 @@ function renderEditor() {
       }
     }
     const cost = document.createElement('small');
-    cost.textContent = `CPU +${f.cpu.percent}% ${f.cpu.kind}${f.cpu.placeholder ? ' (placeholder)' : ''}${f.synth_path ? ' · includes synth path' : ''}`;
+    const delta = featureDelta(e, f);
+    cost.textContent = `CPU ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% versus release default · ${f.cpu.kind}${f.cpu.placeholder ? ' (placeholder)' : ''}${f.synth_path ? ' · includes synth path' : ''}`;
     row.append(cost); $('features').append(row);
   }
 }
@@ -257,8 +246,15 @@ async function init() {
       manifest.releases.some((r) => !r.profile || r.profile.version !== 1 || r.profile.offset !== 1024 || r.profile.size !== 512)) {
     status('Unsupported release list.', 'error'); return;
   }
+  const counts = downloadCounts();
   for (const release of manifest.releases) {
     $('release').add(new Option(release.name, release.tag));
+    const line = document.createElement('p'); line.className = 'note';
+    line.textContent = release.date || ''; line.hidden = !line.textContent;
+    $('download-counts').append(line);
+    counts(release).then((total) => {
+      line.textContent = countLine(release, total); line.hidden = !line.textContent;
+    }).catch(() => {});
   }
   $('release').selectedIndex = manifest.releases.length - 1;
   entries = defaults(selected().profile);
