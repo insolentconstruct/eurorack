@@ -25,10 +25,13 @@
   main { max-width: 42rem; margin: 0 auto; padding: 2rem 16px 3rem; }
   h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
   .lead { color: var(--muted); margin: 0 0 1.5rem; }
-  section {
+  section { margin: 0 0 1.75rem; }
+  section.panel {
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-    padding: 1rem 1.25rem; margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
   }
+  footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: .75rem; }
+  input[type=file] { min-height: 44px; padding: .5rem 0; max-width: 100%; }
   label { display: block; font-weight: 600; margin-bottom: .35rem; }
   select, button { font: inherit; }
   select { width: 100%; padding: .45rem; border: 1px solid var(--line); border-radius: 6px;
@@ -49,6 +52,13 @@
   details { margin-top: .75rem; color: var(--muted); }
   small, .note { color: var(--muted); font-size: .9rem; }
   a { color: var(--accent); }
+  h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+  ol { margin: 0; padding-left: 1.25rem; }
+  li + li { margin-top: .35rem; }
+  .warn { color: var(--error); font-weight: 600; }
+  button, a.button, select { min-height: 44px; }
+  summary { cursor: pointer; padding: .65rem 0; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -56,7 +66,8 @@
   <h1>Drizzlet Hygrostat</h1>
   <p class="lead">Makes the firmware update file for Mutable Instruments Beads in your browser. Nothing is uploaded.</p>
 
-  <section>
+  <section class="panel" aria-labelledby="make">
+    <h2 id="make">Make the update file</h2>
     <label for="release">Release</label>
     <select id="release"></select>
     <button id="build" disabled>Make the update file</button>
@@ -78,12 +89,30 @@
     </details>
   </section>
 
-  <section>
-    <p class="note">For now this makes exactly the update file published with each release, so you can check it. Choosing which features your firmware has comes later.</p>
-    <p class="note">Install it as described in the <a href="https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/README.md#updating-your-module">README</a>. Drizzlet is community firmware; it is not a Mutable Instruments product, so please do not contact Mutable Instruments about it.</p>
-    <p class="note">Each update file made is counted, by version only, with <a href="https://www.goatcounter.com">GoatCounter</a>: no cookies, and your browser's "do not track" setting is respected. Like any web request, it sees your IP address and browser.</p>
-    <small>Insolent Construct · <a href="https://github.com/insolentconstruct/eurorack">Source</a> · Encoder based on Mutable Instruments' (MIT); sine and cosine from the GNU C Library (LGPL 2.1 or later).<br>Not an ultrasonic humidifier. Please do not fill with water.</small>
+  <section aria-labelledby="install">
+    <h2 id="install">How to install</h2>
+    <ol>
+      <li>Unplug all CV cables. Patch your audio interface's output to <strong>IN L</strong> and set <strong>TIME</strong> to an intermediate position.</li>
+      <li>Power on your system with <strong>FREEZE</strong> held down.</li>
+      <li>Disconnect your speakers: the update file is loud and harsh. Close anything else that could make a sound.</li>
+      <li>Play the update file. The quality LED <strong>[A]</strong> shows the level: yellow is right; turn <strong>TIME</strong> to adjust.</li>
+      <li>At the end the module restarts by itself and runs the new firmware.</li>
+    </ol>
+    <p class="note">If all LEDs blink red, the level was wrong: press <strong>FREEZE</strong> and play it again louder. Avoid equalizers or automatic gain in the signal chain. Full steps: the <a href="https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware">Beads manual</a>. <strong>Don't hold SEED at power-on:</strong> it resets your settings.</p>
+    <p class="note">Module stuck at startup even after reinstalling? Read the <a href="https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27">storage recovery tool</a> and its warnings first: it erases your settings and may reset your calibration.</p>
   </section>
+
+  <section aria-labelledby="about">
+    <h2 id="about">About</h2>
+    <p class="note">For now this makes exactly the update file published with each release, so you can check it. Choosing which features your firmware has comes later.</p>
+    <p class="note">Drizzlet is community firmware; it is not a Mutable Instruments product, so please do not contact Mutable Instruments about it.</p>
+    <p class="note">Each update file made is counted, by version only, with <a href="https://www.goatcounter.com">GoatCounter</a>: no cookies, and your browser's "do not track" setting is respected. Like any web request, it sees your IP address and browser.</p>
+  </section>
+
+  <footer>
+    <p>Made by Insolent Construct; <a href="https://github.com/insolentconstruct/eurorack">source on GitHub</a>. The encoder is based on Mutable Instruments' (MIT), with sine and cosine from the GNU C Library (LGPL 2.1 or later).</p>
+    <p>Not an ultrasonic humidifier. Please do not fill with water.</p>
+  </footer>
 </main>
 <script type="module" src="js/app.js"></script>
 </body>
