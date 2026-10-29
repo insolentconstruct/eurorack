@@ -65,7 +65,8 @@ class Flash {
     __DSB();
     __ISB();
     __set_FAULTMASK(1);
-    const volatile uint32_t* source = (const volatile uint32_t*)(address);
+    const volatile uint32_t* source =
+        (const volatile uint32_t*)(uintptr_t)(address);
     uint32_t* words = static_cast<uint32_t*>(destination);
     size_t num_words = size / 4;
     while (num_words--) {
@@ -133,7 +134,7 @@ class Flash {
     // Whole cache lines: CMSIS steps 32 bytes from the address given.
     const uint32_t start = address & ~uint32_t(31);
     SCB_InvalidateDCache_by_Addr(
-        (uint32_t*)(start),
+        (uint32_t*)(uintptr_t)(start),
         int32_t(address + size - start));
   }
 
