@@ -18,6 +18,7 @@ heading; a release turns it into a dated heading.
 - Add adjustable grain diffusion: hold [A] and turn REVERB, with either reverb. Once set, it is also an [M] destination for CV. Clouds-style reverb keeps its Beta 1 diffusion until you set an amount (#2).
 - Clouds-style reverb uses less CPU; the sound is unchanged.
 - Grains use less CPU (about 6% of the audio budget in the busiest case); the sound is unchanged.
+- The wavetable synth uses less CPU (about 4% of the audio budget in its busiest case); the sound is unchanged.
 - Releases add `<tag>-combo.hex`, the ST-Link recovery image as Intel HEX: it carries its flash address, so programmers need none.
 
 ## 2026.10.18 (tag `drizzlet-2026.10.18`, beta 1 "Mist")

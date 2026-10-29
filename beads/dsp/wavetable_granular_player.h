@@ -76,8 +76,7 @@ class WavetableGranularPlayer : public GranularPlayer<WavetableGrain, 32> {
       SortGrainList(p.monophonic_mode);
     }
 
-    // Two playing grains are computed side by side so the core overlaps their
-    // dependency chains. They are still summed in index order.
+    // Two playing grains side by side overlap on the core; summed in order.
     for (int i = 0; i < NUM_GRAINS; i += 2) {
       WavetableGrain* a = &grain_[i];
       WavetableGrain* b = &grain_[i + 1];
