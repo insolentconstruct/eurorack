@@ -36,6 +36,7 @@
 #include <iterator>
 #include <new>
 #include <string>
+#include <vector>
 #include <sys/mman.h>
 
 #include "beads/test/test_checker.h"
@@ -94,6 +95,12 @@ void Init();
 void MonitorStateChange();
 void Process(const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
 extern "C" void SysTick_Handler();
+extern volatile bool codec_fade;
+extern volatile float codec_fade_gain;
+
+struct Rig;
+Rig* current_rig = NULL;
+void RigBlock(Rig* r);
 
 // Only the cache warming/timing call WasteCPUCycles is skipped.
 void MainLoopStep() {
@@ -102,6 +109,17 @@ void MainLoopStep() {
   if (!synth_mode) {
     background_buffer_backup.Process(ui.freeze_led_state());
   }
+}
+
+// One main loop pass; the audio interrupt runs on while main waits for a
+// fade before a codec restart (#53).
+void RunMainLoop() {
+  MainLoopStep();
+  for (int i = 0; i < 64 && current_rig && codec_fade &&
+       codec_fade_gain > 0.0f && codec.callback_; ++i) {
+    RigBlock(current_rig);
+  }
+  if (codec_fade && codec_fade_gain == 0.0f) MainLoopStep();
 }
 
 template<typename T>
@@ -119,9 +137,12 @@ struct Rig {
   uint16_t cv[CV_ADC_CHANNEL_LAST];
   int32_t audio;
   Codec::Frame out[kMaxCodecBlockSize];
+  std::vector<int32_t>* peaks;
 
   Rig(bool unpatched = true)
-      : left(!unpatched), right(!unpatched), seed_patched(false), audio(0) {
+      : left(!unpatched), right(!unpatched), seed_patched(false), audio(0),
+        peaks(NULL) {
+    current_rig = this;
     memset(reinterpret_cast<void*>(0x08100000), 255, 0x100000);
     PowerOnObject(&settings);
     settings.Init(false);
@@ -179,13 +200,20 @@ struct Rig {
     }
     if (codec.callback_) {
       codec.callback_(events, in, out, codec.block_size_);
+      if (peaks) {
+        int32_t peak = 0;
+        for (size_t i = 0; i < codec.block_size_; ++i) {
+          peak = std::max(peak, std::abs(out[i].l));
+        }
+        peaks->push_back(peak);
+      }
     }
   }
 
   void Tick(int milliseconds, bool main_loop = true) {
     while (milliseconds--) {
       // The first main step starts the codec; thereafter four callbacks/ms.
-      if (main_loop) MainLoopStep();
+      if (main_loop) RunMainLoop();
       for (int i = 0; i < 4; ++i) Block();
       SysTick_Handler();
     }
@@ -195,7 +223,7 @@ struct Rig {
   // the decision. Boundary callbacks still verify the signal and gate state.
   void Advance(int milliseconds) {
     while (milliseconds--) {
-      MainLoopStep();
+      RunMainLoop();
       SysTick_Handler();
     }
   }
@@ -215,7 +243,7 @@ struct Rig {
     // Dispatch the hold event, leaving MonitorStateChange to the caller.
     Tick(8, false);
     ui.DoEvents();
-    if (consume) MainLoopStep();
+    if (consume) RunMainLoop();
   }
 
   // Eight 32 ms probe windows plus 250 ms of codec blanking.
@@ -224,6 +252,8 @@ struct Rig {
     CHECK(codec.idle_stops_ == 0);
   }
 };
+
+void RigBlock(Rig* r) { r->Block(); }
 
 std::string Compact(const std::string& source) {
   std::string result;
@@ -289,10 +319,10 @@ void TestAutomaticSelfPlay() {
     return;
   }
   synth_mode_start_time = 0;
-  MainLoopStep();
+  RunMainLoop();
   const int start = synth_mode_start_time;
   r.Advance(9900);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(!synth_mode);
   CHECK(synth_mode_start_time == start);
   r.Advance(101);
@@ -306,12 +336,12 @@ void TestAutomaticSelfPlay() {
   CHECK(synth_mode_start_time != 0);
   test_freeze_input = true;
   r.Tick(1);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(synth_mode_start_time == 0);
   test_freeze_input = false;
   r.Tick(2);
   r.Advance(9900);
-  MainLoopStep();
+  RunMainLoop();
   CHECK(!synth_mode);
   r.Advance(102);
   CHECK(synth_mode);
@@ -339,7 +369,7 @@ void TestAutomaticSelfPlay() {
   CHECK(normalization_detector.no_input());
   bool heard = false;
   for (int i = 0; i < 1200; ++i) {
-    MainLoopStep();
+    RunMainLoop();
     tail.Block();
     for (size_t j = 0; j < codec.block_size_; ++j) {
       if (fabs(double(tail.out[j].l)) > 21474836.0 ||
@@ -679,6 +709,71 @@ void TestCodecKeepsClocks() {
   }
 }
 
+// Codec restarts fade out first (#53): the output steps down to silence
+// over about 10 ms instead of stopping at full level.
+void TestCodecRestartFade() {
+  test_checker.Start("TestCodecRestartFade");
+  Rig r(false);
+  r.Settle();
+  std::vector<int32_t> peaks;
+  r.peaks = &peaks;
+  for (int i = 0; i < 400; ++i) {
+    r.audio = (i / 2) & 1 ? 0x20000000 : -0x20000000;
+    r.Block();
+  }
+  const int32_t steady = peaks.back();
+  CHECK(steady > 0x08000000);
+  settings.mutable_state()->media = (settings.state().media + 1) % 4;
+  const Processor::Media before = processor.media();
+  for (int i = 0; i < 200 && processor.media() == before; ++i) {
+    r.audio = (i / 2) & 1 ? 0x20000000 : -0x20000000;
+    RunMainLoop();
+    r.Block();
+  }
+  CHECK(processor.media() != before);
+  r.peaks = NULL;
+  // The last sounding block before the restart is quiet.
+  size_t last = peaks.size();
+  while (last && peaks[last - 1] == 0) --last;
+  CHECK(last > 40);
+  printf("Restart fade: steady %d, last %d\n", steady, peaks[last - 1]);
+  CHECK(peaks[last - 1] < steady / 8);
+
+  // FREEZE during the fade postpones the restart without leaving silence.
+  r.Settle();
+  settings.mutable_state()->media = (settings.state().media + 1) % 4;
+  MainLoopStep();
+  CHECK(codec_fade);
+  test_freeze_input = true;
+  for (int i = 0; i < 400; ++i) {
+    r.Block();
+    MainLoopStep();
+  }
+  CHECK(!codec_fade && codec_fade_gain == 1.0f);
+  test_freeze_input = false;
+  r.Settle();
+}
+
+// Stopping the synth clears the reverb memory it shares.
+void TestSynthStopClearsReverb() {
+  test_checker.Start("TestSynthStopClearsReverb");
+  extern uint16_t reverb_buffer[];
+  Rig r;
+  PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
+  r.StartAutomatic();
+  CHECK(synth_mode);
+  r.Tick(500);
+  bool used = false;
+  for (int i = 0; i < 32768 && !used; ++i) used = reverb_buffer[i] != 0;
+  CHECK(used);
+  r.left = true;
+  for (int i = 0; i < 2000 && synth_mode; ++i) r.Tick(1);
+  CHECK(!synth_mode && codec_transition_frames > 0);
+  bool clear = true;
+  for (int i = 0; i < 32768 && clear; ++i) clear = reverb_buffer[i] == 0;
+  CHECK(clear);
+}
+
 int main() {
   InitTestFpu();
   setbuf(stdout, NULL);
@@ -695,5 +790,7 @@ int main() {
   TestCallbackCvRouting();
   TestPitchChain();
   TestCodecKeepsClocks();
+  TestCodecRestartFade();
+  TestSynthStopClearsReverb();
   return test_checker.failures() ? 1 : 0;
 }

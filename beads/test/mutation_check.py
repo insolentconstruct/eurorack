@@ -145,6 +145,17 @@ cases = [
   ('TestNonBlankSlot', 'storage', 'beads/settings_storage.h',
     '      if (WriteChunk(next_state_chunk_index_, state_data_)) {',
     '      WriteChunk(next_state_chunk_index_, state_data_);\n      if (true) {'),
+  # #53: codec restarts fade out first, FREEZE cancels the fade, and leaving
+  # the synth clears its reverb.
+  ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
+    '      if (!FadedOut()) {\n        return;\n      }\n      // elapsed',
+    '      // elapsed'),
+  ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
+    '    codec_fade = false;\n    return;',
+    '    return;'),
+  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
+    '        processor.ClearReverb();\n',
+    ''),
 ]
 GUARD = 'const int16_t wav_integrated_waves[] = {'
 # A case with several edits gives tuples of equal length.

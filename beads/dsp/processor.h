@@ -147,6 +147,11 @@ class Processor {
     }
   }
   
+  // Clears the reverb's memory, which the synth shares.
+  inline void ClearReverb() {
+    reverb_.Clear();
+  }
+
   void WasteCPUCycles(size_t size) {
     // The one with the most convoluted memory access!
     processor_vintage_digital_.WasteCPUCycles(size);
