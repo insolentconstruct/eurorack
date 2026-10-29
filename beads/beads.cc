@@ -48,6 +48,7 @@ using namespace beads;
 using namespace stmlib;
 
 const int kBlockRate = 4000;
+const float kCodecFadeStep = 1.0f / (0.01f * kBlockRate);
 
 const bool skip_factory_test = false;
 
@@ -97,6 +98,10 @@ void SysTick_Handler() {
 int codec_transition_frames;
 // The rate the converter runs at; 0 before its first start.
 int codec_sample_rate;
+// Set by main before it restarts the codec: the output fades out first.
+volatile bool codec_fade;
+volatile float codec_fade_gain;
+float codec_fade_previous_gain;
 bool synth_mode;
 int synth_mode_start_time;
 
@@ -243,6 +248,20 @@ void Process(
     processor.Trim();
     ui.ClearTrimFlag();
   }
+  // Fade out while main waits to restart the codec.
+  codec_fade_previous_gain = codec_fade_gain;
+  if (codec_fade) {
+    codec_fade_gain = max(0.0f, codec_fade_gain - kCodecFadeStep);
+    if (codec_fade_previous_gain == 0.0f) {
+      Codec::Frame silence;
+      silence.l = 0;
+      silence.r = 0;
+      fill(&out[0], &out[size], silence);
+      return;
+    }
+  } else if (codec_fade_gain < 1.0f) {
+    codec_fade_gain = min(1.0f, codec_fade_gain + kCodecFadeStep);
+  }
   if (synth_mode) {
     synth.Render(
         seed_button_state,
@@ -261,6 +280,14 @@ void Process(
         float_out, size);
   }
   
+  if (codec_fade_previous_gain != 1.0f || codec_fade_gain != 1.0f) {
+    ParameterInterpolator gain(
+        &codec_fade_previous_gain, codec_fade_gain, size);
+    for (size_t i = 0; i < size; ++i) {
+      float_out[i] = float_out[i] * gain.Next();
+    }
+  }
+
   // Conversion of output samples into integers.
   for (size_t i = 0; i < size; ++i) {
     float l = float_out[i].l;
@@ -292,6 +319,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   event_delay.Init();
 
   codec_transition_frames = kBlockRate / 4;
+  codec_fade = false;
   if (sr == codec_sample_rate) {
     // Same clocks: the converter played silence while paused (#53).
     codec.Resume(&Process);
@@ -313,6 +341,9 @@ void Init() {
   seed_input.Init();
   codec.Init();
   codec_sample_rate = 0;
+  codec_fade = false;
+  codec_fade_gain = 1.0f;
+  codec_fade_previous_gain = 1.0f;
 
   cv_reader.Init(&settings);
   calibrator.Init(&settings, &cv_reader, &normalization_detector);
@@ -361,9 +392,17 @@ void Init() {
   }
 }
 
+// Codec restarts fade the output out first (#53): true once it is silent.
+bool FadedOut() {
+  // Before the first start there is no audio to fade.
+  codec_fade = codec_sample_rate != 0;
+  return !codec_sample_rate || codec_fade_gain == 0.0f;
+}
+
 void MonitorStateChange() {
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
+    codec_fade = false;
     return;
   }
   
@@ -376,6 +415,9 @@ void MonitorStateChange() {
         if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
           // If 10 seconds have elapsed with nothing patched in the audio
           // inputs, enable the synth mode.
+          if (!FadedOut()) {
+            return;
+          }
           codec.Pause();
           ConfigureAndStartCodec(true, true);
         }
@@ -398,13 +440,22 @@ void MonitorStateChange() {
     bool mono_changed = mono != processor.mono();
     
     if (synth_mode || mono_changed || media_changed) {
+      if (!FadedOut()) {
+        return;
+      }
       // elapsed = system_clock.milliseconds();
       codec.Pause();
       processor.Configure(media, mono);
+      if (synth_mode) {
+        // The synth's reverb tail would otherwise play on.
+        processor.ClearReverb();
+      }
       ConfigureAndStartCodec(false, mono_changed || synth_mode);
     }
     synth_mode_start_time = 0;
   }
+  // Restarted, or nothing to restart after all: fade back in.
+  codec_fade = false;
 }
 
 int main(void) {
