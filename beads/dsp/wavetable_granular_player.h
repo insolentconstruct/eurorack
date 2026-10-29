@@ -72,8 +72,21 @@ class WavetableGranularPlayer : public GranularPlayer<WavetableGrain, 32> {
       SortGrainList(p.monophonic_mode);
     }
 
-    for (int i = 0; i < NUM_GRAINS; ++i) {
-      grain_[i].Render(out, freeze);
+    // Two playing grains side by side overlap on the core; summed in order.
+    for (int i = 0; i < NUM_GRAINS; i += 2) {
+      WavetableGrain* a = &grain_[i];
+      WavetableGrain* b = &grain_[i + 1];
+      if (a->done() || b->done()) {
+        a->Render(out, freeze);
+        b->Render(out, freeze);
+      } else {
+        float sample_a = a->RenderSample();
+        float sample_b = b->RenderSample();
+        sample_a *= a->RenderEnvelope(freeze);
+        sample_b *= b->RenderEnvelope(freeze);
+        a->Mix(sample_a, out);
+        b->Mix(sample_b, out);
+      }
     }
     
     Tick();  // Required to estimate the timing between grains.

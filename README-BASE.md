@@ -1,7 +1,7 @@
 # Beads base for firmware modders
 
 This branch starts at the vanilla source in `origin/master` (`f4cfa76`).
-It carries bug fixes, a reproducible compiler kit and four audio-preserving
+It carries bug fixes, a reproducible compiler kit and five audio-preserving
 CPU optimizations. Controls, gestures, settings layout and default sound
 follow that source. Options that master compiles out stay compiled out.
 Hardware operation has not been tested as part of this port.
@@ -35,6 +35,7 @@ Changes from master, one line per change:
 - Round pan, shape and speed explicitly: sound is identical to the previous build in 20 emulated scenarios, and GCC 9-16 now match as measured on Drizzlet.
 - Select mono/stereo processing once per block with a template, sum grains locally and use unsigned read-index modulo; audio stays bit-identical.
 - Interpolate grain reads on the stored integers and scale once, as Clouds' `ReadHermite` does; audio stays bit-identical.
+- Compute the synth's playing grains in pairs, mixed in index order: 5.7 points of headroom in its busiest case; audio stays bit-identical.
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 

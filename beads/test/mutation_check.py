@@ -123,6 +123,11 @@ cases = [
     '    if (freeze_state_ && save_started_) {'),
   # #35: the wavetable ends with a duplicated guard row.
   ('TestGuardRow', 'wavetable', 'beads/resources.cc', None, None),
+  # Synth grains computed in pairs mix each grain's own sample.
+  ('TestSynthGrainPairs', 'wavetable',
+    'beads/dsp/wavetable_granular_player.h',
+    'b->Mix(sample_b, out);',
+    'b->Mix(sample_a, out);'),
   # Grains are summed locally and added once: both channels (the audio
   # reference comparison does not reach this path).
   ('TestDryWetEndpoints', 'mix', 'beads/dsp/delay_granular_player.h',
