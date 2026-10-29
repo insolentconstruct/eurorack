@@ -25,9 +25,9 @@ The current code and placeholder table retain their existing model meanwhile.
 Other measured combinations key on the complete encoded 512-byte profile
 (`cpu.combinations[].profile`, hex), with worst-case `synth` and `granular`
 percentages. Placement or default changes require another exact match.
-Each engine rounds to 0.1% before checking: warn from 86%, block unmeasured
-combinations above 87% (provisional ceiling 92% minus 5% margin), and allow
-measured combinations up to the 92% ceiling.
+Each engine rounds to 0.1% before checking: warn from 91% and block anything
+above the provisional 92% ceiling, measured or estimated (no margin until module
+measurements show how well estimates add up).
 
 Layout: everything served as-is is under `static/`, where a Hugo site expects it, so moving to Hugo later only adds configuration and templates. Tests are outside it.
 

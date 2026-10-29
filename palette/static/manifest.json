@@ -536,8 +536,8 @@
         "ceiling": 92,
         "ceiling_kind": "measured",
         "provisional": true,
-        "warning": 86,
-        "margin": 5,
+        "warning": 91,
+        "margin": 0,
         "combinations": [],
         "release_note": "Before release, measure the worst case of the default profile, including Clouds-style reverb in synth mode. The default profile is always allowed.",
         "baselines": {

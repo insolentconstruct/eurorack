@@ -106,7 +106,7 @@ assert.equal(filenames(release, fp, true).wav, release.tag + '.wav');
 assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);
 assert.equal(filenames(release, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
-for (const [percent, warning, blocked] of [[85.94, false, false], [85.99, true, false], [87.04, true, false], [87.06, true, true]]) {
+for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
   const r = structuredClone(release);
   for (const f of r.profile.features) f.cpu.off = 0;
   for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
@@ -120,7 +120,7 @@ for (const engine of ['synth', 'granular']) {
   const r = structuredClone(release);
   for (const f of r.profile.features) f.cpu.off = 0;
   for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
-  r.cpu.baselines[engine].percent = 87.1;
+  r.cpu.baselines[engine].percent = 92.1;
   const usage = cpuUsage([], r);
   assert(usage.blocked && usage.warning, `${engine} independently gates the profile`);
   assert(usage.engines.find((e) => e.engine === engine).blocked);
@@ -141,13 +141,16 @@ for (const r of manifest.releases) {
   assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
   for (const [name, candidate] of Object.entries(templates(r.profile))) {
     const result = cpuUsage(candidate, r);
-    assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 87), name);
+    assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 92), name);
     assert(!result.blocked, `shipped template ${name} builds or warns`);
   }
   const heavy = defaults(r.profile).map((e) => e.slice());
   heavy.find((e) => e[0] === 7)[2] = 1;
   heavy.find((e) => e[0] === 12)[2] = 255;
-  assert(cpuUsage(heavy, r).blocked, 'real manifest heavy custom combination blocks');
+  assert(cpuUsage(heavy, r).engines.find((e) => e.engine === 'synth').percent > 85.8,
+      'real manifest heavy custom combination costs more than the default');
+  const nearCeiling = structuredClone(r); nearCeiling.cpu.baselines.synth.percent = 91;
+  assert(cpuUsage(heavy, nearCeiling).blocked, 'heavy custom combination blocks near the ceiling');
   assert(r.profile.features.some((f) => featureDelta([f.id, 0], f) < 0));
   for (const f of r.profile.features) assert.equal(featureDelta(f.default, f), 0);
 }
