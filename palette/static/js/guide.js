@@ -120,7 +120,7 @@ export function guide(entries, release, fp, mobile = false) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
     return RELEASE_GUIDES[Number(mobile)].replace('</g>\n</svg>',
-        `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="${mobile ? 55 : 55}" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
+        `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="52" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
   }
   const d = new Drawing();
   const width = mobile ? 390 : 1100;
@@ -142,7 +142,7 @@ export function guide(entries, release, fp, mobile = false) {
   const panelStart = reference.indexOf('<text x="405" y="70"');
   const panelEnd = reference.indexOf('<text x="780" y="70"');
   if (panelStart >= 0 && panelEnd > panelStart) {
-    d.items.push(`<g transform="translate(${margin - 405} ${y - 70})">${reference.slice(panelStart, panelEnd)}</g>`);
+    d.items.push(`<g transform="translate(${margin} ${y}) scale(${mobile ? 0.85 : 1}) translate(-405 -70)">${reference.slice(panelStart, panelEnd)}</g>`);
     y += 285;
   }
   for (let page = 1; page <= 4; ++page) {
@@ -176,9 +176,13 @@ export function guide(entries, release, fp, mobile = false) {
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: Fixed · ${f.values ? f.values[e[2]] : e[2]}`, mobile ? 43 : 140);
   }
+  for (const e of entries.filter((e) => e[1] === 2 && !e[3] && !e[4] && !e[5])) {
+    const f = feature(e);
+    y = d.lines(margin, y + 10, `${f.name}: ${f.values ? f.values[e[2]] : e[2]} · set on the page: not placed`, mobile ? 43 : 140);
+  }
   y = d.lines(margin, y + 20, 'Do not hold SEED while powering on: it resets all settings to the profile defaults. Calibration is kept.', mobile ? 43 : 140);
   d.text(margin, y + 15, `Author: Insolent Construct · Profile ${fp}`, 15);
   y = d.lines(margin, y + 40, 'Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).', mobile ? 43 : 140);
   const height = y + 30;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${mobile ? 390 : '190mm'}" height="${mobile ? height : (190 * height / width).toFixed(2) + 'mm'}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title"><title id="title">Drizzlet hidden options guide · ${escape(fp)}</title><metadata>Copyright 2026 Insolent Construct. Author: Insolent Construct (insolentconstruct@gmail.com). MIT licence: see encoder.js.</metadata><rect width="100%" height="100%" fill="white"/><g font-family="sans-serif" fill="#222">\n${d.items.join('\n')}\n</g>\n</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${mobile ? 390 : '190mm'}" height="${mobile ? height : (190 * height / width).toFixed(2) + 'mm'}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title"><title id="title">Drizzlet hidden options guide · ${escape(fp)}</title><metadata>Copyright 2026 Insolent Construct. Author: Insolent Construct (insolentconstruct@gmail.com). Panel geometry adapted from Mutable Instruments Beads, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).</metadata><rect width="100%" height="100%" fill="white"/><g font-family="sans-serif" fill="#222">\n${d.items.join('\n')}\n</g>\n</svg>\n`;
 }

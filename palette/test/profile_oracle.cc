@@ -43,7 +43,16 @@ int main() {
     }
   }
   while (fread(block, 1, sizeof(block), stdin) == sizeof(block)) {
-    putchar(p.Init(block) ? 1 : 0);
+    const bool accepted = p.Init(block);
+    putchar(accepted ? 1 : 0);
+    for (int i = 0; i < 82; ++i) {
+      uint8_t empty[6] = {0, 0, 0, 0, 0, 0};
+      const void* entry = empty;
+      if (accepted && i < block[5]) {
+        entry = &p.entry(beads::ProfileFeature(block[16 + i * 6]));
+      }
+      fwrite(entry, 1, 6, stdout);
+    }
   }
   return ferror(stdin) ? 1 : 0;
 }

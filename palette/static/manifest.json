@@ -2,11 +2,11 @@
   "format": 2,
   "releases": [
     {
-      "tag": "drizzlet-2026.10.29",
+      "tag": "drizzlet-dev-a70e669",
       "name": "Drizzlet Beta 2 \u2014 development (unreleased)",
       "development": true,
       "source_commit": "a70e669a7da5a582b5fd2182b351e49f8b853480",
-      "app": "images/drizzlet-2026.10.29/app.bin",
+      "app": "images/drizzlet-dev-a70e669/app.bin",
       "profile": {
         "offset": 1024,
         "size": 512,
@@ -385,17 +385,28 @@
         ]
       },
       "cpu": {
-        "baseline": {
-          "percent": 83,
-          "kind": "estimated",
-          "placeholder": true
-        },
         "ceiling": 92,
         "ceiling_kind": "measured",
         "provisional": true,
         "warning": 86,
         "margin": 5,
-        "combinations": []
+        "combinations": [],
+        "baselines": {
+          "synth": {
+            "percent": 86,
+            "kind": "estimated",
+            "placeholder": true,
+            "provisional": true,
+            "provenance": "Provisional lower bound of measured module worst-case range 86\u201387%; feature increments are placeholders."
+          },
+          "granular": {
+            "percent": 83,
+            "kind": "estimated",
+            "placeholder": true,
+            "provisional": true,
+            "provenance": "Provisional upper bound of measured module worst-case range 81\u201383%; feature increments are placeholders."
+          }
+        }
       },
       "app_sha256": "1c557891bacf9715b9046dfc2af7c8303bc93fc18dd1dd25733565809f50aa94",
       "app_size": 633232,

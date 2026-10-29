@@ -9,13 +9,16 @@ Off, Fixed and Adjustable features, defaults, page/amount/action placements,
 templates, share links and desktop/phone SVG guides. Conflicts and invalid
 firmware profiles are refused. Older plain-WAV releases are not offered.
 
-The current entry is an **unreleased development build** from `a70e669`. All
-feature CPU costs and the baseline are placeholder estimates. Replace them with
-module measurements before publishing a release. The provisional stock ceiling
+The current entry is an **unreleased development build** pinned in the manifest. All
+feature CPU costs and per-engine baselines are placeholder estimates. Replace them with
+module measurements before publishing a release. The provisional baselines use
+86% for synth (measured range 86–87%) and 83% for granular (81–83%).
+Synth-path costs apply to synth; all active costs apply conservatively to granular.
+Estimates are rounded to 0.1% before each engine is checked. The provisional stock ceiling
 is 92%; unmeasured combinations warn from 86% and are blocked above 87%.
 A measured combination at or below 92% is allowed. A measurement is tied to the
-complete six-byte entry list (`cpu.combinations[].profile`, JSON string), with
-its worst-case `percent`; placement or default changes require another match.
+complete encoded 512-byte profile block (`cpu.combinations[].profile`, hex), with
+its worst-case `synth` and `granular` percentages; placement or default changes require another match.
 
 Layout: everything served as-is is under `static/`, where a Hugo site expects it, so moving to Hugo later only adds configuration and templates. Tests are outside it.
 

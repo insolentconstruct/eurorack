@@ -103,8 +103,8 @@ export function filenames(release, fp, isDefault) {
   const suffix = isDefault ? '' : `-${fp}`;
   const date = release.tag.replace(/^drizzlet-/, '');
   return { wav: `${release.tag}${suffix}.wav`,
-    desktop: isDefault ? 'options-guide.svg' : `options-guide-${date}${suffix}.svg`,
-    mobile: isDefault ? 'options-guide-mobile.svg' : `options-guide-${date}${suffix}-mobile.svg` };
+    desktop: isDefault ? `options-guide${release.development ? '-dev' : ''}.svg` : `options-guide-${date}${suffix}.svg`,
+    mobile: isDefault ? `options-guide${release.development ? '-dev' : ''}-mobile.svg` : `options-guide-${date}${suffix}-mobile.svg` };
 }
 export function share(release, block) {
   return new URLSearchParams({ release: release.tag,
@@ -114,7 +114,7 @@ export function unshare(text, releases) {
   const params = new URLSearchParams(text.replace(/^#/, ''));
   const release = releases.find((r) => r.tag === params.get('release'));
   const hex = params.get('profile');
-  if (!release || !hex || !/^[0-9a-f]{1024}$/.test(hex)) throw new Error('Invalid shared profile.');
+  if (!release || !hex || !/^[0-9a-f]{1024}$/i.test(hex)) throw new Error('Invalid shared profile.');
   return { release, entries: decodeProfile(Uint8Array.from(hex.match(/../g),
       (v) => parseInt(v, 16)), release.profile) };
 }
@@ -127,17 +127,22 @@ export function templates(profile) {
     'Pitched grains': themed({ 1: [2, 3, 1, 0, 0], 10: [2, 1, 2, 0, 0] }),
     'Manual synth': themed({ 9: [2, 1, 9, 0, 3] }) };
 }
+export const profileKey = (entries, profile) => Array.from(encodeProfile(entries, profile),
+    (v) => v.toString(16).padStart(2, '0')).join('');
 export function cpuUsage(entries, release) {
   const active = entries.filter((e) => e[1] === 2 || (e[1] === 1 && e[2]));
   const features = active.map((e) => release.profile.features.find((f) => f.id === e[0]));
-  // A measurement must identify all six fields, including defaults and placement.
-  const key = JSON.stringify(entries);
-  const measured = release.cpu.combinations.find((c) => c.profile === key);
-  const percent = measured ? measured.percent : release.cpu.baseline.percent +
-      features.reduce((sum, f) => sum + f.cpu.percent, 0);
-  const blocked = measured ? percent > release.cpu.ceiling :
-      percent > release.cpu.ceiling - release.cpu.margin;
-  return { percent, blocked, warning: percent >= release.cpu.warning,
+  const measured = release.cpu.combinations.find((c) => c.profile === profileKey(entries, release.profile));
+  const engines = Object.entries(release.cpu.baselines).map(([engine, baseline]) => {
+    const contributing = features.filter((f) => engine === 'synth' ? f.synth_path : true);
+    const percent = Math.round((measured ? measured[engine] : baseline.percent +
+        contributing.reduce((sum, f) => sum + f.cpu.percent, 0)) * 10) / 10;
+    return { engine, baseline, percent,
+      blocked: percent > release.cpu.ceiling - (measured ? 0 : release.cpu.margin),
+      warning: percent >= release.cpu.warning };
+  });
+  return { engines, percent: Math.max(...engines.map((e) => e.percent)),
+    blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
     kind: measured ? 'measured' : 'estimated',
     names: features.filter((f) => f.cpu.percent).map((f) => f.name).join(', ') || 'Stock settings' };
 }

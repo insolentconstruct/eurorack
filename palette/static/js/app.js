@@ -7,7 +7,7 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage } from './profile.js';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage } from './profile.js';
 import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js';
 
 const $ = (id) => document.getElementById(id);
@@ -73,7 +73,14 @@ async function build(release, app) {
     throw new Error('The release profile does not match the manifest.');
   }
   const isDefault = equal(block, original);
+  const base = app.slice();
   app.set(block, release.profile.offset);
+  const offset = release.profile.offset;
+  if (!equal(app.subarray(0, offset), base.subarray(0, offset)) ||
+      !equal(app.subarray(offset + 512), base.subarray(offset + 512)) ||
+      JSON.stringify(decodeProfile(app.subarray(offset, offset + 512), release.profile)) !== JSON.stringify(chosen)) {
+    throw new Error('Patched image verification failed.');
+  }
   const fp = await fingerprint(block);
   const names = filenames(release, fp, isDefault);
   status('Encoding and checking the update file…');
@@ -156,7 +163,11 @@ function setupEditor() {
   const release = selected();
   $('template').replaceChildren();
   Object.keys(templates(release.profile)).forEach((name) => $('template').add(new Option(name)));
+  $('template').add(new Option('Custom', 'Custom'));
+  $('template').value = Object.entries(templates(release.profile)).find(([, candidate]) =>
+    equal(encodeProfile(candidate, release.profile), encodeProfile(entries, release.profile)))?.[0] || 'Custom';
   $('template').onchange = () => {
+    if ($('template').value === 'Custom') return;
     entries = templates(release.profile)[$('template').value]; renderEditor(); refresh();
   };
   $('development').hidden = !release.development;
@@ -184,7 +195,7 @@ function renderEditor() {
       }
       try {
         validate(candidate, profile); entries = candidate;
-        $('template').selectedIndex = -1; status('');
+        $('template').value = 'Custom'; status('');
       } catch (error) { status(error.message, 'error'); }
       renderEditor(); refresh();
     };
@@ -220,7 +231,7 @@ async function refresh() {
   const cpu = cpuUsage(entries, release);
   document.body.classList.toggle('cpu-warning', cpu.warning);
   $('cpu').textContent = `${cpu.percent.toFixed(1)}% ${cpu.kind}: ${cpu.names}. ` +
-      `Baseline ${release.cpu.baseline.percent}% ${release.cpu.baseline.kind} (placeholder). ` +
+      cpu.engines.map((e) => `${e.engine}: ${e.percent.toFixed(1)}%; baseline ${e.baseline.percent}% ${e.baseline.kind}${e.baseline.placeholder ? ' (placeholder)' : ''}${e.baseline.provisional ? ' (provisional)' : ''}.`).join(' ') +
       `Stock ceiling ${release.cpu.ceiling}% ${release.cpu.ceiling_kind} (provisional). ` +
       (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
   $('build').disabled = $('local').disabled = busy || cpu.blocked;

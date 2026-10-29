@@ -30,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { webcrypto } from 'node:crypto';
 import { defaults, encodeProfile, decodeProfile, crc32, equal, fingerprint,
-  filenames, share, unshare, cpuUsage, templates } from '../static/js/profile.js';
+  profileKey, filenames, share, unshare, cpuUsage, templates } from '../static/js/profile.js';
 import { guide } from '../static/js/guide.js';
 import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
@@ -79,6 +79,8 @@ for (const f of profile.features) {
     for (let value = 0; value < (f.values ? f.values.length + 1 : 256); ++value) {
       for (let action = 0; action <= 4; ++action) {
         const e = [f.id, state, value, 0, 0, action];
+        const raw = block.slice(); raw[5] = 1; raw[6] = 6; raw[7] = 0;
+        raw.set(e, 16); cases.push(reseal(raw));
         const allowed = state <= 2 && (!f.values || value < f.values.length) && action <= 3 &&
           (!action || (f.action && state !== 0 && (state !== 1 || (value && f.stateless)))) &&
           !(f.id === 9 && state === 1 && value && !action);
@@ -101,17 +103,36 @@ assert.match(fp, /^[0-9a-f]{8}$/);
 assert.deepEqual(unshare(share(release, block), manifest.releases).entries, entries);
 assert.throws(() => unshare('release=missing&profile=00', manifest.releases));
 assert.equal(filenames(release, fp, true).wav, release.tag + '.wav');
-assert.equal(filenames(release, fp, true).desktop, 'options-guide.svg');
+assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);
-assert.equal(filenames(release, fp, false).mobile, `options-guide-2026.10.29-${fp}-mobile.svg`);
-for (const [percent, warning, blocked] of [[85.99, false, false], [86, true, false], [87, true, false], [87.01, true, true]]) {
-  const r = structuredClone(release); r.cpu.baseline.percent = percent;
+assert.equal(filenames(release, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
+for (const [percent, warning, blocked] of [[85.94, false, false], [85.99, true, false], [87.04, true, false], [87.06, true, true]]) {
+  const r = structuredClone(release);
+  for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
   const result = cpuUsage([], r); assert.equal(result.warning, warning); assert.equal(result.blocked, blocked);
 }
-for (const [percent, blocked] of [[92, false], [92.01, true]]) {
-  const r = structuredClone(release); r.cpu.combinations = [{ profile: '[]', percent }];
+for (const [percent, blocked] of [[92, false], [92.1, true]]) {
+  const r = structuredClone(release); r.cpu.combinations = [{ profile: profileKey([], profile), synth: percent, granular: percent }];
   const result = cpuUsage([], r); assert.equal(result.kind, 'measured'); assert.equal(result.blocked, blocked);
 }
+for (const engine of ['synth', 'granular']) {
+  const r = structuredClone(release);
+  for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
+  r.cpu.baselines[engine].percent = 87.1;
+  const usage = cpuUsage([], r);
+  assert(usage.blocked && usage.warning, `${engine} independently gates the profile`);
+  assert(usage.engines.find((e) => e.engine === engine).blocked);
+}
+const measuredRelease = structuredClone(release);
+measuredRelease.cpu.combinations = [{ profile: profileKey(entries, profile), synth: 90, granular: 89 }];
+assert.equal(cpuUsage(entries, measuredRelease).kind, 'measured');
+const changedPlacement = entries.map((e) => e.slice()); changedPlacement[0][3] = 10;
+assert.equal(cpuUsage(changedPlacement, measuredRelease).kind, 'estimated');
+const warningProfile = [[7, 1, 1, 0, 0, 0]];
+assert(cpuUsage(warningProfile, release).warning);
+assert(!cpuUsage(warningProfile, release).blocked);
+assert(cpuUsage(entries, release).blocked, 'real manifest heavy combination blocks');
+assert.deepEqual(unshare(share(release, block).replace(/profile=([0-9a-f]+)/, (_, hex) => 'profile=' + hex.toUpperCase()), manifest.releases).entries, entries);
 // Documented guide normalisation: compare page titles, setting names, value
 // labels and LED indications; omit geometry, wrapping and added defaults/fp.
 const unescape = (s) => s.replace(/&amp;/g, '&').replace(/&gt;/g, '>').replace(/&lt;/g, '<');
@@ -131,6 +152,11 @@ for (const mobile of [false, true]) {
   const moved = entries.map((e) => e.slice()); moved[0][3] = 10;
   const custom = guide(moved, release, fp, mobile);
   assert(custom.includes('FEEDBACK: Pitch scale'));
+  assert(custom.includes('CC BY-SA 3.0'));
+  assert(!custom.includes('MIT licence'));
+  assert(svg.includes('y="52" font-size="12"'));
+  assert(text(guide([[1, 2, 3, 0, 0, 0]], release, fp, mobile)).join(' ').includes('set on the page: not placed'));
+  if (mobile) assert(custom.includes('scale(0.85)'));
   assert(!guide([], release, fp, mobile).includes('PAGE 1'));
 }
 // Differential coverage: byte mutations of every entry field, all headers,
@@ -157,13 +183,19 @@ try {
   execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I.',
     ...(process.env.STMLIB_INCLUDE ? ['-I' + process.env.STMLIB_INCLUDE] : []),
     'palette/test/profile_oracle.cc', 'beads/profile.cc', '-o', oracle]);
-  const answers = execFileSync(oracle, [], { input: Buffer.concat(cases.map((b) => Buffer.from(b))), maxBuffer: 2000000 });
-  assert.equal(answers.length, cases.length);
-  cases.forEach((b, i) => {
-    let accepted = true;
-    try { decodeProfile(b, profile); } catch { accepted = false; }
-    assert.equal(accepted, answers[i] === 1, `firmware differential case ${i}`);
+  const answers = execFileSync(oracle, [], { input: Buffer.concat(cases.map((b) => Buffer.from(b))), maxBuffer: 40000000 });
+  const stride = 493;
+  assert.equal(answers.length, cases.length * stride);
+  const compare = (candidateProfile) => cases.forEach((b, i) => {
+    let decoded;
+    try { decoded = decodeProfile(b, candidateProfile); } catch {}
+    assert.equal(!!decoded, answers[i * stride] === 1, `firmware differential case ${i}`);
+    if (decoded) assert.deepEqual(decoded.flat(), Array.from(answers.subarray(i * stride + 1, i * stride + 1 + decoded.length * 6)), `decoded entries case ${i}`);
   });
+  compare(profile);
+  const mutated = structuredClone(profile);
+  mutated.features.find((f) => f.name === 'Monophonic grains').stateless = true;
+  assert.throws(() => compare(mutated), /firmware differential/, 'stateless metadata mutation must be detected');
   console.log(`PASS ${cases.length} candidates agree with the compiled firmware parser`);
 } finally {
   rmSync(scratch, { recursive: true, force: true });

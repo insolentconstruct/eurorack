@@ -38,6 +38,8 @@ for (const release of manifest.releases) {
   check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
   check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
   if (release.development) {
+    check(/^drizzlet-dev-[0-9a-f]+$/.test(release.tag) && release.app.includes('-dev-') &&
+        /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);
     // Development builds have no release tag. Bind their format to the
     // recorded source commit; the independently encoded WAV pins the build.
     const source = execFileSync('git', ['show', `${release.source_commit}:beads/profile.h`], { encoding: 'utf8' });

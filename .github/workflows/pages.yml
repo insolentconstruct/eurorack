@@ -25,12 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          submodules: true
-          fetch-depth: 0
+          fetch-depth: 1
       - name: The pinned images still encode to their release files
         run: |
           node --version
-          git fetch --no-tags --depth=1 origin '+refs/tags/drizzlet-*:refs/tags/drizzlet-*'
+          git submodule update --init --depth=1 stmlib
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { execFileSync } from "node:child_process";
+            for (const r of JSON.parse(readFileSync("palette/static/manifest.json")).releases) {
+              execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin",
+                r.development ? r.source_commit : `refs/tags/${r.tag}:refs/tags/${r.tag}`], { stdio: "inherit" });
+            }'
           node palette/test/manifest.js
           node palette/test/profile.js
       - name: Install the pinned Hugo
