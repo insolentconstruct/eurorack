@@ -164,7 +164,8 @@ void BackgroundBufferBackup::EraseSector() {
   if (remaining_sectors_) {
     save_started_ = true;
     // The header's sector first: an interrupted backup is never loaded.
-    if (!EraseBufferSector(kNumSectors - remaining_sectors_, 1)) {
+    const uint32_t sector = kNumSectors - remaining_sectors_;
+    if (!EraseBufferSector(sector, kFlashAttempts)) {
       remaining_sectors_ = remaining_bytes_ = 0;
       return;
     }

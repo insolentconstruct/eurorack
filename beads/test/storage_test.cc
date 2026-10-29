@@ -319,6 +319,41 @@ void TestCalibrationFromMirror() {
   }
 }
 
+// No valid state, an intact calibration out of range and a good mirror:
+// the mirror's calibration is chosen before anything is written.
+void TestRestoredCalibrationChoice() {
+  test_checker.Start("TestRestoredCalibrationChoice");
+  const State defaults = Defaults();
+  const PersistentData calibration = Calibration(0.1f);
+  PersistentData wild = calibration;
+  wild.adc_calibration[CV_ADC_CHANNEL_PITCH].scale *= 1.5f;
+  for (int unreadable = 0; unreadable < 2; ++unreadable) {
+    Setup(wild, 1);
+    uint8_t chunk[kCalibrationChunk];
+    Peek(chunk, kSector, sizeof(chunk));
+    Setup(calibration, 5);
+    Poke(kSector, chunk, sizeof(chunk));
+    if (unreadable) {
+      TestFlashDamage(StateChunk(1));
+    } else {
+      uint8_t byte = 0;
+      Poke(StateChunk(1) + 12, &byte, 1);
+    }
+    static uint8_t mirror[kSectorSize];
+    Peek(mirror, kMirror, kSectorSize);
+    Settings s;
+    CHECK(s.Init(false) && !s.write_locked());
+    CHECK(SameCalibration(s, calibration));
+    CHECK(SameState(s, defaults));
+    static uint8_t now[kSectorSize];
+    Peek(now, kMirror, kSectorSize);
+    CHECK(!memcmp(now, mirror, kSectorSize));
+    Peek(chunk, kSector, sizeof(chunk));
+    CHECK(!memcmp(chunk, mirror, sizeof(chunk)));
+    CHECK(StockLoads(calibration, defaults));
+  }
+}
+
 void TestCalibrationLost() {
   test_checker.Start("TestCalibrationLost");
   const State defaults = Defaults();
@@ -826,6 +861,7 @@ int main() {
   TestFlashGuard(&OnUnmaskedRead);
   TestMaskedReader();
   TestCalibrationFromMirror();
+  TestRestoredCalibrationChoice();
   TestCalibrationLost();
   TestStateTerminator();
   TestInterruptedAppend();

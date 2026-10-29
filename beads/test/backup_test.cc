@@ -715,10 +715,12 @@ void TestStaleFlags() {
   r.Boot();
   processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
   Fill(5);
+  const int erases = test_erases;
   test_stale_flags = true;
   CHECK(r.Freeze(0));
   test_stale_flags = false;
   CHECK(r.settings.state().frozen);
+  CHECK(test_erases == erases + 6);  // None refused and retried.
   Rig after;
   CHECK(after.Boot() && Restored(5));
 }
@@ -781,6 +783,22 @@ void TestEraseDamagedSectors() {
   TestFlashRepairAll();
 }
 
+void TestRetriedBufferErase() {
+  test_checker.Start("TestRetriedBufferErase");
+  // A refused erase is retried, and the save completes.
+  Wipe();
+  Rig r;
+  r.Boot();
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(6);
+  test_fail_at = test_ops + 1;
+  CHECK(r.Freeze(0));
+  test_fail_at = 0;
+  CHECK(r.settings.state().frozen);
+  Rig after;
+  CHECK(after.Boot() && Restored(6));
+}
+
 void TestStuckBufferErase() {
   test_checker.Start("TestStuckBufferErase");
   // An erase that reports success but leaves the old backup: the save is
@@ -793,10 +811,10 @@ void TestStuckBufferErase() {
   processor.Configure(Processor::MEDIA_DIGITAL, false);
   Fill(9);
   const int ops = test_ops;
-  test_stuck_erases = 1;
+  test_stuck_erases = 3;  // Every attempt.
   r.Freeze(0);
   test_stuck_erases = 0;
-  CHECK(test_ops == ops + 1);
+  CHECK(test_ops == ops + 3);
   CHECK(!r.settings.state().frozen);
   CHECK(!r.backup.busy());
   CHECK(TestFlash().wide_sectors == 0);
@@ -844,6 +862,7 @@ int main() {
   TestStaleFlags();
   TestLockedBackup();
   TestEraseDamagedSectors();
+  TestRetriedBufferErase();
   TestStuckBufferErase();
   return test_checker.failures() ? 1 : 0;
 }

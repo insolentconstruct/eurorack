@@ -62,7 +62,7 @@ enum StorageStatus {
   // Blank sector and mirror: a new module. The defaults were written.
   STORAGE_NEW,
   // The calibration survived, in the sector or in its mirror, but no state
-  // did: the calibration was written again with the default state.
+  // did. Nothing written.
   STORAGE_RESTORED,
   // The calibration is unreadable or invalid in a sector that isn't blank;
   // the states before the first bad one loaded. Nothing written.
@@ -105,8 +105,9 @@ class ChunkStorage {
  public:
   ChunkStorage() { }
   ~ChunkStorage() { }
-  // Loads the latest saved data. A blank sector is rewritten, from the
-  // mirrored calibration if there is one; a damaged one is left as it is.
+  // Loads the latest saved data. A new module's blank sector is written;
+  // anything else is left for the caller to write once it has chosen the
+  // calibration.
   StorageStatus Init(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
@@ -114,7 +115,7 @@ class ChunkStorage {
 
     const StorageStatus status = Load(
         persistent_data, state_data, &next_state_chunk_index_);
-    if (status == STORAGE_NEW || status == STORAGE_RESTORED) {
+    if (status == STORAGE_NEW) {
       RewriteSector();
     }
     return status;
