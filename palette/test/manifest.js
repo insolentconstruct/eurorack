@@ -30,6 +30,8 @@ for (const release of manifest.releases) {
   check(app.length === release.app_size && app.length <= MAX_APP_SIZE,
       `${release.tag}: app size ${app.length}`);
   check(hash(app) === release.app_sha256, `${release.tag}: app SHA-256`);
+  // Every release so far is a plain update file, made without a profile.
+  check(release.profile === null, `${release.tag}: no profile`);
   check(hash(encode(app)) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
   // The hashes the release was built against, from the tag itself.
   const pinned = (file) => execFileSync('git',

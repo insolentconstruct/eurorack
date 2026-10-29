@@ -11,16 +11,26 @@ Layout: everything served as-is is under `static/`, where a Hugo site expects it
 - `static/js/encoder.js`: Mutable Instruments' QPSK encoder (`stm_audio_bootloader/qpsk/encoder.py`) as Beads' release build runs it. One unminified module, used by both the page and the Node tests.
 - `static/js/glibc_sincos.js`: sine and cosine ported from the GNU C Library 2.36, LGPL 2.1 or later (`static/js/COPYING.LIB`). The release file is encoded by numpy on glibc; one last bit of a sine decides between samples 32766 and 32767, and the browser's own `Math.sin` differs in about 636,000 samples of the Beta 2 file.
 - `static/index.html`, `static/js/app.js`, `static/js/worker.js`: the page; the encoder runs in a worker.
-- `static/manifest.json` and `static/images/`: the releases offered, with each app image and update file pinned by SHA-256. GitHub release downloads cannot be fetched from another site, so the images are served with the page.
+- `static/manifest.json` and `static/images/`: the releases offered, with each app image and update file pinned by SHA-256. `profile` is `null`: every release so far is a plain update file. GitHub release downloads cannot be fetched from another site, so the images are served with the page.
+- `tools/swap_release.py`: offers a new release, optionally in place of an old one (below).
 
-Tests (Node 18 or later):
+Tests (Node 18 or later; Python 3 and git for the swap test):
 
 ```sh
 node palette/test/manifest.js
 node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
+python3 palette/test/swap_release_test.py
 ```
 
 CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
+
+**New release:** after the tag is pushed and fetched,
+
+```sh
+python3 palette/tools/swap_release.py drizzlet-YYYY.MM.DD --label 'Beta 2 "Fog"' --replace OLD_TAG
+```
+
+checks the app image (cut from the release's combo download, or a given `app.bin`) and the `.wav` it encodes to against the hashes pinned at the tag, then runs the manifest test on a copy. With `--write` it then applies the swap to `palette/` if the test passed; commit the result.
 
 **Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 

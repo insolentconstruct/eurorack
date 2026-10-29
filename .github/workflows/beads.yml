@@ -68,6 +68,7 @@ jobs:
           git fetch --no-tags --depth=1 origin '+refs/tags/drizzlet-*:refs/tags/drizzlet-*'
           node palette/test/golden.js artifacts/app.bin "$(cut -c1-64 beads/build/expected-wav.sha256)"
           node palette/test/manifest.js
+          python3 palette/test/swap_release_test.py
       - name: Build the unchanged 4.9.3 golden app
         run: bash beads/build/golden.sh "$PWD/golden"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
