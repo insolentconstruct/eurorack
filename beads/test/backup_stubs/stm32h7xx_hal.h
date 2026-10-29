@@ -50,6 +50,7 @@ extern int test_ops;
 extern int test_erases;
 extern bool test_half_erase;  // Power goes halfway through an erase.
 extern bool test_stale_flags;  // Each operation leaves an error flag set.
+extern int test_stuck_erases;  // Erases that succeed but change nothing.
 inline bool TestOperation() {
   if (test_locked || test_budget == 0) {
     return false;
@@ -67,10 +68,10 @@ inline bool TestOperation() {
 inline void HAL_FLASH_Unlock() { test_locked = false; }
 inline void HAL_FLASH_Lock() { test_locked = true; }
 inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
-  if (e->Sector >= 8 && e->Sector < 14) {
+  if (e->Sector < 6) {
     test_erases += e->NbSectors;
   }
-  const uint32_t start = 0x08100000 + (e->Sector - 8) * 0x20000;
+  const uint32_t start = TestFlashSectorStart(e->Banks, e->Sector);
   if (test_half_erase && test_budget == 1 && !test_locked) {
     TestFlashBeginOperation();
     memset(reinterpret_cast<void*>(start), 255, 0x10000);
@@ -80,6 +81,10 @@ inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
   }
   if (!TestOperation()) {
     return 1;
+  }
+  if (test_stuck_erases > 0) {
+    --test_stuck_erases;
+    return 0;
   }
   TestFlashBeginOperation();
   memset(reinterpret_cast<void*>(start), 255, 0x20000 * e->NbSectors);

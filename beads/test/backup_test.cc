@@ -49,6 +49,7 @@ int test_ops = 0;
 int test_erases = 0;
 bool test_half_erase = false;
 bool test_stale_flags = false;
+int test_stuck_erases = 0;
 namespace stmlib {
 
 SystemClock system_clock;
@@ -726,12 +727,9 @@ void TestLockedBackup() {
   test_checker.Start("TestLockedBackup");
   Wipe();
   Save(Processor::MEDIA_DIGITAL, false, 123, 7);
-  // Damage the latest state record.
-  Rig probe;
-  probe.Boot();
-  const uint32_t state = 0x081e0000 + 128 +
-      32 * (probe.settings.chunk_storage_.next_state_chunk_index_ - 2);
-  TestFlashDamage(state);
+  // Both copies of the calibration lost.
+  TestFlashDamage(0x081e0000 + 32);
+  TestFlashDamage(0x081c0000 + 32);
   Rig r;
   CHECK(!r.Boot());  // The stored frozen flag isn't trusted.
   CHECK(r.settings.write_locked());
@@ -759,14 +757,49 @@ void TestEraseDamagedSectors() {
   TestFlashDamage(0x08180000 + 0x1ffe0);
   Rig r;
   r.Boot();
-  const int erases = test_erases;
+  int erases = test_erases;
   test_locked = true;
+  // A refused erase, then one that does nothing: retried until blank.
+  test_fail_at = test_ops + 1;
+  test_stuck_erases = 1;
   r.backup.EraseDamagedSectors();
-  CHECK(test_erases == erases + 2);
+  test_fail_at = 0;
+  CHECK(test_erases == erases + 4);
   CHECK(TestFlash().num_damaged == 0);
   CHECK(kFlash[0x20000] == 0xff && kFlash[0x80000] == 0xff);
+  CHECK(TestFlash().wide_sectors == 0);
   // The other sectors are left as they were.
   CHECK(kHeader->tag == 0x5a5a5246 && kFlash[0x40000] != 0xff);
+  // An erase that never works leaves the damage.
+  TestFlashDamage(0x08140000);
+  erases = test_erases;
+  test_stuck_erases = 100;
+  r.backup.EraseDamagedSectors();
+  test_stuck_erases = 0;
+  CHECK(test_erases == erases + 3);
+  CHECK(TestFlash().num_damaged == 1);
+  TestFlashRepairAll();
+}
+
+void TestStuckBufferErase() {
+  test_checker.Start("TestStuckBufferErase");
+  // An erase that reports success but leaves the old backup: the save is
+  // abandoned before any audio is written over it.
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+  Rig r;
+  CHECK(r.Boot());
+  r.backup.Process(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  const int ops = test_ops;
+  test_stuck_erases = 1;
+  r.Freeze(0);
+  test_stuck_erases = 0;
+  CHECK(test_ops == ops + 1);
+  CHECK(!r.settings.state().frozen);
+  CHECK(!r.backup.busy());
+  CHECK(TestFlash().wide_sectors == 0);
 }
 
 void TestPowerLoss() {
@@ -811,5 +844,6 @@ int main() {
   TestStaleFlags();
   TestLockedBackup();
   TestEraseDamagedSectors();
+  TestStuckBufferErase();
   return test_checker.failures() ? 1 : 0;
 }

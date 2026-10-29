@@ -163,18 +163,8 @@ void BackgroundBufferBackup::SaveState(bool frozen) {
 void BackgroundBufferBackup::EraseSector() {
   if (remaining_sectors_) {
     save_started_ = true;
-    HAL_FLASH_Unlock();
-    FLASH_EraseInitTypeDef erase_params;
-    erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
-    erase_params.Banks = FLASH_BANK_2;
     // The header's sector first: an interrupted backup is never loaded.
-    erase_params.Sector = 8 + kNumSectors - remaining_sectors_;
-    erase_params.NbSectors = 1;
-    erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
-    uint32_t sector_error;
-    Flash::ClearErrors();
-    if (settings_->write_locked() || \
-        HAL_FLASHEx_Erase(&erase_params, &sector_error) != HAL_OK) {
+    if (!EraseBufferSector(kNumSectors - remaining_sectors_, 1)) {
       remaining_sectors_ = remaining_bytes_ = 0;
       return;
     }
@@ -288,24 +278,36 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
 
 
 void BackgroundBufferBackup::EraseDamagedSectors() {
-  for (size_t i = 0; i < kNumSectors; ++i) {
-    if (Flash::IsReadable(Sector<8>::start + i * kSectorSize, kSectorSize)) {
-      continue;
+  for (uint32_t i = 0; i < kNumSectors; ++i) {
+    if (!Flash::IsReadable(Sector<8>::start + i * kSectorSize, kSectorSize)) {
+      EraseBufferSector(i, kFlashAttempts);
     }
-    HAL_FLASH_Unlock();
+  }
+  HAL_FLASH_Lock();
+}
+
+// Sector 0 to 5 of bank 2; checked as the settings storage checks its
+// erases.
+bool BackgroundBufferBackup::EraseBufferSector(uint32_t sector, int attempts) {
+  if (settings_->write_locked()) {
+    return false;
+  }
+  HAL_FLASH_Unlock();
+  for (int attempt = 0; attempt < attempts; ++attempt) {
     FLASH_EraseInitTypeDef erase_params;
     erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
     erase_params.Banks = FLASH_BANK_2;
-    erase_params.Sector = 8 + i;
+    erase_params.Sector = sector;
     erase_params.NbSectors = 1;
     erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
     uint32_t sector_error;
     Flash::ClearErrors();
-    if (!settings_->write_locked()) {
-      HAL_FLASHEx_Erase(&erase_params, &sector_error);
+    if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK && \
+        Flash::IsBlank(Sector<8>::start + sector * kSectorSize, kSectorSize)) {
+      return true;
     }
-    HAL_FLASH_Lock();
   }
+  return false;
 }
 
 }  // namespace beads
