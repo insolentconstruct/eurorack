@@ -171,14 +171,23 @@ class WavetableGrain : public Grain {
       return;
     }
     
+    float sample = RenderSample();
+    sample *= RenderEnvelope(freeze);
+    Mix(sample, in_out);
+  }
+
+  // The three steps of Render, for a caller that interleaves two grains.
+  inline float RenderSample() {
     phase_ += frequency_;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
     }
     
     float sample = differentiator_.Process(ReadSample(phase_));
-    sample = float(int(sample * scale_up_)) * scale_down_;
-    
+    return float(int(sample * scale_up_)) * scale_down_;
+  }
+
+  inline float RenderEnvelope(bool freeze) {
     if (!freeze) {
       envelope_sample_ = envelope_.Render() * voice_stealing_envelope_.Render();
       --remaining_samples_;
@@ -186,9 +195,10 @@ class WavetableGrain : public Grain {
         remaining_samples_ = 0;
       }
     }
-    
-    sample *= envelope_sample_;
+    return envelope_sample_;
+  }
 
+  inline void Mix(float sample, FloatFrame* in_out) const {
     in_out->l += sample * gain_l_;
     in_out->r += sample * gain_r_;
   }
