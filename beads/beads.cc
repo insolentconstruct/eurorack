@@ -548,6 +548,7 @@ bool FadedOut() {
 }
 
 void MonitorStateChange() {
+  gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
   ui.set_no_input(normalization_detector.no_input());
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;

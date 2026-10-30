@@ -1090,6 +1090,16 @@ cases = [
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'settings_->FeatureValue(FEATURE_VERSION) &&',
     'false &&'),
+  ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
+    'if (attenuation_ && gain_setting) {',
+    'if (false) {'),
+  ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
+    'gain_setting < 120', 'gain_setting < 121'),
+  ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
+    'gain_setting <= 136', 'gain_setting <= 135'),
+  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
+    '? 0.25f : 0.05f', '? 0.5f : 0.05f'),
+
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

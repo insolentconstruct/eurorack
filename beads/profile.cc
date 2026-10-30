@@ -49,6 +49,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, true, false },  // Monophonic.
   { 2, kNoField, false, false, true, true },  // Trim.
   { 2, kNoField, false, false, false, false },  // Version.
+  { 2, kNoField, false, false, false, false },  // Attenuation.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

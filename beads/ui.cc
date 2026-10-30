@@ -334,7 +334,10 @@ void Ui::UpdateLeds() {
         const State& state = settings_->state();
         
         if (adjusting_manual_gain) {
-          leds_.set_meter(0.05f + 0.95f * float(state.gain) / 256.0f);
+          const bool unity = settings_->FeatureValue(FEATURE_ATTENUATION) &&
+              state.gain >= 120 && state.gain <= 136;
+          leds_.set_meter(unity
+              ? 0.25f : 0.05f + 0.95f * float(state.gain) / 256.0f);
         } else if (adjusting_width) {
           // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
           const StereoWidth width = settings_->stereo_width();

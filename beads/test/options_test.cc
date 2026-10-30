@@ -2459,6 +2459,19 @@ void TestBetaOptionsLeds() {
   version.Tick(300);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] != 0);
 
+  Rig gain;
+  gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
+  gain.Down(SWITCH_MEDIA);
+  gain.feedback = 0.1f;
+  gain.Tick(20);
+  const int gains[] = { 119, 120, 136, 137 };
+  for (int i = 0; i < 4; ++i) {
+    gain.feedback = float(gains[i]) / 256.0f;
+    gain.Tick(20);
+    CHECK((gain.ui.leds_.intensity_[LED_MEDIA_R] == 0 &&
+        gain.ui.leds_.intensity_[LED_MEDIA_G] == 255) == (i == 1 || i == 2));
+  }
+
 
 }
 
