@@ -566,8 +566,10 @@ void MonitorStateChange() {
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
   ui.set_delay_active(processor.delay_active());
-  if (settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
-    ui.set_modulation_indication(false, cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
+  if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
+      settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
+    ui.set_modulation_indication(cv_reader.pitch_on_notch(),
+        cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
   ui.set_no_input(normalization_detector.no_input());
   if (ui.should_ignore_state_change() || codec_transition_frames) {

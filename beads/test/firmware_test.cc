@@ -1498,6 +1498,35 @@ void TestSynthStopClearsReverb() {
   CHECK(clear);
 }
 
+void TestPitchNotchLaw() {
+  test_checker.Start("TestPitchNotchLaw");
+  Rig r(false, false);
+  r.Settle();
+  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
+  // Boundaries in raw ADC units, both directions, plus both knob ends.
+  const uint16_t raw[] = {
+    32768, 34580, 34620, 34730, 34580,
+    59900, 60130, 61890, 61950, 62060, 61890,
+    65535, 65250, 65420, 0, 235, 400
+  };
+  const bool expected[] = {
+    true, true, true, false, true,
+    false, true, true, true, false, true,
+    true, false, true, true, true, false
+  };
+  for (int sign = 0; sign < 2; ++sign) {
+    cv_reader.pitch_on_notch_ = false;
+    for (size_t i = 0; i < sizeof(raw) / sizeof(raw[0]); ++i) {
+      PotsAdc::values_[POTS_ADC_CHANNEL_PITCH] = sign ? 65535 - raw[i] : raw[i];
+      MonitorStateChange();
+      ui.UpdateLeds();
+      CHECK(ui.pitch_on_notch_ == expected[i]);
+      CHECK((ui.leds_.intensity_[LED_MEDIA_R] == 0 &&
+          ui.leds_.intensity_[LED_MEDIA_G] == 255) == expected[i]);
+    }
+  }
+}
+
 // Off identity is checked against the release executable's existing audio
 // hashes. Comparing two profiles through ApplyProfile is not independent.
 void TestSeedLatchPatched() {
@@ -1609,6 +1638,7 @@ int main() {
   TestCodecRestartFade();
   TestCodecKeepsClocks();
   TestSynthStopClearsReverb();
+  TestPitchNotchLaw();
   TestSeedLatchPatched();
   return test_checker.failures() ? 1 : 0;
 }

@@ -165,6 +165,18 @@ class CvReader {
     return pot_channel_[channel].value();
   }
 
+  bool pitch_on_notch() {
+    // Knob only, before smoothing. Hold the cue 0.002 of knob travel past
+    // each plateau edge; enter only inside the plateau. Include both ends.
+    const float detune = fabsf(
+        2.0f * raw_pot(POTS_ADC_CHANNEL_PITCH) - 1.0f) * 6.0f;
+    const float margin = pitch_on_notch_ ? 0.024f : 0.0f;
+    pitch_on_notch_ = detune <= 0.33333333f + margin ||
+        (detune >= 5.0f - margin && detune <= 5.33333333f + margin) ||
+        detune >= 5.976f - margin;
+    return pitch_on_notch_;
+  }
+
   inline float raw_pot(PotsAdcChannel channel) const {
     return pots_.float_value(channel);
   }
@@ -174,6 +186,7 @@ class CvReader {
   }
   
  private:
+  bool pitch_on_notch_;
   CvAdc cv_;
   PotsAdc pots_;
   

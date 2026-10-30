@@ -2521,6 +2521,14 @@ void TestBetaOptionsLeds() {
     CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] != 0);
   }
 
+  Rig notch;
+  SetFixed(&notch, FEATURE_PITCH_NOTCH, 1);
+  for (int active = 0; active < 2; ++active) {
+    notch.ui.set_modulation_indication(active, 0.0f);
+    notch.Tick(1);
+    CHECK((notch.ui.leds_.intensity_[LED_MEDIA_R] == 0) == bool(active));
+  }
+
   Rig live;
   live.settings.set_stereo_width(255);
   live.settings.set_diffusion(0.5f);

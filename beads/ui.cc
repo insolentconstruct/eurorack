@@ -356,6 +356,10 @@ void Ui::UpdateLeds() {
           const float brightness = overwrite_reserve_ * \
               (state.monophonic_mode ? 0.5f : 1.0f);
           leds_.set_media(media_color, brightness);
+          if (settings_->FeatureValue(FEATURE_PITCH_NOTCH) && pitch_on_notch_) {
+            const Leds::Color cue = { 0, 255, 0 };
+            leds_.set_media(cue);
+          }
           if (settings_->FeatureValue(FEATURE_DELAY_CUE) && delay_cue_time_ &&
               uint32_t(system_clock.milliseconds() - delay_cue_time_) < 150) {
             const Leds::Color cue = { 255, 0, 0 };
