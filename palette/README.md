@@ -15,7 +15,10 @@ Per-feature CPU costs are measured on a module-calibrated development board;
 four event-only features have no per-block work by code inspection. Estimates
 sum each engine's own costs. The synth baseline is the measured default-profile
 worst case, **87.2% with Clouds-style reverb**, width 255 and Raag Shri; it already
-includes Clouds-style reverb. Granular's historical baseline is 83.0%.
+includes Clouds-style reverb. Granular's historical baseline is 83.0% and
+already includes its default settings too. Per-feature estimates subtract each
+feature's default cost for both engines, so moving slots leaves both baselines
+unchanged.
 
 Measurement provenance: measured on the module, October 2026. Clouds-style
 synth reverb ranged from 86.1–87.2%; Plaits with Clouds-style reverb measured

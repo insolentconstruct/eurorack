@@ -11,7 +11,7 @@ const engines = ['synth', 'granular'];
 const round = (v) => Math.round(v * 10) / 10;
 const tableFeature = (f) => costTable.features.find((row) => row.id === f.id);
 // Independent oracle: use only each engine's table fields, never its top-level maxima.
-function tableDelta(entry, f, engine) {
+function tableCost(entry, f, engine) {
   const cpu = tableFeature(f).cpu;
   if (cpu.kind === 'inspection') return 0;
   const c = cpu.engines[engine];
@@ -20,6 +20,9 @@ function tableDelta(entry, f, engine) {
   const v = c[entry[1] === 1 ? 'fixed' : 'adjustable'];
   if (Array.isArray(v)) return v[entry[2]];
   return (v.zero * (255 - entry[2]) + v.maximum * entry[2]) / 255;
+}
+function tableDelta(entry, f, engine) {
+  return tableCost(entry, f, engine) - tableCost(f.default, f, engine);
 }
 const sum = (entries, engine) => profile.features.reduce((total, f) =>
   total + tableDelta(entries.find((e) => e[0] === f.id), f, engine), 0);
@@ -48,9 +51,35 @@ for (const f of profile.features) {
   assert(!JSON.stringify(f.cpu).includes('measured on the module'));
 }
 assert.equal(featureDelta([2, 1, 1], profile.features[1], 'synth'), 0);
-assert.equal(featureDelta([2, 1, 1], profile.features[1], 'granular'), 1.202);
+assert.equal(featureDelta([2, 1, 1], profile.features[1], 'granular'), 0);
 assert.equal(featureDelta([5, 1, 1], profile.features[4], 'synth'), -0.062);
-assert.equal(featureDelta([5, 1, 1], profile.features[4], 'granular'), 0.047);
+assert.equal(featureDelta([5, 1, 1], profile.features[4], 'granular'), 0);
+// Both the exact default and a valid placement-only edit use the same baseline.
+const moved = defaults(profile);
+moved.find((e) => e[0] === 1)[3] = 10;
+assert.notEqual(profileKey(moved, profile), profileKey(defaults(profile), profile));
+assert.deepEqual(decodeProfile(encodeProfile(moved, profile), profile), moved);
+for (const entries of [defaults(profile), moved]) {
+  for (const result of cpuUsage(entries, release).engines) {
+    assert.equal(result.percent, release.cpu.baselines[result.engine].percent);
+  }
+}
+for (const f of profile.features) for (const engine of engines) {
+  assert.equal(featureDelta(f.default, f, engine), 0, `${f.name}: default ${engine}`);
+}
+// A real setting change adds only the measured difference from its default.
+const changed = structuredClone(moved);
+changed.push([18, 1, 2, 0, 0, 0]);
+assert.deepEqual(decodeProfile(encodeProfile(changed, profile), profile), changed);
+for (const result of cpuUsage(changed, release).engines) {
+  const delta = tableDelta(changed.find((e) => e[0] === 18), profile.features[17], result.engine);
+  assert.equal(delta, 0.147);
+  assert.equal(result.percent, round(result.baseline.percent + delta));
+}
+const fixedPitch = structuredClone(moved);
+fixedPitch[0] = [1, 1, 0, 0, 0, 0];
+assert.equal(featureDelta(fixedPitch[0], profile.features[0], 'granular'), -0.16);
+assert.equal(cpuUsage(fixedPitch, release).engines.find((e) => e.engine === 'granular').percent, 82.8);
 for (const [name, entries] of Object.entries({ Default: defaults(profile), ...templates(profile) })) {
   assert.deepEqual(decodeProfile(encodeProfile(entries, profile), profile), entries, `${name} builds`);
   const usage = cpuUsage(entries, release);
@@ -74,7 +103,7 @@ for (const engine of engines) {
   assert.equal(result.percent, estimate);
   assert.equal(result.warning, estimate >= 91);
   assert.equal(result.blocked, estimate > 92);
-  for (const percent of [91.5, 92.5, 90]) {
+  for (const percent of [90, 91, 91.5, 92, 92.5]) {
     const measured = structuredClone(release);
     measured.cpu.combinations = [{ profile: profileKey(entries, profile), synth: percent, granular: percent }];
     const usage = cpuUsage(entries, measured);
@@ -103,7 +132,7 @@ for (let i = 0; i < 100; ++i) {
   }
 }
 const app = readFileSync(new URL('../static/js/app.js', import.meta.url), 'utf8');
-assert(app.includes('points versus stock · ' + costSource));
+assert(app.includes('points versus release default · ' + costSource));
 assert(app.includes('estimated from costs ' + costSource));
 assert(app.includes("e.measured ? ' measured on the module'"));
 assert.equal((app.match(/measured on the module/g) || []).length, 1);

@@ -137,16 +137,20 @@ export function templates(profile) {
 }
 export const profileKey = (entries, profile) => Array.from(encodeProfile(entries, profile),
     (v) => v.toString(16).padStart(2, '0')).join('');
-// One engine's cost of a setting, in points, relative to the feature Off; an
+// One engine's cost of a setting, in points, relative to the release default; an
 // engine the feature cannot run on costs 0, an unmeasured feature is null.
 export function featureDelta(entry, feature, engine) {
   if (!feature.cpu || !['measured', 'zero'].includes(feature.cpu.kind)) return null;
   const cpu = feature.cpu.engines[engine];
   if (!cpu) return 0;
-  const e = entry || [feature.id, 0];
-  if (e[1] === 0) return cpu.off;
-  const costs = cpu[e[1] === 1 ? 'fixed' : 'adjustable'];
-  return Array.isArray(costs) ? costs[e[2]] : costs.zero + (costs.maximum - costs.zero) * e[2] / 255;
+  const cost = (e) => {
+    if (!e || e[1] === 0) return cpu.off;
+    const costs = cpu[e[1] === 1 ? 'fixed' : 'adjustable'];
+    return Array.isArray(costs) ? costs[e[2]] : costs.zero + (costs.maximum - costs.zero) * e[2] / 255;
+  };
+  // The measured engine baseline already includes every default setting.
+  // Subtract its cost even for omitted entries (Off); placement has no cost.
+  return cost(entry) - cost(feature.default);
 }
 export function cpuUsage(entries, release) {
   const key = profileKey(entries, release.profile);
