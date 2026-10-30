@@ -83,6 +83,10 @@ class Processor {
     processor_dirty_tape_.SetAttacks(mode);
   }
 
+  inline bool delay_active() const {
+    return delay_mode_transition_ > 0.0f && !spectral_;
+  }
+
   inline AttackInput* attack_input() { return &attack_input_; }
 
   // Attacks are marked only while granular playback records.

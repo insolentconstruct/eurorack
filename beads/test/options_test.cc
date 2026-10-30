@@ -2459,6 +2459,17 @@ void TestBetaOptionsLeds() {
   version.Tick(300);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] != 0);
 
+  Rig delay;
+  SetFixed(&delay, FEATURE_DELAY_CUE, 1);
+  for (int edge = 0; edge < 2; ++edge) {
+    delay.ui.set_delay_active(edge == 0);
+    delay.Tick(1);
+    CHECK(delay.ui.leds_.intensity_[LED_MEDIA_R] == 255);
+    CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    delay.Tick(150);
+    CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] != 0);
+  }
+
   Rig gain;
   gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
   gain.Down(SWITCH_MEDIA);

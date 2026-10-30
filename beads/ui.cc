@@ -94,6 +94,8 @@ void Ui::Init(
   
   freeze_button_state_ = false;
   freeze_led_state_ = false;
+  delay_active_ = false;
+  delay_cue_time_ = 0;
   boot_cue_time_ = system_clock.milliseconds();
   
   seed_button_state_ = false;
@@ -352,6 +354,11 @@ void Ui::UpdateLeds() {
           const float brightness = overwrite_reserve_ * \
               (state.monophonic_mode ? 0.5f : 1.0f);
           leds_.set_media(media_color, brightness);
+          if (settings_->FeatureValue(FEATURE_DELAY_CUE) && delay_cue_time_ &&
+              uint32_t(system_clock.milliseconds() - delay_cue_time_) < 150) {
+            const Leds::Color cue = { 255, 0, 0 };
+            leds_.set_media(cue);
+          }
           if (settings_->FeatureValue(FEATURE_VERSION) &&
               uint32_t(system_clock.milliseconds() - boot_cue_time_) <
                   200u + 300u * kReleaseBeta) {
@@ -702,6 +709,13 @@ void Ui::OnSwitchReleased(const Event& e) {
 
     default:
       break;
+  }
+}
+
+void Ui::set_delay_active(bool active) {
+  if (active != delay_active_) {
+    delay_active_ = active;
+    delay_cue_time_ = system_clock.milliseconds();
   }
 }
 
