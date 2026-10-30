@@ -40,6 +40,70 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '!e.value || !d.stateless', '!e.value'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '!id || id >= FEATURE_LAST',
+    'id >= FEATURE_LAST'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'id >= FEATURE_LAST',
+    'id > FEATURE_LAST'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.page_slot && pages[e.page_slot]',
+    '(e.page_slot && pages[e.page_slot] && false)'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.amount_slot && amounts[e.amount_slot]',
+    '(e.amount_slot && amounts[e.amount_slot] && false)'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.action && actions[e.action]',
+    '(e.action && actions[e.action] && false)'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '!d.page || e.state != PROFILE_ADJUSTABLE',
+    '!d.page'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '!d.amount || e.state != PROFILE_ADJUSTABLE',
+    '!d.amount'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.state == PROFILE_OFF ||',
+    'false ||'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '(e.state == PROFILE_FIXED && (!e.value || !d.stateless))',
+    'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.value && !e.action',
+    'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'count > kMaxProfileEntries', 'count > 83'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'bytes != 6 * count', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'Read32(b) != kProfileMagic', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'b[4] != 1', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'Read32(b + 12) != 0', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'Crc32(b, 16 + bytes) != Read32(b + 16 + bytes)', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'Read32(b + 8) != kProfileReleaseId', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '|| seen[id]', '|| (seen[id] && id == 0)'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.state > PROFILE_ADJUSTABLE', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    '(d.values && e.value >= d.values)', 'false'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.page_slot > 12', 'e.page_slot > 13'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.amount_slot > 2', 'e.amount_slot > 3'),
+  ('TestProfileParser', 'profile', 'beads/profile.cc',
+    'e.action > 3', 'e.action > 4'),
+  ('TestProfileKinds', 'profile', 'beads/profile.cc',
+    '!d.page', 'false'),
+  ('TestProfileKinds', 'profile', 'beads/profile.cc',
+    '!d.amount', 'false'),
+  ('TestProfileKinds', 'profile', 'beads/profile.cc',
+    '!d.action', 'false'),
   ('TestOptionsSeed', 'options', 'beads/options.h',
     'return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&',
     'return qualified_[0] && stage_ == STAGE_EDITING && page_ == kPitchScalePage &&'),
@@ -1051,7 +1115,11 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
                 'plaits_synth', 'spectral') else 60)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
-      if name == 'TestFinalBankRendering':
+      if name == 'TestProfileParser' and 'runtime error: index ' in failure:
+        assert 'beads/profile.cc:' in failure, failure
+      elif name == 'TestProfileParser' and 'ERROR: AddressSanitizer:' in failure:
+        assert 'Profile::' in failure, failure
+      elif name == 'TestFinalBankRendering':
         assert 'ERROR: AddressSanitizer:' in failure, failure
         report = failure.split('ERROR: AddressSanitizer:', 1)[1]
         stack = report.split('SUMMARY:', 1)[0]
