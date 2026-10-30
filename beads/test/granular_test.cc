@@ -982,15 +982,21 @@ void TestRenderedWidthLatch() {
   bool audible = false;
   for (int i = 0; i < 200; ++i) {
     trigger.trigger = i == 0 || i == 100;
-    if (i == 1) changed.set_stereo_width(1.0f, true);
+    if (i == 1) {
+      changed.set_stereo_width(1.0f, true);
+    }
     FloatFrame a = { 0.0f, 0.0f };
     FloatFrame b = a;
     stmlib::Random::Seed(123);
     changed.Render(&line, trigger, p, &a);
     stmlib::Random::Seed(123);
     reference.Render(&line, trigger, p, &b);
-    if (i < 100) CHECK(a.l == b.l && a.r == b.r);
-    if (i > 110 && (a.l != b.l || a.r != b.r)) audible = true;
+    if (i < 100) {
+      CHECK(a.l == b.l && a.r == b.r);
+    }
+    if (i > 110 && (a.l != b.l || a.r != b.r)) {
+      audible = true;
+    }
   }
   CHECK(audible);
 }

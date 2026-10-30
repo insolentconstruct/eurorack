@@ -71,25 +71,33 @@ void TestAttackInput() {
     const float level = b < 200 ? 0.01f : 0.5f;
     if (Feed(&input, level)) {
       ++onsets;
-      if (first < 0) first = b;
+      if (first < 0) {
+        first = b;
+      }
     }
   }
   CHECK(onsets == 1);
   CHECK(first == 200);
   // Below the floor nothing counts, however sudden.
   input.Configure(ATTACK_MODE_SNAP, kAttackThreshold);
-  for (int b = 0; b < 200; ++b) Feed(&input, 0.0f);
+  for (int b = 0; b < 200; ++b) {
+    Feed(&input, 0.0f);
+  }
   CHECK(!Feed(&input, 0.001f));
   // Hits every 2.5 ms count once: the level stays up between them.
   input.Configure(ATTACK_MODE_SNAP, kAttackThreshold);
-  for (int b = 0; b < 200; ++b) Feed(&input, 0.001f);
+  for (int b = 0; b < 200; ++b) {
+    Feed(&input, 0.001f);
+  }
   onsets = 0;
   for (int b = 0; b < 400; ++b) {
     onsets += Feed(&input, b % 10 == 0 ? 0.5f : 0.001f);
   }
   CHECK(onsets == 1);
   // Hits 100 ms apart count each time.
-  for (int b = 0; b < 400; ++b) Feed(&input, 0.001f);
+  for (int b = 0; b < 400; ++b) {
+    Feed(&input, 0.001f);
+  }
   onsets = 0;
   for (int b = 0; b < 2000; ++b) {
     onsets += Feed(&input, b % 400 == 0 ? 0.5f : 0.001f);
@@ -97,7 +105,9 @@ void TestAttackInput() {
   CHECK(onsets == 5);
   // An unpatched channel is ignored.
   input.Configure(ATTACK_MODE_SNAP, kAttackThreshold);
-  for (int b = 0; b < 200; ++b) Feed(&input, 0.01f);
+  for (int b = 0; b < 200; ++b) {
+    Feed(&input, 0.01f);
+  }
   CodecFrame in[kBlockSize];
   for (size_t i = 0; i < kBlockSize; ++i) {
     in[i].l = 0;
@@ -111,9 +121,9 @@ void TestAttackSnap() {
   AttackDetector detector;
   detector.Init(kRate);
   detector.Configure(ATTACK_MODE_SNAP);
-  const unsigned capacity = 192000;
+  const uint32_t capacity = 192000;
   // Marks at clock 1000 and 30000, recording up to clock 40000.
-  unsigned clock = 0;
+  uint32_t clock = 0;
   while (clock < 40000) {
     detector.SetOnset(clock == 996 || clock == 29999 - 29999 % kBlockSize);
     detector.BeginBlock(0, capacity, true, false);

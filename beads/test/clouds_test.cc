@@ -227,7 +227,9 @@ void TestReverbRates() {
       actual.ProcessClouds(a, 12);
       reference.ProcessClouds(b, 12);
       CHECK(memcmp(a, b, sizeof(a)) == 0);
-      for (int i = 0; i < 12; ++i) energy += a[i].l * a[i].l;
+      for (int i = 0; i < 12; ++i) {
+        energy += a[i].l * a[i].l;
+      }
     }
     CHECK(energy > 0.01);
   }

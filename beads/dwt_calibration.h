@@ -52,18 +52,18 @@ const uint8_t kResetPanel = 1;
 const uint8_t kResetSynthetic = 3;
 const uint32_t kMagic = 0x44575443;
 const uint32_t kVersion = 2;
-const unsigned kHistogramBinWidth = 2000;
-const unsigned kHistogramBins = 64;
-const unsigned kSyntheticBlocks = 4096;
-const unsigned kPanelBlocks = 240000;
-const unsigned kWarmupBlocks = 16000;
-const unsigned kStimulusSeed = 0x12345678;
-const unsigned kLeftMultiplier = 73;
-const unsigned kRightMultiplier = 137;
-const unsigned kStimulusPeriod = 2048;
+const uint32_t kHistogramBinWidth = 2000;
+const uint32_t kHistogramBins = 64;
+const uint32_t kSyntheticBlocks = 4096;
+const uint32_t kPanelBlocks = 240000;
+const uint32_t kWarmupBlocks = 16000;
+const uint32_t kStimulusSeed = 0x12345678;
+const uint32_t kLeftMultiplier = 73;
+const uint32_t kRightMultiplier = 137;
+const uint32_t kStimulusPeriod = 2048;
 const int kStimulusOffset = 1024;
 const float kStimulusScale = 8192.0f;
-const unsigned kFrameChannels = 2;
+const uint32_t kFrameChannels = 2;
 
 struct Bracket {
   uint32_t maximum;
@@ -119,11 +119,11 @@ inline uint32_t Read() {
 }
 
 inline void Clear() {
-  for (unsigned b = 0; b < BRACKET_LAST; ++b) {
+  for (uint32_t b = 0; b < BRACKET_LAST; ++b) {
     stats.bracket[b].maximum = 0;
     stats.bracket[b].count = 0;
     stats.bracket[b].sum = 0;
-    for (unsigned i = 0; i < kHistogramBins; ++i) {
+    for (uint32_t i = 0; i < kHistogramBins; ++i) {
       stats.bracket[b].histogram[i] = 0;
     }
   }
@@ -149,14 +149,14 @@ inline void Init() {
   stats.reserved[1] = 0;
   stats.frames.sequence = 0;
   stats.frames.reserved = 0;
-  for (unsigned c = 0; c < kFrameChannels; ++c) {
+  for (uint32_t c = 0; c < kFrameChannels; ++c) {
     stats.frames.channel[c].generation = 0;
   }
   Clear();
   stats.sequence = 2;
 }
 
-inline void Record(unsigned b, uint32_t elapsed) {
+inline void Record(uint32_t b, uint32_t elapsed) {
   if (stats.synthetic && stats.block < kWarmupBlocks) {
     return;
   }
@@ -170,7 +170,7 @@ inline void Record(unsigned b, uint32_t elapsed) {
   }
   s.sum += elapsed;
   ++s.count;
-  unsigned bin = elapsed / kHistogramBinWidth;
+  uint32_t bin = elapsed / kHistogramBinWidth;
   ++s.histogram[bin < kHistogramBins - 1 ? bin : kHistogramBins - 1];
 }
 
@@ -237,7 +237,7 @@ class FrameTimer {
     __enable_irq();
   }
 
-  void Stop(unsigned channel, size_t ready, size_t done) {
+  void Stop(uint32_t channel, size_t ready, size_t done) {
     __disable_irq();
     const uint32_t callback = CallbackCycles() - callback_;
     const uint32_t wall = Read() - start_;
@@ -313,7 +313,7 @@ inline void PrepareSynthetic(
     stmlib::GateFlags** seed_input, stmlib::GateFlags* seed, bool* freeze,
     FloatFrame* float_in, size_t size, ScopedBlockTimer* callback) {
   const uint32_t preparation_start = Read();
-  const unsigned block = stats.block;
+  const uint32_t block = stats.block;
   if (block == 0) {
     uint8_t* buffers[] = {
       delay_buffer_1, delay_buffer_1 + delay_buffer_1_size / 2, delay_buffer_2
@@ -340,7 +340,7 @@ inline void PrepareSynthetic(
   m->output_gate = false;
   *seed_button_state = SEED_BUTTON_STATE_OFF;
   *seed_input = seed;
-  for (unsigned i = 0; i < size; ++i) {
+  for (uint32_t i = 0; i < size; ++i) {
     float_in[i].l = float(int((block * size + i) * kLeftMultiplier
         % kStimulusPeriod) - kStimulusOffset) / kStimulusScale;
     float_in[i].r = float(int((block * size + i) * kRightMultiplier

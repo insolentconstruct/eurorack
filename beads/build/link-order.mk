@@ -7,7 +7,8 @@ ifeq ($(KIT_GCC9),1)
 CPPFLAGS += -std=gnu++98
 endif
 CC_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.cc))))
-C_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) $(sort $(CORE_C_FILES)) $(sort $(DRIVERS_C_FILES))
+C_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.c)))) \
+	$(sort $(CORE_C_FILES)) $(sort $(DRIVERS_C_FILES))
 AS_FILES = $(notdir $(foreach p,$(PACKAGES),$(sort $(wildcard $(p)/*.s))))
 ifneq ($(words $(OBJ_FILES)),$(words $(sort $(OBJ_FILES))))
 $(error Duplicate object basenames: cannot safely use upstream VPATH)

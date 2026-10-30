@@ -1370,7 +1370,8 @@ void TestSpectralEngine() {
   // even if another was picked meanwhile.
   settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
   RunSquare(&r, 3000);
-  CHECK(processor.spectral() && processor.media() == Processor::MEDIA_CLEAN_TAPE);
+  CHECK(processor.spectral() &&
+        processor.media() == Processor::MEDIA_CLEAN_TAPE);
   settings.set_spectral(false);
   SysTick_Handler();
   for (int i = 0; i < 400 && processor.spectral(); ++i) {
@@ -1421,7 +1422,9 @@ void TestCodecRestartFade() {
   r.peaks = NULL;
   // The last sounding block before the restart is quiet.
   size_t last = peaks.size();
-  while (last && peaks[last - 1] == 0) --last;
+  while (last && peaks[last - 1] == 0) {
+    --last;
+  }
   CHECK(last > 40);
   printf("Restart fade: steady %d, last %d\n", steady, peaks[last - 1]);
   CHECK(peaks[last - 1] < steady / 8);
@@ -1486,7 +1489,9 @@ void TestSynthStopClearsReverb() {
   CHECK(synth_mode);
   r.Tick(500);
   bool used = false;
-  for (int i = 0; i < 32768 && !used; ++i) used = reverb_buffer[i] != 0;
+  for (int i = 0; i < 32768 && !used; ++i) {
+    used = reverb_buffer[i] != 0;
+  }
   CHECK(used);
   r.left = true;
   for (int i = 0; i < 2000 && synth_mode; ++i) {
@@ -1494,7 +1499,9 @@ void TestSynthStopClearsReverb() {
   }
   CHECK(!synth_mode && codec_transition_frames > 0);
   bool clear = true;
-  for (int i = 0; i < 32768 && clear; ++i) clear = reverb_buffer[i] == 0;
+  for (int i = 0; i < 32768 && clear; ++i) {
+    clear = reverb_buffer[i] == 0;
+  }
   CHECK(clear);
 }
 

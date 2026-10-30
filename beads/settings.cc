@@ -134,9 +134,8 @@ bool Settings::Init(bool recovery_mode,
   }
   
   if (status == STORAGE_DAMAGED) {
-    // Neither copy of the calibration is usable: play on the factory values
-    // and default settings held in RAM, unfrozen since the stored flag can't
-    // be trusted. Only SEED at power-up writes.
+    // No usable calibration: play on factory values and default settings,
+    // unfrozen, in RAM only. Only SEED at power-up writes.
     chunk_storage_.Lock();
     stored_state_ = defaults;
     persistent_data_ = factory;
@@ -219,9 +218,9 @@ void Settings::SaveState() {
   chunk_storage_.SaveState();
 }
 
-namespace {
-const uint8_t kFieldBytes[10] = { 10, 11, 12, 13, 15, 18, 19, 20, 21, 22 };
-}  // namespace
+const uint8_t kFieldBytes[kNumPackedBytes] = {
+  10, 11, 12, 13, 15, 18, 19, 20, 21, 22
+};
 
 uint8_t Settings::FeatureValue(ProfileFeature feature) const {
   if (feature >= FEATURE_VERSION) {
@@ -333,7 +332,7 @@ void Settings::LoadOptions() {
   }
   if (marker == kSettingsFormat) {
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&stored_state_);
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < kNumPackedBytes; ++i) {
       packed_[i] = bytes[kFieldBytes[i]];
       // Keep the downgrade invariant even after a damaged record.
       if ((packed_[i] >> 4) > 9) {
@@ -385,7 +384,7 @@ void Settings::PackOptions() {
     }
   }
   uint8_t* bytes = reinterpret_cast<uint8_t*>(&stored_state_);
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < kNumPackedBytes; ++i) {
     bytes[kFieldBytes[i]] = packed_[i];
   }
   // Any new CV assignment replaces the dormant one.

@@ -89,7 +89,7 @@ Observed upstream DSP conventions and design principles:
   and separator; (Drizzlet) add a brief description. Upstream Plaits, Marbles
   and Stages tests instead retain GPL headers without a separator; do not
   replace them.
-- (Drizzlet) Use one makefile per program, following the host `beads/test/makefile` structure (`PACKAGES`, `VPATH`, explicit `CC_FILES`, `-DTEST -Wall -Werror`); run `make -f beads/test/<name>.mk test` from the root. Options also runs the advanced build.
+- (Drizzlet) Use one makefile per program, following the host `beads/test/makefile` structure (`PACKAGES`, `VPATH`, explicit `CC_FILES`, `-DTEST -Wall -Werror`); run `make -f beads/test/<name>.mk test` from the root.
 - (Drizzlet) `beads/test/ci-jobs.json` lists the CI jobs; a job may run several programs. Register a new program there. Shared fragments such as `plaits_sources.mk` are not programs. `mutation_check.py` runs weekly.
 - Make recipes use tabs, as in upstream test makefiles.
 - Firmware makefiles commonly keep the MIT header, aligned assignments, `PACKAGES` and `include stmlib/makefile.inc`; Beads gives an overridable `TOOLCHAIN_PATH ?=` default with compiler comparison comments. Host makefiles list sources explicitly and need not have the firmware header, toolchain default or include.

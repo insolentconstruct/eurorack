@@ -169,9 +169,9 @@ bool Profile::Parse(const volatile uint8_t* b) {
   }
   memset(entries_, 0, sizeof(entries_));
   bool seen[FEATURE_LAST] = { false };
-  bool pages[13] = { false };
-  bool amounts[3] = { false };
-  bool actions[4] = { false };
+  bool pages[kNumPageSlots] = { false };
+  bool amounts[AMOUNT_LAST] = { false };
+  bool actions[ACTION_LAST] = { false };
   for (size_t i = 0; i < count; ++i) {
     const volatile uint8_t* p = b + 16 + 6 * i;
     const uint8_t id = p[0];
@@ -182,7 +182,8 @@ bool Profile::Parse(const volatile uint8_t* b) {
     const FeatureDefinition& d = kFeatureDefinitions[id];
     ProfileEntry e = { id, p[1], p[2], p[3], p[4], p[5] };
     if (e.state > PROFILE_ADJUSTABLE || (d.values && e.value >= d.values) ||
-        e.page_slot > 12 || e.amount_slot > 2 || e.action > 3) {
+        e.page_slot >= kNumPageSlots || e.amount_slot >= AMOUNT_LAST ||
+        e.action >= ACTION_LAST) {
       return false;
     }
     if (id >= FEATURE_VERSION && e.state == PROFILE_ADJUSTABLE &&

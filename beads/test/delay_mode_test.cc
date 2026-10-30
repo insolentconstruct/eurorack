@@ -384,12 +384,16 @@ void TestDelayModeSwitchClick() {
   std::vector<uint8_t> saved(sizeof(r));
   memcpy(&saved[0], &r, sizeof(r));
   std::vector<float> control;
-  for (int i = 0; i < 4096; ++i) r.Block(&control);
+  for (int i = 0; i < 4096; ++i) {
+    r.Block(&control);
+  }
   memcpy(static_cast<void*>(&r), &saved[0], sizeof(r));
   std::vector<float> switched;
   r.Block(&switched);
   r.processor.set_delay_mode(DELAY_MODE_WIDE_DETENT);
-  for (int i = 0; i < 4095; ++i) r.Block(&switched);
+  for (int i = 0; i < 4095; ++i) {
+    r.Block(&switched);
+  }
   const size_t checkpoints[] = { 100, 512, 4096 };
   const size_t block_size = int(r.processor.sample_rate()) / 4000;
   CHECK(switched.size() == control.size());
@@ -398,7 +402,7 @@ void TestDelayModeSwitchClick() {
     const float switched_step = MaximumStep(switched, frames);
     const float control_step = MaximumStep(control, frames);
     printf("%u blocks, switch/control steps: %.9g / %.9g\n",
-        static_cast<unsigned>(checkpoints[i]), switched_step, control_step);
+        static_cast<uint32_t>(checkpoints[i]), switched_step, control_step);
     CHECK(switched_step <= control_step);
   }
 }

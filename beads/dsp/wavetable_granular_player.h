@@ -31,7 +31,7 @@
 
 #ifdef TEST
 #include <cstdio>
-#endif
+#endif  // TEST
 
 #include "stmlib/stmlib.h"
 
@@ -67,7 +67,8 @@ class WavetableGranularPlayer : public GranularPlayer<WavetableGrain, 32> {
           bank,
           bit_shift,
           p.time.value(),
-          p.pitch.pitch_value(pitch_scale_, random_intervals_) * kWavetableRootNote * one_hertz_,
+          p.pitch.pitch_value(pitch_scale_, random_intervals_) * \
+              kWavetableRootNote * one_hertz_,
           ComputeGrainDuration(p.size.value()),
           p.shape.value(),
           amplitude,

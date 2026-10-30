@@ -1725,7 +1725,9 @@ void TestDiffusionAssignCycle() {
   for (int c = 0; c < 4; ++c) {
     Rig r;
     r.settings.set_stereo_width(c & 1 ? 128 : 0);
-    if (c & 2) r.settings.set_diffusion(0.4f);
+    if (c & 2) {
+      r.settings.set_diffusion(0.4f);
+    }
     r.settings.mutable_state()->assignable_cv_destination = 0;
     r.Tick(20);
     for (int i = 0; i < 6; ++i) {
@@ -1892,7 +1894,9 @@ void TestOptionsKnobsAndSettling() {
     for (int knob = 0; knob < 3; ++knob) {
       Rig r;
       r.Enter();
-      for (int i = 0; i < page; ++i) r.Tap();
+      for (int i = 0; i < page; ++i) {
+        r.Tap();
+      }
       float* pot = knob == 0 ? &r.feedback : knob == 1 ? &r.pot : &r.reverb;
       const OptionSetting setting = kOptionPages[page].knobs[knob];
       const State state = r.settings.state();
@@ -1940,7 +1944,9 @@ void TestOptionsKnobsAndSettling() {
   }
   // A leave button keeps a pending change and waits for its one settled save.
   for (int button = 0; button < SWITCH_LAST; ++button) {
-    if (button == SWITCH_ASSIGN) continue;
+    if (button == SWITCH_ASSIGN) {
+      continue;
+    }
     Rig r;
     r.Enter();
     const uint32_t writes = test_writes;
@@ -2246,7 +2252,9 @@ void TestPendingSeed() {
     CHECK(r.ui.options_.commit_requested());
     test_down[SWITCH_SEED] = true;
     r.Tick(hold ? 600 : 20, false);
-    if (hold == 2) r.ui.DoEvents();
+    if (hold == 2) {
+      r.ui.DoEvents();
+    }
     test_down[SWITCH_SEED] = false;
     r.Tick(20, false);
     CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
@@ -2374,7 +2382,9 @@ void TestProfilePages() {
 void TestProfileActions() {
   test_checker.Start("TestProfileActions");
   uint8_t b[kProfileSize];
-  const int features[] = { FEATURE_MONOPHONIC, FEATURE_TRIM, FEATURE_SYNTH_START };
+  const int features[] = {
+    FEATURE_MONOPHONIC, FEATURE_TRIM, FEATURE_SYNTH_START
+  };
   for (int i = 0; i < 3; ++i) {
     for (int slot = 1; slot <= 3; ++slot) {
       for (int patched = 0; patched < 2; ++patched) {
@@ -2581,18 +2591,23 @@ void TestBetaOptionsLeds() {
     full.settings.mutable_state()->media = 3;
     full.ui.set_freeze_led_state(true);
     full.Tick(1);
-    CHECK(full.ui.leds_.intensity_[LED_FREEZE] == 255 * percentages[level] / 100);
+    CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
+          255 * percentages[level] / 100);
     // Bright digital quality is white; balance it only below 100%.
     for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
-      CHECK(full.ui.leds_.intensity_[i] == ((i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100) / (level ? 2 : 1));
+      CHECK(full.ui.leds_.intensity_[i] ==
+            ((i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100) /
+                (level ? 2 : 1));
     }
     full.ui.mode_ = Ui::MODE_STORAGE_WARNING;
     while (!(stmlib::system_clock.milliseconds() & 64)) {
       stmlib::system_clock.Tick();
     }
     full.ui.UpdateLeds();
-    CHECK(full.ui.leds_.intensity_[LED_FREEZE] == 255 * percentages[level] / 100);
-    CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] == (255 * percentages[level] / 100) / (level ? 2 : 1));
+    CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
+          255 * percentages[level] / 100);
+    CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] ==
+          (255 * percentages[level] / 100) / (level ? 2 : 1));
   }
   Rig gain;
   gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
@@ -2617,9 +2632,11 @@ void TestBetaOptionsLeds() {
     const int level = preview_values[i];
     preview.pot = (float(level) + 0.5f) / 3.0f;
     preview.Tick(40);
-    CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) == (i ? preview_values[i - 1] : 0));
+    CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) ==
+          (i ? preview_values[i - 1] : 0));
     CHECK(preview.ui.options_.Value(OPTION_BRIGHTNESS) == level);
-    CHECK(preview.ui.leds_.intensity_[LED_ASSIGN_1] == 255 * percentages[level] / 100);
+    CHECK(preview.ui.leds_.intensity_[LED_ASSIGN_1] ==
+          255 * percentages[level] / 100);
     preview.Tick(1002);
     CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) == level);
   }

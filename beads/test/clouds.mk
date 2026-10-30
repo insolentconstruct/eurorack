@@ -25,4 +25,5 @@ include beads/test/host.mk
 
 .PHONY: capture
 capture:
-	$(MAKE) -f beads/test/clouds.mk TARGET=clouds_capture EXTRA=-DGOLDEN_CAPTURE test
+	$(MAKE) -f beads/test/clouds.mk TARGET=clouds_capture \
+		EXTRA=-DGOLDEN_CAPTURE test

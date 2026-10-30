@@ -398,7 +398,8 @@ class ChunkStorage {
     if (index == 0) {
       return FLASH_STORAGE_BASE;
     } else {
-      return FLASH_STORAGE_BASE + ChunkSize<PersistentData>() + ChunkSize<StateData>() * (index - 1);
+      return FLASH_STORAGE_BASE + ChunkSize<PersistentData>() + \
+          ChunkSize<StateData>() * (index - 1);
     }
   }
 

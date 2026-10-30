@@ -45,6 +45,6 @@ PLAITS_CC_FILES = plaits_synth.cc \
 
 # Plaits' DX7 units shift negative values left, which the firmware's GCC
 # does arithmetically; keep the other checks on Plaits' own code.
-PLAITS_OBJS = $(patsubst %.cc,$(or $(BUILD_ROOT),build/)$(TARGET)/%.o,$(filter-out \
-	plaits_synth.cc plaits_voice.cc,$(PLAITS_CC_FILES)))
+PLAITS_OBJS = $(patsubst %.cc,$(or $(BUILD_ROOT),build/)$(TARGET)/%.o, \
+	$(filter-out plaits_synth.cc plaits_voice.cc,$(PLAITS_CC_FILES)))
 $(PLAITS_OBJS): EXTRA_FLAGS = -fno-sanitize=shift-base

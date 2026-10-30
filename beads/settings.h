@@ -34,12 +34,12 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/drivers/cv_adc.h"
-#include "beads/dsp/limiter.h"
 #include "beads/dsp/attack_detector.h"
-#include "beads/dsp/playback_options.h"
+#include "beads/dsp/limiter.h"
 #include "beads/dsp/pitch_quantizer.h"
-#include "beads/settings_storage.h"
+#include "beads/dsp/playback_options.h"
 #include "beads/profile.h"
+#include "beads/settings_storage.h"
 
 namespace beads {
 
@@ -120,6 +120,8 @@ struct StateLayoutAssertions {
 };
 
 const uint8_t kOptionTag = 0xa0;
+// Option nibbles packed two to a byte, in the free bytes of State.
+const int kNumPackedBytes = 10;
 
 // SEED held at power-up on damaged storage.
 enum StorageRepair {
@@ -196,7 +198,9 @@ class Settings {
 
   inline void set_stereo_width(StereoWidth width) {
     state_.stereo_width = width;
-    if (!width && width_assigned()) set_width_assigned(false);
+    if (!width && width_assigned()) {
+      set_width_assigned(false);
+    }
   }
 
   inline DelayMode delay_mode() const {
@@ -231,7 +235,9 @@ class Settings {
   inline void set_width_assigned(bool assigned) {
     state_.width_assigned = assigned && profile_.adjustable(FEATURE_WIDTH) &&
         stereo_width() ? 1 : 0;
-    if (assigned) state_.assignable_cv_destination = 0;
+    if (assigned) {
+      state_.assignable_cv_destination = 0;
+    }
   }
 
   inline AttackMode attack_mode() const {
@@ -267,7 +273,9 @@ class Settings {
   inline void set_diffusion(float amount) {
     CONSTRAIN(amount, 0.0f, 1.0f);
     state_.diffusion = 1 + static_cast<uint8_t>(amount * 254.0f + 0.5f);
-    if (state_.diffusion == 1) set_diffusion_assigned(false);
+    if (state_.diffusion == 1) {
+      set_diffusion_assigned(false);
+    }
   }
 
   inline bool diffusion_assigned() const {
@@ -329,7 +337,7 @@ class Settings {
   State stored_state_;
   Profile profile_;
   bool profile_locked_;
-  uint8_t packed_[10];
+  uint8_t packed_[kNumPackedBytes];
   uint8_t profile_values_[FEATURE_LAST];
   uint8_t dormant_destination_;
   // Bank 2: the settings in sector 7, the calibration mirror in sector 6.

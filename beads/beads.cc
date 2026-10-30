@@ -166,7 +166,7 @@ void Process(
   }
   bool attack_onset = false;
   if (attack_mode && !codec_transition_frames && !freeze_block &&
-      !synth_mode && processor.AttackRecording()) {
+      !synth_mode && processor.attack_recording()) {
     attack_onset = processor.attack_input()->Process(
         in,
         size,
@@ -292,9 +292,8 @@ void Process(
     CONSTRAIN(mix_parameter[i], 0.0f, 1.0f);
   }
 
-  const float stereo_width = ModulatedStereoWidth(ui.stereo_width(),
-      width_assigned
-          ? assign_cv : 0.0f);
+  const float stereo_width = ModulatedStereoWidth(
+      ui.stereo_width(), width_assigned ? assign_cv : 0.0f);
 
   Processor::MixParameters m;
   m.feedback = mix_parameter[Ui::MIX_PARAMETER_FEEDBACK];
@@ -580,9 +579,8 @@ void MonitorStateChange() {
     return;
   }
 
-  // Once the audio callback has faded out, swap the engine. This clears the
-  // recording; a frozen buffer saved to flash returns with the granular
-  // engine.
+  // Once faded out, swap the engine. This clears the recording; a frozen
+  // buffer saved to flash returns with the granular engine.
   if (ui.spectral() != processor.spectral() && reverb_style_gain == 0.0f) {
     codec.Pause();
     processor.set_spectral(ui.spectral());
