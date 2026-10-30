@@ -157,7 +157,7 @@ bool Settings::Init(bool recovery_mode,
   state_.padding[0] = 0;
   CONSTRAIN(state_.media, 0, 3);
   CONSTRAIN(state_.assignable_cv_destination, 0, 3);
-  
+
   NormalizeOptions();
   ApplyProfile();
   // A new module runs the factory test, unless SEED is held.
