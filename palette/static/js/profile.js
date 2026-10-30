@@ -122,9 +122,21 @@ export function unshare(text, releases) {
   const params = new URLSearchParams(text.replace(/^#/, ''));
   const release = releases.find((r) => r.tag === params.get('release'));
   const hex = params.get('profile');
-  if (!release || !hex || !/^[0-9a-f]{1024}$/i.test(hex)) throw new Error('Invalid shared profile.');
-  return { release, entries: decodeProfile(Uint8Array.from(hex.match(/../g),
-      (v) => parseInt(v, 16)), release.profile) };
+  if (!params.get('release') || !hex || !/^[0-9a-f]{1024}$/i.test(hex)) {
+    throw new Error('Invalid shared profile: copy the complete share address and try again.');
+  }
+  if (!release) throw new Error('This share link was made for another release that this page no longer offers. Choose a release and make a new profile.');
+  const block = Uint8Array.from(hex.match(/../g), (v) => parseInt(v, 16));
+  const header = new DataView(block.buffer);
+  if (header.getUint32(0, true) === 0x46505a44 &&
+      (block[4] !== release.profile.version || header.getUint32(8, true) !== release.profile.release_id)) {
+    throw new Error('This share link was made for another profile version or release. Open it with the matching page, or make a new profile here.');
+  }
+  try {
+    return { release, entries: decodeProfile(block, release.profile) };
+  } catch (error) {
+    throw new Error('This shared profile is damaged or uses settings from another page version. Copy the complete share address, or make a new profile here.');
+  }
 }
 export function templates(profile) {
   const stock = defaults(profile).map((e) => [e[0], 0, 0, 0, 0, 0]);

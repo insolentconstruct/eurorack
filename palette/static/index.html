@@ -68,25 +68,43 @@
   summary { cursor: pointer; padding: .65rem 0; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   input[type=number] { min-height: 44px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  #share, #guides a { display: inline-block; min-height: 44px; padding: .65rem 0; }
+  @media print {
+    :root { --bg: #fff; --fg: #000; --muted: #333; --line: #888; --panel: #fff; --accent: #000; }
+    body.cpu-warning { --bg: #fff; --fg: #000; --panel: #fff; --muted: #333; --accent: #000; }
+    main { max-width: none; padding: 0; }
+    .editor-label, #release, #template, #features, #share, #guides, #build, #progress, #status,
+    #result, #download-counts, #compatibility, #cpu-status, details, noscript { display: none !important; }
+    section.panel { border: 0; padding: 0; }
+    section, li { break-inside: avoid; }
+    a { color: #000; text-decoration: underline; }
+    .print-note { display: block !important; }
+  }
 </style>
 </head>
 <body>
 <main>
-  <noscript>This page needs JavaScript to build and verify firmware files.</noscript>
+  <noscript><p class="warn">This page needs JavaScript to edit profiles and build and verify firmware files. Enable JavaScript and reload, or download a ready-made update from the <a href="https://github.com/insolentconstruct/eurorack/releases">releases page</a>.</p></noscript>
   <h1>Drizzlet Hygrostat</h1>
   <p class="lead">Makes the firmware update file for Mutable Instruments Beads in your browser. Nothing is uploaded.</p>
 
+  <p id="compatibility" class="note">Loading the profile builder… If it does not load, enable JavaScript and use a current browser with module worker support over HTTPS (or localhost).</p>
+  <p class="print-note" hidden>This is the builder page. For your profile’s control layout, download the printable SVG guide before printing.</p>
+
   <section class="panel" aria-labelledby="make">
     <h2 id="make">Make the update file</h2>
-    <label for="release">Release</label>
+    <label for="release" class="editor-label">Release</label>
     <select id="release"></select>
     <div id="download-counts" aria-live="polite"></div>
     <p id="development" class="note" hidden>Development build for Beta 2. Unreleased. Feature CPU costs are not yet measured; default CPU measurements are provisional.</p>
     <fieldset id="editor">
       <legend>Profile options</legend>
-      <label for="template">Start from</label><select id="template"></select>
+      <label for="template" class="editor-label">Start from</label><select id="template"></select>
       <p class="note">Off uses stock behaviour. Fixed keeps the chosen default. Adjustable uses the controls below. Other stock gestures keep their meaning.</p>
-      <p id="cpu" role="status"></p>
+      <p id="cpu"></p>
+      <p id="cpu-status" class="sr-only" role="status" aria-atomic="true"></p>
       <details><summary>CPU costs and measurement history</summary><p id="cpu-provenance" class="note"></p></details>
       <div id="features"></div>
     </fieldset>
@@ -136,6 +154,6 @@
     <p>Not an ultrasonic humidifier. Please do not fill with water.</p>
   </footer>
 </main>
-<script type="module" src="js/app.js?v=36771571baff4c38"></script>
+<script type="module" src="js/app.js?v=9f8a0284597bc23e"></script>
 </body>
 </html>

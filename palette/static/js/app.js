@@ -7,9 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=36771571baff4c38';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=36771571baff4c38';
-import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=36771571baff4c38';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=9f8a0284597bc23e';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=9f8a0284597bc23e';
+import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=9f8a0284597bc23e';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,8 +20,9 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=36771571baff4c38', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=9f8a0284597bc23e', { type: 'module' });
     worker.onmessage = ({ data }) => {
+      if (data.ready) return;
       if (data.progress !== undefined) {
         $('progress').value = data.progress;
       } else {
@@ -165,6 +166,7 @@ function setupEditor() {
 }
 
 function renderEditor() {
+  const focused = $('features').contains(document.activeElement) ? document.activeElement.id : null;
   $('features').replaceChildren();
   const profile = selected().profile;
   // Omitted entries in a shared profile are Off, as in the firmware.
@@ -173,7 +175,8 @@ function renderEditor() {
     const missing = !e;
     if (missing) e = initialEntry(f);
     const row = document.createElement('div'); row.className = 'feature';
-    const title = document.createElement('h3'); title.textContent = f.name; row.append(title);
+    const title = document.createElement('h3'); title.textContent = f.name; title.id = `feature-${f.id}-title`; row.append(title);
+    row.setAttribute('role', 'group'); row.setAttribute('aria-labelledby', title.id);
     const change = (k, value) => {
       const candidate = entries.map((e) => e.slice());
       let edited = candidate.find((e) => e[0] === f.id);
@@ -198,7 +201,15 @@ function renderEditor() {
       else {
         const label = document.createElement('label'); label.textContent = 'Default (0–255)';
         const input = document.createElement('input'); input.type = 'number'; input.min = 0; input.max = 255; input.value = e[2];
-        input.onchange = () => change(2, Number(input.value)); label.append(input); row.append(label);
+        input.required = true; input.step = 1;
+        input.onchange = () => {
+          if (input.value.trim() === '' || !input.validity.valid) {
+            input.value = e[2];
+            status(`${f.name}: enter a whole number from 0 to 255. The previous value has been kept.`, 'error');
+            return;
+          }
+          change(2, input.valueAsNumber);
+        }; label.append(input); row.append(label);
       }
       for (const [k, enabled, labels] of [[3, f.page && e[1] === 2, Array.from({ length: 13 }, (_, i) => pageName(i))],
           [4, f.amount && e[1] === 2, AMOUNTS], [5, f.action && (e[1] === 2 || (f.stateless && e[2])), ACTIONS]]) {
@@ -218,8 +229,13 @@ function renderEditor() {
         const delta = featureDelta(e, f, engine);
         return `${engine}${engines.length === 1 ? ' only' : ''} ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
       }).join(', ') + ' points versus release default · measured on a module-calibrated development board';
+    row.querySelectorAll('select, input').forEach((control, i) => {
+      control.id = `feature-${f.id}-control-${i}`;
+      control.setAttribute('aria-label', `${f.name}: ${control.parentElement.firstChild.textContent}`);
+    });
     row.append(cost); $('features').append(row);
   }
+  if (focused) $(focused)?.focus({ preventScroll: true });
 }
 
 async function refresh() {
@@ -233,6 +249,10 @@ async function refresh() {
       cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? ' measured on the module' : ' estimated from costs measured on a module-calibrated development board'}`).join('; ') +
       `. Provisional stock ceiling ${release.cpu.ceiling}%. ` +
       (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
+  const announcement = cpu.blocked ? 'CPU allowance exceeded. Building is disabled.' :
+    cpu.warning ? 'Near the CPU limit. Building is allowed.' :
+    cpu.percent === null ? 'Some CPU costs are not yet measured. Building is allowed.' : 'Within the CPU allowance. Building is allowed.';
+  if ($('cpu-status').textContent !== announcement) $('cpu-status').textContent = announcement;
   $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
       Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
       ' Estimates sum per-engine costs measured on a module-calibrated development board. Final-image measurements are pending.';
@@ -260,9 +280,32 @@ function loadSharedProfile() {
   } catch (error) { status(error.message, 'error'); }
 }
 
+async function checkCapabilities() {
+  if (!globalThis.Worker || !globalThis.crypto?.subtle || !globalThis.AbortSignal?.timeout) {
+    throw new Error('This browser cannot build firmware here. Use a current Chrome, Firefox, Safari or Edge over HTTPS (or localhost).');
+  }
+  // A constructor alone does not establish support for module workers.
+  await new Promise((resolve, reject) => {
+    const worker = new Worker('js/worker.js?v=9f8a0284597bc23e', { type: 'module' });
+    const done = (error) => {
+      clearTimeout(timer); worker.terminate();
+      error ? reject(error) : resolve();
+    };
+    const timer = setTimeout(() => done(new Error('The firmware worker could not start. Reload the page or use a current browser with module worker support.')), 10000);
+    worker.onmessage = ({ data }) => { if (data.ready) done(); };
+    worker.onerror = () => done(new Error('This browser could not load the firmware module worker. Reload the page or use a current browser.'));
+  });
+}
+
 async function init() {
   try {
-    const response = await fetch('manifest.json?v=36771571baff4c38', { cache: 'no-cache' });
+    await checkCapabilities();
+  } catch (error) {
+    status(error.message, 'error'); return;
+  }
+  $('compatibility').hidden = true;
+  try {
+    const response = await fetch('manifest.json?v=9f8a0284597bc23e', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');

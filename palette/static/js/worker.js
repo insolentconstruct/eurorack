@@ -6,9 +6,9 @@
 //
 // Runs the encoder off the page's main thread.
 
-import { encode } from './encoder.js?v=36771571baff4c38';
-import { decode } from './decoder.js?v=36771571baff4c38';
-import { equal } from './profile.js?v=36771571baff4c38';
+import { encode } from './encoder.js?v=9f8a0284597bc23e';
+import { decode } from './decoder.js?v=9f8a0284597bc23e';
+import { equal } from './profile.js?v=9f8a0284597bc23e';
 
 self.onmessage = (event) => {
   try {
@@ -23,3 +23,6 @@ self.onmessage = (event) => {
     self.postMessage({ error: String(error) });
   }
 };
+
+// Also lets the page verify module worker support before enabling the editor.
+self.postMessage({ ready: true });

@@ -114,6 +114,16 @@ assert.equal(fp.length, 8);
 assert.match(fp, /^[0-9a-f]{8}$/);
 assert.deepEqual(unshare(share(release, block), manifest.releases).entries, entries);
 assert.throws(() => unshare('release=missing&profile=00', manifest.releases));
+assert.throws(() => unshare(share({ ...release, tag: 'another-release' }, block), manifest.releases), /another release/);
+for (const edit of [(b) => { b[4] = 2; }, (b) => { b[8] ^= 1; }]) {
+  const incompatible = block.slice(); edit(incompatible); reseal(incompatible);
+  assert.throws(() => unshare(share(release, incompatible), manifest.releases), /another profile version or release/);
+}
+const unknownFeature = block.slice(); unknownFeature[16] = 250; reseal(unknownFeature);
+assert.throws(() => unshare(share(release, unknownFeature), manifest.releases), /another page version/);
+const damagedShare = block.slice(); damagedShare[20] ^= 1;
+assert.throws(() => unshare(share(release, damagedShare), manifest.releases), /damaged/);
+
 assert.equal(filenames(release, fp, true).wav, release.tag + '.wav');
 assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);

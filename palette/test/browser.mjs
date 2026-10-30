@@ -30,6 +30,41 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const releaseBlock = encodeProfile(defaults(release.profile), release.profile);
     const releaseFP = await fingerprint(releaseBlock);
     await waitFingerprint(releaseFP);
+    // Keyboard focus survives rebuilding the controls; names identify the feature.
+    await page.locator('#release').focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'template');
+    await page.keyboard.press('Tab'); // CPU measurement details summary.
+    assert.equal(await page.evaluate(() => document.activeElement.tagName), 'SUMMARY');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'feature-1-control-0');
+    await page.keyboard.press('Home');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'feature-1-control-0');
+    assert.equal(await page.getByRole('combobox', { name: 'Pitch scale: Mode', exact: true }).count(), 1);
+    await page.keyboard.press('Tab'); // Off removes the feature's other controls.
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'feature-2-control-0');
+    await page.selectOption('#template', 'Drizzlet');
+    await waitFingerprint(releaseFP);
+    assert.equal(await page.locator('#cpu').getAttribute('role'), null);
+    assert.equal(await page.locator('#cpu-status').getAttribute('role'), 'status');
+    assert((await page.textContent('#cpu-status')).length < 100);
+    for (const f of release.profile.features.filter((f) => !f.values)) {
+      const input = page.getByRole('spinbutton', { name: `${f.name}: Default (0–255)`, exact: true });
+      const previous = await input.inputValue();
+      const previousShare = await page.getAttribute('#share', 'href');
+      for (const invalid of ['', '-1', '256', '1.5']) {
+        await input.fill(invalid);
+        await input.press('Tab');
+        assert.equal(await input.inputValue(), previous);
+        assert.equal(await page.getAttribute('#share', 'href'), previousShare);
+        assert((await page.textContent('#status')).includes('previous value has been kept'));
+      }
+    }
+    await page.emulateMedia({ media: 'print' });
+    assert.equal(await page.locator('#features').isVisible(), false);
+    assert.equal(await page.locator('.print-note').isVisible(), true);
+    assert.equal(await page.locator('#install').isVisible(), true);
+    await page.emulateMedia({ media: 'screen' });
     const row = (f) => page.locator('.feature').filter({ has: page.getByRole('heading', { name: f.name, exact: true }) });
     const mode = (f, value) => row(f).locator('select').first().selectOption(String(value));
     // Every feature returns to byte-identical Off state, including value/slots.
@@ -112,6 +147,16 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.isDisabled('#local'), blocked);
       assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), percent >= 91);
     }
+    // Capability failure gives an actionable message before enabling builds.
+    await page.addInitScript(() => { window.Worker = undefined; });
+    await page.goto(base);
+    await until(async () => (await page.textContent('#status')).includes('current Chrome'));
+    assert.equal(await page.isDisabled('#build'), true);
+    const noJS = await browser.newContext({ javaScriptEnabled: false });
+    const noJSPage = await noJS.newPage();
+    await noJSPage.goto(base);
+    assert((await noJSPage.locator('noscript').innerText()).includes('Enable JavaScript'));
+    await noJS.close();
     assert.deepEqual(errors, []);
     console.log(`PASS ${name}: every feature Fixed/Off exact bytes, default names, unknown CPU costs, same-document share links and invalid-link recovery`);
   } finally { await browser.close(); }
