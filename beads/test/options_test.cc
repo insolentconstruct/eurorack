@@ -2489,8 +2489,30 @@ void TestProfileAmounts() {
         CHECK(r.settings.state().diffusion == 255);
         CHECK(r.settings.stereo_width() == 0);
       }
+      // The knob without an amount keeps its stock role during the hold.
+      if (slot == 1) {
+        r.reverb = 1.0f;
+      } else {
+        r.pot = 1.0f;
+      }
+      r.Tick(40, true);
+      CHECK(r.ui.mix_parameter(slot == 1 ? Ui::MIX_PARAMETER_REVERB
+          : Ui::MIX_PARAMETER_DRY_WET) == 1.0f);
     }
   }
+  // With no amounts, DRY/WET and REVERB stay live and a tap changes quality.
+  Rig none(false);
+  CustomProfile(b, 0, 0, 0, 0);
+  ApplyCustomProfile(&none, b);
+  const uint8_t media = none.settings.state().media;
+  none.Down(SWITCH_MEDIA);
+  none.pot = 1.0f;
+  none.reverb = 0.0f;
+  none.Tick(40, true);
+  CHECK(none.ui.mix_parameter(Ui::MIX_PARAMETER_DRY_WET) == 1.0f);
+  CHECK(none.ui.mix_parameter(Ui::MIX_PARAMETER_REVERB) == 0.0f);
+  none.Up(SWITCH_MEDIA);
+  CHECK(none.settings.state().media == (media + 3) % 4);
 }
 
 void SetFixed(Rig* r, ProfileFeature feature, uint8_t value) {

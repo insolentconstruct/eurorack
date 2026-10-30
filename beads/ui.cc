@@ -602,9 +602,11 @@ void Ui::OnSwitchPressed(const Event& e) {
       break;
       
     case SWITCH_MEDIA:
-      assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Lock();
-      assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Lock();
-      assignable_cv_pot_[MIX_PARAMETER_REVERB].Lock();
+      for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+        if (media_amount(i)) {
+          assignable_cv_pot_[i].Lock();
+        }
+      }
       break;
       
     case SWITCH_ASSIGN:
@@ -692,9 +694,11 @@ void Ui::OnSwitchReleased(const Event& e) {
           // Save the manual gain, width or diffusion settings.
           settings_->SaveState();
         }
-        assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
-        assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
-        assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
+        for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+          if (media_amount(i)) {
+            assignable_cv_pot_[i].Unlock();
+          }
+        }
       }
       break;
 

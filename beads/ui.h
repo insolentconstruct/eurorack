@@ -196,6 +196,12 @@ class Ui {
     return mode_ >= MODE_STORAGE_WARNING;
   }
 
+  // [A] turns FEEDBACK into the gain, as in Beads; the other knobs only when
+  // the profile gives them an amount.
+  inline bool media_amount(int i) const {
+    return i == MIX_PARAMETER_FEEDBACK || amount_feature_[i] != FEATURE_NONE;
+  }
+
   stmlib::EventQueue<16> queue_;
 
   Leds leds_;
