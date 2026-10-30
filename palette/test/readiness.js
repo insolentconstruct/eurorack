@@ -10,6 +10,7 @@ import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   releaseIdForTag, validateReleaseId, initialEntry } from '../static/js/profile.js';
 import { importedCost, costTable, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
 import './costs.js';
+import './help.js';
 import { guide } from '../static/js/guide.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const root = new URL('../static/', import.meta.url);

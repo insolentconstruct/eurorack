@@ -7,9 +7,11 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=9f8a0284597bc23e';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=9f8a0284597bc23e';
-import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=9f8a0284597bc23e';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=5ea88b9a31f82023';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=5ea88b9a31f82023';
+import { mountCounts, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=5ea88b9a31f82023';
+
+import { featureHelp, actionHelp } from './help.js?v=5ea88b9a31f82023';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +22,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=9f8a0284597bc23e', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=5ea88b9a31f82023', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -177,6 +179,16 @@ function renderEditor() {
     const row = document.createElement('div'); row.className = 'feature';
     const title = document.createElement('h3'); title.textContent = f.name; title.id = `feature-${f.id}-title`; row.append(title);
     row.setAttribute('role', 'group'); row.setAttribute('aria-labelledby', title.id);
+    const help = featureHelp(f, selected());
+    const description = document.createElement('p'); description.className = 'note';
+    description.textContent = help.description + ' ';
+    const link = document.createElement('a'); link.href = help.url; link.textContent = 'Documentation';
+    link.setAttribute('aria-label', `${f.name} documentation`);
+    description.append(link); row.append(description);
+    if (actionHelp(f)) {
+      const action = document.createElement('p'); action.className = 'note';
+      action.textContent = actionHelp(f); row.append(action);
+    }
     const change = (k, value) => {
       const candidate = entries.map((e) => e.slice());
       let edited = candidate.find((e) => e[0] === f.id);
@@ -286,7 +298,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=9f8a0284597bc23e', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=5ea88b9a31f82023', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -305,7 +317,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=9f8a0284597bc23e', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=5ea88b9a31f82023', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
@@ -315,16 +327,8 @@ async function init() {
       manifest.releases.some((r) => !r.profile || r.profile.version !== 1 || r.profile.offset !== 1024 || r.profile.size !== 512)) {
     status('Unsupported release list.', 'error'); return;
   }
-  const counts = downloadCounts();
-  for (const release of manifest.releases) {
-    $('release').add(new Option(release.name, release.tag));
-    const line = document.createElement('p'); line.className = 'note';
-    line.textContent = release.date || ''; line.hidden = !line.textContent;
-    $('download-counts').append(line);
-    afterInteraction(document, () => counts(release).then((total) => {
-      line.textContent = countLine(release, total); line.hidden = !line.textContent;
-    }).catch(() => {}));
-  }
+  for (const release of manifest.releases) $('release').add(new Option(release.name, release.tag));
+  afterInteraction(document, mountCounts($('download-counts'), manifest.releases));
   $('release').selectedIndex = manifest.releases.length - 1;
   entries = defaults(selected().profile);
   if (location.hash) loadSharedProfile();

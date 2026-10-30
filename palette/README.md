@@ -9,8 +9,6 @@ Off, Fixed and Adjustable features, defaults, page/amount/action placements,
 templates, share links and desktop/phone SVG guides. Conflicts and invalid
 firmware profiles are refused. Older plain-WAV releases are not offered.
 
-The current entry is an **unreleased development build** pinned in the manifest.
-It pins `drizzlet-dev-d02a5b2`, built from the merged Drizzlet firmware.
 Per-feature CPU costs are measured on a module-calibrated development board;
 four event-only features have no per-block work by code inspection. Estimates
 sum each engine's own costs. The synth baseline is the measured default-profile
@@ -35,14 +33,9 @@ combinations key on the complete encoded 512-byte profile
 that engine's baseline plus measured feature deltas; placement changes require
 another exact match. Exact module measurements take precedence over per-feature estimates.
 
-Maintainer release gates:
-
-- **OPEN — release blocking:** check the final image and cost table on the
-  module before release. No invented
-  allowances; do not add Clouds-style reverb twice. Generate feature CPU fields
-  from that table and validate their provenance.
-- **OPEN — release blocking:** measure the final image's default and heaviest
-  supported combinations. Historical baselines remain provisional.
+Before each release, check the final image's default profile and heaviest
+supported combinations on the module. Historical baselines remain provisional;
+module measurements take precedence over estimates.
 
 Layout: everything served as-is is under `static/`, where a Hugo site expects it, so moving to Hugo later only adds configuration and templates. Tests are outside it.
 
@@ -70,6 +63,7 @@ Tests (Node 18 or later, g++, and the pinned stmlib submodule):
 node palette/test/manifest.js
 node palette/test/profile.js
 node palette/test/downloads.js
+node palette/test/help.js
 node palette/test/readiness.js
 node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
 ```
@@ -102,17 +96,36 @@ encodes and decodes the WAV. The untouched default also checks the release WAV
 hash. Custom WAVs and guides carry the first eight hex digits of SHA-256 of the
 512-byte profile; share links carry all 512 bytes and the release tag.
 
-Development images are pinned by the manifest and independently encoded with
-the release Python encoder. Released images must also match their tag's checked-in
-hash files. The current development image and independently encoded WAV match
-the pinned commit's checked-in app and WAV hashes. Its default block fingerprint
-remains `a0540fdd`.
-
 CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
 
-**Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. Pull requests run all palette suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
+Publishing: `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. Pull requests run all palette suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 
-**Counting:** Successful builds send `/render/<tag>` events; WAV download clicks send one
+To update the page for a release:
+
+1. Wait for the firmware release tag and its published assets. Copy that tag’s
+   `app.bin` into `static/images/<tag>/` and set the manifest entry’s tag, display
+   name (for example, “Beta 2 (Fog)”), date and stable download-event slug.
+   Replace the development entry, remove its `development` and `source_commit`
+   fields, and remove its image and on-page development notice.
+2. Take the app size, app/WAV SHA-256 values, profile release ID and catalogue
+   from the tagged firmware. The release ID must equal the tag date as
+   hexadecimal YYYYMMDD and the firmware constant. Update CPU measurements and
+   provenance from the final image; keep estimates labelled. Refresh canonical
+   release guides when they change. Feature help resolves `{TAG}` links from
+   the selected manifest release, so documentation follows the installed version.
+3. Run the Node suites above and the three-browser checks. Verify the untouched
+   default WAV against the published release and a custom profile with both
+   guides. Run `node palette/tools/version-assets.js` after browser or manifest
+   edits, then rerun readiness. Remove the development-source fetch path from
+   the Pages workflow and its development-only manifest validation at release.
+4. Merge the page PR into `drizzlet` after the tag exists. Check the Pages
+   deployment, offered release, default/custom WAVs, guides and deferred counts
+   on the live site. GoatCounter public counts must be enabled; new counts can
+   take up to four hours to appear. Record the last good deployment and release
+   before publishing; follow [ROLLBACK.md](ROLLBACK.md) if a deploy or release
+   entry needs withdrawing.
+
+Counting: Successful builds send `/render/<tag>` events; WAV download clicks send one
 `download/<release-slug>` event through GoatCounter's scriptless `/count` endpoint (`p` is the event
 path and `e=true` marks an event). The event name is
 the only application data sent: no profile, fingerprint, custom/default marker,
@@ -122,12 +135,14 @@ GoatCounter has no separate event properties that preserve that count page.
 See the [GoatCounter endpoint parameters](https://www.goatcounter.com/help/pixel).
 
 The owner must enable **Allow adding visitor counts** in GoatCounter settings.
-After the first pointer or keyboard interaction, the page reads `/counter/<encoded-event-name>.json` and adds GitHub release asset
+After the first pointer or keyboard interaction, the page reads `/counter/<encoded-event-name>.json` for each release and adds GitHub release asset
 `download_count` values from api.github.com for names ending `-wav.zip`.
-Both services receive the browser and IP address. Counts may merge repeat
-downloads by the same visitor on the same day. Totals of at least 10 are shown;
+Named release download totals appear first, in bold. The secondary site visitor
+count uses GoatCounter’s public `/counter/TOTAL.json` endpoint; it is not the
+number of successful builds. Both services receive the browser and IP address. Counts may merge repeat
+downloads by the same visitor on the same day. Download totals of at least 10 are shown;
 otherwise the manifest date is shown, or the line is hidden if no date exists.
-Either source can fail independently; results (including failures) are cached
+Visitor counts are hidden when unavailable. Either download source can fail independently; results (including failures) are cached
 in sessionStorage for the browser tab session, with an in-memory fallback.
 Requests time out after five seconds and never delay or block building. Tests use only stubbed fetches; the Docker test container runs
 without network access. See [public counter setup](https://www.goatcounter.com/help/visitor-counter).

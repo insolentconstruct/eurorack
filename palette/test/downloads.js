@@ -103,3 +103,52 @@ assert.equal((app.match(/recordBuild\(release\)/g) || []).length, 1);
 assert(app.indexOf('recordBuild(release)') > app.indexOf('await updateGuides(release, chosen'));
 assert(!app.includes('goatcounter.com/count'));
 console.log('PASS successful-build event, DNT, private parameters and quiet failures');
+
+// Read-only counters: downloads remain ahead of visitors even when visitors finish first.
+const { visitorCounts, mountCounts } = await import('../static/js/downloads.js');
+for (const [data, expected] of [[{ count: '1,234' }, 1234], [{ count: 0 }, 0], [{ count: 'bad' }, null]]) {
+  const requests = [];
+  const visitors = visitorCounts(async (url, options) => {
+    requests.push(url);
+    assert.equal(options.credentials, 'omit');
+    assert.equal(options.referrerPolicy, 'no-referrer');
+    assert(options.signal instanceof AbortSignal);
+    return response(data);
+  }, blockedStorage);
+  assert.equal(await visitors(), expected);
+  assert.equal(await visitors(), expected);
+  assert.deepEqual(requests, ['https://insolentconstruct.goatcounter.com/counter/TOTAL.json']);
+}
+assert.equal(await visitorCounts(async () => { throw new Error('offline'); }, blockedStorage)(), null);
+assert.equal(await visitorCounts(async () => ({ ok: false }), blockedStorage)(), null);
+assert.equal(await visitorCounts(async () => ({ ok: true, json: async () => { throw new Error('bad JSON'); } }), blockedStorage)(), null);
+assert.equal(await visitorCounts(async () => response({ count: '12' }), storage)(), 12);
+assert.equal(await visitorCounts(() => { throw new Error('session must be cached'); }, storage)(), 12);
+const container = () => ({ children: [], ownerDocument: { createElement: () => ({}) }, append(p) { this.children.push(p); } });
+const panel = container();
+let finishDownload;
+let reads = 0;
+const refreshCounts = mountCounts(panel, [release], () => {
+  reads++; return new Promise((resolve) => { finishDownload = resolve; });
+}, async () => { reads++; return 400; });
+assert.equal(reads, 0, 'mounting counters does not fetch');
+assert.equal(panel.children[0].textContent, release.date);
+assert(panel.children[1].hidden);
+const updating = refreshCounts();
+await Promise.resolve();
+assert.equal(panel.children[1].textContent, 'Site visitors: 400');
+finishDownload(1234);
+await updating;
+assert.equal(panel.children[0].textContent, 'Beta 2 (Fog): downloaded 1,234 times');
+assert.equal(panel.children[0].className, 'download-total');
+assert.equal(panel.children[1].className, 'note');
+const two = container();
+await mountCounts(two, [release, { ...release, tag: 'other', name: 'Beta 3' }], async (r) => r.tag === release.tag ? 12 : 20, async () => null)();
+assert.deepEqual(two.children.map((p) => p.textContent), ['Beta 2 (Fog): downloaded 12 times', 'Beta 3: downloaded 20 times', '']);
+assert(two.children[2].hidden);
+const offline = container();
+await mountCounts(offline, [release], async () => { throw new Error('offline'); }, async () => { throw new Error('offline'); })();
+assert.equal(offline.children[0].textContent, release.date);
+assert(offline.children[1].hidden);
+assert(app.includes("afterInteraction(document, mountCounts($('download-counts'), manifest.releases))"));
+console.log('PASS deferred downloads-first release totals, secondary visitors, public endpoint, independent failures and cache');

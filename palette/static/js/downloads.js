@@ -85,3 +85,49 @@ export function downloadCounts(fetcher = globalThis.fetch, cache = new Map(), st
     return cache.get(key);
   };
 }
+
+// TOTAL is GoatCounter's public site-wide visitor count, not a render event.
+export function visitorCounts(fetcher = globalThis.fetch, storage) {
+  try { if (storage === undefined) storage = globalThis.sessionStorage; } catch {}
+  let pending;
+  return () => {
+    if (!pending) pending = (async () => {
+      const key = 'hygrostat-visitors:TOTAL';
+      try {
+        const saved = storage?.getItem(key);
+        if (saved !== null && saved !== undefined) {
+          const value = JSON.parse(saved);
+          if (value === null || (Number.isSafeInteger(value) && value >= 0)) return value;
+        }
+      } catch {}
+      let total = null;
+      try {
+        const response = await fetcher('https://insolentconstruct.goatcounter.com/counter/TOTAL.json', {
+          credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(5000)
+        });
+        if (response.ok) total = number((await response.json()).count);
+      } catch {}
+      try { storage?.setItem(key, JSON.stringify(total)); } catch {}
+      return total;
+    })();
+    return pending;
+  };
+}
+
+// Mount downloads first and visitors second; completion order cannot reorder them.
+// Return the refresh callback so the caller can defer every request to interaction.
+export function mountCounts(container, releases, counts = downloadCounts(), visitors = visitorCounts()) {
+  const line = (text, className) => {
+    const p = container.ownerDocument.createElement('p');
+    p.className = className; p.textContent = text; p.hidden = !text;
+    container.append(p);
+    return p;
+  };
+  const downloads = releases.map((release) => line(release.date || '', 'download-total'));
+  const visitor = line('', 'note');
+  const update = (p, text) => { p.textContent = text; p.hidden = !text; };
+  return () => Promise.all([
+    ...releases.map((release, i) => counts(release).then((total) => update(downloads[i], countLine(release, total))).catch(() => {})),
+    visitors().then((total) => update(visitor, total === null ? '' : `Site visitors: ${total.toLocaleString('en-US')}`)).catch(() => {})
+  ]);
+}

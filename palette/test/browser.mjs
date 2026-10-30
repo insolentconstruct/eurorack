@@ -30,6 +30,14 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const releaseBlock = encodeProfile(defaults(release.profile), release.profile);
     const releaseFP = await fingerprint(releaseBlock);
     await waitFingerprint(releaseFP);
+    for (const f of release.profile.features) {
+      const link = page.getByRole('link', { name: `${f.name} documentation`, exact: true });
+      assert.equal(await link.count(), 1);
+      const href = await link.getAttribute('href');
+      assert(href.includes(`/blob/${release.development ? release.source_commit : release.tag}/beads/build/docs/FEATURES.md#`));
+      assert((await link.locator('..').innerText()).length > 'Documentation'.length);
+    }
+    assert((await page.getByRole('group', { name: 'Monophonic grains', exact: true }).innerText()).includes('no page knob'));
     // Keyboard focus survives rebuilding the controls; names identify the feature.
     await page.locator('#release').focus();
     await page.keyboard.press('Tab');
@@ -37,11 +45,15 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.keyboard.press('Tab'); // CPU measurement details summary.
     assert.equal(await page.evaluate(() => document.activeElement.tagName), 'SUMMARY');
     await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Pitch scale documentation');
+    await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'feature-1-control-0');
     await page.keyboard.press('Home');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'feature-1-control-0');
     assert.equal(await page.getByRole('combobox', { name: 'Pitch scale: Mode', exact: true }).count(), 1);
     await page.keyboard.press('Tab'); // Off removes the feature's other controls.
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Reverb character documentation');
+    await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'feature-2-control-0');
     await page.selectOption('#template', 'Drizzlet');
     await waitFingerprint(releaseFP);
@@ -147,6 +159,29 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.isDisabled('#local'), blocked);
       assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), percent >= 91);
     }
+    const counters = await browser.newContext();
+    const counterRequests = [];
+    await counters.route('**/*', (route) => {
+      const url = new URL(route.request().url());
+      if (url.origin === new URL(base).origin) return route.continue();
+      counterRequests.push(url.href);
+      if (url.hostname === 'insolentconstruct.goatcounter.com' && url.pathname.startsWith('/counter/')) {
+        return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { count: url.pathname.endsWith('/TOTAL.json') ? '400' : '12' } });
+      }
+      if (url.hostname === 'api.github.com') return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { assets: [{ name: 'release-wav.zip', download_count: 8 }] } });
+      return route.abort('internetdisconnected');
+    });
+    const counterPage = await counters.newPage();
+    await counterPage.goto(base);
+    await counterPage.waitForFunction(() => document.querySelector('#fingerprint').textContent.length > 0);
+    assert.deepEqual(counterRequests, [], 'counters remain deferred');
+    await counterPage.keyboard.press('Tab');
+    await counterPage.waitForFunction(() => document.querySelector('#download-counts').textContent.includes('Site visitors: 400'));
+    const lines = counterPage.locator('#download-counts p');
+    assert.equal(await lines.count(), JSON.parse(readFileSync(`${site}/manifest.json`)).releases.length + 1);
+    assert((await lines.first().textContent()).includes(`${release.name}: downloaded 20 times`));
+    assert.equal(await lines.last().textContent(), 'Site visitors: 400');
+    await counters.close();
     // Capability failure gives an actionable message before enabling builds.
     await page.addInitScript(() => { window.Worker = undefined; });
     await page.goto(base);
