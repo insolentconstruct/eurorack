@@ -225,7 +225,9 @@ void TestGrainTimeAndDirection() {
     DelayGranularPlayer player;
     player.Init(48000.0f);
     p.time.base = float(i);
-    FloatFrame out = { 0.0f, 0.0f };
+    FloatFrame out;
+    out.l = 0.0f;
+    out.r = 0.0f;
     player.Render(&line, trigger, p, &out);
     ages[i] = line.age;
     CHECK(ages[i] > 0.0f && ages[i] < TaggedLine::MAX_DELAY);
@@ -236,7 +238,9 @@ void TestGrainTimeAndDirection() {
     player.Init(48000.0f);
     p.time.base = 0.5f;
     p.size.base = i ? 0.5f : 0.0f;
-    FloatFrame out = { 0.0f, 0.0f };
+    FloatFrame out;
+    out.l = 0.0f;
+    out.r = 0.0f;
     player.Render(&line, trigger, p, &out);
     float first = line.age;
     trigger.trigger = false;
@@ -253,7 +257,9 @@ void TestGrainTimeAndDirection() {
   Parameters original = p;
   for (int i = 0; i < 100; ++i) {
     trigger.trigger = i == 0;
-    FloatFrame a = { 0.0f, 0.0f };
+    FloatFrame a;
+    a.l = 0.0f;
+    a.r = 0.0f;
     FloatFrame b = a;
     stmlib::Random::Seed(123);
     changed.Render(&line, trigger, p, &a);
@@ -308,7 +314,9 @@ void TestGrainShape() {
           shape ? 1.0f : 2.0f / 3.0f, 1.0f, 0.5f, 0.0f);
       float peak = 0.0f;
       for (int i = 0; i < 6000; ++i) {
-        FloatFrame out = { 0.0f, 0.0f };
+        FloatFrame out;
+        out.l = 0.0f;
+        out.r = 0.0f;
         grain.Render<HEAD_CROSSING_POLICY_STOP, false>(&line, &out);
         float envelope = out.l / (line.age / TaggedLine::MAX_DELAY);
         if (envelope > peak) {
@@ -994,7 +1002,9 @@ void TestRenderedWidthLatch() {
     if (i == 1) {
       changed.set_stereo_width(1.0f, true);
     }
-    FloatFrame a = { 0.0f, 0.0f };
+    FloatFrame a;
+    a.l = 0.0f;
+    a.r = 0.0f;
     FloatFrame b = a;
     stmlib::Random::Seed(123);
     changed.Render(&line, trigger, p, &a);

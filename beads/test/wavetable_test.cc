@@ -62,7 +62,9 @@ void TestFinalBankRendering() {
     for (int n = 0; n < 4096; ++n) {
       const float phase = (float(n) + 0.37f) / 4096.0f;
       CHECK(std::isfinite(grain.ReadSample(phase)));
-      FloatFrame out = { };
+      FloatFrame out;
+      out.l = 0.0f;
+      out.r = 0.0f;
       grain.Render(&out);
       CHECK(std::isfinite(out.l) && std::isfinite(out.r));
     }
@@ -72,7 +74,9 @@ void TestFinalBankRendering() {
     p.time.base = positions[i];
     bool freeze = false;
     for (int n = 0; n < 8192; ++n) {
-      FloatFrame out = { };
+      FloatFrame out;
+      out.l = 0.0f;
+      out.r = 0.0f;
       voice.Render(bank, 16, &freeze, p, &out, 1);
       CHECK(std::isfinite(out.l) && std::isfinite(out.r));
       CHECK(fabsf(out.l) <= 1.0f && out.l == out.r);
@@ -81,7 +85,9 @@ void TestFinalBankRendering() {
     // Force the endpoint; the smoother approaches it from below.
     voice.wave_lp_ = 1.0f;
     p.time.base = 1.0f;
-    FloatFrame out = { };
+    FloatFrame out;
+    out.l = 0.0f;
+    out.r = 0.0f;
     voice.Render(bank, 16, &freeze, p, &out, 1);
     CHECK(std::isfinite(out.l) && std::isfinite(out.r));
   }
@@ -132,7 +138,9 @@ void TestFmBankRatios() {
       Parameters parameters = { };
       parameters.time.base = voice.wave_lp_;
       bool freeze = false;
-      FloatFrame out = { };
+      FloatFrame out;
+      out.l = 0.0f;
+      out.r = 0.0f;
       voice.Render(bank + 8, 16, &freeze, parameters, &out, 1);
       CHECK(std::isfinite(out.l) && out.l == out.r);
     }
@@ -300,9 +308,13 @@ void TestSynthGrainPairs() {
       playing_pairs += both;
       other_pairs += !both;
     }
-    FloatFrame paired = { 0.0f, 0.0f };
+    FloatFrame paired;
+    paired.l = 0.0f;
+    paired.r = 0.0f;
     player->Render(0, 0, no_trigger, freeze, h.parameters, &paired);
-    FloatFrame single = { 0.0f, 0.0f };
+    FloatFrame single;
+    single.l = 0.0f;
+    single.r = 0.0f;
     for (int g = 0; g < 32; ++g) {
       reference[g].Render(&single, freeze);
     }

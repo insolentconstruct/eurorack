@@ -388,7 +388,9 @@ void TestStorage() {
 
 // Frozen released limiter arithmetic, independent of ProcessOutput dispatch.
 struct StockLimiter {
-  float peak, lp, decay;
+  float peak;
+  float lp;
+  float decay;
   explicit StockLimiter(float d) : peak(.5f), lp(.5f), decay(d) { }
   void Process(FloatFrame* x) {
     const float p = std::min(std::max(fabsf(x->l), fabsf(x->r)), 40.0f);
@@ -1056,14 +1058,18 @@ void TestSynthEngineStorage() {
   r.settings.SaveState();
   r.ui.LoadOptions();
   r.EnterPage(2);
-  r.pot = .9f; r.Tick(1, true);
+  r.pot = .9f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.plaits_preview() && r.ui.plaits_synth());
   CHECK(!r.settings.plaits_synth());
-  r.pot = .5f; r.Tick(1, true);
+  r.pot = .5f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.plaits_preview());
-  r.pot = .46f; r.Tick(1, true);
+  r.pot = .46f;
+  r.Tick(1, true);
   CHECK(!r.ui.options_.plaits_preview() && !r.ui.plaits_synth());
-  r.pot = .54f; r.Tick(1001, true);
+  r.pot = .54f;
+  r.Tick(1001, true);
   CHECK(r.settings.plaits_synth());
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.plaits_synth());
@@ -2012,35 +2018,48 @@ void TestOptionsZonesAndSaveBatch() {
   Rig r(false);
   r.Enter();
   // Pitch thirds, including hysteresis around both boundaries.
-  r.feedback = .1f; r.Tick(1, true);
+  r.feedback = .1f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
-  r.feedback = .35f; r.Tick(1, true);
+  r.feedback = .35f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
-  r.feedback = .38f; r.Tick(1, true);
+  r.feedback = .38f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
-  r.feedback = .68f; r.Tick(1, true);
+  r.feedback = .68f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
-  r.feedback = .71f; r.Tick(1, true);
+  r.feedback = .71f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
-  r.feedback = .65f; r.Tick(1, true);
+  r.feedback = .65f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
-  r.feedback = .62f; r.Tick(1, true);
+  r.feedback = .62f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
-  r.feedback = .29f; r.Tick(1, true);
+  r.feedback = .29f;
+  r.Tick(1, true);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
   // Halves retain a value inside the midpoint dead band; two knobs
   // settle in one batch.
   {
     Rig halves(false);
     halves.EnterPage(1);
-    halves.pot = .9f; halves.Tick(1, true);
-    halves.pot = .5f; halves.Tick(1, true);
+    halves.pot = .9f;
+    halves.Tick(1, true);
+    halves.pot = .5f;
+    halves.Tick(1, true);
     CHECK(halves.ui.options_.clouds_preview());
-    halves.pot = .46f; halves.Tick(1, true);
+    halves.pot = .46f;
+    halves.Tick(1, true);
     CHECK(!halves.ui.options_.clouds_preview());
-    halves.pot = .54f; halves.Tick(1, true);
+    halves.pot = .54f;
+    halves.Tick(1, true);
     const uint32_t writes = test_writes;
-    halves.reverb = .9f; halves.Tick(1001, true);
+    halves.reverb = .9f;
+    halves.Tick(1001, true);
     CHECK(test_writes == writes + 1);
     CHECK(halves.settings.clouds_style());
     CHECK(halves.settings.evolving_feedback());
@@ -2049,9 +2068,11 @@ void TestOptionsZonesAndSaveBatch() {
     CHECK(loaded.clouds_style() && loaded.evolving_feedback());
   }
   // Main may be delayed: published batch must stay stable until consumed.
-  r.feedback = .9f; r.Tick(1001, false);
+  r.feedback = .9f;
+  r.Tick(1001, false);
   CHECK(r.ui.options_.commit_requested());
-  r.feedback = .1f; r.Tick(2000, false);
+  r.feedback = .1f;
+  r.Tick(2000, false);
   CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
   // Exit remains responsive even if main is delayed by a flash operation.
   test_down[SWITCH_MEDIA] = true;
@@ -2097,25 +2118,38 @@ void TestOptionsPalette() {
       case OPTION_TIME_SCAN:
         r.ui.options_.profile_preview_[v.setting] = v.value;
         break;
-      case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value);
+      case OPTION_PITCH:
+        r.ui.options_.pitch_preview_ = PitchScale(v.value);
         break;
-      case OPTION_REVERB: r.ui.options_.clouds_preview_ = v.value; break;
-      case OPTION_DELAY: r.ui.options_.delay_preview_ = DelayMode(v.value);
+      case OPTION_REVERB:
+        r.ui.options_.clouds_preview_ = v.value;
         break;
-      case OPTION_PROCESSOR: r.ui.options_.spectral_preview_ = v.value; break;
+      case OPTION_DELAY:
+        r.ui.options_.delay_preview_ = DelayMode(v.value);
+        break;
+      case OPTION_PROCESSOR:
+        r.ui.options_.spectral_preview_ = v.value;
+        break;
       case OPTION_SYNTH_START:
         r.ui.options_.manual_start_preview_ = v.value;
         break;
-      case OPTION_INTERVALS: r.ui.options_.intervals_preview_ = v.value; break;
-      case OPTION_SYNTH: r.ui.options_.plaits_preview_ = v.value; break;
+      case OPTION_INTERVALS:
+        r.ui.options_.intervals_preview_ = v.value;
+        break;
+      case OPTION_SYNTH:
+        r.ui.options_.plaits_preview_ = v.value;
+        break;
       case OPTION_LIMITER:
         r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
         break;
-      case OPTION_FROZEN: r.ui.options_.evolving_preview_ = v.value; break;
+      case OPTION_FROZEN:
+        r.ui.options_.evolving_preview_ = v.value;
+        break;
       case OPTION_ATTACKS:
         r.ui.options_.attack_preview_ = AttackMode(v.value);
         break;
-      default: break;
+      default:
+        break;
     }
     const OptionValue& indication = r.ui.options_.indication();
     CHECK(&indication == &v);
