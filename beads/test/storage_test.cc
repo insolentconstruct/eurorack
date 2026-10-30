@@ -853,10 +853,12 @@ void TestLowSupply() {
   Setup(calibration, 4);
   CHECK(TestFlash().pwr.CR1 == \
       (PWR_CR1_RESET | PWR_CR1_PLS_LEV6 | PWR_CR1_PVDEN));
-  // A new module with a low supply: nothing written, the factory test runs.
+  // A new module powered up on a low supply: nothing written, the factory
+  // test runs.
   {
     Wipe();
     Take(&snapshot);
+    TestFlashPowerUp();
     TestFlash().supply_low = true;
     Settings s;
     CHECK(!s.Init(false));

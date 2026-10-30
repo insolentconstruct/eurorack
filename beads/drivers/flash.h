@@ -27,8 +27,8 @@
 // Reads of the bank 2 flash (frozen buffer, calibration mirror, settings)
 // that survive an uncorrectable ECC error. A plain read of such a word faults
 // and the module restarts in a loop; here it is read with faults masked and
-// the error flag is checked instead. Writes check the supply first: nothing
-// is erased or programmed while VDD is below the PVD threshold.
+// the error flag is checked instead. Each erase and program checks the
+// supply first, and is refused while VDD is below the PVD threshold.
 
 #ifndef BEADS_DRIVERS_FLASH_H_
 #define BEADS_DRIVERS_FLASH_H_

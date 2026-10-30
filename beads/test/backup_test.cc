@@ -870,9 +870,12 @@ void TestLowSupplyBackup() {
 void TestSupplyDropBackup() {
   test_checker.Start("TestSupplyDropBackup");
   TestFlashPowerUp();
-  // The supply drops after an erase, an audio word or the header: the save
-  // stops there, never loads partly written, and the next one completes.
-  const int drops[] = { 1, 5, 6, 7, 12000, 24005, 24006, 24007 };
+  // The supply drops after an erase, an audio word, the header or the
+  // settings save that flags it: the save stops there and doesn't load
+  // unless it completed, and the next one completes.
+  const int last = 6 + 24000 + 1 + int((8 + sizeof(State) + 31) / 32);
+  const int drops[] = { 1, 5, 6, 7, 12000, 24005, 24006, 24007, last - 1,
+      last };
   for (size_t i = 0; i < sizeof(drops) / sizeof(drops[0]); ++i) {
     Wipe();
     Save(Processor::MEDIA_DIGITAL, false, 100, 1);
@@ -889,8 +892,10 @@ void TestSupplyDropBackup() {
     TestFlash().supply_low = false;
     TestFlash().supply_budget = 0;
     Rig after;
-    if (after.Boot()) {
-      CHECK(processor.write_ptr_ == 200 && Restored(2));
+    if (drops[i] == last) {
+      CHECK(after.Boot() && processor.write_ptr_ == 200 && Restored(2));
+    } else {
+      CHECK(!after.Boot());
     }
     after.backup.Process(false);
     processor.Configure(Processor::MEDIA_DIGITAL, false);
