@@ -5,7 +5,7 @@ TODO: release date; rename this file and replace `{TAG}` with `drizzlet-YYYY.MM.
 ## Upgrading
 
 - **From the Mutable Instruments firmware:** your settings and calibration carry over.
-- **From an earlier Drizzlet release** (alpha or Beta 1): the calibration and the stock settings (recording quality, [M] routing and amounts, input gain, trigger output, autosave, monophonic grains) are kept. Drizzlet's own options, stereo width and grain diffusion start from the profile’s defaults; set them again on the new options page.
+- **From an earlier Drizzlet release** (alpha or Beta 1): the calibration and the stock settings (recording quality, [M] routing and amounts, input gain, trigger output, autosave, monophonic grains) are kept. Drizzlet's own options, stereo width and grain diffusion start from the profile's defaults; set them again on the new options page.
 
 The options page now has four pages, and its page LEDs light left to right: FEEDBACK, DRY/WET, REVERB, then all three. Where the Beta 1 options went:
 
@@ -30,7 +30,7 @@ Listed by the number of requests ([feature requests](https://github.com/insolent
 - **Frozen feedback** (page 2; 3 requests, #4): Evolving runs a frozen sound through a slowly moving all-pass loop, so it drifts and softens instead of repeating exactly.
 - **Random intervals** (page 1; 2 requests, #8): with the PITCH attenurandomizer counter-clockwise, random pitch lands on fifths and octaves. Works with any pitch scale.
 - **Attacks** (page 1; #58, #47): Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
-- **Quieter switching** (#53): Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth’s reverb tail stops with it.
+- **Quieter switching** (#53): Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth's reverb tail stops with it.
 - **Less CPU, same sound:** Clouds-style reverb, the grains, and the wavetable synth, which now computes two grains side by side (#168; TODO: final-image module CPU figures).
 
 ### Drizzlet Hygrostat
@@ -90,7 +90,7 @@ Drizzlet includes everything Mutable Instruments changed after those releases: s
 
 ## How it was tested
 
-Host tests on every push, reproducible builds, and TODO hours of automated runs on a module, with TODO firmware and settings installs, none failed to boot. The damaged-settings handling was tested with real flash errors on a development board with the same processor, and on the module with a deliberately damaged settings sector. CV calibration was checked twice against an Intellijel Scales reference. Hygrostat profiles and the nine new options have not yet been checked on the module. Details: [TESTING.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/TESTING.md).
+Host tests on every push, reproducible builds, and TODO hours of automated runs on a module, with TODO firmware and settings installs, none failed to boot. The damaged-settings handling was tested with real flash errors on a development board with the same processor, and on the module with a deliberately damaged settings sector. CV calibration was checked twice against an Intellijel Scales reference. TODO: the Hygrostat profiles and options module session. Details: [TESTING.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/TESTING.md).
 
 ## Downgrading
 
