@@ -741,6 +741,55 @@ cases = [
   ('TestRepairFailures', 'storage', 'beads/settings_storage.h',
     '    return !locked_;\n  }',
     '    return true;\n  }'),
+  ('TestLowSupply', 'storage', 'beads/settings.cc',
+    '  Flash::Init();  // Every write checks the supply from here on.',
+    '  // Every write checks the supply from here on.'),
+  ('TestLowSupply', 'storage', 'beads/drivers/flash.h',
+    '    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);',
+    '    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS);'),
+  ('TestLowSupply', 'storage', 'beads/drivers/flash.h',
+    '    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);',
+    '    PWR->CR1 = PWR_CR1_PLS_LEV6;'),
+  ('TestLowSupply', 'storage', 'beads/drivers/flash.h',
+    '    return READ_BIT(PWR->CSR1, PWR_CSR1_PVDO);',
+    '    return false;'),
+  ('TestLowSupply', 'storage', 'beads/settings_storage.h',
+    '    if (Flash::SupplyLow()) {\n'
+    '      return;  // Kept in RAM; the next save writes it.\n'
+    '    }\n',
+    ''),
+  ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
+    '      if (Flash::SupplyLow()) {\n'
+    '        return false;\n'
+    '      }\n'
+    '      ClearErrors();\n'
+    '      FLASH_EraseInitTypeDef',
+    '      ClearErrors();\n'
+    '      FLASH_EraseInitTypeDef'),
+  ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
+    '      if (Flash::SupplyLow()) {\n'
+    '        return false;\n'
+    '      }\n'
+    '      ClearErrors();\n'
+    '      if (HAL_FLASH_Program(',
+    '      ClearErrors();\n'
+    '      if (HAL_FLASH_Program('),
+  ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (Flash::SupplyLow()) {\n'
+    '      return false;\n'
+    '    }\n',
+    ''),
+  ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (Flash::SupplyLow()) {\n'
+    '      remaining_sectors_ = remaining_bytes_ = 0;\n'
+    '      return;\n'
+    '    }\n',
+    ''),
+  ('TestSupplyDropBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '      if (Flash::SupplyLow()) {\n'
+    '        return;\n'
+    '      }\n',
+    ''),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings.cc',
     '      (status == STORAGE_OK || status == STORAGE_RESTORED) && \\',
     '      false && \\'),

@@ -844,6 +844,140 @@ void TestMirrorWrites() {
   CHECK(SameCalibration(restored, calibration));
 }
 
+void TestLowSupply() {
+  test_checker.Start("TestLowSupply");
+  const PersistentData calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  // Init starts the PVD at level 6, and leaves the rest of PWR_CR1 alone.
+  TestFlashPowerUp();
+  Setup(calibration, 4);
+  CHECK(TestFlash().pwr.CR1 == \
+      (PWR_CR1_RESET | PWR_CR1_PLS_LEV6 | PWR_CR1_PVDEN));
+  // A new module with a low supply: nothing written, the factory test runs.
+  {
+    Wipe();
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    Settings s;
+    CHECK(!s.Init(false));
+    CHECK(Unchanged(snapshot));
+    TestFlash().supply_low = false;
+  }
+  // State saves are skipped while the supply is low, and resume where they
+  // left off when it comes back.
+  {
+    Setup(calibration, 4);
+    Settings s;
+    CHECK(s.Init(false));
+    const uint16_t next = s.chunk_storage_.next_state_chunk_index_;
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    for (int i = 0; i < kStateChunks + 5; ++i) {
+      s.mutable_state()->gain = uint8_t(i);
+      s.SaveState();
+    }
+    CHECK(Unchanged(snapshot));
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == next);
+    TestFlash().supply_low = false;
+    s.mutable_state()->gain = 99;
+    s.SaveState();
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == next + 1);
+    CHECK(TestFlashErases() == snapshot.erases);
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameState(loaded, s.state()));
+    CHECK(StockLoads(calibration, s.state()));
+  }
+  // A calibration save refused before the mirror erase: nothing written,
+  // and the next save once the supply is back rewrites the sector.
+  {
+    const State saved = Setup(calibration, 4);
+    Settings s;
+    CHECK(s.Init(false));
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        new_calibration.adc_calibration,
+        sizeof(new_calibration.adc_calibration));
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    s.SavePersistentData();
+    CHECK(Unchanged(snapshot));
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(loaded, calibration));
+    CHECK(SameState(loaded, saved));
+    TestFlash().supply_low = false;
+    s.SaveState();
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == 2);
+    Settings again;
+    CHECK(again.Init(false) && SameCalibration(again, new_calibration));
+    CHECK(SameState(again, s.state()));
+  }
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
+void TestSupplyDrop() {
+  test_checker.Start("TestSupplyDrop");
+  const State defaults = Defaults();
+  const PersistentData old_calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  TestFlashPowerUp();
+  // The supply drops after each operation of a calibration save: the save
+  // stops there, and the boot guard reads what is left as it reads a power
+  // cut at the same point.
+  for (int drop = 1; drop <= 10; ++drop) {
+    const State saved = Setup(old_calibration, 6);
+    Settings s;
+    CHECK(s.Init(false));
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        new_calibration.adc_calibration,
+        sizeof(new_calibration.adc_calibration));
+    TestFlash().supply_budget = drop;
+    s.SavePersistentData();
+    CHECK(TestFlash().supply_low);
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == 0xffff);
+    TestFlash().supply_low = false;
+    TestFlash().supply_budget = 0;
+
+    Settings loaded;
+    CHECK(loaded.Init(false));  // Never the factory test.
+    CHECK(!loaded.write_locked());
+    if (drop <= 5) {
+      CHECK(SameState(loaded, saved));
+      CHECK(SameCalibration(loaded, old_calibration));
+    } else {
+      CHECK(SameState(loaded, defaults));
+      CHECK(SameCalibration(loaded, new_calibration));
+    }
+    // The interrupted save completes on the next one.
+    s.SaveState();
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == 2);
+    Settings again;
+    CHECK(again.Init(false) && !again.write_locked());
+    CHECK(SameCalibration(again, new_calibration));
+    CHECK(SameState(again, s.state()));
+    CHECK(StockLoads(new_calibration, s.state()));
+  }
+  // A repair with the supply low fails without writing, and stays guarded;
+  // the next one with the supply back succeeds.
+  {
+    Setup(old_calibration, 5);
+    LoseCalibration(0);
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    Settings s;
+    CHECK(s.Init(true));
+    CHECK(s.repair() == STORAGE_REPAIR_FAILED);
+    CHECK(s.write_locked());
+    CHECK(Unchanged(snapshot));
+    TestFlash().supply_low = false;
+    Settings again;
+    CHECK(again.Init(true));
+    CHECK(again.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+    CHECK(!again.write_locked());
+  }
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
 void OnUnmaskedRead(int) {
   printf("ERROR: %s: unmasked read of a damaged flash word\n",
       test_checker.test());
@@ -873,6 +1007,8 @@ int main() {
   TestRepairFailures();
   TestRepairPowerLoss();
   TestMirrorWrites();
+  TestLowSupply();
+  TestSupplyDrop();
   test_checker.Start("main");
   CHECK(TestFlash().violations == 0);
   CHECK(TestFlash().wide_sectors == 0);

@@ -89,6 +89,7 @@ bool Settings::Init(bool recovery_mode) {
   const State defaults = state_;
   repair_ = STORAGE_REPAIR_NONE;
   
+  Flash::Init();  // Every write checks the supply from here on.
   StorageStatus status = chunk_storage_.Init(&persistent_data_, &state_);
   
   // A lost or implausible calibration comes back from the mirror, the
