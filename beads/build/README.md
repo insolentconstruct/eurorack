@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable Instruments source; not a Mutable Instruments product.
 
-**TL;DR:** Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks, evolving frozen feedback and random intervals, on a four-page options page, with quieter quality changes. A module with damaged settings flash now starts instead of crashing. [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/) builds your own update file: which features, where they sit, their defaults, and nine more options that are off in the standard firmware. In the standard firmware every option defaults to stock behaviour. Clouds-style reverb, the grains and the wavetable synth use less CPU, with the same sound.
+**TL;DR:** Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks, evolving frozen feedback and random intervals, on a four-page options page, with quieter switching. A module with damaged settings flash now starts instead of crashing. [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/) builds your own update file: which features, where they sit, their defaults, and nine more options that are off in the standard firmware. In the standard firmware every option defaults to stock behaviour. Clouds-style reverb, the grains and the wavetable synth use less CPU, with the same sound.
 
 Tested on one module so far. Please report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); questions, ideas and what works go in [Discussions](https://github.com/insolentconstruct/eurorack/discussions). Do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
 
@@ -95,6 +95,20 @@ powering up without a saved frozen buffer. Buffer trim restarts the recording
 window without erasing the old audio; grains already playing finish on it,
 and new grains read only the new window.
 
+## Quieter switching
+
+Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth’s reverb tail stops with it.
+
+## Fixes
+
+Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
+
+The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
+
+Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
+
+SEED starts latched at power-up, as in stock firmware.
+
 ## Frozen-buffer autosave
 
 A frozen buffer is saved after FREEZE has been on for ten seconds. A save cut
@@ -165,7 +179,7 @@ setting"). The 120-136 unity band and green meter cue keep unity easy to find.
 LED brightness offers 100% / 66% / 33%, Fixed via Hygrostat or Adjustable
 in thirds of a selected options-page knob, with a live preview while turning.
 Warnings dim too. Bright digital RGB white is balanced against the white LEDs
-at the reduced levels; 100% is the release's own LEDs. The default is 100%.
+at the reduced levels; 100% is the release's own LEDs. The default is 100%. This is a profile option; there is no power-on gesture.
 SEED latch offers four values in quarters of the selected knob:
 Off (stock divider with a patched cable), Ignore (free-running, cable ignored),
 Sync (free-running; SEED edges restart grain-clock phase, useful on the

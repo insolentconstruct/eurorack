@@ -5,27 +5,37 @@ heading; a release turns it into a dated heading.
 
 ## Unreleased
 
+<!-- TODO: release date; replace YYYY.MM.DD in the heading and tag. -->
 ## YYYY.MM.DD (tag `drizzlet-YYYY.MM.DD`, beta 2 "Fog")
+
 - Drizzlet Hygrostat profiles: the firmware reads a profile block that sets which features are Off, Fixed or Adjustable, which options page knob each adjustable one uses, and its default. Hygrostat builds the update file and the options guides for a profile in the browser. An invalid profile keeps the standard layout and saves nothing to the settings; the damaged-settings repair still works (#140).
 - Settings: settings from stock firmware carry over. Drizzlet's own options, stereo width and grain diffusion saved by earlier releases (alphas and Beta 1) start from the profile's defaults; calibration and the stock settings are kept. Earlier Drizzlet releases read the new settings as stock.
-- Add nine options, Off in the standard firmware and available through Hygrostat: version at boot (#54), input attenuation to silence (#44), delay indication (#42), LED brightness at 100%, 66% or 33% (#40), live assignment LEDs (#27), FREEZE lit during saves (#25), free-running SEED latch: Ignore, Sync or Add (#13), pitch notch indication (#7) and TIME scan (#141). With SEED latch on Ignore, Sync or Add, a patched cable no longer divides the grain clock.
-- The wavetable synth computes two playing grains side by side: about 3% less of the audio budget on its heaviest settings, with the same sound (#168).
-- Settings and frozen-buffer saves are skipped while the supply sags; an interrupted save is handled like a power cut (#175).
-- A module whose settings flash is damaged no longer crashes at every start. The calibration is kept in a second sector and restored from it when needed, and an interrupted save only loses that save, so a power cut while saving no longer resets anything. If both copies of the calibration are lost, the module plays on the factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing to flash; hold SEED at power-up to repair it, then recalibrate. A damaged frozen buffer is skipped instead of crashing (#148).
-- The build refuses an application large enough to reach the frozen buffer and settings flash (#155).
-- Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Mutable Instruments' firmware has the same code. Each flash operation is now checked, and settings are only written onto erased flash (#149).
+- Add nine options, Off in the standard firmware and available through Hygrostat: version at boot (#54), input attenuation to silence (#44), delay indication (#42), LED brightness at 100%, 66% or 33% (#40), live assignment LEDs (#27), FREEZE lit during saves (#25), free-running SEED latch: Ignore, Sync or Add (#13), pitch notch indication (#7) and TIME scan (#141). LED brightness is a profile option with no power-on gesture. SEED starts latched at power-up, as in stock firmware. With SEED latch on Ignore, Sync or Add, a patched cable no longer divides the grain clock.
+- The wavetable synth computes two playing grains side by side: less CPU on its heaviest settings (TODO: final-image module CPU figures), with the same sound (#168).
 - Add random intervals (page 1, DRY/WET): with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. It works with any pitch scale (#8).
 - The options page now has four pages, lighting the mix LEDs left to right, then all three: 1 pitch scale, random intervals and attacks; 2 delay mode, reverb character and frozen feedback; 3 processor, synth and synth start; 4 limiter. Opening a page shows each stored value on [A] in turn. The wavetable synth's start (Automatic or Manual) is now its own setting, Synth start.
 - Stereo width moves off the options page: hold [A] and turn DRY/WET, like manual gain and grain diffusion.
-- Quality changes, mono/stereo switches and the wavetable synth starting or stopping now fade the output out briefly before the change takes effect, and the synth's reverb tail no longer plays on after it stops. Changes that keep the sample rate no longer stop the converter, which removes the pop it made in every earlier firmware; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it. The brief silence during a change, and the empty buffer after a quality change, remain (#53).
+- **Quieter switching** (#53): Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth’s reverb tail stops with it.
 - Add a spectral engine: Clouds' spectral processing in place of the grains, chosen with Processor (page 3, FEEDBACK): Granular (Stock) or Spectral. TIME picks the stored spectrum, SIZE warps, SHAPE quantizes, PITCH shifts (with the pitch scale), DENSITY sets the refresh rate and phase randomization, holding SEED glitches and FREEZE holds. Changing processor clears the recording; a frozen buffer saved to flash is kept (#3).
 - Add attacks (page 1, REVERB): Snap starts grains on the hits in the recording instead of partway through their decay; Snap and trigger also starts a grain on each hit (#58, #47).
 - Add frozen feedback (page 2, REVERB): Evolving runs the grains through a slowly moving all-pass loop while FREEZE is on, so a frozen sound drifts and softens instead of repeating exactly; FEEDBACK sets how far (#4).
 - Add Plaits as a second synth (page 3, DRY/WET): six voices of Mutable Instruments' Plaits play in place of the wavetable synth, with FEEDBACK picking one of 24 models, TIME, SIZE and SHAPE as HARMONICS, TIMBRE and MORPH, DRY/WET as decay and FREEZE as sustain (#50).
 - Add adjustable grain diffusion: hold [A] and turn REVERB, with either reverb. Once set, it is also an [M] destination for CV. Clouds-style reverb keeps its Beta 1 diffusion until you set an amount (#2).
 - Clouds-style reverb uses less CPU; the sound is unchanged.
-- Grains use less CPU (about 6% of the audio budget in the busiest case); the sound is unchanged.
+- Grains use less CPU (TODO: final-image module CPU figures); the sound is unchanged.
 - Releases add `<tag>-combo.hex`, the ST-Link recovery image as Intel HEX: it carries its flash address, so programmers need none. Erase only the sectors written: a full-chip erase also wipes calibration and settings.
+- The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
+
+### Fixes
+
+- **Low-supply save guard:** Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
+- A module whose settings flash is damaged no longer crashes at every start. The calibration is kept in a second sector and restored from it when needed, and an interrupted save only loses that save, so a power cut while saving no longer resets anything. If both copies of the calibration are lost, the module plays on the factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing to flash; hold SEED at power-up to repair it, then recalibrate. A damaged frozen buffer is skipped instead of crashing (#148).
+- The build refuses an application large enough to reach the frozen buffer and settings flash (#155).
+- Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Mutable Instruments' firmware has the same code. Each flash operation is now checked, and settings are only written onto erased flash (#149).
+
+### Known stock behaviour
+
+- Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
 
 ## 2026.10.18 (tag `drizzlet-2026.10.18`, beta 1 "Mist")
 - New options page layout on three pages. Page 1 (REVERB LED): pitch scale, stereo width, reverb character. Page 2 (FEEDBACK LED): delay mode. Page 3 (DRY/WET LED): wavetable synth (formerly self-play) and limiter. Changes save by themselves about a second after you stop turning; close by holding [M] for three seconds or pressing another button. Values show on the quality LED [A] in green, yellow and red, steady or blinking; stock values are steady green.

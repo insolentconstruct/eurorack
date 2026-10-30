@@ -7,6 +7,18 @@ The [options guide](OPTIONS.md) explains the controls, zones and LED patterns.
 The `drizzlet` branch, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. Planned uses come from the tentative roadmap in [#32](https://github.com/insolentconstruct/eurorack/issues/32); they can change until built. <!-- source: git trees fc549d7, d8f4739 -->
 Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzlet pins stmlib `d18def8` (stock `e3bd7c9`; the stmlib files cited here are identical in both); “linker script” means `stmlib/linker_scripts/stm32h7xx_flash_application_large.ld`, and `manual.md` is the Beads manual. <!-- source: git ls-tree fc549d7 stmlib; git ls-tree d8f4739 stmlib -->
 
+## Beta 2 behaviour
+
+Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth’s reverb tail stops with it.
+
+SEED starts latched at power-up, as in stock firmware. LED brightness is a profile option; there is no power-on gesture. The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
+
+Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
+
+## Fixes
+
+Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
+
 ## Buttons and startup
 
 | Gesture | Allocation / action | Saved? |
@@ -189,7 +201,7 @@ Buffer trim and monophonic grains use Mutable Instruments’ original gestures a
 
 ## Budgets
 
-Measured on the Beta 2 code before Hygrostat profiles and the synth grain pairs (the build pinned in `expected-hashes.sha256` when the startup guard merged): bytes from `app.elf` sections, not the debug ELF file size. TODO: remeasure on the release build; profiles and the grain pairs add about 14 KB of flash. <!-- measurement: app.bin SHA256 2e523f20dfc2f3a2550e8e04728b1ce1cada3406a1800fc69ce186681100b163, readelf -S app.elf; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld; beads/build/flash_bound.ld -->
+Measured on the Beta 2 code before Hygrostat profiles and the synth grain pairs (the build pinned in `expected-hashes.sha256` when the startup guard merged): bytes from `app.elf` sections, not the debug ELF file size. These are historical sizes, not final-image headroom; profiles and the grain pairs add flash. The build checks the final image against the buffer boundary. <!-- measurement: app.bin SHA256 2e523f20dfc2f3a2550e8e04728b1ce1cada3406a1800fc69ce186681100b163, readelf -S app.elf; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld; beads/build/flash_bound.ld -->
 
 | Region | TAKEN | FREE / qualification |
 |---|---|---|
@@ -199,7 +211,8 @@ Measured on the Beta 2 code before Hygrostat profiles and the synth grain pairs 
 | D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM. Plaits borrows the first 168 KB of delay bank 0 in synth mode |
 | D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement |
 
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. Module timing, whole callback, Beta 2 code: highest 87.2% (wavetable synth, Clouds-style reverb, width at maximum, a pitch scale); on the heavy synth case, 84.0–84.2% with the grain pairs against 86.0% for the vanilla source; no underruns (TESTING.md). TODO: remeasure on the release build. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. TODO: final-image module CPU figures (whole callback, worst case and underruns). Earlier measurements are recorded in TESTING.md.
+
 The dummy workload keeps the main loop busy, so main-loop activity is not idle time. The wavetable synth sets the peak; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
 ## Design aims
@@ -288,8 +301,8 @@ block is unchanged. The page-facing catalogue is
 `palette/static/profile-features.json`; costs are unknown until measured.
 
 Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
-when Adjustable or set via Hygrostat when Fixed. SEED latch uses Off / Ignore /
-Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
+when Adjustable or set via Hygrostat when Fixed. There is no power-on
+brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
 Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
 frame, including options and warning displays, and previews while turning. Off
 and Fixed 100% preserve every stock LED value. At 66% and 33%, RGB white also
