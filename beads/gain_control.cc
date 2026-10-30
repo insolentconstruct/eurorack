@@ -67,7 +67,8 @@ void GainControl::Init(
   one_hertz_ = 1.0f / sample_rate;
 }
 
-void GainControl::Process(
+template<bool attenuation>
+void GainControl::ProcessInternal(
     bool active,
     uint8_t gain_setting,
     bool left_normalization,
@@ -126,7 +127,7 @@ void GainControl::Process(
   manual_gain *= manual_gain;
   manual_gain *= manual_gain;
   manual_gain = kMinGain + (kMaxGain - kMinGain) * manual_gain;
-  if (attenuation_ && gain_setting) {
+  if (attenuation && gain_setting) {
     // 1 is silence; 120..136 is unity; the upper range reaches +32 dB.
     if (gain_setting < 120) {
       manual_gain = float(gain_setting - 1) / 120.0f;
@@ -143,7 +144,7 @@ void GainControl::Process(
     }
   }
   ONE_POLE(manual_gain_, manual_gain, 0.01f);
-  if (attenuation_ && gain_setting == 1) {
+  if (attenuation && gain_setting == 1) {
     manual_gain_ = 0.0f;
   }
   
@@ -160,7 +161,7 @@ void GainControl::Process(
     CONSTRAIN(soft_clipping_amount, 0.0f, 1.0f)
   }
   
-  if (attenuation_ && gain_setting == 1) {
+  if (attenuation && gain_setting == 1) {
     soft_clipping_amount = 0.0f;
   }
 
@@ -211,6 +212,25 @@ void GainControl::Process(
     
     ++out;
     ++in;
+  }
+}
+
+void GainControl::Process(
+    bool active,
+    uint8_t gain_setting,
+    bool left_normalization,
+    bool right_normalization,
+    const Codec::Frame* in,
+    FloatFrame* out,
+    size_t size) {
+  if (attenuation_) {
+    ProcessInternal<true>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
+  } else {
+    ProcessInternal<false>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
   }
 }
 

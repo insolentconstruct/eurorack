@@ -89,6 +89,16 @@ class GainControl {
   }
 
  private:
+  template<bool attenuation>
+  void ProcessInternal(
+      bool active,
+      uint8_t gain,
+      bool left_normalization,
+      bool right_normalization,
+      const Codec::Frame* in,
+      FloatFrame* out,
+      size_t size);
+
   float peak_;
   float agc_peak_;
   float stable_agc_peak_;

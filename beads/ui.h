@@ -35,6 +35,7 @@
 
 #include "beads/options.h"
 #include "beads/pot_controller.h"
+#include "beads/profile.h"
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
@@ -214,6 +215,7 @@ class Ui {
   bool seed_button_locked_;
   bool delay_active_;
   bool pitch_on_notch_;
+  ProfileFeature amount_feature_[MIX_PARAMETER_LAST];
   float assign_modulation_;
   uint32_t delay_cue_time_;
   uint32_t boot_cue_time_;
