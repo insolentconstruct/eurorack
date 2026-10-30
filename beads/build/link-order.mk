@@ -29,3 +29,8 @@ $(BUILD_DIR)%.nd: %.c
 	$(CC) -M $(CCFLAGS) $< -MF $@ -MT $(@:.nd=.o)
 $(BUILD_DIR)%.nd: %.cc
 	$(CXX) -M $(CCFLAGS) $(CPPFLAGS) $< -MF $@ -MT $(@:.nd=.o)
+
+ifeq ($(DWT_CALIBRATION),1)
+CPPFLAGS += -DDWT_CALIBRATION
+LDFLAGS := -T beads/build/dwt.ld $(LDFLAGS)
+endif
