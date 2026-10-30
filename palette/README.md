@@ -11,8 +11,9 @@ firmware profiles are refused. Older plain-WAV releases are not offered.
 
 The current entry is an **unreleased development build** pinned in the manifest.
 It pins `drizzlet-dev-db46c9a`, built from the merged Drizzlet firmware.
-Each feature has either a measured CPU cost or **not yet measured** (`cpu: null`);
-none has a measured cost yet. The synth baseline is the measured default-profile
+Per-feature CPU costs are measured on a module-calibrated development board;
+four event-only features have no per-block work by code inspection. Estimates
+sum each engine's own costs. The synth baseline is the measured default-profile
 worst case, **87.2% with Clouds-style reverb**, width 255 and Raag Shri; it already
 includes Clouds-style reverb. Granular's historical baseline is 83.0%.
 
@@ -29,13 +30,12 @@ warn from 91% and block above the provisional 92% ceiling. Exact measured
 combinations key on the complete encoded 512-byte profile
 (`cpu.combinations[].profile`, hex). Missing engine measurements fall back to
 that engine's baseline plus measured feature deltas; placement changes require
-another exact match. Unknown enabled feature costs still suppress a computed
-percentage, even if a combination measurement is present.
+another exact match. Exact module measurements take precedence over per-feature estimates.
 
 Maintainer release gates:
 
-- **OPEN — release blocking:** supply the per-feature cost table, referenced to
-  the measured default profile, and module checks before release. No invented
+- **OPEN — release blocking:** check the final image and cost table on the
+  module before release. No invented
   allowances; do not add Clouds-style reverb twice. Generate feature CPU fields
   from that table and validate their provenance.
 - **OPEN — release blocking:** measure the final image's default and heaviest

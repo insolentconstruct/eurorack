@@ -130,7 +130,7 @@ const withMeasuredCosts = (r) => {
   const release = withMeasuredCosts(manifest.releases[0]);
   for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
     const r = structuredClone(release);
-    for (const f of r.profile.features) f.cpu.off = 0;
+    for (const f of r.profile.features) for (const cpu of Object.values(f.cpu.engines)) cpu.off = 0;
     for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
     const result = cpuUsage([], r); assert.equal(result.warning, warning); assert.equal(result.blocked, blocked);
   }
@@ -140,7 +140,7 @@ const withMeasuredCosts = (r) => {
   }
   for (const engine of ['synth', 'granular']) {
     const r = structuredClone(release);
-    for (const f of r.profile.features) f.cpu.off = 0;
+    for (const f of r.profile.features) for (const cpu of Object.values(f.cpu.engines)) cpu.off = 0;
     for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
     r.cpu.baselines[engine].percent = 92.1;
     const usage = cpuUsage([], r);
@@ -178,12 +178,16 @@ const withMeasuredCosts = (r) => {
         'real manifest heavy custom combination costs more than the default');
     const nearCeiling = structuredClone(r); nearCeiling.cpu.baselines.synth.percent = 91;
     assert(cpuUsage(heavy, nearCeiling).blocked, 'heavy custom combination blocks near the ceiling');
-    assert(r.profile.features.some((f) => featureDelta([f.id, 0], f) < 0));
-    for (const f of r.profile.features) assert.equal(featureDelta(f.default, f), 0);
+    for (const engine of ['synth', 'granular']) {
+      assert(r.profile.features.some((f) => featureDelta([f.id, 0], f, engine) < 0));
+      for (const f of r.profile.features) assert.equal(featureDelta(f.default, f, engine), 0);
+    }
   }
 }
 // Exact module measurements override unknown per-feature costs and lighter labels.
 {
+  const release = structuredClone(manifest.releases[0]);
+  for (const f of release.profile.features) f.cpu = null;
   const chosen = defaults(profile);
   chosen.find((e) => e[0] === 2)[2] = 1;
   for (const [percent, blocked] of [[90.4, false], [92, false], [92.1, true]]) {
@@ -200,7 +204,8 @@ const withMeasuredCosts = (r) => {
   assert.deepEqual(cpuUsage(chosen, release).unknown, ['Reverb character']);
   const partialCosts = structuredClone(release);
   partialCosts.profile.features.find((f) => f.id === 2).cpu = {
-    kind: 'measured', off: 0, fixed: [0, 6], adjustable: [0, 6] };
+    kind: 'measured', engines: { synth: { off: 0, fixed: [0, 6], adjustable: [0, 6] },
+      granular: { off: 0, fixed: [0, 6], adjustable: [0, 6] } } };
   const partialUsage = cpuUsage(chosen, partialCosts);
   assert.equal(partialUsage.kind, 'estimated', 'known added work is not labelled within default');
   assert.equal(partialUsage.withinMeasuredDefault, false);
@@ -232,15 +237,18 @@ const withMeasuredCosts = (r) => {
   lighterAmount.find((e) => e[0] === 12)[2] = 100;
   assert.equal(cpuUsage(lighterAmount, amountDefault).kind, 'within measured default');
 }
-// The shipped manifest contains no invented feature costs.
+// Unknown costs remain unknown for every catalogue feature.
 for (const f of profile.features) {
-  assert.equal(f.cpu, null);
-  assert.equal(featureDelta(f.default, f), null);
+  assert.notEqual(f.cpu, null);
+  const unknownFeature = { ...f, cpu: null };
+  assert.equal(featureDelta(unknownFeature.default, unknownFeature, 'synth'), null);
+  assert.equal(featureDelta(unknownFeature.default, unknownFeature, 'granular'), null);
   const off = normalise([[f.id, 0, 0, 0, 0, 0]], profile);
   const fixed = [f.id, 1, f.id === 9 || f.values?.[0] === 'Off' ? 1 : 0, 0, 0,
     f.id === 9 ? 1 : 0];
   // Isolate enabled unknown costs against an Off-default fixture.
   const offDefault = structuredClone(release);
+  offDefault.profile.features.find((feature) => feature.id === f.id).cpu = null;
   for (const feature of offDefault.profile.features) feature.default = [feature.id, 0, 0, 0, 0, 0];
   assert.equal(cpuUsage([fixed], offDefault).percent, null);
   assert(cpuUsage([fixed], offDefault).unknown.includes(f.name));

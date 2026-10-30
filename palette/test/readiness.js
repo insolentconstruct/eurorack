@@ -8,6 +8,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   releaseIdForTag, validateReleaseId, initialEntry } from '../static/js/profile.js';
+import { importedCost, costTable, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
+import './costs.js';
 import { guide } from '../static/js/guide.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const root = new URL('../static/', import.meta.url);
@@ -41,7 +43,9 @@ for (const [i, definition] of definitions.entries()) {
   assert.deepEqual(f.states, c.states);
   assert.equal(f.synth_path, c.touches_synth);
   assert.equal(f.stateless, c.stateless ?? false);
-  assert.deepEqual(f.cpu, c.cpu_cost);
+  assert.equal(c.cpu_cost, null);
+  assert.notEqual(f.cpu, null);
+  assert.deepEqual(f.cpu, importedCost(f));
   assert.equal(f.default[1], ['Off', 'Fixed', 'Adjustable'].indexOf(c.default_state));
   assert.equal(f.default[2], c.default);
   assert.equal(f.values?.length || 0, Number(definition[1]));
@@ -96,9 +100,20 @@ assert(cpuUsage(warning, measuredCosts(release)).warning && !cpuUsage(warning, m
 const heavy = warning.map((e) => e.slice());
 for (const [id, value] of [[1, 9], [10, 1], [11, 255]]) heavy.find((e) => e[0] === id)[2] = value;
 assert(cpuUsage(heavy, measuredCosts(release)).blocked);
-for (const f of profile.features) assert.equal(f.cpu, null, 'unmeasured costs must not carry invented numbers');
+assert.equal(cpuUsage(warning, measuredCosts(release)).percent, 91.1);
+assert.equal(cpuUsage(heavy, measuredCosts(release)).percent, 92.5);
+assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
+assert.equal(release.cpu.costs.table_sha256, tableSha256);
+assert.deepEqual(importCosts(structuredClone(manifest)), manifest);
+for (const change of [(r) => r.profile.features.pop(), (r) => { r.profile.features[0].name += ' mismatch'; },
+  (r) => { r.profile.features[0].id = 99; }]) {
+  const r = structuredClone(release); change(r);
+  assert.throws(() => importCosts({ releases: [r] }));
+}
 for (const candidate of [warning, heavy]) {
-  const result = cpuUsage(candidate, release);
+  const unknownCosts = structuredClone(release);
+  unknownCosts.profile.features.find((f) => f.id === 2).cpu = null;
+  const result = cpuUsage(candidate, unknownCosts);
   assert.equal(result.percent, null);
   assert.equal(result.kind, 'not yet measured');
   assert(!result.warning && !result.blocked);
@@ -149,4 +164,4 @@ assert(workflow.includes('  pull_request:'));
 assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/drizzlet'"));
 const html = read('index.html');
 for (const text of ['How to install', 'storage-recovery-2026.10.27', ':focus-visible', 'min-height: 44px', 'Made by Insolent Construct']) assert(html.includes(text));
-console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and unmeasured shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, release IDs, assets and PR CI`);
+console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and traced per-engine shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, release IDs, assets and PR CI`);

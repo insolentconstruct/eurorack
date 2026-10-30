@@ -7,9 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=359b687fb6271455';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=359b687fb6271455';
-import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=359b687fb6271455';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=6b546fe5d6cc5671';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=6b546fe5d6cc5671';
+import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=6b546fe5d6cc5671';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +20,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=359b687fb6271455', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6b546fe5d6cc5671', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.progress !== undefined) {
         $('progress').value = data.progress;
@@ -212,8 +212,12 @@ function renderEditor() {
       }
     }
     const cost = document.createElement('small');
-    const delta = featureDelta(e, f);
-    cost.textContent = delta === null ? 'CPU cost not yet measured' : `CPU ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% versus release default · ${f.cpu.kind}${f.synth_path ? ' · includes synth path' : ''}`;
+    const engines = ['synth', 'granular'].filter((engine) => f.cpu?.engines?.[engine]);
+    cost.textContent = !f.cpu ? 'CPU cost not yet measured' : f.cpu.kind === 'zero' ?
+      'No CPU cost (no per-block work)' : 'CPU ' + engines.map((engine) => {
+        const delta = featureDelta(e, f, engine);
+        return `${engine}${engines.length === 1 ? ' only' : ''} ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
+      }).join(', ') + ' points versus stock · measured on a module-calibrated development board';
     row.append(cost); $('features').append(row);
   }
 }
@@ -226,12 +230,12 @@ async function refresh() {
   document.body.classList.toggle('cpu-warning', cpu.warning);
   $('cpu').textContent = cpu.withinMeasuredDefault ? 'Within the measured default. Savings from Off or lighter settings are not yet measured.' : cpu.percent === null ? `CPU cost not yet measured for: ${cpu.unknown.join(', ')}.` :
       `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
-      cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? '' : ' estimated'}`).join('; ') +
+      cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? ' measured on the module' : ' estimated from costs measured on a module-calibrated development board'}`).join('; ') +
       `. Provisional stock ceiling ${release.cpu.ceiling}%. ` +
       (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
   $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
       Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
-      ' Per-feature costs and final-image measurements are pending.';
+      ' Estimates sum per-engine costs measured on a module-calibrated development board. Final-image measurements are pending.';
   $('build').disabled = $('local').disabled = busy || cpu.blocked;
   const block = encodeProfile(entries, release.profile);
   const fp = await fingerprint(block);
@@ -258,7 +262,7 @@ function loadSharedProfile() {
 
 async function init() {
   try {
-    const response = await fetch('manifest.json?v=359b687fb6271455', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=6b546fe5d6cc5671', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');

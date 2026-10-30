@@ -33,7 +33,82 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": -0.002,
+                  "fixed": [
+                    -0.002,
+                    -0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0
+                  ],
+                  "adjustable": [
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003,
+                    0.003
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    3,
+                    9
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.047,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.122
+                  ],
+                  "adjustable": [
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16,
+                    0.16
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    3,
+                    9
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.14
+              },
+              "note": "synth value=0: worst-case -2 cycles; largest scenario median +15 (synth 32 grains: pitch scale Off), peak up to +144, 2 scenarios; synth value=1: worst-case -4 cycles; largest scenario median +7 (synth 32 grains: pitch scale Chromatic), peak up to -203, 2 scenarios; synth value=3: worst-case +4 cycles; largest scenario median +4 (synth 32 grains: pitch scale Major), peak up to -302, 2 scenarios; granular value=1: worst-case +56 cycles; largest scenario median +93 (q0 stress32: pitch scale Chromatic), peak up to +274, 8 scenarios; granular value=3: worst-case +188 cycles; largest scenario median +188 (q3 stress32: pitch scale Major), peak up to +902, 8 scenarios; granular value=9: worst-case +144 cycles; largest scenario median +173 (q0 stress32: pitch scale Raag Shri), peak up to +861, 8 scenarios"
+            },
             "default": [
               1,
               2,
@@ -62,7 +137,46 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": -0.254,
+                  "fixed": [
+                    -0.254,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    1.202
+                  ],
+                  "adjustable": [
+                    1.202,
+                    1.202
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.16
+              },
+              "note": "synth value=0: worst-case -305 cycles; largest scenario median -283 (synth 32 grains: stock reverb), peak up to +39, 2 scenarios; granular value=1: worst-case +1420 cycles; largest scenario median +1452 (q3 dense: Clouds-style), peak up to +1574, 8 scenarios"
+            },
             "default": [
               2,
               2,
@@ -92,7 +206,34 @@
             "action": false,
             "stateless": false,
             "synth_path": false,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    2
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.35
+              },
+              "note": "granular value=1: worst-case +0 cycles; largest scenario median +17837 (q3 delay: delay Disabled), peak up to +21721, 4 scenarios; granular value=2: worst-case +0 cycles; largest scenario median +202 (q3 delay: delay wide/smooth filter), peak up to +230, 4 scenarios; synth: 0 by construction (granular only)"
+            },
             "default": [
               3,
               2,
@@ -121,7 +262,31 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    -55.982
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.63
+              },
+              "note": "granular value=1: worst-case -66120 cycles; largest scenario median -39778 (q0 spectral (dense stimulus)), peak up to -40489, 4 scenarios; synth: 0 by construction (the synth does not run in spectral mode)"
+            },
             "default": [
               4,
               2,
@@ -151,7 +316,52 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    -0.062,
+                    -0.89
+                  ],
+                  "adjustable": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    2
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.047,
+                    -0.698
+                  ],
+                  "adjustable": [
+                    0.047,
+                    0.047,
+                    0.047
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    2
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.17
+              },
+              "note": "synth value=1: worst-case -75 cycles; largest scenario median -75 (synth b2-wavetable-clouds-size: limiter fast release), peak up to -234, 2 scenarios; synth value=2: worst-case -1068 cycles; largest scenario median -1027 (synth 32 grains: limiter Off), peak up to -639, 2 scenarios; granular value=1: worst-case +56 cycles; largest scenario median +56 (q3 stress32: limiter fast release), peak up to +157, 4 scenarios; granular value=2: worst-case -824 cycles; largest scenario median -509 (q0 stress32: limiter Off), peak up to -510, 4 scenarios"
+            },
             "default": [
               5,
               2,
@@ -180,7 +390,31 @@
             "action": false,
             "stateless": false,
             "synth_path": false,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.23
+              },
+              "note": "granular value=1: worst-case +0 cycles; largest scenario median +3826 (q1 frozen dense: evolving feedback), peak up to +5629, 4 scenarios; synth: 0 by construction (granular only)"
+            },
             "default": [
               6,
               2,
@@ -209,7 +443,31 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    -13.038
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.15
+              },
+              "note": "synth value=1: worst-case -15646 cycles; largest scenario median -15645 (Plaits model 19 (Clouds, width 255, Shri, b2 stimulus)), peak up to -18032, 24 scenarios; granular: not applicable (synth engine only)"
+            },
             "default": [
               7,
               2,
@@ -239,7 +497,34 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.913,
+                    0.886
+                  ],
+                  "adjustable": [
+                    0.913,
+                    0.913,
+                    0.913
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    2
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.16
+              },
+              "note": "granular value=1: worst-case +1078 cycles; largest scenario median +1184 (q1 stress32: attacks Snap), peak up to +1774, 8 scenarios; granular value=2: worst-case +1046 cycles; largest scenario median +1168 (q1 stress32: attacks Snap and trigger), peak up to +1264, 8 scenarios; synth: 0 by construction (attack detection runs only outside synth mode)"
+            },
             "default": [
               8,
               2,
@@ -268,7 +553,38 @@
             "action": true,
             "stateless": true,
             "synth_path": false,
-            "cpu": null,
+            "cpu": {
+              "kind": "zero",
+              "source": "no per-block work (code inspection)",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.05
+              },
+              "note": "action only (an event in Ui::DoEvents); no per-block or per-tick code"
+            },
             "default": [
               9,
               2,
@@ -297,7 +613,46 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.013
+                  ],
+                  "adjustable": [
+                    0.013,
+                    0.013
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.066
+                  ],
+                  "adjustable": [
+                    0.066,
+                    0.066
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.13
+              },
+              "note": "synth value=1: worst-case +16 cycles; largest scenario median +15 (synth b2-wavetable-clouds-size: random intervals), peak up to +139, 2 scenarios; granular value=1: worst-case +78 cycles; largest scenario median +78 (q3 stress32: random intervals), peak up to +183, 8 scenarios"
+            },
             "default": [
               10,
               2,
@@ -323,7 +678,48 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0.002,
+                  "fixed": {
+                    "zero": 0.002,
+                    "maximum": 0
+                  },
+                  "adjustable": {
+                    "zero": 0.003,
+                    "maximum": 0.003
+                  },
+                  "measured": {
+                    "0": 0.002,
+                    "128": 0.003,
+                    "255": 0
+                  }
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": {
+                    "zero": 0,
+                    "maximum": -0.119
+                  },
+                  "adjustable": {
+                    "zero": 0,
+                    "maximum": 0
+                  },
+                  "measured": {
+                    "0": 0,
+                    "128": -0.143,
+                    "255": -0.119
+                  }
+                }
+              },
+              "uncertainty": {
+                "points": 0.15
+              },
+              "note": "synth amount=0: worst-case +2 cycles; largest scenario median +24 (synth 32 grains: width Off), peak up to -160, 2 scenarios; synth amount=128: worst-case +4 cycles; largest scenario median +10 (synth 32 grains: width 128), peak up to -284, 2 scenarios; granular amount=128: worst-case -168 cycles; largest scenario median +19 (q1 dense: width 128), peak up to +466, 8 scenarios; granular amount=255: worst-case -141 cycles; largest scenario median +38 (q1 dense: width 255), peak up to -82, 8 scenarios"
+            },
             "default": [
               11,
               2,
@@ -349,7 +745,32 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "granular": {
+                  "off": 0,
+                  "fixed": {
+                    "zero": 0,
+                    "maximum": 1.411
+                  },
+                  "adjustable": {
+                    "zero": 1.424,
+                    "maximum": 1.424
+                  },
+                  "measured": {
+                    "0": 0,
+                    "128": 1.424,
+                    "255": 1.411
+                  }
+                }
+              },
+              "uncertainty": {
+                "points": 0.17
+              },
+              "note": "granular amount=128: worst-case +1682 cycles; largest scenario median +1704 (q3 dense: diffusion 128), peak up to +1963, 8 scenarios; granular amount=255: worst-case +1666 cycles; largest scenario median +1713 (q3 dense: diffusion 255), peak up to +1624, 8 scenarios; synth: 0 by construction (diffusion is set on the granular processor only)"
+            },
             "default": [
               12,
               2,
@@ -378,7 +799,46 @@
             "action": true,
             "stateless": false,
             "synth_path": false,
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    -59.63
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.601
+                  ],
+                  "adjustable": [
+                    0.601,
+                    0.601
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.3
+              },
+              "note": "synth value=1: worst-case -71556 cycles; largest scenario median -70771 (synth 32 grains: monophonic grains), peak up to -68755, 2 scenarios; granular value=1: worst-case +710 cycles; largest scenario median +2325 (q3 dense: monophonic grains), peak up to +825, 8 scenarios"
+            },
             "default": [
               13,
               2,
@@ -407,7 +867,38 @@
             "action": true,
             "stateless": true,
             "synth_path": false,
-            "cpu": null,
+            "cpu": {
+              "kind": "zero",
+              "source": "no per-block work (code inspection)",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.05
+              },
+              "note": "action only (one Trim per press); the per-block flag test is stock"
+            },
             "default": [
               14,
               1,
@@ -449,7 +940,38 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "zero",
+              "source": "no per-block work (code inspection)",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.05
+              },
+              "note": "LED cue in Ui::Poll for the first 0.8 s after boot only"
+            },
             "field": null
           },
           {
@@ -477,7 +999,46 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.07
+                  ],
+                  "adjustable": [
+                    0.07,
+                    0.07
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.026
+                  ],
+                  "adjustable": [
+                    0.026,
+                    0.026
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.14
+              },
+              "note": "synth value=1: worst-case +84 cycles; largest scenario median +94 (synth b2-wavetable-clouds-size: gain 200, attenuation On), peak up to +790, 4 scenarios; granular value=1: worst-case +30 cycles; largest scenario median +72 (q1 stress32: gain 200, attenuation On), peak up to +268, 8 scenarios"
+            },
             "field": null
           },
           {
@@ -505,7 +1066,38 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.012
+                  ],
+                  "adjustable": [
+                    0.012,
+                    0.012
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.012
+                  ],
+                  "adjustable": [
+                    0.012,
+                    0.012
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.08
+              },
+              "note": "UI interrupt (Ui::Poll); delay cue lit: Poll max +14, mean -2 cycles"
+            },
             "field": null
           },
           {
@@ -535,7 +1127,42 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.131,
+                    0.147
+                  ],
+                  "adjustable": [
+                    0.147,
+                    0.147,
+                    0.147
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.131,
+                    0.147
+                  ],
+                  "adjustable": [
+                    0.147,
+                    0.147,
+                    0.147
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.09
+              },
+              "note": "UI interrupt (Ui::Poll); brightness 66%: Poll max +157, mean +157 cycles; brightness 33%: Poll max +176, mean +157 cycles"
+            },
             "field": 10
           },
           {
@@ -563,7 +1190,38 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.052
+                  ],
+                  "adjustable": [
+                    0.052,
+                    0.052
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.052
+                  ],
+                  "adjustable": [
+                    0.052,
+                    0.052
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.07
+              },
+              "note": "UI interrupt (Ui::Poll); live assignment LEDs: Poll max +63, mean +59 cycles"
+            },
             "field": null
           },
           {
@@ -591,7 +1249,38 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "zero",
+              "source": "no per-block work (code inspection)",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.05
+              },
+              "note": "one flag test in Ui::Poll's LED code, only while a save runs"
+            },
             "field": null
           },
           {
@@ -622,7 +1311,58 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0,
+                    0,
+                    0.345
+                  ],
+                  "adjustable": [
+                    0.345,
+                    0.345,
+                    0.345,
+                    0.345
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0,
+                    0,
+                    0.59
+                  ],
+                  "adjustable": [
+                    0.59,
+                    0.59,
+                    0.59,
+                    0.59
+                  ],
+                  "measured_values": [
+                    0,
+                    1,
+                    2,
+                    3
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.32
+              },
+              "note": "synth value=1: worst-case +0 cycles; largest scenario median +1101 (synth b2-wavetable-clouds-size: latch Ignore p48), peak up to +5947, 4 scenarios; synth value=2: worst-case +0 cycles; largest scenario median -75377 (synth 32 grains: latch Sync p48), peak up to -75547, 4 scenarios; synth value=3: worst-case +414 cycles; largest scenario median +609 (synth b2-wavetable-clouds-size: latch Add p1), peak up to +5148, 4 scenarios; granular value=1: worst-case +0 cycles; largest scenario median -972 (q0 dense: latch Ignore p48), peak up to +2501, 12 scenarios; granular value=2: worst-case +0 cycles; largest scenario median -1195 (q1 stress32: latch Sync p1), peak up to -1382, 12 scenarios; granular value=3: worst-case +696 cycles; largest scenario median +4860 (q3 dense: latch Add p48), peak up to +10149, 12 scenarios"
+            },
             "field": 11
           },
           {
@@ -650,7 +1390,38 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.005
+                  ],
+                  "adjustable": [
+                    0.005,
+                    0.005
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0.005
+                  ],
+                  "adjustable": [
+                    0.005,
+                    0.005
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.07
+              },
+              "note": "UI interrupt (Ui::Poll); pitch notch cue lit: Poll max +6, mean -2 cycles"
+            },
             "field": null
           },
           {
@@ -679,7 +1450,31 @@
               0,
               0
             ],
-            "cpu": null,
+            "cpu": {
+              "kind": "measured",
+              "source": "measured on a module-calibrated development board",
+              "engines": {
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ],
+                  "measured_values": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0.08
+              },
+              "note": "granular value=1: worst-case +0 cycles; largest scenario median +280 (q3 dense: TIME amount 0.3, Scan), peak up to +1346, 8 scenarios; synth: 0 by construction (TIME scan is in Processor::Process only)"
+            },
             "field": 12
           }
         ]
@@ -691,7 +1486,7 @@
         "warning": 91,
         "margin": 0,
         "combinations": [],
-        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs are not yet measured. Measure the final image and per-feature cost table before release. The default profile is always allowed.",
+        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed.",
         "baselines": {
           "synth": {
             "percent": 87.2,
@@ -705,6 +1500,12 @@
             "provisional": true,
             "provenance": "Granular measured 83.0% in the 2026-10-27/28 sessions. Final profile image measurement is pending."
           }
+        },
+        "costs": {
+          "source": "measured on a module-calibrated development board",
+          "firmware": "hygrostat-profiles 35718f2",
+          "table": "costs/cost-table.json",
+          "table_sha256": "dc5f7fef75cb5c0435aa52f5513549a17b48f4daf37d2728ba5debbd281063a3"
         }
       },
       "app_sha256": "583800010af5ed238980b5224969e25c22c7d3b00ea273d3970a252bf023def4",
@@ -714,5 +1515,5 @@
       "date": "2026-10-29"
     }
   ],
-  "asset_version": "359b687fb6271455"
+  "asset_version": "6b546fe5d6cc5671"
 }

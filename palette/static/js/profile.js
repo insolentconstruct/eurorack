@@ -137,12 +137,15 @@ export function templates(profile) {
 }
 export const profileKey = (entries, profile) => Array.from(encodeProfile(entries, profile),
     (v) => v.toString(16).padStart(2, '0')).join('');
-// Measured per-setting deltas relative to the release DEFAULT feature setting.
-export function featureDelta(entry, feature) {
-  if (!feature.cpu || feature.cpu.kind !== 'measured') return null;
+// One engine's cost of a setting, in points, relative to the feature Off; an
+// engine the feature cannot run on costs 0, an unmeasured feature is null.
+export function featureDelta(entry, feature, engine) {
+  if (!feature.cpu || !['measured', 'zero'].includes(feature.cpu.kind)) return null;
+  const cpu = feature.cpu.engines[engine];
+  if (!cpu) return 0;
   const e = entry || [feature.id, 0];
-  if (e[1] === 0) return feature.cpu.off;
-  const costs = feature.cpu[e[1] === 1 ? 'fixed' : 'adjustable'];
+  if (e[1] === 0) return cpu.off;
+  const costs = cpu[e[1] === 1 ? 'fixed' : 'adjustable'];
   return Array.isArray(costs) ? costs[e[2]] : costs.zero + (costs.maximum - costs.zero) * e[2] / 255;
 }
 export function cpuUsage(entries, release) {
@@ -153,7 +156,8 @@ export function cpuUsage(entries, release) {
     Object.fromEntries(Object.entries(release.cpu.baselines).map(([e, b]) => [e, b.percent])) :
     null);
   const deltas = release.profile.features.map((f) => ({ feature: f,
-    delta: featureDelta(entries.find((e) => e[0] === f.id), f) }));
+    deltas: Object.fromEntries(Object.keys(release.cpu.baselines).map((engine) =>
+      [engine, featureDelta(entries.find((e) => e[0] === f.id), f, engine)])) }));
   // Placement does not add DSP work. Off, Fixed Off, and the same value in
   // a lighter mode stay within the default; other enabled values need a cost.
   const withinDefault = (f) => {
@@ -163,27 +167,26 @@ export function cpuUsage(entries, release) {
       (d[1] !== 0 && e[1] <= d[1] &&
         (f.amount ? e[2] <= d[2] : e[2] === d[2]));
   };
-  const unknown = deltas.filter(({ feature: f, delta }) => delta === null &&
+  const unknown = deltas.filter(({ feature: f, deltas }) => Object.values(deltas).some((d) => d === null) &&
     !withinDefault(f)).map(({ feature: f }) => f.name);
   if (!measured && unknown.length) {
     return { engines: [], percent: null, blocked: false, warning: false,
       kind: 'not yet measured', unknown, names: unknown.join(', ') };
   }
   const engines = Object.entries(release.cpu.baselines).map(([engine, baseline]) => {
-    const contributing = deltas.filter(({ feature: f }) => engine === 'synth' ? f.synth_path : true);
     const hasMeasurement = Number.isFinite(measured?.[engine]);
     const percent = Math.round((hasMeasurement ? measured[engine] : baseline.percent +
-        contributing.reduce((sum, f) => sum + f.delta, 0)) * 10) / 10;
+        deltas.reduce((sum, f) => sum + f.deltas[engine], 0)) * 10) / 10;
     return { engine, baseline, percent, measured: hasMeasurement,
       blocked: (!isDefault || Boolean(combination)) && percent > release.cpu.ceiling - (hasMeasurement ? 0 : release.cpu.margin),
       warning: percent >= release.cpu.warning };
   });
-  const withinMeasuredDefault = !measured && deltas.some((f) => f.delta === null) &&
-    deltas.every((f) => f.delta === null || f.delta <= 0);
+  const withinMeasuredDefault = !measured && deltas.some((f) => Object.values(f.deltas).some((d) => d === null)) &&
+    deltas.every((f) => Object.values(f.deltas).every((d) => d === null || d <= 0));
   return { engines, withinMeasuredDefault, percent: Math.max(...engines.map((e) => e.percent)),
     blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
     kind: withinMeasuredDefault ? 'within measured default' : isDefault && !combination ? 'partly measured' : engines.every((e) => e.measured) ? 'measured' : engines.some((e) => e.measured) ? 'partly measured' : 'estimated',
-    names: deltas.filter((f) => f.delta).map((f) => f.feature.name).join(', ') || 'Release default settings' };
+    names: deltas.filter((f) => Object.values(f.deltas).some((d) => d)).map((f) => f.feature.name).join(', ') || 'Release default settings' };
 }
 
 // State choices are catalogue capabilities; Fixed Off means disabled.
