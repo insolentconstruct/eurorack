@@ -26,6 +26,7 @@
 
 """Keep the plain-text Options page's reference table tied to firmware."""
 
+import json
 import os
 from pathlib import Path
 import re
@@ -129,7 +130,9 @@ user_sections.append(
         "Options reference (TSV)", 1
     )[0]
 )
+# Brightness percentages are the owner-selected public level names.
 for text in user_sections:
+    text = re.sub(r"(?<![0-9])(100|66|33)%", "", text)
     for banned in STYLE_BANNED:
         assert banned not in text, banned
 rich_width = markdown_readme.split("## Stereo width\n", 1)[1].split("\n## ", 1)[0]
@@ -474,3 +477,27 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
         assert guide in listed, guide
         assert (out / guide).read_bytes() == Path("beads/build/docs", guide).read_bytes()
 print("Release ZIPs include the generated guides and the combo HEX; wrong HEX rejected: PASS")
+
+
+# The profile page consumes permanent IDs and placements, never source enums.
+# This file is the page's whole catalogue; the page copies it verbatim.
+catalog = json.loads(Path("palette/static/profile-features.json").read_text())
+exported = subprocess.check_output(["build/options_tables", "--profile"],
+                                  text=True).splitlines()
+assert len(catalog["features"]) == len(exported) == 23
+assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
+    "100%", "66%", "33%"]
+for feature, row in zip(catalog["features"], exported):
+    identity, name, count, field, page, amount, action, stateless = (
+        int(x) if x.isdigit() else x for x in row.split("\t"))
+    assert feature["id"] == identity
+    assert len(feature["values"] or []) == count
+    assert feature["field"] == (None if field == 255 else field)
+    assert feature["page_slots"] == (list(range(1, 13)) if page else [])
+    assert bool(feature["amount_slots"]) == bool(amount)
+    assert bool(feature["actions"]) == bool(action)
+    assert feature.get("stateless", False) == bool(stateless)
+    assert ("Adjustable" in feature["states"]) == bool(page or amount or action)
+    if identity >= 15:
+        assert feature["default_state"] == "Off" and feature["default"] == 0
+print("Profile page catalogue: PASS")

@@ -51,9 +51,57 @@ Reserved knobs have no effect on [A] or saving. On entry and on each page change
 
 ## Saved data
 
-Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17, frozen feedback byte 18, attacks byte 19, the processor byte 20, the synth byte 21 and random intervals byte 22. No byte is free; byte 23 is reserved. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–22 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
+Hygrostat format v1 keeps State at 24 bytes. Bytes 0–9 retain their stock
+meaning. Width (14), CV destination (16) and diffusion (17) use full-byte
+encoding.
+Settings from stock carry over exactly as stock reads them, including
+monophonic mode. Drizzlet's options from earlier releases (alphas and Beta 1)
+start from the profile's defaults. Calibration is always kept.
+Byte 23 is the format marker: 0 is the old layout, 0xC1 is packed v1, and
+every other marker selects the profile defaults. Old records are decoded in
+RAM; the next save writes packed v1.
 
-### Settings layout
+Bytes 10–13, 15 and 18–22 hold twenty permanent nibble fields. The low
+nibble admits 0–14, with 15 meaning not set; the high admits 0–8, with 9
+meaning not set. Pitch uses a low nibble. No packed byte can be 0xA0–0xAF,
+so Beta 1 reads the packed choices as Stock. Fields never move or get reused;
+Off and Fixed features keep their dormant saved fields. Unsupported or
+not-set values use the profile default.
+
+| Feature ID | Feature | Permanent field |
+|---|---|---|
+| 1 | Pitch scale | 0 (byte 10 low) |
+| 2 | Reverb character | 1 (byte 10 high) |
+| 3 | Delay mode | 2 (byte 11 low) |
+| 4 | Processor | 3 (byte 11 high) |
+| 5 | Limiter | 4 (byte 12 low) |
+| 6 | Frozen feedback | 5 (byte 12 high) |
+| 7 | Synth | 6 (byte 13 low) |
+| 8 | Attacks | 7 (byte 13 high) |
+| 9 | Synth start | 8 (byte 15 low) |
+| 10 | Random intervals | 9 (byte 15 high) |
+| 11 | Stereo width | Full byte 14 |
+| 12 | Diffusion | Full byte 17 |
+| 13 | Monophonic grains | Stock byte 9 |
+| 14 | Buffer trim | No saved value |
+| 15 | Version at boot (#54) | No saved value |
+| 16 | Input attenuation (#44) | No saved value |
+| 17 | Delay indication (#42) | No saved value |
+| 18 | LED brightness (#40) | 10 (byte 18 low) |
+| 19 | Live assignment LEDs (#27) | No saved value |
+| 20 | FREEZE during saves (#25) | No saved value |
+| 21 | SEED latch (#13) | 11 (byte 18 high) |
+| 22 | Pitch notch indication (#7) | No saved value |
+| 23 | TIME modulation (#141) | 12 (byte 19 low) |
+
+Fields 13–19 are unallocated in v1. Fields 10–12 are permanent from this
+release.
+The profile table in `beads/profile.cc` owns identities and allowed controls.
+Missing or invalid profiles use the release layout and lock settings writes;
+the boot guard's own recoveries still run from storage state. SEED at boot
+with a valid profile resets to its defaults, preserving calibration.
+
+### Legacy and runtime settings layout
 
 State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no payload bytes. Defaults below are before flash loading. <!-- beads/settings.h:51-62; beads/settings.cc:60-70 -->
 
@@ -186,8 +234,9 @@ Prefer, in order: no control (a better default or an indicator), a new value in 
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Byte 22 holds random intervals, so no byte is free; later options must use spare values of existing bytes, with 0 still meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
-- **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks. Byte 23 stays reserved.
+- **Saved fields keep their meaning permanently.** Layout and defaults in
+  [Saved data](#saved-data); byte 23 holds the format marker.
+- **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
@@ -223,3 +272,71 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 - **Processor, Spectral:** takes effect once the page has closed: a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
+
+## Off-by-default features
+
+A lightweight requested feature may ship Off by default. Its Off state must
+leave the audio unchanged and add no measurable audio-path cost; branches
+belong outside sample loops. Measure each feature and interacting controls.
+Stock Beads' measured worst case is the ceiling (provisionally 92%). Warn from
+91%; block above 92%, for measured and estimated combinations alike. The
+ceiling must stay below the earliest measured DAC deadline at every sample
+rate. New features still require flash, permanent storage fields, controls and
+maintenance.
+
+### Small Beta 2 profile options
+
+IDs 15–23 default to Off. LED brightness Off means full brightness. Brightness,
+SEED latch and TIME modulation allow Off, Fixed or Adjustable; an Adjustable
+choice can occupy any of the twelve page slots. They have no amount, action,
+SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
+only, with no control placement. Omitted entries are Off. The default profile
+block is unchanged. The page-facing catalogue is
+`palette/static/profile-features.json`; costs are unknown until measured.
+
+Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
+when Adjustable or set via Hygrostat when Fixed. SEED latch uses Off / Ignore /
+Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
+Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
+frame, including options and warning displays, and previews while turning. Off
+and Fixed 100% preserve every stock LED value. At 66% and 33%, RGB white also
+receives the half-intensity balance correction. UI priority is options and
+storage indications, manual meters, boot cue, delay cue, pitch notch, then
+quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
+cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms
+light-blue pulses separated by 150 ms gaps. One release constant sets the pulse
+count (2 for Beta 2); audio startup never waits for this cue. Notch indication
+follows the detune law's unison and octave plateaus and both two-octave knob
+ends before smoothing; it ignores CV, random pitch and quantization. A small
+hysteresis holds the cue at plateau edges. Live assignment LEDs retain stock
+width, diffusion and amount-weighted patterns, scaled by absolute assignable CV
+(32/255 at zero to full stock brightness at full modulation). FREEZE remains
+full intensity during a save. These features never change the audio or save
+layout.
+
+Manual attenuation reserves gain byte 0 for automatic gain and 1 for silence.
+Bytes 120–136 snap to unity, with attenuation below and the usual maximum gain
+above, never exceeding stock. The meter shows green at unity. Stock firmware
+never goes below unity: Mutable Instruments deliberately kept unity as the
+minimum because "it's a sensitivity setting". This option keeps unity easy to
+find. Existing gain bytes are preserved; an enabled profile deliberately
+interprets manual settings with this new law. Automatic gain is unchanged.
+There are no new sample-loop tests or branches.
+
+SEED latch defaults to Off: stock uses the patched cable as a clock divider
+while latched. Ignore free-runs and ignores cable triggers, including their LED
+flashes. Sync free-runs and restarts the internal grain-clock phase on each
+SEED edge (meaningful on the periodic side of DENSITY). Add free-runs and fires
+an extra grain per edge. The divider is unavailable in every non-Off value.
+These choices act only while latched with a cable patched; unpatched
+attack-triggered grains keep working. Synth grain clocks use the same choices;
+delay has no grain clock and free-runs for non-Off values. In spectral mode,
+Sync and Add behave like stock: cable gates pass through. Choose any options
+page slot or a Fixed Hygrostat value. TIME Scan applies only to granular
+playback with TIME CV unpatched. The attenurandomizer sets signed speed: noon
+stops, clockwise moves forwards, counter-clockwise backwards; full travel scans
+the whole buffer in four seconds. The position wraps and is added to TIME.
+Patching CV restores Random/attenuation, and pauses the scan; delay and
+spectral playback also pause it. The position resets at processor
+initialization and is not saved. Feature selection occurs once per block; only
+enabled Sync/Add inspect individual cable edges. Off adds no per-sample work.
