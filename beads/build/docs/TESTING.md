@@ -1,13 +1,13 @@
 # Testing
 
-**TL;DR:** TODO host tests in 18 programs cover 110 of 117 manual behaviours (3 only in part), backed by 249 deliberate-fault checks, TODO injected power-loss and flash-error points (544 before the damaged-settings tests), reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
+**TL;DR:** TODO host tests in 18 programs cover 110 of 117 manual behaviours (3 only in part), backed by TODO (249) deliberate-fault checks, TODO injected power-loss and flash-error points (544 before the damaged-settings tests), reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
 
 TODO: host-test and assertion totals with the damaged-settings tests (currently 230 tests and 1655 assertion sites: storage 14/211, firmware 23/226, backup 22/134) and the backup test's power-loss and flash-error points; confirm at the release commit and update the TL;DR, the table below and the firmware and backup rows.
 
 - **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
 - **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, runs on the release code: quality changes, the quality button, CPU load, CV calibration, installing over Beta 1, [M] CV, and settings and frozen-buffer saves with the storage fix.
-- **Totals:** TODO: update after the damaged-settings module session. 123 firmware and settings installs on the test module, none failed to boot; about 31 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
+- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, runs on the release code: quality changes, the quality button, CPU load, CV calibration, installing over Beta 1, [M] CV, settings and frozen-buffer saves with the storage fix, and a deliberately damaged settings sector. TODO: the Hygrostat profiles session.
+- **Totals:** TODO: update with the damaged-settings and profiles sessions. 123 firmware and settings installs on the test module, none failed to boot; about 31 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
 
 Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Options also runs an advanced build and spectral a ShyFFT build, each counted once. Assertions inside loops run more than once.
 
@@ -59,7 +59,7 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 
 The separate TSV/documentation check is not included in the C++ assertion counts.
 
-Run any test from the repository root with `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Where the firmware and the manual differ, the tests check the firmware (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail (249 of 249). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+Run any test from the repository root with `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Where the firmware and the manual differ, the tests check the firmware (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail (TODO: 249 of 249). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -241,7 +241,7 @@ The release code, including the converter fix, on 2026-10-27, and with the stora
 | Converter pop at changes that keep the sample rate, 12 per build (separate comparison, 2026-10-25) | About +18 dB above a −34 dBFS test tone before the fix, about −50 dB after (median; worst −35 dB) |
 | CV calibration with Intellijel Scales | Saved, then the factory calibration restored (below) |
 | Install by audio file; storage recovery tool; SEED at power-on (2026-10-25) | Pass: settings and frozen buffer erased, calibration kept |
-| Installing over Beta 1, with every Beta 1 option saved away from stock | Pass: all kept, live and saved; the new options at stock |
+| Installing over Beta 1, with every Beta 1 option saved away from stock | Pass: all kept, live and saved; the new options at stock. This was before Hygrostat profiles; this release starts Drizzlet's own options from their defaults instead (TODO: recheck in the profiles session) |
 | [M] CV at 0 V and 2 V, assigned to stereo width, then to grain diffusion | Pass: each rose by 0.40 of its range (0.2 needed) |
 | Storage fix: the firmware's own settings saves (FREEZE held 60 s, then released) | Pass: two records appended, calibration unchanged |
 | Storage fix: the settings sector full, so the next save rewrites it | Pass: calibration byte-identical, one new settings record, the rest erased |
@@ -264,9 +264,18 @@ The release code, including the converter fix, on 2026-10-27, and with the stora
 
 No audio underruns.
 
-TODO: the damaged-settings module session (pending): one uncorrectable word in a settings record, then in the calibration, then in the frozen buffer; the warning, no writes while damaged, the SEED repair and its LED result; a power cut after the settings erase restoring the calibration copy; CPU unchanged.
+**Damaged settings** (2026-10-29), on the code with the startup guard, the module's own settings sector saved first and written back at the end:
 
-Not yet checked on the module: a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
+| Check | Result |
+|---|---|
+| Calibration record damaged, calibration copy blank | Pass: the module started, played on the factory calibration and default settings, and locked all flash writes. The 3 s LED warning was not confirmed: the rig's check for it was faulty |
+| Power on holding SEED | Pass: repaired with the factory calibration and the calibration copy written; the green repair blink was seen by eye |
+| Next start | Pass: normal, nothing locked |
+| Good calibration, calibration copy erased | Pass: normal start, no warning |
+| Own settings sector written back | Pass: byte-identical |
+| Heavy wavetable synth case, CPU | 87.2%; 84.0–84.2% with synth grains computed in pairs (#168); vanilla source 86.0%. Some repeat rows were rejected by the rig's audio check |
+
+Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. TODO: Hygrostat profiles and the nine new options (profiles session).
 
 **Test module totals** (2026-10-18 to 2026-10-28). Firmware and settings installs:
 
@@ -298,7 +307,8 @@ Everything above used one module. Also done on it for release candidate 3 (2026-
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
-- Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite can reset the settings to defaults; the calibration copy keeps the calibration. The host tests check this window and that the full rewrite keeps everything.
+- Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite loses the settings being saved; the calibration copy keeps the calibration. The host tests check this window and that the full rewrite keeps everything.
+- The module's noise floor (hiss, #59), planned for a later release.
 - Listening tests of the limiter modes. Their code is unchanged since the limiter's own measurements.
 - The full bench suite was not rerun on 2026.10.16.
 

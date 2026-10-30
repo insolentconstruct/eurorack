@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable Instruments source; not a Mutable Instruments product.
 
-**TL;DR:** Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim, pitch scales, Clouds-style reverb, stereo width and delay mode, on an options page that saves by itself. New settings default to stock behaviour. The grain engine needs about 6,900 fewer cycles per block in the heaviest stock case, with the same sound.
+**TL;DR:** Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks, evolving frozen feedback and random intervals, on a four-page options page, with quieter quality changes. A module with damaged settings flash now starts instead of crashing. [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/) builds your own update file: which features, where they sit, their defaults, and nine more options that are off in the standard firmware. In the standard firmware every option defaults to stock behaviour. Clouds-style reverb, the grains and the wavetable synth use less CPU, with the same sound.
 
 Tested on one module so far. Please report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); questions, ideas and what works go in [Discussions](https://github.com/insolentconstruct/eurorack/discussions). Do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
 
@@ -19,6 +19,8 @@ Install at your own risk.
 Buttons use the letters from the Beads manual: [A] is the quality button, and [M] is the CV-assign button below the FEEDBACK [J] knob (CV input 7).
 
 Hold the CV-assign button [M] for three seconds, then release, to open the options page. Tap [M] to change page; move a mix knob and rest it for one second to save. Guides: [text](docs/OPTIONS.md), [printable](docs/options-guide.svg).
+
+To choose which features your firmware has, where they sit and their defaults, build your own update file on [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/); it also makes the guides for that layout. The guides here are for the standard firmware.
 
 ![Options page phone guide](docs/options-guide-mobile.svg)
 
@@ -287,7 +289,7 @@ arm-none-eabi-objcopy -I binary -O ihex --change-addresses 0x08000000 drizzlet-Y
 
 ## Saved data
 
-The settings and frozen-buffer formats are frozen for Beta 1. Zero and unknown values select the stock behaviour. Stock firmware ignores the Drizzlet bytes and clears them when it saves, and loads trimmed buffers at full length. Turn monophonic grains off before downgrading. Byte layout: [FEATURES.md](docs/FEATURES.md).
+Settings from stock firmware carry over. Drizzlet's own options, stereo width and grain diffusion saved by earlier Drizzlet releases start from the profile's defaults; the calibration and the stock settings are kept. Downgrading to stock firmware is safe: it ignores the Drizzlet bytes and clears them when it saves, and loads trimmed buffers at full length. Turn monophonic grains off before downgrading. Earlier Drizzlet releases read the new settings as stock. The frozen-buffer format is unchanged. Byte layout: [FEATURES.md](docs/FEATURES.md).
 
 ## Building it yourself
 

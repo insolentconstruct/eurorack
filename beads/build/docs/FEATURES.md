@@ -51,9 +51,57 @@ Reserved knobs have no effect on [A] or saving. On entry and on each page change
 
 ## Saved data
 
-Both formats are frozen for Beta 1. Off, Automatic (Stock) and Stock are the stock behaviours; zero and unknown option values select them. Byte 12/13 values are frozen; width, delay mode and WIDTH assignment use bytes 14–16; grain diffusion uses byte 17, frozen feedback byte 18, attacks byte 19, the processor byte 20, the synth byte 21 and random intervals byte 22. No byte is free; byte 23 is reserved. Monophonic grains use the original byte 9 (0 off, 1 on), which stock keeps but compiles out. Stock ignores bytes 10–22 and clears them on save (byte 16 reads as FEEDBACK); turn mono off before downgrading.
+Hygrostat format v1 keeps State at 24 bytes. Bytes 0–9 retain their stock
+meaning. Width (14), CV destination (16) and diffusion (17) use full-byte
+encoding.
+Settings from stock carry over exactly as stock reads them, including
+monophonic mode. Drizzlet's options from earlier releases (alphas and Beta 1)
+start from the profile's defaults. Calibration is always kept.
+Byte 23 is the format marker: 0 is the old layout, 0xC1 is packed v1, and
+every other marker selects the profile defaults. Old records are decoded in
+RAM; the next save writes packed v1.
 
-### Settings layout
+Bytes 10–13, 15 and 18–22 hold twenty permanent nibble fields. The low
+nibble admits 0–14, with 15 meaning not set; the high admits 0–8, with 9
+meaning not set. Pitch uses a low nibble. No packed byte can be 0xA0–0xAF,
+so Beta 1 reads the packed choices as Stock. Fields never move or get reused;
+Off and Fixed features keep their dormant saved fields. Unsupported or
+not-set values use the profile default.
+
+| Feature ID | Feature | Permanent field |
+|---|---|---|
+| 1 | Pitch scale | 0 (byte 10 low) |
+| 2 | Reverb character | 1 (byte 10 high) |
+| 3 | Delay mode | 2 (byte 11 low) |
+| 4 | Processor | 3 (byte 11 high) |
+| 5 | Limiter | 4 (byte 12 low) |
+| 6 | Frozen feedback | 5 (byte 12 high) |
+| 7 | Synth | 6 (byte 13 low) |
+| 8 | Attacks | 7 (byte 13 high) |
+| 9 | Synth start | 8 (byte 15 low) |
+| 10 | Random intervals | 9 (byte 15 high) |
+| 11 | Stereo width | Full byte 14 |
+| 12 | Diffusion | Full byte 17 |
+| 13 | Monophonic grains | Stock byte 9 |
+| 14 | Buffer trim | No saved value |
+| 15 | Version at boot (#54) | No saved value |
+| 16 | Input attenuation (#44) | No saved value |
+| 17 | Delay indication (#42) | No saved value |
+| 18 | LED brightness (#40) | 10 (byte 18 low) |
+| 19 | Live assignment LEDs (#27) | No saved value |
+| 20 | FREEZE during saves (#25) | No saved value |
+| 21 | SEED latch (#13) | 11 (byte 18 high) |
+| 22 | Pitch notch indication (#7) | No saved value |
+| 23 | TIME modulation (#141) | 12 (byte 19 low) |
+
+Fields 13–19 are unallocated in v1. Fields 10–12 are permanent from this
+release.
+The profile table in `beads/profile.cc` owns identities and allowed controls.
+Missing or invalid profiles use the release layout and lock settings writes;
+the boot guard's own recoveries still run from storage state. SEED at boot
+with a valid profile resets to its defaults, preserving calibration.
+
+### Legacy and runtime settings layout
 
 State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no payload bytes. Defaults below are before flash loading. <!-- beads/settings.h:51-62; beads/settings.cc:60-70 -->
 
@@ -141,25 +189,18 @@ Buffer trim and monophonic grains use Mutable Instruments’ original gestures a
 
 ## Budgets
 
-Earlier combined pitch-scale and reverb build: 273,456 B of app flash, excluding the later trim changes. Off matches Stock audio in emulator fixtures; instruction counts vary with code generation.
-
-Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before the GCC 9 app build and this cycle's features; remeasure before allocating this headroom. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
+Measured on the Beta 2 code before Hygrostat profiles and the synth grain pairs (the build pinned in `expected-hashes.sha256` when the startup guard merged): bytes from `app.elf` sections, not the debug ELF file size. TODO: remeasure on the release build; profiles and the grain pairs add about 14 KB of flash. <!-- measurement: app.bin SHA256 2e523f20dfc2f3a2550e8e04728b1ce1cada3406a1800fc69ce186681100b163, readelf -S app.elf; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld; beads/build/flash_bound.ld -->
 
 | Region | TAKEN | FREE / qualification |
 |---|---|---|
-| App flash before FRZZ (896 KiB) | 271,292: vectors 664 + text/rodata 269,432 + exidx 8 + data load 1,188 | 646,212; app ends 0x080623BC. Linker alone reports 1,694,788 free, but includes storage areas above <!-- measurement: CI 38491527444 app.elf sections, beads.map:2682,3664-3716; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld:36 --> |
-| DTCM (128 KiB) | `.data` 1,188 + `.bss` 31,508; minimum heap/stack reservation 1,536 | 96,840 after reservation; actual stack grows from 0x20020000 and must also fit; no Drizzlet high-water measurement <!-- measurement: CI 38491527444 app.elf sections 4,5,10,12; linker script:29-32,170-178 --> |
-| ITCM (64 KiB) | 0 | 65,536 for explicitly placed code; adds flash load bytes <!-- measurement: CI 38491527444 app.elf section 11; linker script:37,152-162 --> |
-| D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM <!-- measurement: CI 38491527444 app.elf sections 7-9; beads/beads.cc:54-56; linker script:39-42 --> |
-| D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement <!-- measurement: CI 38491527444 app.elf section 6; linker script:41 --> |
+| App flash before FRZZ (896 KiB) | 626,248: vectors 664 + text/rodata 624,388 + exidx 8 + data load 1,188 | 291,256; app ends 0x080B8E48. The build fails if the image reaches bank 2 |
+| DTCM (128 KiB) | `.data` 1,188 + `.bss` 84,764; minimum heap/stack reservation 1,536 | 43,584 after reservation; the stack grows from 0x20020000 and must also fit; no Drizzlet high-water measurement |
+| ITCM (64 KiB) | 0 | 65,536 for explicitly placed code; adds flash load bytes |
+| D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM. Plaits borrows the first 168 KB of delay bank 0 in synth mode |
+| D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement |
 
-The GCC 9 Clouds-style build uses 270,808 app flash bytes and 35,700 DTCM
-`.bss` bytes, plus 1,188 `.data` bytes and the 1,536-byte minimum heap/stack
-reservation. D1/D2/D3 and DMA reservations are unchanged. Actual module stack
-high-water remains unverified; module callback timing is in TESTING.md.
-
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. Module timing, whole callback: delay mode 60% of budget; heaviest grain case with default options 85–86%; Clouds-style 88.1%; wavetable synth mode 90.5%; no underruns (TESTING.md). <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
-The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Synth mode leaves 9.5% of the budget; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. Module timing, whole callback, Beta 2 code: highest 87.2% (wavetable synth, Clouds-style reverb, width at maximum, a pitch scale); on the heavy synth case, 84.0–84.2% with the grain pairs against 86.0% for the vanilla source; no underruns (TESTING.md). TODO: remeasure on the release build. <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
+The dummy workload keeps the main loop busy, so main-loop activity is not idle time. The wavetable synth sets the peak; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
 ## Design aims
 
@@ -186,8 +227,9 @@ Prefer, in order: no control (a better default or an indicator), a new value in 
 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
-- **Saved options default to stock.** Byte layout in [Settings layout](#settings-layout). Byte 22 holds random intervals, so no byte is free; later options must use spare values of existing bytes, with 0 still meaning the Beta 1 behaviour. Byte 23 is reserved for a variant ID (0 = main Drizzlet or stock), so options never use it up.
-- **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks. Byte 23 stays reserved.
+- **Saved fields keep their meaning permanently.** Layout and defaults in
+  [Saved data](#saved-data); byte 23 holds the format marker.
+- **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.

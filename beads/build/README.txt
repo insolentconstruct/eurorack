@@ -3,9 +3,14 @@ Drizzlet
 Alternative firmware for Mutable Instruments Beads; not a Mutable
 Instruments product.
 
-TL;DR: Beta 1 "Mist", a call for testers. New since alpha 2: buffer trim,
-pitch scales, Clouds-style reverb, stereo width and delay mode. New settings
-default to stock behaviour. Details are in CHANGELOG.md in the repository.
+TL;DR: Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a
+spectral processor, grain diffusion, attacks, evolving frozen feedback and
+random intervals, on a four-page options page. A module with damaged
+settings flash now starts instead of crashing. Drizzlet Hygrostat
+(https://insolentconstruct.github.io/eurorack/) builds your own update file,
+with nine more options that are off in this standard firmware. Every option
+here defaults to stock behaviour. Details are in CHANGELOG.md in the
+repository.
 
 Tested on one module so far. Please report problems at
 https://github.com/insolentconstruct/eurorack/issues (not to Mutable
@@ -255,11 +260,13 @@ End options reference
 
 Saved data
 ----------
-The settings and frozen-buffer formats are frozen for Beta 1. Zero and unknown
-values select the stock behaviour. Stock firmware ignores the Drizzlet bytes
-and clears them when it saves, and loads trimmed buffers at full length. Turn
-monophonic grains off before downgrading. Byte layout: FEATURES.md in the
-repository.
+Settings from stock firmware carry over. Drizzlet's own options, stereo
+width and grain diffusion saved by earlier Drizzlet releases start from their
+defaults; the calibration and the stock settings are kept. Downgrading to
+stock firmware is safe: it ignores the Drizzlet bytes and clears them when it
+saves, and loads trimmed buffers at full length. Turn monophonic grains off
+before downgrading. Earlier Drizzlet releases read the new settings as stock.
+Byte layout: FEATURES.md in the repository.
 
 Firmware update procedure
 -------------------------
@@ -323,14 +330,10 @@ Back up the 128 KiB settings/calibration sector:
 shutdown"
 
 Check that beads-settings.bin is 131072 bytes. Label it with its unit.
-Restore to the same unit only; calibration is specific to each module:
-
-  openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-    -c "init; halt; flash write_image erase beads-settings.bin 0x081E0000;
-verify_image beads-settings.bin 0x081E0000; reset run; shutdown"
-
-Corrupt settings make the module start in factory-test mode (breathing
-LEDs); restoring the backup fixes it.
+Restore to the same unit only; calibration is specific to each module. To
+restore, build a restore image from the backup with
+beads/build/tools/settings_sector.py and write that, as the build kit README
+shows ("Backup and restore"); don't write the 128 KiB backup itself back.
 
 Credits: Mutable Instruments, Frederic Meslin / Fred's Lab, Oliver Rockstedt.
 Copyright and permission notices are in NOTICE.txt; keep them when

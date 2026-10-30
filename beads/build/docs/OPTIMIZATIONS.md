@@ -36,7 +36,7 @@ The same changes on the vanilla source alone ([beads-tuneup](https://github.com/
 | beads-tuneup with the integer Hermite read (not yet on that branch) | 82,911 | 69.1% |
 
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests; the emulator agreed wherever it was run (integer Hermite: 70 of 70 comparisons).
-- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
+- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter, synth grains rendered a block at a time, one Hermite read per synth sample.
 
 ## Build comparison
 
@@ -117,9 +117,9 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 **Result.** On the development board the stock worst block goes 97,255 (GCC 9 baseline) to 90,333 with the first three changes, and to 83,345 (69.5%) with the integer Hermite read; the worst of all 28 scenarios is 84,567 (70.5%), under the 90,000-cycle (75%) DSP-only target. On the module the whole callback is in the TL;DR table.
 
-**Synth grains, block per grain (tried 2026-10-27, not kept).** Rendering each wavetable grain across the whole block, split at each grain start so the sound stays bit-identical, was slower in all three versions tried on the development board: the stock heavy synth's median went from 83,099 to between 84,332 and 87,093 cycles. Keeping grain state across the block gave no measured benefit.
+**Synth grains, block per grain (tried, not kept).** Rendering each wavetable grain across the whole block, split at each grain start so the sound stays bit-identical, was slower in all three versions tried on the development board: the stock heavy synth's median went from 83,099 to between 84,332 and 87,093 cycles. Keeping grain state across the block gave no measured benefit.
 
-**One Hermite read per synth sample (untried).** The synth reads two neighbouring waves with Hermite interpolation and crossfades them (`WavetableGrain::ReadSample`; Plaits does the same with linear reads). Hermite is linear in its four samples, so crossfading the samples first and interpolating once gives the same value in exact arithmetic, with about six fewer float operations per grain per sample: an estimated 2% of the budget with 32 grains. The rounding differs, and the tables are integrated and differentiated on playback, which can magnify rounding differences, so the difference must be measured and reported before it is offered.
+**One Hermite read per synth sample (measured, not kept, #154).** The synth reads two neighbouring waves with Hermite interpolation and crossfades them (`WavetableGrain::ReadSample`). Hermite is linear in its four samples, so crossfading the samples first and interpolating once gives the same value in exact arithmetic, with about six fewer float operations per grain per sample. On the development board it was about 2 points of the budget slower, not faster: the two original reads are independent and overlap on the Cortex-M7, while the combined read is one dependent chain. The output also changed (difference about -87 dBFS RMS at 16-bit, peaks to -35 dBFS at 4-bit), so it fails the rules below anyway.
 
 **Attack template (prototyped, not measured).** Templating the granular paths on the attack setting was prototyped but not kept: attacks already cost nothing when Off (worst block 84,434 against 84,643 without the feature).
 
