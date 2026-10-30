@@ -10,7 +10,7 @@ templates, share links and desktop/phone SVG guides. Conflicts and invalid
 firmware profiles are refused. Older plain-WAV releases are not offered.
 
 The current entry is an **unreleased development build** pinned in the manifest.
-It pins `drizzlet-dev-db46c9a`, built from the merged Drizzlet firmware.
+It pins `drizzlet-dev-d02a5b2`, built from the merged Drizzlet firmware.
 Per-feature CPU costs are measured on a module-calibrated development board;
 four event-only features have no per-block work by code inspection. Estimates
 sum each engine's own costs. The synth baseline is the measured default-profile
