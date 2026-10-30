@@ -323,6 +323,9 @@ class Settings {
   uint8_t FeatureValue(ProfileFeature feature) const;
   void SetFeatureValue(ProfileFeature feature, uint8_t value);
 
+  // Any LED feature on: Ui::Poll skips their code when none is.
+  inline bool led_features() const { return led_features_; }
+
  private:
   void NormalizeOptions();
   void LoadOptions();
@@ -339,6 +342,7 @@ class Settings {
   bool profile_locked_;
   uint8_t packed_[kNumPackedBytes];
   uint8_t profile_values_[FEATURE_LAST];
+  bool led_features_;
   uint8_t dormant_destination_;
   // Bank 2: the settings in sector 7, the calibration mirror in sector 6.
   ChunkStorage<15, 14, PersistentData, State> chunk_storage_;

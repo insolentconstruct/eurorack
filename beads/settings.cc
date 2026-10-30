@@ -96,6 +96,7 @@ bool Settings::Init(bool recovery_mode,
   for (size_t i = 0; i < sizeof(packed_); ++i) {
     packed_[i] = 0x9f;
   }
+  fill(&profile_values_[0], &profile_values_[FEATURE_LAST], 0);
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const ProfileEntry& e = profile_.entry(ProfileFeature(i));
     SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : e.value);
@@ -261,6 +262,11 @@ uint8_t Settings::FeatureValue(ProfileFeature feature) const {
 void Settings::SetFeatureValue(ProfileFeature feature, uint8_t value) {
   if (feature >= FEATURE_VERSION) {
     profile_values_[feature] = value;
+    led_features_ = profile_values_[FEATURE_VERSION] ||
+        profile_values_[FEATURE_DELAY_CUE] ||
+        profile_values_[FEATURE_BRIGHTNESS] ||
+        profile_values_[FEATURE_LIVE_ASSIGN] ||
+        profile_values_[FEATURE_PITCH_NOTCH];
     return;
   }
   switch (feature) {

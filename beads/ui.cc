@@ -133,6 +133,9 @@ void Ui::ShowStorageStatus() {
 
 void Ui::LoadOptions() {
   options_.Configure(settings_->profile());
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    amount_feature_[i] = settings_->profile().Amount(i);
+  }
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
   evolving_feedback_ = settings_->evolving_feedback();
@@ -241,7 +244,7 @@ void Ui::Poll() {
         if (i == MIX_PARAMETER_FEEDBACK) {
           state->gain = 1.0f + p->hidden_parameter() * 255.0f;
         } else {
-          const ProfileFeature feature = settings_->profile().Amount(i);
+          const ProfileFeature feature = amount_feature_[i];
           if (feature == FEATURE_WIDTH) {
             settings_->set_stereo_width(StereoWidthFromPot(
                 p->hidden_parameter(), settings_->stereo_width()));
@@ -295,6 +298,7 @@ void Ui::UpdateLeds() {
   int triangle = (system_clock.milliseconds() & 2047) >> 2;
   triangle = triangle >= 256 ? 511 - triangle : triangle;
 
+  const bool led_features = settings_->led_features();
   bool adjusting_manual_gain = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].editing_hidden_parameter();
   bool adjusting_width = false;
@@ -302,9 +306,8 @@ void Ui::UpdateLeds() {
   for (int i = MIX_PARAMETER_DRY_WET; i <= MIX_PARAMETER_REVERB; ++i) {
     if (switches_.pressed(SWITCH_MEDIA) &&
         assignable_cv_pot_[i].editing_hidden_parameter()) {
-      adjusting_width |= settings_->profile().Amount(i) == FEATURE_WIDTH;
-      adjusting_diffusion |=
-          settings_->profile().Amount(i) == FEATURE_DIFFUSION;
+      adjusting_width |= amount_feature_[i] == FEATURE_WIDTH;
+      adjusting_diffusion |= amount_feature_[i] == FEATURE_DIFFUSION;
     }
   }
   
@@ -359,16 +362,18 @@ void Ui::UpdateLeds() {
           const float brightness = overwrite_reserve_ * \
               (state.monophonic_mode ? 0.5f : 1.0f);
           leds_.set_media(media_color, brightness);
-          if (settings_->FeatureValue(FEATURE_PITCH_NOTCH) && pitch_on_notch_) {
+          if (led_features && settings_->FeatureValue(FEATURE_PITCH_NOTCH) &&
+              pitch_on_notch_) {
             const Leds::Color cue = { 0, 255, 0 };
             leds_.set_media(cue);
           }
-          if (settings_->FeatureValue(FEATURE_DELAY_CUE) && delay_cue_time_ &&
+          if (led_features && settings_->FeatureValue(FEATURE_DELAY_CUE) &&
+              delay_cue_time_ &&
               uint32_t(system_clock.milliseconds() - delay_cue_time_) < 150) {
             const Leds::Color cue = { 255, 0, 0 };
             leds_.set_media(cue);
           }
-          if (settings_->FeatureValue(FEATURE_VERSION) &&
+          if (led_features && settings_->FeatureValue(FEATURE_VERSION) &&
               uint32_t(system_clock.milliseconds() - boot_cue_time_) <
                   200u + 300u * kReleaseBeta) {
             // Light blue identifies Drizzlet; pulse count identifies Beta.
@@ -416,7 +421,7 @@ void Ui::UpdateLeds() {
         } else {
           leds_.set(Led(LED_ASSIGN_1 + state.assignable_cv_destination), 128);
         }
-        if (settings_->FeatureValue(FEATURE_LIVE_ASSIGN)) {
+        if (led_features && settings_->FeatureValue(FEATURE_LIVE_ASSIGN)) {
           float modulation = fabsf(assign_modulation_);
           CONSTRAIN(modulation, 0.0f, 1.0f);
           leds_.ScaleAssignments(32 + uint8_t(modulation * 223.0f));
@@ -503,10 +508,12 @@ void Ui::UpdateLeds() {
       leds_.set(LED_VU_METER, gain_control_->vu_meter());
     }
   }
-  const uint8_t level = options_.active()
-      ? options_.Value(OPTION_BRIGHTNESS)
-      : settings_->FeatureValue(FEATURE_BRIGHTNESS);
-  leds_.Scale(level);
+  if (led_features || options_.active()) {
+    const uint8_t level = options_.active()
+        ? options_.Value(OPTION_BRIGHTNESS)
+        : settings_->FeatureValue(FEATURE_BRIGHTNESS);
+    leds_.Scale(level);
+  }
   leds_.Write();
 }
 
