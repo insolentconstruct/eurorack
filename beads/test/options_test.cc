@@ -2080,6 +2080,7 @@ void TestOptionsPalette() {
     r.ui.options_.selected_ = v.setting;
     switch (v.setting) {
       case OPTION_BRIGHTNESS:
+      case OPTION_SEED_LATCH:
         r.ui.options_.profile_preview_[v.setting] = v.value;
         break;
       case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value);

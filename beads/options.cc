@@ -106,6 +106,10 @@ const OptionValue kOptionValues[] = {
   { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
 };
 
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
@@ -288,6 +292,16 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       const int before = Value(setting);
       UpdateZone(pot, &zone_[i]);
       switch (setting) {
+        case OPTION_SEED_LATCH: {
+          int value = profile_preview_[setting];
+          while (value < 3 && pot > float(value + 1) * 0.25f + 0.025f) {
+            ++value;
+          }
+          while (value > 0 && pot < float(value) * 0.25f - 0.025f) {
+            --value;
+          }
+          profile_preview_[setting] = value;
+        } break;
         case OPTION_BRIGHTNESS: {
           int value = profile_preview_[setting];
           while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f) {

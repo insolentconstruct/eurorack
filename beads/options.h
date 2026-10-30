@@ -60,6 +60,7 @@ enum OptionSetting {
   OPTION_SYNTH_START,
   OPTION_INTERVALS,
   OPTION_BRIGHTNESS = 18,
+  OPTION_SEED_LATCH = 21,
   OPTION_LAST,
 };
 
@@ -104,7 +105,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 35;
+const size_t kNumOptionValues = 39;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 

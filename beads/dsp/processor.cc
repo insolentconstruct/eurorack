@@ -158,9 +158,10 @@ void Processor::Process(
   // Extract grain triggers.
   if (delay_mode) {
     triggers = NULL;
+    const bool free_running = seed_button_state >= SEED_BUTTON_STATE_IGNORE;
     delay_controller_.Render(
-        seed_button_state,
-        seed_input,
+        free_running ? SEED_BUTTON_STATE_LOCKED : seed_button_state,
+        free_running ? NULL : seed_input,
         freeze,
         density.base,
         (1.0f - expo_fm_amount) * density.cv,

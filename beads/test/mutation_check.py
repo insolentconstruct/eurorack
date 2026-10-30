@@ -1117,10 +1117,21 @@ cases = [
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
     'if (attenuation_ && gain_setting) {',
     'if (false) {'),
+  ('TestSeedLatchPatched', 'firmware', 'beads/beads.cc',
+    'seed_latch_enabled && seed_input &&',
+    'false &&'),
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
     'gain_setting < 120', 'gain_setting < 121'),
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
     'gain_setting <= 136', 'gain_setting <= 135'),
+  ('TestSeedLatchPatched', 'firmware', 'beads/dsp/trigger_generator.cc',
+    'seed_button_state == SEED_BUTTON_STATE_SYNC',
+    'seed_button_state == SEED_BUTTON_STATE_IGNORE'),
+  ('TestSeedLatchPatched', 'firmware', 'beads/dsp/trigger_generator.cc',
+    'seed_button_state == SEED_BUTTON_STATE_ADD', 'false'),
+  ('TestSeedLatchPatched', 'firmware', 'beads/beads.cc',
+    'ui.set_seed_led_state(false);', 'ui.set_seed_led_state(true);'),
+
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'options_.Value(OPTION_BRIGHTNESS)', '0'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
@@ -1132,6 +1143,13 @@ cases = [
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     '} else if (settings_->diffusion_assigned()) {\n          leds_',
     '} else if (false) {\n          leds_'),
+
+  ('TestSeedLatchPatched', 'firmware', 'beads/beads.cc',
+    '!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED) &&',
+    'true &&'),
+
+  ('TestSeedLatchPatched', 'firmware', 'beads/beads.cc',
+    '      seed_input = NULL;', '      seed_input = seed;'),
 
 ]
 # Validate every replacement before creating a disposable source tree.

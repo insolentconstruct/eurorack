@@ -83,6 +83,7 @@ extern int synth_mode_start_time;
 extern int codec_transition_frames;
 extern volatile bool ready;
 extern GateFlags previous_seed;
+extern uint8_t seed_latch_mode;
 void Init();
 void MonitorStateChange();
 void Process(const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
@@ -1497,6 +1498,86 @@ void TestSynthStopClearsReverb() {
   CHECK(clear);
 }
 
+// Off identity is checked against the release executable's existing audio
+// hashes. Comparing two profiles through ApplyProfile is not independent.
+void TestSeedLatchPatched() {
+  test_checker.Start("TestSeedLatchPatched");
+  Rig r(false, false);
+  r.seed_patched = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+  r.Settle();
+  ui.seed_button_locked_ = true;
+  for (int mode = 0; mode < 4; ++mode) {
+    settings.SetFeatureValue(FEATURE_SEED_LATCH, mode);
+    MonitorStateChange();
+    CHECK(seed_latch_mode == mode);
+    // Feed actual callback edges, checking the generator selected by the
+    // foreground cache and ensuring Ignore cannot light the trigger LED.
+    const int ignored_before =
+        processor.trigger_generator_.elapsed_since_last_pulse_;
+    test_seed_input = true;
+    for (int i = 0; i < 30; ++i) {
+      r.Block();
+    }
+    if (mode == 1) {
+      CHECK(!ui.seed_led_state_);
+      CHECK(processor.trigger_generator_.elapsed_since_last_pulse_ ==
+          ignored_before);
+    }
+    test_seed_input = false;
+    for (int i = 0; i < 30; ++i) {
+      r.Block();
+    }
+    if (mode) {
+      CHECK(NextGrainSpeed(&r) > 0.0f);
+    }
+  }
+  // Inspect rendered triggers, not an incidental divider counter.
+  for (int mode = 0; mode < 4; ++mode) {
+    TriggerGenerator generator;
+    generator.Init(48000.0f);
+    TriggerGenerator::Output out[256];
+    GateFlags edges[256];
+    std::fill(edges, edges + 256, GATE_FLAG_LOW);
+    edges[64] = GateFlags(GATE_FLAG_HIGH | GATE_FLAG_RISING);
+    const SeedButtonState state = mode
+        ? SeedButtonState(SEED_BUTTON_STATE_IGNORE + mode - 1)
+        : SEED_BUTTON_STATE_LOCKED;
+    generator.Render(state, edges, 0.0f, 0.0f, 0.0f, out, 256);
+    int triggers = 0;
+    for (int i = 0; i < 256; ++i) {
+      triggers += out[i].trigger;
+    }
+    CHECK(triggers > 0);
+    if (mode == 1) {
+      CHECK(!out[64].trigger);
+    }
+    if (mode == 2) {
+      CHECK(out[64].phase < 0.01f && !out[64].trigger);
+    }
+    if (mode == 3) {
+      CHECK(out[64].trigger && out[64].phase > 0.1f);
+    }
+    // At noon only Add inserts a grain. Ignore and Sync keep the clock still.
+    generator.Init(48000.0f);
+    generator.Render(state, edges, 0.5f, 0.0f, 0.0f, out, 256);
+    if (mode) {
+      CHECK(out[64].trigger == (mode == 3));
+    }
+  }
+  // With no cable, attack-triggered grains retain the stock path.
+  r.seed_patched = false;
+  r.Settle();
+  settings.SetFeatureValue(FEATURE_SEED_LATCH, 3);
+  MonitorStateChange();
+  CHECK(normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED));
+  settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
+  ui.LoadOptions();
+  const int before = processor.trigger_generator_.elapsed_since_last_pulse_;
+  r.Block();
+  CHECK(processor.trigger_generator_.elapsed_since_last_pulse_ > before);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -1528,5 +1609,6 @@ int main() {
   TestCodecRestartFade();
   TestCodecKeepsClocks();
   TestSynthStopClearsReverb();
+  TestSeedLatchPatched();
   return test_checker.failures() ? 1 : 0;
 }
