@@ -5,7 +5,7 @@ on:
     branches: ['**']
     tags: ['drizzlet-*']
   pull_request:
-    paths: ['beads/**', 'palette/**', 'stmlib', 'stm_audio_bootloader', '.github/workflows/beads.yml']
+    paths: ['beads/**', 'clouds/**', 'plaits/**', 'palette/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
 permissions:
   contents: read
 concurrency:
