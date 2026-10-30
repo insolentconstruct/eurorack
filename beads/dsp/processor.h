@@ -34,6 +34,7 @@
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
 #include "beads/dsp/spectral_processor.h"
+#include "beads/dsp/time_scan.h"
 #include "beads/dsp/fx/diffuser.h"
 #include "beads/dsp/fx/feedback_diffuser.h"
 #include "beads/dsp/fx/reverb.h"
@@ -81,6 +82,12 @@ class Processor {
     processor_vintage_digital_.SetAttacks(mode);
     processor_clean_tape_.SetAttacks(mode);
     processor_dirty_tape_.SetAttacks(mode);
+  }
+
+  inline void set_time_scan(bool enabled) { time_scan_enabled_ = enabled; }
+
+  inline bool delay_active() const {
+    return delay_mode_transition_ > 0.0f && !spectral_;
   }
 
   inline AttackInput* attack_input() { return &attack_input_; }
@@ -328,6 +335,8 @@ class Processor {
   
   float delay_mode_transition_;
   DelayMode delay_mode_;
+  bool time_scan_enabled_;
+  TimeScan time_scan_;
 
   float dry_;
   float wet_;

@@ -191,6 +191,7 @@ void TestFreezeButtonRecording() {
   memset(test_down, 0, sizeof(test_down));
   settings.Init(false);
   ui.Init(&settings, &gain, &calibration, &backup);
+  ui.LoadOptions();
   rig.Init(Processor::MEDIA_DIGITAL, false);
   for (int tap = 0; tap < 2; ++tap) {
     for (int down = 1; down >= 0; --down) {
@@ -321,12 +322,75 @@ void TestTrimGrowth() {
   CheckTrimGrowth(rig.processor.processor_digital_.stereo_delay_line_);
 }
 
+void TestTimeScan() {
+  test_checker.Start("TestTimeScan");
+  for (int media = 0; media < 4; ++media) {
+    rig.Init(Processor::Media(media), false);
+    rig.parameters.time.attenuverter = 1.0f;
+    rig.Block(false, 0.25f);
+    CHECK(rig.processor.time_scan_.position_ == 0.0f);
+    rig.processor.set_time_scan(true);
+    rig.Block(true, 0.25f);
+    CHECK(rig.processor.time_scan_.position_ > 0.99f);
+    const float position = rig.processor.time_scan_.position_;
+    rig.parameters.time.attenuverter = 0.0f;
+    rig.Block(true, 0.25f);
+    CHECK(rig.processor.time_scan_.position_ == position);
+    rig.parameters.time.attenuverter = -1.0f;
+    rig.Block(true, 0.25f);
+    CHECK(rig.processor.time_scan_.position_ < 0.001f);
+    const float stopped = rig.processor.time_scan_.position_;
+    rig.parameters.time.has_cv = true;
+    rig.Block(true, 0.25f);
+    CHECK(rig.processor.time_scan_.position_ == stopped);
+    rig.parameters.time.has_cv = false;
+    rig.processor.delay_mode_transition_ = 0.1f;
+    rig.Block(true, 0.25f);
+    CHECK(rig.processor.time_scan_.position_ == stopped);
+  }
+  static FloatFrame reference[2048][12];
+  for (int media = 0; media < 4; ++media) {
+    bool different = false;
+    for (int enabled = 0; enabled < 2; ++enabled) {
+      rig.Init(Processor::Media(media), false);
+      rig.processor.Trim();
+      stmlib::Random::Seed(0x12345678);
+      for (int block = 0; block < 4000; ++block) {
+        rig.Block(false, sinf(float(block) * 0.073f) * 0.3f);
+      }
+      rig.parameters.time.base = 0.5f;
+      rig.parameters.time.attenuverter = 0.8f;
+      rig.processor.set_time_scan(enabled);
+      for (int block = 0; block < 2048; ++block) {
+        rig.Block(true, 0.0f);
+        const size_t bytes = size_t(rig.processor.sample_rate() / 4000) *
+            sizeof(FloatFrame);
+        if (!enabled) {
+          memcpy(reference[block], rig.output, bytes);
+        } else {
+          different |= memcmp(reference[block], rig.output, bytes) != 0;
+        }
+      }
+    }
+    CHECK(different);
+  }
+  TimeScan scan;
+  scan.Init();
+  RandomizedParameter time = { 0.5f, -1.0f, 0.0f, false };
+  scan.Process(1.0f, &time);
+  CHECK(time.base == 0.75f && time.attenuverter == 0.0f && time.has_cv);
+  time.attenuverter = 1.0f;
+  scan.Process(1.0f, &time);
+  CHECK(time.base == 0.75f);
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x08100000))) {
     return 1;
   }
+  TestTimeScan();
   TestTrimDispatch();
   TestTrimGrowth();
   TestBrightRecording();

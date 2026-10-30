@@ -40,6 +40,8 @@
 
 namespace beads {
 
+class Profile;
+
 class Settings;
 
 const int MIX_PARAMETER_LAST = 3;
@@ -57,6 +59,9 @@ enum OptionSetting {
   OPTION_ATTACKS,
   OPTION_SYNTH_START,
   OPTION_INTERVALS,
+  OPTION_BRIGHTNESS = 18,
+  OPTION_SEED_LATCH = 21,
+  OPTION_TIME_SCAN = 23,
   OPTION_LAST,
 };
 
@@ -101,7 +106,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 32;
+const size_t kNumOptionValues = 41;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -119,6 +124,7 @@ class Options {
   ~Options() { }
 
   void Init();
+  void Configure(const Profile& profile);
 
   void Poll(uint32_t now, bool assign, bool other, bool all_up,
       bool just_pressed, bool normal, bool pot_touched, const float* pots,
@@ -135,6 +141,8 @@ class Options {
   inline Stage stage() const { return stage_; }
 
   inline int page() const { return page_; }
+
+  inline bool any_page() const { return any_page_; }
 
   inline OutputLimiterMode limiter_preview() const { return limiter_preview_; }
 
@@ -163,7 +171,7 @@ class Options {
   inline uint32_t indication_time() const { return indication_time_; }
 
   inline bool seed_allowed() const {
-    return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&
+    return stage_ == STAGE_EDITING && PageHasPitch() &&
         pitch_preview_ >= PITCH_SCALE_FIFTHS;
   }
 
@@ -175,6 +183,12 @@ class Options {
   }
 
  private:
+  bool PageHasPitch() const;
+  bool PageEmpty(int page) const;
+  OptionPage pages_[kNumOptionPages];
+  bool any_page_;
+  uint8_t profile_preview_[OPTION_LAST];
+
   void ApplySeedTaps();
 
   void RequestCommit(uint32_t now);

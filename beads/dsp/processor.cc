@@ -43,6 +43,8 @@ using namespace stmlib;
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
+  time_scan_enabled_ = false;
+  time_scan_.Init();
   attack_input_.Init();
   clouds_style_ = false;
   evolving_feedback_ = false;
@@ -130,11 +132,19 @@ void Processor::Process(
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
     const ModulatedParameter& density,
-    const Parameters& parameters,
+    const Parameters& input_parameters,
     const MixParameters& mix_parameters,
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
+  Parameters scanned;
+  const bool scan = time_scan_enabled_ && !spectral_ &&
+      delay_mode_transition_ <= 0.0f && !input_parameters.time.has_cv;
+  if (scan) {
+    scanned = input_parameters;
+    time_scan_.Process(float(size) / sample_rate(), &scanned.time);
+  }
+  const Parameters& parameters = scan ? scanned : input_parameters;
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
   const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
@@ -158,9 +168,10 @@ void Processor::Process(
   // Extract grain triggers.
   if (delay_mode) {
     triggers = NULL;
+    const bool free_running = seed_button_state >= SEED_BUTTON_STATE_IGNORE;
     delay_controller_.Render(
-        seed_button_state,
-        seed_input,
+        free_running ? SEED_BUTTON_STATE_LOCKED : seed_button_state,
+        free_running ? NULL : seed_input,
         freeze,
         density.base,
         (1.0f - expo_fm_amount) * density.cv,

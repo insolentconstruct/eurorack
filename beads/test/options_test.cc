@@ -91,6 +91,7 @@ struct Rig {
     memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
     settings.Init(false);
     ui.Init(&settings, &gain, &calibration, &backup);
+    ui.LoadOptions();
     Tick(40);
   }
   void Tick(int n, bool events = true) {
@@ -376,7 +377,7 @@ void TestStorage() {
   PersistentData legacy_calibration = { };
   stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
   CHECK(legacy.Init(&legacy_calibration, &legacy_state));
-  CHECK(legacy_state.media == 3 && legacy_state.padding[0] == 0xa2);
+  CHECK(legacy_state.media == 3 && legacy_state.padding[0] == 0);
   memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
   legacy.SaveState();
   Settings downgrade;
@@ -921,68 +922,11 @@ void TestSelfPlayStorage() {
   legacy.SaveState();
   CHECK(loaded.Init(false) && !loaded.self_play_on_request());
   loaded.mutable_state()->self_play = 0xff;
+  loaded.stored_state_ = loaded.state_;
+  loaded.stored_state_.padding[0] = 0;
   loaded.chunk_storage_.SaveState();
   CHECK(loaded.Init(false));
   CHECK(loaded.state().self_play == 0);
-}
-
-// Beta 1's state record (drizzlet-2026.10.18): bytes 17-23 were padding.
-struct Beta1State {
-  uint8_t media;
-  uint8_t assignable_cv_destination;
-  uint8_t assignable_cv_amount[3];
-  uint8_t gain;
-  uint8_t gate_output_mode;
-  uint8_t frozen;
-  uint8_t disable_autosave;
-  uint8_t monophonic_mode;
-  uint8_t output_limiter_mode;
-  uint8_t self_play;
-  uint8_t pitch_scale;
-  uint8_t reverb_style;
-  uint8_t stereo_width;
-  uint8_t delay_mode;
-  uint8_t width_assigned;
-  uint8_t padding[7];
-  enum { tag = 0x54415453 };  // STAT
-};
-
-void TestBeta1SettingsCarryOver() {
-  test_checker.Start("TestBeta1SettingsCarryOver");
-  Rig r;
-  PersistentData calibration = r.settings.persistent_data();
-  Beta1State beta1 = { };
-  stmlib::ChunkStorage<15, PersistentData, Beta1State> storage;
-  storage.Init(&calibration, &beta1);  // Reads the newest record: set after.
-  beta1 = Beta1State();
-  beta1.media = 2;
-  beta1.assignable_cv_amount[0] = 77;
-  beta1.gain = 40;
-  beta1.gate_output_mode = 1;
-  beta1.monophonic_mode = 1;
-  beta1.output_limiter_mode = 0xa1;  // Fast release
-  beta1.self_play = 0xa1;  // On request: Synth start Manual
-  beta1.pitch_scale = 0xa9;  // Raag Shri
-  beta1.reverb_style = 0xa2;  // Clouds-style
-  beta1.stereo_width = 200;
-  beta1.delay_mode = 0xa2;  // Wide detent: Wide/smooth filter
-  beta1.width_assigned = 1;
-  storage.SaveState();
-
-  Settings loaded;
-  CHECK(loaded.Init(false));
-  CHECK(!memcmp(&loaded.state(), &beta1, offsetof(Beta1State, padding)));
-  CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-  CHECK(loaded.self_play_on_request());
-  CHECK(loaded.pitch_scale() == PITCH_SCALE_SHRI);
-  CHECK(loaded.clouds_style());
-  CHECK(loaded.stereo_width() == 200 && loaded.width_assigned());
-  CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
-  // Beta 2's options start at stock; Clouds-style keeps Beta 1's diffusion.
-  CHECK(!loaded.diffusion_set() && loaded.diffusion() == kCloudsDiffusion);
-  CHECK(!loaded.evolving_feedback() && !loaded.spectral());
-  CHECK(!loaded.plaits_synth() && !loaded.random_intervals());
-  CHECK(loaded.attack_mode() == ATTACK_MODE_OFF);
 }
 
 void TestAttackStorage() {
@@ -999,9 +943,11 @@ void TestAttackStorage() {
     CHECK(loaded.attack_mode() == mode);
     CHECK(loaded.state().attacks == (mode ? 0xa0 + mode : 0));
     loaded.mutable_state()->attacks = value;
+    loaded.stored_state_ = loaded.state_;
+    loaded.stored_state_.padding[0] = 0;
     loaded.chunk_storage_.SaveState();
     CHECK(loaded.Init(false));
-    CHECK(loaded.state().attacks == (mode ? 0xa0 + mode : 0));
+    CHECK(loaded.state().attacks == 0);
     CHECK(r.settings.Init(false));
   }
   // Page 1, REVERB, in thirds.
@@ -1031,9 +977,11 @@ void TestFrozenFeedbackStorage() {
     CHECK(loaded.Init(false));
     CHECK(loaded.state().frozen_feedback == (value == 0xa1 ? 0xa1 : 0));
     loaded.mutable_state()->frozen_feedback = value;
+    loaded.stored_state_ = loaded.state_;
+    loaded.stored_state_.padding[0] = 0;
     loaded.chunk_storage_.SaveState();
     CHECK(loaded.Init(false));
-    CHECK(loaded.evolving_feedback() == (value == 0xa1));
+    CHECK(!loaded.evolving_feedback());
     CHECK(r.settings.Init(false));
   }
   // Page 2, REVERB: upper half is Evolving, saved when the page settles.
@@ -1065,11 +1013,6 @@ void TestCloudsStorage() {
     CHECK(loaded.state().pitch_scale == 0xa7);
     CHECK(loaded.pitch_scale() == PITCH_SCALE_PELOG);
     CHECK(loaded.state().padding[0] == 0);
-    // Bypass SaveState normalization to exercise load normalization too.
-    loaded.mutable_state()->reverb_style = value;
-    loaded.chunk_storage_.SaveState();
-    CHECK(loaded.Init(false));
-    CHECK(loaded.state().reverb_style == (value == 0xa2 ? 0xa2 : 0));
     CHECK(r.settings.Init(false));
   }
 }
@@ -1091,9 +1034,11 @@ void TestSynthEngineStorage() {
     CHECK(!loaded.state().random_intervals && !loaded.state().padding[0]);
     // Bypass SaveState normalization to exercise load normalization too.
     loaded.mutable_state()->synth_engine = value;
+    loaded.stored_state_ = loaded.state_;
+    loaded.stored_state_.padding[0] = 0;
     loaded.chunk_storage_.SaveState();
     CHECK(loaded.Init(false));
-    CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.state().synth_engine == 0);
     CHECK(r.settings.Init(false));
   }
   // Page 3, DRY/WET knob: two halves with a dead band, previewed live.
@@ -1125,8 +1070,7 @@ void TestEngineStorage() {
     r.settings.mutable_state()->self_play = 0xa1;
     CHECK(r.settings.spectral() == (i == 0xa1));
     CHECK(r.settings.self_play_on_request());
-    // Read unnormalized data from flash, then save it canonically.
-    r.settings.chunk_storage_.SaveState();
+    r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.spectral() == (i == 0xa1));
@@ -1141,8 +1085,7 @@ void TestEngineStorage() {
   CHECK(r.settings.state().self_play == 0xa1);
   r.settings.set_spectral(false);
   CHECK(!r.settings.state().engine && r.settings.state().self_play == 0xa1);
-  // Unknown values in bytes 18 and 19 read as stock, and byte 23 stays
-  // free: cleared on save.
+  // Unknown legacy values read as Stock; the runtime view clears byte 23.
   r.settings.set_spectral(true);
   r.settings.mutable_state()->frozen_feedback = 0x12;
   r.settings.mutable_state()->attacks = 0x34;
@@ -1153,12 +1096,12 @@ void TestEngineStorage() {
   CHECK(!loaded.state().frozen_feedback && !loaded.state().attacks);
   CHECK(!loaded.state().padding[0]);
   CHECK(loaded.self_play_on_request());
-  // Stock clears byte 20 on save: the granular engine again.
+  // A stock save clears the packed choices and selects Granular.
   LegacyState legacy_state = { };
   PersistentData calibration = { };
   stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
   CHECK(legacy.Init(&calibration, &legacy_state));
-  CHECK(legacy_state.padding[10] == 0xa1);
+  CHECK(legacy_state.padding[10] == 0x9f);
   memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
   legacy.SaveState();
   CHECK(loaded.Init(false) && !loaded.spectral());
@@ -1221,9 +1164,11 @@ void TestIntervalsStorage() {
     CHECK(loaded.state().random_intervals == (value == 0xa1 ? 0xa1 : 0));
     CHECK(loaded.state().padding[0] == 0);
     loaded.mutable_state()->random_intervals = value;
+    loaded.stored_state_ = loaded.state_;
+    loaded.stored_state_.padding[0] = 0;
     loaded.chunk_storage_.SaveState();
     CHECK(loaded.Init(false));
-    CHECK(loaded.state().random_intervals == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.state().random_intervals == 0);
     CHECK(r.settings.Init(false));
   }
 }
@@ -1615,8 +1560,7 @@ void TestPitchStorage() {
         ? PitchScale(i - 0xa0) : PITCH_SCALE_OFF;
     r.settings.mutable_state()->pitch_scale = i;
     CHECK(r.settings.pitch_scale() == expected);
-    // Read unnormalized data from flash, then save it canonically.
-    r.settings.chunk_storage_.SaveState();
+    r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.pitch_scale() == expected);
@@ -2135,6 +2079,11 @@ void TestOptionsPalette() {
     const OptionValue& v = kOptionValues[i];
     r.ui.options_.selected_ = v.setting;
     switch (v.setting) {
+      case OPTION_BRIGHTNESS:
+      case OPTION_SEED_LATCH:
+      case OPTION_TIME_SCAN:
+        r.ui.options_.profile_preview_[v.setting] = v.value;
+        break;
       case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value);
         break;
       case OPTION_REVERB: r.ui.options_.clouds_preview_ = v.value; break;
@@ -2171,9 +2120,14 @@ void TestOptionsPalette() {
           (v.pulses == 1 && now % 1024 < 512) ||
           (v.pulses == 2 && now % 256 < 128) ||
           (v.pulses == 3 && (phase < 128 || (phase >= 256 && phase < 384)));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (lit ? v.color.r : 0));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (lit ? v.color.g : 0));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (lit ? v.color.b : 0));
+      const uint8_t level = r.ui.options_.Value(OPTION_BRIGHTNESS);
+      const int percent = level == 0 ? 100 : level == 1 ? 66 : 33;
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
+          (lit ? v.color.r * percent / 100 : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
+          (lit ? v.color.g * percent / 100 : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
+          (lit ? v.color.b * percent / 100 : 0));
     }
   }
 }
@@ -2348,6 +2302,397 @@ void TestPendingExitButtons() {
   CHECK(test_writes == writes + 1);
 }
 
+void CustomProfile(uint8_t* b, int id, int page, int amount, int action) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  b[5] = id ? 1 : 0;
+  b[6] = id ? 6 : 0;
+  b[16] = id;
+  b[17] = PROFILE_ADJUSTABLE;
+  b[18] = id == FEATURE_SYNTH_START ? 1 : 0;
+  b[19] = page;
+  b[20] = amount;
+  b[21] = action;
+  const size_t size = 16 + b[6];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+void ApplyCustomProfile(Rig* r, const uint8_t* b) {
+  CHECK(r->settings.Init(false, b));
+  CHECK(!r->settings.profile_locked());
+  r->ui.Init(&r->settings, &r->gain, &r->calibration, &r->backup);
+  r->ui.LoadOptions();
+  r->Tick(40);
+}
+
+void TestProfilePages() {
+  test_checker.Start("TestProfilePages");
+  uint8_t b[kProfileSize] = { 0 };
+  Rig invalid;
+  invalid.settings.Init(false, b);
+  invalid.ui.Init(&invalid.settings, &invalid.gain,
+      &invalid.calibration, &invalid.backup);
+  invalid.ui.LoadOptions();
+  invalid.ui.ShowStorageStatus();
+  CHECK(invalid.ui.mode_ == Ui::MODE_NORMAL);
+  for (int id = FEATURE_PITCH; id < FEATURE_LAST; ++id) {
+    if (!kFeatureDefinitions[id].page) {
+      continue;
+    }
+    for (int slot = 1; slot <= 12; ++slot) {
+      Rig r;
+      CustomProfile(b, id, slot, 0, 0);
+      ApplyCustomProfile(&r, b);
+      r.Enter();
+      CHECK(r.ui.options_.page() == (slot - 1) / 3);
+      CHECK(r.ui.options_.preview_knob() == (slot - 1) % 3);
+      CHECK(r.ui.options_.selected_ == OptionSetting(id));
+      r.Tap();
+      CHECK(r.ui.options_.page() == (slot - 1) / 3);
+      r.ui.options_.pitch_preview_ = PITCH_SCALE_FIFTHS;
+      CHECK(r.ui.options_.seed_allowed() == (id == FEATURE_PITCH));
+    }
+  }
+  Rig empty;
+  CustomProfile(b, 0, 0, 0, 0);
+  ApplyCustomProfile(&empty, b);
+  const uint32_t writes = test_writes;
+  const State before = empty.settings.state();
+  empty.Down(SWITCH_ASSIGN);
+  empty.Tick(3100);
+  empty.Up(SWITCH_ASSIGN);
+  CHECK(test_writes == writes);
+  CHECK(!memcmp(&before, &empty.settings.state(), sizeof(before)));
+  CHECK(empty.ui.options_.stage() == Options::STAGE_INACTIVE);
+  CHECK(empty.ui.options_.preview_knob() == -1);
+}
+
+void TestProfileActions() {
+  test_checker.Start("TestProfileActions");
+  uint8_t b[kProfileSize];
+  const int features[] = { FEATURE_MONOPHONIC, FEATURE_TRIM, FEATURE_SYNTH_START };
+  for (int i = 0; i < 3; ++i) {
+    for (int slot = 1; slot <= 3; ++slot) {
+      for (int patched = 0; patched < 2; ++patched) {
+        Rig r;
+        CustomProfile(b, features[i], 0, 0, slot);
+        ApplyCustomProfile(&r, b);
+        r.settings.set_self_play_on_request(true);
+        r.ui.set_no_input(!patched);
+        r.settings.mutable_state()->gain = 123;
+        r.Down(SWITCH_MEDIA);
+        if (slot == 3) {
+          r.Tick(1510);
+        } else {
+          r.Down(slot == 1 ? SWITCH_SEED : SWITCH_FREEZE);
+        }
+        // Only the synth needs empty inputs; a handled hold keeps the gain.
+        const bool handled = features[i] != FEATURE_SYNTH_START || !patched;
+        if (features[i] == FEATURE_MONOPHONIC) {
+          CHECK(r.settings.state().monophonic_mode);
+        } else if (features[i] == FEATURE_TRIM) {
+          CHECK(r.ui.trim_flag_);
+        } else {
+          CHECK(r.ui.self_play_requested() == !patched);
+        }
+        const bool reset = slot == 3 && !handled;
+        CHECK(r.gain.restarts == (reset ? 1 : 0));
+        CHECK(r.settings.state().gain == (reset ? 0 : 123));
+      }
+    }
+  }
+  Rig off;
+  CustomProfile(b, 0, 0, 0, 0);
+  ApplyCustomProfile(&off, b);
+  off.Down(SWITCH_MEDIA);
+  off.Down(SWITCH_SEED);
+  CHECK(!off.settings.state().monophonic_mode);
+  off.Up(SWITCH_SEED);
+  off.Down(SWITCH_FREEZE);
+  CHECK(!off.ui.trim_flag_);
+}
+
+void TestProfileAmounts() {
+  test_checker.Start("TestProfileAmounts");
+  uint8_t b[kProfileSize];
+  for (int id = FEATURE_WIDTH; id <= FEATURE_DIFFUSION; ++id) {
+    for (int slot = 1; slot <= 2; ++slot) {
+      Rig r;
+      CustomProfile(b, id, 0, slot, 0);
+      ApplyCustomProfile(&r, b);
+      r.Down(SWITCH_MEDIA);
+      if (slot == 1) {
+        r.pot = 1.0f;
+      } else {
+        r.reverb = 1.0f;
+      }
+      r.Tick(40);
+      if (id == FEATURE_WIDTH) {
+        CHECK(r.settings.stereo_width() == 255);
+        CHECK(r.settings.diffusion() == 0.0f);
+      } else {
+        CHECK(r.settings.state().diffusion == 255);
+        CHECK(r.settings.stereo_width() == 0);
+      }
+    }
+  }
+}
+
+void SetFixed(Rig* r, ProfileFeature feature, uint8_t value) {
+  uint8_t b[kProfileSize];
+  CustomProfile(b, feature, 0, 0, 0);
+  b[17] = PROFILE_FIXED;
+  b[18] = value;
+  const uint32_t crc = Profile::Crc32(b, 22);
+  for (int i = 0; i < 4; ++i) {
+    b[22 + i] = crc >> (8 * i);
+  }
+  ApplyCustomProfile(r, b);
+}
+
+void TestDefaultLedIdentity() {
+  test_checker.Start("TestDefaultLedIdentity");
+  Rig r;
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 0);
+  // Release 86014e3: factory-test frames are the unmodified triangle on
+  // every LED; storage warnings are unmodified 0/255 on every LED.
+  for (int tick = 0; tick < 2048; ++tick) {
+    stmlib::system_clock.Tick();
+    const uint32_t now = stmlib::system_clock.milliseconds();
+    int triangle = (now & 2047) >> 2;
+    triangle = triangle >= 256 ? 511 - triangle : triangle;
+    r.ui.mode_ = Ui::MODE_FACTORY_TEST;
+    r.ui.UpdateLeds();
+    for (int i = 0; i < LED_LAST; ++i) {
+      CHECK(r.ui.leds_.intensity_[i] == triangle);
+    }
+    r.ui.mode_ = Ui::MODE_STORAGE_WARNING;
+    r.ui.UpdateLeds();
+    for (int i = 0; i < LED_LAST; ++i) {
+      CHECK(r.ui.leds_.intensity_[i] == ((now & 64) ? 255 : 0));
+    }
+  }
+  // Release writes the frame verbatim. Exercise every value in every LED,
+  // including RGB white and mixed colours, through the default level.
+  for (int value = 0; value < 256; ++value) {
+    for (int mixed = 0; mixed < 2; ++mixed) {
+      uint8_t release[LED_LAST];
+      for (int i = 0; i < LED_LAST; ++i) {
+        release[i] = mixed ? uint8_t(value + i * 37) : value;
+        r.ui.leds_.intensity_[i] = release[i];
+      }
+      r.ui.leds_.Scale(r.settings.FeatureValue(FEATURE_BRIGHTNESS));
+      for (int i = 0; i < LED_LAST; ++i) {
+        CHECK(r.ui.leds_.intensity_[i] == release[i]);
+      }
+    }
+  }
+}
+
+void TestBetaOptionsLeds() {
+  test_checker.Start("TestBetaOptionsLeds");
+  Rig version;
+  SetFixed(&version, FEATURE_VERSION, 1);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_G] == 128);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] == 0);
+  version.Tick(100);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  version.Tick(100);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  version.Tick(150);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  version.Tick(150);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  version.Tick(300);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] != 0);
+
+  Rig delay;
+  SetFixed(&delay, FEATURE_DELAY_CUE, 1);
+  for (int edge = 0; edge < 2; ++edge) {
+    delay.ui.set_delay_active(edge == 0);
+    delay.Tick(1);
+    CHECK(delay.ui.leds_.intensity_[LED_MEDIA_R] == 255);
+    CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    delay.Tick(150);
+    CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] != 0);
+  }
+
+  Rig notch;
+  SetFixed(&notch, FEATURE_PITCH_NOTCH, 1);
+  for (int active = 0; active < 2; ++active) {
+    notch.ui.set_modulation_indication(active, 0.0f);
+    notch.Tick(1);
+    CHECK((notch.ui.leds_.intensity_[LED_MEDIA_R] == 0) == bool(active));
+  }
+
+  Rig live;
+  live.settings.set_stereo_width(255);
+  live.settings.set_diffusion(0.5f);
+  live.Tick(512);
+  for (int destination = 0; destination < 6; ++destination) {
+    live.settings.mutable_state()->assignable_cv_destination = destination < 4
+        ? destination : 0;
+    live.settings.set_width_assigned(destination == 4);
+    live.settings.set_diffusion_assigned(destination == 5);
+    CHECK(live.settings.width_assigned() == (destination == 4));
+    CHECK(live.settings.diffusion_assigned() == (destination == 5));
+    for (int i = 0; i < 3; ++i) {
+      live.settings.mutable_state()->assignable_cv_amount[i] = i ? 255 : 0;
+    }
+    for (int polarity = -1; polarity <= 1; ++polarity) {
+      live.settings.SetFeatureValue(FEATURE_LIVE_ASSIGN, 0);
+      live.ui.UpdateLeds();
+      uint8_t stock[3];
+      for (int i = 0; i < 3; ++i) {
+        stock[i] = live.ui.leds_.intensity_[LED_ASSIGN_1 + i];
+      }
+      if (destination == 4) {
+        CHECK(stock[0] > 0 && stock[0] == stock[1] && stock[1] == stock[2]);
+      }
+      if (destination == 5) {
+        CHECK(stock[0] == 0 && stock[1] == 0 && stock[2] > 0);
+      }
+      live.settings.SetFeatureValue(FEATURE_LIVE_ASSIGN, 1);
+      live.ui.set_modulation_indication(false, float(polarity));
+      live.ui.UpdateLeds();
+      for (int i = 0; i < 3; ++i) {
+        CHECK(live.ui.leds_.intensity_[LED_ASSIGN_1 + i] ==
+            uint16_t(stock[i]) * (polarity ? 255 : 32) / 255);
+      }
+    }
+  }
+
+  Rig freeze;
+  SetFixed(&freeze, FEATURE_SAVE_FREEZE, 1);
+  freeze.ui.set_freeze_led_state(true);
+  freeze.backup.busy_ = true;
+  freeze.Tick(1);
+  CHECK(freeze.ui.leds_.intensity_[LED_FREEZE] == 255);
+
+  const int percentages[] = { 100, 66, 33 };
+  for (int level = 0; level < 3; ++level) {
+    Rig full;
+    SetFixed(&full, FEATURE_BRIGHTNESS, level);
+    full.settings.mutable_state()->media = 3;
+    full.ui.set_freeze_led_state(true);
+    full.Tick(1);
+    CHECK(full.ui.leds_.intensity_[LED_FREEZE] == 255 * percentages[level] / 100);
+    // Bright digital quality is white; balance it only below 100%.
+    for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
+      CHECK(full.ui.leds_.intensity_[i] == ((i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100) / (level ? 2 : 1));
+    }
+    full.ui.mode_ = Ui::MODE_STORAGE_WARNING;
+    while (!(stmlib::system_clock.milliseconds() & 64)) {
+      stmlib::system_clock.Tick();
+    }
+    full.ui.UpdateLeds();
+    CHECK(full.ui.leds_.intensity_[LED_FREEZE] == 255 * percentages[level] / 100);
+    CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] == (255 * percentages[level] / 100) / (level ? 2 : 1));
+  }
+  Rig gain;
+  gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
+  gain.Down(SWITCH_MEDIA);
+  gain.feedback = 0.1f;
+  gain.Tick(20);
+  const int gains[] = { 119, 120, 136, 137 };
+  for (int i = 0; i < 4; ++i) {
+    gain.feedback = float(gains[i]) / 256.0f;
+    gain.Tick(20);
+    CHECK((gain.ui.leds_.intensity_[LED_MEDIA_R] == 0 &&
+        gain.ui.leds_.intensity_[LED_MEDIA_G] == 255) == (i == 1 || i == 2));
+  }
+
+  Rig preview;
+  uint8_t b[kProfileSize];
+  CustomProfile(b, FEATURE_BRIGHTNESS, 2, 0, 0);
+  ApplyCustomProfile(&preview, b);
+  preview.Enter();
+  const int preview_values[] = { 2, 1, 0 };
+  for (int i = 0; i < 3; ++i) {
+    const int level = preview_values[i];
+    preview.pot = (float(level) + 0.5f) / 3.0f;
+    preview.Tick(40);
+    CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) == (i ? preview_values[i - 1] : 0));
+    CHECK(preview.ui.options_.Value(OPTION_BRIGHTNESS) == level);
+    CHECK(preview.ui.leds_.intensity_[LED_ASSIGN_1] == 255 * percentages[level] / 100);
+    preview.Tick(1002);
+    CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) == level);
+  }
+
+}
+
+void TestBetaOptionPages() {
+  test_checker.Start("TestBetaOptionPages");
+  const ProfileFeature features[] = {
+    FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_TIME_SCAN
+  };
+  for (int f = 0; f < 3; ++f) {
+    for (int slot = 1; slot <= 12; ++slot) {
+      Rig r;
+      uint8_t b[kProfileSize];
+      CustomProfile(b, features[f], slot, 0, 0);
+      ApplyCustomProfile(&r, b);
+      r.Enter();
+      const int knob = (slot - 1) % 3;
+      if (knob == 0) {
+        r.feedback = 1.0f;
+      }
+      if (knob == 1) {
+        r.pot = 1.0f;
+      }
+      if (knob == 2) {
+        r.reverb = 1.0f;
+      }
+      r.Tick(1002);
+      const uint8_t expected = f == 1 ? 3 : f == 0 ? 2 : 1;
+      CHECK(r.settings.FeatureValue(features[f]) == expected);
+      Settings loaded;
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.FeatureValue(features[f]) == expected);
+      // Removing the feature leaves its dormant nibble intact.
+      uint8_t off[kProfileSize];
+      CustomProfile(off, 0, 0, 0, 0);
+      Settings disabled;
+      CHECK(disabled.Init(false, off));
+      CHECK(disabled.FeatureValue(features[f]) == 0);
+      disabled.SaveState();
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.FeatureValue(features[f]) == expected);
+      const int values = kFeatureDefinitions[features[f]].values;
+      for (int value = 0; value < values; ++value) {
+        const float pot = (float(value) + 0.5f) / float(values);
+        if (knob == 0) {
+          r.feedback = pot;
+        }
+        if (knob == 1) {
+          r.pot = pot;
+        }
+        if (knob == 2) {
+          r.reverb = pot;
+        }
+        r.Tick(40);
+        if (f == 0) {
+          CHECK(r.ui.options_.Value(OPTION_BRIGHTNESS) == value);
+          const int percent[] = { 100, 66, 33 };
+          CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
+              (value ? 255 * percent[value] / 100 : 0));
+          CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
+              (value < 2 ? 255 * percent[value] / 100 : 0));
+        }
+        r.Tick(1002);
+        CHECK(r.settings.FeatureValue(features[f]) == value);
+        CHECK(loaded.Init(false, b));
+        CHECK(loaded.FeatureValue(features[f]) == value);
+      }
+    }
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -2376,7 +2721,6 @@ int main() {
   TestSynthEngineStorage();
   TestPitchStorage();
   TestSelfPlayStorage();
-  TestBeta1SettingsCarryOver();
   TestEngineStorage();
   TestEngineOption();
   TestSynthStartOption();
@@ -2412,5 +2756,11 @@ int main() {
   TestQueueRace();
   TestStorage();
   TestDsp();
+  TestProfilePages();
+  TestDefaultLedIdentity();
+  TestBetaOptionsLeds();
+  TestBetaOptionPages();
+  TestProfileActions();
+  TestProfileAmounts();
   return test_checker.failures() ? 1 : 0;
 }

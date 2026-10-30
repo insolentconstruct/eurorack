@@ -110,14 +110,21 @@ class ChunkStorage {
   // anything else is left for the caller to write once it has chosen the
   // calibration.
   StorageStatus Init(PersistentData* persistent_data, StateData* state_data) {
+    return Init(persistent_data, state_data, false);
+  }
+
+  StorageStatus Init(PersistentData* persistent_data, StateData* state_data,
+      bool protect) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
     locked_ = false;
+    Protect(protect);
+    recovering_ = false;
 
     const StorageStatus status = Load(
         persistent_data, state_data, &next_state_chunk_index_);
     if (status == STORAGE_NEW) {
-      RewriteSector();
+      RestorePersistentData();
     }
     return status;
   }
@@ -139,6 +146,7 @@ class ChunkStorage {
   // loads back as written. Writes stay locked if it fails.
   bool Repair() {
     locked_ = false;
+    recovering_ = true;
     RewriteSector();
     PersistentData persistent_data;
     StateData state_data;
@@ -153,10 +161,14 @@ class ChunkStorage {
     if (locked_) {
       next_state_chunk_index_ = REWRITE_NEEDED;
     }
+    recovering_ = false;
     return !locked_;
   }
 
   void SaveState() {
+    if (locked()) {
+      return;
+    }
     if (Flash::SupplyLow()) {
       return;  // Kept in RAM; the next save writes it.
     }
@@ -183,7 +195,19 @@ class ChunkStorage {
     return ReadChunk(MIRROR_BASE, persistent_data) == CHUNK_VALID;
   }
 
-  inline bool locked() const { return locked_; }
+  void RestorePersistentData() {
+    recovering_ = true;
+    RewriteSector();
+    recovering_ = false;
+  }
+
+  inline bool locked() const {
+    return locked_ || (protected_ && !recovering_);
+  }
+
+  void Protect(bool protect) { protected_ = protect; }
+
+  inline bool storage_damaged() const { return locked_; }
 
  private:
   // Reads the sector as stmlib's loader does: the calibration, then the
@@ -255,7 +279,7 @@ class ChunkStorage {
   }
 
   bool EraseSector(uint32_t index, uint32_t address) {
-    if (locked_) {
+    if (locked()) {
       return false;
     }
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
@@ -335,7 +359,7 @@ class ChunkStorage {
   }
 
   bool ProgramWord(uint32_t address, const uint8_t* buffer) {
-    if (locked_) {
+    if (locked()) {
       return false;
     }
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
@@ -398,6 +422,8 @@ class ChunkStorage {
   // Damaged storage found at power-up: nothing is erased or programmed
   // until a repair succeeds.
   bool locked_;
+  bool protected_;
+  bool recovering_;
 
   DISALLOW_COPY_AND_ASSIGN(ChunkStorage);
 };

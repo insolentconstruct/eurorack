@@ -25,7 +25,7 @@
   },
   {
     "name": "firmware-controls",
-    "run": "make -j\"$(nproc)\" -f beads/test/firmware.mk test\nmake -j\"$(nproc)\" -f beads/test/options.mk test\nmake -j\"$(nproc)\" -f beads/test/storage.mk test\nmake -j\"$(nproc)\" -f beads/test/gain.mk test\nmake -j\"$(nproc)\" -f beads/test/pitch_quantizer.mk test\nmake -j\"$(nproc)\" -f beads/test/trigger.mk test"
+    "run": "make -j\"$(nproc)\" -f beads/test/firmware.mk test\nmake -j\"$(nproc)\" -f beads/test/options.mk test\nmake -j\"$(nproc)\" -f beads/test/storage.mk test\nmake -j\"$(nproc)\" -f beads/test/gain.mk test\nmake -j\"$(nproc)\" -f beads/test/pitch_quantizer.mk test\nmake -j\"$(nproc)\" -f beads/test/trigger.mk test\nmake -j\"$(nproc)\" -f beads/test/profile.mk test"
   },
   {
     "name": "delay-grains",

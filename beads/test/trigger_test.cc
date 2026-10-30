@@ -254,7 +254,33 @@ void TestExponentialTriggerFm() {
   CHECK(std::abs(octave - base * 2) <= 2);
 }
 
+void TestSyncBoundaryEdges() {
+  test_checker.Start("TestSyncBoundaryEdges");
+  for (int consecutive = 0; consecutive < 2; ++consecutive) {
+    TriggerGenerator generator;
+    generator.Init(kSampleRate);
+    GateFlags edges[12] = { };
+    edges[0] = GateFlags(GATE_FLAG_HIGH | GATE_FLAG_RISING);
+    if (consecutive) {
+      edges[1] = edges[0];
+    }
+    TriggerGenerator::Output out[12];
+    generator.Render(SEED_BUTTON_STATE_SYNC, edges, 0.0f, 0, 0, out, 12);
+    for (int i = 0; i < 12; ++i) {
+      CHECK(std::isfinite(out[i].phase));
+      CHECK(out[i].phase > 0.0f);
+      CHECK(!out[i].trigger);
+      if (i) {
+        CHECK(consecutive && i == 1
+            ? out[i].phase == out[0].phase
+            : out[i].phase > out[i - 1].phase);
+      }
+    }
+  }
+}
+
 int main() {
+  TestSyncBoundaryEdges();
   TestDensityModulation();
   TestLatchedNoonSilence();
   TestRegularDensityRate();

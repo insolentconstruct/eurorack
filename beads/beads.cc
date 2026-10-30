@@ -117,6 +117,8 @@ bool synth_mode;
 int synth_mode_start_time;
 
 GateFlags previous_seed;
+uint8_t seed_latch_mode;
+bool seed_latch_enabled;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
 void Process(
@@ -304,6 +306,18 @@ void Process(
       ? SEED_BUTTON_STATE_LOCKED
       : (ui.seed_button_state() ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF);
   
+  if (seed_latch_enabled && seed_input &&
+      !normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED) &&
+      seed_button_state == SEED_BUTTON_STATE_LOCKED) {
+    if (seed_latch_mode == 1) {
+      seed_input = NULL;
+      ui.set_seed_led_state(false);
+    } else {
+      seed_button_state = SeedButtonState(
+          SEED_BUTTON_STATE_IGNORE + seed_latch_mode - 1);
+    }
+  }
+
   if (ui.trim_flag()) {
     if (!processor.spectral()) {
       processor.Trim();
@@ -548,6 +562,16 @@ bool FadedOut() {
 }
 
 void MonitorStateChange() {
+  seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
+  seed_latch_enabled = seed_latch_mode != 0;
+  gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
+  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
+  ui.set_delay_active(processor.delay_active());
+  if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
+      settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
+    ui.set_modulation_indication(cv_reader.pitch_on_notch(),
+        cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
+  }
   ui.set_no_input(normalization_detector.no_input());
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
