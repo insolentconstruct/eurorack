@@ -171,6 +171,56 @@ const withMeasuredCosts = (r) => {
     for (const f of r.profile.features) assert.equal(featureDelta(f.default, f), 0);
   }
 }
+// Exact module measurements override unknown per-feature costs and lighter labels.
+{
+  const chosen = defaults(profile);
+  chosen.find((e) => e[0] === 2)[2] = 1;
+  for (const [percent, blocked] of [[90.4, false], [92, false], [92.1, true]]) {
+    const r = structuredClone(release);
+    r.cpu.combinations = [{ profile: profileKey(chosen, profile), synth: percent, granular: 89 }];
+    const result = cpuUsage(chosen, r);
+    assert.equal(result.kind, 'measured');
+    assert.equal(result.percent, percent);
+    assert.equal(result.blocked, blocked);
+    assert.equal(result.engines.find((e) => e.engine === 'synth').percent, percent);
+    const moved = chosen.map((e) => e.slice()); moved[0][3] = 10;
+    assert.equal(cpuUsage(moved, r).kind, 'not yet measured', 'only an exact block matches');
+  }
+  assert.deepEqual(cpuUsage(chosen, release).unknown, ['Reverb character']);
+  const partialCosts = structuredClone(release);
+  partialCosts.profile.features.find((f) => f.id === 2).cpu = {
+    kind: 'measured', off: 0, fixed: [0, 6], adjustable: [0, 6] };
+  const partialUsage = cpuUsage(chosen, partialCosts);
+  assert.equal(partialUsage.kind, 'estimated', 'known added work is not labelled within default');
+  assert.equal(partialUsage.withinMeasuredDefault, false);
+  assert(partialUsage.blocked);
+  const stock = templates(profile)['Stock plus fixes'];
+  const usage = cpuUsage(stock, release);
+  assert.equal(usage.kind, 'within measured default');
+  assert.equal(usage.withinMeasuredDefault, true);
+  assert(!usage.warning && !usage.blocked);
+  for (const f of profile.features.filter((f) => f.default[1] !== 0)) {
+    const lighter = defaults(profile);
+    lighter.splice(lighter.findIndex((e) => e[0] === f.id), 1, [f.id, 0, 0, 0, 0, 0]);
+    assert.deepEqual(cpuUsage(lighter, release).unknown, undefined, `${f.name}: Off adds no unknown cost`);
+    if (f.default[1] !== 2) continue;
+    const fixed = defaults(profile);
+    fixed.splice(fixed.findIndex((e) => e[0] === f.id), 1, [f.id, 1, f.default[2], 0, 0, 0]);
+    assert.equal(cpuUsage(fixed, release).kind, 'within measured default', `${f.name}: Fixed default is no heavier`);
+  }
+  const r = structuredClone(release);
+  r.cpu.combinations = [{ profile: profileKey(stock, profile), synth: 93, granular: 89 }];
+  assert(cpuUsage(stock, r).blocked, 'a measured lighter combination still enforces the ceiling');
+  r.cpu.combinations[0].profile = profileKey(defaults(profile), profile);
+  assert.equal(cpuUsage(defaults(profile), r).kind, 'measured');
+  assert(cpuUsage(defaults(profile), r).blocked, 'an explicit measurement overrides the default baseline');
+  // Lower amount settings are within a heavier release default even without costs.
+  const amountDefault = structuredClone(release);
+  amountDefault.profile.features.find((f) => f.id === 12).default[2] = 200;
+  const lighterAmount = defaults(amountDefault.profile);
+  lighterAmount.find((e) => e[0] === 12)[2] = 100;
+  assert.equal(cpuUsage(lighterAmount, amountDefault).kind, 'within measured default');
+}
 // The shipped manifest contains no invented feature costs.
 for (const f of profile.features) {
   assert.equal(f.cpu, null);
@@ -178,9 +228,12 @@ for (const f of profile.features) {
   const off = normalise([[f.id, 0, 0, 0, 0, 0]], profile);
   const fixed = [f.id, 1, f.id === 9 || f.values?.[0] === 'Off' ? 1 : 0, 0, 0,
     f.id === 9 ? 1 : 0];
-  assert.equal(cpuUsage([fixed], release).percent, null);
-  assert(cpuUsage([fixed], release).unknown.includes(f.name));
-  assert(!cpuUsage([fixed], release).warning && !cpuUsage([fixed], release).blocked);
+  // Isolate enabled unknown costs against an Off-default fixture.
+  const offDefault = structuredClone(release);
+  for (const feature of offDefault.profile.features) feature.default = [feature.id, 0, 0, 0, 0, 0];
+  assert.equal(cpuUsage([fixed], offDefault).percent, null);
+  assert(cpuUsage([fixed], offDefault).unknown.includes(f.name));
+  assert(!cpuUsage([fixed], offDefault).warning && !cpuUsage([fixed], offDefault).blocked);
   // Every feature can return from Fixed to its original Off representation.
   const toggled = normalise([fixed], profile);
   toggled[0][1] = 0; toggled[0][5] = 0;

@@ -7,9 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=974dc91abfff0f91';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=974dc91abfff0f91';
-import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=974dc91abfff0f91';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=47d7653c01ba8942';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=47d7653c01ba8942';
+import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=47d7653c01ba8942';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +20,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=974dc91abfff0f91', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=47d7653c01ba8942', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.progress !== undefined) {
         $('progress').value = data.progress;
@@ -224,7 +224,7 @@ async function refresh() {
   const release = selected();
   const cpu = cpuUsage(entries, release);
   document.body.classList.toggle('cpu-warning', cpu.warning);
-  $('cpu').textContent = cpu.percent === null ? `CPU cost not yet measured for: ${cpu.unknown.join(', ')}.` :
+  $('cpu').textContent = cpu.withinMeasuredDefault ? 'Within the measured default. Savings from Off or lighter settings are not yet measured.' : cpu.percent === null ? `CPU cost not yet measured for: ${cpu.unknown.join(', ')}.` :
       `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
       cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? '' : ' estimated'}`).join('; ') +
       `. Provisional stock ceiling ${release.cpu.ceiling}%. ` +
@@ -258,7 +258,7 @@ function loadSharedProfile() {
 
 async function init() {
   try {
-    const response = await fetch('manifest.json?v=974dc91abfff0f91', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=47d7653c01ba8942', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');

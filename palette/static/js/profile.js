@@ -148,14 +148,24 @@ export function featureDelta(entry, feature) {
 export function cpuUsage(entries, release) {
   const key = profileKey(entries, release.profile);
   const isDefault = key === profileKey(defaults(release.profile), release.profile);
-  const measured = isDefault ?
+  const combination = release.cpu.combinations.find((c) => c.profile === key);
+  const measured = combination || (isDefault ?
     Object.fromEntries(Object.entries(release.cpu.baselines).map(([e, b]) => [e, b.percent])) :
-    release.cpu.combinations.find((c) => c.profile === key);
+    null);
   const deltas = release.profile.features.map((f) => ({ feature: f,
     delta: featureDelta(entries.find((e) => e[0] === f.id), f) }));
+  // Placement does not add DSP work. Off, Fixed Off, and the same value in
+  // a lighter mode stay within the default; other enabled values need a cost.
+  const withinDefault = (f) => {
+    const e = entries.find((e) => e[0] === f.id);
+    const d = f.default;
+    return !e || e[1] === 0 || (e[1] === 1 && f.values?.[e[2]] === 'Off') ||
+      (d[1] !== 0 && e[1] <= d[1] &&
+        (f.amount ? e[2] <= d[2] : e[2] === d[2]));
+  };
   const unknown = deltas.filter(({ feature: f, delta }) => delta === null &&
-    entries.some((e) => e[0] === f.id && e[1] !== 0)).map(({ feature: f }) => f.name);
-  if (!isDefault && unknown.length) {
+    !withinDefault(f)).map(({ feature: f }) => f.name);
+  if (!measured && unknown.length) {
     return { engines: [], percent: null, blocked: false, warning: false,
       kind: 'not yet measured', unknown, names: unknown.join(', ') };
   }
@@ -165,12 +175,14 @@ export function cpuUsage(entries, release) {
     const percent = Math.round((hasMeasurement ? measured[engine] : baseline.percent +
         contributing.reduce((sum, f) => sum + f.delta, 0)) * 10) / 10;
     return { engine, baseline, percent, measured: hasMeasurement,
-      blocked: !isDefault && percent > release.cpu.ceiling - (hasMeasurement ? 0 : release.cpu.margin),
+      blocked: (!isDefault || Boolean(combination)) && percent > release.cpu.ceiling - (hasMeasurement ? 0 : release.cpu.margin),
       warning: percent >= release.cpu.warning };
   });
-  return { engines, percent: Math.max(...engines.map((e) => e.percent)),
+  const withinMeasuredDefault = !measured && deltas.some((f) => f.delta === null) &&
+    deltas.every((f) => f.delta === null || f.delta <= 0);
+  return { engines, withinMeasuredDefault, percent: Math.max(...engines.map((e) => e.percent)),
     blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
-    kind: isDefault ? 'partly measured' : engines.every((e) => e.measured) ? 'measured' : engines.some((e) => e.measured) ? 'partly measured' : 'estimated',
+    kind: withinMeasuredDefault ? 'within measured default' : isDefault && !combination ? 'partly measured' : engines.every((e) => e.measured) ? 'measured' : engines.some((e) => e.measured) ? 'partly measured' : 'estimated',
     names: deltas.filter((f) => f.delta).map((f) => f.feature.name).join(', ') || 'Release default settings' };
 }
 
