@@ -224,6 +224,9 @@ const uint8_t kFieldBytes[10] = { 10, 11, 12, 13, 15, 18, 19, 20, 21, 22 };
 }  // namespace
 
 uint8_t Settings::FeatureValue(ProfileFeature feature) const {
+  if (feature >= FEATURE_VERSION) {
+    return profile_values_[feature];
+  }
   switch (feature) {
     case FEATURE_PITCH:
       return pitch_scale();
@@ -257,6 +260,10 @@ uint8_t Settings::FeatureValue(ProfileFeature feature) const {
 }
 
 void Settings::SetFeatureValue(ProfileFeature feature, uint8_t value) {
+  if (feature >= FEATURE_VERSION) {
+    profile_values_[feature] = value;
+    return;
+  }
   switch (feature) {
     case FEATURE_PITCH:
       set_pitch_scale(PitchScale(value));
@@ -347,7 +354,7 @@ void Settings::LoadOptions() {
         if (saved < kFeatureDefinitions[i].values) {
           value = saved;
         }
-      } else if (feature != FEATURE_TRIM) {
+      } else if (feature < FEATURE_TRIM) {
         value = FeatureValue(feature);
       }
     }

@@ -2429,6 +2429,39 @@ void TestProfileAmounts() {
   }
 }
 
+void SetFixed(Rig* r, ProfileFeature feature, uint8_t value) {
+  uint8_t b[kProfileSize];
+  CustomProfile(b, feature, 0, 0, 0);
+  b[17] = PROFILE_FIXED;
+  b[18] = value;
+  const uint32_t crc = Profile::Crc32(b, 22);
+  for (int i = 0; i < 4; ++i) {
+    b[22 + i] = crc >> (8 * i);
+  }
+  ApplyCustomProfile(r, b);
+}
+
+void TestBetaOptionsLeds() {
+  test_checker.Start("TestBetaOptionsLeds");
+  Rig version;
+  SetFixed(&version, FEATURE_VERSION, 1);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_G] == 128);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] == 0);
+  version.Tick(100);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  version.Tick(100);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  version.Tick(150);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  version.Tick(150);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  version.Tick(300);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] != 0);
+
+
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -2493,6 +2526,7 @@ int main() {
   TestStorage();
   TestDsp();
   TestProfilePages();
+  TestBetaOptionsLeds();
   TestProfileActions();
   TestProfileAmounts();
   return test_checker.failures() ? 1 : 0;

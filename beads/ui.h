@@ -207,6 +207,7 @@ class Ui {
   
   bool seed_button_state_;
   bool seed_button_locked_;
+  uint32_t boot_cue_time_;
   bool seed_led_state_;
   
   float overwrite_reserve_;

@@ -41,6 +41,8 @@
 
 namespace beads {
 
+const uint8_t kReleaseBeta = 2;
+
 using namespace std;
 using namespace stmlib;
 
@@ -92,6 +94,7 @@ void Ui::Init(
   
   freeze_button_state_ = false;
   freeze_led_state_ = false;
+  boot_cue_time_ = system_clock.milliseconds();
   
   seed_button_state_ = false;
   seed_button_locked_ = true;
@@ -346,6 +349,18 @@ void Ui::UpdateLeds() {
           const float brightness = overwrite_reserve_ * \
               (state.monophonic_mode ? 0.5f : 1.0f);
           leds_.set_media(media_color, brightness);
+          if (settings_->FeatureValue(FEATURE_VERSION) &&
+              uint32_t(system_clock.milliseconds() - boot_cue_time_) <
+                  200u + 300u * kReleaseBeta) {
+            // Light blue identifies Drizzlet; pulse count identifies Beta.
+            const uint32_t elapsed = system_clock.milliseconds() - boot_cue_time_;
+            const bool lit = elapsed < 100 || (elapsed >= 200 &&
+                ((elapsed - 200) / 150) % 2 == 0);
+            const Leds::Color cue = {
+              0, uint8_t(lit ? 128 : 0), uint8_t(lit ? 255 : 0)
+            };
+            leds_.set_media(cue);
+          }
         }
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {

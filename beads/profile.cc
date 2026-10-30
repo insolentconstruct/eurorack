@@ -47,7 +47,8 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 0, kNoField, false, true, false, false },  // Width.
   { 0, kNoField, false, true, false, false },  // Diffusion.
   { 2, kNoField, false, false, true, false },  // Monophonic.
-  { 2, kNoField, false, false, true, true }  // Trim.
+  { 2, kNoField, false, false, true, true },  // Trim.
+  { 2, kNoField, false, false, false, false },  // Version.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
@@ -174,6 +175,10 @@ bool Profile::Parse(const volatile uint8_t* b) {
     ProfileEntry e = { id, p[1], p[2], p[3], p[4], p[5] };
     if (e.state > PROFILE_ADJUSTABLE || (d.values && e.value >= d.values) ||
         e.page_slot > 12 || e.amount_slot > 2 || e.action > 3) {
+      return false;
+    }
+    if (id >= FEATURE_VERSION && e.state == PROFILE_ADJUSTABLE &&
+        !d.page) {
       return false;
     }
     if ((e.page_slot && (!d.page || e.state != PROFILE_ADJUSTABLE)) ||

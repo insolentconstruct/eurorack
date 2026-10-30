@@ -198,7 +198,7 @@ cases = [
   ('TestProfileParser', 'profile', 'beads/profile.cc',
     'e.action > 3', 'e.action > 4'),
   ('TestProfileKinds', 'profile', 'beads/profile.cc',
-    '!d.page', 'false'),
+    '(!d.page || e.state', '(false || e.state'),
   ('TestProfileKinds', 'profile', 'beads/profile.cc',
     '!d.amount', 'false'),
   ('TestProfileKinds', 'profile', 'beads/profile.cc',
@@ -1087,6 +1087,9 @@ cases = [
   ('TestProfileLocks', 'storage', 'beads/settings.cc',
     'if (recovery_mode && !profile_locked_) {',
     'if (recovery_mode) {'),
+  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
+    'settings_->FeatureValue(FEATURE_VERSION) &&',
+    'false &&'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:
