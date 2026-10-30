@@ -11,20 +11,31 @@ firmware profiles are refused. Older plain-WAV releases are not offered.
 
 The current entry is an **unreleased development build** pinned in the manifest. All
 feature CPU deltas are placeholder estimates until the per-feature cost table exists.
-The baseline is **partly measured**: synth 85.8% is the Beta 2 wavetable row
-with stock reverb measured in the 2026-10-27/28 sessions; synth with Clouds-style
-reverb was never measured and is estimated at about 87%. Granular was measured
-at 83.0%. The release entry still needs the measured worst case of the default
-profile, including Clouds-style reverb in synth mode. The exact DEFAULT profile
-is always allowed; this allowance does not imply a fully measured baseline.
+The baseline is **partly measured**: Clouds-style synth reverb WAS measured
+at **86.1–87.2%**, and granular at 83.0%. The provisional synth baseline uses
+87.2%; the final profile image still needs its own default and heavy-combination
+measurements. The exact DEFAULT profile is always allowed.
 
-The current deltas are provisional signed estimates against default settings.
-The intended worst-case model gives Adjustable features zero delta and lets
-Fixed settings only lower the baseline; settle this with the cost table.
-The current code and placeholder table retain their existing model meanwhile.
+Measurement provenance (shared session reports):
+
+- `session-2026-10-27/combos-module/report.md`: wavetable + Clouds-style
+  reverb 86.1%, with size variation 86.3%; Plaits + Clouds-style 69.4%.
+- `session-2026-10-28/synthab-module/report.md`: Clouds-style synth 86.4%;
+  vanilla granular 92.1%, the provisional stock ceiling's source.
+- `session-2026-10-28/storage-module/report.md`: Clouds-style synth 87.2%
+  on the storage-fix image. All these rows predate profiles and paired grains.
+  The later boot-guard rows marked INVALID are excluded.
+
+The feature table uses conservative signed **placeholder estimates** against
+release defaults: small UI allowances and larger DSP allowances for reverb,
+attacks and diffusion. These are budgeting estimates, not new measurements.
+Heavy combinations on the shipped manifest can reach both warning and block.
+Replace these allowances with the per-feature timing table and module checks;
+a lower measured Plaits peak is not treated as a positive synth cost.
 Other measured combinations key on the complete encoded 512-byte profile
 (`cpu.combinations[].profile`, hex), with worst-case `synth` and `granular`
-percentages. Placement or default changes require another exact match.
+percentages. If an engine is absent, that engine keeps its estimate and is
+labelled unmeasured; available measurements still apply. Placement or default changes require another exact match.
 Each engine rounds to 0.1% before checking: warn from 91% and block anything
 above the provisional 92% ceiling, measured or estimated (no margin until module
 measurements show how well estimates add up).
@@ -55,16 +66,23 @@ Tests (Node 18 or later, g++, and the pinned stmlib submodule):
 node palette/test/manifest.js
 node palette/test/profile.js
 node palette/test/downloads.js
+node palette/test/readiness.js
 node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
 ```
 
-The profile test compiles a small oracle from the actual firmware parser and
+The profile test compiles a small oracle from the manifest source commit or release tag’s firmware parser and
 compares more than 26,000 candidate blocks. With stmlib already available in a
 separate checkout, `STMLIB_INCLUDE` can name that checkout's root. No firmware
 source or Git metadata needs changing.
 
 Manifest format 2 stores the profile offset, size, version, release ID and
-feature table per release. `values: null` means a full byte. The `page`,
+feature table per release. `default_in_block: false` omits a feature from the
+untouched wire block while its catalogue default remains available in the editor.
+The 23-feature catalogue is checked against the pinned firmware definition table;
+the default block still contains 14 entries. `states` controls editor modes.
+Released `release_id` values are the tag date as hexadecimal YYYYMMDD (for example,
+2026-11-05 becomes `0x20261105`), and must equal that tag's firmware
+`kProfileReleaseId`; development entries retain the development constant. `values: null` means a full byte. The `page`,
 `amount`, `action` and `stateless` fields mirror the firmware definition table.
 The page verifies the pinned base app first, patches only bytes 1024–1535, then
 encodes and decodes the WAV. The untouched default also checks the release WAV
@@ -80,15 +98,14 @@ hashes before turning this into a release entry.
 
 CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
 
-**Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
+**Deploy:** `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. Pull requests run all palette suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 
-**Counting:** WAV download clicks (not builds or guide downloads) send one
+**Counting:** Successful builds send `/render/<tag>` events; WAV download clicks send one
 `download/<release-slug>` event through GoatCounter's scriptless `/count` endpoint (`p` is the event
 path and `e=true` marks an event). The event name is
 the only application data sent: no profile, fingerprint, custom/default marker,
 page URL, referrer or personal data. The request necessarily exposes the browser
-and IP address to the service. “Do not track” is respected. The pre-existing scriptless `/render/<tag>`
-count after a successful build is retained. Custom and default downloads share one event per version because
+and IP address to the service. “Do not track” is respected. Guide downloads are not counted. Both event types use the same tested transport. Custom and default downloads share one event per version because
 GoatCounter has no separate event properties that preserve that count page.
 See the [GoatCounter endpoint parameters](https://www.goatcounter.com/help/pixel).
 
@@ -104,3 +121,9 @@ Requests time out after five seconds and never delay or block building. Tests us
 without network access. See [public counter setup](https://www.goatcounter.com/help/visitor-counter).
 
 To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d palette/static`); the hash check needs a secure context, which `localhost` is.
+
+Browser modules, worker dependencies and the manifest URL carry `?v=` versions
+bound to the manifest and module contents; image URLs carry their SHA-256.
+After changing browser code or manifest data, run
+`node palette/tools/version-assets.js`. The readiness suite verifies every
+referenced browser asset has the matching version or hash.

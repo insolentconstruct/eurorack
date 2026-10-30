@@ -6,13 +6,18 @@ on:
     paths:
       - 'palette/**'
       - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'palette/**'
+      - 'beads/profile.*'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -40,6 +45,7 @@ jobs:
           node palette/test/manifest.js
           node palette/test/profile.js
           node palette/test/downloads.js
+          node palette/test/readiness.js
       - name: Install the pinned Hugo
         run: |
           archive="hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
@@ -58,6 +64,7 @@ jobs:
           path: public
 
   deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/drizzlet'
     needs: build
     runs-on: ubuntu-24.04
     permissions:

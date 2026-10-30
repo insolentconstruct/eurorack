@@ -13,7 +13,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { defaults, encodeProfile, equal } from '../static/js/profile.js';
+import { defaults, encodeProfile, equal, validateReleaseId } from '../static/js/profile.js';
 import { decode } from '../static/js/decoder.js';
 import { encode, MAX_APP_SIZE } from '../static/js/encoder.js';
 
@@ -37,6 +37,10 @@ for (const release of manifest.releases) {
   const wav = encode(app);
   check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
   check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
+  const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
+  const header = execFileSync('git', ['show', `${ref}:beads/profile.h`], { encoding: 'utf8' });
+  try { validateReleaseId(release, header); check(true, `${release.tag}: firmware and dated release ID`); }
+  catch { check(false, `${release.tag}: firmware and dated release ID`); }
   if (release.development) {
     check(/^drizzlet-dev-[0-9a-f]+$/.test(release.tag) && release.app.includes('-dev-') &&
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);

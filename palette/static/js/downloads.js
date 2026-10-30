@@ -7,14 +7,22 @@
 // Public, per-release counts. Failures never affect the WAV builder.
 export const eventName = (release) => `download/${release.slug || release.tag.replace(/^drizzlet-/, '')}`;
 
-export function recordDownload(release, fetcher = globalThis.fetch, dnt = globalThis.navigator?.doNotTrack) {
+function recordEvent(path, fetcher, dnt) {
   if (dnt === '1') return;
   try {
-    const query = new URLSearchParams({ p: eventName(release), e: 'true' });
+    const query = new URLSearchParams({ p: path, e: 'true' });
     Promise.resolve(fetcher(`https://insolentconstruct.goatcounter.com/count?${query}`, {
       mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
     })).catch(() => {});
   } catch {} // A blocked or unavailable counter must not interrupt a download.
+}
+
+export function recordDownload(release, fetcher = globalThis.fetch, dnt = globalThis.navigator?.doNotTrack) {
+  recordEvent(eventName(release), fetcher, dnt);
+}
+
+export function recordBuild(release, fetcher = globalThis.fetch, dnt = globalThis.navigator?.doNotTrack) {
+  recordEvent(`/render/${release.tag}`, fetcher, dnt);
 }
 
 // Defer optional third-party count requests until the page is being used.

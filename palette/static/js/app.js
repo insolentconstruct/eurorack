@@ -7,9 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta } from './profile.js';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js';
-import { downloadCounts, countLine, recordDownload, afterInteraction } from './downloads.js';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry } from './profile.js?v=56964915dd627c31';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=56964915dd627c31';
+import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=56964915dd627c31';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +20,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=56964915dd627c31', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.progress !== undefined) {
         $('progress').value = data.progress;
@@ -88,13 +88,7 @@ async function build(release, app) {
   status(isDefault ? 'Done: identical to the release update file. WAV decoded and checked.' : `Done: profile ${fp}. WAV decoded and checked.`, 'ok');
   await updateGuides(release, chosen, fp, names);
   $('download').onclick = () => recordDownload(release);
-  if (navigator.doNotTrack !== '1') {
-    const query = new URLSearchParams({ p: `/render/${release.tag}`, t: release.tag,
-      rnd: Math.random().toString(36).slice(2) });
-    fetch(`https://insolentconstruct.goatcounter.com/count?${query}`, {
-      mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer'
-    }).catch(() => {});
-  }
+  recordBuild(release);
 }
 
 function selected() {
@@ -176,7 +170,7 @@ function renderEditor() {
   for (const f of profile.features) {
     let e = entries.find((e) => e[0] === f.id);
     const missing = !e;
-    if (missing) e = [f.id, 0, 0, 0, 0, 0];
+    if (missing) e = initialEntry(f);
     const row = document.createElement('div'); row.className = 'feature';
     const title = document.createElement('h3'); title.textContent = f.name; row.append(title);
     const change = (k, value) => {
@@ -184,6 +178,7 @@ function renderEditor() {
       let edited = candidate.find((e) => e[0] === f.id);
       if (!edited) { edited = e.slice(); candidate.push(edited); }
       edited[k] = value;
+      if (k === 1 && value === 1 && f.values?.[0] === 'Off' && !edited[2]) edited[2] = 1;
       if (k === 1 && value !== 2) {
         edited[3] = edited[4] = 0;
         if (!value || !edited[2] || !f.stateless) edited[5] = 0;
@@ -194,9 +189,9 @@ function renderEditor() {
       } catch (error) { status(error.message, 'error'); }
       renderEditor(); refresh();
     };
-    row.append(selectControl('Mode', [[0, 'Off'], [1, 'Fixed'], [2, 'Adjustable']], e[1], (v) => change(1, v)));
+    row.append(selectControl('Mode', modes(f), e[1], (v) => change(1, v)));
     if (e[1]) {
-      if (f.values) row.append(selectControl('Default', f.values.map((v, i) => [i, v]), e[2], (v) => change(2, v)));
+      if (f.values) row.append(selectControl('Default', f.values.map((v, i) => [i, v]).filter(([i]) => !(e[1] === 1 && i === 0 && f.values[0] === 'Off')), e[2], (v) => change(2, v)));
       else {
         const label = document.createElement('label'); label.textContent = 'Default (0–255)';
         const input = document.createElement('input'); input.type = 'number'; input.min = 0; input.max = 255; input.value = e[2];
@@ -226,10 +221,13 @@ async function refresh() {
   const release = selected();
   const cpu = cpuUsage(entries, release);
   document.body.classList.toggle('cpu-warning', cpu.warning);
-  $('cpu').textContent = `${cpu.percent.toFixed(1)}% ${cpu.kind}: ${cpu.names}. ` +
-      cpu.engines.map((e) => `${e.engine}: ${e.percent.toFixed(1)}%; baseline ${e.baseline.percent}% ${e.baseline.kind}${e.baseline.placeholder ? ' (placeholder)' : ''}${e.baseline.provisional ? ' (provisional)' : ''}: ${e.baseline.provenance}.`).join(' ') +
-      `Stock ceiling ${release.cpu.ceiling}% ${release.cpu.ceiling_kind} (provisional). ` +
+  $('cpu').textContent = `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
+      cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? '' : ' estimated'}`).join('; ') +
+      `. Provisional stock ceiling ${release.cpu.ceiling}%. ` +
       (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
+  $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
+      cpu.engines.map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
+      ' Feature costs are placeholder estimates; final-image measurements are pending.';
   $('build').disabled = $('local').disabled = busy || cpu.blocked;
   const block = encodeProfile(entries, release.profile);
   const fp = await fingerprint(block);
@@ -243,7 +241,7 @@ async function refresh() {
 
 async function init() {
   try {
-    const response = await fetch('manifest.json', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=56964915dd627c31', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');

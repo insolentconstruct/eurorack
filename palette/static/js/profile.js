@@ -45,7 +45,7 @@ export function validate(entries, profile) {
     const f = profile.features.find((f) => f.id === id);
     if (!f || seen.has(id)) throw new Error('Unknown or repeated feature.');
     seen.add(id);
-    if (state > 2 || (f.values && value >= f.values.length) ||
+    if (state > 2 || (state === 2 && f.states && !f.states.includes('Adjustable')) || (f.values && value >= f.values.length) ||
         page > 12 || amount > 2 || action > 3 ||
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
@@ -92,7 +92,7 @@ export function decodeProfile(b, profile) {
     Array.from(b.subarray(16 + i * 6, 22 + i * 6))), profile);
 }
 
-export const defaults = (profile) => profile.features.map((f) => f.default.slice());
+export const defaults = (profile) => profile.features.filter((f) => f.default_in_block !== false).map((f) => f.default.slice());
 export const equal = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 export async function sha256(b) {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)),
@@ -146,14 +146,40 @@ export function cpuUsage(entries, release) {
     delta: featureDelta(entries.find((e) => e[0] === f.id), f) }));
   const engines = Object.entries(release.cpu.baselines).map(([engine, baseline]) => {
     const contributing = deltas.filter(({ feature: f }) => engine === 'synth' ? f.synth_path : true);
-    const percent = Math.round((measured ? measured[engine] : baseline.percent +
+    const hasMeasurement = Number.isFinite(measured?.[engine]);
+    const percent = Math.round((hasMeasurement ? measured[engine] : baseline.percent +
         contributing.reduce((sum, f) => sum + f.delta, 0)) * 10) / 10;
-    return { engine, baseline, percent,
-      blocked: !isDefault && percent > release.cpu.ceiling - (measured ? 0 : release.cpu.margin),
+    return { engine, baseline, percent, measured: hasMeasurement,
+      blocked: !isDefault && percent > release.cpu.ceiling - (hasMeasurement ? 0 : release.cpu.margin),
       warning: percent >= release.cpu.warning };
   });
   return { engines, percent: Math.max(...engines.map((e) => e.percent)),
     blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
-    kind: isDefault ? 'partly measured' : measured ? 'measured' : 'estimated',
+    kind: isDefault ? 'partly measured' : engines.every((e) => e.measured) ? 'measured' : engines.some((e) => e.measured) ? 'partly measured' : 'estimated',
     names: deltas.filter((f) => f.delta).map((f) => f.feature.name).join(', ') || 'Release default settings' };
+}
+
+// State choices are catalogue capabilities; Fixed Off means disabled.
+export const modes = (feature) => (feature.states || ['Off', 'Fixed', 'Adjustable'])
+  .map((name) => [['Off', 'Fixed', 'Adjustable'].indexOf(name), name]);
+export const initialEntry = (feature) => feature.default_in_block === false ?
+  feature.default.slice() : [feature.id, 0, 0, 0, 0, 0];
+
+// Release tags encode a BCD-like hexadecimal calendar date, not epoch time.
+export function releaseIdForTag(tag) {
+  const match = /^drizzlet-(\d{4})\.(\d{2})\.(\d{2})$/.exec(tag);
+  if (!match) throw new Error('Expected a dated release tag.');
+  const [, year, month, day] = match;
+  const date = `${year}-${month}-${day}`;
+  if (new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) {
+    throw new Error('Invalid release date.');
+  }
+  return parseInt(year + month + day, 16) >>> 0;
+}
+export function validateReleaseId(release, source) {
+  const match = /kProfileReleaseId\s*=\s*(0x[0-9a-f]+)/i.exec(source);
+  if (!match || Number(match[1]) !== release.profile.release_id ||
+      (!release.development && release.profile.release_id !== releaseIdForTag(release.tag))) {
+    throw new Error('Release ID must match the firmware and release tag date.');
+  }
 }

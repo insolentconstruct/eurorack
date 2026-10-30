@@ -23,8 +23,8 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { defaults, equal, encodeProfile } from './profile.js';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js';
+import { defaults, equal, encodeProfile } from './profile.js?v=56964915dd627c31';
+import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=56964915dd627c31';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -74,7 +74,7 @@ class Drawing {
     this.circle(cx, cy, 22);
     this.items.push(`<path d="M ${cx} ${cy} v -16" stroke="#222" stroke-width="2"/>`);
     const count = f.id === 1 ? 3 : f.values ? f.values.length : 2;
-    const bands = f.id === 12 ? [] : f.id === 11 ? [[.07, .13]] : count === 2 ? [[.47, .53]] : [[1 / 3 - .03, 1 / 3 + .03], [2 / 3 - .03, 2 / 3 + .03]];
+    const bands = f.id === 12 ? [] : f.id === 11 ? [[.07, .13]] : count === 2 ? [[.47, .53]] : Array.from({ length: count - 1 }, (_, i) => [(i + 1) / count - .03, (i + 1) / count + .03]);
     const starts = [0, ...bands.map((b) => b[1])];
     const ends = [...bands.map((b) => b[0]), 1];
     const zoneLabels = f.id === 12 ? ['more →'] : f.id === 1 ? [f.values[0], f.values[1], 'Scale'] :
@@ -130,13 +130,13 @@ export function guide(entries, release, fp, mobile = false) {
   d.text(margin, 35, 'Drizzlet Hidden Options', 24, 'bold');
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
-  for (const line of [
+  for (const line of (entries.some((e) => e[3]) ? [
     'Open: hold the CV-assign button [M] 3 seconds, release.',
     'Change page: tap [M]. Empty pages are skipped. Pages 1–4 pulse FEEDBACK, DRY/WET, REVERB, then all three.',
     '[A] shows each stored value in turn. Turn a knob to change it; it saves by itself.',
     'Close: hold [M] 3 seconds or press another button. With Scale selected, SEED taps step the scale.',
     'Move a knob a little before it responds. Wait a moment before powering off.'
-  ]) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
+  ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
   // Share the release's to-scale control sketch and LED legend.
   const reference = RELEASE_GUIDES[0];
   const panelStart = reference.indexOf('<text x="405" y="70"');
@@ -166,11 +166,11 @@ export function guide(entries, release, fp, mobile = false) {
     y += d.card(margin, y, mobile ? width - margin * 2 : 325,
         feature(e), e, `${AMOUNTS[e[4]]}: ${feature(e).name}`, mobile) + 15;
   }
-  y = d.lines(margin, y, 'Manual gain: hold [A] and turn FEEDBACK. [A] hold resets gain when it is not starting the synth.', mobile ? 43 : 140);
+  y = d.lines(margin, y, 'Manual gain: hold [A] and turn FEEDBACK. [A] hold resets gain when no hold action runs.', mobile ? 43 : 140);
   for (const e of entries.filter((e) => e[5])) {
     const extra = e[0] === 9 ? ' With Synth start on Manual, both inputs unplugged and FREEZE off.' :
         e[0] === 13 ? ' Toggle monophonic grains.' : ' Start a fresh recording window.';
-    y = d.lines(margin, y + 10, `${ACTIONS[e[5]]}: ${feature(e).name}.${extra}`, mobile ? 43 : 140);
+    y = d.lines(margin, y + 10, `${ACTIONS[e[5]]}: ${feature(e).name}.${e[5] === 3 ? ' Both inputs unplugged.' : ''}${extra}`, mobile ? 43 : 140);
   }
   for (const e of entries.filter((e) => e[1] === 1 && !e[5])) {
     const f = feature(e);

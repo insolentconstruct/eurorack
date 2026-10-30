@@ -7,7 +7,7 @@
 // All network access is stubbed; never contact analytics from tests.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { downloadCounts, countLine, eventName, recordDownload, afterInteraction } from '../static/js/downloads.js';
+import { downloadCounts, countLine, eventName, recordDownload, recordBuild, afterInteraction } from '../static/js/downloads.js';
 const html = readFileSync(new URL('../static/index.html', import.meta.url), 'utf8');
 function checkScripts(source) {
   for (const tag of source.matchAll(/<script\b[^>]*>/gi)) {
@@ -85,3 +85,21 @@ assert.equal(await downloadCounts(() => { throw new Error('cached session must n
 const blockedStorage = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
 assert.equal(await downloadCounts(async () => response({ count: '10' }), new Map(), blockedStorage)(release), 10);
 console.log('PASS download event, public count combination, threshold, failures and session cache (stubbed fetches only)');
+
+for (const dnt of ['0', undefined, '1']) {
+  const builds = [];
+  recordBuild(release, (...args) => builds.push(args), dnt);
+  assert.equal(builds.length, dnt === '1' ? 0 : 1);
+  if (builds.length) {
+    const [url, options] = builds[0];
+    assert.deepEqual([...new URL(url).searchParams], [['p', '/render/drizzlet-test'], ['e', 'true']]);
+    assert.deepEqual(options, { mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
+  }
+}
+recordBuild(release, () => { throw new Error('blocked'); }, '0');
+recordBuild(release, async () => { throw new Error('offline'); }, '0');
+const app = readFileSync(new URL('../static/js/app.js', import.meta.url), 'utf8');
+assert.equal((app.match(/recordBuild\(release\)/g) || []).length, 1);
+assert(app.indexOf('recordBuild(release)') > app.indexOf('await updateGuides(release, chosen'));
+assert(!app.includes('goatcounter.com/count'));
+console.log('PASS successful-build event, DNT, private parameters and quiet failures');

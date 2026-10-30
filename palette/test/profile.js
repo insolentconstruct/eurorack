@@ -24,7 +24,7 @@
 //
 // Node tests use the compiled firmware as the profile oracle.
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -59,9 +59,10 @@ for (const offset of [0, 4, 5, 6, 7, 8, 12, 13, 14, 15]) {
   reject([5, 6, 7].includes(offset) ? b : reseal(b));
 }
 // The refusal table from beads/test/profile_test.cc, parsed so it cannot drift.
-const firmwareTests = readFileSync(new URL('../../beads/test/profile_test.cc', import.meta.url), 'utf8');
+const firmwareFile = (file) => execFileSync('git', ['show', `${release.development ? release.source_commit : 'refs/tags/' + release.tag}:${file}`], { encoding: 'utf8' });
+const firmwareTests = firmwareFile('beads/test/profile_test.cc');
 const bad = firmwareTests.split('const uint8_t bad[][2] = {')[1].split('};')[0];
-const constants = { FEATURE_LAST: 15, FEATURE_PITCH: 1, PROFILE_OFF: 0, PROFILE_FIXED: 1 };
+const constants = { FEATURE_LAST: Math.max(...profile.features.map((f) => f.id)) + 1, FEATURE_PITCH: 1, PROFILE_OFF: 0, PROFILE_FIXED: 1 };
 for (const match of bad.matchAll(/\{\s*(\d+),\s*(\w+)\s*\}/g)) {
   const b = block.slice(); b[Number(match[1])] = constants[match[2]] ?? Number(match[2]); reject(reseal(b));
 }
@@ -81,7 +82,7 @@ for (const f of profile.features) {
         const e = [f.id, state, value, 0, 0, action];
         const raw = block.slice(); raw[5] = 1; raw[6] = 6; raw[7] = 0;
         raw.set(e, 16); cases.push(reseal(raw));
-        const allowed = state <= 2 && (!f.values || value < f.values.length) && action <= 3 &&
+        const allowed = state <= 2 && (state !== 2 || f.states.includes('Adjustable')) && (!f.values || value < f.values.length) && action <= 3 &&
           (!action || (f.action && state !== 0 && (state !== 1 || (value && f.stateless)))) &&
           !(f.id === 9 && state === 1 && value && !action);
         if (allowed) assert.deepEqual(decodeProfile(encodeProfile([e], profile), profile), [e]);
@@ -105,7 +106,8 @@ assert.throws(() => unshare('release=missing&profile=00', manifest.releases));
 assert.equal(filenames(release, fp, true).wav, release.tag + '.wav');
 assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);
-assert.equal(filenames(release, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
+assert.equal(filenames({ ...release, tag: 'drizzlet-dev-a70e669' }, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
+assert.equal(filenames(release, fp, false).mobile, `options-guide-${release.tag.replace(/^drizzlet-/, '')}-${fp}-mobile.svg`);
 for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
   const r = structuredClone(release);
   for (const f of r.profile.features) f.cpu.off = 0;
@@ -135,7 +137,9 @@ assert.equal(cpuUsage(changedPlacement, measuredRelease).kind, 'estimated');
 for (const r of manifest.releases) {
   const usage = cpuUsage(defaults(r.profile), r);
   assert.equal(usage.kind, 'partly measured'); assert(!usage.blocked);
-  assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 85.8);
+  const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
+  assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
+  assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, r.cpu.baselines.synth.percent);
   const highDefault = structuredClone(r);
   highDefault.cpu.baselines.synth.percent = 99;
   assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
@@ -164,7 +168,7 @@ for (const mobile of [false, true]) {
   assert.equal(svg.replace(/<text data-profile-fingerprint="true"[^>]*>.*?<\/text>\n/, ''), golden);
   const text = (s) => [...s.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => unescape(m[1]));
   const actual = text(svg), expected = text(golden);
-  for (const f of profile.features.filter((f) => f.page)) {
+  for (const f of profile.features.filter((f) => f.page && f.default_in_block !== false)) {
     const e = entries.find((e) => e[0] === f.id);
     const title = `${['FEEDBACK', 'DRY/WET', 'REVERB'][(e[3] - 1) % 3]}: ${f.name}`;
     assert(actual.includes(title) && expected.includes(title), title);
@@ -202,9 +206,11 @@ for (const f of profile.features) {
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-oracle-'));
 try {
   const oracle = join(scratch, 'profile-oracle');
-  execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I.',
+  mkdirSync(join(scratch, 'beads'));
+  for (const file of ['profile.h', 'profile.cc']) writeFileSync(join(scratch, 'beads', file), firmwareFile('beads/' + file));
+  execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I' + scratch, '-I.',
     ...(process.env.STMLIB_INCLUDE ? ['-I' + process.env.STMLIB_INCLUDE] : []),
-    'palette/test/profile_oracle.cc', 'beads/profile.cc', '-o', oracle]);
+    'palette/test/profile_oracle.cc', join(scratch, 'beads/profile.cc'), '-o', oracle]);
   const answers = execFileSync(oracle, [], { input: Buffer.concat(cases.map((b) => Buffer.from(b))), maxBuffer: 40000000 });
   const stride = 493;
   assert.equal(answers.length, cases.length * stride);
