@@ -3,13 +3,15 @@ on:
   schedule:
     - cron: '17 4 * * 1'
   workflow_dispatch:
+  pull_request:
+    paths: ['beads/**', 'stmlib', '.gitmodules', '.github/workflows/beads-mutation.yml']
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  mutations:
+  build-kit:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -54,15 +56,71 @@ jobs:
           docker build --platform linux/amd64 \
             --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
             -t beads-build-kit:gcc9 beads/build
+          docker save --output /tmp/beads-build-kit.tar beads-build-kit:gcc9
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: beads-mutation-build-kit
+          path: /tmp/beads-build-kit.tar
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+  mutations:
+    needs: build-kit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every 8th case from `shard`, so the 8 shards run each case once.
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Initialize stmlib
+        run: git submodule update --init stmlib
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: beads-mutation-build-kit
+          path: /tmp/beads-build-kit
+      - name: Load build kit
+        run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
       - name: Break the firmware in each recorded way; every test must fail
         run: |
           mkdir -p "$RUNNER_TEMP/mutation-report"
           docker run --rm --network none -v "$PWD:/src" \
             -v "$RUNNER_TEMP/mutation-report:/out" -w /src beads-build-kit:gcc9 \
-            python3 beads/test/mutation_check.py /out
+            python3 beads/test/mutation_check.py --shard ${{ matrix.shard }}/8 /out
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: mutation-report
+          name: mutation-shard-${{ matrix.shard }}
           if-no-files-found: warn
           path: ${{ runner.temp }}/mutation-report/
+  report:
+    needs: mutations
+    # Runs even when a shard failed, so this check fails instead of skipping.
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every shard passed
+        run: test "${{ needs.mutations.result }}" = success
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Initialize stmlib
+        run: git submodule update --init stmlib
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: mutation-shard-*
+          path: shards
+      - name: Merge the shards; every case must have run
+        run: python3 beads/test/mutation_check.py --merge "$PWD/mutation-report" shards/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutation-report
+          if-no-files-found: error
+          path: mutation-report/

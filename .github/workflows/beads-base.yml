@@ -1,5 +1,10 @@
 name: Beads base
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    paths: ['beads/**', 'tools/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', 'README-BASE.md', '.github/workflows/beads-base.yml']
+  pull_request:
+    paths: ['beads/**', 'tools/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', 'README-BASE.md', '.github/workflows/beads-base.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -110,7 +115,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
   compare-releases:
-    needs: [host-tests, release-build]
+    needs: release-build
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
