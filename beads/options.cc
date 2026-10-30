@@ -125,6 +125,10 @@ void Options::Init() {
   armed_ = eligible_ = holding_ = commit_ = dirty_ = false;
   all_up_time_ = press_time_ = last_action_ = 0;
   page_ = 0;
+  any_page_ = true;
+  for (int i = 0; i < kNumOptionPages; ++i) {
+    pages_[i] = kOptionPages[i];
+  }
   selected_ = OPTION_PITCH;
   preview_knob_ = -1;
   preview_time_ = indication_time_ = 0;
@@ -143,6 +147,22 @@ void Options::Init() {
     origin_[i] = previous_[i] = 0.0f;
     qualified_[i] = false;
     zone_[i] = 0;
+  }
+}
+
+void Options::Configure(const Profile& profile) {
+  any_page_ = false;
+  for (int page = 0; page < kNumOptionPages; ++page) {
+    for (int knob = 0; knob < MIX_PARAMETER_LAST; ++knob) {
+      pages_[page].knobs[knob] = OptionSetting(
+          profile.Page(1 + page * MIX_PARAMETER_LAST + knob));
+    }
+    any_page_ |= !PageEmpty(page);
+  }
+  if (any_page_) {
+    while (PageEmpty(page_)) {
+      page_ = (page_ + 1) % kNumOptionPages;
+    }
   }
 }
 
@@ -195,7 +215,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
     if (holding_ && all_up) {
       holding_ = false;
-      page_ = (page_ + 1) % kNumOptionPages;
+      do {
+        page_ = (page_ + 1) % kNumOptionPages;
+      } while (PageEmpty(page_));
       ResetPots(pots);
       StartPreview(now, 0);
     }
@@ -233,7 +255,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
     ApplySeedTaps();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      const OptionSetting setting = kOptionPages[page_].knobs[i];
+      const OptionSetting setting = pages_[page_].knobs[i];
       if (setting == OPTION_RESERVED) {
         continue;
       }
@@ -351,7 +373,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
   }
 
   if (just_pressed) {
-    eligible_ = armed_ && normal && !other && !pot_touched;
+    eligible_ = any_page_ && armed_ && normal && !other && !pot_touched;
     armed_ = false;
     press_time_ = now;
   }
@@ -450,8 +472,8 @@ void Options::ResetPots(const float* pots) {
   }
 
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (kOptionPages[page_].knobs[i] != OPTION_RESERVED) {
-      selected_ = kOptionPages[page_].knobs[i];
+    if (pages_[page_].knobs[i] != OPTION_RESERVED) {
+      selected_ = pages_[page_].knobs[i];
       break;
     }
   }
@@ -460,9 +482,31 @@ void Options::ResetPots(const float* pots) {
   seed_held_ = false;
 }
 
+bool Options::PageEmpty(int page) const {
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    if (pages_[page].knobs[i] != OPTION_RESERVED) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool Options::PageHasPitch() const {
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    if (pages_[page_].knobs[i] == OPTION_PITCH) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void Options::StartPreview(uint32_t now, int knob) {
+  if (PageEmpty(page_)) {
+    preview_knob_ = -1;
+    return;
+  }
   while (knob < MIX_PARAMETER_LAST &&
-         kOptionPages[page_].knobs[knob] == OPTION_RESERVED) {
+         pages_[page_].knobs[knob] == OPTION_RESERVED) {
     ++knob;
   }
 
@@ -470,7 +514,7 @@ void Options::StartPreview(uint32_t now, int knob) {
     // Back to the first setting, as before the preview.
     preview_knob_ = -1;
     knob = 0;
-    while (kOptionPages[page_].knobs[knob] == OPTION_RESERVED) {
+    while (pages_[page_].knobs[knob] == OPTION_RESERVED) {
       ++knob;
     }
   } else {
@@ -478,7 +522,7 @@ void Options::StartPreview(uint32_t now, int knob) {
     preview_time_ = now;
   }
 
-  selected_ = kOptionPages[page_].knobs[knob];
+  selected_ = pages_[page_].knobs[knob];
   indication_time_ = now;
 }
 

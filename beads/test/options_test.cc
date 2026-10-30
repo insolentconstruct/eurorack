@@ -91,6 +91,7 @@ struct Rig {
     memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
     settings.Init(false);
     ui.Init(&settings, &gain, &calibration, &backup);
+    ui.LoadOptions();
     Tick(40);
   }
   void Tick(int n, bool events = true) {
@@ -2291,6 +2292,143 @@ void TestPendingExitButtons() {
   CHECK(test_writes == writes + 1);
 }
 
+void CustomProfile(uint8_t* b, int id, int page, int amount, int action) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  b[5] = id ? 1 : 0;
+  b[6] = id ? 6 : 0;
+  b[16] = id;
+  b[17] = PROFILE_ADJUSTABLE;
+  b[18] = id == FEATURE_SYNTH_START ? 1 : 0;
+  b[19] = page;
+  b[20] = amount;
+  b[21] = action;
+  const size_t size = 16 + b[6];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+void ApplyCustomProfile(Rig* r, const uint8_t* b) {
+  CHECK(r->settings.Init(false, b));
+  CHECK(!r->settings.profile_locked());
+  r->ui.Init(&r->settings, &r->gain, &r->calibration, &r->backup);
+  r->ui.LoadOptions();
+  r->Tick(40);
+}
+
+void TestProfilePages() {
+  test_checker.Start("TestProfilePages");
+  uint8_t b[kProfileSize] = { 0 };
+  Rig invalid;
+  invalid.settings.Init(false, b);
+  invalid.ui.Init(&invalid.settings, &invalid.gain,
+      &invalid.calibration, &invalid.backup);
+  invalid.ui.LoadOptions();
+  invalid.ui.ShowStorageStatus();
+  CHECK(invalid.ui.mode_ == Ui::MODE_NORMAL);
+  for (int id = FEATURE_PITCH; id <= FEATURE_INTERVALS; ++id) {
+    for (int slot = 1; slot <= 12; ++slot) {
+      Rig r;
+      CustomProfile(b, id, slot, 0, 0);
+      ApplyCustomProfile(&r, b);
+      r.Enter();
+      CHECK(r.ui.options_.page() == (slot - 1) / 3);
+      CHECK(r.ui.options_.preview_knob() == (slot - 1) % 3);
+      CHECK(r.ui.options_.selected_ == OptionSetting(id));
+      r.Tap();
+      CHECK(r.ui.options_.page() == (slot - 1) / 3);
+      r.ui.options_.pitch_preview_ = PITCH_SCALE_FIFTHS;
+      CHECK(r.ui.options_.seed_allowed() == (id == FEATURE_PITCH));
+    }
+  }
+  Rig empty;
+  CustomProfile(b, 0, 0, 0, 0);
+  ApplyCustomProfile(&empty, b);
+  const uint32_t writes = test_writes;
+  const State before = empty.settings.state();
+  empty.Down(SWITCH_ASSIGN);
+  empty.Tick(3100);
+  empty.Up(SWITCH_ASSIGN);
+  CHECK(test_writes == writes);
+  CHECK(!memcmp(&before, &empty.settings.state(), sizeof(before)));
+  CHECK(empty.ui.options_.stage() == Options::STAGE_INACTIVE);
+  CHECK(empty.ui.options_.preview_knob() == -1);
+}
+
+void TestProfileActions() {
+  test_checker.Start("TestProfileActions");
+  uint8_t b[kProfileSize];
+  const int features[] = { FEATURE_MONOPHONIC, FEATURE_TRIM, FEATURE_SYNTH_START };
+  for (int i = 0; i < 3; ++i) {
+    for (int slot = 1; slot <= 3; ++slot) {
+      for (int patched = 0; patched < 2; ++patched) {
+        Rig r;
+        CustomProfile(b, features[i], 0, 0, slot);
+        ApplyCustomProfile(&r, b);
+        r.settings.set_self_play_on_request(true);
+        r.ui.set_no_input(!patched);
+        r.settings.mutable_state()->gain = 123;
+        r.Down(SWITCH_MEDIA);
+        if (slot == 3) {
+          r.Tick(1510);
+        } else {
+          r.Down(slot == 1 ? SWITCH_SEED : SWITCH_FREEZE);
+        }
+        // Only the synth needs empty inputs; a handled hold keeps the gain.
+        const bool handled = features[i] != FEATURE_SYNTH_START || !patched;
+        if (features[i] == FEATURE_MONOPHONIC) {
+          CHECK(r.settings.state().monophonic_mode);
+        } else if (features[i] == FEATURE_TRIM) {
+          CHECK(r.ui.trim_flag_);
+        } else {
+          CHECK(r.ui.self_play_requested() == !patched);
+        }
+        const bool reset = slot == 3 && !handled;
+        CHECK(r.gain.restarts == (reset ? 1 : 0));
+        CHECK(r.settings.state().gain == (reset ? 0 : 123));
+      }
+    }
+  }
+  Rig off;
+  CustomProfile(b, 0, 0, 0, 0);
+  ApplyCustomProfile(&off, b);
+  off.Down(SWITCH_MEDIA);
+  off.Down(SWITCH_SEED);
+  CHECK(!off.settings.state().monophonic_mode);
+  off.Up(SWITCH_SEED);
+  off.Down(SWITCH_FREEZE);
+  CHECK(!off.ui.trim_flag_);
+}
+
+void TestProfileAmounts() {
+  test_checker.Start("TestProfileAmounts");
+  uint8_t b[kProfileSize];
+  for (int id = FEATURE_WIDTH; id <= FEATURE_DIFFUSION; ++id) {
+    for (int slot = 1; slot <= 2; ++slot) {
+      Rig r;
+      CustomProfile(b, id, 0, slot, 0);
+      ApplyCustomProfile(&r, b);
+      r.Down(SWITCH_MEDIA);
+      if (slot == 1) {
+        r.pot = 1.0f;
+      } else {
+        r.reverb = 1.0f;
+      }
+      r.Tick(40);
+      if (id == FEATURE_WIDTH) {
+        CHECK(r.settings.stereo_width() == 255);
+        CHECK(r.settings.diffusion() == 0.0f);
+      } else {
+        CHECK(r.settings.state().diffusion == 255);
+        CHECK(r.settings.stereo_width() == 0);
+      }
+    }
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -2354,5 +2492,8 @@ int main() {
   TestQueueRace();
   TestStorage();
   TestDsp();
+  TestProfilePages();
+  TestProfileActions();
+  TestProfileAmounts();
   return test_checker.failures() ? 1 : 0;
 }

@@ -237,6 +237,9 @@ class Ui {
 
   static const Leds::Color media_palette_[4];
   
+  // Returns true when the action is handled.
+  bool DoAction(uint8_t slot);
+
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 

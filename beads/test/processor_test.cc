@@ -191,6 +191,7 @@ void TestFreezeButtonRecording() {
   memset(test_down, 0, sizeof(test_down));
   settings.Init(false);
   ui.Init(&settings, &gain, &calibration, &backup);
+  ui.LoadOptions();
   rig.Init(Processor::MEDIA_DIGITAL, false);
   for (int tap = 0; tap < 2; ++tap) {
     for (int down = 1; down >= 0; --down) {

@@ -40,6 +40,8 @@
 
 namespace beads {
 
+class Profile;
+
 class Settings;
 
 const int MIX_PARAMETER_LAST = 3;
@@ -119,6 +121,7 @@ class Options {
   ~Options() { }
 
   void Init();
+  void Configure(const Profile& profile);
 
   void Poll(uint32_t now, bool assign, bool other, bool all_up,
       bool just_pressed, bool normal, bool pot_touched, const float* pots,
@@ -135,6 +138,8 @@ class Options {
   inline Stage stage() const { return stage_; }
 
   inline int page() const { return page_; }
+
+  inline bool any_page() const { return any_page_; }
 
   inline OutputLimiterMode limiter_preview() const { return limiter_preview_; }
 
@@ -163,7 +168,7 @@ class Options {
   inline uint32_t indication_time() const { return indication_time_; }
 
   inline bool seed_allowed() const {
-    return stage_ == STAGE_EDITING && page_ == kPitchScalePage &&
+    return stage_ == STAGE_EDITING && PageHasPitch() &&
         pitch_preview_ >= PITCH_SCALE_FIFTHS;
   }
 
@@ -175,6 +180,11 @@ class Options {
   }
 
  private:
+  bool PageHasPitch() const;
+  bool PageEmpty(int page) const;
+  OptionPage pages_[kNumOptionPages];
+  bool any_page_;
+
   void ApplySeedTaps();
 
   void RequestCommit(uint32_t now);
