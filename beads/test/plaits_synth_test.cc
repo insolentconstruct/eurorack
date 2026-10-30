@@ -41,8 +41,8 @@
 
 using namespace beads;
 
-// GCC 12 (amd64), -ffp-contract=off. Notes from a regular SEED pulse train,
-// then the drone with DENSITY at noon. Other hosts only print theirs.
+// GCC 12 to 14 on amd64 and arm64, -ffp-contract=off. Notes from a regular
+// SEED pulse train, then the drone with DENSITY at noon.
 const uint32_t kNoteHashes[kNumPlaitsModels] = {
   0x2a2d2972, 0x877170b5, 0xc08556f5, 0x8a883e64,
   0x7707b2a5, 0x707f8c2a, 0xbbaf2a21, 0x2c51fa9c,
@@ -165,9 +165,7 @@ void TestEveryModelRenders() {
       printf("%s model %2d rms %.4f %08x\n", drone ? "Drone" : "Notes",
           model, rms, hash);
       CHECK(rms > 0.001);
-#if defined(__x86_64__)
       CHECK(hash == (drone ? kDroneHashes[model] : kNoteHashes[model]));
-#endif
     }
   }
 }
