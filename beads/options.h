@@ -59,6 +59,7 @@ enum OptionSetting {
   OPTION_ATTACKS,
   OPTION_SYNTH_START,
   OPTION_INTERVALS,
+  OPTION_BRIGHTNESS = 18,
   OPTION_LAST,
 };
 
@@ -103,7 +104,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 32;
+const size_t kNumOptionValues = 35;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -184,6 +185,7 @@ class Options {
   bool PageEmpty(int page) const;
   OptionPage pages_[kNumOptionPages];
   bool any_page_;
+  uint8_t profile_preview_[OPTION_LAST];
 
   void ApplySeedTaps();
 

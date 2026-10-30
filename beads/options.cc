@@ -102,7 +102,10 @@ const OptionValue kOptionValues[] = {
   { OPTION_INTERVALS, 0,
     { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_INTERVALS, 1,
-    { 255, 255, 0 }, PULSE_STEADY }
+    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
 };
 
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
@@ -152,6 +155,9 @@ void Options::Init() {
 
 void Options::Configure(const Profile& profile) {
   any_page_ = false;
+  for (int i = 0; i < OPTION_LAST; ++i) {
+    profile_preview_[i] = 0;
+  }
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < MIX_PARAMETER_LAST; ++knob) {
       pages_[page].knobs[knob] = OptionSetting(
@@ -282,6 +288,16 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       const int before = Value(setting);
       UpdateZone(pot, &zone_[i]);
       switch (setting) {
+        case OPTION_BRIGHTNESS: {
+          int value = profile_preview_[setting];
+          while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f) {
+            ++value;
+          }
+          while (value > 0 && pot < float(value) / 3.0f - 0.025f) {
+            --value;
+          }
+          profile_preview_[setting] = value;
+        } break;
         case OPTION_PITCH:
           pitch_preview_ = zone_[i] == 2 ? scale_ : PitchScale(zone_[i]);
           break;
@@ -384,6 +400,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
   if (eligible_ && assign &&
       uint32_t(now - press_time_) >= kOptionsHoldTime) {
+    for (int i = FEATURE_VERSION; i < OPTION_LAST; ++i) {
+      profile_preview_[i] = settings.FeatureValue(ProfileFeature(i));
+    }
     limiter_preview_ = settings.output_limiter_mode();
     spectral_preview_ = settings.spectral();
     manual_start_preview_ = settings.self_play_on_request();
@@ -403,6 +422,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 }
 
 int Options::Value(OptionSetting setting) const {
+  if (setting >= OPTION_BRIGHTNESS && setting < OPTION_LAST) {
+    return profile_preview_[setting];
+  }
   switch (setting) {
     case OPTION_PITCH:
       return pitch_preview_;

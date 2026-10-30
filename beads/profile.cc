@@ -51,6 +51,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Version.
   { 2, kNoField, false, false, false, false },  // Attenuation.
   { 2, kNoField, false, false, false, false },  // Delay cue.
+  { 3, 10, true, false, false, false },  // Brightness.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

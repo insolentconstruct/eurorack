@@ -68,6 +68,23 @@ class Leds {
   void Write();
   void Clear();
 
+  void Scale(uint8_t level) {
+    if (!level) {
+      return;
+    }
+    const uint8_t percent = level == 1 ? 66 : 33;
+    for (int i = 0; i < LED_LAST; ++i) {
+      intensity_[i] = uint16_t(intensity_[i]) * percent / 100;
+    }
+    // The RGB package's white is brighter than the discrete white LEDs.
+    if (intensity_[LED_MEDIA_R] && intensity_[LED_MEDIA_G] &&
+        intensity_[LED_MEDIA_B]) {
+      intensity_[LED_MEDIA_R] >>= 1;
+      intensity_[LED_MEDIA_G] >>= 1;
+      intensity_[LED_MEDIA_B] >>= 1;
+    }
+  }
+
   inline void set(Led led, uint8_t intensity) {
     intensity_[led] = intensity;
   }

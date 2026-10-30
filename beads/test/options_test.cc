@@ -2079,6 +2079,9 @@ void TestOptionsPalette() {
     const OptionValue& v = kOptionValues[i];
     r.ui.options_.selected_ = v.setting;
     switch (v.setting) {
+      case OPTION_BRIGHTNESS:
+        r.ui.options_.profile_preview_[v.setting] = v.value;
+        break;
       case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value);
         break;
       case OPTION_REVERB: r.ui.options_.clouds_preview_ = v.value; break;
@@ -2115,9 +2118,14 @@ void TestOptionsPalette() {
           (v.pulses == 1 && now % 1024 < 512) ||
           (v.pulses == 2 && now % 256 < 128) ||
           (v.pulses == 3 && (phase < 128 || (phase >= 256 && phase < 384)));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (lit ? v.color.r : 0));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (lit ? v.color.g : 0));
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == (lit ? v.color.b : 0));
+      const uint8_t level = r.ui.options_.Value(OPTION_BRIGHTNESS);
+      const int percent = level == 0 ? 100 : level == 1 ? 66 : 33;
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
+          (lit ? v.color.r * percent / 100 : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
+          (lit ? v.color.g * percent / 100 : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
+          (lit ? v.color.b * percent / 100 : 0));
     }
   }
 }
@@ -2329,7 +2337,10 @@ void TestProfilePages() {
   invalid.ui.LoadOptions();
   invalid.ui.ShowStorageStatus();
   CHECK(invalid.ui.mode_ == Ui::MODE_NORMAL);
-  for (int id = FEATURE_PITCH; id <= FEATURE_INTERVALS; ++id) {
+  for (int id = FEATURE_PITCH; id < FEATURE_LAST; ++id) {
+    if (!kFeatureDefinitions[id].page) {
+      continue;
+    }
     for (int slot = 1; slot <= 12; ++slot) {
       Rig r;
       CustomProfile(b, id, slot, 0, 0);
@@ -2441,6 +2452,45 @@ void SetFixed(Rig* r, ProfileFeature feature, uint8_t value) {
   ApplyCustomProfile(r, b);
 }
 
+void TestDefaultLedIdentity() {
+  test_checker.Start("TestDefaultLedIdentity");
+  Rig r;
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 0);
+  // Release 86014e3: factory-test frames are the unmodified triangle on
+  // every LED; storage warnings are unmodified 0/255 on every LED.
+  for (int tick = 0; tick < 2048; ++tick) {
+    stmlib::system_clock.Tick();
+    const uint32_t now = stmlib::system_clock.milliseconds();
+    int triangle = (now & 2047) >> 2;
+    triangle = triangle >= 256 ? 511 - triangle : triangle;
+    r.ui.mode_ = Ui::MODE_FACTORY_TEST;
+    r.ui.UpdateLeds();
+    for (int i = 0; i < LED_LAST; ++i) {
+      CHECK(r.ui.leds_.intensity_[i] == triangle);
+    }
+    r.ui.mode_ = Ui::MODE_STORAGE_WARNING;
+    r.ui.UpdateLeds();
+    for (int i = 0; i < LED_LAST; ++i) {
+      CHECK(r.ui.leds_.intensity_[i] == ((now & 64) ? 255 : 0));
+    }
+  }
+  // Release writes the frame verbatim. Exercise every value in every LED,
+  // including RGB white and mixed colours, through the default level.
+  for (int value = 0; value < 256; ++value) {
+    for (int mixed = 0; mixed < 2; ++mixed) {
+      uint8_t release[LED_LAST];
+      for (int i = 0; i < LED_LAST; ++i) {
+        release[i] = mixed ? uint8_t(value + i * 37) : value;
+        r.ui.leds_.intensity_[i] = release[i];
+      }
+      r.ui.leds_.Scale(r.settings.FeatureValue(FEATURE_BRIGHTNESS));
+      for (int i = 0; i < LED_LAST; ++i) {
+        CHECK(r.ui.leds_.intensity_[i] == release[i]);
+      }
+    }
+  }
+}
+
 void TestBetaOptionsLeds() {
   test_checker.Start("TestBetaOptionsLeds");
   Rig version;
@@ -2470,6 +2520,26 @@ void TestBetaOptionsLeds() {
     CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] != 0);
   }
 
+  const int percentages[] = { 100, 66, 33 };
+  for (int level = 0; level < 3; ++level) {
+    Rig full;
+    SetFixed(&full, FEATURE_BRIGHTNESS, level);
+    full.settings.mutable_state()->media = 3;
+    full.ui.set_freeze_led_state(true);
+    full.Tick(1);
+    CHECK(full.ui.leds_.intensity_[LED_FREEZE] == 255 * percentages[level] / 100);
+    // Bright digital quality is white; balance it only below 100%.
+    for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
+      CHECK(full.ui.leds_.intensity_[i] == ((i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100) / (level ? 2 : 1));
+    }
+    full.ui.mode_ = Ui::MODE_STORAGE_WARNING;
+    while (!(stmlib::system_clock.milliseconds() & 64)) {
+      stmlib::system_clock.Tick();
+    }
+    full.ui.UpdateLeds();
+    CHECK(full.ui.leds_.intensity_[LED_FREEZE] == 255 * percentages[level] / 100);
+    CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] == (255 * percentages[level] / 100) / (level ? 2 : 1));
+  }
   Rig gain;
   gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
   gain.Down(SWITCH_MEDIA);
@@ -2483,6 +2553,22 @@ void TestBetaOptionsLeds() {
         gain.ui.leds_.intensity_[LED_MEDIA_G] == 255) == (i == 1 || i == 2));
   }
 
+  Rig preview;
+  uint8_t b[kProfileSize];
+  CustomProfile(b, FEATURE_BRIGHTNESS, 2, 0, 0);
+  ApplyCustomProfile(&preview, b);
+  preview.Enter();
+  const int preview_values[] = { 2, 1, 0 };
+  for (int i = 0; i < 3; ++i) {
+    const int level = preview_values[i];
+    preview.pot = (float(level) + 0.5f) / 3.0f;
+    preview.Tick(40);
+    CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) == (i ? preview_values[i - 1] : 0));
+    CHECK(preview.ui.options_.Value(OPTION_BRIGHTNESS) == level);
+    CHECK(preview.ui.leds_.intensity_[LED_ASSIGN_1] == 255 * percentages[level] / 100);
+    preview.Tick(1002);
+    CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) == level);
+  }
 
 }
 
@@ -2550,6 +2636,7 @@ int main() {
   TestStorage();
   TestDsp();
   TestProfilePages();
+  TestDefaultLedIdentity();
   TestBetaOptionsLeds();
   TestProfileActions();
   TestProfileAmounts();

@@ -487,6 +487,10 @@ void Ui::UpdateLeds() {
       leds_.set(LED_VU_METER, gain_control_->vu_meter());
     }
   }
+  const uint8_t level = options_.active()
+      ? options_.Value(OPTION_BRIGHTNESS)
+      : settings_->FeatureValue(FEATURE_BRIGHTNESS);
+  leds_.Scale(level);
   leds_.Write();
 }
 
@@ -721,7 +725,17 @@ void Ui::set_delay_active(bool active) {
 
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
-    if (options_.limiter_preview() != settings_->output_limiter_mode() ||
+    bool profile_changed = false;
+    for (int i = FEATURE_VERSION; i < FEATURE_LAST; ++i) {
+      const ProfileFeature f = ProfileFeature(i);
+      if (settings_->profile().adjustable(f) &&
+          options_.Value(OptionSetting(i)) != settings_->FeatureValue(f)) {
+        settings_->SetFeatureValue(f, options_.Value(OptionSetting(i)));
+        profile_changed = true;
+      }
+    }
+    if (profile_changed ||
+        options_.limiter_preview() != settings_->output_limiter_mode() ||
         options_.spectral_preview() != settings_->spectral() ||
         options_.manual_start_preview() !=
             settings_->self_play_on_request() ||
