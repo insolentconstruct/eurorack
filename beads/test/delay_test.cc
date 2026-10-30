@@ -185,9 +185,8 @@ void TestDelayIntervals() {
   for (size_t i = 0; i < sizeof(line_data); ++i) {
     line_data[i] = uint8_t(i * 17 + (i >> 8));
   }
-  // Two SEED edges under 16 samples apart, or the first edge after Init, made
-  // a zero-length slice at the 1/16 ratio: an integer division by zero.
-  // These slices last one sample and play silently.
+  // SEED edges under 16 samples apart, or the first after Init, made 1/16
+  // slices of zero length; they now last one silent sample.
   const int short_periods[] = { 2, 4, 8, 15 };
   for (size_t i = 0;
        i < sizeof(short_periods) / sizeof(short_periods[0]); ++i) {
@@ -465,7 +464,7 @@ void CheckHermiteRaw(uint32_t* seed) {
       mismatches += !(fabsf(a.l - b.l) < 1.0e-6f && fabsf(a.r - b.r) < 1.0e-6f);
 #else
       mismatches += !(a.l == b.l && a.r == b.r);
-#endif
+#endif  // __FP_FAST_FMAF
     }
   }
   CHECK(mismatches == 0);

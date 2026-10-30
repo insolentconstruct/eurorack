@@ -65,7 +65,7 @@ struct Rig {
     mix.dry_wet = 1.0f;
   }
 
-  void Block(std::vector<float>* capture = NULL) {
+  void Block(std::vector<float>* capture) {
     const int size = int(processor.sample_rate()) / 4000;
     FloatFrame in[12];
     FloatFrame out[12];
@@ -88,7 +88,7 @@ struct Rig {
 
   void Run(int blocks) {
     while (blocks--) {
-      Block();
+      Block(NULL);
     }
   }
 };
@@ -133,7 +133,7 @@ void TestDelayModeFade() {
       // Each checkpoint is reachable by holding SIZE in the chosen direction.
       const float before = checkpoints[direction ? 7 - point : point];
       r.processor.delay_mode_transition_ = before;
-      r.Block();
+      r.Block(NULL);
       const float t = r.processor.delay_mode_transition_;
       const float next = before + (direction ? -0.00025f : 0.00025f);
       CHECK(fabsf(t - std::max(-1.5f, std::min(1.5f, next))) < 0.000001f);

@@ -32,7 +32,7 @@
 #include <cstring>
 #if defined(__SSE__)
 #include <xmmintrin.h>
-#endif
+#endif  // defined(__SSE__)
 
 #define private public
 #include "beads/dsp/processor.h"
@@ -51,7 +51,7 @@ static FloatFrame input[12];
 static FloatFrame output[12];
 static bool freeze[12];
 
-void Init(bool mono = false) {
+void Init(bool mono) {
   memset(static_cast<void*>(&processor), 0, sizeof(processor));
   uint8_t* buffers[3] = { banks[0], banks[1], banks[2] };
   processor.Init(buffers, reverb_buffer);
@@ -93,7 +93,7 @@ void TestFeedbackRecording() {
   test_checker.Start("TestFeedbackRecording");
   float recorded[2];
   for (int pass = 0; pass < 2; ++pass) {
-    Init();
+    Init(false);
     FillRecording(false);
     mix.dry_wet = 1.0f;
     for (int i = 0; i < 400; ++i) {
@@ -122,7 +122,7 @@ void TestDryWetEndpoints() {
   test_checker.Start("TestDryWetEndpoints");
   FloatFrame result[3][1200];
   for (int pass = 0; pass < 3; ++pass) {
-    Init();
+    Init(false);
     FillRecording(false);
     mix.dry_wet = float(pass) * 0.5f;
     parameters.size.base = 0.8f;
@@ -185,7 +185,7 @@ void TestMonoRecordingStereoOutput() {
 
 // One input impulse reaches reverb through either crossfade endpoint.
 double ReverbTail(bool wet, float amount) {
-  Init();
+  Init(false);
   mix.dry_wet = wet ? 1.0f : 0.0f;
   mix.reverb_amount = amount;
   density.base = 0.5f;
@@ -229,7 +229,7 @@ void TestReverbAfterDryWet() {
 
 void TestReverbSendOff() {
   test_checker.Start("TestReverbSendOff");
-  Init();
+  Init(false);
   mix.reverb_amount = 0.9f;
   for (int block = 0; block < 1200; ++block) {
     input[0].l = block < 400 ? 0.2f : 0.0f;
@@ -254,7 +254,7 @@ void TestReverbSendOff() {
   CHECK(early > 0.00001);
   CHECK(late < early * 0.01);
   CHECK(processor.reverb_.send_ == 0.0f);
-  Init();
+  Init(false);
   for (int block = 0; block < 400; ++block) {
     input[0].l = 0.2f;
     Process();
@@ -289,15 +289,15 @@ float FeedbackTransfer(T* granular, float previous) {
 
 void TestFeedbackQualityCurves() {
   test_checker.Start("TestFeedbackQualityCurves");
-  Init();
+  Init(false);
   const float digital = FeedbackTransfer(&processor.processor_digital_, 0.5f);
-  Init();
+  Init(false);
   const float vintage = FeedbackTransfer(
       &processor.processor_vintage_digital_, 0.5f);
-  Init();
+  Init(false);
   const float clean = FeedbackTransfer(
       &processor.processor_clean_tape_, 0.5f);
-  Init();
+  Init(false);
   const float dirty = FeedbackTransfer(
       &processor.processor_dirty_tape_, 0.5f);
   CHECK(digital == 32767.0f / 32768.0f);
@@ -305,13 +305,13 @@ void TestFeedbackQualityCurves() {
   CHECK(fabsf(vintage - 13.0f / 14.0f) < 1.0f / 2048.0f);
   CHECK(clean == vintage);
   CHECK(fabsf(dirty - 13.0f / 14.0f) < 0.02f);
-  Init();
+  Init(false);
   const float digital_low = FeedbackTransfer(
       &processor.processor_digital_, 0.1f);
-  Init();
+  Init(false);
   const float vintage_low = FeedbackTransfer(
       &processor.processor_vintage_digital_, 0.1f);
-  Init();
+  Init(false);
   const float dirty_low = FeedbackTransfer(
       &processor.processor_dirty_tape_, 0.1f);
   CHECK(fabsf(digital_low - 0.3f) < 0.00004f);
@@ -322,7 +322,7 @@ void TestFeedbackQualityCurves() {
 static float echoes[2][12000];
 
 int EchoOnset(float time, float feedback, float* samples) {
-  Init();
+  Init(false);
   parameters.size.base = 1.0f;
   parameters.time.base = time;
   parameters.shape.base = 1.0f;
@@ -381,7 +381,7 @@ int main() {
   __asm__ volatile("mrs %0, fpcr" : "=r" (fpcr));
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
-#endif
+#endif  // defined(__SSE__)
   TestFeedbackRecording();
   TestDryWetEndpoints();
   TestMonoRecordingStereoOutput();

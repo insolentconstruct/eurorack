@@ -154,10 +154,10 @@ struct Rig {
     PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 0;
     PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 0;
     PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
-    Reboot();
+    Reboot(false);
   }
 
-  void Reboot(bool seed = false) {
+  void Reboot(bool seed) {
     ready = false;
     PowerOnObject(&background_buffer_backup);
     PowerOnObject(&calibrator);
@@ -209,7 +209,7 @@ struct Rig {
     }
   }
 
-  void Tick(int milliseconds, bool main_loop = true) {
+  void Tick(int milliseconds, bool main_loop) {
     while (milliseconds--) {
       // The first main step starts the codec; thereafter four callbacks/ms.
       if (main_loop) {
@@ -237,9 +237,9 @@ struct Rig {
     Settle();
   }
 
-  void HoldMedia(bool consume = true) {
+  void HoldMedia(bool consume) {
     test_down[SWITCH_MEDIA] = true;
-    Tick(10);
+    Tick(10, true);
     // The input and pots stay fixed during the hold; only the UI clock matters.
     Advance(1497);
     test_down[SWITCH_MEDIA] = false;
@@ -253,7 +253,7 @@ struct Rig {
 
   // Eight 32 ms probe windows plus 250 ms of codec blanking.
   void Settle() {
-    Tick(600);
+    Tick(600, true);
     CHECK(codec.idle_stops_ == 0);
   }
 };
@@ -274,7 +274,7 @@ void TestAutomaticSelfPlay() {
   PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
   // Detection settles within a few hundred milliseconds.
   for (int i = 0; i < 2000 && !normalization_detector.no_input(); ++i) {
-    r.Tick(1);
+    r.Tick(1, true);
   }
   if (!CHECK(normalization_detector.no_input())) {
     return;
@@ -296,11 +296,11 @@ void TestAutomaticSelfPlay() {
   r.Advance(5000);
   CHECK(synth_mode_start_time != 0);
   test_freeze_input = true;
-  r.Tick(1);
+  r.Tick(1, true);
   RunMainLoop();
   CHECK(synth_mode_start_time == 0);
   test_freeze_input = false;
-  r.Tick(2);
+  r.Tick(2, true);
   r.Advance(9900);
   RunMainLoop();
   CHECK(!synth_mode);
@@ -323,10 +323,10 @@ void TestAutomaticSelfPlay() {
   PotsAdc::values_[POTS_ADC_CHANNEL_SHAPE] = 0;
   for (int i = 0; i < 3000; ++i) {
     tail.audio = i & 1 ? 0x20000000 : -0x20000000;
-    tail.Tick(1);
+    tail.Tick(1, true);
   }
   tail.left = tail.right = false;
-  tail.Tick(100);
+  tail.Tick(100, true);
   CHECK(normalization_detector.no_input());
   bool heard = false;
   for (int i = 0; i < 1200; ++i) {
@@ -367,7 +367,7 @@ void TestRequestedSelfPlay() {
   r.audio = 0x10000000;
   r.Settle();
   settings.mutable_state()->gain = 20;
-  r.HoldMedia();
+  r.HoldMedia(true);
   CHECK(!synth_mode);
   CHECK(settings.state().gain == 0);
   CHECK(gain_control.time_ == gain_control.ignore_time_);
@@ -426,18 +426,18 @@ void TestFrozenQualityLock() {
   r.Settle();
   CHECK(processor.media() == Processor::MEDIA_DIGITAL);
   test_freeze_input = true;
-  r.Tick(1);
+  r.Tick(1, true);
   test_down[SWITCH_MEDIA] = true;
-  r.Tick(10);
+  r.Tick(10, true);
   test_down[SWITCH_MEDIA] = false;
-  r.Tick(10);
+  r.Tick(10, true);
   CHECK(settings.state().media == Processor::MEDIA_VINTAGE_DIGITAL);
   r.right = false;
   r.Settle();
   CHECK(!processor.mono());
   CHECK(processor.media() == Processor::MEDIA_DIGITAL);
   test_freeze_input = false;
-  r.Tick(2);
+  r.Tick(2, true);
   r.Settle();
   CHECK(processor.mono());
   CHECK(processor.media() == Processor::MEDIA_VINTAGE_DIGITAL);
@@ -450,9 +450,9 @@ void TestOverwriteIndicator() {
   Rig r(false, false);
   r.Settle();
   test_freeze_input = true;
-  r.Tick(1);
+  r.Tick(1, true);
   test_freeze_input = false;
-  r.Tick(1);
+  r.Tick(1, true);
   // Observe the reserve before each callback (the callback feeds UI first).
   float minimum = 1.0f;
   bool passed = false;
@@ -472,9 +472,9 @@ void TestOverwriteIndicator() {
   r.left = r.right = false;
   r.Settle();
   test_freeze_input = true;
-  r.Tick(1);
+  r.Tick(1, true);
   test_freeze_input = false;
-  r.Tick(1);
+  r.Tick(1, true);
   for (int i = 0; i < 15800; ++i) {
     r.Block();
   }
@@ -482,7 +482,7 @@ void TestOverwriteIndicator() {
   CHECK(processor.overwrite_reserve() < 0.5f);
   RunMainLoop();
   CHECK(synth_mode);
-  r.Tick(260);
+  r.Tick(260, true);
   r.Block();
   CHECK(processor.overwrite_reserve() < 0.5f);
   CHECK(ui.overwrite_reserve_ == 1.0f);
@@ -538,13 +538,13 @@ void TestStartupBranches() {
   CHECK(!factory_test.running());
   // A new module's blank storage starts the factory test.
   memset(reinterpret_cast<void*>(0x08100000), 255, 0x100000);
-  r.Reboot();
+  r.Reboot(false);
   CHECK(factory_test.running());
   CHECK(ui.mode_ == Ui::MODE_FACTORY_TEST);
   CHECK(codec.callback_ == &FactoryTest::ProcessFn);
-  r.Tick(20);
+  r.Tick(20, true);
   uint32_t writes = test_writes;
-  r.Reboot();
+  r.Reboot(false);
   CHECK(!factory_test.running());
   CHECK(ui.mode_ == Ui::MODE_NORMAL);
   CHECK(test_writes == writes);
@@ -553,7 +553,7 @@ void TestStartupBranches() {
   reinterpret_cast<uint8_t*>(0x081e0000)[6] ^= 1;
   reinterpret_cast<uint8_t*>(0x081c0000)[6] ^= 1;  // And its mirror.
   writes = test_writes;
-  r.Reboot();
+  r.Reboot(false);
   CHECK(!factory_test.running());
   CHECK(settings.write_locked());
   CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
@@ -591,7 +591,7 @@ void TestStorageWarning() {
   memcpy(sector, reinterpret_cast<void*>(0x081e0000), sizeof(sector));
   const uint32_t writes = test_writes;
   for (int boot = 0; boot < 2; ++boot) {
-    r.Reboot();
+    r.Reboot(false);
     CHECK(settings.write_locked());
     CHECK(!factory_test.running());
     CHECK(settings.persistent_data().adc_calibration[0].offset != 0.987f);
@@ -604,27 +604,27 @@ void TestStorageWarning() {
     bool lit = false;
     bool dark = false;
     for (int i = 0; i < 2990; ++i) {
-      r.Tick(1);
+      r.Tick(1, true);
       lit = lit || AllLeds(255);
       dark = dark || AllLeds(0);
     }
     CHECK(lit && dark);
     CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
-    r.Tick(20);
+    r.Tick(20, true);
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
-    r.Tick(2000);
+    r.Tick(2000, true);
     test_down[SWITCH_ASSIGN] = false;
     test_down[SWITCH_MEDIA] = false;
-    r.Tick(100);
+    r.Tick(100, true);
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
     CHECK(!ui.options_.active());
     CHECK(settings.state().assignable_cv_destination == 0);
     CHECK(settings.state().media == 3);
     // Then normal play; changes apply in RAM and nothing is written.
     test_down[SWITCH_MEDIA] = true;
-    r.Tick(50);
+    r.Tick(50, true);
     test_down[SWITCH_MEDIA] = false;
-    r.Tick(50);
+    r.Tick(50, true);
     CHECK(settings.state().media == 2);
     CHECK(test_writes == writes);
     TestFlashExpose(true);
@@ -643,7 +643,7 @@ void TestStorageRepair() {
     settings.SavePersistentData();
     TestFlashDamage(0x081e0000 + 32);
     TestFlashDamage(0x08100000 + 0x30000);
-    r.Reboot();
+    r.Reboot(false);
     CHECK(!settings.write_locked());
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
     CHECK(settings.persistent_data().adc_calibration[0].offset == 0.987f);
@@ -660,18 +660,18 @@ void TestStorageRepair() {
     CHECK(!settings.write_locked());
     CHECK(TestFlash().num_damaged == 0);
     CHECK(ui.mode_ == Ui::MODE_REPAIR_CALIBRATION_RESET);
-    r.Tick(100);
+    r.Tick(100, true);
     CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 255);
     CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 0);
     CHECK(ui.leds_.intensity_[LED_ASSIGN_1] == 255);
     CHECK(ui.leds_.intensity_[LED_ASSIGN_2] == 255);
     CHECK(ui.leds_.intensity_[LED_ASSIGN_3] == 255);
-    r.Tick(500);
+    r.Tick(500, true);
     CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 0);
-    r.Tick(2420);
+    r.Tick(2420, true);
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
     test_down[SWITCH_SEED] = false;
-    r.Reboot();
+    r.Reboot(false);
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
     CHECK(!settings.write_locked());
   }
@@ -688,17 +688,17 @@ void TestStorageRepair() {
     CHECK(settings.write_locked());
     CHECK(TestFlash().num_damaged == 3);
     CHECK(ui.mode_ == Ui::MODE_REPAIR_FAILED);
-    r.Tick(50);
+    r.Tick(50, true);
     CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 255);
     CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 0);
     CHECK(ui.leds_.intensity_[LED_ASSIGN_2] == 255);
-    r.Tick(100);
+    r.Tick(100, true);
     CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 0);
     CHECK(ui.leds_.intensity_[LED_ASSIGN_2] == 0);
-    r.Tick(2900);
+    r.Tick(2900, true);
     CHECK(ui.mode_ == Ui::MODE_NORMAL);
     test_down[SWITCH_SEED] = false;
-    r.Reboot();
+    r.Reboot(false);
     CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
     // The lock holds for the frozen buffer's erase too.
     background_buffer_backup.EraseDamagedSectors();
@@ -877,7 +877,7 @@ void TestPitchChain() {
     const float base = mode ? synth.wavetable_voice_.frequency_ :
         NextGrainSpeed(&r);
     r.cv[CV_ADC_CHANNEL_PITCH] = 26214;  // 1 V: 1/10 ADC range.
-    r.Tick(30);
+    r.Tick(30, true);
     const float octave = mode ? synth.wavetable_voice_.frequency_ :
         NextGrainSpeed(&r);
     // ADC, grain speed quantization and the pot endpoint give <0.01 st error.
@@ -925,12 +925,12 @@ void TestQuantizedPitchChain() {
   r.Settle();
   CHECK(ui.pitch_scale() == PITCH_SCALE_FIFTHS);
   r.cv[CV_ADC_CHANNEL_PITCH] = 30365;  // About 0.367 V, or 4.4 st.
-  r.Tick(30);
+  r.Tick(30, true);
   const float speed = NextGrainSpeed(&r);
   const float expected = stmlib::SemitonesToRatio(7.0f);
   CHECK(fabsf(speed - expected) < 2.0f / 1024.0f);
   settings.SaveState();
-  r.Reboot();
+  r.Reboot(false);
   CHECK(settings.pitch_scale() == PITCH_SCALE_FIFTHS);
   CHECK(ui.pitch_scale() == PITCH_SCALE_FIFTHS);
 }
@@ -976,20 +976,20 @@ void TestSelfPlayFrozenBackup() {
   header->mono = false;
   settings.mutable_state()->frozen = true;
   settings.SaveState();
-  r.Reboot();
+  r.Reboot(false);
   CHECK(!synth_mode && ui.freeze_button_state());
   CHECK(*processor.mutable_delay_write_ptr() == 1234);
   r.Settle();
-  r.HoldMedia();
+  r.HoldMedia(true);
   CHECK(!synth_mode);  // FREEZE prevents starting and leaves backup intact.
   CHECK(settings.state().frozen);
   test_down[SWITCH_FREEZE] = true;
-  r.Tick(10);
+  r.Tick(10, true);
   test_down[SWITCH_FREEZE] = false;
-  r.Tick(10);
+  r.Tick(10, true);
   CHECK(!ui.freeze_button_state());
   CHECK(!settings.state().frozen);
-  r.HoldMedia();
+  r.HoldMedia(true);
   CHECK(synth_mode);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   r.Settle();
@@ -999,8 +999,8 @@ void TestSelfPlayFrozenBackup() {
   r.Advance(10100);
   CHECK(test_writes == writes);  // The main loop skips backup in self-play.
   test_freeze_input = false;
-  r.Tick(2);
-  r.HoldMedia();
+  r.Tick(2, true);
+  r.HoldMedia(true);
   CHECK(!synth_mode);
   r.Settle();
   CHECK(!settings.state().frozen);
@@ -1024,7 +1024,7 @@ void TestFailedBufferLoad() {
   settings.mutable_state()->frozen = true;
   settings.SaveState();
   TestFlashDamage(0x08100000 + 32 * 1000);
-  r.Reboot();
+  r.Reboot(false);
   CHECK(!ui.freeze_button_state());
   r.Settle();
   CHECK(!synth_mode);
@@ -1104,7 +1104,7 @@ void TestSynthPitchScaleChain() {
     settings.SaveState();
     for (int boot = 0; boot < 2; ++boot) {
       if (boot) {
-        r.Reboot();  // The saved scale alone must bring it back.
+        r.Reboot(false);  // The saved scale alone must bring it back.
       }
       CHECK(settings.pitch_scale() == scale);
       // Full randomness with no CV: the spread is wide, the grains on scale.
@@ -1208,7 +1208,7 @@ void TestCloudsSwitch() {
     }
     settings.set_clouds_style(true);
     settings.SaveState();
-    r.Reboot();
+    r.Reboot(false);
     CHECK(settings.clouds_style());
     r.Settle();
     CHECK(clouds_style);
@@ -1225,7 +1225,7 @@ void TestPlaitsSynthSelection() {
     Rig r(false, true);
     settings.set_plaits_synth(plaits);
     settings.SaveState();
-    r.Reboot();
+    r.Reboot(false);
     CHECK(ui.plaits_synth() == bool(plaits));
     r.Settle();
     CHECK(!synth_mode);
@@ -1361,7 +1361,7 @@ void TestSpectralEngine() {
   RunMainLoop();
   CHECK(!synth_mode);
   settings.set_self_play_on_request(true);
-  r.HoldMedia();
+  r.HoldMedia(true);
   CHECK(!synth_mode && !ui.self_play_requested());
   r.left = r.right = true;
   PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
@@ -1389,7 +1389,7 @@ void TestSpectralEngine() {
   // Starting in spectral leaves the saved buffer in flash.
   settings.set_spectral(true);
   settings.SaveState();
-  r.Reboot();
+  r.Reboot(false);
   CHECK(processor.spectral() && !ui.freeze_button_state());
   CHECK(settings.state().frozen && header->tag == 0x5a5a5246);
   RunSquare(&r, 4000);
@@ -1487,7 +1487,7 @@ void TestSynthStopClearsReverb() {
   PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
   r.StartAutomatic();
   CHECK(synth_mode);
-  r.Tick(500);
+  r.Tick(500, true);
   bool used = false;
   for (int i = 0; i < 32768 && !used; ++i) {
     used = reverb_buffer[i] != 0;
@@ -1495,7 +1495,7 @@ void TestSynthStopClearsReverb() {
   CHECK(used);
   r.left = true;
   for (int i = 0; i < 2000 && synth_mode; ++i) {
-    r.Tick(1);
+    r.Tick(1, true);
   }
   CHECK(!synth_mode && codec_transition_frames > 0);
   bool clear = true;

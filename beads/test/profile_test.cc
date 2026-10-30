@@ -73,7 +73,9 @@ void TestProfileParser() {
     CHECK(p.Action(2) == FEATURE_TRIM);
   }
   const int header_offsets[] = { 0, 4, 5, 6, 7, 8, 12, 13, 14, 15 };
-  for (size_t i = 0; i < sizeof(header_offsets) / sizeof(header_offsets[0]); ++i) {
+  for (size_t i = 0;
+       i < sizeof(header_offsets) / sizeof(header_offsets[0]);
+       ++i) {
     Template(b);
     b[header_offsets[i]] ^= 1;
     if (header_offsets[i] != 5 && header_offsets[i] != 6 &&
@@ -181,7 +183,8 @@ void TestProfileKinds() {
         b[19 + kind] = slot;
         Checksum(b);
         Profile p;
-        CHECK(p.Init(b) == (kind == 0 ? d.page : kind == 1 ? d.amount : d.action));
+        CHECK(p.Init(b) ==
+              (kind == 0 ? d.page : kind == 1 ? d.amount : d.action));
       }
     }
   }

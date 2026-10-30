@@ -33,6 +33,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <stdint.h>
+
 #include "stm_audio_bootloader/qpsk/demodulator.h"
 #include "stm_audio_bootloader/qpsk/packet_decoder.h"
 

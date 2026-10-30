@@ -77,7 +77,8 @@ struct TaggedLine {
   template<int method>
   FloatFrame Read(int delay, float fraction) const {
     age = float(delay) + fraction;
-    FloatFrame result = { age / MAX_DELAY, age / MAX_DELAY };
+    FloatFrame result;
+    result.l = result.r = age / MAX_DELAY;
     return result;
   }
 };
@@ -483,15 +484,23 @@ void InitProcessor() {
 }
 
 FloatFrame ProcessSample(
-    bool trigger, float density_base = 0.48f, bool external = true) {
+    bool trigger, float density_base, bool external) {
   const bool freeze = true;
   const stmlib::GateFlags gate = trigger
       ? static_cast<stmlib::GateFlags>(
           stmlib::GATE_FLAG_RISING | stmlib::GATE_FLAG_HIGH)
       : stmlib::GATE_FLAG_LOW;
-  ModulatedParameter density = { density_base, 0.0f };
-  Processor::MixParameters mix = { 0.0f, 1.0f, 0.0f, false };
-  FloatFrame input = { 0.0f, 0.0f };
+  ModulatedParameter density;
+  density.base = density_base;
+  density.cv = 0.0f;
+  Processor::MixParameters mix;
+  mix.feedback = 0.0f;
+  mix.dry_wet = 1.0f;
+  mix.reverb_amount = 0.0f;
+  mix.output_gate = false;
+  FloatFrame input;
+  input.l = 0.0f;
+  input.r = 0.0f;
   FloatFrame output;
   processor.Process(
       external ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_ON,
@@ -530,16 +539,16 @@ void TestMonophonicGrains() {
       InitProcessor();
       // Fill the priority list before switching modes.
       for (int i = 0; i < 32; ++i) {
-        ProcessSample(true);
-        ProcessSample(false);
+        ProcessSample(true, 0.48f, true);
+        ProcessSample(false, 0.48f, true);
       }
       for (int i = 0; i < interval; ++i) {
-        ProcessSample(false);
+        ProcessSample(false, 0.48f, true);
       }
       DelayGrain* candidate = Player().grain_priority_list_[1];
       const int elapsed = Player().grain_interval_;
       parameters.monophonic_mode = mono;
-      ProcessSample(true);
+      ProcessSample(true, 0.48f, true);
       if (mono) {
         CHECK(candidate->remaining_samples() <= std::min(elapsed, 240));
         for (int j = 0; j < 31; ++j) {
@@ -547,7 +556,7 @@ void TestMonophonicGrains() {
         }
       }
       for (int i = 0; i < 241; ++i) {
-        ProcessSample(false);
+        ProcessSample(false, 0.48f, true);
       }
       int active = 0;
       for (int j = 0; j < 32; ++j) {
@@ -562,7 +571,7 @@ void TestMonophonicGrains() {
     parameters.shape.base = float(shape) / 3.0f;
     float peak = 0.0f;
     for (int i = 0; i < 9600; ++i) {
-      FloatFrame output = ProcessSample(i % 2400 == 0);
+      FloatFrame output = ProcessSample(i % 2400 == 0, 0.48f, true);
       peak = std::max(peak, fabsf(output.l));
     }
     CHECK(peak > 0.01f);
@@ -572,7 +581,7 @@ void TestMonophonicGrains() {
 void TestProcessorGrainLatch() {
   test_checker.Start("TestProcessorGrainLatch");
   InitProcessor();
-  ProcessSample(true);
+  ProcessSample(true, 0.48f, true);
   DelayGrain& grain = Player().grain_[0];
   const int speed = grain.speed_;
   const int initial_delay = grain.initial_delay_;
@@ -588,14 +597,14 @@ void TestProcessorGrainLatch() {
     parameters.time.cv = 0.3f;
     parameters.time.has_cv = true;
     parameters.time.attenuverter = 1.0f;
-    ProcessSample(false);
+    ProcessSample(false, 0.48f, true);
     CHECK(grain.speed_ == speed);
     CHECK(grain.initial_delay_ == initial_delay);
     CHECK(grain.envelope_.phase_increment_[0] == attack);
     CHECK(grain.envelope_.phase_increment_[2] == release);
   }
   CHECK(grain.remaining_samples() == remaining - 100);
-  ProcessSample(true);
+  ProcessSample(true, 0.48f, true);
   DelayGrain& next = Player().grain_[1];
   CHECK(!next.done());
   CHECK(next.speed_ == -2 * speed);
@@ -608,11 +617,11 @@ void TestProcessorEnvelopeCompletion() {
   InitProcessor();
   parameters.size.base = 1.0f / 3.0f;
   parameters.shape.base = 2.0f / 3.0f;
-  ProcessSample(true);
+  ProcessSample(true, 0.48f, true);
   DelayGrain& first = Player().grain_[0];
   float peak = 0.0f;
   for (int i = 0; i < 1000; ++i) {
-    FloatFrame output = ProcessSample(false);
+    FloatFrame output = ProcessSample(false, 0.48f, true);
     peak = std::max(peak, output.l);
   }
   CHECK(peak > 0.01f);
@@ -620,10 +629,10 @@ void TestProcessorEnvelopeCompletion() {
   CHECK(first.done());
   CHECK(first.remaining_samples() == 0);
   for (int i = 0; i < 100; ++i) {
-    FloatFrame output = ProcessSample(false);
+    FloatFrame output = ProcessSample(false, 0.48f, true);
     CHECK(output.l == 0.0f && output.r == 0.0f);
   }
-  ProcessSample(true);
+  ProcessSample(true, 0.48f, true);
   CHECK(!Player().grain_[1].done());
   CHECK(first.done());
 }
@@ -632,27 +641,27 @@ void TestProcessorVoiceRelease() {
   test_checker.Start("TestProcessorVoiceRelease");
   InitProcessor();
   for (int i = 0; i < 20; ++i) {
-    ProcessSample(i == 0);
+    ProcessSample(i == 0, 0.48f, true);
   }
   DelayGrain& grain = Player().grain_[0];
   CHECK(grain.voice_stealing_envelope_.value_ == 1.0f);
   // A full rotation brings the sounding voice into the safety set.
   for (int i = 0; i < 28; ++i) {
-    ProcessSample(true);
-    ProcessSample(false);
+    ProcessSample(true, 0.48f, true);
+    ProcessSample(false, 0.48f, true);
   }
   CHECK(grain.voice_stealing_envelope_.decrement_ > 0.0f);
   float previous = grain.voice_stealing_envelope_.value_;
   CHECK(previous > 0.0f && previous < 1.0f);
   for (int i = 0; i < 10; ++i) {
-    FloatFrame output = ProcessSample(false);
+    FloatFrame output = ProcessSample(false, 0.48f, true);
     const float value = grain.voice_stealing_envelope_.value_;
     CHECK(value > 0.0f && value < previous);
     CHECK(output.l > 0.0f);
     previous = value;
   }
   for (int i = 0; i < 5000; ++i) {
-    ProcessSample(false);
+    ProcessSample(false, 0.48f, true);
   }
   CHECK(grain.done());
 }
@@ -664,7 +673,7 @@ void TestProcessorVoiceSaturation() {
   int max_safety = 0;
   int max_active = 0;
   for (int i = 0; i < 20000; ++i) {
-    ProcessSample(i % 240 == 0);
+    ProcessSample(i % 240 == 0, 0.48f, true);
     int musical = 0;
     int safety = 0;
     for (int j = 0; j < Player().NUM_GRAINS; ++j) {
@@ -703,12 +712,12 @@ void TestProcessorRandomPan() {
     float minimum = 10.0f;
     float maximum = -10.0f;
     for (int i = 0; i < 20; ++i) {
-      ProcessSample(true);
+      ProcessSample(true, 0.48f, true);
       DelayGrain& grain = Player().grain_[i];
       float balance = grain.gain_[0][0] - grain.gain_[1][1];
       minimum = std::min(minimum, balance);
       maximum = std::max(maximum, balance);
-      ProcessSample(false);
+      ProcessSample(false, 0.48f, true);
     }
     if (mode == 0) {
       CHECK(minimum == 0.0f && maximum == 0.0f);
@@ -755,7 +764,7 @@ void TestPitchCvImmediate() {
   parameters.pitch.has_cv = true;
   parameters.pitch.attenuverter = 1.0f;
   parameters.pitch.cv = reader.cv(CV_ADC_CHANNEL_PITCH);
-  ProcessSample(true);
+  ProcessSample(true, 0.48f, true);
   // The replay increment is quantized to 1/1024 sample.
   CHECK(abs(Player().grain_[0].speed_ - 2048) <= 1);
   reader.cv_.values_[CV_ADC_CHANNEL_PITCH] = 32768;

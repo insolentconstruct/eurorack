@@ -26,8 +26,8 @@
 //
 // Queue read interrupt injection for native tests.
 
-#ifndef BEADS_TEST_COMMON_STUBS_EVENT_QUEUE_H_
-#define BEADS_TEST_COMMON_STUBS_EVENT_QUEUE_H_
+#ifndef BEADS_TEST_COMMON_STUBS_STMLIB_UI_EVENT_QUEUE_H_
+#define BEADS_TEST_COMMON_STUBS_STMLIB_UI_EVENT_QUEUE_H_
 
 #define EventQueue FirmwareEventQueue
 #include_next "stmlib/ui/event_queue.h"
@@ -40,7 +40,7 @@ inline void DispatchInterrupt() {
     TestOptionsDispatchInterrupt();
   }
 }
-}
+}  // namespace beads
 
 namespace stmlib {
 template<uint16_t size = 32>
@@ -54,4 +54,4 @@ class EventQueue : public FirmwareEventQueue<size> {
 };
 }  // namespace stmlib
 
-#endif  // BEADS_TEST_COMMON_STUBS_EVENT_QUEUE_H_
+#endif  // BEADS_TEST_COMMON_STUBS_STMLIB_UI_EVENT_QUEUE_H_

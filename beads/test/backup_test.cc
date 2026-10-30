@@ -873,9 +873,8 @@ void TestLowSupplyBackup() {
 void TestSupplyDropBackup() {
   test_checker.Start("TestSupplyDropBackup");
   TestFlashPowerUp();
-  // The supply drops after an erase, an audio word, the header or the
-  // settings save that flags it: the save stops there and doesn't load
-  // unless it completed, and the next one completes.
+  // A supply drop at each step stops the save; only a complete save loads,
+  // and the next save completes.
   const int last = 6 + 24000 + 1 + int((8 + sizeof(State) + 31) / 32);
   const int drops[] = { 1, 5, 6, 7, 12000, 24005, 24006, 24007, last - 1,
       last };

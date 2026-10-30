@@ -27,6 +27,7 @@
 // Export the firmware options layout and quality LED [A] indications as TSV.
 
 #include <cstdio>
+
 #include "beads/options.h"
 #include "beads/profile.h"
 

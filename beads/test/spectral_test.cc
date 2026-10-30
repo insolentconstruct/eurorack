@@ -368,7 +368,7 @@ void TestSpectralRender() {
     CHECK(hash == again);
 #ifndef GOLDEN_CAPTURE
     CHECK(hash == kSpectralHashes[q]);
-#endif
+#endif  // GOLDEN_CAPTURE
   }
 }
 

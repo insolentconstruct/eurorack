@@ -30,13 +30,15 @@
 #define BEADS_TEST_FIRMWARE_SHIMS_H_
 
 #include <algorithm>
+
 #include "stmlib/system/system_clock.h"
+
 #include "beads/drivers/leds.h"
 
 #ifndef BEADS_TEST_CHANNEL_SHIMS_ONLY
 namespace stmlib {
 SystemClock system_clock;
-}
+}  // namespace stmlib
 
 namespace beads {
 bool Leds::Init() {
@@ -46,7 +48,7 @@ bool Leds::Init() {
 void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
 void Leds::Write() { }
 }  // namespace beads
-#endif
+#endif  // BEADS_TEST_CHANNEL_SHIMS_ONLY
 
 namespace beads {
 #ifdef BEADS_TEST_CV_SHIMS
@@ -54,7 +56,7 @@ CvChannel::CvChannel() { }
 CvChannel::~CvChannel() { }
 PotChannel::PotChannel() { }
 PotChannel::~PotChannel() { }
-#endif
+#endif  // BEADS_TEST_CV_SHIMS
 }  // namespace beads
 
 #endif  // BEADS_TEST_FIRMWARE_SHIMS_H_

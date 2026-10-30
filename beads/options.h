@@ -44,7 +44,7 @@ namespace beads {
 class Profile;
 class Settings;
 
-const int MIX_PARAMETER_LAST = 3;
+enum { MIX_PARAMETER_LAST = 3 };
 const int kNumOptionPages = 4;
 
 enum OptionSetting {
