@@ -40,6 +40,9 @@
 # Build directory
 build
 
+# Firmware build support is source, not generated output.
+!/beads/build/
+
 # BETA Layout variants
 *_beta.sch
 *_BETA.sch

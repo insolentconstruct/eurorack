@@ -168,6 +168,12 @@ class Processor {
       FloatFrame* out,
       size_t size);
   
+#ifdef DWT_CALIBRATION
+  void PrepareCalibration(unsigned block) {
+    processor_digital_.PrepareCalibration(block);
+  }
+#endif  // DWT_CALIBRATION
+
  private:
   GranularProcessor<
       RESOLUTION_16_BIT,

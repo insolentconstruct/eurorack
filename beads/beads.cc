@@ -26,6 +26,10 @@
 
 #include <algorithm>
 
+#ifdef DWT_CALIBRATION
+#include "beads/dwt_calibration.h"
+#endif  // DWT_CALIBRATION
+
 #include "beads/background_buffer_backup.h"
 #include "beads/calibrator.h"
 #include "beads/cv_reader.h"
@@ -113,6 +117,9 @@ void Process(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Callback calibration_callback;
+#endif  // DWT_CALIBRATION
 #ifdef PROFILE_INTERRUPT
   ScopedDebugPinToggler toggler;
 #endif  // PROFILE_INTERRUPT
@@ -248,6 +255,15 @@ void Process(
     processor.Trim();
     ui.ClearTrimFlag();
   }
+#ifdef DWT_CALIBRATION
+  if (dwt_calibration::stats.synthetic) {
+    dwt_calibration::PrepareSynthetic(
+        processor, delay_buffer_1, sizeof(delay_buffer_1),
+        delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
+        synth_mode, p, d, m, seed_button_state,
+        seed_input, seed, freeze, float_in, size, calibration_callback);
+  }
+#endif  // DWT_CALIBRATION
   // Fade out while main waits to restart the codec.
   codec_fade_previous_gain = codec_fade_gain;
   if (codec_fade) {
@@ -263,6 +279,9 @@ void Process(
     codec_fade_gain = min(1.0f, codec_fade_gain + kCodecFadeStep);
   }
   if (synth_mode) {
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
     synth.Render(
         seed_button_state,
         seed_input,
@@ -270,7 +289,13 @@ void Process(
         Synth::Resolution(settings.state().media),
         d, p, m,
         float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(1, dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
   } else {
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
     processor.Process(
         seed_button_state,
         seed_input,
@@ -278,6 +303,9 @@ void Process(
         d, p, m,
         float_in,
         float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(1, dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
   }
   
   if (codec_fade_previous_gain != 1.0f || codec_fade_gain != 1.0f) {
@@ -340,6 +368,10 @@ void Init() {
   freeze_input.Init();
   seed_input.Init();
   codec.Init();
+
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Init();
+#endif  // DWT_CALIBRATION
   codec_sample_rate = 0;
   codec_fade = false;
   codec_fade_gain = 1.0f;
