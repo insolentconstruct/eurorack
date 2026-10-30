@@ -50,9 +50,6 @@ using namespace beads;
 
 bool test_down[4] = { };
 uint32_t test_writes = 0;
-namespace beads {
-}  // namespace beads
-
 struct Rig {
   Processor processor;
   uint8_t banks[3][262144];
@@ -267,9 +264,11 @@ void TestTrimDispatch() {
       durations[3] =
           rig.processor.processor_clean_tape_.mutable_delay_duration(true);
       durations[4] =
-          rig.processor.processor_vintage_digital_.mutable_delay_duration(false);
+          rig.processor.processor_vintage_digital_.mutable_delay_duration(
+              false);
       durations[5] =
-          rig.processor.processor_vintage_digital_.mutable_delay_duration(true);
+          rig.processor.processor_vintage_digital_.mutable_delay_duration(
+              true);
       durations[6] =
           rig.processor.processor_digital_.mutable_delay_duration(false);
       durations[7] =

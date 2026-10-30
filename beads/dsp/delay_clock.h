@@ -75,7 +75,7 @@ class DelayClock {
 #ifdef TEST
   inline int& test_next_interval() { return next_interval_; }
   inline int test_max_interval() const { return max_interval_; }
-#endif
+#endif  // TEST
 
  private:
   float interval_[2];

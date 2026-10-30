@@ -39,70 +39,38 @@ const OptionPage kOptionPages[kNumOptionPages] = {
   { MIX_PARAMETER_LAST, { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER } }
 };
 const OptionValue kOptionValues[] = {
-  { OPTION_RESERVED, 0,
-    { 0, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 3,
-    { 0, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 4,
-    { 255, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 5,
-    { 255, 0, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 6,
-    { 0, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 7,
-    { 255, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 8,
-    { 255, 0, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 9,
-    { 255, 255, 0 }, PULSE_DOUBLE },
-  { OPTION_REVERB, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_REVERB, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PROCESSOR, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PROCESSOR, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_FROZEN, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_FROZEN, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH_START, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH_START, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 4, { 255, 255, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 5, { 255, 0, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 6, { 0, 255, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 7, { 255, 255, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 8, { 255, 0, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 9, { 255, 255, 0 }, PULSE_DOUBLE },
+  { OPTION_REVERB, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_REVERB, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_PROCESSOR, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_PROCESSOR, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_FROZEN, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_FROZEN, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH_START, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH_START, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
@@ -294,26 +262,30 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       const int before = Value(setting);
       UpdateZone(pot, &zone_[i]);
       switch (setting) {
-        case OPTION_SEED_LATCH: {
-          int value = profile_preview_[setting];
-          while (value < 3 && pot > float(value + 1) * 0.25f + 0.025f) {
-            ++value;
+        case OPTION_SEED_LATCH:
+          {
+            int value = profile_preview_[setting];
+            while (value < 3 && pot > float(value + 1) * 0.25f + 0.025f) {
+              ++value;
+            }
+            while (value > 0 && pot < float(value) * 0.25f - 0.025f) {
+              --value;
+            }
+            profile_preview_[setting] = value;
           }
-          while (value > 0 && pot < float(value) * 0.25f - 0.025f) {
-            --value;
+          break;
+        case OPTION_BRIGHTNESS:
+          {
+            int value = profile_preview_[setting];
+            while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f) {
+              ++value;
+            }
+            while (value > 0 && pot < float(value) / 3.0f - 0.025f) {
+              --value;
+            }
+            profile_preview_[setting] = value;
           }
-          profile_preview_[setting] = value;
-        } break;
-        case OPTION_BRIGHTNESS: {
-          int value = profile_preview_[setting];
-          while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f) {
-            ++value;
-          }
-          while (value > 0 && pot < float(value) / 3.0f - 0.025f) {
-            --value;
-          }
-          profile_preview_[setting] = value;
-        } break;
+          break;
         case OPTION_TIME_SCAN:
           if (pot < kOptionsHalfLow) {
             profile_preview_[setting] = 0;

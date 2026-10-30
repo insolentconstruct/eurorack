@@ -203,7 +203,9 @@ void Ui::Poll() {
     Switch s = Switch(i);
 
     if (switches_.just_pressed(s)) {
-      if (accept_switch_events) queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      if (accept_switch_events) {
+        queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      }
       press_time_[i] = system_clock.milliseconds();
       ignore_release_[i] = !accept_switch_events;
     }
@@ -301,7 +303,8 @@ void Ui::UpdateLeds() {
     if (switches_.pressed(SWITCH_MEDIA) &&
         assignable_cv_pot_[i].editing_hidden_parameter()) {
       adjusting_width |= settings_->profile().Amount(i) == FEATURE_WIDTH;
-      adjusting_diffusion |= settings_->profile().Amount(i) == FEATURE_DIFFUSION;
+      adjusting_diffusion |=
+          settings_->profile().Amount(i) == FEATURE_DIFFUSION;
     }
   }
   
@@ -369,7 +372,8 @@ void Ui::UpdateLeds() {
               uint32_t(system_clock.milliseconds() - boot_cue_time_) <
                   200u + 300u * kReleaseBeta) {
             // Light blue identifies Drizzlet; pulse count identifies Beta.
-            const uint32_t elapsed = system_clock.milliseconds() - boot_cue_time_;
+            const uint32_t elapsed =
+                system_clock.milliseconds() - boot_cue_time_;
             const bool lit = elapsed < 100 || (elapsed >= 200 &&
                 ((elapsed - 200) / 150) % 2 == 0);
             const Leds::Color cue = {
@@ -779,7 +783,9 @@ void Ui::DoEvents() {
       flush_options_events_ = false;
       queue_.Flush();
     }
-    if (!queue_.available()) break;
+    if (!queue_.available()) {
+      break;
+    }
     Event e = queue_.PullEvent();
     // Drop events queued before options entry.
     if (!options_.active() && !flush_options_events_ &&

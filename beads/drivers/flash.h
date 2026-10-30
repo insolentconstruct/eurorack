@@ -91,8 +91,7 @@ class Flash {
     const bool clean = !__HAL_FLASH_GET_FLAG_BANK2(FLASH_FLAG_DBECCERR_BANK2);
     if (!clean) {
       // The ignored bus fault still latched its status: clear it (write 1
-      // to clear) before unmasking, so that later fault diagnostics aren't
-      // misled.
+      // to clear) before unmasking.
       SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;
       __DSB();
     }

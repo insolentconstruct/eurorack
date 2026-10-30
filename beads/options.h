@@ -32,19 +32,19 @@
 #include <cmath>
 
 #include "stmlib/stmlib.h"
+
 #include "beads/drivers/leds.h"
-#include "beads/dsp/limiter.h"
 #include "beads/dsp/attack_detector.h"
-#include "beads/dsp/playback_options.h"
+#include "beads/dsp/limiter.h"
 #include "beads/dsp/pitch_quantizer.h"
+#include "beads/dsp/playback_options.h"
 
 namespace beads {
 
 class Profile;
-
 class Settings;
 
-const int MIX_PARAMETER_LAST = 3;
+enum { MIX_PARAMETER_LAST = 3 };
 const int kNumOptionPages = 4;
 
 enum OptionSetting {
@@ -70,7 +70,7 @@ struct OptionPage {
   int led_index;  // MIX_PARAMETER_LAST for all three.
   OptionSetting knobs[MIX_PARAMETER_LAST];  // FEEDBACK, DRY/WET, REVERB.
 };
-const int kPitchScalePage = 0;
+
 const uint32_t kOptionsHoldTime = 3000;
 const uint32_t kOptionsTapTime = 500;
 const uint32_t kOptionsArmTime = 20;
@@ -185,23 +185,17 @@ class Options {
  private:
   bool PageHasPitch() const;
   bool PageEmpty(int page) const;
+  void ApplySeedTaps();
+  void RequestCommit(uint32_t now);
+  void ResetPots(const float* pots);
+  void StartPreview(uint32_t now, int knob);
+  void Select(uint32_t now, OptionSetting setting);
+  void UpdateZone(float pot, int* zone);
+  void Finish();
+
   OptionPage pages_[kNumOptionPages];
   bool any_page_;
   uint8_t profile_preview_[OPTION_LAST];
-
-  void ApplySeedTaps();
-
-  void RequestCommit(uint32_t now);
-
-  void ResetPots(const float* pots);
-
-  void StartPreview(uint32_t now, int knob);
-
-  void Select(uint32_t now, OptionSetting setting);
-
-  void UpdateZone(float pot, int* zone);
-
-  void Finish();
 
   // SysTick publishes transitions and a stable batch to main.
   volatile Stage stage_;

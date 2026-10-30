@@ -245,7 +245,7 @@ class GranularProcessor {
   }
 
 #ifdef DWT_CALIBRATION
-  void PrepareCalibration(unsigned block) {
+  void PrepareCalibration(uint32_t block) {
     granular_player_.PrepareCalibration(&stereo_delay_line_, block);
   }
 #endif  // DWT_CALIBRATION
@@ -334,8 +334,8 @@ class GranularProcessor {
     const bool wide_detent = filter_mode_.wide_detent;
     float q_offset = wide_detent ? kWideDetentQOffset : kStockDelayQOffset;
     float q_scale = wide_detent ? 0.0f : kStockDelayQScale;
-    // fmaf rounds incorrectly here; -ffp-contract=off changes GCC 9's
-    // other choices (see compiler investigation).
+    // volatile stops GCC 9 fusing this into an fmaf, which rounds
+    // differently; -ffp-contract=off would change its other choices.
     const volatile float speed = stmlib::SemitonesToRatio(
         parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
 
@@ -373,7 +373,7 @@ class GranularProcessor {
     // Attack marks follow the recording, in samples written.
     AttackDetector* const attacks = attacks_.mode() ? &attacks_ : NULL;
     granular_player_.SetAttacks(attacks);
-    unsigned writes = 0;
+    uint32_t writes = 0;
     if (attacks) {
       for (size_t i = 0; i < size; ++i) {
         writes += !freeze[i];

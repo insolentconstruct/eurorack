@@ -27,6 +27,7 @@
 // Export the firmware options layout and quality LED [A] indications as TSV.
 
 #include <cstdio>
+
 #include "beads/options.h"
 #include "beads/profile.h"
 
@@ -105,7 +106,9 @@ int main(int argc, char** argv) {
       const OptionSetting setting = kOptionPages[page].knobs[knob];
       for (size_t i = 0; i < kNumOptionValues; ++i) {
         const OptionValue& value = kOptionValues[i];
-        if (value.setting != setting) continue;
+        if (value.setting != setting) {
+          continue;
+        }
         char pulse[64];
         if (!value.pulses) {
           snprintf(pulse, sizeof(pulse), "steady");

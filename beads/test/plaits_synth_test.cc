@@ -114,7 +114,9 @@ inline float ModelCentre(int model) {
 bool GuardIntact() {
   const uint8_t* guard = Ram() + kPlaitsSynthRamSize;
   for (size_t i = 0; i < kGuardSize; ++i) {
-    if (guard[i] != kGuard) return false;
+    if (guard[i] != kGuard) {
+      return false;
+    }
   }
   return true;
 }

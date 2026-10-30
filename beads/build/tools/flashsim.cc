@@ -33,6 +33,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <stdint.h>
+
 #include "stm_audio_bootloader/qpsk/demodulator.h"
 #include "stm_audio_bootloader/qpsk/packet_decoder.h"
 
@@ -56,8 +57,10 @@ int main(int argc, char** argv) {
   const double kModulationRate = 6000.0;
   const double kBitRate = 12000.0;
   decoder.Init(max_sync, true);
-  demodulator.Init(kModulationRate / kSampleRate * 4294967296.0, kSampleRate / kModulationRate,
-                   2.0 * kSampleRate / kBitRate);
+  demodulator.Init(
+      kModulationRate / kSampleRate * 4294967296.0,
+      kSampleRate / kModulationRate,
+      2.0 * kSampleRate / kBitRate);
   demodulator.SyncCarrier(true);
   decoder.Reset();
   long packets = 0, errors = 0, overflow = 0, symbols = 0, first_error = -1;
@@ -93,7 +96,8 @@ int main(int argc, char** argv) {
         complete = true;
         stop = true;
         break;
-      } else if (state == PACKET_DECODER_STATE_ERROR_SYNC || state == PACKET_DECODER_STATE_ERROR_CRC) {
+      } else if (state == PACKET_DECODER_STATE_ERROR_SYNC ||
+                 state == PACKET_DECODER_STATE_ERROR_CRC) {
         ++errors;
         if (first_error < 0) {
           first_error = symbols;
@@ -105,7 +109,9 @@ int main(int argc, char** argv) {
     }
   }
   fclose(out);
-  printf("packets=%ld blocks=%ld errors=%ld first_error_symbol=%ld overflow=%ld complete=%d\n", packets, packets / 256,
-         errors, first_error, overflow, complete ? 1 : 0);
+  printf("packets=%ld blocks=%ld errors=%ld first_error_symbol=%ld "
+         "overflow=%ld complete=%d\n",
+         packets, packets / 256, errors, first_error, overflow,
+         complete ? 1 : 0);
   return 0;
 }

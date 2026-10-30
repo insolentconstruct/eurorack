@@ -8,7 +8,8 @@ TARGET = build/settings_sector_check
 $(TARGET): beads/build/tools/settings_sector_check.cc beads/settings.h \
 		stmlib/system/sector_storage_h7xx.h
 	mkdir -p build
-	g++ -DTEST -DSTM32H7XX -Ibeads/test/common_stubs -std=c++98 -Wall -Werror -I. -funsigned-char \
+	g++ -DTEST -DSTM32H7XX -Ibeads/test/common_stubs \
+		-std=c++98 -Wall -Werror -I. -funsigned-char \
 		-Wno-int-to-pointer-cast \
 		-fsanitize=address,undefined,integer-divide-by-zero \
 		-fno-sanitize-recover=all -fno-pie $< -no-pie -o $@

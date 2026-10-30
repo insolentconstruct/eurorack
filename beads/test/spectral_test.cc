@@ -238,7 +238,9 @@ double ReferenceSnr(const Scenario& scenario) {
     phase_vocoder.Buffer();
     for (size_t i = 0; i < kBlockSize; ++i) {
       finite = finite && std::isfinite(out[i].l) && std::isfinite(out[i].r);
-      if (block < kSkip) continue;
+      if (block < kSkip) {
+        continue;
+      }
       for (int c = 0; c < scenario.num_channels; ++c) {
         const double expected = reference[offset + 2 * i + c];
         const double actual = c ? out[i].r : out[i].l;
@@ -366,7 +368,7 @@ void TestSpectralRender() {
     CHECK(hash == again);
 #ifndef GOLDEN_CAPTURE
     CHECK(hash == kSpectralHashes[q]);
-#endif
+#endif  // GOLDEN_CAPTURE
   }
 }
 
@@ -485,7 +487,7 @@ void TestStalledFrames() {
   mix.feedback = 0.0f;
   mix.dry_wet = 1.0f;
   mix.reverb_amount = 0.0f;
-  CHECK(!processor.AttackRecording());
+  CHECK(!processor.attack_recording());
   const STFT& stft = processor.spectral_processor_.phase_vocoder_.stft_[0];
   double replay = 0.0;
   double after = 0.0;
@@ -508,8 +510,12 @@ void TestStalledFrames() {
       const double e = out[i].l * out[i].l + out[i].r * out[i].r;
       // A full ring (5120 samples) after the stall begins, nothing old
       // plays again; frames resume afterwards.
-      if (block >= 940 && block < 1000) replay += e;
-      if (block >= 1200) after += e;
+      if (block >= 940 && block < 1000) {
+        replay += e;
+      }
+      if (block >= 1200) {
+        after += e;
+      }
     }
   }
   printf("Stall: replay %.3g, after %.3g\n", replay, after);

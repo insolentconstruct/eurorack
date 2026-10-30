@@ -294,8 +294,7 @@ void BackgroundBufferBackup::EraseDamagedSectors() {
   HAL_FLASH_Lock();
 }
 
-// Sector 0 to 5 of bank 2; checked as the settings storage checks its
-// erases.
+// Bank 2 sectors 0 to 5, checked as settings_storage.h checks its erases.
 bool BackgroundBufferBackup::EraseBufferSector(
     uint32_t sector, int attempts, bool recovery) {
   if (recovery ? settings_->storage_damaged() : settings_->write_locked()) {

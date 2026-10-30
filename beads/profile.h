@@ -42,18 +42,22 @@ const uint8_t kMaxProfileEntries = 82;
 const uint8_t kNoField = 255;
 const uint32_t kProfileReleaseId = 0xa51e8760;
 const uint8_t kSettingsFormat = 0xc1;
+// Page slot 0 is none; 1 to 12 are the options pages' knobs, in order.
+const uint8_t kNumPageSlots = 13;
 
 enum ActionSlot {
   ACTION_NONE,
   ACTION_SEED,
   ACTION_FREEZE,
-  ACTION_HOLD
+  ACTION_HOLD,
+  ACTION_LAST
 };
 
 enum AmountSlot {
   AMOUNT_NONE,
   AMOUNT_DRY_WET,
-  AMOUNT_REVERB
+  AMOUNT_REVERB,
+  AMOUNT_LAST
 };
 
 enum ProfileFeature {

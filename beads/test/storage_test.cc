@@ -277,9 +277,8 @@ void TestCalibrationFromMirror() {
   test_checker.Start("TestCalibrationFromMirror");
   const State defaults = Defaults();
   const PersistentData calibration = Calibration(0.1f);
-  // An uncorrectable error at every word of the calibration, or a clean one
-  // failing its checks: restored from the mirror byte for byte, with the
-  // states that loaded, and no lock.
+  // Each unreadable calibration word, or a clean but invalid calibration, is
+  // restored from the mirror byte for byte, keeping loaded states, unlocked.
   for (int damage = 0; damage < 7; ++damage) {
     const State saved = Setup(calibration, 5);
     uint8_t mirror[kCalibrationChunk];
@@ -765,10 +764,8 @@ void TestRepairPowerLoss() {
   test_checker.Start("TestRepairPowerLoss");
   const State defaults = Defaults();
   const PersistentData calibration = Calibration(0.1f);
-  // Mirror erase, four mirror words, sector erase, four calibration words,
-  // the state. Once the mirror holds the factory values, every boot
-  // restores them (with the states, while the sector is unerased); before
-  // that the module stays guarded.
+  // A cut after each repair step. Once the mirror holds the factory values,
+  // every boot restores them; before that the module stays guarded.
   for (int cut = 0; cut <= 11; ++cut) {
     const State saved = Setup(calibration, 5);
     LoseCalibration(0);
@@ -943,9 +940,8 @@ void TestSupplyDrop() {
   const PersistentData old_calibration = Calibration(0.1f);
   const PersistentData new_calibration = Calibration(-0.1f);
   TestFlashPowerUp();
-  // The supply drops after each operation of a calibration save: the save
-  // stops there, and the boot guard reads what is left as it reads a power
-  // cut at the same point.
+  // A supply drop after each step of a calibration save reads back as a
+  // power cut at the same point.
   for (int drop = 1; drop <= 10; ++drop) {
     const State saved = Setup(old_calibration, 6);
     Settings s;
@@ -1164,7 +1160,8 @@ void TestPackedSettings() {
     CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
     CHECK(loaded.self_play_on_request() && loaded.random_intervals());
     CHECK(loaded.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
-    const uint8_t* raw = reinterpret_cast<const uint8_t*>(&loaded.stored_state_);
+    const uint8_t* raw =
+        reinterpret_cast<const uint8_t*>(&loaded.stored_state_);
     CHECK(raw[10] == (0x10 | pitch));
     CHECK(raw[11] == 0x12 && raw[12] == 0x12);
     CHECK(raw[13] == 0x21 && raw[15] == 0x11);

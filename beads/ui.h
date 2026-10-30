@@ -33,8 +33,8 @@
 
 #include "stmlib/ui/event_queue.h"
 
-#include "beads/pot_controller.h"
 #include "beads/options.h"
+#include "beads/pot_controller.h"
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
@@ -144,19 +144,16 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
-
   inline bool evolving_feedback() const { return evolving_feedback_; }
-
   inline bool plaits_synth() const { return plaits_synth_; }
-
   inline AttackMode attack_mode() const { return attack_mode_; }
-
-  // The saved engine, applied once the options page has closed.
-  inline bool spectral() const { return spectral_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
   inline bool random_intervals() const { return random_intervals_; }
+
+  // The saved engine, applied once the options page has closed.
+  inline bool spectral() const { return spectral_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -185,6 +182,8 @@ class Ui {
   
  private:
   void FlashOptionsPage();
+  // Returns true when the action is handled.
+  bool DoAction(uint8_t slot);
 
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
@@ -248,9 +247,6 @@ class Ui {
 
   static const Leds::Color media_palette_[4];
   
-  // Returns true when the action is handled.
-  bool DoAction(uint8_t slot);
-
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 

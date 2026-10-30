@@ -93,7 +93,7 @@ class Processor {
   inline AttackInput* attack_input() { return &attack_input_; }
 
   // Attacks are marked only while granular playback records.
-  inline bool AttackRecording() const {
+  inline bool attack_recording() const {
     return delay_mode_transition_ <= 0.0f && !spectral_;
   }
 
@@ -291,7 +291,7 @@ class Processor {
   }
 
 #ifdef DWT_CALIBRATION
-  void PrepareCalibration(unsigned block) {
+  void PrepareCalibration(uint32_t block) {
     processor_digital_.PrepareCalibration(block);
   }
 #endif  // DWT_CALIBRATION

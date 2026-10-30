@@ -36,8 +36,8 @@
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
 
-#include "beads/resources.h"
 #include "beads/dsp/pitch_quantizer.h"
+#include "beads/resources.h"
 
 namespace beads {
 
