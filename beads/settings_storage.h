@@ -32,6 +32,12 @@
 // flags are cleared first, every result is checked, and a record is only
 // programmed onto blank flash and read back, past the D-cache. Same layout
 // and records as stmlib's.
+//
+// Every read is masked (beads/drivers/flash.h), so an uncorrectable ECC word
+// no longer crashes the module. Before each erase of the sector, the
+// calibration about to be written is verified in a mirror sector, so a power
+// cut after the erase can't lose it. Settings decides what a lost
+// calibration means; Lock stops all writes to bank 2 until a repair.
 
 #ifndef BEADS_SETTINGS_STORAGE_H_
 #define BEADS_SETTINGS_STORAGE_H_
@@ -44,12 +50,31 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/system/storage.h"
 
+#include "beads/drivers/flash.h"
+
 namespace beads {
 
 const int kFlashAttempts = 3;
 
+// What Init found in the settings sector.
+enum StorageStatus {
+  STORAGE_OK,
+  // Blank sector and mirror: a new module. The defaults were written.
+  STORAGE_NEW,
+  // The calibration survived, in the sector or in its mirror, but no state
+  // did. Nothing written.
+  STORAGE_RESTORED,
+  // The calibration is unreadable or invalid in a sector that isn't blank;
+  // the states before the first bad one loaded. Nothing written.
+  STORAGE_CALIBRATION_LOST,
+  // Blank sector, and a mirror that isn't blank but holds no calibration.
+  // Nothing written.
+  STORAGE_DAMAGED
+};
+
 template<
     uint32_t sector_index,
+    uint32_t mirror_sector_index,
     typename PersistentData,
     typename StateData>
 class ChunkStorage {
@@ -63,42 +88,71 @@ class ChunkStorage {
   enum {
     FLASH_STORAGE_BASE = stmlib::Sector<sector_index>::start,
     FLASH_STORAGE_LAST = stmlib::Sector<sector_index + 1>::start,
+    MIRROR_BASE = stmlib::Sector<mirror_sector_index>::start,
+    MIRROR_LAST = stmlib::Sector<mirror_sector_index + 1>::start,
   };
 
   enum {
     BLOCK_SIZE = 32,  // Must be a power of 2!
   };
 
+  enum ChunkStatus {
+    CHUNK_VALID,
+    CHUNK_INVALID,
+    CHUNK_UNREADABLE
+  };
+
  public:
   ChunkStorage() { }
   ~ChunkStorage() { }
-  // Loads the latest saved data. In case the sector is blank/corrupted,
-  // reinitializes the sector and returns false.
-  bool Init(PersistentData* persistent_data, StateData* state_data) {
+  // Loads the latest saved data. A new module's blank sector is written;
+  // anything else is left for the caller to write once it has chosen the
+  // calibration.
+  StorageStatus Init(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
+    locked_ = false;
 
-    if (ReadChunk(0, persistent_data)) {
-      for (next_state_chunk_index_ = 1;
-           chunk_address(next_state_chunk_index_ + 1) <= FLASH_STORAGE_LAST;
-           ++next_state_chunk_index_) {
-         if (!ReadChunk(next_state_chunk_index_, state_data)) {
-           break;
-         }
-      }
-      if (next_state_chunk_index_ != 1) {
-        return true;
-      }
+    const StorageStatus status = Load(
+        persistent_data, state_data, &next_state_chunk_index_);
+    if (status == STORAGE_NEW) {
+      RewriteSector();
     }
-    RewriteSector();
-    return false;
+    return status;
+  }
+
+  // Damaged storage: nothing is erased or programmed until Repair.
+  void Lock() {
+    locked_ = true;
+    next_state_chunk_index_ = REWRITE_NEEDED;
   }
 
   void Recover(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
-    ReadChunk(0, persistent_data_);
+    ReadChunk(chunk_address(0), persistent_data_);
     RewriteSector();
+  }
+
+  // Rewrites a damaged sector from RAM, past the lock, and checks that it
+  // loads back as written. Writes stay locked if it fails.
+  bool Repair() {
+    locked_ = false;
+    RewriteSector();
+    PersistentData persistent_data;
+    StateData state_data;
+    uint16_t next_index;
+    locked_ = next_state_chunk_index_ != 2 || \
+        Load(&persistent_data, &state_data, &next_index) != STORAGE_OK || \
+        next_index != 2 || \
+        memcmp(&persistent_data, persistent_data_, sizeof(PersistentData)) || \
+        memcmp(&state_data, state_data_, sizeof(StateData)) || \
+        !Flash::IsBlank(
+            chunk_address(2), FLASH_STORAGE_LAST - chunk_address(2));
+    if (locked_) {
+      next_state_chunk_index_ = REWRITE_NEEDED;
+    }
+    return !locked_;
   }
 
   void SaveState() {
@@ -106,7 +160,7 @@ class ChunkStorage {
       RewriteSector();
     } else {
       HAL_FLASH_Unlock();
-      if (WriteChunk(next_state_chunk_index_, state_data_)) {
+      if (WriteChunk(chunk_address(next_state_chunk_index_), state_data_)) {
         next_state_chunk_index_++;
         HAL_FLASH_Lock();
       } else {
@@ -120,27 +174,92 @@ class ChunkStorage {
     RewriteSector();
   }
 
+  // The mirrored calibration, if it reads clean and passes its checks.
+  bool ReadMirror(PersistentData* persistent_data) {
+    return ReadChunk(MIRROR_BASE, persistent_data) == CHUNK_VALID;
+  }
+
+  inline bool locked() const { return locked_; }
+
  private:
+  // Reads the sector as stmlib's loader does: the calibration, then the
+  // states up to the first one that fails its checks or can't be read, as
+  // an interrupted save leaves it. Nothing past that one is read.
+  StorageStatus Load(
+      PersistentData* persistent_data,
+      StateData* state_data,
+      uint16_t* next_index) {
+    *next_index = REWRITE_NEEDED;
+    const ChunkStatus calibration = ReadChunk(
+        chunk_address(0), persistent_data);
+    if (calibration == CHUNK_INVALID && Flash::IsBlank(
+            FLASH_STORAGE_BASE, FLASH_STORAGE_LAST - FLASH_STORAGE_BASE)) {
+      // Erased, then the power went: the mirror holds the calibration.
+      const ChunkStatus mirror = ReadChunk(MIRROR_BASE, persistent_data);
+      if (mirror == CHUNK_VALID) {
+        return STORAGE_RESTORED;
+      }
+      // A mirror that isn't blank may have been the only copy left.
+      return mirror == CHUNK_INVALID && \
+          Flash::IsBlank(MIRROR_BASE, MIRROR_LAST - MIRROR_BASE)
+          ? STORAGE_NEW
+          : STORAGE_DAMAGED;
+    }
+
+    uint16_t index = 1;
+    for (; chunk_address(index + 1) <= FLASH_STORAGE_LAST; ++index) {
+      if (ReadChunk(chunk_address(index), state_data) != CHUNK_VALID) {
+        break;
+      }
+    }
+    if (calibration != CHUNK_VALID) {
+      return STORAGE_CALIBRATION_LOST;
+    } else if (index == 1) {
+      // Rewritten, then the power went before the first state.
+      return STORAGE_RESTORED;
+    }
+    *next_index = index;
+    return STORAGE_OK;
+  }
+
   void RewriteSector() {
     HAL_FLASH_Unlock();
-    if (EraseSector() && \
-        WriteChunk(0, persistent_data_) && \
-        WriteChunk(1, state_data_)) {
+    if (MirrorPersistentData() && \
+        EraseSector(sector_index, FLASH_STORAGE_BASE) && \
+        WriteChunk(chunk_address(0), persistent_data_) && \
+        WriteChunk(chunk_address(1), state_data_)) {
       next_state_chunk_index_ = 2;
     } else {
       // Settings stay in RAM; the next save tries the whole sector again.
-      next_state_chunk_index_ = kRewriteNeeded;
+      next_state_chunk_index_ = REWRITE_NEEDED;
     }
     HAL_FLASH_Lock();
   }
 
-  bool EraseSector() {
+  // Leaves a verified copy of the calibration about to be written in the
+  // mirror sector; only writes it if it is missing or different.
+  bool MirrorPersistentData() {
+    PersistentData mirror;
+    if (ReadChunk(MIRROR_BASE, &mirror) == CHUNK_VALID && \
+        !memcmp(&mirror, persistent_data_, sizeof(PersistentData))) {
+      return true;
+    }
+    return EraseSector(mirror_sector_index, MIRROR_BASE) && \
+        WriteChunk(MIRROR_BASE, persistent_data_) && \
+        ReadChunk(MIRROR_BASE, &mirror) == CHUNK_VALID && \
+        !memcmp(&mirror, persistent_data_, sizeof(PersistentData));
+  }
+
+  bool EraseSector(uint32_t index, uint32_t address) {
+    if (locked_) {
+      return false;
+    }
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
       ClearErrors();
       FLASH_EraseInitTypeDef erase_params;
       erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
-      erase_params.Banks = (sector_index < 8) ? FLASH_BANK_1 : FLASH_BANK_2;
-      erase_params.Sector = sector_index;
+      erase_params.Banks = (index < 8) ? FLASH_BANK_1 : FLASH_BANK_2;
+      erase_params.Sector = index % 8;  // Within its bank.
       erase_params.NbSectors = 1;
       erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
 
@@ -148,7 +267,7 @@ class ChunkStorage {
       if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK) {
         // The D-cache may still hold the records read before the erase.
         SCB_InvalidateDCache_by_Addr(
-            (uint32_t*)(FLASH_STORAGE_BASE),
+            (uint32_t*)(address),
             FLASH_STORAGE_LAST - FLASH_STORAGE_BASE);
         return true;
       }
@@ -156,30 +275,35 @@ class ChunkStorage {
     return false;
   }
 
+  // Reads a whole chunk in one masked read.
   template<typename T>
-  bool ReadChunk(size_t index, T* data) {
-    const char* flash_ptr = (const char*)(chunk_address(index));
-    ChunkHeader* h = (ChunkHeader*)(flash_ptr);
-    if (h->tag == T::tag &&
-        h->size == sizeof(T) &&
-        Checksum(flash_ptr + sizeof(ChunkHeader), h->size) == h->checksum) {
-      memcpy(data, flash_ptr + sizeof(ChunkHeader), h->size);
-      return true;
+  ChunkStatus ReadChunk(uint32_t address, T* data) {
+    struct {
+      ChunkHeader h;
+      T data;
+    } chunk;
+    if (!Flash::Read(address, &chunk, sizeof(chunk))) {
+      return CHUNK_UNREADABLE;
+    }
+    if (chunk.h.tag == T::tag &&
+        chunk.h.size == sizeof(T) &&
+        Checksum(&chunk.data, sizeof(T)) == chunk.h.checksum) {
+      memcpy(data, &chunk.data, sizeof(T));
+      return CHUNK_VALID;
     } else {
-      return false;
+      return CHUNK_INVALID;
     }
   }
 
   // Programs the chunk only onto blank flash, and checks it reads back.
   template<typename T>
-  bool WriteChunk(size_t index, const T* data) {
+  bool WriteChunk(uint32_t flash_address, const T* data) {
     ChunkHeader h;
     h.tag = T::tag;
     h.size = sizeof(T);
     h.checksum = Checksum(data, sizeof(T));
 
     size_t num_flash_words = ChunkSize<T>() / BLOCK_SIZE;
-    uint32_t flash_address = chunk_address(index);
 
     size_t data_size = sizeof(T);
     const uint8_t* data_source = (const uint8_t*)(data);
@@ -204,9 +328,11 @@ class ChunkStorage {
   }
 
   bool ProgramWord(uint32_t address, const uint8_t* buffer) {
+    if (locked_) {
+      return false;
+    }
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
-      SCB_InvalidateDCache_by_Addr((uint32_t*)(address), BLOCK_SIZE);
-      if (!IsBlank(address, BLOCK_SIZE)) {
+      if (!Flash::IsBlank(address, BLOCK_SIZE)) {
         return false;
       }
       ClearErrors();
@@ -214,21 +340,12 @@ class ChunkStorage {
               FLASH_TYPEPROGRAM_FLASHWORD,
               address,
               (uint64_t)(&buffer[0])) == HAL_OK) {
-        SCB_InvalidateDCache_by_Addr((uint32_t*)(address), BLOCK_SIZE);
-        return !memcmp((const void*)(address), buffer, BLOCK_SIZE);
+        uint32_t written[BLOCK_SIZE / 4];
+        return Flash::Read(address, written, BLOCK_SIZE) && \
+            !memcmp(written, buffer, BLOCK_SIZE);
       }
     }
     return false;
-  }
-
-  bool IsBlank(uint32_t address, size_t size) const {
-    const uint32_t* words = (const uint32_t*)(address);
-    for (size_t i = 0; i < size / 4; ++i) {
-      if (words[i] != 0xffffffff) {
-        return false;
-      }
-    }
-    return true;
   }
 
   void ClearErrors() const {
@@ -262,12 +379,15 @@ class ChunkStorage {
 
   enum {
     // Past the end of the sector: the next save rewrites it.
-    kRewriteNeeded = 0xffff
+    REWRITE_NEEDED = 0xffff
   };
 
   PersistentData* persistent_data_;
   StateData* state_data_;
   uint16_t next_state_chunk_index_;
+  // Damaged storage found at power-up: nothing is erased or programmed
+  // until a repair succeeds.
+  bool locked_;
 
   DISALLOW_COPY_AND_ASSIGN(ChunkStorage);
 };

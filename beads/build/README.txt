@@ -300,6 +300,11 @@ Notes
 -----
 * Do NOT hold SEED at power-on: it rewrites the settings/calibration
   sector, keeping a valid calibration.
+* If all LEDs blink fast for 3 seconds at power-up, the calibration and its
+  copy are both lost: the module plays on defaults and saves nothing. Power
+  on holding SEED to repair it. Then: green quality LED with the three mix
+  LEDs lit = repaired, recalibrate; red with the mix LEDs blinking = repair
+  failed, try again.
 * The audio update writes only the application area. It leaves the
   bootloader and settings/calibration sector untouched.
 * If updates keep failing, set the computer's output to 44.1 kHz or try

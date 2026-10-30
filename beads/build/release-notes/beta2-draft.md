@@ -76,7 +76,8 @@ Host tests on every push, reproducible builds, and about 28 hours of automated r
 
 - Tested on one module only.
 - A module that no longer starts after an update, even after reinstalling: see the [storage recovery tool](https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27) and its warnings first.
-- Settings are stored as in Mutable Instruments' firmware. About once every 4,000 saves, the settings sector is erased and rewritten. A power cut during that moment can reset calibration and settings. The README shows how to back up calibration.
+- Settings are stored as in Mutable Instruments' firmware. About once every 4,000 saves, the settings sector is erased and rewritten. A power cut during that moment, or during any save, loses only that save; the calibration is kept in a second copy. The README shows how to back up calibration.
+- If all LEDs blink fast for 3 seconds at power-up, the calibration and its copy are both lost: the module plays on defaults and saves nothing. Power on holding SEED to repair it, then recalibrate (README, "Damaged settings").
 - Where the Beads manual and the firmware disagree: [MANUAL_ERRATA.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/MANUAL_ERRATA.md).
 
 ## Reporting problems

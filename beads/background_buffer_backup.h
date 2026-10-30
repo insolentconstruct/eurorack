@@ -48,6 +48,8 @@ class BackgroundBufferBackup {
   void EraseSector();
   void WriteBlock();
   void SaveState(bool freeze_state);
+  // After a settings repair: erases the sectors holding an unreadable word.
+  void EraseDamagedSectors();
   
   inline bool busy() const { return remaining_bytes_ || remaining_sectors_; }
   
@@ -67,6 +69,7 @@ class BackgroundBufferBackup {
 
  private:
   bool Valid(const BufferBackupHeader& header) const;
+  bool EraseBufferSector(uint32_t sector, int attempts);
 
   Processor* processor_;
   Settings* settings_;
@@ -75,6 +78,8 @@ class BackgroundBufferBackup {
   size_t remaining_bytes_;
   size_t remaining_sectors_;
   uint32_t crc_;
+  // The trim of the backup in flash, kept from its header.
+  uint32_t saved_trimmed_frames_;
   uint32_t freeze_start_time_;
   
   uint32_t backup_delay_;

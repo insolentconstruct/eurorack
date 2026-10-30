@@ -57,7 +57,7 @@ using namespace beads;
 using namespace stmlib;
 
 bool test_down[4];
-unsigned test_writes;
+uint32_t test_writes;
 namespace beads {
 bool test_probe;
 bool test_freeze_input;
@@ -138,6 +138,7 @@ struct Rig {
       : left(!unpatched), right(!unpatched), seed_patched(false), audio(0),
         peaks(NULL) {
     current_rig = this;
+    TestFlashRepairAll();
     memset(reinterpret_cast<void*>(0x08100000), 255, 0x100000);
     PowerOnObject(&settings);
     settings.Init(false);
@@ -534,20 +535,175 @@ void TestStartupBranches() {
   CHECK(settings.state().media == 3 && settings.state().gain == 0);
   CHECK(settings.persistent_data().adc_calibration[0].offset == 0.987f);
   CHECK(!factory_test.running());
-  // Break the persisted CALI header checksum, not the in-memory object.
-  reinterpret_cast<uint8_t*>(0x081e0000)[6] ^= 1;
+  // A new module's blank storage starts the factory test.
+  memset(reinterpret_cast<void*>(0x08100000), 255, 0x100000);
   r.Reboot();
   CHECK(factory_test.running());
   CHECK(ui.mode_ == Ui::MODE_FACTORY_TEST);
   CHECK(codec.callback_ == &FactoryTest::ProcessFn);
   r.Tick(20);
-  const unsigned writes = test_writes;
+  uint32_t writes = test_writes;
   r.Reboot();
   CHECK(!factory_test.running());
   CHECK(ui.mode_ == Ui::MODE_NORMAL);
   CHECK(test_writes == writes);
+  // Break the persisted CALI header checksum, not the in-memory object:
+  // damaged storage never starts the factory test.
+  reinterpret_cast<uint8_t*>(0x081e0000)[6] ^= 1;
+  reinterpret_cast<uint8_t*>(0x081c0000)[6] ^= 1;  // And its mirror.
+  writes = test_writes;
+  r.Reboot();
+  CHECK(!factory_test.running());
+  CHECK(settings.write_locked());
+  CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+  CHECK(test_writes == writes);
   r.Settle();
   CHECK(codec.callback_ == &Process);
+}
+
+bool AllLeds(int intensity) {
+  for (int i = 0; i < LED_LAST; ++i) {
+    if (ui.leds_.intensity_[i] != intensity) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// A module in use whose calibration and its mirror are both lost.
+void LoseCalibration() {
+  for (int i = 0; i < 4; ++i) {
+    settings.mutable_state()->gain = uint8_t(10 + i);
+    settings.SaveState();
+  }
+  TestFlashDamage(0x081e0000 + 32);
+  TestFlashDamage(0x081c0000 + 32);
+}
+
+void TestStorageWarning() {
+  test_checker.Start("TestStorageWarning");
+  Rig r(false, true);
+  settings.mutable_persistent_data()->adc_calibration[0].offset = 0.987f;
+  settings.SavePersistentData();
+  LoseCalibration();
+  static uint8_t sector[0x20000];
+  memcpy(sector, reinterpret_cast<void*>(0x081e0000), sizeof(sector));
+  const uint32_t writes = test_writes;
+  for (int boot = 0; boot < 2; ++boot) {
+    r.Reboot();
+    CHECK(settings.write_locked());
+    CHECK(!factory_test.running());
+    CHECK(settings.persistent_data().adc_calibration[0].offset != 0.987f);
+    CHECK(settings.state().gain == 0);
+    // At every power-up, all LEDs blink fast for 3 s, as MODE_PANIC does,
+    // and buttons held through it do nothing.
+    CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+    test_down[SWITCH_ASSIGN] = true;
+    test_down[SWITCH_MEDIA] = true;
+    bool lit = false;
+    bool dark = false;
+    for (int i = 0; i < 2990; ++i) {
+      r.Tick(1);
+      lit = lit || AllLeds(255);
+      dark = dark || AllLeds(0);
+    }
+    CHECK(lit && dark);
+    CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+    r.Tick(20);
+    CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    r.Tick(2000);
+    test_down[SWITCH_ASSIGN] = false;
+    test_down[SWITCH_MEDIA] = false;
+    r.Tick(100);
+    CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    CHECK(!ui.options_.active());
+    CHECK(settings.state().assignable_cv_destination == 0);
+    CHECK(settings.state().media == 3);
+    // Then normal play; changes apply in RAM and nothing is written.
+    test_down[SWITCH_MEDIA] = true;
+    r.Tick(50);
+    test_down[SWITCH_MEDIA] = false;
+    r.Tick(50);
+    CHECK(settings.state().media == 2);
+    CHECK(test_writes == writes);
+    TestFlashExpose(true);
+    CHECK(!memcmp(sector, reinterpret_cast<void*>(0x081e0000),
+        sizeof(sector)));
+  }
+}
+
+void TestStorageRepair() {
+  test_checker.Start("TestStorageRepair");
+  // A torn calibration with its mirror intact: restored without a word,
+  // and no repair touches the frozen buffer.
+  {
+    Rig r(false, true);
+    settings.mutable_persistent_data()->adc_calibration[0].offset = 0.987f;
+    settings.SavePersistentData();
+    TestFlashDamage(0x081e0000 + 32);
+    TestFlashDamage(0x08100000 + 0x30000);
+    r.Reboot();
+    CHECK(!settings.write_locked());
+    CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    CHECK(settings.persistent_data().adc_calibration[0].offset == 0.987f);
+    CHECK(TestFlash().num_damaged == 1);
+  }
+  // Repaired with the factory calibration: the green mode LED blinks for
+  // 3 s with the three ASSIGN LEDs lit, and the frozen buffer is erased.
+  {
+    Rig r(false, true);
+    LoseCalibration();
+    TestFlashDamage(0x08100000 + 0x30000);
+    r.Reboot(true);
+    CHECK(settings.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+    CHECK(!settings.write_locked());
+    CHECK(TestFlash().num_damaged == 0);
+    CHECK(ui.mode_ == Ui::MODE_REPAIR_CALIBRATION_RESET);
+    r.Tick(100);
+    CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 255);
+    CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 0);
+    CHECK(ui.leds_.intensity_[LED_ASSIGN_1] == 255);
+    CHECK(ui.leds_.intensity_[LED_ASSIGN_2] == 255);
+    CHECK(ui.leds_.intensity_[LED_ASSIGN_3] == 255);
+    r.Tick(500);
+    CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    r.Tick(2420);
+    CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    test_down[SWITCH_SEED] = false;
+    r.Reboot();
+    CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    CHECK(!settings.write_locked());
+  }
+  // Failed: red mode LED and ASSIGN LEDs blinking; still guarded, and the
+  // frozen buffer is left alone.
+  {
+    Rig r(false, true);
+    LoseCalibration();
+    TestFlashDamage(0x08100000 + 0x30000);
+    TestFlashFailures() = 1000;
+    r.Reboot(true);
+    TestFlashFailures() = 0;
+    CHECK(settings.repair() == STORAGE_REPAIR_FAILED);
+    CHECK(settings.write_locked());
+    CHECK(TestFlash().num_damaged == 3);
+    CHECK(ui.mode_ == Ui::MODE_REPAIR_FAILED);
+    r.Tick(50);
+    CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 255);
+    CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    CHECK(ui.leds_.intensity_[LED_ASSIGN_2] == 255);
+    r.Tick(100);
+    CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 0);
+    CHECK(ui.leds_.intensity_[LED_ASSIGN_2] == 0);
+    r.Tick(2900);
+    CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    test_down[SWITCH_SEED] = false;
+    r.Reboot();
+    CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+    // The lock holds for the frozen buffer's erase too.
+    background_buffer_backup.EraseDamagedSectors();
+    CHECK(TestFlash().num_damaged == 3);
+    TestFlashRepairAll();
+  }
 }
 
 // Independent DSP invocation: the expected Parameters route one ADC channel
@@ -836,7 +992,7 @@ void TestSelfPlayFrozenBackup() {
   CHECK(synth_mode);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   r.Settle();
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   test_freeze_input = true;
   r.Block();
   r.Advance(10100);
@@ -849,6 +1005,32 @@ void TestSelfPlayFrozenBackup() {
   CHECK(!settings.state().frozen);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
+}
+
+// A frozen buffer whose audio can't be read: the module starts unfrozen,
+// with the processor set from the settings, as without a buffer.
+void TestFailedBufferLoad() {
+  test_checker.Start("TestFailedBufferLoad");
+  Rig r(false, false);
+  BackgroundBufferBackup::BufferBackupHeader* header =
+      reinterpret_cast<BackgroundBufferBackup::BufferBackupHeader*>(0x08100000);
+  memset(header, 0, sizeof(*header));
+  header->tag = 0x5a5a5246;
+  header->write_ptr = 1234;
+  header->media = Processor::MEDIA_DIRTY_TAPE;
+  header->mono = true;
+  settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
+  settings.mutable_state()->frozen = true;
+  settings.SaveState();
+  TestFlashDamage(0x08100000 + 32 * 1000);
+  r.Reboot();
+  CHECK(!ui.freeze_button_state());
+  r.Settle();
+  CHECK(!synth_mode);
+  CHECK(processor.media() == Processor::MEDIA_CLEAN_TAPE);
+  CHECK(!processor.mono());
+  CHECK(settings.state().media == Processor::MEDIA_CLEAN_TAPE);
+  TestFlashRepairAll();
 }
 
 // Semitones above the synth's root note of the grain the next block starts.
@@ -1160,7 +1342,7 @@ void TestSpectralEngine() {
         std::isfinite(spectral.previous_sample_.r));
 
   // FREEZE holds the spectrum; nothing is saved to flash.
-  const unsigned writes = test_writes;
+  const uint32_t writes = test_writes;
   test_freeze_input = true;
   RunSquare(&r, 4);
   CHECK(spectral.parameters_.freeze);
@@ -1333,6 +1515,9 @@ int main() {
   TestOverwriteIndicator();
   TestTriggerOutput();
   TestStartupBranches();
+  TestStorageWarning();
+  TestStorageRepair();
+  TestFailedBufferLoad();
   TestCallbackCvRouting();
   TestPitchChain();
   TestQuantizedPitchChain();

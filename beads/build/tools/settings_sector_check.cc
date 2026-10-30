@@ -35,7 +35,7 @@
 #include "beads/settings.h"
 
 bool test_down[4];
-unsigned test_writes;
+uint32_t test_writes;
 
 using namespace beads;
 

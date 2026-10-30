@@ -49,7 +49,7 @@
 using namespace beads;
 
 bool test_down[4] = { };
-unsigned test_writes = 0;
+uint32_t test_writes = 0;
 namespace beads {
 }  // namespace beads
 
@@ -322,9 +322,9 @@ void TestTrimGrowth() {
 }
 
 int main() {
-  if (!CHECK(mmap(reinterpret_cast<void*>(0x081e0000), 0x20000,
+  if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
-      -1, 0) == reinterpret_cast<void*>(0x081e0000))) {
+      -1, 0) == reinterpret_cast<void*>(0x08100000))) {
     return 1;
   }
   TestTrimDispatch();
