@@ -52,6 +52,7 @@ void GainControl::Init(
     SoftClippingMode soft_clipping_mode,
     bool reset) {
   if (reset) {
+    attenuation_ = false;
     stable_agc_peak_ = agc_peak_ = peak_ = 0.5f;
     gain_ = 1.0f;
     soft_clipping_amount_ = 0.0f;
@@ -66,7 +67,8 @@ void GainControl::Init(
   one_hertz_ = 1.0f / sample_rate;
 }
 
-void GainControl::Process(
+template<bool attenuation>
+void GainControl::ProcessInternal(
     bool active,
     uint8_t gain_setting,
     bool left_normalization,
@@ -125,7 +127,26 @@ void GainControl::Process(
   manual_gain *= manual_gain;
   manual_gain *= manual_gain;
   manual_gain = kMinGain + (kMaxGain - kMinGain) * manual_gain;
+  if (attenuation && gain_setting) {
+    // 1 is silence; 120..136 is unity; the upper range reaches +32 dB.
+    if (gain_setting < 120) {
+      manual_gain = float(gain_setting - 1) / 120.0f;
+    } else if (gain_setting <= 136) {
+      manual_gain = 1.0f;
+    } else {
+      float amount = float(gain_setting - 136) / 119.0f;
+      amount *= amount;
+      amount *= amount;
+      // Start one control step above unity, then curve toward maximum.
+      const float first_step = (kMaxGain - kMinGain) / 119.0f;
+      manual_gain = kMinGain + first_step +
+          (kMaxGain - kMinGain - first_step) * amount;
+    }
+  }
   ONE_POLE(manual_gain_, manual_gain, 0.01f);
+  if (attenuation && gain_setting == 1) {
+    manual_gain_ = 0.0f;
+  }
   
   const float optimal_gain = min(0.9f / min(agc_peak_, 0.9f), kMaxGain);
   const float gain = auto_gain_ ? optimal_gain : manual_gain_;
@@ -140,6 +161,10 @@ void GainControl::Process(
     CONSTRAIN(soft_clipping_amount, 0.0f, 1.0f)
   }
   
+  if (attenuation && gain_setting == 1) {
+    soft_clipping_amount = 0.0f;
+  }
+
   ParameterInterpolator gain_modulation(&gain_, gain, size);
   ParameterInterpolator soft_clipping_amount_modulation(
       &soft_clipping_amount_,
@@ -187,6 +212,25 @@ void GainControl::Process(
     
     ++out;
     ++in;
+  }
+}
+
+void GainControl::Process(
+    bool active,
+    uint8_t gain_setting,
+    bool left_normalization,
+    bool right_normalization,
+    const Codec::Frame* in,
+    FloatFrame* out,
+    size_t size) {
+  if (attenuation_) {
+    ProcessInternal<true>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
+  } else {
+    ProcessInternal<false>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
   }
 }
 

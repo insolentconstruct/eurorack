@@ -69,7 +69,7 @@ class BackgroundBufferBackup {
 
  private:
   bool Valid(const BufferBackupHeader& header) const;
-  bool EraseBufferSector(uint32_t sector, int attempts);
+  bool EraseBufferSector(uint32_t sector, int attempts, bool recovery);
 
   Processor* processor_;
   Settings* settings_;

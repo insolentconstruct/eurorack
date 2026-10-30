@@ -165,7 +165,7 @@ void BackgroundBufferBackup::EraseSector() {
     save_started_ = true;
     // The header's sector first: an interrupted backup is never loaded.
     const uint32_t sector = kNumSectors - remaining_sectors_;
-    if (!EraseBufferSector(sector, kFlashAttempts)) {
+    if (!EraseBufferSector(sector, kFlashAttempts, false)) {
       remaining_sectors_ = remaining_bytes_ = 0;
       return;
     }
@@ -188,6 +188,10 @@ void BackgroundBufferBackup::WriteBlock() {
         
     uint32_t flash_address = \
         Sector<8>::start + uint32_t(write_offset_) + kFlashWordSize;
+    if (Flash::SupplyLow()) {
+      remaining_sectors_ = remaining_bytes_ = 0;
+      return;
+    }
     Flash::ClearErrors();
     if (settings_->write_locked() || HAL_FLASH_Program(
         FLASH_TYPEPROGRAM_FLASHWORD,
@@ -214,6 +218,9 @@ void BackgroundBufferBackup::WriteBlock() {
           *processor_->mutable_delay_duration();
       fill(&header.reserved[0], &header.reserved[sizeof(header.reserved)], 0);
       header.crc = crc32(crc_, &header, sizeof(header));
+      if (Flash::SupplyLow()) {
+        return;
+      }
       Flash::ClearErrors();
       if (settings_->write_locked() || HAL_FLASH_Program(
           FLASH_TYPEPROGRAM_FLASHWORD,
@@ -281,16 +288,16 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
 void BackgroundBufferBackup::EraseDamagedSectors() {
   for (uint32_t i = 0; i < kNumSectors; ++i) {
     if (!Flash::IsReadable(Sector<8>::start + i * kSectorSize, kSectorSize)) {
-      EraseBufferSector(i, kFlashAttempts);
+      EraseBufferSector(i, kFlashAttempts, true);
     }
   }
   HAL_FLASH_Lock();
 }
 
-// Sector 0 to 5 of bank 2; checked as the settings storage checks its
-// erases.
-bool BackgroundBufferBackup::EraseBufferSector(uint32_t sector, int attempts) {
-  if (settings_->write_locked()) {
+// Bank 2 sectors 0 to 5, checked as settings_storage.h checks its erases.
+bool BackgroundBufferBackup::EraseBufferSector(
+    uint32_t sector, int attempts, bool recovery) {
+  if (recovery ? settings_->storage_damaged() : settings_->write_locked()) {
     return false;
   }
   HAL_FLASH_Unlock();
@@ -302,6 +309,9 @@ bool BackgroundBufferBackup::EraseBufferSector(uint32_t sector, int attempts) {
     erase_params.NbSectors = 1;
     erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
     uint32_t sector_error;
+    if (Flash::SupplyLow()) {
+      return false;
+    }
     Flash::ClearErrors();
     if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK && \
         Flash::IsBlank(Sector<8>::start + sector * kSectorSize, kSectorSize)) {

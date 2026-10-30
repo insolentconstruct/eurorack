@@ -124,6 +124,7 @@ class Diffuser {
   AllPassMemory<kDiffuserBufferSize> memory_;
   int32_t write_ptr_;
   float amount_;
+
   DISALLOW_COPY_AND_ASSIGN(Diffuser);
 };
 

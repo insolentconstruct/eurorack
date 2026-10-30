@@ -135,7 +135,7 @@ Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, b
 Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Saving on stock loses Drizzlet options (wavetable synth returns to Automatic (Stock)). Drizzlet canonicalizes bytes 10–16 and 18–21 on load/save, keeps byte 17 and clears 22 and 23. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
-Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded; an out-of-range CALI with no such mirror loads as stock loads it. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. Only a lost CALI with no usable mirror, or a blank sector with a mirror that isn't blank but holds no CALI, is damage: every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/test/storage_test.cc -->
+Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded; an out-of-range CALI with no such mirror loads as stock loads it. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. Only a lost CALI with no usable mirror, or a blank sector with a mirror that isn't blank but holds no CALI, is damage: every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. Each erase and program first checks the programmable voltage detector (level 6, 2.69-2.83 V falling) and is refused while it shows VDD low: a state save is skipped, and any other refused operation fails like a flash error, so a save cut short loads as a power cut at that point would. The detector is set at each start-up; no option byte is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/drivers/flash.h; beads/test/storage_test.cc -->
 
 | Flash area | TAKEN | FREE / limit |
 |---|---|---|
@@ -265,3 +265,71 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 - **Processor, Spectral:** takes effect once the page has closed: a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
+
+## Off-by-default features
+
+A lightweight requested feature may ship Off by default. Its Off state must
+leave the audio unchanged and add no measurable audio-path cost; branches
+belong outside sample loops. Measure each feature and interacting controls.
+Stock Beads' measured worst case is the ceiling (provisionally 92%). Warn from
+91%; block above 92%, for measured and estimated combinations alike. The
+ceiling must stay below the earliest measured DAC deadline at every sample
+rate. New features still require flash, permanent storage fields, controls and
+maintenance.
+
+### Small Beta 2 profile options
+
+IDs 15–23 default to Off. LED brightness Off means full brightness. Brightness,
+SEED latch and TIME modulation allow Off, Fixed or Adjustable; an Adjustable
+choice can occupy any of the twelve page slots. They have no amount, action,
+SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
+only, with no control placement. Omitted entries are Off. The default profile
+block is unchanged. The page-facing catalogue is
+`palette/static/profile-features.json`; costs are unknown until measured.
+
+Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
+when Adjustable or set via Hygrostat when Fixed. SEED latch uses Off / Ignore /
+Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
+Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
+frame, including options and warning displays, and previews while turning. Off
+and Fixed 100% preserve every stock LED value. At 66% and 33%, RGB white also
+receives the half-intensity balance correction. UI priority is options and
+storage indications, manual meters, boot cue, delay cue, pitch notch, then
+quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
+cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms
+light-blue pulses separated by 150 ms gaps. One release constant sets the pulse
+count (2 for Beta 2); audio startup never waits for this cue. Notch indication
+follows the detune law's unison and octave plateaus and both two-octave knob
+ends before smoothing; it ignores CV, random pitch and quantization. A small
+hysteresis holds the cue at plateau edges. Live assignment LEDs retain stock
+width, diffusion and amount-weighted patterns, scaled by absolute assignable CV
+(32/255 at zero to full stock brightness at full modulation). FREEZE remains
+full intensity during a save. These features never change the audio or save
+layout.
+
+Manual attenuation reserves gain byte 0 for automatic gain and 1 for silence.
+Bytes 120–136 snap to unity, with attenuation below and the usual maximum gain
+above, never exceeding stock. The meter shows green at unity. Stock firmware
+never goes below unity: Mutable Instruments deliberately kept unity as the
+minimum because "it's a sensitivity setting". This option keeps unity easy to
+find. Existing gain bytes are preserved; an enabled profile deliberately
+interprets manual settings with this new law. Automatic gain is unchanged.
+There are no new sample-loop tests or branches.
+
+SEED latch defaults to Off: stock uses the patched cable as a clock divider
+while latched. Ignore free-runs and ignores cable triggers, including their LED
+flashes. Sync free-runs and restarts the internal grain-clock phase on each
+SEED edge (meaningful on the periodic side of DENSITY). Add free-runs and fires
+an extra grain per edge. The divider is unavailable in every non-Off value.
+These choices act only while latched with a cable patched; unpatched
+attack-triggered grains keep working. Synth grain clocks use the same choices;
+delay has no grain clock and free-runs for non-Off values. In spectral mode,
+Sync and Add behave like stock: cable gates pass through. Choose any options
+page slot or a Fixed Hygrostat value. TIME Scan applies only to granular
+playback with TIME CV unpatched. The attenurandomizer sets signed speed: noon
+stops, clockwise moves forwards, counter-clockwise backwards; full travel scans
+the whole buffer in four seconds. The position wraps and is added to TIME.
+Patching CV restores Random/attenuation, and pauses the scan; delay and
+spectral playback also pause it. The position resets at processor
+initialization and is not saved. Feature selection occurs once per block; only
+enabled Sync/Add inspect individual cable edges. Off adds no per-sample work.

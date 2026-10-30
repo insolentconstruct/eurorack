@@ -16,6 +16,10 @@ HOST_FLAGS += -fsanitize=address,undefined,integer-divide-by-zero \
 HOST_LDFLAGS += -fsanitize=address,undefined,integer-divide-by-zero -no-pie
 endif
 
+ifneq ($(filter settings.cc,$(CC_FILES)),)
+CC_FILES += profile.cc
+endif
+
 OBJ_FILES = $(CC_FILES:.cc=.o)
 OBJS = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
 DEPS = $(OBJS:.o=.d)

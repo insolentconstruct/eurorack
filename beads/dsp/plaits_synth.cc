@@ -135,9 +135,8 @@ void PlaitsSynth::Render(
     sustain = sustain || freeze[i];
   }
 
-  // With DENSITY at noon and SEED unpatched, the voice drones as Plaits does
-  // with TRIG unpatched, until a SEED press plays a note. Turning DENSITY
-  // back to noon resumes the drone.
+  // DENSITY at noon with SEED unpatched drones, as Plaits with TRIG
+  // unpatched, until a SEED press plays a note.
   float d = density.base + (1.0f - expo_fm_amount) * density.cv;
   CONSTRAIN(d, 0.0f, 1.0f);
   const bool noon = !seed_input && d >= 0.48f && d <= 0.52f;

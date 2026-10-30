@@ -1,0 +1,701 @@
+{
+  "format": 1,
+  "features": [
+    {
+      "id": 1,
+      "name": "Pitch scale",
+      "values": [
+        "Off",
+        "Chromatic",
+        "Fifths and octaves",
+        "Major",
+        "Minor",
+        "Major pentatonic",
+        "Minor pentatonic",
+        "Pelog",
+        "Raag Bhairav",
+        "Raag Shri"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 0
+    },
+    {
+      "id": 2,
+      "name": "Reverb character",
+      "values": [
+        "Stock",
+        "Clouds-style"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 1
+    },
+    {
+      "id": 3,
+      "name": "Delay mode",
+      "values": [
+        "Auto (Stock)",
+        "Disabled",
+        "Wide/smooth filter"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "field": 2
+    },
+    {
+      "id": 4,
+      "name": "Processor",
+      "values": [
+        "Granular (Stock)",
+        "Spectral"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 3
+    },
+    {
+      "id": 5,
+      "name": "Limiter",
+      "values": [
+        "Stock",
+        "Fast release",
+        "Off"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 4
+    },
+    {
+      "id": 6,
+      "name": "Frozen feedback",
+      "values": [
+        "Stock",
+        "Evolving"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "field": 5
+    },
+    {
+      "id": 7,
+      "name": "Synth",
+      "values": [
+        "Beads (Stock)",
+        "Plaits"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 6
+    },
+    {
+      "id": 8,
+      "name": "Attacks",
+      "values": [
+        "Off",
+        "Snap",
+        "Snap and trigger"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 7
+    },
+    {
+      "id": 9,
+      "name": "Synth start",
+      "values": [
+        "Automatic (Stock)",
+        "Manual"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [
+        1,
+        2,
+        3
+      ],
+      "stateless": true,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "field": 8
+    },
+    {
+      "id": 10,
+      "name": "Random intervals",
+      "values": [
+        "Free (Stock)",
+        "Fifths and octaves"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": 9
+    },
+    {
+      "id": 11,
+      "name": "Stereo width",
+      "values": null,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [],
+      "amount_slots": [
+        1,
+        2
+      ],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": null
+    },
+    {
+      "id": 12,
+      "name": "Diffusion",
+      "values": null,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [],
+      "amount_slots": [
+        1,
+        2
+      ],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": null
+    },
+    {
+      "id": 13,
+      "name": "Monophonic grains",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [
+        1,
+        2,
+        3
+      ],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "field": null
+    },
+    {
+      "id": 14,
+      "name": "Buffer trim",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [
+        1,
+        2,
+        3
+      ],
+      "stateless": true,
+      "default_state": "Fixed",
+      "default": 1,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "field": null
+    },
+    {
+      "id": 15,
+      "issue": 54,
+      "name": "Version at boot",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 16,
+      "issue": 44,
+      "name": "Input attenuation",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 17,
+      "issue": 42,
+      "name": "Delay indication",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 18,
+      "issue": 40,
+      "name": "LED brightness",
+      "values": [
+        "100%",
+        "66%",
+        "33%"
+      ],
+      "field": 10,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 19,
+      "issue": 27,
+      "name": "Live assignment LEDs",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 20,
+      "issue": 25,
+      "name": "FREEZE during saves",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 21,
+      "issue": 13,
+      "name": "SEED latch",
+      "values": [
+        "Off",
+        "Ignore",
+        "Sync",
+        "Add"
+      ],
+      "field": 11,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 22,
+      "issue": 7,
+      "name": "Pitch notch indication",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 23,
+      "issue": 141,
+      "name": "TIME modulation",
+      "values": [
+        "Random",
+        "Scan"
+      ],
+      "field": 12,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    }
+  ],
+  "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."
+}

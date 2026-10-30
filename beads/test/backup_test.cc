@@ -759,6 +759,9 @@ void TestEraseDamagedSectors() {
   TestFlashDamage(0x08180000 + 0x1ffe0);
   Rig r;
   r.Boot();
+  uint8_t invalid[kProfileSize] = { 0 };
+  r.settings.Init(false, invalid);
+  CHECK(r.settings.profile_locked() && !r.settings.storage_damaged());
   int erases = test_erases;
   test_locked = true;
   // A refused erase, then one that does nothing: retried until blank.
@@ -827,6 +830,86 @@ void TestPowerLoss() {
   }
 }
 
+void TestLowSupplyBackup() {
+  test_checker.Start("TestLowSupplyBackup");
+  TestFlashPowerUp();
+  // A low supply when the backup starts: no erase or program, and the save
+  // is abandoned as a failed erase abandons it.
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+  Rig r;
+  CHECK(r.Boot());
+  r.backup.Process(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  const int ops = test_ops;
+  const int erases = test_erases;
+  TestFlash().supply_low = true;
+  r.Freeze(0);
+  CHECK(test_ops == ops && test_erases == erases);
+  CHECK(!r.backup.busy());
+  CHECK(!r.settings.state().frozen);
+  // Nor a program, even mid-save.
+  r.backup.write_offset_ = 0;
+  r.backup.remaining_bytes_ = kAudio;
+  r.backup.WriteBlock();
+  CHECK(test_ops == ops);
+  CHECK(!r.backup.busy());
+  // The old backup is still in flash, but no longer flagged.
+  CHECK(kHeader->tag == 0x5a5a5246);
+  Rig after;
+  CHECK(!after.Boot());
+  // With the supply back, thawing and freezing again saves normally.
+  TestFlash().supply_low = false;
+  after.backup.Process(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  CHECK(after.Freeze(0));
+  Rig again;
+  CHECK(again.Boot() && Restored(9));
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
+void TestSupplyDropBackup() {
+  test_checker.Start("TestSupplyDropBackup");
+  TestFlashPowerUp();
+  // A supply drop at each step stops the save; only a complete save loads,
+  // and the next save completes.
+  const int last = 6 + 24000 + 1 + int((8 + sizeof(State) + 31) / 32);
+  const int drops[] = { 1, 5, 6, 7, 12000, 24005, 24006, 24007, last - 1,
+      last };
+  for (size_t i = 0; i < sizeof(drops) / sizeof(drops[0]); ++i) {
+    Wipe();
+    Save(Processor::MEDIA_DIGITAL, false, 100, 1);
+    Rig r;
+    CHECK(r.Boot());
+    r.backup.Process(false);
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    processor.write_ptr_ = 200;
+    Fill(2);
+    TestFlash().supply_budget = drops[i];
+    r.Freeze(0);
+    CHECK(TestFlash().supply_low);
+    CHECK(!r.backup.busy());
+    TestFlash().supply_low = false;
+    TestFlash().supply_budget = 0;
+    Rig after;
+    if (drops[i] == last) {
+      CHECK(after.Boot() && processor.write_ptr_ == 200 && Restored(2));
+    } else {
+      CHECK(!after.Boot());
+    }
+    after.backup.Process(false);
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    processor.write_ptr_ = 300;
+    Fill(3);
+    CHECK(after.Freeze(0));
+    Rig again;
+    CHECK(again.Boot() && processor.write_ptr_ == 300 && Restored(3));
+  }
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
 void OnUnmaskedRead(int) {
   printf("ERROR: %s: unmasked read of a damaged flash word\n",
       test_checker.test());
@@ -864,5 +947,7 @@ int main() {
   TestEraseDamagedSectors();
   TestRetriedBufferErase();
   TestStuckBufferErase();
+  TestLowSupplyBackup();
+  TestSupplyDropBackup();
   return test_checker.failures() ? 1 : 0;
 }

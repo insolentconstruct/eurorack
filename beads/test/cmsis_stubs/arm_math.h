@@ -38,7 +38,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // __cplusplus
 
 #define ALIGN4 __attribute__((aligned(4)))
 #define FAST_MATH_TABLE_SIZE 512
@@ -105,6 +105,6 @@ void arm_rfft_fast_f32(
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // __cplusplus
 
 #endif  // _ARM_MATH_H

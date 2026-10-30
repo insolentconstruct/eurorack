@@ -62,7 +62,9 @@ void TestFinalBankRendering() {
     for (int n = 0; n < 4096; ++n) {
       const float phase = (float(n) + 0.37f) / 4096.0f;
       CHECK(std::isfinite(grain.ReadSample(phase)));
-      FloatFrame out = { };
+      FloatFrame out;
+      out.l = 0.0f;
+      out.r = 0.0f;
       grain.Render(&out);
       CHECK(std::isfinite(out.l) && std::isfinite(out.r));
     }
@@ -72,7 +74,9 @@ void TestFinalBankRendering() {
     p.time.base = positions[i];
     bool freeze = false;
     for (int n = 0; n < 8192; ++n) {
-      FloatFrame out = { };
+      FloatFrame out;
+      out.l = 0.0f;
+      out.r = 0.0f;
       voice.Render(bank, 16, &freeze, p, &out, 1);
       CHECK(std::isfinite(out.l) && std::isfinite(out.r));
       CHECK(fabsf(out.l) <= 1.0f && out.l == out.r);
@@ -81,7 +85,9 @@ void TestFinalBankRendering() {
     // Force the endpoint; the smoother approaches it from below.
     voice.wave_lp_ = 1.0f;
     p.time.base = 1.0f;
-    FloatFrame out = { };
+    FloatFrame out;
+    out.l = 0.0f;
+    out.r = 0.0f;
     voice.Render(bank, 16, &freeze, p, &out, 1);
     CHECK(std::isfinite(out.l) && std::isfinite(out.r));
   }
@@ -132,7 +138,9 @@ void TestFmBankRatios() {
       Parameters parameters = { };
       parameters.time.base = voice.wave_lp_;
       bool freeze = false;
-      FloatFrame out = { };
+      FloatFrame out;
+      out.l = 0.0f;
+      out.r = 0.0f;
       voice.Render(bank + 8, 16, &freeze, parameters, &out, 1);
       CHECK(std::isfinite(out.l) && out.l == out.r);
     }
@@ -147,9 +155,15 @@ void TestSynthBankSelection() {
   const size_t kSize = 8;
   stmlib::GateFlags seed[kSize] = { };
   bool freeze[kSize] = { };
-  ModulatedParameter density = { 0.5f, 0.0f };
+  ModulatedParameter density;
+  density.base = 0.5f;
+  density.cv = 0.0f;
   Parameters parameters = { };
-  Processor::MixParameters mix = { 0.0f, 0.0f, 0.0f, false };
+  Processor::MixParameters mix;
+  mix.feedback = 0.0f;
+  mix.dry_wet = 0.0f;
+  mix.reverb_amount = 0.0f;
+  mix.output_gate = false;
   FloatFrame out[kSize];
   // FEEDBACK selects one of 12 banks. Moving up, bank b + 1 starts at
   // (b + 1.048) / 12; moving down, bank b returns at (b + 0.952) / 12.
@@ -203,7 +217,9 @@ struct SynthHarness {
   FloatFrame Tick(bool gate, bool frozen) {
     stmlib::GateFlags seed = gate ? stmlib::GATE_FLAG_HIGH :
         stmlib::GATE_FLAG_LOW;
-    ModulatedParameter density = { 0.5f, 0.0f };
+    ModulatedParameter density;
+    density.base = 0.5f;
+    density.cv = 0.0f;
     FloatFrame out;
     synth.Render(SEED_BUTTON_STATE_OFF, &seed, &frozen, resolution,
         density, parameters, mix, &out, 1);
@@ -263,6 +279,50 @@ void TestSynthFreeze() {
   CHECK(grain.phase_ != phase);
   h.Tick(false, false);
   CHECK(grain.remaining_samples() == remaining - 1);
+}
+
+void TestSynthGrainPairs() {
+  test_checker.Start("TestSynthGrainPairs");
+  static SynthHarness h;
+  static WavetableGrain reference[32];
+  h.Init();
+  h.parameters.size.base = 0.5f;
+  WavetableGranularPlayer* player = &h.synth.wavetable_granular_player_;
+  TriggerGenerator::Output no_trigger;
+  memset(&no_trigger, 0, sizeof(no_trigger));
+  int playing_pairs = 0;
+  int other_pairs = 0;
+  int stolen = 0;
+  for (int i = 0; i < 3 * 2600; ++i) {
+    const int t = i % 2600;
+    const bool freeze = i >= 2600 && i < 5200 && t >= 400 && t < 1400;
+    if (t < 72) {
+      const int active = player->CountActiveGrains();
+      h.Tick(i & 1, false);
+      stolen += active == 32 && (i & 1);
+    }
+    // Pairs against one grain at a time, in index order: same mix and state.
+    memcpy(static_cast<void*>(reference), player->grain_, sizeof(reference));
+    for (int g = 0; g < 32; g += 2) {
+      const bool both = !reference[g].done() && !reference[g + 1].done();
+      playing_pairs += both;
+      other_pairs += !both;
+    }
+    FloatFrame paired;
+    paired.l = 0.0f;
+    paired.r = 0.0f;
+    player->Render(0, 0, no_trigger, freeze, h.parameters, &paired);
+    FloatFrame single;
+    single.l = 0.0f;
+    single.r = 0.0f;
+    for (int g = 0; g < 32; ++g) {
+      reference[g].Render(&single, freeze);
+    }
+    CHECK(paired.l == single.l && paired.r == single.r);
+    CHECK(!memcmp(static_cast<void*>(reference), player->grain_,
+        sizeof(reference)));
+  }
+  CHECK(playing_pairs > 50000 && other_pairs > 30000 && stolen > 0);
 }
 
 void TestSynthResolution() {
@@ -421,7 +481,8 @@ void TestRandomIntervalSynthGrains() {
       h.parameters.pitch.attenuverter = -1.0f;
       h.synth.set_random_intervals(intervals);
       h.Tick(true, false);
-      const WavetableGrain& grain = h.synth.wavetable_granular_player_.grain_[0];
+      const WavetableGrain& grain =
+          h.synth.wavetable_granular_player_.grain_[0];
       const float offset = 12.0f * log2f(
           grain.frequency_ * 48000.0f / kWavetableRootNote);
       off_grid[intervals] +=
@@ -547,6 +608,7 @@ void TestSynthStereoWidth() {
 int main() {
   TestSynthMixEndpoints();
   TestSynthFreeze();
+  TestSynthGrainPairs();
   TestQuantizedSynthGrains();
   TestRandomIntervalSynthGrains();
   TestSynthStereoWidth();

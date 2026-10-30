@@ -138,7 +138,21 @@ bool SameCalibration(const Settings& s, const PersistentData& data) {
       sizeof(data.adc_calibration));
 }
 
+// A packed record, decoded with the default profile.
+State Decoded(const State& record) {
+  Settings decoded;
+  decoded.profile_.Defaults();
+  decoded.stored_state_ = decoded.state_ = record;
+  decoded.LoadOptions();
+  decoded.state_.padding[0] = 0;
+  return decoded.state_;
+}
+
 bool SameState(const Settings& s, const State& state) {
+  if (state.padding[0] == kSettingsFormat) {
+    const State decoded = Decoded(state);
+    return !memcmp(&s.state(), &decoded, sizeof(State));
+  }
   return !memcmp(&s.state(), &state, sizeof(State));
 }
 
@@ -167,10 +181,16 @@ bool StockLoads(const PersistentData& calibration, const State& state) {
   memset(&data, 0, sizeof(data));
   memset(&loaded, 0, sizeof(loaded));
   stmlib::ChunkStorage<15, PersistentData, State> stock;
-  return stock.Init(&data, &loaded) && \
-      !memcmp(data.adc_calibration, calibration.adc_calibration,
+  if (!stock.Init(&data, &loaded)) {
+    return false;
+  }
+  // Stock bytes verbatim; the packed bytes must decode to the saved state.
+  const State decoded = Decoded(loaded);
+  return !memcmp(data.adc_calibration, calibration.adc_calibration,
           sizeof(calibration.adc_calibration)) && \
-      !memcmp(&loaded, &state, sizeof(State));
+      !memcmp(&loaded, &state, 10) &&
+      loaded.padding[0] == kSettingsFormat &&
+      !memcmp(&decoded, &state, sizeof(State));
 }
 
 bool MirrorHolds(const PersistentData& calibration) {
@@ -257,9 +277,8 @@ void TestCalibrationFromMirror() {
   test_checker.Start("TestCalibrationFromMirror");
   const State defaults = Defaults();
   const PersistentData calibration = Calibration(0.1f);
-  // An uncorrectable error at every word of the calibration, or a clean one
-  // failing its checks: restored from the mirror byte for byte, with the
-  // states that loaded, and no lock.
+  // Each unreadable calibration word, or a clean but invalid calibration, is
+  // restored from the mirror byte for byte, keeping loaded states, unlocked.
   for (int damage = 0; damage < 7; ++damage) {
     const State saved = Setup(calibration, 5);
     uint8_t mirror[kCalibrationChunk];
@@ -745,10 +764,8 @@ void TestRepairPowerLoss() {
   test_checker.Start("TestRepairPowerLoss");
   const State defaults = Defaults();
   const PersistentData calibration = Calibration(0.1f);
-  // Mirror erase, four mirror words, sector erase, four calibration words,
-  // the state. Once the mirror holds the factory values, every boot
-  // restores them (with the states, while the sector is unerased); before
-  // that the module stays guarded.
+  // A cut after each repair step. Once the mirror holds the factory values,
+  // every boot restores them; before that the module stays guarded.
   for (int cut = 0; cut <= 11; ++cut) {
     const State saved = Setup(calibration, 5);
     LoseCalibration(0);
@@ -844,6 +861,553 @@ void TestMirrorWrites() {
   CHECK(SameCalibration(restored, calibration));
 }
 
+void TestLowSupply() {
+  test_checker.Start("TestLowSupply");
+  const PersistentData calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  // Init starts the PVD at level 6, and leaves the rest of PWR_CR1 alone.
+  TestFlashPowerUp();
+  Setup(calibration, 4);
+  CHECK(TestFlash().pwr.CR1 == \
+      (PWR_CR1_RESET | PWR_CR1_PLS_LEV6 | PWR_CR1_PVDEN));
+  // A new module powered up on a low supply: nothing written, the factory
+  // test runs.
+  {
+    Wipe();
+    Take(&snapshot);
+    TestFlashPowerUp();
+    TestFlash().supply_low = true;
+    Settings s;
+    CHECK(!s.Init(false));
+    CHECK(Unchanged(snapshot));
+    TestFlash().supply_low = false;
+  }
+  // State saves are skipped while the supply is low, and resume where they
+  // left off when it comes back.
+  {
+    Setup(calibration, 4);
+    Settings s;
+    CHECK(s.Init(false));
+    const uint16_t next = s.chunk_storage_.next_state_chunk_index_;
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    for (int i = 0; i < kStateChunks + 5; ++i) {
+      s.mutable_state()->gain = uint8_t(i);
+      s.SaveState();
+    }
+    CHECK(Unchanged(snapshot));
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == next);
+    TestFlash().supply_low = false;
+    s.mutable_state()->gain = 99;
+    s.SaveState();
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == next + 1);
+    CHECK(TestFlashErases() == snapshot.erases);
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameState(loaded, s.state()));
+    CHECK(StockLoads(calibration, s.state()));
+  }
+  // A calibration save refused before the mirror erase: nothing written,
+  // and the next save once the supply is back rewrites the sector.
+  {
+    const State saved = Setup(calibration, 4);
+    Settings s;
+    CHECK(s.Init(false));
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        new_calibration.adc_calibration,
+        sizeof(new_calibration.adc_calibration));
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    s.SavePersistentData();
+    CHECK(Unchanged(snapshot));
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(loaded, calibration));
+    CHECK(SameState(loaded, saved));
+    TestFlash().supply_low = false;
+    s.SaveState();
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == 2);
+    Settings again;
+    CHECK(again.Init(false) && SameCalibration(again, new_calibration));
+    CHECK(SameState(again, s.state()));
+  }
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
+void TestSupplyDrop() {
+  test_checker.Start("TestSupplyDrop");
+  const State defaults = Defaults();
+  const PersistentData old_calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  TestFlashPowerUp();
+  // A supply drop after each step of a calibration save reads back as a
+  // power cut at the same point.
+  for (int drop = 1; drop <= 10; ++drop) {
+    const State saved = Setup(old_calibration, 6);
+    Settings s;
+    CHECK(s.Init(false));
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        new_calibration.adc_calibration,
+        sizeof(new_calibration.adc_calibration));
+    TestFlash().supply_budget = drop;
+    s.SavePersistentData();
+    CHECK(TestFlash().supply_low);
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == 0xffff);
+    TestFlash().supply_low = false;
+    TestFlash().supply_budget = 0;
+
+    Settings loaded;
+    CHECK(loaded.Init(false));  // Never the factory test.
+    CHECK(!loaded.write_locked());
+    if (drop <= 5) {
+      CHECK(SameState(loaded, saved));
+      CHECK(SameCalibration(loaded, old_calibration));
+    } else {
+      CHECK(SameState(loaded, defaults));
+      CHECK(SameCalibration(loaded, new_calibration));
+    }
+    // The interrupted save completes on the next one.
+    s.SaveState();
+    CHECK(s.chunk_storage_.next_state_chunk_index_ == 2);
+    Settings again;
+    CHECK(again.Init(false) && !again.write_locked());
+    CHECK(SameCalibration(again, new_calibration));
+    CHECK(SameState(again, s.state()));
+    CHECK(StockLoads(new_calibration, s.state()));
+  }
+  // A repair with the supply low fails without writing, and stays guarded;
+  // the next one with the supply back succeeds.
+  {
+    Setup(old_calibration, 5);
+    LoseCalibration(0);
+    Take(&snapshot);
+    TestFlash().supply_low = true;
+    Settings s;
+    CHECK(s.Init(true));
+    CHECK(s.repair() == STORAGE_REPAIR_FAILED);
+    CHECK(s.write_locked());
+    CHECK(Unchanged(snapshot));
+    TestFlash().supply_low = false;
+    Settings again;
+    CHECK(again.Init(true));
+    CHECK(again.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+    CHECK(!again.write_locked());
+  }
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
+void ProfileTemplate(uint8_t* b) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+}
+
+void ProfileChecksum(uint8_t* b) {
+  const size_t size = 16 + 6 * b[5];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+void TestProfileLocks() {
+  test_checker.Start("TestProfileLocks");
+  uint8_t b[kProfileSize];
+  ProfileTemplate(b);
+  b[0] = 0;
+  const PersistentData calibration = Calibration(0.05f);
+  for (int storage = 0; storage < 8; ++storage) {
+    for (int seed = 0; seed < 2; ++seed) {
+      for (int fail = 0; fail < 2; ++fail) {
+        Setup(calibration, 2);
+        State saved;
+        Peek(&saved, StateChunk(3) + 8, sizeof(saved));
+        if (storage == 1 || storage == 2 || storage == 5) {
+          TestFlashExpose(true);
+          memset(reinterpret_cast<void*>(kSector), 255, kSectorSize);
+          if (storage == 2) {
+            memset(reinterpret_cast<void*>(kMirror), 255, kSectorSize);
+          }
+          TestFlashExpose(false);
+          if (storage == 5) {
+            TestFlashDamage(kMirror);
+          }
+        } else if (storage == 3) {
+          TestFlashExpose(true);
+          memset(reinterpret_cast<void*>(StateChunk(1)), 255,
+              kSectorSize - kCalibrationChunk);
+          TestFlashExpose(false);
+        } else if (storage == 4) {
+          TestFlashDamage(kSector);
+          TestFlashDamage(kMirror);
+        } else if (storage == 6) {
+          TestFlashDamage(kSector);
+        }
+        if (storage == 7) {
+          PersistentData wild = calibration;
+          wild.adc_calibration[0].scale = 0.0f;
+          Setup(wild, 2);
+          uint8_t chunk[kCalibrationChunk];
+          Peek(chunk, kSector, sizeof(chunk));
+          Setup(calibration, 2);
+          Poke(kSector, chunk, sizeof(chunk));
+        }
+        Take(&snapshot);
+        TestFlashFailures() = fail ? 1000 : 0;
+        Settings locked;
+        locked.Init(seed, b);
+        CHECK(locked.profile_locked());
+        CHECK(locked.write_locked());
+        if (!storage) {
+          CHECK(locked.state().media == 1 && locked.state().gain == 2);
+        }
+        if (!storage || ((storage == 4 || storage == 5) && !seed)) {
+          CHECK(Unchanged(snapshot));
+        }
+        if (!fail && storage && ((storage != 4 && storage != 5) || seed)) {
+          State wire;
+          Peek(&wire, StateChunk(1) + 8, sizeof(wire));
+          if (storage == 6 || storage == 7) {
+            CHECK(!memcmp(&wire, &saved, sizeof(wire)));
+          } else {
+            CHECK(wire.padding[0] == 0);
+            CHECK(wire.media == 3 && wire.gain == 0);
+          }
+          CHECK(!locked.chunk_storage_.storage_damaged());
+        }
+        TestFlashFailures() = 0;
+        Take(&snapshot);
+        locked.chunk_storage_.Recover(
+            &locked.persistent_data_, &locked.stored_state_);
+        CHECK(Unchanged(snapshot));
+        locked.set_pitch_scale(PITCH_SCALE_SHRI);
+        locked.SaveState();
+        locked.SavePersistentData();
+        CHECK(Unchanged(snapshot));
+        CHECK(locked.profile_locked());
+      }
+    }
+  }
+}
+
+void TestProfileSettings() {
+  test_checker.Start("TestProfileSettings");
+  uint8_t b[kProfileSize];
+  ProfileTemplate(b);
+  b[18] = PITCH_SCALE_SHRI;
+  b[42] = OUTPUT_LIMITER_FAST;
+  b[78] = 127;
+  b[84] = 200;
+  ProfileChecksum(b);
+  Wipe();
+  Settings s;
+  CHECK(!s.Init(false, b));
+  CHECK(s.pitch_scale() == PITCH_SCALE_SHRI);
+  CHECK(s.stereo_width() == 127 && s.state().diffusion == 200);
+  CHECK(s.output_limiter_mode() == OUTPUT_LIMITER_FAST);
+  s.set_pitch_scale(PITCH_SCALE_CHROMATIC);
+  s.SaveState();
+  Settings loaded;
+  CHECK(loaded.Init(false, b));
+  CHECK(loaded.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  const PersistentData calibration = loaded.persistent_data();
+  CHECK(loaded.Init(true, b));
+  CHECK(loaded.pitch_scale() == PITCH_SCALE_SHRI);
+  CHECK(SameCalibration(loaded, calibration));
+  State wire;
+  Peek(&wire, StateChunk(1) + 8, sizeof(wire));
+  CHECK(wire.padding[0] == kSettingsFormat);
+  // Unsupported markers select profile defaults, never legacy tags.
+  for (int marker = 1; marker < 256; ++marker) {
+    if (marker == kSettingsFormat) {
+      continue;
+    }
+    loaded.stored_state_.output_limiter_mode = 0;
+    loaded.stored_state_.pitch_scale = kOptionTag + 1;
+    loaded.stored_state_.padding[0] = marker;
+    loaded.chunk_storage_.SaveState();
+    Settings unknown;
+    CHECK(unknown.Init(false, b));
+    CHECK(unknown.pitch_scale() == PITCH_SCALE_SHRI);
+    CHECK(unknown.stereo_width() == 127);
+  }
+}
+
+void TestPackedSettings() {
+  test_checker.Start("TestPackedSettings");
+  uint8_t b[kProfileSize];
+  ProfileTemplate(b);
+  Wipe();
+  Settings s;
+  s.Init(false);
+  const uint8_t offsets[10] = { 10, 11, 12, 13, 15, 18, 19, 20, 21, 22 };
+  for (int pitch = 0; pitch < 10; ++pitch) {
+    s.set_pitch_scale(PitchScale(pitch));
+    s.set_clouds_style(true);
+    s.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+    s.set_self_play_on_request(true);
+    s.set_plaits_synth(true);
+    s.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
+    s.set_evolving_feedback(true);
+    s.set_delay_mode(DELAY_MODE_WIDE_DETENT);
+    s.set_random_intervals(true);
+    s.set_spectral(true);
+    s.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.pitch_scale() == pitch);
+    CHECK(loaded.clouds_style() && loaded.plaits_synth() && loaded.spectral());
+    CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+    CHECK(loaded.self_play_on_request() && loaded.random_intervals());
+    CHECK(loaded.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
+    const uint8_t* raw =
+        reinterpret_cast<const uint8_t*>(&loaded.stored_state_);
+    CHECK(raw[10] == (0x10 | pitch));
+    CHECK(raw[11] == 0x12 && raw[12] == 0x12);
+    CHECK(raw[13] == 0x21 && raw[15] == 0x11);
+    for (int i = 0; i < 10; ++i) {
+      CHECK(raw[offsets[i]] < 0xa0 || raw[offsets[i]] > 0xaf);
+    }
+  }
+  // Removing and fixing a feature preserves its permanent field.
+  b[17] = PROFILE_OFF;
+  b[19] = 0;
+  ProfileChecksum(b);
+  Settings off;
+  CHECK(off.Init(false, b));
+  CHECK(off.pitch_scale() == PITCH_SCALE_OFF);
+  off.SaveState();
+  Settings restored;
+  CHECK(restored.Init(false));
+  CHECK(restored.pitch_scale() == PITCH_SCALE_SHRI);
+  b[17] = PROFILE_FIXED;
+  b[18] = PITCH_SCALE_CHROMATIC;
+  ProfileChecksum(b);
+  CHECK(off.Init(false, b));
+  CHECK(off.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  off.SaveState();
+  CHECK(restored.Init(false));
+  CHECK(restored.pitch_scale() == PITCH_SCALE_SHRI);
+  // Not-set low and high fields select the profile defaults.
+  restored.stored_state_.output_limiter_mode = 0x9f;
+  restored.chunk_storage_.SaveState();
+  ProfileTemplate(b);
+  b[18] = PITCH_SCALE_CHROMATIC;
+  b[24] = 0;
+  ProfileChecksum(b);
+  CHECK(restored.Init(false, b));
+  CHECK(restored.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  CHECK(!restored.clouds_style());
+  restored.stored_state_.random_intervals = 0xa5;
+  restored.chunk_storage_.SaveState();
+  CHECK(restored.Init(false));
+  restored.SaveState();
+  CHECK(restored.stored_state_.random_intervals == 0x95);
+}
+
+void TestStockSettingsCarryOver() {
+  test_checker.Start("TestStockSettingsCarryOver");
+  uint8_t b[kProfileSize];
+  for (int custom = 0; custom < 2; ++custom) {
+    ProfileTemplate(b);
+    if (custom) {
+      b[18] = PITCH_SCALE_SHRI;
+      b[24] = 1;
+      b[42] = OUTPUT_LIMITER_FAST;
+      b[78] = 127;
+      b[84] = 200;
+      ProfileChecksum(b);
+    }
+    for (int beta1 = 0; beta1 < 2; ++beta1) {
+      for (int destination = 0; destination < 4; ++destination) {
+        Wipe();
+        Settings stock;
+        stock.Init(false, b);
+        const State defaults = stock.state();
+        const PersistentData calibration = Calibration(0.05f);
+        stock.persistent_data_ = calibration;
+        stock.SavePersistentData();
+        State& saved = stock.stored_state_;
+        memset(&saved, 0, sizeof(saved));
+        saved.media = 2;
+        saved.assignable_cv_destination = destination;
+        saved.assignable_cv_amount[0] = 77;
+        saved.assignable_cv_amount[1] = 33;
+        saved.assignable_cv_amount[2] = 111;
+        saved.gain = 40;
+        saved.gate_output_mode = 1;
+        saved.frozen = 1;
+        saved.disable_autosave = 1;
+        saved.monophonic_mode = 1;
+        if (beta1) {
+          saved.output_limiter_mode = 0xa1;
+          saved.self_play = 0xa1;
+          saved.pitch_scale = 0xa9;
+          saved.reverb_style = 0xa2;
+          saved.stereo_width = 200;
+          saved.delay_mode = 0xa2;
+          saved.width_assigned = 1;
+        }
+        State expected = defaults;
+        memcpy(&expected, &saved, offsetof(State, output_limiter_mode));
+        stock.chunk_storage_.SaveState();
+        Settings loaded;
+        CHECK(loaded.Init(false, b));
+        CHECK(!memcmp(&loaded.state(), &expected, sizeof(State)));
+        CHECK(SameCalibration(loaded, calibration));
+        CHECK(!loaded.width_assigned() && !loaded.diffusion_assigned());
+        // The first save commits the new meanings and remains stock-safe.
+        loaded.SaveState();
+        CHECK(loaded.stored_state_.padding[0] == kSettingsFormat);
+        const uint8_t* bytes =
+            reinterpret_cast<const uint8_t*>(&loaded.stored_state_);
+        for (int i = 10; i < 23; ++i) {
+          CHECK(bytes[i] < 0xa0 || bytes[i] > 0xaf);
+        }
+        CHECK(loaded.Init(false, b));
+        CHECK(!memcmp(&loaded.state(), &expected, sizeof(State)));
+        CHECK(SameCalibration(loaded, calibration));
+      }
+    }
+  }
+  for (int fixed = 0; fixed < 2; ++fixed) {
+    ProfileTemplate(b);
+    for (int i = 10; i <= 11; ++i) {
+      b[16 + 6 * i + 1] = fixed ? PROFILE_FIXED : PROFILE_OFF;
+      b[16 + 6 * i + 4] = b[16 + 6 * i + 5] = 0;
+    }
+    b[78] = fixed ? 127 : 0;
+    b[84] = fixed ? 200 : 0;
+    ProfileChecksum(b);
+    Wipe();
+    Settings old;
+    old.Init(false);
+    memset(&old.stored_state_, 0, sizeof(State));
+    old.stored_state_.stereo_width = 111;
+    old.stored_state_.diffusion = 123;
+    old.stored_state_.width_assigned = 1;
+    old.chunk_storage_.SaveState();
+    CHECK(old.Init(false, b));
+    old.SaveState();
+    CHECK(old.stored_state_.stereo_width == b[78]);
+    CHECK(old.stored_state_.diffusion == b[84]);
+    CHECK(!old.stored_state_.width_assigned);
+    CHECK(old.Init(false));
+    CHECK(old.stereo_width() == b[78]);
+    CHECK(old.state().diffusion == b[84]);
+    CHECK(!old.width_assigned() && !old.diffusion_assigned());
+  }
+}
+
+void TestProfileNewAssignment() {
+  test_checker.Start("TestProfileNewAssignment");
+  uint8_t b[kProfileSize];
+  ProfileTemplate(b);
+  b[16 + 6 * 10 + 1] = PROFILE_OFF;  // Width.
+  b[16 + 6 * 10 + 4] = 0;
+  ProfileChecksum(b);
+  for (int choice = 0; choice < 2; ++choice) {
+    Wipe();
+    Settings s;
+    s.Init(false);
+    s.set_stereo_width(129);
+    s.set_diffusion(0.75f);
+    s.set_width_assigned(true);
+    s.SaveState();
+    Settings p;
+    CHECK(p.Init(false, b));
+    CHECK(!p.width_assigned());
+    if (choice) {
+      p.mutable_state()->assignable_cv_destination = 2;
+    } else {
+      p.set_diffusion_assigned(true);
+      CHECK(p.diffusion_assigned());
+    }
+    p.SaveState();
+    CHECK(p.stored_state_.width_assigned == (choice ? 0 : 2));
+    CHECK(s.Init(false));
+    CHECK(!s.width_assigned());
+    CHECK(choice ? s.state().assignable_cv_destination == 2
+        : s.diffusion_assigned());
+  }
+}
+
+void TestProfileDormantAmounts() {
+  test_checker.Start("TestProfileDormantAmounts");
+  uint8_t b[kProfileSize];
+  for (int combination = 0; combination < 4; ++combination) {
+    const int fixed = combination & 1;
+    const int destination = 1 + combination / 2;
+    Wipe();
+    Settings s;
+    s.Init(false);
+    s.set_stereo_width(129);
+    s.set_diffusion(0.75f);
+    s.mutable_state()->monophonic_mode = 1;
+    if (destination == 1) {
+      s.set_width_assigned(true);
+    } else {
+      s.set_diffusion_assigned(true);
+    }
+    s.SaveState();
+    const uint8_t diffusion = s.state().diffusion;
+    ProfileTemplate(b);
+    for (int i = 10; i <= 12; ++i) {
+      b[16 + 6 * i + 1] = fixed ? PROFILE_FIXED : PROFILE_OFF;
+      b[16 + 6 * i + 4] = b[16 + 6 * i + 5] = 0;
+    }
+    b[78] = 111;
+    b[84] = 112;
+    b[90] = 0;
+    ProfileChecksum(b);
+    Settings dormant;
+    CHECK(dormant.Init(false, b));
+    CHECK(dormant.stereo_width() == (fixed ? 111 : 0));
+    CHECK(dormant.state().diffusion == (fixed ? 112 : 1));
+    CHECK(!dormant.state().monophonic_mode);
+    CHECK(!dormant.width_assigned() && !dormant.diffusion_assigned());
+    dormant.SaveState();
+    CHECK(dormant.stored_state_.stereo_width == 129);
+    CHECK(dormant.stored_state_.diffusion == diffusion);
+    CHECK(dormant.stored_state_.monophonic_mode == 1);
+    CHECK(dormant.stored_state_.width_assigned == destination);
+    CHECK(s.Init(false));
+    CHECK(s.stereo_width() == 129 && s.state().diffusion == diffusion);
+    CHECK(s.state().monophonic_mode);
+    CHECK(destination == 1 ? s.width_assigned() : s.diffusion_assigned());
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.stored_state_);
+    const uint8_t unused[] = { 18, 19, 20, 21, 22 };
+    for (size_t i = 0; i < sizeof(unused); ++i) {
+      bytes[unused[i]] = 0x8e;
+    }
+    s.chunk_storage_.SaveState();
+    CHECK(s.Init(false));
+    s.SaveState();
+    for (size_t i = 0; i < sizeof(unused); ++i) {
+      CHECK(bytes[unused[i]] == 0x8e);
+    }
+  }
+}
+
+void TestProfileDiffusionOff() {
+  test_checker.Start("TestProfileDiffusionOff");
+  Wipe();
+  Settings s;
+  s.Init(false);
+  s.set_clouds_style(true);
+  s.SaveState();
+  uint8_t b[kProfileSize];
+  ProfileTemplate(b);
+  b[83] = PROFILE_OFF;
+  b[86] = 0;
+  ProfileChecksum(b);
+  CHECK(s.Init(false, b));
+  CHECK(s.clouds_style());
+  CHECK(s.diffusion_set() && s.diffusion() == 0.0f);
+  s.SaveState();
+  CHECK(s.stored_state_.diffusion == 0);
+}
+
 void OnUnmaskedRead(int) {
   printf("ERROR: %s: unmasked read of a damaged flash word\n",
       test_checker.test());
@@ -873,6 +1437,15 @@ int main() {
   TestRepairFailures();
   TestRepairPowerLoss();
   TestMirrorWrites();
+  TestLowSupply();
+  TestSupplyDrop();
+  TestProfileLocks();
+  TestProfileSettings();
+  TestPackedSettings();
+  TestStockSettingsCarryOver();
+  TestProfileDormantAmounts();
+  TestProfileNewAssignment();
+  TestProfileDiffusionOff();
   test_checker.Start("main");
   CHECK(TestFlash().violations == 0);
   CHECK(TestFlash().wide_sectors == 0);

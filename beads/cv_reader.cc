@@ -34,6 +34,7 @@ namespace beads {
 using namespace std;
 
 void CvReader::Init(const Settings* settings) {
+  pitch_on_notch_ = false;
   cv_.Init();
   pots_.Init();
   pots_.StartMuxedPotsConversion();

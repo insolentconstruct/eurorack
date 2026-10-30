@@ -34,6 +34,7 @@
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
 #include "beads/dsp/spectral_processor.h"
+#include "beads/dsp/time_scan.h"
 #include "beads/dsp/fx/diffuser.h"
 #include "beads/dsp/fx/feedback_diffuser.h"
 #include "beads/dsp/fx/reverb.h"
@@ -83,10 +84,16 @@ class Processor {
     processor_dirty_tape_.SetAttacks(mode);
   }
 
+  inline void set_time_scan(bool enabled) { time_scan_enabled_ = enabled; }
+
+  inline bool delay_active() const {
+    return delay_mode_transition_ > 0.0f && !spectral_;
+  }
+
   inline AttackInput* attack_input() { return &attack_input_; }
 
   // Attacks are marked only while granular playback records.
-  inline bool AttackRecording() const {
+  inline bool attack_recording() const {
     return delay_mode_transition_ <= 0.0f && !spectral_;
   }
 
@@ -284,7 +291,7 @@ class Processor {
   }
 
 #ifdef DWT_CALIBRATION
-  void PrepareCalibration(unsigned block) {
+  void PrepareCalibration(uint32_t block) {
     processor_digital_.PrepareCalibration(block);
   }
 #endif  // DWT_CALIBRATION
@@ -328,6 +335,8 @@ class Processor {
   
   float delay_mode_transition_;
   DelayMode delay_mode_;
+  bool time_scan_enabled_;
+  TimeScan time_scan_;
 
   float dry_;
   float wet_;

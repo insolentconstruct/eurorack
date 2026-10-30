@@ -2,7 +2,7 @@
 
 Author: Insolent Construct
 
-Run from the repository root: `make -j"$(nproc)" -f beads/test/<suite>.mk test`. Native tests use `-O1` with the existing sanitizer settings; options also runs its advanced build, and spectral a build with Clouds' FFT.
+Run from the repository root: `make -j"$(nproc)" -f beads/test/<suite>.mk test`. Native tests use `-O1` with the existing sanitizer settings; spectral also runs a build with Clouds' FFT.
 
 Delay mode, Clouds and spectral accept exact `TestXxx` names:
 

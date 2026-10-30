@@ -167,8 +167,8 @@ class FeedbackDiffuser {
           apr, write_ptr, wet.r, tail_r, kFeedbackDelayCoefficient);
       previous_ = wet;
       wet_power += wet.l * wet.l + wet.r * wet.r;
-      *in_out = *in_out * dry_amount.Next() \
-          + wet * (wet_amount.Next() * match.Next());
+      *in_out = *in_out * dry_amount.Next() + \
+          wet * (wet_amount.Next() * match.Next());
       ++in_out;
     }
     delay_write_ptr_ = write_ptr;

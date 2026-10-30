@@ -131,6 +131,52 @@ Output limiter: page 4 (all three LEDs), REVERB knob, in thirds. Stock is
 steady green; Fast release is steady yellow; Off is steady red. With Off,
 loud peaks can hard-clip.
 
+Hygrostat profile options
+
+Hygrostat can add the following options to a profile. They are off in the
+standard firmware. Page settings appear at the knob chosen in Hygrostat;
+turning and saving them works like the other options.
+
+Version at boot gives a short light-blue Drizzlet flash followed by two
+light-blue pulses for Beta 2, without delaying audio startup.
+Delay indication flashes it red briefly when entering or leaving delay mode.
+Pitch notch indication lights it green while the PITCH knob is on the unison
+or an octave plateau, including the +/-2-octave knob ends, with a little
+hysteresis at the edges. CV, random pitch and quantization do not affect it. These cues yield to options, warnings and manual meters.
+Live assignment LEDs scale the stock patterns by the magnitude of assignable
+CV, retaining distinct width/diffusion patterns and stock amount weighting. FREEZE during saves keeps the FREEZE LED at full
+intensity while a frozen buffer is being saved.
+
+Input attenuation extends [A]+FEEDBACK down to silence. Around noon the gain
+snaps to unity; below it, the input is attenuated, and above it the input is
+amplified. Automatic gain still works as usual and never attenuates. Hold [A]
+to restart automatic gain. A saved manual gain uses the extended range as soon
+as this feature is enabled. Stock never attenuates below unity: Mutable
+Instruments kept unity as the minimum deliberately ("it's a sensitivity
+setting"). The 120-136 unity band and green meter cue keep unity easy to find.
+
+LED brightness offers 100% / 66% / 33%, Fixed via Hygrostat or Adjustable
+in thirds of a selected options-page knob, with a live preview while turning.
+Warnings dim too. Bright digital RGB white is balanced against the white LEDs
+at the reduced levels; 100% is the release's own LEDs. The default is 100%.
+SEED latch offers four values in quarters of the selected knob:
+Off (stock divider with a patched cable), Ignore (free-running, cable ignored),
+Sync (free-running; SEED edges restart grain-clock phase, useful on the
+periodic side of DENSITY), Add (free-running; one extra grain per edge).
+The divider is unavailable except in Off. These choices apply only while
+latched with a cable patched; unpatched attack triggers keep working. Ignore
+also suppresses trigger LED flashes. Synth grain clocks share these modes;
+delay free-runs for all non-Off values. Hygrostat can fix any value or place
+it in any options page slot.
+
+TIME modulation offers Random in the lower half and Scan in the upper half.
+With Scan and TIME CV unpatched, the TIME attenurandomizer moves the playback
+position: noon stops, clockwise moves forwards, counter-clockwise backwards.
+At either end it takes four seconds to scan the buffer. TIME offsets the
+position, which wraps at the buffer boundary. Try it on a frozen recording.
+Patching TIME CV restores its usual response and pauses the scan. Scan also
+pauses in delay, spectral and synth modes. The position is not saved.
+
 Processor: page 3 (REVERB LED), FEEDBACK knob. Lower half selects Granular
 (Stock) (steady green); upper half selects Spectral (steady yellow).
 Spectral replaces the grains with the spectral processing of Mutable

@@ -41,6 +41,8 @@
 
 namespace beads {
 
+const uint8_t kReleaseBeta = 2;
+
 using namespace std;
 using namespace stmlib;
 
@@ -83,7 +85,6 @@ void Ui::Init(
   flush_options_events_ = false;
   options_flash_time_ = 0;
   options_flash_page_ = 0;
-  LoadOptions();
   fill(&mix_pot_value_[0], &mix_pot_value_[MIX_PARAMETER_LAST], 0.0f);
   
   queue_.Init();
@@ -93,6 +94,11 @@ void Ui::Init(
   
   freeze_button_state_ = false;
   freeze_led_state_ = false;
+  delay_active_ = false;
+  pitch_on_notch_ = false;
+  assign_modulation_ = 0.0f;
+  delay_cue_time_ = 0;
+  boot_cue_time_ = system_clock.milliseconds();
   
   seed_button_state_ = false;
   seed_button_locked_ = true;
@@ -116,7 +122,7 @@ void Ui::ShowStorageStatus() {
       mode_ = MODE_REPAIR_FAILED;
       break;
     default:
-      if (!settings_->write_locked()) {
+      if (!settings_->storage_damaged()) {
         return;
       }
       mode_ = MODE_STORAGE_WARNING;
@@ -126,6 +132,10 @@ void Ui::ShowStorageStatus() {
 }
 
 void Ui::LoadOptions() {
+  options_.Configure(settings_->profile());
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    amount_feature_[i] = settings_->profile().Amount(i);
+  }
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
   evolving_feedback_ = settings_->evolving_feedback();
@@ -196,7 +206,9 @@ void Ui::Poll() {
     Switch s = Switch(i);
 
     if (switches_.just_pressed(s)) {
-      if (accept_switch_events) queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      if (accept_switch_events) {
+        queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      }
       press_time_[i] = system_clock.milliseconds();
       ignore_release_[i] = !accept_switch_events;
     }
@@ -231,11 +243,14 @@ void Ui::Poll() {
         press_time_[SWITCH_MEDIA] = system_clock.milliseconds();
         if (i == MIX_PARAMETER_FEEDBACK) {
           state->gain = 1.0f + p->hidden_parameter() * 255.0f;
-        } else if (i == MIX_PARAMETER_DRY_WET) {
-          settings_->set_stereo_width(StereoWidthFromPot(
-              p->hidden_parameter(), settings_->stereo_width()));
         } else {
-          settings_->set_diffusion(p->hidden_parameter());
+          const ProfileFeature feature = amount_feature_[i];
+          if (feature == FEATURE_WIDTH) {
+            settings_->set_stereo_width(StereoWidthFromPot(
+                p->hidden_parameter(), settings_->stereo_width()));
+          } else if (feature == FEATURE_DIFFUSION) {
+            settings_->set_diffusion(p->hidden_parameter());
+          }
         }
       } else if (switches_.pressed(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
@@ -283,12 +298,18 @@ void Ui::UpdateLeds() {
   int triangle = (system_clock.milliseconds() & 2047) >> 2;
   triangle = triangle >= 256 ? 511 - triangle : triangle;
 
+  const bool led_features = settings_->led_features();
   bool adjusting_manual_gain = switches_.pressed(SWITCH_MEDIA) && \
       assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].editing_hidden_parameter();
-  const bool adjusting_width = switches_.pressed(SWITCH_MEDIA) && \
-      assignable_cv_pot_[MIX_PARAMETER_DRY_WET].editing_hidden_parameter();
-  const bool adjusting_diffusion = switches_.pressed(SWITCH_MEDIA) && \
-      assignable_cv_pot_[MIX_PARAMETER_REVERB].editing_hidden_parameter();
+  bool adjusting_width = false;
+  bool adjusting_diffusion = false;
+  for (int i = MIX_PARAMETER_DRY_WET; i <= MIX_PARAMETER_REVERB; ++i) {
+    if (switches_.pressed(SWITCH_MEDIA) &&
+        assignable_cv_pot_[i].editing_hidden_parameter()) {
+      adjusting_width |= amount_feature_[i] == FEATURE_WIDTH;
+      adjusting_diffusion |= amount_feature_[i] == FEATURE_DIFFUSION;
+    }
+  }
   
   switch (mode_) {
     case MODE_PANIC:
@@ -323,7 +344,10 @@ void Ui::UpdateLeds() {
         const State& state = settings_->state();
         
         if (adjusting_manual_gain) {
-          leds_.set_meter(0.05f + 0.95f * float(state.gain) / 256.0f);
+          const bool unity = settings_->FeatureValue(FEATURE_ATTENUATION) &&
+              state.gain >= 120 && state.gain <= 136;
+          leds_.set_meter(unity
+              ? 0.25f : 0.05f + 0.95f * float(state.gain) / 256.0f);
         } else if (adjusting_width) {
           // Avoid set_meter's wrap at 1.0; its red endpoint is 255/0/0.
           const StereoWidth width = settings_->stereo_width();
@@ -338,6 +362,30 @@ void Ui::UpdateLeds() {
           const float brightness = overwrite_reserve_ * \
               (state.monophonic_mode ? 0.5f : 1.0f);
           leds_.set_media(media_color, brightness);
+          if (led_features && settings_->FeatureValue(FEATURE_PITCH_NOTCH) &&
+              pitch_on_notch_) {
+            const Leds::Color cue = { 0, 255, 0 };
+            leds_.set_media(cue);
+          }
+          if (led_features && settings_->FeatureValue(FEATURE_DELAY_CUE) &&
+              delay_cue_time_ &&
+              uint32_t(system_clock.milliseconds() - delay_cue_time_) < 150) {
+            const Leds::Color cue = { 255, 0, 0 };
+            leds_.set_media(cue);
+          }
+          if (led_features && settings_->FeatureValue(FEATURE_VERSION) &&
+              uint32_t(system_clock.milliseconds() - boot_cue_time_) <
+                  200u + 300u * kReleaseBeta) {
+            // Light blue identifies Drizzlet; pulse count identifies Beta.
+            const uint32_t elapsed =
+                system_clock.milliseconds() - boot_cue_time_;
+            const bool lit = elapsed < 100 || (elapsed >= 200 &&
+                ((elapsed - 200) / 150) % 2 == 0);
+            const Leds::Color cue = {
+              0, uint8_t(lit ? 128 : 0), uint8_t(lit ? 255 : 0)
+            };
+            leds_.set_media(cue);
+          }
         }
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {
@@ -345,7 +393,8 @@ void Ui::UpdateLeds() {
         } else {
           leds_.set(LED_FREEZE,
               freeze_led_state_
-                  ? (background_buffer_backup_->busy() ? 128 : 255)
+                  ? (background_buffer_backup_->busy() &&
+                      !settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255)
                   : 0);
         }
         
@@ -371,6 +420,11 @@ void Ui::UpdateLeds() {
           }
         } else {
           leds_.set(Led(LED_ASSIGN_1 + state.assignable_cv_destination), 128);
+        }
+        if (led_features && settings_->FeatureValue(FEATURE_LIVE_ASSIGN)) {
+          float modulation = fabsf(assign_modulation_);
+          CONSTRAIN(modulation, 0.0f, 1.0f);
+          leds_.ScaleAssignments(32 + uint8_t(modulation * 223.0f));
         }
       }
       break;
@@ -454,6 +508,12 @@ void Ui::UpdateLeds() {
       leds_.set(LED_VU_METER, gain_control_->vu_meter());
     }
   }
+  if (led_features || options_.active()) {
+    const uint8_t level = options_.active()
+        ? options_.Value(OPTION_BRIGHTNESS)
+        : settings_->FeatureValue(FEATURE_BRIGHTNESS);
+    leds_.Scale(level);
+  }
   leds_.Write();
 }
 
@@ -504,36 +564,16 @@ void Ui::OnSwitchPressed(const Event& e) {
     return;
   }
 
-  // Combo
-  //
-  // Media + SEED = toogle monophonic mode.
-  //
-  if (switches_.pressed(SWITCH_MEDIA) && e.control_id == SWITCH_SEED) {
-    State* state = settings_->mutable_state();
-    state->monophonic_mode = !state->monophonic_mode;
-    settings_->SaveState();
-    assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
-    assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
-    assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
-    ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_SEED] = true;
+  if (switches_.pressed(SWITCH_MEDIA) &&
+      (e.control_id == SWITCH_SEED || e.control_id == SWITCH_FREEZE)) {
+    DoAction(e.control_id == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      assignable_cv_pot_[i].Unlock();
+    }
+    ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;
     return;
   }
 
-  // Combo
-  //
-  // Media + FREEZE = trim the buffer and unfreeze.
-  //
-  if (switches_.pressed(SWITCH_MEDIA) && \
-      e.control_id == SWITCH_FREEZE) {
-    trim_flag_ = true;
-    freeze_button_state_ = false;
-    assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
-    assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
-    assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
-    ignore_release_[SWITCH_MEDIA] = ignore_release_[SWITCH_FREEZE] = true;
-    return;
-  }
-  
   // Combo
   //
   // Assign + Media = calibration mode.
@@ -562,9 +602,11 @@ void Ui::OnSwitchPressed(const Event& e) {
       break;
       
     case SWITCH_MEDIA:
-      assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Lock();
-      assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Lock();
-      assignable_cv_pot_[MIX_PARAMETER_REVERB].Lock();
+      for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+        if (media_amount(i)) {
+          assignable_cv_pot_[i].Lock();
+        }
+      }
       break;
       
     case SWITCH_ASSIGN:
@@ -634,10 +676,7 @@ void Ui::OnSwitchReleased(const Event& e) {
             NextCalibrationStep();
           } else {
             if (uint32_t(e.data) >= long_press_duration[SWITCH_MEDIA]) {
-              if (settings_->self_play_on_request() && !spectral_ &&
-                  no_input_ && !should_ignore_state_change()) {
-                self_play_requested_ = true;
-              } else {
+              if (!DoAction(ACTION_HOLD)) {
                 State* state = settings_->mutable_state();
                 if (state->gain != 0) {
                   state->gain = 0;
@@ -655,9 +694,11 @@ void Ui::OnSwitchReleased(const Event& e) {
           // Save the manual gain, width or diffusion settings.
           settings_->SaveState();
         }
-        assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].Unlock();
-        assignable_cv_pot_[MIX_PARAMETER_DRY_WET].Unlock();
-        assignable_cv_pot_[MIX_PARAMETER_REVERB].Unlock();
+        for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+          if (media_amount(i)) {
+            assignable_cv_pot_[i].Unlock();
+          }
+        }
       }
       break;
 
@@ -669,6 +710,10 @@ void Ui::OnSwitchReleased(const Event& e) {
               assignable_cv_pot_[i].editing_hidden_parameter();
           assignable_cv_pot_[i].Unlock();
         }
+        if (!pot_touched && !options_.any_page() &&
+            uint32_t(e.data) >= kOptionsHoldTime) {
+          break;
+        }
         if (!pot_touched) {
           State* state = settings_->mutable_state();
           if (settings_->width_assigned()) {
@@ -676,10 +721,12 @@ void Ui::OnSwitchReleased(const Event& e) {
             settings_->set_diffusion_assigned(true);
           } else if (settings_->diffusion_assigned()) {
             settings_->set_diffusion_assigned(false);
-          } else if (state->assignable_cv_destination == 2 && stereo_width_) {
+          } else if (state->assignable_cv_destination == 2 && stereo_width_ &&
+                     settings_->profile().adjustable(FEATURE_WIDTH)) {
             settings_->set_width_assigned(true);
           } else if (state->assignable_cv_destination == 2 &&
-                     settings_->diffusion_assignable()) {
+                     settings_->diffusion_assignable() &&
+                     settings_->profile().adjustable(FEATURE_DIFFUSION)) {
             settings_->set_diffusion_assigned(true);
           } else {
             state->assignable_cv_destination =
@@ -696,9 +743,26 @@ void Ui::OnSwitchReleased(const Event& e) {
   }
 }
 
+void Ui::set_delay_active(bool active) {
+  if (active != delay_active_) {
+    delay_active_ = active;
+    delay_cue_time_ = system_clock.milliseconds();
+  }
+}
+
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
-    if (options_.limiter_preview() != settings_->output_limiter_mode() ||
+    bool profile_changed = false;
+    for (int i = FEATURE_VERSION; i < FEATURE_LAST; ++i) {
+      const ProfileFeature f = ProfileFeature(i);
+      if (settings_->profile().adjustable(f) &&
+          options_.Value(OptionSetting(i)) != settings_->FeatureValue(f)) {
+        settings_->SetFeatureValue(f, options_.Value(OptionSetting(i)));
+        profile_changed = true;
+      }
+    }
+    if (profile_changed ||
+        options_.limiter_preview() != settings_->output_limiter_mode() ||
         options_.spectral_preview() != settings_->spectral() ||
         options_.manual_start_preview() !=
             settings_->self_play_on_request() ||
@@ -730,7 +794,9 @@ void Ui::DoEvents() {
       flush_options_events_ = false;
       queue_.Flush();
     }
-    if (!queue_.available()) break;
+    if (!queue_.available()) {
+      break;
+    }
     Event e = queue_.PullEvent();
     // Drop events queued before options entry.
     if (!options_.active() && !flush_options_events_ &&
@@ -756,6 +822,28 @@ void Ui::DoEvents() {
   if (queue_.idle_time() > 3000) {
     queue_.Touch();
   }
+}
+
+bool Ui::DoAction(uint8_t slot) {
+  const ProfileFeature feature = settings_->profile().Action(slot);
+  if (feature == FEATURE_MONOPHONIC) {
+    State* state = settings_->mutable_state();
+    if (settings_->profile().adjustable(feature)) {
+      state->monophonic_mode = !state->monophonic_mode;
+      settings_->SaveState();
+    }
+    return true;
+  } else if (feature == FEATURE_TRIM) {
+    trim_flag_ = true;
+    freeze_button_state_ = false;
+    return true;
+  } else if (feature == FEATURE_SYNTH_START &&
+      settings_->self_play_on_request() && !spectral_ && no_input_ &&
+      !should_ignore_state_change()) {
+    self_play_requested_ = true;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace beads

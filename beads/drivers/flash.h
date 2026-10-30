@@ -27,7 +27,8 @@
 // Reads of the bank 2 flash (frozen buffer, calibration mirror, settings)
 // that survive an uncorrectable ECC error. A plain read of such a word faults
 // and the module restarts in a loop; here it is read with faults masked and
-// the error flag is checked instead.
+// the error flag is checked instead. Each erase and program checks the
+// supply first, and is refused while VDD is below the PVD threshold.
 
 #ifndef BEADS_DRIVERS_FLASH_H_
 #define BEADS_DRIVERS_FLASH_H_
@@ -49,6 +50,20 @@ class Flash {
  public:
   Flash() { }
   ~Flash() { }
+
+  // Starts the programmable voltage detector at level 6: 2.69 to 2.83 V
+  // falling, 100 mV of hysteresis. Programs at x64 parallelism are rated
+  // down to 1.8 V. Not an option byte: nothing persists.
+  static void Init() {
+    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);
+    SET_BIT(PWR->CR1, PWR_CR1_PVDEN);
+  }
+
+  // True while VDD is below the threshold: no erase or program may start.
+  // One already under way can't be stopped.
+  static bool SupplyLow() {
+    return READ_BIT(PWR->CSR1, PWR_CSR1_PVDO);
+  }
 
   // Copies size bytes (a multiple of 4, at most kFlashMaxReadSize) from bank
   // 2 to a word-aligned destination. Returns false if the read hit an
@@ -76,8 +91,7 @@ class Flash {
     const bool clean = !__HAL_FLASH_GET_FLAG_BANK2(FLASH_FLAG_DBECCERR_BANK2);
     if (!clean) {
       // The ignored bus fault still latched its status: clear it (write 1
-      // to clear) before unmasking, so that later fault diagnostics aren't
-      // misled.
+      // to clear) before unmasking.
       SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;
       __DSB();
     }

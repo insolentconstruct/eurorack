@@ -137,7 +137,26 @@ void TestGainNoiseAmplification() {
       - 40.0f) < 0.001f);
 }
 
+void TestInputAttenuation() {
+  test_checker.Start("TestInputAttenuation");
+  for (int clipping = 0; clipping < 3; ++clipping) {
+    control.Init(48000.0f, GainControl::SoftClippingMode(clipping), true);
+    control.set_attenuation(true);
+    const float unity = Render(0.1f, 128, 2000, true).l;
+    CHECK(unity > 0.09f && unity < 0.101f);
+    CHECK(Render(0.1f, 120, 2000, true).l == unity);
+    CHECK(Render(0.1f, 136, 2000, true).l == unity);
+    CHECK(Render(0.1f, 119, 2000, true).l < unity);
+    CHECK(Render(0.1f, 137, 2000, true).l > unity * 1.1f);
+    const float attenuated = Render(0.1f, 60, 2000, true).l;
+    CHECK(attenuated > 0.04f && attenuated < 0.06f);
+    CHECK(Render(0.1f, 1, 2000, true).l == 0.0f);
+    CHECK(Render(0.1f, 0, 14000, true).l >= 0.1f);
+  }
+}
+
 int main() {
+  TestInputAttenuation();
   TestGainLearningWindow();
   TestGainHeadroomAndRise();
   TestGainDigitalClipping();

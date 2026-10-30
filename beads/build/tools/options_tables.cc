@@ -27,7 +27,9 @@
 // Export the firmware options layout and quality LED [A] indications as TSV.
 
 #include <cstdio>
+
 #include "beads/options.h"
+#include "beads/profile.h"
 
 namespace {
 
@@ -37,7 +39,10 @@ const char* const kPageNames[] = {
 const char* const kOptionNames[] = {
   "Not used yet", "Pitch scale", "Reverb character", "Delay mode",
   "Processor", "Limiter", "Frozen feedback", "Synth", "Attacks",
-  "Synth start", "Random intervals"
+  "Synth start", "Random intervals",
+  "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
+  "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
+  "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 struct ValueNames {
@@ -77,19 +82,33 @@ const ValueNames kValueNames[] = {
   { "Manual", "yellow" },
   { "Free (Stock)", "green" },
   { "Fifths and octaves", "yellow" },
+  { "100%", "green" }, { "66%", "yellow" }, { "33%", "red" },
+  { "Off", "green" }, { "Ignore", "yellow" },
+  { "Sync", "red" }, { "Add", "green" },
+  { "Random", "green" }, { "Scan", "yellow" },
 };
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
   using namespace beads;
+  if (argc > 1) {
+    for (int id = FEATURE_PITCH; id < FEATURE_LAST; ++id) {
+      const FeatureDefinition& d = kFeatureDefinitions[id];
+      printf("%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n", id, kOptionNames[id],
+          d.values, d.field, d.page, d.amount, d.action, d.stateless);
+    }
+    return 0;
+  }
   puts("page\tLED\tknob\tsetting\tvalue\tcolour\tpulse");
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       const OptionSetting setting = kOptionPages[page].knobs[knob];
       for (size_t i = 0; i < kNumOptionValues; ++i) {
         const OptionValue& value = kOptionValues[i];
-        if (value.setting != setting) continue;
+        if (value.setting != setting) {
+          continue;
+        }
         char pulse[64];
         if (!value.pulses) {
           snprintf(pulse, sizeof(pulse), "steady");

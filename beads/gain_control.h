@@ -71,6 +71,8 @@ class GainControl {
       FloatFrame* out,
       size_t size);
 
+  inline void set_attenuation(bool enabled) { attenuation_ = enabled; }
+
   inline float peak() const { return peak_; }
 
   inline uint8_t vu_meter() const {
@@ -87,6 +89,16 @@ class GainControl {
   }
 
  private:
+  template<bool attenuation>
+  void ProcessInternal(
+      bool active,
+      uint8_t gain,
+      bool left_normalization,
+      bool right_normalization,
+      const Codec::Frame* in,
+      FloatFrame* out,
+      size_t size);
+
   float peak_;
   float agc_peak_;
   float stable_agc_peak_;
@@ -96,6 +108,7 @@ class GainControl {
   SoftClippingMode soft_clipping_mode_;
   
   bool auto_gain_;
+  bool attenuation_;
   float manual_gain_;
   
   float one_hertz_;

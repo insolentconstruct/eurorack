@@ -36,8 +36,8 @@ DelayFilterQ SmoothDelayFilterQ(
     DelayFilterMode* mode, float offset, float scale) {
   if (mode->wide_detent) {
     mode->position +=
-        (kDelayQPositionMax - mode->position + kDelayQRampSteps - 1)
-        / kDelayQRampSteps;
+        (kDelayQPositionMax - mode->position + kDelayQRampSteps - 1) /
+        kDelayQRampSteps;
   } else {
     mode->position -=
         (mode->position + kDelayQRampSteps - 1) / kDelayQRampSteps;

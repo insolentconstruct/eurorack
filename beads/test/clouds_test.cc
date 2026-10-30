@@ -36,7 +36,7 @@
 #include "beads/dsp/synth.h"
 #ifndef REFERENCE_CAPTURE
 #include "beads/dsp/fx/diffuser.h"
-#endif
+#endif  // REFERENCE_CAPTURE
 #include "beads/test/test_checker.h"
 #include "beads/test/test_runner.h"
 
@@ -58,7 +58,7 @@ const uint32_t kStockSynthHashes[4] = {
 const uint32_t kCloudsSynthHashes[4] = {
   0x221c8e17, 0x431d2106, 0x3e9aaca8, 0x3335d7a1
 };
-#endif
+#endif  // defined(__aarch64__)
 
 const uint32_t kStockHashes[4][2] = {
   { 0x6eac02c8, 0x72c5604b },
@@ -108,7 +108,7 @@ uint32_t Render(int quality, int mode, bool clouds, bool reconfigure,
   }
   processor.set_diffusion(diffusion >= 0.0f
       ? diffusion : (clouds ? kCloudsDiffusion : 0.0f));
-#endif
+#endif  // REFERENCE_CAPTURE
   stmlib::Random::Seed(0x12345678);
   Parameters p;
   memset(&p, 0, sizeof(p));
@@ -173,7 +173,7 @@ void TestStockHashes() {
       printf("Stock q%d mode%d %08x\n", q, mode, hash);
 #if !defined(REFERENCE_CAPTURE) && !defined(GOLDEN_CAPTURE)
       CHECK(hash == (mode == 2 ? kStockSynthHashes[q] : kStockHashes[q][mode]));
-#endif
+#endif  // !defined(REFERENCE_CAPTURE) && !defined(GOLDEN_CAPTURE)
     }
   }
 }
@@ -190,13 +190,13 @@ void TestCloudsOutput() {
 #ifndef GOLDEN_CAPTURE
       CHECK(hash == (mode == 2
           ? kCloudsSynthHashes[q] : kCloudsHashes[q][mode]));
-#endif
+#endif  // GOLDEN_CAPTURE
       if (mode == 0) {
         CHECK(hash == Render(q, mode, true, true, -1.0f, 0.5f));
       }
     }
   }
-#endif
+#endif  // REFERENCE_CAPTURE
 }
 
 // Compare Clouds initialization with an explicit stock-style rate reset.
@@ -227,7 +227,9 @@ void TestReverbRates() {
       actual.ProcessClouds(a, 12);
       reference.ProcessClouds(b, 12);
       CHECK(memcmp(a, b, sizeof(a)) == 0);
-      for (int i = 0; i < 12; ++i) energy += a[i].l * a[i].l;
+      for (int i = 0; i < 12; ++i) {
+        energy += a[i].l * a[i].l;
+      }
     }
     CHECK(energy > 0.01);
   }
@@ -253,7 +255,7 @@ void TestDiffusionAmount() {
     // Delay mode bypasses the diffuser, as before.
     CHECK(Render(q, 1, false, false, 0.5f, 0.5f) == kStockHashes[q][1]);
   }
-#endif
+#endif  // REFERENCE_CAPTURE
 }
 
 void TestDiffuserImpulse() {
@@ -276,7 +278,7 @@ void TestDiffuserImpulse() {
   }
   CHECK(fabs(left / (0.25 * 0.25) - 1.0) < 0.03);
   CHECK(fabs(right / (0.125 * 0.125) - 1.0) < 0.05);
-#endif
+#endif  // REFERENCE_CAPTURE
 }
 
 int main(int argc, char** argv) {

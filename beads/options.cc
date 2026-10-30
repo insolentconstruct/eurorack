@@ -39,70 +39,47 @@ const OptionPage kOptionPages[kNumOptionPages] = {
   { MIX_PARAMETER_LAST, { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER } }
 };
 const OptionValue kOptionValues[] = {
-  { OPTION_RESERVED, 0,
-    { 0, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 3,
-    { 0, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 4,
-    { 255, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 5,
-    { 255, 0, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 6,
-    { 0, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 7,
-    { 255, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 8,
-    { 255, 0, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 9,
-    { 255, 255, 0 }, PULSE_DOUBLE },
-  { OPTION_REVERB, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_REVERB, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PROCESSOR, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PROCESSOR, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_FROZEN, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_FROZEN, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 2,
-    { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH_START, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH_START, 1,
-    { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 0,
-    { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 1,
-    { 255, 255, 0 }, PULSE_STEADY }
+  { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 4, { 255, 255, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 5, { 255, 0, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 6, { 0, 255, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 7, { 255, 255, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 8, { 255, 0, 0 }, PULSE_FAST },
+  { OPTION_PITCH, 9, { 255, 255, 0 }, PULSE_DOUBLE },
+  { OPTION_REVERB, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_REVERB, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_DELAY, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_PROCESSOR, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_PROCESSOR, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_LIMITER, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_FROZEN, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_FROZEN, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_ATTACKS, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH_START, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SYNTH_START, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 2, { 255, 0, 0 }, PULSE_STEADY },
+  { OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { OPTION_TIME_SCAN, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_TIME_SCAN, 1, { 255, 255, 0 }, PULSE_STEADY },
 };
 
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
@@ -125,6 +102,10 @@ void Options::Init() {
   armed_ = eligible_ = holding_ = commit_ = dirty_ = false;
   all_up_time_ = press_time_ = last_action_ = 0;
   page_ = 0;
+  any_page_ = true;
+  for (int i = 0; i < kNumOptionPages; ++i) {
+    pages_[i] = kOptionPages[i];
+  }
   selected_ = OPTION_PITCH;
   preview_knob_ = -1;
   preview_time_ = indication_time_ = 0;
@@ -143,6 +124,25 @@ void Options::Init() {
     origin_[i] = previous_[i] = 0.0f;
     qualified_[i] = false;
     zone_[i] = 0;
+  }
+}
+
+void Options::Configure(const Profile& profile) {
+  any_page_ = false;
+  for (int i = 0; i < OPTION_LAST; ++i) {
+    profile_preview_[i] = 0;
+  }
+  for (int page = 0; page < kNumOptionPages; ++page) {
+    for (int knob = 0; knob < MIX_PARAMETER_LAST; ++knob) {
+      pages_[page].knobs[knob] = OptionSetting(
+          profile.Page(1 + page * MIX_PARAMETER_LAST + knob));
+    }
+    any_page_ |= !PageEmpty(page);
+  }
+  if (any_page_) {
+    while (PageEmpty(page_)) {
+      page_ = (page_ + 1) % kNumOptionPages;
+    }
   }
 }
 
@@ -195,7 +195,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
     if (holding_ && all_up) {
       holding_ = false;
-      page_ = (page_ + 1) % kNumOptionPages;
+      do {
+        page_ = (page_ + 1) % kNumOptionPages;
+      } while (PageEmpty(page_));
       ResetPots(pots);
       StartPreview(now, 0);
     }
@@ -233,7 +235,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
     ApplySeedTaps();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      const OptionSetting setting = kOptionPages[page_].knobs[i];
+      const OptionSetting setting = pages_[page_].knobs[i];
       if (setting == OPTION_RESERVED) {
         continue;
       }
@@ -260,6 +262,38 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       const int before = Value(setting);
       UpdateZone(pot, &zone_[i]);
       switch (setting) {
+        case OPTION_SEED_LATCH:
+          {
+            int value = profile_preview_[setting];
+            while (value < 3 && pot > float(value + 1) * 0.25f + 0.025f) {
+              ++value;
+            }
+            while (value > 0 && pot < float(value) * 0.25f - 0.025f) {
+              --value;
+            }
+            profile_preview_[setting] = value;
+          }
+          break;
+        case OPTION_BRIGHTNESS:
+          {
+            int value = profile_preview_[setting];
+            while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f) {
+              ++value;
+            }
+            while (value > 0 && pot < float(value) / 3.0f - 0.025f) {
+              --value;
+            }
+            profile_preview_[setting] = value;
+          }
+          break;
+        case OPTION_TIME_SCAN:
+          if (pot < kOptionsHalfLow) {
+            profile_preview_[setting] = 0;
+          }
+          if (pot > kOptionsHalfHigh) {
+            profile_preview_[setting] = 1;
+          }
+          break;
         case OPTION_PITCH:
           pitch_preview_ = zone_[i] == 2 ? scale_ : PitchScale(zone_[i]);
           break;
@@ -351,7 +385,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
   }
 
   if (just_pressed) {
-    eligible_ = armed_ && normal && !other && !pot_touched;
+    eligible_ = any_page_ && armed_ && normal && !other && !pot_touched;
     armed_ = false;
     press_time_ = now;
   }
@@ -362,6 +396,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
   if (eligible_ && assign &&
       uint32_t(now - press_time_) >= kOptionsHoldTime) {
+    for (int i = FEATURE_VERSION; i < OPTION_LAST; ++i) {
+      profile_preview_[i] = settings.FeatureValue(ProfileFeature(i));
+    }
     limiter_preview_ = settings.output_limiter_mode();
     spectral_preview_ = settings.spectral();
     manual_start_preview_ = settings.self_play_on_request();
@@ -381,6 +418,9 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 }
 
 int Options::Value(OptionSetting setting) const {
+  if (setting >= OPTION_BRIGHTNESS && setting < OPTION_LAST) {
+    return profile_preview_[setting];
+  }
   switch (setting) {
     case OPTION_PITCH:
       return pitch_preview_;
@@ -450,8 +490,8 @@ void Options::ResetPots(const float* pots) {
   }
 
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (kOptionPages[page_].knobs[i] != OPTION_RESERVED) {
-      selected_ = kOptionPages[page_].knobs[i];
+    if (pages_[page_].knobs[i] != OPTION_RESERVED) {
+      selected_ = pages_[page_].knobs[i];
       break;
     }
   }
@@ -460,9 +500,31 @@ void Options::ResetPots(const float* pots) {
   seed_held_ = false;
 }
 
+bool Options::PageEmpty(int page) const {
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    if (pages_[page].knobs[i] != OPTION_RESERVED) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool Options::PageHasPitch() const {
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    if (pages_[page_].knobs[i] == OPTION_PITCH) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void Options::StartPreview(uint32_t now, int knob) {
+  if (PageEmpty(page_)) {
+    preview_knob_ = -1;
+    return;
+  }
   while (knob < MIX_PARAMETER_LAST &&
-         kOptionPages[page_].knobs[knob] == OPTION_RESERVED) {
+         pages_[page_].knobs[knob] == OPTION_RESERVED) {
     ++knob;
   }
 
@@ -470,7 +532,7 @@ void Options::StartPreview(uint32_t now, int knob) {
     // Back to the first setting, as before the preview.
     preview_knob_ = -1;
     knob = 0;
-    while (kOptionPages[page_].knobs[knob] == OPTION_RESERVED) {
+    while (pages_[page_].knobs[knob] == OPTION_RESERVED) {
       ++knob;
     }
   } else {
@@ -478,7 +540,7 @@ void Options::StartPreview(uint32_t now, int knob) {
     preview_time_ = now;
   }
 
-  selected_ = kOptionPages[page_].knobs[knob];
+  selected_ = pages_[page_].knobs[knob];
   indication_time_ = now;
 }
 

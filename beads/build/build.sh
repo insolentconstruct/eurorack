@@ -73,6 +73,12 @@ for target, origin in [('beads_bootloader', '08000000'), ('beads', '08020000')]:
     vector = next(line.split() for line in sections.splitlines() if '.isr_vector' in line)
     if vector[3] != origin or vector[4] != origin:
         raise SystemExit('Unexpected vector VMA/LMA: '+repr(vector))
+    if target == 'beads':
+        profile = next((line.split() for line in sections.splitlines()
+                        if '.profile' in line), None)
+        if not profile or profile[3] != '08020400' or profile[2] != '00000200':
+            raise SystemExit(
+                'Missing or misplaced profile section: '+repr(profile))
 b = (p/'bootloader.bin').read_bytes()
 a = (p/'app.bin').read_bytes()
 if not 0 < len(b) <= 0x20000 or not a:

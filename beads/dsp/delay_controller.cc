@@ -170,8 +170,8 @@ void DelayController::RenderInternal(
       size,
       1.0f,
       true);
-  // fmaf rounds incorrectly here; -ffp-contract=off changes GCC 9's
-  // other choices (see compiler investigation).
+  // volatile stops GCC 9 fusing this into an fmaf, which rounds
+  // differently; -ffp-contract=off would change its other choices.
   const volatile float shape_target =
       shape.value(&shape_modulation_, size, 1.0f, true) * 0.995f;
   ParameterInterpolator modulated_shape(&shape_, shape_target, size);

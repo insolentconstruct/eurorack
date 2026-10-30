@@ -33,8 +33,9 @@
 
 #include "stmlib/ui/event_queue.h"
 
-#include "beads/pot_controller.h"
 #include "beads/options.h"
+#include "beads/pot_controller.h"
+#include "beads/profile.h"
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
 
@@ -99,6 +100,12 @@ class Ui {
     return switches_.pressed_immediate(s);
   }
   
+  void set_delay_active(bool active);
+  void set_modulation_indication(bool notch, float assign) {
+    pitch_on_notch_ = notch;
+    assign_modulation_ = assign;
+  }
+
   inline bool freeze_led_state() const {
     return freeze_led_state_;
   }
@@ -138,19 +145,16 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
-
   inline bool evolving_feedback() const { return evolving_feedback_; }
-
   inline bool plaits_synth() const { return plaits_synth_; }
-
   inline AttackMode attack_mode() const { return attack_mode_; }
-
-  // The saved engine, applied once the options page has closed.
-  inline bool spectral() const { return spectral_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
   inline bool random_intervals() const { return random_intervals_; }
+
+  // The saved engine, applied once the options page has closed.
+  inline bool spectral() const { return spectral_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -179,6 +183,8 @@ class Ui {
   
  private:
   void FlashOptionsPage();
+  // Returns true when the action is handled.
+  bool DoAction(uint8_t slot);
 
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
@@ -188,6 +194,12 @@ class Ui {
 
   inline bool showing_storage_status() const {
     return mode_ >= MODE_STORAGE_WARNING;
+  }
+
+  // [A] turns FEEDBACK into the gain, as in Beads; the other knobs only when
+  // the profile gives them an amount.
+  inline bool media_amount(int i) const {
+    return i == MIX_PARAMETER_FEEDBACK || amount_feature_[i] != FEATURE_NONE;
   }
 
   stmlib::EventQueue<16> queue_;
@@ -207,6 +219,12 @@ class Ui {
   
   bool seed_button_state_;
   bool seed_button_locked_;
+  bool delay_active_;
+  bool pitch_on_notch_;
+  ProfileFeature amount_feature_[MIX_PARAMETER_LAST];
+  float assign_modulation_;
+  uint32_t delay_cue_time_;
+  uint32_t boot_cue_time_;
   bool seed_led_state_;
   
   float overwrite_reserve_;

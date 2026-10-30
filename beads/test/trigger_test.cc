@@ -39,7 +39,7 @@ const int kSampleRate = 48000;
 
 int Count(SeedButtonState state, float density, float linear_fm,
     float exponential_fm, int samples, int* shortest, int* longest,
-    bool external = false) {
+    bool external) {
   TriggerGenerator generator;
   generator.Init(kSampleRate);
   Random::Seed(1234567);
@@ -74,12 +74,12 @@ void TestDensityModulation() {
   test_checker.Start("TestDensityModulation");
   int shortest, longest;
   const int slow = Count(SEED_BUTTON_STATE_LOCKED, 0.2f, 0, 0,
-      kSampleRate * 4, &shortest, &longest);
+      kSampleRate * 4, &shortest, &longest, false);
   const int fast = Count(SEED_BUTTON_STATE_LOCKED, 0.2f, -0.1f, 0,
-      kSampleRate * 4, &shortest, &longest);
+      kSampleRate * 4, &shortest, &longest, false);
   CHECK(slow > 0 && fast > slow * 2);
   const int held = Count(SEED_BUTTON_STATE_ON, 0.1f, 0, 0,
-      kSampleRate * 4, &shortest, &longest);
+      kSampleRate * 4, &shortest, &longest, false);
   CHECK(held == fast);
   CHECK(Count(SEED_BUTTON_STATE_OFF, 0.2f, 0, 0,
       kSampleRate * 4, &shortest, &longest, true) == slow);
@@ -110,11 +110,11 @@ void TestRegularDensityRate() {
   test_checker.Start("TestRegularDensityRate");
   int shortest, longest;
   const int count = Count(SEED_BUTTON_STATE_LOCKED, 0, 0, 0,
-      kSampleRate * 10, &shortest, &longest);
+      kSampleRate * 10, &shortest, &longest, false);
   CHECK(std::abs(count - 1308) <= 2);
   CHECK(shortest == 366 && longest == 367);
   const int slower = Count(SEED_BUTTON_STATE_LOCKED, 0.1f, 0, 0,
-      kSampleRate * 10, &shortest, &longest);
+      kSampleRate * 10, &shortest, &longest, false);
   CHECK(slower < count / 2);
   CHECK(longest - shortest <= 1);
 }
@@ -123,10 +123,10 @@ void TestRandomDensityRate() {
   test_checker.Start("TestRandomDensityRate");
   int shortest, longest;
   const int slow = Count(SEED_BUTTON_STATE_LOCKED, 0.8f, 0, 0,
-      kSampleRate * 20, &shortest, &longest);
+      kSampleRate * 20, &shortest, &longest, false);
   CHECK(longest > shortest * 2);
   const int fast = Count(SEED_BUTTON_STATE_LOCKED, 1, 0, 0,
-      kSampleRate * 20, &shortest, &longest);
+      kSampleRate * 20, &shortest, &longest, false);
   CHECK(longest > shortest * 2);
   CHECK(fast > slow * 4);
   // Mean interval is 0.883 / 65.41 Hz: about 1481 grains in 20 s, with a
@@ -248,13 +248,39 @@ void TestExponentialTriggerFm() {
   test_checker.Start("TestExponentialTriggerFm");
   int shortest, longest;
   const int base = Count(SEED_BUTTON_STATE_LOCKED, 0, 0, 0,
-      kSampleRate * 10, &shortest, &longest);
+      kSampleRate * 10, &shortest, &longest, false);
   const int octave = Count(SEED_BUTTON_STATE_LOCKED, 0, 0, 0.2f,
-      kSampleRate * 10, &shortest, &longest);
+      kSampleRate * 10, &shortest, &longest, false);
   CHECK(std::abs(octave - base * 2) <= 2);
 }
 
+void TestSyncBoundaryEdges() {
+  test_checker.Start("TestSyncBoundaryEdges");
+  for (int consecutive = 0; consecutive < 2; ++consecutive) {
+    TriggerGenerator generator;
+    generator.Init(kSampleRate);
+    GateFlags edges[12] = { };
+    edges[0] = GateFlags(GATE_FLAG_HIGH | GATE_FLAG_RISING);
+    if (consecutive) {
+      edges[1] = edges[0];
+    }
+    TriggerGenerator::Output out[12];
+    generator.Render(SEED_BUTTON_STATE_SYNC, edges, 0.0f, 0, 0, out, 12);
+    for (int i = 0; i < 12; ++i) {
+      CHECK(std::isfinite(out[i].phase));
+      CHECK(out[i].phase > 0.0f);
+      CHECK(!out[i].trigger);
+      if (i) {
+        CHECK(consecutive && i == 1
+            ? out[i].phase == out[0].phase
+            : out[i].phase > out[i - 1].phase);
+      }
+    }
+  }
+}
+
 int main() {
+  TestSyncBoundaryEdges();
   TestDensityModulation();
   TestLatchedNoonSilence();
   TestRegularDensityRate();

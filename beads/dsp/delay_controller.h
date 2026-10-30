@@ -114,7 +114,7 @@ class PlayHead {
   inline int test_start() const { return start_; }
   inline int test_remaining() const { return remaining_; }
   inline float test_phase_increment() const { return phase_increment_; }
-#endif
+#endif  // TEST
 
  private:
   int start_;
@@ -210,7 +210,7 @@ class DelayController {
   inline float test_multiplier() const { return multiplier_lp_; }
   inline PlayHead* test_play_heads() { return play_head_; }
   inline PlayHead* test_slave_play_heads() { return slave_play_head_; }
-#endif
+#endif  // TEST
 
  private:
   template<bool synchronized>

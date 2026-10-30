@@ -237,6 +237,39 @@ void TriggerGenerator::Render(
     float exponential_fm,
     TriggerGenerator::Output* out,
     size_t size) {
+  if (external_input && seed_button_state >= SEED_BUTTON_STATE_IGNORE) {
+    // Only the patched, latched path uses these modes. Render the stock
+    // free-running clock; Sync restarts its phase at each incoming edge.
+    if (seed_button_state == SEED_BUTTON_STATE_SYNC) {
+      size_t start = 0;
+      for (size_t i = 0; i < size; ++i) {
+        if (external_input[i] & GATE_FLAG_RISING) {
+          if (i > start) {
+            Render(SEED_BUTTON_STATE_LOCKED, NULL, density, linear_fm,
+                exponential_fm, out + start, i - start);
+          }
+          phase_ = 0.0f;
+          previous_flags_ = GATE_FLAG_HIGH;
+          start = i;
+        }
+      }
+      Render(SEED_BUTTON_STATE_LOCKED, NULL, density, linear_fm,
+          exponential_fm, out + start, size - start);
+    } else {
+      Render(SEED_BUTTON_STATE_LOCKED, NULL, density, linear_fm,
+          exponential_fm, out, size);
+      if (seed_button_state == SEED_BUTTON_STATE_ADD) {
+        for (size_t i = 0; i < size; ++i) {
+          if (external_input[i] & GATE_FLAG_RISING) {
+            out[i].trigger = true;
+            out[i].gate = true;
+            out[i].fractional_sample = 0.0f;
+          }
+        }
+      }
+    }
+    return;
+  }
   if (external_input && seed_button_state == SEED_BUTTON_STATE_LOCKED) {
     // We don't make any difference between linear and expo FM when the CV
     // is only selecting a divider: the CV is swinging the knob, end of the
