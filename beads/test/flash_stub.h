@@ -31,6 +31,10 @@
 // unless FAULTMASK and BFHFNMIGN are set. With the guard on, the pages
 // holding a damaged word are inaccessible outside a masked read, so a plain
 // read of one stops the test (TestFlashGuardHandler).
+//
+// The supply: PVDO reads set while it is low, once the firmware has enabled
+// the PVD at level 6. An erase or program that starts while it is low is
+// counted.
 
 #ifndef BEADS_TEST_FLASH_STUB_H_
 #define BEADS_TEST_FLASH_STUB_H_
@@ -48,6 +52,15 @@
 #define SCB_CCR_BFHFNMIGN_Msk (1U << 8)
 #define SCB_CFSR_PRECISERR_Msk (1U << 9)
 #define SCB_CFSR_BFARVALID_Msk (1U << 15)
+#define PWR_CR1_PLS 0x000000e0U
+#define PWR_CR1_PLS_LEV6 0x000000c0U
+#define PWR_CR1_PVDEN 0x00000010U
+#define PWR_CSR1_PVDO 0x00000010U
+#define PWR_CR1_RESET 0xf000c000U
+#define SET_BIT(REG, BIT) ((REG) |= (BIT))
+#define READ_BIT(REG, BIT) ((REG) & (BIT))
+#define MODIFY_REG(REG, CLEARMASK, SETMASK) \
+    ((REG) = (((REG) & ~(CLEARMASK)) | (SETMASK)))
 
 // A write-1-to-clear status register.
 struct TestStatusRegister {
@@ -61,6 +74,16 @@ struct TestStatusRegister {
 struct SCB_Type {
   uint32_t CCR;
   TestStatusRegister CFSR;
+};
+
+// PVDO, from the supply and the PVD settings.
+struct TestPvdStatus {
+  operator uint32_t() const;
+};
+
+struct PWR_TypeDef {
+  uint32_t CR1;
+  TestPvdStatus CSR1;
 };
 
 const int kTestDamagedWordsMax = 64;
@@ -90,6 +113,12 @@ struct TestFlashState {
   // Erases given a sector number the HAL's three-bit field can't hold, or
   // outside bank 2.
   int wide_sectors;
+  PWR_TypeDef pwr;
+  bool supply_low;
+  // Erases and programs left before the supply goes low; 0: never.
+  int supply_budget;
+  // Erases and programs started while the supply was low.
+  int low_supply_writes;
 };
 
 
@@ -113,6 +142,23 @@ inline uint32_t& TestFlashErrors() {
 }
 
 #define SCB (&TestFlash().scb)
+#define PWR (&TestFlash().pwr)
+
+inline TestPvdStatus::operator uint32_t() const {
+  const TestFlashState& f = TestFlash();
+  const bool enabled = (f.pwr.CR1 & PWR_CR1_PVDEN) &&
+      (f.pwr.CR1 & PWR_CR1_PLS) == PWR_CR1_PLS_LEV6;
+  return enabled && f.supply_low ? PWR_CSR1_PVDO : 0;
+}
+
+// The supply as at power-up: PVD off, the supply good.
+inline void TestFlashPowerUp() {
+  TestFlashState& f = TestFlash();
+  f.pwr.CR1 = PWR_CR1_RESET;
+  f.supply_low = false;
+  f.supply_budget = 0;
+  f.low_supply_writes = 0;
+}
 
 inline void TestFlashExpose(bool exposed) {
   TestFlashState& f = TestFlash();
@@ -169,11 +215,18 @@ inline void TestFlashBeginOperation() {
   if (TestFlash().faultmask) {
     ++TestFlash().violations;
   }
+  if (TestFlash().supply_low) {
+    ++TestFlash().low_supply_writes;
+  }
   TestFlashExpose(true);
 }
 
 inline void TestFlashEndOperation() {
+  TestFlashState& f = TestFlash();
   TestFlashExpose(false);
+  if (f.supply_budget > 0 && --f.supply_budget == 0) {
+    f.supply_low = true;
+  }
 }
 
 inline uint32_t __get_FAULTMASK() {

@@ -37,7 +37,8 @@
 // no longer crashes the module. Before each erase of the sector, the
 // calibration about to be written is verified in a mirror sector, so a power
 // cut after the erase can't lose it. Settings decides what a lost
-// calibration means; Lock stops all writes to bank 2 until a repair.
+// calibration means; Lock stops all writes to bank 2 until a repair. An
+// erase or program refused for a low supply fails like any other.
 
 #ifndef BEADS_SETTINGS_STORAGE_H_
 #define BEADS_SETTINGS_STORAGE_H_
@@ -156,6 +157,9 @@ class ChunkStorage {
   }
 
   void SaveState() {
+    if (Flash::SupplyLow()) {
+      return;  // Kept in RAM; the next save writes it.
+    }
     if (chunk_address(next_state_chunk_index_ + 1) > FLASH_STORAGE_LAST) {
       RewriteSector();
     } else {
@@ -255,6 +259,9 @@ class ChunkStorage {
       return false;
     }
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
+      if (Flash::SupplyLow()) {
+        return false;
+      }
       ClearErrors();
       FLASH_EraseInitTypeDef erase_params;
       erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
@@ -333,6 +340,9 @@ class ChunkStorage {
     }
     for (int attempt = 0; attempt < kFlashAttempts; ++attempt) {
       if (!Flash::IsBlank(address, BLOCK_SIZE)) {
+        return false;
+      }
+      if (Flash::SupplyLow()) {
         return false;
       }
       ClearErrors();
