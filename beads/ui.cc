@@ -95,6 +95,8 @@ void Ui::Init(
   freeze_button_state_ = false;
   freeze_led_state_ = false;
   delay_active_ = false;
+  pitch_on_notch_ = false;
+  assign_modulation_ = 0.0f;
   delay_cue_time_ = 0;
   boot_cue_time_ = system_clock.milliseconds();
   
@@ -404,6 +406,11 @@ void Ui::UpdateLeds() {
           }
         } else {
           leds_.set(Led(LED_ASSIGN_1 + state.assignable_cv_destination), 128);
+        }
+        if (settings_->FeatureValue(FEATURE_LIVE_ASSIGN)) {
+          float modulation = fabsf(assign_modulation_);
+          CONSTRAIN(modulation, 0.0f, 1.0f);
+          leds_.ScaleAssignments(32 + uint8_t(modulation * 223.0f));
         }
       }
       break;

@@ -2520,6 +2520,43 @@ void TestBetaOptionsLeds() {
     CHECK(delay.ui.leds_.intensity_[LED_MEDIA_G] != 0);
   }
 
+  Rig live;
+  live.settings.set_stereo_width(255);
+  live.settings.set_diffusion(0.5f);
+  live.Tick(512);
+  for (int destination = 0; destination < 6; ++destination) {
+    live.settings.mutable_state()->assignable_cv_destination = destination < 4
+        ? destination : 0;
+    live.settings.set_width_assigned(destination == 4);
+    live.settings.set_diffusion_assigned(destination == 5);
+    CHECK(live.settings.width_assigned() == (destination == 4));
+    CHECK(live.settings.diffusion_assigned() == (destination == 5));
+    for (int i = 0; i < 3; ++i) {
+      live.settings.mutable_state()->assignable_cv_amount[i] = i ? 255 : 0;
+    }
+    for (int polarity = -1; polarity <= 1; ++polarity) {
+      live.settings.SetFeatureValue(FEATURE_LIVE_ASSIGN, 0);
+      live.ui.UpdateLeds();
+      uint8_t stock[3];
+      for (int i = 0; i < 3; ++i) {
+        stock[i] = live.ui.leds_.intensity_[LED_ASSIGN_1 + i];
+      }
+      if (destination == 4) {
+        CHECK(stock[0] > 0 && stock[0] == stock[1] && stock[1] == stock[2]);
+      }
+      if (destination == 5) {
+        CHECK(stock[0] == 0 && stock[1] == 0 && stock[2] > 0);
+      }
+      live.settings.SetFeatureValue(FEATURE_LIVE_ASSIGN, 1);
+      live.ui.set_modulation_indication(false, float(polarity));
+      live.ui.UpdateLeds();
+      for (int i = 0; i < 3; ++i) {
+        CHECK(live.ui.leds_.intensity_[LED_ASSIGN_1 + i] ==
+            uint16_t(stock[i]) * (polarity ? 255 : 32) / 255);
+      }
+    }
+  }
+
   const int percentages[] = { 100, 66, 33 };
   for (int level = 0; level < 3; ++level) {
     Rig full;

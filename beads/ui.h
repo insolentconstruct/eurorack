@@ -100,6 +100,10 @@ class Ui {
   }
   
   void set_delay_active(bool active);
+  void set_modulation_indication(bool notch, float assign) {
+    pitch_on_notch_ = notch;
+    assign_modulation_ = assign;
+  }
 
   inline bool freeze_led_state() const {
     return freeze_led_state_;
@@ -210,6 +214,8 @@ class Ui {
   bool seed_button_state_;
   bool seed_button_locked_;
   bool delay_active_;
+  bool pitch_on_notch_;
+  float assign_modulation_;
   uint32_t delay_cue_time_;
   uint32_t boot_cue_time_;
   bool seed_led_state_;

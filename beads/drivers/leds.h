@@ -68,6 +68,12 @@ class Leds {
   void Write();
   void Clear();
 
+  void ScaleAssignments(uint8_t level) {
+    for (int i = LED_ASSIGN_1; i <= LED_ASSIGN_3; ++i) {
+      intensity_[i] = uint16_t(intensity_[i]) * level / 255;
+    }
+  }
+
   void Scale(uint8_t level) {
     if (!level) {
       return;

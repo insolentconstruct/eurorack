@@ -1094,6 +1094,9 @@ cases = [
     'settings_->FeatureValue(FEATURE_DELAY_CUE) &&',
     'false &&'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
+    'if (settings_->FeatureValue(FEATURE_LIVE_ASSIGN))',
+    'if (false)'),
+  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'leds_.Scale(level);',
     '(void)level; leds_.Scale(0);'),
   ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
@@ -1119,6 +1122,13 @@ cases = [
     'options_.Value(OPTION_BRIGHTNESS)', '0'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     '? 0.25f : 0.05f', '? 0.5f : 0.05f'),
+
+  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
+    'if (settings_->width_assigned()) {\n          for',
+    'if (false) {\n          for'),
+  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
+    '} else if (settings_->diffusion_assigned()) {\n          leds_',
+    '} else if (false) {\n          leds_'),
 
 ]
 # Validate every replacement before creating a disposable source tree.
