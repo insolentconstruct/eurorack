@@ -56,6 +56,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Save freeze.
   { 4, 11, true, false, false, false },  // Seed latch.
   { 2, kNoField, false, false, false, false },  // Pitch notch.
+  { 2, 12, true, false, false, false },  // Time scan.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

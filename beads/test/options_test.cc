@@ -2081,6 +2081,7 @@ void TestOptionsPalette() {
     switch (v.setting) {
       case OPTION_BRIGHTNESS:
       case OPTION_SEED_LATCH:
+      case OPTION_TIME_SCAN:
         r.ui.options_.profile_preview_[v.setting] = v.value;
         break;
       case OPTION_PITCH: r.ui.options_.pitch_preview_ = PitchScale(v.value);
@@ -2625,6 +2626,73 @@ void TestBetaOptionsLeds() {
 
 }
 
+void TestBetaOptionPages() {
+  test_checker.Start("TestBetaOptionPages");
+  const ProfileFeature features[] = {
+    FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_TIME_SCAN
+  };
+  for (int f = 0; f < 3; ++f) {
+    for (int slot = 1; slot <= 12; ++slot) {
+      Rig r;
+      uint8_t b[kProfileSize];
+      CustomProfile(b, features[f], slot, 0, 0);
+      ApplyCustomProfile(&r, b);
+      r.Enter();
+      const int knob = (slot - 1) % 3;
+      if (knob == 0) {
+        r.feedback = 1.0f;
+      }
+      if (knob == 1) {
+        r.pot = 1.0f;
+      }
+      if (knob == 2) {
+        r.reverb = 1.0f;
+      }
+      r.Tick(1002);
+      const uint8_t expected = f == 1 ? 3 : f == 0 ? 2 : 1;
+      CHECK(r.settings.FeatureValue(features[f]) == expected);
+      Settings loaded;
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.FeatureValue(features[f]) == expected);
+      // Removing the feature leaves its dormant nibble intact.
+      uint8_t off[kProfileSize];
+      CustomProfile(off, 0, 0, 0, 0);
+      Settings disabled;
+      CHECK(disabled.Init(false, off));
+      CHECK(disabled.FeatureValue(features[f]) == 0);
+      disabled.SaveState();
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.FeatureValue(features[f]) == expected);
+      const int values = kFeatureDefinitions[features[f]].values;
+      for (int value = 0; value < values; ++value) {
+        const float pot = (float(value) + 0.5f) / float(values);
+        if (knob == 0) {
+          r.feedback = pot;
+        }
+        if (knob == 1) {
+          r.pot = pot;
+        }
+        if (knob == 2) {
+          r.reverb = pot;
+        }
+        r.Tick(40);
+        if (f == 0) {
+          CHECK(r.ui.options_.Value(OPTION_BRIGHTNESS) == value);
+          const int percent[] = { 100, 66, 33 };
+          CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
+              (value ? 255 * percent[value] / 100 : 0));
+          CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
+              (value < 2 ? 255 * percent[value] / 100 : 0));
+        }
+        r.Tick(1002);
+        CHECK(r.settings.FeatureValue(features[f]) == value);
+        CHECK(loaded.Init(false, b));
+        CHECK(loaded.FeatureValue(features[f]) == value);
+      }
+    }
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -2691,6 +2759,7 @@ int main() {
   TestProfilePages();
   TestDefaultLedIdentity();
   TestBetaOptionsLeds();
+  TestBetaOptionPages();
   TestProfileActions();
   TestProfileAmounts();
   return test_checker.failures() ? 1 : 0;

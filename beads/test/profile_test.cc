@@ -187,9 +187,36 @@ void TestProfileKinds() {
   }
 }
 
+void TestBetaProfileDefinitions() {
+  test_checker.Start("TestBetaProfileDefinitions");
+  uint8_t b[kProfileSize];
+  CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
+  const uint8_t fields[] = { 255, 255, 255, 10, 255, 255, 11, 255, 12 };
+  for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
+    CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);
+    for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
+      for (int value = 0; value <= kFeatureDefinitions[id].values; ++value) {
+        Template(b);
+        b[5] = 1;
+        b[6] = 6;
+        b[16] = id;
+        b[17] = state;
+        b[18] = value;
+        b[19] = b[20] = b[21] = 0;
+        Checksum(b);
+        Profile p;
+        const bool valid = value < kFeatureDefinitions[id].values &&
+            (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page);
+        CHECK(p.Init(b) == valid);
+      }
+    }
+  }
+}
+
 int main() {
   TestProfileParser();
   TestProfileKinds();
+  TestBetaProfileDefinitions();
   puts("Profile validation: PASS");
   return test_checker.failures() ? 1 : 0;
 }

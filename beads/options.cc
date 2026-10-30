@@ -110,6 +110,8 @@ const OptionValue kOptionValues[] = {
   { OPTION_SEED_LATCH, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_SEED_LATCH, 2, { 255, 0, 0 }, PULSE_STEADY },
   { OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { OPTION_TIME_SCAN, 0, { 0, 255, 0 }, PULSE_STEADY },
+  { OPTION_TIME_SCAN, 1, { 255, 255, 0 }, PULSE_STEADY },
 };
 
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
@@ -312,6 +314,14 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
           }
           profile_preview_[setting] = value;
         } break;
+        case OPTION_TIME_SCAN:
+          if (pot < kOptionsHalfLow) {
+            profile_preview_[setting] = 0;
+          }
+          if (pot > kOptionsHalfHigh) {
+            profile_preview_[setting] = 1;
+          }
+          break;
         case OPTION_PITCH:
           pitch_preview_ = zone_[i] == 2 ? scale_ : PitchScale(zone_[i]);
           break;

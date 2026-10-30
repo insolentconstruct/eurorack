@@ -565,6 +565,7 @@ void MonitorStateChange() {
   seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
+  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
   ui.set_delay_active(processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
       settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
