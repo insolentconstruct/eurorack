@@ -165,7 +165,7 @@ void BackgroundBufferBackup::EraseSector() {
     save_started_ = true;
     // The header's sector first: an interrupted backup is never loaded.
     const uint32_t sector = kNumSectors - remaining_sectors_;
-    if (!EraseBufferSector(sector, kFlashAttempts)) {
+    if (!EraseBufferSector(sector, kFlashAttempts, false)) {
       remaining_sectors_ = remaining_bytes_ = 0;
       return;
     }
@@ -288,7 +288,7 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
 void BackgroundBufferBackup::EraseDamagedSectors() {
   for (uint32_t i = 0; i < kNumSectors; ++i) {
     if (!Flash::IsReadable(Sector<8>::start + i * kSectorSize, kSectorSize)) {
-      EraseBufferSector(i, kFlashAttempts);
+      EraseBufferSector(i, kFlashAttempts, true);
     }
   }
   HAL_FLASH_Lock();
@@ -296,8 +296,9 @@ void BackgroundBufferBackup::EraseDamagedSectors() {
 
 // Sector 0 to 5 of bank 2; checked as the settings storage checks its
 // erases.
-bool BackgroundBufferBackup::EraseBufferSector(uint32_t sector, int attempts) {
-  if (settings_->write_locked()) {
+bool BackgroundBufferBackup::EraseBufferSector(
+    uint32_t sector, int attempts, bool recovery) {
+  if (recovery ? settings_->storage_damaged() : settings_->write_locked()) {
     return false;
   }
   HAL_FLASH_Unlock();

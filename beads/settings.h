@@ -39,6 +39,7 @@
 #include "beads/dsp/playback_options.h"
 #include "beads/dsp/pitch_quantizer.h"
 #include "beads/settings_storage.h"
+#include "beads/profile.h"
 
 namespace beads {
 
@@ -134,6 +135,10 @@ class Settings {
   
   // False on a new module's blank storage: the factory test runs.
   bool Init(bool recovery_mode);
+  bool Init(bool recovery_mode, const volatile uint8_t* profile_block);
+
+  inline const Profile& profile() const { return profile_; }
+  inline bool profile_locked() const { return profile_locked_; }
 
   void SavePersistentData();
   void SaveState();
@@ -224,7 +229,8 @@ class Settings {
   inline bool width_assigned() const { return state_.width_assigned == 1; }
 
   inline void set_width_assigned(bool assigned) {
-    state_.width_assigned = assigned && stereo_width() ? 1 : 0;
+    state_.width_assigned = assigned && profile_.adjustable(FEATURE_WIDTH) &&
+        stereo_width() ? 1 : 0;
     if (assigned) state_.assignable_cv_destination = 0;
   }
 
@@ -272,7 +278,8 @@ class Settings {
   inline bool diffusion_assignable() const { return state_.diffusion > 1; }
 
   inline void set_diffusion_assigned(bool assigned) {
-    if (assigned && diffusion_assignable()) {
+    if (assigned && profile_.adjustable(FEATURE_DIFFUSION) &&
+        diffusion_assignable()) {
       state_.width_assigned = 2;
       state_.assignable_cv_destination = 0;
     } else if (diffusion_assigned()) {
@@ -297,18 +304,32 @@ class Settings {
   }
 
   // Damaged storage found at power-up: settings change in RAM only.
+  inline bool storage_damaged() const {
+    return chunk_storage_.storage_damaged();
+  }
+
   inline bool write_locked() const { return chunk_storage_.locked(); }
 
   inline StorageRepair repair() const { return repair_; }
 
  private:
   void NormalizeOptions();
+  void LoadOptions();
+  void PackOptions();
+  void ApplyProfile();
+  uint8_t FeatureValue(ProfileFeature feature) const;
+  void SetFeatureValue(ProfileFeature feature, uint8_t value);
   static bool CalibrationPlausible(
       const PersistentData& data,
       const PersistentData& factory);
 
   PersistentData persistent_data_;
   State state_;
+  State stored_state_;
+  Profile profile_;
+  bool profile_locked_;
+  uint8_t packed_[10];
+  uint8_t dormant_destination_;
   // Bank 2: the settings in sector 7, the calibration mirror in sector 6.
   ChunkStorage<15, 14, PersistentData, State> chunk_storage_;
   StorageRepair repair_;

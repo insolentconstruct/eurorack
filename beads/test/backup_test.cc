@@ -759,6 +759,9 @@ void TestEraseDamagedSectors() {
   TestFlashDamage(0x08180000 + 0x1ffe0);
   Rig r;
   r.Boot();
+  uint8_t invalid[kProfileSize] = { 0 };
+  r.settings.Init(false, invalid);
+  CHECK(r.settings.profile_locked() && !r.settings.storage_damaged());
   int erases = test_erases;
   test_locked = true;
   // A refused erase, then one that does nothing: retried until blank.
