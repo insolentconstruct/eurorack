@@ -15,7 +15,17 @@ const read = (p) => readFileSync(new URL(p, root), 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
 const catalogue = JSON.parse(read('profile-features.json'));
 const release = manifest.releases[0], profile = release.profile;
-const source = (file) => execFileSync('git', ['show', `${release.development ? release.source_commit : 'refs/tags/' + release.tag}:${file}`], { encoding: 'utf8' });
+const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
+const source = (file) => execFileSync('git', ['show', `${firmwareRef}:${file}`], { encoding: 'utf8' });
+const catalogueBytes = readFileSync(new URL('profile-features.json', root));
+assert.deepEqual(catalogueBytes,
+  execFileSync('git', ['show', `${firmwareRef}:palette/static/profile-features.json`]),
+  'copy the authoritative firmware catalogue verbatim');
+if (process.env.FIRMWARE_CATALOGUE_REF) {
+  assert.deepEqual(catalogueBytes,
+    execFileSync('git', ['show', `${process.env.FIRMWARE_CATALOGUE_REF}:palette/static/profile-features.json`]),
+    'the prepared firmware catalogue must also match verbatim');
+}
 const table = source('beads/profile.cc').split('kFeatureDefinitions[FEATURE_LAST] = {')[1].split('};')[0];
 const definitions = [...table.matchAll(/\{ (\d+), (\w+), (true|false), (true|false), (true|false), (true|false) \}/g)].slice(1);
 assert.equal(profile.features.length, 23);
@@ -30,10 +40,16 @@ for (const [i, definition] of definitions.entries()) {
   assert.equal(f.field, definition[2] === 'kNoField' ? null : Number(definition[2]));
   assert.deepEqual(f.states, c.states);
   assert.equal(f.synth_path, c.touches_synth);
+  assert.equal(f.stateless, c.stateless ?? false);
+  assert.deepEqual(f.cpu, c.cpu_cost);
+  assert.equal(f.default[1], ['Off', 'Fixed', 'Adjustable'].indexOf(c.default_state));
+  assert.equal(f.default[2], c.default);
   assert.equal(f.values?.length || 0, Number(definition[1]));
   for (const [key, index, slots] of [['page', 3, 'page_slots'], ['amount', 4, 'amount_slots'], ['action', 5, 'actions']]) {
     assert.equal(f[key], definition[index] === 'true', `${f.name}: firmware ${key}`);
     assert.equal(f[key], c[slots].length > 0, `${f.name}: catalogue ${key}`);
+    const count = key === 'page' ? 12 : key === 'amount' ? 2 : 3;
+    assert.deepEqual(c[slots], f[key] ? Array.from({ length: count }, (_, n) => n + 1) : []);
   }
   assert.equal(f.stateless, definition[6] === 'true');
   assert.deepEqual(modes(f).map(([, label]) => label), c.states);
@@ -58,19 +74,6 @@ const measuredCosts = (r) => {
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;
 };
-const firmwareCatalogueText = process.env.FIRMWARE_CATALOGUE_REF ?
-  execFileSync('git', ['show', `${process.env.FIRMWARE_CATALOGUE_REF}:palette/static/profile-features.json`], { encoding: 'utf8' }) :
-  source('palette/static/profile-features.json');
-const firmwareCatalogue = JSON.parse(firmwareCatalogueText);
-// The current pinned firmware has only the nine additions. Check every one;
-// after firmware supplies the full catalogue, require byte identity as well.
-for (const f of firmwareCatalogue.features) {
-  assert.deepEqual(catalogue.features.find((c) => c.id === f.id), f);
-}
-if (firmwareCatalogue.features.length === catalogue.features.length || process.env.FIRMWARE_CATALOGUE_REF) {
-  assert.equal(read('profile-features.json'), firmwareCatalogueText,
-    'copy the authoritative firmware catalogue verbatim');
-}
 // A missing measured engine uses its own estimate and still gates the profile.
 for (const engine of ['synth', 'granular']) {
   const r = structuredClone(release);

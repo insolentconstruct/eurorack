@@ -25,7 +25,7 @@
 // Node tests use the compiled firmware as the profile oracle.
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { webcrypto } from 'node:crypto';
@@ -59,7 +59,18 @@ for (const offset of [0, 4, 5, 6, 7, 8, 12, 13, 14, 15]) {
   reject([5, 6, 7].includes(offset) ? b : reseal(b));
 }
 // The refusal table from beads/test/profile_test.cc, parsed so it cannot drift.
-const firmwareFile = (file) => execFileSync('git', ['show', `${release.development ? release.source_commit : 'refs/tags/' + release.tag}:${file}`], { encoding: 'utf8' });
+const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
+const firmwareFile = (file) => execFileSync('git', ['show', `${firmwareRef}:${file}`], { encoding: 'utf8' });
+const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', firmwareRef, 'HEAD'], { encoding: 'utf8' });
+assert.ifError(ancestor.error);
+assert([0, 1].includes(ancestor.status), ancestor.stderr);
+// This page branch predates the pinned firmware; skip until it is merged.
+if (ancestor.status === 0) {
+  for (const file of ['beads/profile.cc', 'beads/profile.h']) {
+    assert.deepEqual(readFileSync(file), execFileSync('git', ['show', `${firmwareRef}:${file}`]),
+      `${file}: working parser must match the pinned oracle`);
+  }
+}
 const firmwareTests = firmwareFile('beads/test/profile_test.cc');
 const bad = firmwareTests.split('const uint8_t bad[][2] = {')[1].split('};')[0];
 const constants = { FEATURE_LAST: Math.max(...profile.features.map((f) => f.id)) + 1, FEATURE_PITCH: 1, PROFILE_OFF: 0, PROFILE_FIXED: 1 };

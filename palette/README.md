@@ -10,6 +10,7 @@ templates, share links and desktop/phone SVG guides. Conflicts and invalid
 firmware profiles are refused. Older plain-WAV releases are not offered.
 
 The current entry is an **unreleased development build** pinned in the manifest.
+It pins `drizzlet-dev-db46c9a`, built from the merged Drizzlet firmware.
 Each feature has either a measured CPU cost or **not yet measured** (`cpu: null`);
 none has a measured cost yet. The synth baseline is the measured default-profile
 worst case, **87.2% with Clouds-style reverb**, width 255 and Raag Shri; it already
@@ -79,13 +80,16 @@ dependencies belong to the test harness and are never served by the page.
 The profile test compiles a small oracle from the manifest source commit or release tag’s firmware parser and
 compares more than 26,000 candidate blocks. With stmlib already available in a
 separate checkout, `STMLIB_INCLUDE` can name that checkout's root. No firmware
-source or Git metadata needs changing.
+source or Git metadata needs changing. When the pinned firmware is an ancestor
+of HEAD, the working parser source and header must also match it byte for byte.
 
 Manifest format 2 stores the profile offset, size, version, release ID and
 feature table per release. `default_in_block: false` omits a feature from the
 untouched wire block while its catalogue default remains available in the editor.
-The 23-feature catalogue is checked against the pinned firmware definition table;
-the default block still contains 14 entries. `states` controls editor modes.
+The 23-feature catalogue must match the pinned firmware file byte for byte and
+is checked against its definition table. `FIRMWARE_CATALOGUE_REF` adds a second
+byte-identity check against a prepared firmware revision. The default block still
+contains 14 entries. `states` controls editor modes.
 Released `release_id` values are the tag date as hexadecimal YYYYMMDD (for example,
 2026-11-05 becomes `0x20261105`), and must equal that tag's firmware
 `kProfileReleaseId`; development entries retain the development constant. `values: null` means a full byte. The `page`,
@@ -97,10 +101,9 @@ hash. Custom WAVs and guides carry the first eight hex digits of SHA-256 of the
 
 Development images are pinned by the manifest and independently encoded with
 the release Python encoder. Released images must also match their tag's checked-in
-hash files. The development build currently differs from phase 2's checked-in
-app and WAV hashes; the default block agrees with the firmware, and the newly
-built image's WAV agrees with the independent encoder. Resolve those stale
-hashes before turning this into a release entry.
+hash files. The current development image and independently encoded WAV match
+the pinned commit's checked-in app and WAV hashes. Its default block fingerprint
+remains `a0540fdd`.
 
 CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
 

@@ -2,11 +2,11 @@
   "format": 2,
   "releases": [
     {
-      "tag": "drizzlet-dev-35718f2",
+      "tag": "drizzlet-dev-db46c9a",
       "name": "Drizzlet Beta 2 — development (unreleased)",
       "development": true,
-      "source_commit": "35718f221facc2c07ac4a0ed03b55ab73c298d5b",
-      "app": "images/drizzlet-dev-35718f2/app.bin?v=0c93f90fd2581be966fad1a16032367a3999f40e06ba1873cbf2594b2dccf372",
+      "source_commit": "db46c9acc3b5cfe152c79affc0010332aee20660",
+      "app": "images/drizzlet-dev-db46c9a/app.bin?v=583800010af5ed238980b5224969e25c22c7d3b00ea273d3970a252bf023def4",
       "profile": {
         "offset": 1024,
         "size": 512,
@@ -707,12 +707,12 @@
           }
         }
       },
-      "app_sha256": "0c93f90fd2581be966fad1a16032367a3999f40e06ba1873cbf2594b2dccf372",
-      "app_size": 638624,
-      "wav_sha256": "6d1ff812420e9a524cff29768550fe651400f61bcb0569af29ac9f7cdc4a75c4",
+      "app_sha256": "583800010af5ed238980b5224969e25c22c7d3b00ea273d3970a252bf023def4",
+      "app_size": 640280,
+      "wav_sha256": "b31fcc92f9f7a3bac68144e889120726f91b520249b2503d218f27a44df72a82",
       "slug": "beta-2-fog",
       "date": "2026-10-29"
     }
   ],
-  "asset_version": "47d7653c01ba8942"
+  "asset_version": "359b687fb6271455"
 }

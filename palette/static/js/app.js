@@ -7,9 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=47d7653c01ba8942';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=47d7653c01ba8942';
-import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=47d7653c01ba8942';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=359b687fb6271455';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=359b687fb6271455';
+import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=359b687fb6271455';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +20,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=47d7653c01ba8942', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=359b687fb6271455', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.progress !== undefined) {
         $('progress').value = data.progress;
@@ -258,7 +258,7 @@ function loadSharedProfile() {
 
 async function init() {
   try {
-    const response = await fetch('manifest.json?v=47d7653c01ba8942', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=359b687fb6271455', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
