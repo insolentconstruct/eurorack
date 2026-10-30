@@ -50,6 +50,27 @@ const entries = defaults(profile);
 assert.equal(entries.length, 14);
 const app = readFileSync(new URL(release.app, root));
 assert(equal(encodeProfile(entries, profile), app.subarray(1024, 1536)));
+// Threshold regression fixtures retain the former numerical expectations without
+// publishing synthetic deltas as real measurements.
+const measuredCosts = (r) => {
+  const fixture = structuredClone(r);
+  const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
+  for (const f of fixture.profile.features) f.cpu = costs[f.id];
+  return fixture;
+};
+const firmwareCatalogueText = process.env.FIRMWARE_CATALOGUE_REF ?
+  execFileSync('git', ['show', `${process.env.FIRMWARE_CATALOGUE_REF}:palette/static/profile-features.json`], { encoding: 'utf8' }) :
+  source('palette/static/profile-features.json');
+const firmwareCatalogue = JSON.parse(firmwareCatalogueText);
+// The current pinned firmware has only the nine additions. Check every one;
+// after firmware supplies the full catalogue, require byte identity as well.
+for (const f of firmwareCatalogue.features) {
+  assert.deepEqual(catalogue.features.find((c) => c.id === f.id), f);
+}
+if (firmwareCatalogue.features.length === catalogue.features.length || process.env.FIRMWARE_CATALOGUE_REF) {
+  assert.equal(read('profile-features.json'), firmwareCatalogueText,
+    'copy the authoritative firmware catalogue verbatim');
+}
 // A missing measured engine uses its own estimate and still gates the profile.
 for (const engine of ['synth', 'granular']) {
   const r = structuredClone(release);
@@ -65,14 +86,21 @@ for (const engine of ['synth', 'granular']) {
   r.cpu.baselines[unmeasured].percent = 99;
   assert(cpuUsage([], r).blocked, 'missing engine still enforces its estimated ceiling');
 }
-// Conservative DSP estimates must exercise the real warning/block controls.
+// Synthetic measured DSP costs exercise the warning/block controls.
 const warning = entries.map((e) => e.slice());
 for (const [id, value] of [[2, 1], [8, 2], [12, 255]]) warning.find((e) => e[0] === id)[2] = value;
-assert(cpuUsage(warning, release).warning && !cpuUsage(warning, release).blocked);
+assert(cpuUsage(warning, measuredCosts(release)).warning && !cpuUsage(warning, measuredCosts(release)).blocked);
 const heavy = warning.map((e) => e.slice());
 for (const [id, value] of [[1, 9], [10, 1], [11, 255]]) heavy.find((e) => e[0] === id)[2] = value;
-assert(cpuUsage(heavy, release).blocked);
-for (const f of profile.features) assert(f.cpu.placeholder && f.cpu.kind === 'estimate');
+assert(cpuUsage(heavy, measuredCosts(release)).blocked);
+for (const f of profile.features) assert.equal(f.cpu, null, 'unmeasured costs must not carry invented numbers');
+for (const candidate of [warning, heavy]) {
+  const result = cpuUsage(candidate, release);
+  assert.equal(result.percent, null);
+  assert.equal(result.kind, 'not yet measured');
+  assert(!result.warning && !result.blocked);
+  assert(result.unknown.includes('Reverb character'));
+}
 for (const mobile of [false, true]) {
   for (const id of [9, 13, 14]) {
     const svg = guide([[id, 2, 1, 0, 0, 3]], release, 'test', mobile);
@@ -118,4 +146,4 @@ assert(workflow.includes('  pull_request:'));
 assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/drizzlet'"));
 const html = read('index.html');
 for (const text of ['How to install', 'storage-recovery-2026.10.27', ':focus-visible', 'min-height: 44px', 'Made by Insolent Construct']) assert(html.includes(text));
-console.log(`PASS readiness catalogue, default bytes, partial measurements, real CPU thresholds (${cpuUsage(warning, release).percent}/${cpuUsage(heavy, release).percent}), guides, release IDs, assets and PR CI`);
+console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and unmeasured shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, release IDs, assets and PR CI`);

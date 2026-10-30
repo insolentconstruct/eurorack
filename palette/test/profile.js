@@ -30,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { webcrypto } from 'node:crypto';
 import { defaults, encodeProfile, decodeProfile, crc32, equal, fingerprint,
-  profileKey, filenames, share, unshare, cpuUsage, templates, featureDelta } from '../static/js/profile.js';
+  profileKey, filenames, share, unshare, cpuUsage, templates, featureDelta, normalise } from '../static/js/profile.js';
 import { guide } from '../static/js/guide.js';
 import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
@@ -108,55 +108,90 @@ assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);
 assert.equal(filenames({ ...release, tag: 'drizzlet-dev-a70e669' }, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
 assert.equal(filenames(release, fp, false).mobile, `options-guide-${release.tag.replace(/^drizzlet-/, '')}-${fp}-mobile.svg`);
-for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
-  const r = structuredClone(release);
-  for (const f of r.profile.features) f.cpu.off = 0;
-  for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
-  const result = cpuUsage([], r); assert.equal(result.warning, warning); assert.equal(result.blocked, blocked);
-}
-for (const [percent, blocked] of [[92, false], [92.1, true]]) {
-  const r = structuredClone(release); r.cpu.combinations = [{ profile: profileKey([], profile), synth: percent, granular: percent }];
-  const result = cpuUsage([], r); assert.equal(result.kind, 'measured'); assert.equal(result.blocked, blocked);
-}
-for (const engine of ['synth', 'granular']) {
-  const r = structuredClone(release);
-  for (const f of r.profile.features) f.cpu.off = 0;
-  for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
-  r.cpu.baselines[engine].percent = 92.1;
-  const usage = cpuUsage([], r);
-  assert(usage.blocked && usage.warning, `${engine} independently gates the profile`);
-  assert(usage.engines.find((e) => e.engine === engine).blocked);
-}
-const measuredRelease = structuredClone(release);
-const measuredEntries = entries.map((e) => e.slice()); measuredEntries[0][3] = 10;
-measuredRelease.cpu.combinations = [{ profile: profileKey(measuredEntries, profile), synth: 90, granular: 89 }];
-assert.equal(cpuUsage(measuredEntries, measuredRelease).kind, 'measured');
-assert(!cpuUsage(measuredEntries, measuredRelease).blocked);
-const changedPlacement = measuredEntries.map((e) => e.slice()); changedPlacement[0][3] = 11;
-assert.equal(cpuUsage(changedPlacement, measuredRelease).kind, 'estimated');
-for (const r of manifest.releases) {
-  const usage = cpuUsage(defaults(r.profile), r);
-  assert.equal(usage.kind, 'partly measured'); assert(!usage.blocked);
-  const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
-  assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
-  assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, r.cpu.baselines.synth.percent);
-  const highDefault = structuredClone(r);
-  highDefault.cpu.baselines.synth.percent = 99;
-  assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
-  for (const [name, candidate] of Object.entries(templates(r.profile))) {
-    const result = cpuUsage(candidate, r);
-    assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 92), name);
-    assert(!result.blocked, `shipped template ${name} builds or warns`);
+// Synthetic measured costs exercise thresholds; these are never shipped costs.
+const withMeasuredCosts = (r) => {
+  const fixture = structuredClone(r);
+  const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
+  for (const f of fixture.profile.features) f.cpu = costs[f.id];
+  return fixture;
+};
+{
+  const release = withMeasuredCosts(manifest.releases[0]);
+  for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
+    const r = structuredClone(release);
+    for (const f of r.profile.features) f.cpu.off = 0;
+    for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
+    const result = cpuUsage([], r); assert.equal(result.warning, warning); assert.equal(result.blocked, blocked);
   }
-  const heavy = defaults(r.profile).map((e) => e.slice());
-  heavy.find((e) => e[0] === 7)[2] = 1;
-  heavy.find((e) => e[0] === 12)[2] = 255;
-  assert(cpuUsage(heavy, r).engines.find((e) => e.engine === 'synth').percent > 85.8,
-      'real manifest heavy custom combination costs more than the default');
-  const nearCeiling = structuredClone(r); nearCeiling.cpu.baselines.synth.percent = 91;
-  assert(cpuUsage(heavy, nearCeiling).blocked, 'heavy custom combination blocks near the ceiling');
-  assert(r.profile.features.some((f) => featureDelta([f.id, 0], f) < 0));
-  for (const f of r.profile.features) assert.equal(featureDelta(f.default, f), 0);
+  for (const [percent, blocked] of [[92, false], [92.1, true]]) {
+    const r = structuredClone(release); r.cpu.combinations = [{ profile: profileKey([], profile), synth: percent, granular: percent }];
+    const result = cpuUsage([], r); assert.equal(result.kind, 'measured'); assert.equal(result.blocked, blocked);
+  }
+  for (const engine of ['synth', 'granular']) {
+    const r = structuredClone(release);
+    for (const f of r.profile.features) f.cpu.off = 0;
+    for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
+    r.cpu.baselines[engine].percent = 92.1;
+    const usage = cpuUsage([], r);
+    assert(usage.blocked && usage.warning, `${engine} independently gates the profile`);
+    assert(usage.engines.find((e) => e.engine === engine).blocked);
+  }
+  const measuredRelease = structuredClone(release);
+  const measuredEntries = entries.map((e) => e.slice()); measuredEntries[0][3] = 10;
+  measuredRelease.cpu.combinations = [{ profile: profileKey(measuredEntries, profile), synth: 90, granular: 89 }];
+  assert.equal(cpuUsage(measuredEntries, measuredRelease).kind, 'measured');
+  assert(!cpuUsage(measuredEntries, measuredRelease).blocked);
+  const changedPlacement = measuredEntries.map((e) => e.slice()); changedPlacement[0][3] = 11;
+  assert.equal(cpuUsage(changedPlacement, measuredRelease).kind, 'estimated');
+  for (const shipped of manifest.releases) {
+    const r = withMeasuredCosts(shipped);
+    const usage = cpuUsage(defaults(r.profile), r);
+    assert.equal(usage.kind, 'partly measured'); assert(!usage.blocked);
+    const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
+    assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
+    assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 87.2);
+    assert.match(r.cpu.baselines.synth.provenance, /measured on the module, October 2026/);
+    assert.match(r.cpu.baselines.synth.provenance, /already includes Clouds-style reverb/);
+    const highDefault = structuredClone(r);
+    highDefault.cpu.baselines.synth.percent = 99;
+    assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
+    for (const [name, candidate] of Object.entries(templates(r.profile))) {
+      const result = cpuUsage(candidate, r);
+      assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 92), name);
+      assert(!result.blocked, `shipped template ${name} builds or warns`);
+    }
+    const heavy = defaults(r.profile).map((e) => e.slice());
+    heavy.find((e) => e[0] === 7)[2] = 1;
+    heavy.find((e) => e[0] === 12)[2] = 255;
+    assert(cpuUsage(heavy, r).engines.find((e) => e.engine === 'synth').percent > 85.8,
+        'real manifest heavy custom combination costs more than the default');
+    const nearCeiling = structuredClone(r); nearCeiling.cpu.baselines.synth.percent = 91;
+    assert(cpuUsage(heavy, nearCeiling).blocked, 'heavy custom combination blocks near the ceiling');
+    assert(r.profile.features.some((f) => featureDelta([f.id, 0], f) < 0));
+    for (const f of r.profile.features) assert.equal(featureDelta(f.default, f), 0);
+  }
+}
+// The shipped manifest contains no invented feature costs.
+for (const f of profile.features) {
+  assert.equal(f.cpu, null);
+  assert.equal(featureDelta(f.default, f), null);
+  const off = normalise([[f.id, 0, 0, 0, 0, 0]], profile);
+  const fixed = [f.id, 1, f.id === 9 || f.values?.[0] === 'Off' ? 1 : 0, 0, 0,
+    f.id === 9 ? 1 : 0];
+  assert.equal(cpuUsage([fixed], release).percent, null);
+  assert(cpuUsage([fixed], release).unknown.includes(f.name));
+  assert(!cpuUsage([fixed], release).warning && !cpuUsage([fixed], release).blocked);
+  // Every feature can return from Fixed to its original Off representation.
+  const toggled = normalise([fixed], profile);
+  toggled[0][1] = 0; toggled[0][5] = 0;
+  assert(equal(encodeProfile(normalise(toggled, profile), profile),
+    encodeProfile(off, profile)), `${f.name}: Fixed/Off round trip`);
+  if (f.default_in_block === false) {
+    const roundTrip = normalise([...entries, [f.id, 0, 1, 0, 0, 0]], profile);
+    assert(equal(encodeProfile(roundTrip, profile), block), `${f.name}: release default bytes`);
+    assert.deepEqual(filenames(release, await fingerprint(encodeProfile(roundTrip, profile)), true),
+      filenames(release, fp, true));
+  }
 }
 assert.deepEqual(unshare(share(release, block).replace(/profile=([0-9a-f]+)/, (_, hex) => 'profile=' + hex.toUpperCase()), manifest.releases).entries, entries);
 // Documented guide normalisation: compare page titles, setting names, value

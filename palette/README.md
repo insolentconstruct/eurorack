@@ -9,36 +9,36 @@ Off, Fixed and Adjustable features, defaults, page/amount/action placements,
 templates, share links and desktop/phone SVG guides. Conflicts and invalid
 firmware profiles are refused. Older plain-WAV releases are not offered.
 
-The current entry is an **unreleased development build** pinned in the manifest. All
-feature CPU deltas are placeholder estimates until the per-feature cost table exists.
-The baseline is **partly measured**: Clouds-style synth reverb WAS measured
-at **86.1–87.2%**, and granular at 83.0%. The provisional synth baseline uses
-87.2%; the final profile image still needs its own default and heavy-combination
-measurements. The exact DEFAULT profile is always allowed.
+The current entry is an **unreleased development build** pinned in the manifest.
+Each feature has either a measured CPU cost or **not yet measured** (`cpu: null`);
+none has a measured cost yet. The synth baseline is the measured default-profile
+worst case, **87.2% with Clouds-style reverb**, width 255 and Raag Shri; it already
+includes Clouds-style reverb. Granular's historical baseline is 83.0%.
 
-Measurement provenance (shared session reports):
+Measurement provenance: measured on the module, October 2026. Clouds-style
+synth reverb ranged from 86.1–87.2%; Plaits with Clouds-style reverb measured
+69.4%, and vanilla granular 92.1% supplies the provisional ceiling. These builds
+predate profiles and paired grains; invalid boot-guard measurements are excluded.
 
-- `session-2026-10-27/combos-module/report.md`: wavetable + Clouds-style
-  reverb 86.1%, with size variation 86.3%; Plaits + Clouds-style 69.4%.
-- `session-2026-10-28/synthab-module/report.md`: Clouds-style synth 86.4%;
-  vanilla granular 92.1%, the provisional stock ceiling's source.
-- `session-2026-10-28/storage-module/report.md`: Clouds-style synth 87.2%
-  on the storage-fix image. All these rows predate profiles and paired grains.
-  The later boot-guard rows marked INVALID are excluded.
+A custom profile enabling any feature without a measured cost shows
+“CPU cost not yet measured for: …” instead of a computed percentage. It does
+not warn or block on unknown costs. The exact release default is always allowed.
+Once all enabled features have measured costs, each engine rounds to 0.1%:
+warn from 91% and block above the provisional 92% ceiling. Exact measured
+combinations key on the complete encoded 512-byte profile
+(`cpu.combinations[].profile`, hex). Missing engine measurements fall back to
+that engine's baseline plus measured feature deltas; placement changes require
+another exact match. Unknown enabled feature costs still suppress a computed
+percentage, even if a combination measurement is present.
 
-The feature table uses conservative signed **placeholder estimates** against
-release defaults: small UI allowances and larger DSP allowances for reverb,
-attacks and diffusion. These are budgeting estimates, not new measurements.
-Heavy combinations on the shipped manifest can reach both warning and block.
-Replace these allowances with the per-feature timing table and module checks;
-a lower measured Plaits peak is not treated as a positive synth cost.
-Other measured combinations key on the complete encoded 512-byte profile
-(`cpu.combinations[].profile`, hex), with worst-case `synth` and `granular`
-percentages. If an engine is absent, that engine keeps its estimate and is
-labelled unmeasured; available measurements still apply. Placement or default changes require another exact match.
-Each engine rounds to 0.1% before checking: warn from 91% and block anything
-above the provisional 92% ceiling, measured or estimated (no margin until module
-measurements show how well estimates add up).
+Maintainer release gates:
+
+- **OPEN — release blocking:** supply the per-feature cost table, referenced to
+  the measured default profile, and module checks before release. No invented
+  allowances; do not add Clouds-style reverb twice. Generate feature CPU fields
+  from that table and validate their provenance.
+- **OPEN — release blocking:** measure the final image's default and heaviest
+  supported combinations. Historical baselines remain provisional.
 
 Layout: everything served as-is is under `static/`, where a Hugo site expects it, so moving to Hugo later only adds configuration and templates. Tests are outside it.
 
@@ -69,6 +69,12 @@ node palette/test/downloads.js
 node palette/test/readiness.js
 node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
 ```
+
+`palette/test/browser.mjs` adds every-feature Fixed/Off byte round trips and
+same-document share-link regressions in Chromium, Firefox and WebKit. Run it
+with Playwright available in an offline Docker container serving the page;
+`SITE` names the static directory and `BASE` the local HTTP URL. Browser test
+dependencies belong to the test harness and are never served by the page.
 
 The profile test compiles a small oracle from the manifest source commit or release tag’s firmware parser and
 compares more than 26,000 candidate blocks. With stmlib already available in a

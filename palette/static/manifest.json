@@ -33,36 +33,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -0.1,
-              "fixed": [
-                -0.1,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5
-              ],
-              "adjustable": [
-                0,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5,
-                0.5
-              ]
-            },
+            "cpu": null,
             "default": [
               1,
               2,
@@ -91,20 +62,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -0.5,
-              "fixed": [
-                -0.5,
-                1.2
-              ],
-              "adjustable": [
-                0,
-                1.2
-              ]
-            },
+            "cpu": null,
             "default": [
               2,
               2,
@@ -134,22 +92,7 @@
             "action": false,
             "stateless": false,
             "synth_path": false,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               3,
               2,
@@ -178,20 +121,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               4,
               2,
@@ -221,22 +151,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               5,
               2,
@@ -265,20 +180,7 @@
             "action": false,
             "stateless": false,
             "synth_path": false,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               6,
               2,
@@ -307,20 +209,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -1,
-              "fixed": [
-                -1,
-                0
-              ],
-              "adjustable": [
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               7,
               2,
@@ -350,22 +239,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -0.1,
-              "fixed": [
-                -0.1,
-                0.7,
-                0.7
-              ],
-              "adjustable": [
-                0,
-                0.7,
-                0.7
-              ]
-            },
+            "cpu": null,
             "default": [
               8,
               2,
@@ -394,20 +268,7 @@
             "action": true,
             "stateless": true,
             "synth_path": false,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               9,
               2,
@@ -436,20 +297,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -0.1,
-              "fixed": [
-                -0.1,
-                0.4
-              ],
-              "adjustable": [
-                0,
-                0.4
-              ]
-            },
+            "cpu": null,
             "default": [
               10,
               2,
@@ -475,20 +323,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -0.1,
-              "fixed": {
-                "zero": -0.1,
-                "maximum": 0.5
-              },
-              "adjustable": {
-                "zero": 0,
-                "maximum": 0.5
-              }
-            },
+            "cpu": null,
             "default": [
               11,
               2,
@@ -514,20 +349,7 @@
             "action": false,
             "stateless": false,
             "synth_path": true,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": -1,
-              "fixed": {
-                "zero": -1,
-                "maximum": 2
-              },
-              "adjustable": {
-                "zero": 0,
-                "maximum": 2
-              }
-            },
+            "cpu": null,
             "default": [
               12,
               2,
@@ -556,20 +378,7 @@
             "action": true,
             "stateless": false,
             "synth_path": false,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               13,
               2,
@@ -598,20 +407,7 @@
             "action": true,
             "stateless": true,
             "synth_path": false,
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0
-              ],
-              "adjustable": [
-                0,
-                0
-              ]
-            },
+            "cpu": null,
             "default": [
               14,
               1,
@@ -653,20 +449,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": null
           },
           {
@@ -694,20 +477,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.15
-              ],
-              "adjustable": [
-                0,
-                0.15
-              ]
-            },
+            "cpu": null,
             "field": null
           },
           {
@@ -735,20 +505,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": null
           },
           {
@@ -778,22 +535,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": 10
           },
           {
@@ -821,20 +563,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": null
           },
           {
@@ -862,20 +591,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": null
           },
           {
@@ -906,24 +622,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.15,
-                0.15,
-                0.15
-              ],
-              "adjustable": [
-                0,
-                0.15,
-                0.15,
-                0.15
-              ]
-            },
+            "cpu": null,
             "field": 11
           },
           {
@@ -951,20 +650,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": null
           },
           {
@@ -993,20 +679,7 @@
               0,
               0
             ],
-            "cpu": {
-              "kind": "estimate",
-              "placeholder": true,
-              "reference": "release-default",
-              "off": 0,
-              "fixed": [
-                0,
-                0.05
-              ],
-              "adjustable": [
-                0,
-                0.05
-              ]
-            },
+            "cpu": null,
             "field": 12
           }
         ]
@@ -1018,13 +691,13 @@
         "warning": 91,
         "margin": 0,
         "combinations": [],
-        "release_note": "Historical measurements predate profiles. Measure the final image default and heavy combinations before release; feature deltas are estimates. The default profile is always allowed.",
+        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs are not yet measured. Measure the final image and per-feature cost table before release. The default profile is always allowed.",
         "baselines": {
           "synth": {
             "percent": 87.2,
             "kind": "partly measured",
             "provisional": true,
-            "provenance": "Clouds-style synth reverb WAS measured at 86.1–87.2% in the combinations, synth A/B and storage sessions of 2026-10-27/28. These builds predate profiles; the final image still needs measurement."
+            "provenance": "Default-profile worst case: synth with Clouds-style reverb, width 255 and Raag Shri, measured on the module, October 2026 (86.1–87.2%). The 87.2% baseline already includes Clouds-style reverb. These builds predate profiles; the final image still needs measurement."
           },
           "granular": {
             "percent": 83,
@@ -1041,5 +714,5 @@
       "date": "2026-10-29"
     }
   ],
-  "asset_version": "56964915dd627c31"
+  "asset_version": "974dc91abfff0f91"
 }

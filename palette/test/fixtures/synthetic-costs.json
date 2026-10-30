@@ -1,0 +1,329 @@
+{
+  "1": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -0.1,
+    "fixed": [
+      -0.1,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    "adjustable": [
+      0,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ]
+  },
+  "2": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -0.5,
+    "fixed": [
+      -0.5,
+      1.2
+    ],
+    "adjustable": [
+      0,
+      1.2
+    ]
+  },
+  "3": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0,
+      0
+    ]
+  },
+  "4": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0
+    ]
+  },
+  "5": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0,
+      0
+    ]
+  },
+  "6": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0
+    ]
+  },
+  "7": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -1,
+    "fixed": [
+      -1,
+      0
+    ],
+    "adjustable": [
+      0,
+      0
+    ]
+  },
+  "8": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -0.1,
+    "fixed": [
+      -0.1,
+      0.7,
+      0.7
+    ],
+    "adjustable": [
+      0,
+      0.7,
+      0.7
+    ]
+  },
+  "9": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0
+    ]
+  },
+  "10": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -0.1,
+    "fixed": [
+      -0.1,
+      0.4
+    ],
+    "adjustable": [
+      0,
+      0.4
+    ]
+  },
+  "11": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -0.1,
+    "fixed": {
+      "zero": -0.1,
+      "maximum": 0.5
+    },
+    "adjustable": {
+      "zero": 0,
+      "maximum": 0.5
+    }
+  },
+  "12": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": -1,
+    "fixed": {
+      "zero": -1,
+      "maximum": 2
+    },
+    "adjustable": {
+      "zero": 0,
+      "maximum": 2
+    }
+  },
+  "13": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0
+    ]
+  },
+  "14": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0
+    ],
+    "adjustable": [
+      0,
+      0
+    ]
+  },
+  "15": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05
+    ]
+  },
+  "16": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.15
+    ],
+    "adjustable": [
+      0,
+      0.15
+    ]
+  },
+  "17": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05
+    ]
+  },
+  "18": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05,
+      0.05
+    ]
+  },
+  "19": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05
+    ]
+  },
+  "20": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05
+    ]
+  },
+  "21": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.15,
+      0.15,
+      0.15
+    ],
+    "adjustable": [
+      0,
+      0.15,
+      0.15,
+      0.15
+    ]
+  },
+  "22": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05
+    ]
+  },
+  "23": {
+    "kind": "measured",
+    "reference": "release-default",
+    "off": 0,
+    "fixed": [
+      0,
+      0.05
+    ],
+    "adjustable": [
+      0,
+      0.05
+    ]
+  }
+}

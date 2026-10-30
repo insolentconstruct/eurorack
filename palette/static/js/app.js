@@ -7,9 +7,9 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry } from './profile.js?v=56964915dd627c31';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=56964915dd627c31';
-import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=56964915dd627c31';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=974dc91abfff0f91';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=974dc91abfff0f91';
+import { downloadCounts, countLine, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=974dc91abfff0f91';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +20,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=56964915dd627c31', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=974dc91abfff0f91', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.progress !== undefined) {
         $('progress').value = data.progress;
@@ -113,6 +113,7 @@ async function run(getApp) {
     $('local').value = '';
     $('build').disabled = $('release').disabled = $('local').disabled = false;
     busy = false;
+    if (pendingShare) { pendingShare = false; loadSharedProfile(); }
     $('editor').disabled = false;
     const blocked = cpuUsage(entries, selected()).blocked;
     $('build').disabled = $('local').disabled = blocked;
@@ -184,8 +185,10 @@ function renderEditor() {
         if (!value || !edited[2] || !f.stateless) edited[5] = 0;
       }
       try {
-        validate(candidate, profile); entries = candidate;
-        $('template').value = 'Custom'; status('');
+        entries = normalise(candidate, profile);
+        $('template').value = Object.entries(templates(profile)).find(([, value]) =>
+          equal(encodeProfile(entries, profile), encodeProfile(value, profile)))?.[0] || 'Custom';
+        status('');
       } catch (error) { status(error.message, 'error'); }
       renderEditor(); refresh();
     };
@@ -210,7 +213,7 @@ function renderEditor() {
     }
     const cost = document.createElement('small');
     const delta = featureDelta(e, f);
-    cost.textContent = `CPU ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% versus release default · ${f.cpu.kind}${f.cpu.placeholder ? ' (placeholder)' : ''}${f.synth_path ? ' · includes synth path' : ''}`;
+    cost.textContent = delta === null ? 'CPU cost not yet measured' : `CPU ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% versus release default · ${f.cpu.kind}${f.synth_path ? ' · includes synth path' : ''}`;
     row.append(cost); $('features').append(row);
   }
 }
@@ -221,13 +224,14 @@ async function refresh() {
   const release = selected();
   const cpu = cpuUsage(entries, release);
   document.body.classList.toggle('cpu-warning', cpu.warning);
-  $('cpu').textContent = `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
+  $('cpu').textContent = cpu.percent === null ? `CPU cost not yet measured for: ${cpu.unknown.join(', ')}.` :
+      `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
       cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? '' : ' estimated'}`).join('; ') +
       `. Provisional stock ceiling ${release.cpu.ceiling}%. ` +
       (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
   $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
-      cpu.engines.map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
-      ' Feature costs are placeholder estimates; final-image measurements are pending.';
+      Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
+      ' Per-feature costs and final-image measurements are pending.';
   $('build').disabled = $('local').disabled = busy || cpu.blocked;
   const block = encodeProfile(entries, release.profile);
   const fp = await fingerprint(block);
@@ -239,9 +243,22 @@ async function refresh() {
       equal(block, encodeProfile(defaults(release.profile), release.profile))));
 }
 
+let pendingShare = false;
+function loadSharedProfile() {
+  try {
+    const shared = location.hash ? unshare(location.hash, manifest.releases) :
+      { release: selected(), entries: defaults(selected().profile) };
+    const chosen = normalise(shared.entries, shared.release.profile);
+    $('release').value = shared.release.tag;
+    entries = chosen;
+    status('');
+    setupEditor();
+  } catch (error) { status(error.message, 'error'); }
+}
+
 async function init() {
   try {
-    const response = await fetch('manifest.json?v=56964915dd627c31', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=974dc91abfff0f91', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
@@ -263,13 +280,11 @@ async function init() {
   }
   $('release').selectedIndex = manifest.releases.length - 1;
   entries = defaults(selected().profile);
-  if (location.hash) {
-    try {
-      const shared = unshare(location.hash, manifest.releases);
-      $('release').value = shared.release.tag;
-      entries = shared.entries;
-    } catch (error) { status(error.message, 'error'); }
-  }
+  if (location.hash) loadSharedProfile();
+  window.addEventListener('hashchange', () => {
+    if (busy) pendingShare = true;
+    else loadSharedProfile();
+  });
   $('release').onchange = () => { entries = defaults(selected().profile); setupEditor(); };
   setupEditor();
   $('build').onclick = () => run(fetchApp);

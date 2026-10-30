@@ -93,6 +93,14 @@ export function decodeProfile(b, profile) {
 }
 
 export const defaults = (profile) => profile.features.filter((f) => f.default_in_block !== false).map((f) => f.default.slice());
+// Canonical editor entries: omitted catalogue defaults stay absent when Off.
+// Keep the codec lossless for independently supplied firmware blocks.
+export function normalise(entries, profile) {
+  validate(entries, profile);
+  return entries.filter((e) => e[1] !== 0 ||
+    profile.features.find((f) => f.id === e[0]).default_in_block !== false)
+    .map((e) => e[1] === 0 ? [e[0], 0, 0, 0, 0, 0] : e.slice());
+}
 export const equal = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 export async function sha256(b) {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)),
@@ -129,8 +137,9 @@ export function templates(profile) {
 }
 export const profileKey = (entries, profile) => Array.from(encodeProfile(entries, profile),
     (v) => v.toString(16).padStart(2, '0')).join('');
-// Provisional per-setting deltas relative to the release DEFAULT feature setting.
+// Measured per-setting deltas relative to the release DEFAULT feature setting.
 export function featureDelta(entry, feature) {
+  if (!feature.cpu || feature.cpu.kind !== 'measured') return null;
   const e = entry || [feature.id, 0];
   if (e[1] === 0) return feature.cpu.off;
   const costs = feature.cpu[e[1] === 1 ? 'fixed' : 'adjustable'];
@@ -144,6 +153,12 @@ export function cpuUsage(entries, release) {
     release.cpu.combinations.find((c) => c.profile === key);
   const deltas = release.profile.features.map((f) => ({ feature: f,
     delta: featureDelta(entries.find((e) => e[0] === f.id), f) }));
+  const unknown = deltas.filter(({ feature: f, delta }) => delta === null &&
+    entries.some((e) => e[0] === f.id && e[1] !== 0)).map(({ feature: f }) => f.name);
+  if (!isDefault && unknown.length) {
+    return { engines: [], percent: null, blocked: false, warning: false,
+      kind: 'not yet measured', unknown, names: unknown.join(', ') };
+  }
   const engines = Object.entries(release.cpu.baselines).map(([engine, baseline]) => {
     const contributing = deltas.filter(({ feature: f }) => engine === 'synth' ? f.synth_path : true);
     const hasMeasurement = Number.isFinite(measured?.[engine]);
