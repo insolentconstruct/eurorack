@@ -2557,6 +2557,13 @@ void TestBetaOptionsLeds() {
     }
   }
 
+  Rig freeze;
+  SetFixed(&freeze, FEATURE_SAVE_FREEZE, 1);
+  freeze.ui.set_freeze_led_state(true);
+  freeze.backup.busy_ = true;
+  freeze.Tick(1);
+  CHECK(freeze.ui.leds_.intensity_[LED_FREEZE] == 255);
+
   const int percentages[] = { 100, 66, 33 };
   for (int level = 0; level < 3; ++level) {
     Rig full;

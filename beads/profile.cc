@@ -53,6 +53,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Delay cue.
   { 3, 10, true, false, false, false },  // Brightness.
   { 2, kNoField, false, false, false, false },  // Live assignment.
+  { 2, kNoField, false, false, false, false },  // Save freeze.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
