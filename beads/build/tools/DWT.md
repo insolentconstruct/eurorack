@@ -23,7 +23,7 @@ working tree, including uncommitted changes, without Docker, SSH or hardware
 access. Output must be an empty absolute directory without whitespace.
 It checks `release/beads/beads.bin` against the pinned `app.bin` SHA256 in
 `beads/build/expected-hashes.sha256` before building calibration:
-`fb79347520808ecbd15d09817307e5c7a858f720c9c83062bb1dd576b85ac06b`.
+`a221ee50f3ce05d8fdde174f6e0065aefc3b566a51563ae192f3b9dca514c2f2`.
 A mismatch fails the build. The helper writes logs, object/link lists, sizes,
 SHA256SUMS and a copy of `dwt.py` with BUILD_SHA set to the calibration binary's
 hash. The source decoder has no application pin.

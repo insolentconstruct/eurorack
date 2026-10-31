@@ -6,6 +6,10 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
 ## Unreleased
+- A module whose settings flash is damaged no longer crashes at every start. The calibration is kept in a second sector and restored from it when needed, so a save interrupted by a power cut keeps the calibration; at worst the settings return to their defaults. If both copies of the calibration are lost, the module plays on the factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing to flash; hold SEED at power-up to repair it, then recalibrate. A damaged frozen buffer is skipped instead of crashing (#148).
+- A damaged calibration record no longer resets the calibration and starts the factory test; a record with no saved settings after it keeps the calibration and resets only the settings (#148).
+- Settings and frozen-buffer saves are skipped while the module's 3.3 V supply is below about 2.8 V, so flash is never erased or written out of spec. A save cut short is handled like a power cut; the next save completes it (#165).
+- The build refuses an application large enough to reach the frozen buffer and settings flash (#155).
 - Quality, mono/stereo and synth changes now fade the output out over 10 ms instead of cutting it at full level, and fade back in afterwards. The synth's reverb tail no longer plays on after the synth stops (#53).
 - Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Each flash operation is now checked, and settings are only written onto erased flash (#149).
 - Quality, mono/stereo and synth changes that keep the sample rate no longer stop the converter, which removes the pop it made; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it (#53).
