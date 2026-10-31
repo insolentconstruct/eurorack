@@ -100,14 +100,20 @@ trim or change controls during capture. Preserve stimulus and capture logs.
 | 6 | Sunny tape | Sunny tape quality; Stock reverb; reconnect both inputs |
 | 7 | Crackle | Bright digital, Clouds-style on, DRY/WET fully CW, FEEDBACK fully CCW, REVERB as left by options exit, DENSITY .98, PITCH +24 semitones, SIZE .92, SHAPE .5 by fixed CV; music into both inputs |
 
-Scenario 7 passes when total callback maximum is strictly below 120000
-cycles and SAI DAC underrun is not newly set. Capture SAI before reset and
-after the completed capture; record ADC overrun too. A pre-existing DAC flag
-makes the underrun check inconclusive. This settled capture does not prove
+Scenario 7 passes when total callback maximum is strictly below 115800
+cycles (the 48 kHz deadline, below) and SAI DAC underrun is not newly set.
+Capture SAI before reset and after the completed capture; record ADC
+overrun too. A pre-existing DAC flag makes the underrun check inconclusive. This settled capture does not prove
 transition safety. Existing Stock reserve criterion remains maximum <=90000
 cycles for rows 1/4/5/6 (callback) and Stock fixture (callback minus fixture).
 Report Clouds and combined-option margins separately; no hardware result
 is implied by offline checks.
+
+Deadline: the DAC reads slightly ahead, so a late block is heard before
+the 120000-cycle budget runs out. The first stale sample appears at a
+callback maximum of about 115800 cycles at 48 kHz (q1, q3, synth), 113900
+at 32 kHz (q2) and 111500 at 24 kHz (q0). These were measured on the
+development board (same core, codec driver and clocks), not on the module.
 
 Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (FEEDBACK LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri). One [M] tap reaches page 2 (DRY/WET LED), where DRY/WET selects reverb Stock/Clouds-style (lower/upper half). Page 3 (REVERB LED): REVERB lower half is Synth start: Automatic (Stock). Page 4 (all three LEDs): REVERB bottom third is the Stock limiter. Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 
