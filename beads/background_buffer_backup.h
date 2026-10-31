@@ -48,6 +48,8 @@ class BackgroundBufferBackup {
   void EraseSector();
   void WriteBlock();
   void SaveState(bool freeze_state);
+  // After a settings repair: erases the sectors holding an unreadable word.
+  void EraseDamagedSectors();
   
   inline bool busy() const { return remaining_bytes_ || remaining_sectors_; }
   
@@ -66,6 +68,7 @@ class BackgroundBufferBackup {
 
  private:
   bool Valid(const BufferBackupHeader& header) const;
+  bool EraseBufferSector(uint32_t sector, int attempts);
 
   Processor* processor_;
   Settings* settings_;

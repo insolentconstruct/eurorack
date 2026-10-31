@@ -42,6 +42,8 @@ int test_fail_at = 0;
 int test_ops = 0;
 int test_erases = 0;
 bool test_half_erase = false;
+bool test_stale_flags = false;
+int test_stuck_erases = 0;
 namespace stmlib { SystemClock system_clock; }
 using namespace beads;
 using namespace stmlib;
