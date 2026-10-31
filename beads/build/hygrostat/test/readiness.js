@@ -21,12 +21,17 @@ const release = manifest.releases[0], profile = release.profile;
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
 const source = (file) => execFileSync('git', ['show', `${firmwareRef}:${file}`], { encoding: 'utf8' });
 const catalogueBytes = readFileSync(new URL('profile-features.json', root));
-assert.deepEqual(catalogueBytes,
-  execFileSync('git', ['show', `${firmwareRef}:palette/static/profile-features.json`]),
-  'copy the authoritative firmware catalogue verbatim');
+// Releases before the move to beads/build/hygrostat keep the catalogue in palette/.
+const catalogueAt = (ref) => {
+  try {
+    return execFileSync('git', ['show', `${ref}:beads/build/hygrostat/static/profile-features.json`], { stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch (error) {
+    return execFileSync('git', ['show', `${ref}:palette/static/profile-features.json`]);
+  }
+};
+assert.deepEqual(catalogueBytes, catalogueAt(firmwareRef), 'copy the authoritative firmware catalogue verbatim');
 if (process.env.FIRMWARE_CATALOGUE_REF) {
-  assert.deepEqual(catalogueBytes,
-    execFileSync('git', ['show', `${process.env.FIRMWARE_CATALOGUE_REF}:palette/static/profile-features.json`]),
+  assert.deepEqual(catalogueBytes, catalogueAt(process.env.FIRMWARE_CATALOGUE_REF),
     'the prepared firmware catalogue must also match verbatim');
 }
 const table = source('beads/profile.cc').split('kFeatureDefinitions[FEATURE_LAST] = {')[1].split('};')[0];

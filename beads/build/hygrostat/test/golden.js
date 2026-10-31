@@ -7,7 +7,7 @@
 // Encodes an app image with the page's encoder and checks the .wav against
 // the released file's SHA-256; on a mismatch, counts the samples that differ.
 //
-// node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256 [REFERENCE.wav]
+// node beads/build/hygrostat/test/golden.js APP.bin EXPECTED_WAV_SHA256 [REFERENCE.wav]
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';

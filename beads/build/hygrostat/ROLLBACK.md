@@ -9,13 +9,13 @@ commit, and the last good release tag before each deploy.
    <page-squash-commit>` for a squash). Review the diff so it restores only the
    page and any page workflow changes, without reverting firmware. Run the page
    suites. The owner merges it; `.github/workflows/pages.yml` rebuilds and
-   deploys because `palette/` changed. Do not rely on rerunning an old workflow:
+   deploys because `beads/build/hygrostat/` changed. Do not rely on rerunning an old workflow:
    the branch must also contain the restored page for subsequent deploys.
-2. **Bad release entry:** in the rollback PR, restore `palette/static/manifest.json`
-   and the corresponding `palette/static/images/<previous-tag>/app.bin` from the
+2. **Bad release entry:** in the rollback PR, restore `beads/build/hygrostat/static/manifest.json`
+   and the corresponding `beads/build/hygrostat/static/images/<previous-tag>/app.bin` from the
    last good page commit. Restore the complete entry (profile catalogue, CPU
    data, source/tag and hashes), remove the bad entry from the offered releases,
-   and run `node palette/tools/version-assets.js`. Do not just rename a tag or
+   and run `node beads/build/hygrostat/tools/version-assets.js`. Do not just rename a tag or
    reuse its image URL. If the previous release is Beta 1 (plain WAV), restore
    the complete previous builder as in step 1: this profile editor requires a
    profile-capable release and cannot offer a Beta 1 manifest entry.

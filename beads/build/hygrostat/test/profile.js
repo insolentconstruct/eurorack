@@ -281,7 +281,7 @@ assert.deepEqual(unshare(share(release, block).replace(/profile=([0-9a-f]+)/, (_
 const unescape = (s) => s.replace(/&amp;/g, '&').replace(/&gt;/g, '>').replace(/&lt;/g, '<');
 for (const mobile of [false, true]) {
   const svg = guide(entries, release, fp, mobile);
-  const golden = readFileSync(new URL(`../../beads/build/docs/options-guide${mobile ? '-mobile' : ''}.svg`, import.meta.url), 'utf8');
+  const golden = readFileSync(new URL(`../../docs/options-guide${mobile ? '-mobile' : ''}.svg`, import.meta.url), 'utf8');
   assert.equal(svg.replace(/<text data-profile-fingerprint="true"[^>]*>.*?<\/text>\n/, ''), golden);
   const text = (s) => [...s.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => unescape(m[1]));
   const actual = text(svg), expected = text(golden);
@@ -327,7 +327,7 @@ try {
   for (const file of ['profile.h', 'profile.cc']) writeFileSync(join(scratch, 'beads', file), firmwareFile('beads/' + file));
   execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I' + scratch, '-I.',
     ...(process.env.STMLIB_INCLUDE ? ['-I' + process.env.STMLIB_INCLUDE] : []),
-    'palette/test/profile_oracle.cc', join(scratch, 'beads/profile.cc'), '-o', oracle]);
+    'beads/build/hygrostat/test/profile_oracle.cc', join(scratch, 'beads/profile.cc'), '-o', oracle]);
   const answers = execFileSync(oracle, [], { input: Buffer.concat(cases.map((b) => Buffer.from(b))), maxBuffer: 40000000 });
   const stride = 493;
   assert.equal(answers.length, cases.length * stride);

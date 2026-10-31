@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { featureHelp, actionHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 const manifest = JSON.parse(read('../static/manifest.json'));
-const docs = read('../../beads/build/docs/FEATURES.md');
+const docs = read('../../docs/FEATURES.md');
 const headings = [...docs.matchAll(/^#{2,3} (.+)$/gm)].map((m) => m[1].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s/g, '-'));
 for (const release of manifest.releases) {
   for (const feature of release.profile.features) {

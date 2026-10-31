@@ -8,7 +8,7 @@
 // SHA-256, those hashes are the ones pinned at the release tag, and the image
 // encodes to the release's .wav byte for byte. Needs the release tags.
 //
-// node palette/test/manifest.js
+// node beads/build/hygrostat/test/manifest.js
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';

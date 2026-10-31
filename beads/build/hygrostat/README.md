@@ -60,15 +60,15 @@ Layout: everything served as-is is under `static/`, where a Hugo site expects it
 Tests (Node 18 or later, g++, and the pinned stmlib submodule):
 
 ```sh
-node palette/test/manifest.js
-node palette/test/profile.js
-node palette/test/downloads.js
-node palette/test/help.js
-node palette/test/readiness.js
-node palette/test/golden.js APP.bin EXPECTED_WAV_SHA256
+node beads/build/hygrostat/test/manifest.js
+node beads/build/hygrostat/test/profile.js
+node beads/build/hygrostat/test/downloads.js
+node beads/build/hygrostat/test/help.js
+node beads/build/hygrostat/test/readiness.js
+node beads/build/hygrostat/test/golden.js APP.bin EXPECTED_WAV_SHA256
 ```
 
-`palette/test/browser.mjs` adds every-feature Fixed/Off byte round trips and
+`beads/build/hygrostat/test/browser.mjs` adds every-feature Fixed/Off byte round trips and
 same-document share-link regressions in Chromium, Firefox and WebKit. Run it
 with Playwright available in an offline Docker container serving the page;
 `SITE` names the static directory and `BASE` the local HTTP URL. Browser test
@@ -98,7 +98,7 @@ hash. Custom WAVs and guides carry the first eight hex digits of SHA-256 of the
 
 CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
 
-Publishing: `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `palette/`. Pull requests run all palette suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
+Publishing: `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `beads/build/hygrostat/`. Pull requests run all Hygrostat suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 
 To update the page for a release:
 
@@ -115,7 +115,7 @@ To update the page for a release:
    the selected manifest release, so documentation follows the installed version.
 3. Run the Node suites above and the three-browser checks. Verify the untouched
    default WAV against the published release and a custom profile with both
-   guides. Run `node palette/tools/version-assets.js` after browser or manifest
+   guides. Run `node beads/build/hygrostat/tools/version-assets.js` after browser or manifest
    edits, then rerun readiness. Remove the development-source fetch path from
    the Pages workflow and its development-only manifest validation at release.
 4. Merge the page PR into `drizzlet` after the tag exists. Check the Pages
@@ -147,10 +147,10 @@ in sessionStorage for the browser tab session, with an in-memory fallback.
 Requests time out after five seconds and never delay or block building. Tests use only stubbed fetches; the Docker test container runs
 without network access. See [public counter setup](https://www.goatcounter.com/help/visitor-counter).
 
-To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d palette/static`); the hash check needs a secure context, which `localhost` is.
+To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d beads/build/hygrostat/static`); the hash check needs a secure context, which `localhost` is.
 
 Browser modules, worker dependencies and the manifest URL carry `?v=` versions
 bound to the manifest and module contents; image URLs carry their SHA-256.
 After changing browser code or manifest data, run
-`node palette/tools/version-assets.js`. The readiness suite verifies every
+`node beads/build/hygrostat/tools/version-assets.js`. The readiness suite verifies every
 referenced browser asset has the matching version or hash.

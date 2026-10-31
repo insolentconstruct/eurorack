@@ -481,7 +481,7 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 
 # The profile page consumes permanent IDs and placements, never source enums.
 # This file is the page's whole catalogue; the page copies it verbatim.
-catalog = json.loads(Path("palette/static/profile-features.json").read_text())
+catalog = json.loads(Path("beads/build/hygrostat/static/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
 assert len(catalog["features"]) == len(exported) == 23

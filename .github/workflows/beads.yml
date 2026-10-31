@@ -5,7 +5,7 @@ on:
     branches: ['**']
     tags: ['drizzlet-*']
   pull_request:
-    paths: ['beads/**', 'clouds/**', 'plaits/**', 'palette/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
+    paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
 permissions:
   contents: read
 concurrency:
@@ -66,8 +66,8 @@ jobs:
         run: |
           node --version
           git fetch --no-tags --depth=1 origin '+refs/tags/drizzlet-*:refs/tags/drizzlet-*'
-          node palette/test/golden.js artifacts/app.bin "$(cut -c1-64 beads/build/expected-wav.sha256)"
-          node palette/test/manifest.js
+          node beads/build/hygrostat/test/golden.js artifacts/app.bin "$(cut -c1-64 beads/build/expected-wav.sha256)"
+          node beads/build/hygrostat/test/manifest.js
       - name: Build the unchanged 4.9.3 golden app
         run: bash beads/build/golden.sh "$PWD/golden"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
