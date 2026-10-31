@@ -1,127 +1,139 @@
 Drizzlet
 ========
-Alternative firmware for Mutable Instruments Beads; not a Mutable
-Instruments product.
 
-TL;DR: Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a
-spectral processor, grain diffusion, attacks, evolving frozen feedback and
-random intervals, on a four-page options page. A module with damaged
-settings flash now starts instead of crashing. Drizzlet Hygrostat
-(https://hygrostat.insolentconstruct.net/) builds your own update file,
-with a profile choosing features, controls and defaults, and nine more
-options that are off in this standard firmware. Every option
-here defaults to stock behaviour. Details are in CHANGELOG.md in the
-repository.
+Drizzlet is alternative firmware for Mutable Instruments Beads, adding
+Plaits, spectral processing and grain controls. Beta 2 “Fog” has been
+tested on one module; install at your own risk. This is not a Mutable
+Instruments product. All settings save; standard defaults retain stock
+behaviour.
 
-Tested on one module so far. Please report problems at
-https://github.com/insolentconstruct/eurorack/issues (not to Mutable
-Instruments). TESTING.md in the repository shows how it was tested.
-
-Note from the Mutable Instruments eurorack README:
-"Code provided as is, builds on a Desktop platform but not verified to
-build and run on a module. Install at your own risks."
-Install at your own risk.
-
-Based on the 2024 recovery firmware (beads_patch_firmware.wav) plus one change
-to grain stealing, as in the vanilla source. On our module, the 2021 and 2024
-firmware clicked with DENSITY and PITCH near fully clockwise and this one did
-not; see CHANGELOG.md and TESTING.md.
-
-Buttons use the letters from the Beads manual: [A] is the quality button,
-and [M] is the CV-assign button below the FEEDBACK [J] knob (CV input 7).
-
-Beads manual and development history:
-https://pichenettes.github.io/mutable-instruments-
-documentation/modules/beads/manual/
-https://pichenettes.github.io/mutable-instruments-
-documentation/trivia_and_history/beads_history/
-
-Buffer trim
------------
-Hold the quality button [A] first, then press FREEZE to start a new recording window from
-zero length and clear the FREEZE button latch. Release both buttons, record
-the length you want, then freeze. A FREEZE gate keeps the window empty until
-it goes low. Grains already playing finish normally.
-Frozen-buffer saves keep the trimmed length; stock firmware loads them at full
-length. The gesture comes from Mutable Instruments' disabled buffer-trim code.
-
-When the buffer is cleared
+Downloads and installation
 --------------------------
-FREEZE never clears the recording buffer: releasing it resumes recording
-where it stopped, with a short crossfade. As on stock firmware, the buffer
-starts empty after changing the recording quality, switching between mono and
-stereo input (for example, patching or unpatching IN R while IN L is
-patched), leaving the wavetable synth, or
-powering up without a saved frozen buffer. Buffer trim restarts the recording
-window without erasing the old audio; grains already playing finish on it,
-and new grains read only the new window.
 
-Monophonic grains
------------------
-Hold [A] first, then press SEED to toggle monophonic grains. The setting
-is saved and defaults off; the [A] LED is dimmed when on. This is Mutable
-Instruments' original code and gesture: each new grain fades the previous
-grains out. It suits the square and decay SHAPE settings. Slower shapes can go
-nearly silent. To recover sound, switch to square or decay, reduce the trigger
-rate, shorten SIZE, or toggle monophonic grains off. Turn them off before
-downgrading to stock firmware.
+Download audio updates and guides in <tag>-wav.zip from
+https://github.com/insolentconstruct/eurorack/releases. For ST-Link, the
+combo ZIP includes bootloader and application images. HEX carries its
+address; BIN uses 0x08000000.
+
+Updating is not a remedy for unexplained module behaviour. Disconnect
+speakers: update audio can harm hearing. Unplug all CV
+connections, connect your audio output to IN L, set TIME near noon and
+power on holding FREEZE. Silence other computer sounds and disable
+effects. Play the update WAV, adjusting TIME or the source volume until
+[A] shows yellow. It restarts when finished; if it doesn't, start again
+from the beginning. If all LEDs blink red, press FREEZE and retry
+louder. Otherwise, try 44.1 kHz or another computer or interface. Audio
+updates leave the bootloader and calibration untouched.
 
 Stereo width
 ------------
-Hold [A] and turn DRY/WET to set the stereo width of the grains; releasing
-[A] saves it. At the bottom of the knob it is Stock; turn it up a little to
-switch width on. Turning clockwise spreads the grains wider, up to a full
-random spread fully clockwise. At the lowest width the input stereo position
-passes through and mono stays centred. Width randomizes every grain, even at
-DENSITY fully clockwise. Each grain's pan is fixed when it starts, so changes
-affect new grains only, including synth.
-While you turn, the [A] LED shows the width as a meter, from green through
-yellow to red. A tap of [A] without turning DRY/WET still changes the
-recording quality.
-When width is on, short [M] presses cycle the three stock destinations, then
-WIDTH; all three mix LEDs pulse together for WIDTH. Custom mix assignment
-still works. The assignable CV input (7) adds to the width. Stock keeps the
-stock cycle and pan rounding.
 
-Quieter switching
+Hold [A] and turn DRY/WET to set grain width; release to save. At the
+bottom of the knob it is Stock; turn upwards to enable width, reaching
+full random spread clockwise. Minimum width preserves stereo position
+and centres mono. Each grain, including synth, retains its pan, even at
+maximum DENSITY. [A] meters green through yellow to red; tapping [A]
+alone changes quality. Enabled WIDTH follows the three stock [M]
+destinations, pulsing all mix LEDs. CV input 7 adds width; custom
+assignments work. Stock retains routing and pan rounding.
+
+Grain diffusion
+---------------
+
+Hold [A] and turn REVERB; [A] meters the amount. Fully counter-clockwise
+removes diffusion. Until set, Stock has none and Clouds-style uses its
+own amount. Setting it adds DIFFUSION after REVERB and WIDTH in the [M]
+cycle, with REVERB pulsing alone. The amount is saved. Diffusion affects
+grains only.
+
+Monophonic grains
 -----------------
-Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth’s reverb tail stops with it.
 
-Fixes
------
-Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
+Hold [A], then press SEED to toggle this saved setting, initially off.
+[A] dims when enabled; new grains fade earlier grains. Square and decay
+shapes suit it; slower shapes can become nearly silent. Recover by
+changing shape, reducing triggers, shortening SIZE or disabling it.
+Disable before downgrading.
 
-The brown-out reset level option (#165) is not in Beta 2; the reset level
-stays as in the Mutable Instruments firmware.
+Buffer trim
+-----------
 
-Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
+Hold [A], then press FREEZE to restart the recording window at zero
+length and clear the FREEZE latch. Release both, record, then freeze. A
+FREEZE gate holds the window empty until low. Existing grains finish on
+old audio; new grains use the new window. Saved buffers keep trimmed
+lengths; stock loads them full-length.
 
-SEED starts latched at power-up, as in stock firmware.
+Recording and switching
+-----------------------
+
+Releasing FREEZE resumes recording with a crossfade. Quality changes,
+input changes between mono and stereo, leaving wavetable synth, and
+power-up without a saved buffer start an empty recording. Switching
+without changing sample rate is pop-free, including synth switching at
+48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the
+output and stop synth reverb.
+
+SEED starts latched. Latching it in stock delay can pop.
 
 Frozen-buffer autosave
 ----------------------
-A frozen buffer is saved after FREEZE has been on for ten seconds. A save cut
-short (by releasing FREEZE, for example) doubles the next wait, up to a cap,
-until a save completes or FREEZE has been off for a minute; power-up resets the
-wait. If FREEZE is released during wavetable synth, the minute starts when
-wavetable synth ends.
+
+FREEZE saves after ten seconds. Interrupting a save doubles the next
+wait up to a cap, until a save completes or FREEZE stays off for a
+minute. In wavetable synth that minute begins on exit. Power-up resets
+the wait. Supply sags pause saves; interrupted saves lose only that
+save.
+
+Hygrostat
+---------
+
+https://hygrostat.insolentconstruct.net/ builds updates and guides
+locally. Choose features, controls and defaults, using templates or
+custom Off, Fixed and Adjustable settings. It warns about CPU load and
+refuses excessive combinations. Per-feature estimates await module
+measurements.
+
+Hygrostat profiles and these nine additional options remain untested on
+a module. All nine are off in standard firmware:
+
+- Version at boot flashes light-blue, then twice for Beta 2, without
+  delaying startup.
+- Delay indication flashes [A] red entering or leaving delay.
+- Pitch notch indication lights [A] green at unison and octave knob
+  plateaus, including both ends, independently of CV and randomness.
+  These cues yield to warnings and meters.
+- Live assignment LEDs follow CV magnitude, retaining assignment
+  patterns and stock weighting.
+- FREEZE during saves keeps its LED fully lit.
+- Input attenuation extends [A]+FEEDBACK to silence, with unity near
+  noon, marked green, and gain above. Saved gain immediately uses this
+  range. Automatic gain never attenuates; hold [A] to restart.
+- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds
+  with preview; warnings dim too. The default is 100%; there is no
+  power-on gesture.
+- SEED latch selects Off, Ignore, Sync or Add in quarters. With a cable
+  patched and SEED latched, Off retains the divider; Ignore free-runs
+  without cable triggers or flashes; Sync restarts grain-clock phase per
+  edge; Add adds a grain per edge. Synth clocks follow these modes;
+  delay free-runs outside Off. Unpatched attack triggers still work.
+- TIME modulation selects Random below noon or Scan above. With TIME CV
+  unpatched, its attenurandomizer scans backwards or forwards, stopping
+  at noon, taking four seconds per buffer at either end. TIME offsets
+  the wrapping position. Patching CV restores normal control and pauses
+  scanning, as do delay, spectral and synth. Position is not saved.
 
 Options page
 ------------
-Visual and text guides: OPTIONS.md, options-guide.svg (printable) and
-options-guide-mobile.svg (phone). They sit beside this README in the release
-zips, and in docs/ in the source download.
 
-Hold the CV-assign button [M] alone for three seconds with the mix knobs still; then release.
-Tap [M] to change page. The pages light the mix LEDs left to right: page 1
-(FEEDBACK LED), page 2 (DRY/WET LED), page 3 (REVERB LED), page 4 (all three
-LEDs). The page LED pulses slowly. Reopening returns to the last page until
-power-off; power-up starts on page 1.
-When a page opens, [A] shows each stored value in turn, left to right, for
-about two seconds each, with that knob's LED lit steady. Turning a knob, or
-tapping SEED to step the scale, ends this. [A] then shows the first setting
-on the page, then the last knob you took over. A knob must move a little
-before it takes over. Knobs marked Not used yet do nothing.
+[A] is the quality button; [M] is CV assign. Hold [M] alone for three
+seconds with the mix knobs still, then release. Tap [M] to change pages.
+The indicated mix LED pulses. Reopening remembers the page until
+power-off; startup selects page 1.
+
+[A] previews each stored value in turn for about two seconds, with its
+knob LED steady. Turn a knob or tap SEED to end preview. Move a knob
+slightly to take over; [A] shows its setting. Unused knobs do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random intervals  Attacks
@@ -129,159 +141,70 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 3 / REVERB          Processor     Synth             Synth start
 4 / all three       Not used yet  Not used yet      Limiter
 
-Changes save by themselves about a second after you stop turning; wait that
-long before powering off. Close by holding [M] for three seconds or pressing
-another button. Mix controls then catch up smoothly. On page 1 with Scale
-selected, short SEED taps step the scale instead of closing.
-Every first value, including Pitch Off, is steady green. Other values follow
-yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
-The page LED flashes on entry, close and save. See below for every value.
+Changes save about a second after turning stops. Wait before power-off.
+Hold [M] for three seconds or press another button to close; mix
+controls catch up smoothly. On page 1 with Scale selected, SEED taps
+step the scale instead of closing.
+The page LED flashes on entry, close and save. First values are steady
+green; later values use yellow, red and blinking colours.
 
-Delay mode: Auto (Stock) keeps the usual switch to delay at SIZE fully clockwise.
-Disabled keeps granular playback there. Wide/smooth filter keeps the switch and makes the
-delay filter (SIZE attenurandomizer plus SIZE CV) neutral in the middle, with no
-resonant boost. The [A] LED shows steady green / yellow / red for Auto (Stock) /
-Disabled / Wide/smooth filter. It does not affect wavetable synth mode.
+See below for every value.
 
-Output limiter: page 4 (all three LEDs), REVERB knob, in thirds. Stock is
-steady green; Fast release is steady yellow; Off is steady red. With Off,
-loud peaks can hard-clip.
+Delay mode: Auto (Stock) enters delay at SIZE fully clockwise. Disabled
+keeps granular playback there. Wide/smooth filter retains delay with a
+neutral middle and no resonant boost at either end. SIZE CV and its
+attenurandomizer control the filter. FEEDBACK on page 2 selects these
+values in thirds; [A] shows steady green / yellow / red respectively.
+The saved default is Auto (Stock). This does not affect wavetable synth
+mode.
 
-Hygrostat profile options
+Output limiter: REVERB on page 4 selects Stock, Fast release or Off in
+thirds, indicated by steady green, yellow or red respectively. Off can
+hard-clip loud peaks.
 
-Hygrostat can add the following options to a profile. They are off in the
-standard firmware. Page settings appear at the knob chosen in Hygrostat;
-turning and saving them works like the other options.
+Pitch scale. Three zones: Off, Chromatic and Scale. Tap SEED in Scale
+to cycle Fifths and octaves, Major, Minor, Major pentatonic, Minor
+pentatonic, Pelog, Raag Bhairav and Raag Shri. Pelog and the raags are
+microtonal. Holds do nothing; taps neither trigger nor latch. Grains
+combine knob, CV and randomness at birth and retain that pitch. Synth
+grains follow scales; the continuous oscillator and delay do not.
 
-Version at boot gives a short light-blue Drizzlet flash followed by two
-light-blue pulses for Beta 2, without delaying audio startup.
-Delay indication flashes it red briefly when entering or leaving delay mode.
-Pitch notch indication lights it green while the PITCH knob is on the unison
-or an octave plateau, including the +/-2-octave knob ends, with a little
-hysteresis at the edges. CV, random pitch and quantization do not affect it. These cues yield to options, warnings and manual meters.
-Live assignment LEDs scale the stock patterns by the magnitude of assignable
-CV, retaining distinct width/diffusion patterns and stock amount weighting. FREEZE during saves keeps the FREEZE LED at full
-intensity while a frozen buffer is being saved.
+Random intervals selects Free or Fifths and octaves. The latter
+quantizes counter-clockwise PITCH randomness, including synth grains;
+clockwise stays continuous. The pitch scale still applies.
 
-Input attenuation extends [A]+FEEDBACK down to silence. Around noon the gain
-snaps to unity; below it, the input is attenuated, and above it the input is
-amplified. Automatic gain still works as usual and never attenuates. Hold [A]
-to restart automatic gain. A saved manual gain uses the extended range as soon
-as this feature is enabled. Stock never attenuates below unity: Mutable
-Instruments kept unity as the minimum deliberately ("it's a sensitivity
-setting"). The 120-136 unity band and green meter cue keep unity easy to find.
+Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves
+grain starts onto recorded hits; Snap and trigger also triggers a grain
+per hit. Patched SEED still works; only granular playback uses marks.
 
-LED brightness offers 100% / 66% / 33%, Fixed via Hygrostat or Adjustable
-in thirds of a selected options-page knob, with a live preview while turning.
-Warnings dim too. Bright digital RGB white is balanced against the white LEDs
-at the reduced levels; 100% is the release's own LEDs. The default is 100%. This is a profile option; there is no power-on gesture.
-SEED latch offers four values in quarters of the selected knob:
-Off (stock divider with a patched cable), Ignore (free-running, cable ignored),
-Sync (free-running; SEED edges restart grain-clock phase, useful on the
-periodic side of DENSITY), Add (free-running; one extra grain per edge).
-The divider is unavailable except in Off. These choices apply only while
-latched with a cable patched; unpatched attack triggers keep working. Ignore
-also suppresses trigger LED flashes. Synth grain clocks share these modes;
-delay free-runs for all non-Off values. Hygrostat can fix any value or place
-it in any options page slot.
+Reverb character selects Stock or Clouds-style, which adds diffusion
+until manually set. In delay and wavetable synth, only reverb changes.
+Switching fades sound and clears the tail.
 
-TIME modulation offers Random in the lower half and Scan in the upper half.
-With Scan and TIME CV unpatched, the TIME attenurandomizer moves the playback
-position: noon stops, clockwise moves forwards, counter-clockwise backwards.
-At either end it takes four seconds to scan the buffer. TIME offsets the
-position, which wraps at the buffer boundary. Try it on a frozen recording.
-Patching TIME CV restores its usual response and pauses the scan. Scan also
-pauses in delay, spectral and synth modes. The position is not saved.
+Frozen feedback selects Stock or Evolving. Evolving fades in to soften
+and drift frozen grains, controlled by FEEDBACK; it stops with FREEZE
+off.
 
-Processor: page 3 (REVERB LED), FEEDBACK knob. Lower half selects Granular
-(Stock) (steady green); upper half selects Spectral (steady yellow).
-Spectral replaces the grains with the spectral processing of Mutable
-Instruments' Clouds. TIME picks the stored spectrum, SIZE warps it, SHAPE
-quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how
-quickly the spectrum is renewed, and scrambles its phases towards either end.
-Holding SEED glitches it; FREEZE holds it. The attenurandomizers draw a new
-value for each spectrum. FEEDBACK, DRY/WET, REVERB, the recording quality,
-the assignable CV and the R gate output work as usual; there is no grain
-diffusion, delay mode or wavetable synth.
-A new processor takes over when the page closes: the sound fades out, the
-recording is cleared, and the sound fades back in. A frozen buffer saved to
-flash stays there and comes back with Granular. The setting is saved. Stock
-firmware ignores it; saving after a downgrade resets it to Granular (Stock).
+Processor: Lower half selects Granular (Stock); upper half selects
+Spectral, using Mutable Instruments Clouds. TIME selects a spectrum,
+SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls
+renewal and phase scrambling. SEED glitches; FREEZE holds. Random
+controls update per spectrum. Mixing, quality, assignable CV and R gate
+work normally; diffusion, delay and wavetable synth are unavailable.
+Closing fades the change and clears recording. The saved frozen buffer
+returns with Granular.
 
-Synth: page 3 (REVERB LED), DRY/WET knob. Lower half selects
-Beads (Stock) (steady green), the wavetable synth; upper half selects Plaits
-(steady yellow): six voices of Mutable Instruments' Plaits play instead. Each
-SEED trigger starts the next voice, which keeps its pitch and settings.
-FEEDBACK picks one of the 24 models; TIME, SIZE and SHAPE set HARMONICS,
-TIMBRE and MORPH, each note drawing its own random values; PITCH, DENSITY,
-SEED, REVERB, quality, stereo width and the pitch scale work as in the
-wavetable synth. DRY/WET sets the decay and FREEZE sustains. With DENSITY at
-noon and SEED unpatched, the last voice drones until SEED plays a note. The
-setting is saved; stock firmware ignores it.
+Synth selects Beads (Stock) or six Plaits voices. Triggers advance
+voices, retaining pitch and random settings. FEEDBACK selects 24 models;
+TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH.
+DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At
+DENSITY noon with SEED unpatched, the last voice drones.
 
-Synth start: page 3 (REVERB LED), REVERB knob. Lower half selects Automatic
-(Stock) (steady green): the synth starts after 10 s with both audio inputs
-unpatched, as the Beads manual describes. Upper half selects Manual (steady
-yellow): it never starts by itself. To start it by hand, unpatch both audio
-inputs, turn FREEZE off and hold [A] for about a second and a half; hold
-again to stop. Patching either input also stops it (once FREEZE is off);
-with an input patched, the hold restarts automatic gain as usual. The
-setting is saved; stock firmware ignores it.
-
-Reverb character: page 2 (DRY/WET LED), DRY/WET knob. Lower half selects
-Stock (default, steady green); upper half selects Clouds-style (steady yellow).
-Clouds-style uses Mutable Instruments' Clouds reverb timings and modulation,
-plus diffusion on the grain wet output until an amount is set with [A]+REVERB
-(below). In delay and wavetable synth modes, only the reverb character changes. Switching briefly fades the sound out and
-back in and clears the old tail. The setting is saved; stock firmware ignores
-it and resets it to Stock when saving after a downgrade.
-
-Random intervals: page 1 (FEEDBACK LED), DRY/WET knob. Lower half selects
-Free (default, steady green); upper half selects Fifths and octaves (steady
-yellow). With the PITCH attenurandomizer counter-clockwise, each grain's
-random offset then lands on fifths and octaves around the knob's pitch;
-clockwise it stays continuous. The pitch scale still applies. Grains and
-synth grains only. The setting is saved; stock firmware ignores it.
-
-Attacks: page 1 (FEEDBACK LED), REVERB knob, in thirds. Off (default,
-steady green), Snap (steady yellow): while recording, Beads marks the attacks
-in the input, and a grain that would start just after one starts on it
-instead, so grains begin on a hit rather than partway through its decay.
-Snap and trigger (steady red) also starts a grain on each attack, as a SEED
-pulse would. Only granular playback uses the marks; a patched SEED still
-works. The setting is saved; stock firmware ignores it.
-
-Frozen feedback: page 2 (DRY/WET LED), REVERB knob. Lower half selects
-Stock (default, steady green); upper half selects Evolving (steady yellow).
-With Evolving, while FREEZE is on, the grains run through a slowly moving
-all-pass loop, so the frozen sound drifts and its attacks soften instead of
-repeating exactly; FEEDBACK sets how far it goes. It fades in and out
-quickly and does nothing while FREEZE is off. The setting is saved; stock
-firmware ignores it.
-
-Grain diffusion: hold [A] and turn REVERB to set the amount, with either
-reverb; the [A] LED shows it as a meter, and fully CCW is none. Until it is
-set, Stock has none and Clouds-style keeps its own amount. Once an amount is
-set, short presses of [M] add DIFFUSION after REVERB (and after WIDTH); the
-REVERB LED pulses alone while it is the CV destination. Diffusion acts on the
-grains only, not in delay or wavetable synth modes. The amount is saved; stock
-firmware ignores it.
-
-Pitch quantization: page 1 (FEEDBACK LED), FEEDBACK knob. Three zones
-select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
-tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
-Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
-Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
-then a pause). Holds do not cycle. SEED taps here do not trigger or latch
-grains; other buttons close the page. The setting is saved; default is Off.
-
-Each grain's PITCH knob, CV and random offset snap together at its start,
-on a grid rooted at the unshifted pitch; +1 V is still one octave.
-Playing grains keep their pitch. Synth grains snap too; the continuous
-synth oscillator and delay mode keep their existing pitch behaviour.
-Scales use Mutable Instruments Marbles' tunings and notes with weight at
-least 64 (Pelog has four notes). Major and Minor pentatonic are subsets
-of its Major and Minor scales. Pelog and the raags are microtonal.
+Synth start selects Automatic (Stock), starting after ten seconds with
+both inputs unpatched, or Manual. With inputs unpatched and FREEZE off,
+hold [A] about a second and a half to start; repeat to stop. Patching an
+input stops it once FREEZE is off. With an input patched, holding [A]
+restarts automatic gain.
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
@@ -322,83 +245,63 @@ End options reference
 
 Saved data
 ----------
-Settings from stock firmware carry over. Drizzlet's own options, stereo
-width and grain diffusion saved by earlier Drizzlet releases start from their
-defaults; the calibration and the stock settings are kept. Downgrading to
-stock firmware is safe: it ignores the Drizzlet bytes and clears them when it
-saves, and loads trimmed buffers at full length. Turn monophonic grains off
-before downgrading. Earlier Drizzlet releases read the new settings as stock.
-Byte layout: FEATURES.md in the repository.
 
-Firmware update procedure
--------------------------
-Beads manual by Emilie Gillet, CC-BY-SA 3.0; reproduced unchanged:
-https://pichenettes.github.io/mutable-instruments-
-documentation/modules/beads/manual/#firmware
+Stock settings and calibration carry over; earlier Drizzlet options,
+width and diffusion reset to profile defaults. Frozen buffers remain
+stock-compatible. Disable monophonic grains before downgrading. Stock
+clears Drizzlet options when saving and loads trimmed buffers
+full-length; earlier Drizzlet reads new settings as stock.
 
-If you think your module is behaving strangely, updating the firmware is
-certainly not the right thing to do.
+Reset and recovery
+------------------
 
-Unplug all CV inputs/outputs from the module. Connect the output of your
-audio interface/sound card to the IN L input (1). Set the TIME knob [E] to an
-intermediate position. Power on your modular system with the FREEZE
-illuminated push-button (B) pressed.
+Hold SEED at power-on only to reset settings; valid calibration is kept.
 
-Make sure that no additional sound (such as email notification sounds,
-background music etc.) from your computer will be played during the
-procedure. Make sure that your speakers/monitors are not connected to your
-audio interface - the noises emitted during the procedure are aggressive and
-can harm your hearing. On non-studio audio equipment (for example the line
-output from a desktop computer), you might have to turn up the gain to the
-maximum.
+Damaged calibration restores automatically from its copy; damaged frozen
+buffers are skipped. If both calibration copies are lost, all LEDs blink
+fast for three seconds. It then uses factory calibration and defaults,
+saves nothing and restores no buffer.
 
-When you are all set, play the firmware update file into the module. While
-the module receives data, the recording quality LED [A] will act as
-vu-meter (lit in yellow when the signal level is optimal). Try adjusting the
-TIME knob to adjust gain. When the end of the audio file is reached, the
-module automatically restarts - if it is not the case, please retry the
-procedure from the beginning.
+Power on holding SEED to repair. Blinking green [A] with mix LEDs lit
+means success; recalibrate. Fast red and mix blinking means failure;
+retry. If reinstalling fails to restore startup, consult
+https://github.com/insolentconstruct/eurorack/releases/tag/
+storage-recovery-2026.10.27
+and its warnings.
 
-In case the signal level is inadequate, all LEDs will blink in red. Press the
-button [B] and retry with a higher gain. If this does not help, please retry
-the procedure from another computer/audio interface, and make sure that no
-piece of equipment or software effect (equalizer, automatic gain control, FX
-processor) is inserted in the signal chain.
+Back up calibration before ST-Link recovery. Erase only written sectors;
+a full-chip or mass erase loses calibration and settings. For backup,
+restore and ST-Link commands, see:
 
-Notes
------
-* Stock settings and calibration carry over. Earlier Drizzlet options,
-  stereo width and grain diffusion reset to the profile defaults.
-* Do NOT hold SEED at power-on: it rewrites the settings/calibration
-  sector, keeping a valid calibration.
-* If all LEDs blink fast for 3 seconds at power-up, the calibration and its
-  copy are both lost: the module plays on defaults and saves nothing. Power
-  on holding SEED to repair it. Then: green quality LED with the three mix
-  LEDs lit = repaired, recalibrate; red with the mix LEDs blinking = repair
-  failed, try again.
-* The audio update writes only the application area. It leaves the
-  bootloader and settings/calibration sector untouched.
-* If updates keep failing, set the computer's output to 44.1 kHz or try
-  another device. As a last resort, flash the combo image from -combo.zip
-  via ST-Link: the -combo.hex needs no address; the -combo.bin goes at
-  0x08000000. See the build kit README for the command.
-  Erase only the sectors written: a full-chip or mass erase also wipes
-  calibration and settings.
+  https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/docs/RECOVERY.md
 
-Calibration backup and restore (ST-Link + OpenOCD; same unit only)
-----------------------------------------------------------------
-Back up the 128 KiB settings/calibration sector:
+Use backups only on their original module.
 
-  openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-    -c "init; halt; dump_image beads-settings.bin 0x081E0000 0x20000; reset run;
-shutdown"
+Building it yourself
+--------------------
 
-Check that beads-settings.bin is 131072 bytes. Label it with its unit.
-Restore to the same unit only; calibration is specific to each module. To
-restore, build a restore image from the backup with
-beads/build/tools/settings_sector.py and write that, as the build kit README
-shows ("Backup and restore"); don't write the 128 KiB backup itself back.
+From the repository root on an amd64 host with Docker:
 
-Credits: Mutable Instruments, Frederic Meslin / Fred's Lab, Oliver Rockstedt.
-Copyright and permission notices are in NOTICE.txt; keep them when
-redistributing.
+git submodule update --init stmlib stm_audio_bootloader
+docker build --platform linux/amd64 \
+  --target compiler \
+  -t beads-build-kit beads/build
+bash beads/build/build.sh "$PWD/artifacts" --wav
+
+Licence and credits
+-------------------
+
+Code: MIT, from the Mutable Instruments source, with credits to Frédéric
+Meslin / Fred's Lab and Oliver Rockstedt; see LICENSE. The manual
+excerpt and hardware designs are licensed CC-BY-SA 3.0. Copyright and
+permission notices are in NOTICE.txt; preserve them when redistributing.
+
+Report problems at https://github.com/insolentconstruct/eurorack/issues
+and questions at
+https://github.com/insolentconstruct/eurorack/discussions. Do not
+contact Mutable Instruments. See CHANGELOG.md for changes,
+docs/TESTING.md for testing, and the Beads manual at
+https://pichenettes.github.io/mutable-instruments-documentation/
+modules/beads/manual/ for
+stock controls. See docs/CALIBRATION.md in the repository to
+recalibrate.

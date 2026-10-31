@@ -1,17 +1,22 @@
 # Testing
 
-**TL;DR:** TODO: final host-test, program, assertion, deliberate-fault and injected-fault totals. Host tests, reproducible builds, emulator comparisons and runs on one module cover the firmware; other modules, long sessions and limiter listening tests remain untested.
+TODO: final host-test, program, assertion, deliberate-fault and injected-fault
+totals; confirm at the final release commit. TODO: final module install count
+and automated run hours.
 
-TODO: confirm host-test and assertion totals at the final release commit; update the table below.
+Host tests, pinned builds, emulator comparisons and one module cover the
+firmware. Hygrostat profiles and its nine new options remain untested on the
+module. Other gaps are listed below.
 
-- **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
-- **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, runs on the release code: quality changes, the quality button, CPU load, CV calibration, installing over Beta 1, [M] CV, settings and frozen-buffer saves with the storage fix, and a deliberately damaged settings sector. Hygrostat profiles and the nine new options remain untested on the module.
-- **Totals:** TODO: final module install count and automated run hours. CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
-
-Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Spectral also runs a ShyFFT build, counted once. Assertions inside loops run more than once.
+Count `main()` test calls, `CHECK` sites and mutation `cases`. Count spectral
+once despite its ShyFFT build. Loop assertions execute repeatedly.
 
 ## Automated (every push)
+
+Host programs use sanitizers. After README edits, keep README.md and README.txt in step. After guide-generator edits, run
+`ASAN_OPTIONS=detect_leaks=0 ./build/options_tables | python3 beads/build/tools/options_guide.py`.
+`make -f beads/build/tools/options_tables.mk test` checks both formats,
+72-column text, firmware tables, guides and release packaging.
 
 | Check | What it covers |
 |---|---|
@@ -59,9 +64,8 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 | wavetable | TODO | TODO |
 | **Total** | **TODO** | **TODO** |
 
-The separate TSV/documentation check is not included in the C++ assertion counts.
-
-Run any test from the repository root with `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Where the firmware and the manual differ, the tests check the firmware (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail (TODO: final deliberate-fault total). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
+injects recorded faults into newer tests, each required to fail (TODO: final deliberate-fault total). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -71,7 +75,7 @@ Feature checks beyond the table:
 
 ## Coverage of the manual
 
-The developers listed 117 behaviours from the Beads manual, the module page and the [April 2021 update notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572). Host tests check 110 of them.
+Of 117 behaviours in the Beads manual, the module page and the [April 2021 update notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572), host tests check 110.
 
 | Area | Behaviours | Host tests | Not covered by host tests |
 |---|---:|---:|---|
@@ -93,7 +97,7 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 
 ## Before release
 
-Run by the developers; these scripts and results are not in this repository.
+External checks; scripts and results are not in this repository.
 
 | Check | Result |
 |---|---|
@@ -102,7 +106,6 @@ Run by the developers; these scripts and results are not in this repository.
 | Emulator comparison, GCC 9 against GCC 4.9.3 builds of the vanilla source (2026.10.16) | 20 of 20 scenarios bit-identical |
 | Emulator comparison against the previous release (2026.10.14) | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, wavetable synth, freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
 | Instruction counts | No audio-path function grew |
-| Code review | Five rounds by a second AI model; the first four led to fixes (three of them real bugs in the frozen-buffer save) |
 | Damaged settings, on a development board with the same processor and caches on | 8 of 8 cases pass with real uncorrectable flash errors: errors reported instead of crashing, no stale data from the cache, clean reads after a failed one, erase and rewrite, and interrupts held off for under 1 µs |
 
 ## On a module
@@ -173,11 +176,9 @@ threshold.
 | Drizzlet only: Clouds-style switching | | Inconclusive here, pass on release candidate 5 |
 | Drizzlet only: all nine pitch scales | | Measured, see below |
 
-Measured values were compared with the vanilla source. Every difference
-traced back to the test rather than the firmware, and those tests were fixed.
-No recording had dropouts or digital clipping. The click candidates found came
-from the audio itself (music on the dry path, delay echoes, wavetable synth), at
-similar counts on the vanilla source.
+Compared with vanilla source: no firmware differences, dropouts or digital
+clipping. Test errors were corrected. Click candidates came from music, delay
+echoes and synth audio, at similar counts in both builds.
 
 **Pitch scales.** With PITCH randomness turned up, 222 grains were detected
 across the nine scale settings. Every one landed on a note of its scale, the
@@ -201,10 +202,9 @@ digital, with inputs playing.
 No audio underruns in any capture. The vanilla source has no timing counters,
 so it was not timed the same way.
 
-**Release candidate 5** (2026-10-18), the Beta 1 code. Only the Clouds-style
-reverb's modulation rate, explicit rounding that keeps GCC 9's results, and
-code tidying changed since release candidate 3; the emulator gives identical
-audio in every scenario with default options. A short run checked them on the module:
+**Release candidate 5** (2026-10-18, Beta 1). Since candidate 3: Clouds-style
+modulation rate, explicit GCC 9 rounding and tidying. Default-option emulator
+audio remains identical. Module checks:
 
 | Check | Result |
 |---|---|
@@ -228,7 +228,8 @@ audio in every scenario with default options. A short run checked them on the mo
 | Reverse-engineered port | 0 | 1 |
 | **Total** | **35** | **13** |
 
-Every probe install was read back and checked; the module never failed to boot. Once, an update file played too quietly stopped partway; the bootloader was untouched and replaying at full volume fixed it.
+All probe installs verified; every install booted. One quiet audio update
+stopped partway; replaying at full volume worked and the bootloader was intact.
 
 About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 sessions), counted from run logs, excluding waits for a control to be moved; a run recorded by several instruments counts once.
 
@@ -294,7 +295,10 @@ TODO: final module install totals and automated run hours, including the damaged
 | Storage recovery tool | 0 | 2 |
 | **Total** | **71** | **4** |
 
-Since 2026-10-11: 123 installs (106 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 18 more hours of automated runs, 31 in all, counted as above.
+Since 2026-10-11: 123 installs (106 probe, 17 audio). Probe writes verified
+the expected start address; all audio installs booted. Two probe writes needed
+repeating after failed checks; one audio install needed replay after a
+bootloader error. About 18 additional automated hours, 31 total, counted as above.
 
 **CV calibration** ([M]+[A]):
 

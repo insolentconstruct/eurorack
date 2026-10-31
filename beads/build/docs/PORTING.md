@@ -1,28 +1,34 @@
 # Porting the DSP engine
 
-What to know when building Drizzlet's DSP (`beads/dsp`) somewhere other than the module: a desktop build, VCV Rack, a plugin or another MCU.
-
-## TL;DR
-
-- Drizzlet's changes make the DSP no less portable than Mutable Instruments' vanilla source. They add no assembly, section attributes, C++11 features, 64-bit assumptions or hardware constants.
-- Every changed DSP file is built and run on a desktop compiler (g++ with AddressSanitizer and UndefinedBehaviorSanitizer) by the host tests in `beads/test`. No clang, MSVC or VCV build has been tried.
-- A port replaces the firmware side anyway: drivers, UI, the options page, settings and frozen-buffer saves, the bootloader and the DWT calibration build.
+Drizzlet adds no assembly, section attributes, C++11 features, 64-bit assumptions
+or hardware constants to `beads/dsp`. Host tests build every changed DSP file
+with g++, AddressSanitizer and UndefinedBehaviorSanitizer. Clang, MSVC and VCV
+builds are untried. Replace drivers, UI, options, settings, buffer saves,
+bootloader and DWT build for your host.
 
 ## What a port should know
 
-1. **Pinned rounding.** The random pan spread in `dsp/randomized_parameter.h` calls standard C `fmaf()` (fused multiply-add). It makes one pan calculation round the same way everywhere. On a CPU without hardware FMA it is a slower library call, made once per grain start. The firmware keeps GCC's default contraction, which fuses some other multiply-adds on the Cortex-M7; turning contraction off moves the sound further from the module, not closer. For matching sound, use the same contraction setting on a target with hardware FMA, match its flush-to-zero behaviour, and compare with the host tests.
-   Grain render pan and the shape and speed targets use explicit rounding; sound is the same on GCC 9 through 16.
-2. **Delay-line reads stay behind the write head.** `DelayLine::Read()` in `dsp/delay_line.h` uses an unsigned modulo for its index, which assumes no caller reads ahead of the write head. Grains (which stop at the heads) and delay taps satisfy this. A new kind of reader must too.
-3. **Memory and rates.** The Clouds-style reverb uses the same 64 KiB reverb memory; `Processor` adds a 2,048-sample (4 KiB) diffuser buffer. Like Mutable Instruments' own code, the engine runs at fixed internal rates (48, 32 and 24 kHz by recording quality); a host at another rate resamples around it.
-4. **Calibration hooks.** The DWT timing hooks in the DSP headers compile to nothing unless `DWT_CALIBRATION` is defined.
+1. **Rounding:** `randomized_parameter.h` uses standard `fmaf()` once per grain
+   start to pin pan rounding. Without hardware FMA this calls a slower library
+   function. Match GCC's default contraction and Cortex-M7 flush-to-zero for
+   matching audio; disabling contraction moves further from module sound.
+   Grain-render pan, shape and speed targets round explicitly; GCC 9–16 agree.
+   Compare with host tests.
+2. **Delay reads:** `DelayLine::Read()` uses unsigned modulo. Every reader must
+   stay behind the write head, as grains and delay taps do.
+3. **Memory/rates:** Clouds-style reverb keeps 64 KiB; `Processor` adds 2,048
+   diffuser samples (4 KiB). Internal rates are 48, 32 and 24 kHz by quality;
+   resample around the engine for other host rates.
+4. **Timing:** DSP hooks compile away unless `DWT_CALIBRATION` is defined.
 
 ## Already in Mutable Instruments' code
 
-These were non-portable before Drizzlet, and any port of Beads already deals with them:
-
-- Packed bitfield sample structs in `dsp/delay_line.h` (`__attribute__((packed))`).
-- ARM saturation and square-root assembly, and the `IN_RAM` code section, in stmlib. Each has a plain C++ version selected by defining `TEST`, which the host tests use; a port can do the same.
+- Packed bitfield samples in `dsp/delay_line.h` use `__attribute__((packed))`.
+- stmlib ARM saturation/square-root assembly and `IN_RAM` have plain C++
+  alternatives selected with `TEST`, as used by host tests.
 
 ## Sound
 
-On the module the audio is bit-identical across the changes listed in [OPTIMIZATIONS.md](OPTIMIZATIONS.md). A port compiled with a different compiler or floating-point settings can differ by a few float rounding steps; use the host tests to compare.
+[Optimization checks](OPTIMIZATIONS.md) show bit-identical module audio.
+Other compilers or floating-point settings may differ by a few rounding steps;
+compare with host tests.

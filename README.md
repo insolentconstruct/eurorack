@@ -1,34 +1,18 @@
-Mutable Instruments' Eurorack Modules.
+# Drizzlet
 
-* [Beads](http://mutable-instruments.net/modules/beads): Texture synthesizer (1).
-* [Blades](http://mutable-instruments.net/modules/blades): Dual multimode filter.
-* [Blinds](http://mutable-instruments.net/modules/blinds): Quad VC-polarizer.
-* [Braids](http://mutable-instruments.net/modules/braids): Macro-oscillator.
-* [Branches](http://mutable-instruments.net/modules/branches): Dual Bernoulli gate.
-* [Clouds](http://mutable-instruments.net/modules/clouds): Texture synthesizer.
-* [Ears](http://mutable-instruments.net/modules/ears): Contact microphone.
-* [Edges](http://mutable-instruments.net/modules/edges): Quad chiptune digital oscillator.
-* [Elements](http://mutable-instruments.net/modules/elements): Modal synthesizer.
-* [Frames](http://mutable-instruments.net/modules/frames): Keyframer/mixer.
-* [Grids](http://mutable-instruments.net/modules/grids): Topographic drum sequencer.
-* [Kinks](http://mutable-instruments.net/modules/kinks): Utility module - rectifier, analog logic, S&H, noise.
-* [Links](http://mutable-instruments.net/modules/links): Utility module - buffer, mixer.
-* [Marbles](http://mutable-instruments.net/modules/marbles): Random sampler.
-* [Peaks](http://mutable-instruments.net/modules/peaks): Dual trigger converter.
-* [Plaits](http://mutable-instruments.net/modules/plaits): Macro oscillator.
-* [Rings](http://mutable-instruments.net/modules/rings): Resonator.
-* [Ripples](http://mutable-instruments.net/modules/ripples): Liquid 2-pole BP, 2-pole LP and 4-pole LP filter.
-* [Shades](http://mutable-instruments.net/modules/shades): Triple attenuverter.
-* [Shelves](http://mutable-instruments.net/modules/shelves): EQ filter.
-* [Stages](http://mutable-instruments.net/modules/stages): Segment generator.
-* [Streams](http://mutable-instruments.net/modules/streams): Dual dynamics gate.
-* [Tides](http://mutable-instruments.net/modules/tides): Tidal modulator.
-* [Veils](http://mutable-instruments.net/modules/veils): Quad VCA.
-* [Volts](http://mutable-instruments.net/modules/volts): +5V power module.
-* [Warps](http://mutable-instruments.net/modules/warps): Meta-modulator.
-* [Yarns](http://mutable-instruments.net/modules/yarns): MIDI interface.
+Community firmware for Mutable Instruments Beads; not a Mutable Instruments product.
+Start with [installation and controls](beads/build/README.md).
 
-(1) Code provided as is, builds on a Desktop platform but not verified to build and run on a module. Install at your own risks.
+## Options page
+
+See the [options guide](beads/build/docs/OPTIONS.md) or
+[printable guide](beads/build/docs/options-guide.svg).
+
+![Options page phone guide](beads/build/docs/options-guide-mobile.svg)
+
+## For firmware modders
+
+To build the vanilla Mutable Instruments Beads source, unmodified, use the [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) branch. For that source plus the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features, use [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup).
 
 License
 =======
@@ -51,14 +35,3 @@ The name "Mutable Instruments" should not be used on any of the derivative works
 We do not recommend you to keep the original name of the Mutable Instruments module for your derivative works.
 
 For example, your 5U adaptation of Mutable Instruments Clouds can be called "Foobar Modular - Particle Generator".
-
-## Options page
-
-See the [options guide](beads/build/docs/OPTIONS.md) or
-[printable guide](beads/build/docs/options-guide.svg).
-
-![Options page phone guide](beads/build/docs/options-guide-mobile.svg)
-
-## For firmware modders
-
-To build the vanilla Mutable Instruments Beads source, unmodified, use the [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) branch. For that source plus the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features, use [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup).

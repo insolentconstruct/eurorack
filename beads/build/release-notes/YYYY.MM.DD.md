@@ -1,117 +1,105 @@
-**Beta 2 "Fog".** Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks and more, on a four-page options page. Modules with damaged settings flash now start instead of crashing. [Drizzlet Hygrostat](https://hygrostat.insolentconstruct.net/) builds your own update file in the browser: choose which features the firmware has, where they sit and their defaults, including nine new options that are off in the standard firmware. Tested on one module so far; please try it on yours and [report what you find](https://github.com/insolentconstruct/eurorack/issues).
+**Beta 2 “Fog”** — alternative Beads firmware. Tested on one module;
+install at your own risk. Standard options default to stock behaviour.
 
 TODO: release date; rename this file and replace `{TAG}` with `drizzlet-YYYY.MM.DD` before publishing.
 
-## Upgrading
+## Controls
 
-- **From the Mutable Instruments firmware:** your settings and calibration carry over.
-- **From an earlier Drizzlet release** (alpha or Beta 1): the calibration and the stock settings (recording quality, [M] routing and amounts, input gain, trigger output, autosave, monophonic grains) are kept. Drizzlet's own options, stereo width and grain diffusion start from the profile's defaults; set them again on the new options page.
+[A] is the quality button; [M] is CV assign. Hold [M] for three seconds,
+then release to open the options page. Tap [M] to change pages. Turn a knob
+and wait one second to save. Hold [M] for three seconds or press another
+button to close. [A] previews the stored values.
 
-The options page now has four pages, and its page LEDs light left to right: FEEDBACK, DRY/WET, REVERB, then all three. Where the Beta 1 options went:
+| Page / LED | FEEDBACK | DRY/WET | REVERB |
+|---|---|---|---|
+| 1 / FEEDBACK | Pitch scale | Random intervals | Attacks |
+| 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
+| 3 / REVERB | Processor | Synth | Synth start |
+| 4 / all three | Unused | Unused | Limiter |
 
-| Option | Beta 1 | Beta 2 |
-|---|---|---|
-| Pitch scale | Page 1, FEEDBACK | Page 1, FEEDBACK |
-| Stereo width | Page 1, DRY/WET | Off the pages: hold [A], turn DRY/WET |
-| Reverb character | Page 1, REVERB | Page 2, DRY/WET |
-| Delay mode | Page 2, DRY/WET | Page 2, FEEDBACK |
-| Wavetable synth | Page 3, FEEDBACK | Page 3, REVERB, now called Synth start |
-| Limiter | Page 3, DRY/WET | Page 4, REVERB |
+- Hold [A] and turn REVERB to set grain diffusion with either reverb.
+  It can also receive assignable CV through [M].
+- Select Plaits with DRY/WET on page 3. Six voices play one of 24 models
+  selected by FEEDBACK. TIME controls HARMONICS, SIZE controls TIMBRE and
+  SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains.
+- Select Spectral with FEEDBACK on page 3. TIME selects the spectrum, SIZE
+  warps it, SHAPE quantizes it and PITCH shifts it. DENSITY controls renewal
+  and phase scrambling. Hold SEED to glitch; FREEZE holds the spectrum.
+  Switching processor clears the recording.
+- Select Evolving frozen feedback with REVERB on page 2. FEEDBACK controls
+  how far the frozen sound drifts and softens.
+- Select random fifths and octaves with DRY/WET on page 1. They apply to
+  counter-clockwise PITCH randomness and work with any scale.
+- Select Attacks with REVERB on page 1. Off keeps normal playback; Snap
+  starts grains on recorded hits; Snap and trigger also triggers per hit.
+- Stereo width now uses [A]+DRY/WET. Reverb moves to page 2, DRY/WET;
+  delay moves to page 2, FEEDBACK. Never is renamed Disabled, and Wide
+  detent becomes Wide/smooth filter, with unchanged behaviour.
+- Synth start moves to page 3, REVERB; the limiter moves to page 4, REVERB.
+- Earlier controls remain: Chromatic and eight scales, Clouds-style reverb,
+  manual synth start and the limiter. Hold [A], then press SEED for
+  monophonic grains or FREEZE for buffer trim.
+- Changes between mono and stereo, and synth switching at 48 kHz, are
+  pop-free. Quality changes involving 32 or 24 kHz still briefly silence
+  the output, empty the recording and stop synth reverb.
 
-Delay mode's values are renamed, with the same behaviour: Never is now Disabled, Wide detent is now Wide/smooth filter. Guides for the standard firmware: [printable](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/options-guide.svg), [phone](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/options-guide-mobile.svg), [text](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/OPTIONS.md). Hygrostat makes the guides for your own layout.
+## Hygrostat
 
-## New in Beta 2
+[Hygrostat](https://hygrostat.insolentconstruct.net/) builds updates locally
+in your browser and produces guides. Choose a template or set features to
+Off, Fixed or Adjustable, with your own controls and defaults. It warns when
+a combination may be too heavy for the CPU and refuses combinations that
+are too heavy. Per-feature CPU figures are estimates pending measurements
+on a module; the warning and refusal use those estimates.
 
-Listed by the number of requests ([feature requests](https://github.com/insolentconstruct/eurorack/issues/130), [roadmap](https://github.com/insolentconstruct/eurorack/issues/32)).
+Nine profile-only options are off in standard firmware:
 
-- **Grain diffusion** (7 requests, #2): hold [A] and turn REVERB, with either reverb; also an [M] destination for CV.
-- **Plaits synth** (page 3; 6 requests, #50): six Plaits voices in place of the wavetable synth. FEEDBACK picks one of 24 models; TIME, SIZE and SHAPE are HARMONICS, TIMBRE and MORPH.
-- **Spectral processor** (page 3; 4 requests, #3): Clouds' spectral processing in place of the grains. Switching processor clears the recording.
-- **Frozen feedback** (page 2; 3 requests, #4): Evolving runs a frozen sound through a slowly moving all-pass loop, so it drifts and softens instead of repeating exactly.
-- **Random intervals** (page 1; 2 requests, #8): with the PITCH attenurandomizer counter-clockwise, random pitch lands on fifths and octaves. Works with any pitch scale.
-- **Attacks** (page 1; #58, #47): Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
-- **Quieter switching** (#53): Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth's reverb tail stops with it.
-- **Less CPU, same sound:** Clouds-style reverb, the grains, and the wavetable synth, which now computes two grains side by side (#168; TODO: final-image module CPU figures).
+| Option | Action |
+|---|---|
+| Version | Flashes light-blue at boot, then twice for Beta 2 |
+| Input attenuation | Extends [A]+FEEDBACK to silence, with unity at noon |
+| Delay indication | Flashes [A] red when entering or leaving delay |
+| Brightness | Selects 100%, 66% or 33% from the profile or a page knob |
+| Live assignment LEDs | Follow the assignable CV |
+| FREEZE during saves | Keeps FREEZE lit while saving |
+| SEED latch | Retains the divider with Off, free-runs with Ignore, restarts phase with Sync or adds a grain per edge with Add |
+| Pitch notches | Lights [A] green at unison and octave knob positions |
+| TIME scan | Scans backwards or forwards with the attenurandomizer when TIME CV is unpatched |
 
-### Drizzlet Hygrostat
+## Update and recovery
 
-[Hygrostat](https://hygrostat.insolentconstruct.net/) is a web page that builds the update file from this release in your browser; nothing is uploaded. Start from a template or by hand. Each feature can be Off or Fixed at a value, and most can also be Adjustable on the panel, at the options page knob or [A] gesture you choose, with your defaults. The page warns when a combination may be too heavy for the processor, and refuses one that is. It also makes printable and phone guides for your layout. Without changes it builds exactly the update file published here.
+Stock settings and calibration carry over. Upgrading from alpha or Beta 1
+resets Drizzlet options, width and diffusion to profile defaults; set them again.
 
-Nine new options, off in the standard firmware, are available through Hygrostat:
+The [README](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/README.md)
+explains installation, options and recovery. Disconnect speakers during audio
+updates: the update audio can harm hearing. Holding SEED at power-on resets
+settings but keeps valid calibration.
 
-- **Version at boot** (#54): a short light-blue flash at power-up, then two pulses for Beta 2.
-- **Input attenuation** (#44): manual gain ([A]+FEEDBACK) goes down to silence, with unity at noon.
-- **Delay indication** (#42): the quality LED flashes red briefly when SIZE enters or leaves delay mode.
-- **LED brightness** (#40): 100%, 66% or 33%, set by the profile or an options-page knob; no power-on gesture.
-- **Live assignment LEDs** (#27): the mix LEDs follow the assignable CV.
-- **FREEZE during saves** (#25): the FREEZE LED stays fully lit while a frozen buffer is saved.
-- **SEED latch** (#13): with SEED latched and a cable patched, Ignore free-runs and ignores the cable, Sync restarts the grain clock on each edge, Add plays one extra grain per edge.
-- **Pitch notch indication** (#7): the quality LED lights green while PITCH sits on unison or an octave.
-- **TIME scan** (#141): with TIME CV unpatched, the TIME attenurandomizer moves the granular playback position forwards or backwards; try it on a frozen recording.
+Saves pause during supply sags. Interrupted saves lose only that save.
+Damaged calibration restores from its copy; damaged frozen buffers are skipped.
+If both calibration copies are lost, all LEDs blink fast for three seconds.
+The module uses factory calibration and default settings, saves nothing and
+restores no frozen buffer. Power on holding SEED to repair it. Blinking green
+[A] with mix LEDs lit means success; recalibrate. Fast red and mix blinking
+means failure; retry. If reinstalling fails to restore startup, consult the
+[storage recovery tool](https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27)
+and its warnings.
 
-## Fixes
+Back up calibration before ST-Link recovery. Combo HEX includes its address.
+Erase only the sectors being written. Never use a full-chip or mass erase:
+it also wipes calibration and settings.
 
-- **Low-supply save guard:** Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
-- **Settings saves** (#149): a save could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Mutable Instruments' firmware has the same code. Each flash operation is now checked, and settings are only written onto erased flash.
-- **Damaged settings** (#148): a module whose settings flash was damaged crashed at every start, on any firmware. Drizzlet now keeps a copy of the calibration in a second flash sector. A calibration that cannot be read is restored from the copy, with no sign. A save cut short, by a power cut for example, loses only that save. Only if the calibration and its copy are both lost do all LEDs blink fast for 3 s at each power-up; the module then plays on the factory calibration and default settings and saves nothing. Power on holding SEED to repair it with the factory calibration, then [recalibrate](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/CALIBRATION.md). A damaged frozen buffer is skipped instead of crashing. See the [README](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/README.md#damaged-settings).
-- **Firmware size** (#155): the build refuses firmware large enough to overwrite the frozen buffer and settings. Today's firmware is far from that.
+Disable monophonic grains before downgrading. Stock clears Drizzlet options
+when saving and loads trimmed buffers full-length. Earlier Drizzlet reads
+new settings as stock. SEED starts latched; latching in stock delay can pop.
+A patched SEED cable divides the clock only with SEED latch set to Off.
 
-## Everything Drizzlet adds
+TODO: final-image module CPU figures.
+TODO hours of automated runs and TODO firmware and settings installs.
+TODO: the Hygrostat profiles and options module session.
 
-Compared with the Mutable Instruments firmware. In the standard firmware every option defaults to stock behaviour; a Hygrostat profile can change the defaults and the layout.
-
-| Feature | Where (standard firmware) | Since |
-|---|---|---|
-| Pitch scale: Chromatic or eight Marbles scales | Page 1, FEEDBACK | Beta 1 |
-| Random intervals | Page 1, DRY/WET | Beta 2 |
-| Attacks | Page 1, REVERB | Beta 2 |
-| Delay mode: Auto, Disabled or Wide/smooth filter | Page 2, FEEDBACK | Beta 1 |
-| Clouds-style reverb | Page 2, DRY/WET | Beta 1 |
-| Evolving frozen feedback | Page 2, REVERB | Beta 2 |
-| Spectral processor | Page 3, FEEDBACK | Beta 2 |
-| Plaits synth | Page 3, DRY/WET | Beta 2 |
-| Wavetable synth started by hand | Page 3, REVERB | Alpha 2 |
-| Output limiter: Stock, Fast release or Off | Page 4, REVERB | Alpha 1 |
-| Stereo width, with CV | Hold [A], turn DRY/WET | Beta 1 |
-| Grain diffusion, with CV | Hold [A], turn REVERB | Beta 2 |
-| Monophonic grains (Mutable Instruments' code) | Hold [A], press SEED | Alpha 2 |
-| Buffer trim | Hold [A], press FREEZE | Beta 1 |
-| The nine Hygrostat options above | Off; Hygrostat only | Beta 2 |
-| Safer frozen-buffer saves | Automatic | Alpha 1 |
-| Calibration copy; starts with damaged settings, SEED repairs them | Automatic; hold SEED at power-up | Beta 2 |
-| Less flash wear from a modulated FREEZE | Automatic | Alpha 2 |
-| More CPU headroom, same sound | Automatic | Alpha 2 |
-
-How each works: [README](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/README.md). Every change, including bug fixes: [CHANGELOG.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/CHANGELOG.md).
-
-## Coming from the 2021 or 2024 firmware
-
-Drizzlet includes everything Mutable Instruments changed after those releases: settings recovery for modules stuck on boot, smoother knobs and delay controls, and the grain-scheduling change after which our module no longer crackled at high DENSITY.
-
-## How it was tested
-
-Host tests on every push, reproducible builds, and TODO hours of automated runs on a module, with TODO firmware and settings installs, none failed to boot. The damaged-settings handling was tested with real flash errors on a development board with the same processor, and on the module with a deliberately damaged settings sector. CV calibration was checked twice against an Intellijel Scales reference. TODO: the Hygrostat profiles and options module session. Details: [TESTING.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/TESTING.md).
-
-## Downgrading
-
-- To the Mutable Instruments firmware: safe. Turn monophonic grains off first. It ignores Drizzlet's options, clears them when it saves, and loads trimmed buffers at full length.
-- To an earlier Drizzlet release: its options start from stock.
-
-## Known limits
-
-- SEED starts latched at power-up, as in stock firmware.
-- Tested on one module only.
-- With SEED latch on Ignore, Sync or Add, a patched cable no longer divides the grain clock; the divider works only with SEED latch Off.
-- The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
-- Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
-- Hygrostat's CPU figures for single features are estimates until they are measured on a module; the warning and refusal are based on them.
-- A module that no longer starts after an update, even after reinstalling: see the [storage recovery tool](https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27) and its warnings first.
-- Settings are stored as in Mutable Instruments' firmware. About once every 4,000 saves, the settings sector is erased and rewritten. A power cut then loses only the settings being saved; the calibration copy keeps the calibration. The README shows how to back up calibration.
-- ST-Link recovery: the release adds `-combo.hex`, which carries its flash address. Erase only the sectors written: a full-chip or mass erase also wipes calibration and settings ([README](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/README.md#st-link-recovery)).
-- Where the Beads manual and the firmware disagree: [MANUAL_ERRATA.md](https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/MANUAL_ERRATA.md).
-
-## Reporting problems
-
-Open an [issue](https://github.com/insolentconstruct/eurorack/issues) with the release tag, your options page settings (or your Hygrostat profile link), what you did, what you heard, and a recording if you can. Questions, feature ideas and what works: [Discussions](https://github.com/insolentconstruct/eurorack/discussions). Please do not contact Mutable Instruments about this firmware.
-
-Built on the vanilla Mutable Instruments Beads source under the MIT licence.
+[Report problems](https://github.com/insolentconstruct/eurorack/issues) with the release,
+your settings or profile, the steps to reproduce the problem and a recording.
+Use [Discussions](https://github.com/insolentconstruct/eurorack/discussions) for questions and ideas.
+Do not contact Mutable Instruments. This firmware uses Mutable Instruments source under the MIT licence.
