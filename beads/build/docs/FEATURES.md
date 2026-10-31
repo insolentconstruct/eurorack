@@ -292,7 +292,7 @@ choice can occupy any of the twelve page slots. They have no amount, action,
 SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
 only, with no control placement. Omitted entries are Off. The default profile
 block is unchanged. The page-facing catalogue is
-`palette/static/profile-features.json`; costs are unknown until measured.
+`beads/build/profile-features.json`; costs are unknown until measured.
 
 Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
 when Adjustable or set via Hygrostat when Fixed. SEED latch uses Off / Ignore /
