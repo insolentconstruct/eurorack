@@ -1,12 +1,11 @@
 # Optimizations
 
-What Drizzlet changed to run faster or smaller, what was measured and rejected, and the rules for future changes. Audio-path work is judged on cycles saved on a measured worst case, and on whether the sound changes.
-
-Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overload (crackles on the left channel in 48 kHz stereo) "through several code optimizations having no negative impact on the module’s functionality" ([release notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572)).
+Measure audio-path changes by worst-case cycles and sound identity.
 
 ## TL;DR
 
-On the module, with the panel settings of the CPU tests, the busiest stock block now takes 94,311 of the 120,000 cycles available (78.6%). The vanilla source takes 110,947 (92.5%) on the same test. The sound is unchanged.
+Same panel test, whole callback: Drizzlet peaks at 94,311/120,000 cycles
+(78.6%); vanilla source at 110,947 (92.5%). Audio is unchanged.
 
 | Module, whole audio callback, worst block | Stock, panel | Stock, stress test | Clouds-style, panel |
 |---|---:|---:|---:|
@@ -14,7 +13,8 @@ On the module, with the panel settings of the CPU tests, the busiest stock block
 | Drizzlet before the integer Hermite read | 102,433 (85.4%) | 106,014 (88.3%) | 103,665 (86.4%) |
 | Drizzlet with it | 94,311 (78.6%) | 98,802 (82.3%) | 96,022 (80.0%) |
 
-Headroom gained per change, in points of the budget on the busiest stock block (development board, DSP only, except the Hermite row and the total, which are the whole callback on the module with the stock panel settings):
+Headroom in budget points: development-board DSP only, except Hermite and
+total (whole module callback, stock panel settings).
 
 | Change | Headroom |
 |---|---:|
@@ -25,9 +25,13 @@ Headroom gained per change, in points of the budget on the busiest stock block (
 | Grains interpolate the stored integers (integer Hermite) | 6.8 |
 | Total, module | 13.9 |
 
-The Clouds-style reverb also gains 1.0 point from its diffuser reading its tails first. Plain GCC 11 to 16 builds are 5,800 to 9,300 cycles slower than GCC 9 on the stock peak (GCC 10.3, from an unverified archive, 10,200); raising the inlining limit brings GCC 11 within noise of GCC 9. One explicit fused multiply-add and a few explicit roundings make every compiler's audio and buffer hashes match GCC 9 in all 28 scenarios. The bootloader stays on 4.9.3.
+Clouds-style tails-first diffusion gains 1.0 budget point. Plain GCC 11–16
+adds 5,800–9,300 stock-peak cycles over GCC 9; unverified GCC 10.3 adds 10,200.
+Raising inlining puts GCC 11 within noise. Explicit FMA/rounding matches GCC 9
+audio/buffer hashes in 28 scenarios. Bootloader remains on 4.9.3.
 
-The same changes on the vanilla source alone ([beads-tuneup](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup), no Drizzlet features): development board, busiest stock block, 24 scenarios, all hashes matched:
+Vanilla-only [beads-tuneup](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup):
+development-board stock peak, 24 scenarios, all hashes matched.
 
 | Build | Cycles | Budget |
 |---|---:|---:|
@@ -36,7 +40,7 @@ The same changes on the vanilla source alone ([beads-tuneup](https://github.com/
 | beads-tuneup with the integer Hermite read (not yet on that branch) | 82,911 | 69.1% |
 
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests; the emulator agreed wherever it was run (integer Hermite: 70 of 70 comparisons).
-- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter.
+- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter, synth grains rendered a block at a time, one Hermite read per synth sample.
 
 ## Build comparison
 
@@ -54,7 +58,11 @@ Budget is 120,000 cycles per block at 480 MHz. "Stock" is the worst stock case: 
 | GCC 14.3 | 255,696 B | 100,369 / 98,826 (83.64%) | 102,830 | differs, 0.000296535 FS | rejected |
 | GCC 15.3 | 253,760 B | 100,899 / 99,455 (84.08%) | 103,331 | differs, 0.0282450 FS | rejected |
 
-GCC 11 to 15 were built from the GCC 9 baseline source; on the template source they were no better (stock peak 100,069 to 101,526). `-fno-inline-functions` changed sound and timings by under 0.1%. The "all three changes" flash is the template build plus 1,376 B. Sound errors are the worst of 13 long scenarios; the -90 dBFS gate is 0.0000316 FS, so every differing build is 9 to 890 times over it. Seed3 hashes matched on every row except GCC 15.3 (19 of 28).
+GCC 11–15 use GCC 9 baseline source; template-source stock peaks were
+100,069–101,526. `-fno-inline-functions` changed sound/timing by under 0.1%.
+All-three flash is template +1,376 B. Worst errors across 13 long scenarios
+exceed the -90 dBFS (0.0000316 FS) gate by 9–890 times. Seed3 hashes match
+except GCC 15.3 (19/28).
 
 **Earlier sweep (vanilla source, GCC 4.9 to 15, emulator).** Relative to GCC 4.9.3 (image 268,384 B, median 96,826, worst 101,804 cycles):
 
@@ -67,17 +75,37 @@ GCC 11 to 15 were built from the GCC 9 baseline source; on the template source t
 | 9 | -2.3% | -2.2% | -2.3% | 16/20, max 1 ulp (20/20 with the pan pin) | chosen |
 | 10 to 15 | -10 to -11.5% | +0.2 to +1.5% | +0.4 to +1.6% | 8/20 or 12/20, max 1.4e-5 | rejected |
 
-Seed3 re-measure of the same source, worst / median: GCC 4.9.3 101,773 / 96,818; GCC 8.3.1 99,957 / 95,533; GCC 9.3.1 99,430 / 94,672. An older source on a different probe (GCC 4.9.3 vs 15.3) showed the same pattern: 15.3 was 5.7% slower in the worst scenario and 12 of 20 short scenarios were exact.
+Seed3 worst/median remeasure: GCC 4.9.3 101,773/96,818; 8.3.1
+99,957/95,533; 9.3.1 99,430/94,672. Older source/different probe: GCC 15.3
+was 5.7% slower at peak than 4.9.3; 12/20 short scenarios matched.
 
 ## Compiler
 
-- **Why GCC 9, not 8.** Only GCC 8 and 9 beat 4.9.3 in both median and worst block. GCC 8 gave the smaller image (-6.7% against -2.3%) but less headroom (worst 83.3% against 82.9%); headroom decides whether the callback survives its worst block, and flash is not scarce. Only GCC 9 was confirmed bit-exact with the pan pin.
-- **Why GCC 10 and later are slower** (emulator instruction counts, not module cycles). GCC 10 enabled `-finline-functions` at `-O2` and lowered `max-inline-insns-single` from 200 to 70. The Hermite delay-line read is no longer inlined into the grain loop: 384 extra calls per block in the stress case, each saving registers on the stack. With `--param max-inline-insns-single=140`, GCC 10 runs slightly fewer instructions than GCC 9 for about 12 KB more flash; lowering the limit on GCC 9 reproduces the slowdown. Instructions per block against GCC 9: GCC 10 +7.9%, 12 +4.4%, 14 +0.9%, 16 +1.5% (vanilla source +6.0%, +2.2%, -0.7%, -0.4%). Marking the read `always_inline`, as stmlib does for its interpolation helpers, or the parameter above would allow a newer compiler, but the newer compilers' small sound differences are a separate effect, so releases stay on GCC 9 for now.
+- **GCC 9 vs 8:** both improve median/peak over 4.9.3. GCC 8 saves more flash
+  (-6.7% vs -2.3%), but GCC 9 lowers peak load (82.9% vs 83.3%) and alone
+  was confirmed bit-exact with the pan pin. Headroom takes priority over flash.
+- **GCC 10+ inlining:** emulator instructions, not module cycles. GCC 10's
+  `-O2` enables `-finline-functions` and lowers `max-inline-insns-single`
+  200→70. Hermite reads stop inlining: 384 extra calls/block in stress32,
+  with stack register saves. `--param max-inline-insns-single=140` lets GCC 10
+  beat GCC 9 instruction count for about 12 KB flash; lowering GCC 9's limit
+  reproduces the slowdown. Against GCC 9: GCC 10/12/14/16 add
+  7.9/4.4/0.9/1.5% instructions (vanilla: +6.0/+2.2/-0.7/-0.4%).
+  `always_inline` or the parameter could permit newer compilers; sound
+  differences remain a separate gate.
 - **Build.** GCC 9.3.1 (Arm GNU Embedded 9-2020-q2), `-std=gnu++98` as for the vanilla source. The build kit still builds the vanilla app with 4.9.3 as a fixed reference. Both compiler licences ship with the release.
-- **Source change.** The random pan spread `0.5 + (u - 0.5) * min(spread * v, 1)` in `randomized_parameter.h` is one explicit fused multiply-add (standard `fmaf`, which GCC compiles to one instruction). Without it GCC 7 to 9 differed from 4.9.3 by at most 1 float ulp in 4 of 20 scenarios, because compilers may or may not fuse the multiply and add.
+- **Pan pin:** `randomized_parameter.h` uses explicit `fmaf` for
+  `0.5 + (u - 0.5) * min(spread * v, 1)`, one ARM instruction. Without it,
+  inconsistent contraction makes GCC 7–9 differ from 4.9.3 by up to one float
+  ulp in 4/20 scenarios.
 - **Evidence.** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. The emulator runs the real linked ARM code with fused multiply-add and flush-to-zero modelled.
-- **GCC 10 and later: rejected.** Stock peak is 99,516 to 100,899 cycles against 97,255 (+2.3% to +3.7%). Of 13 long scenarios 11 are exact, the rest differ by up to 0.000296535 FS (11 to 14) or 0.0282450 FS (15); short suites missed this. In the saturated digital core the newer compilers emit separate per-sample renderer calls where GCC 9 keeps one body (executed instructions +1.60%, stack-memory instructions +84.42%), because of the inlining limit above. Switching contraction off made the sound difference larger.
-- **Bootloader.** It stays on GCC 4.9.3 and is byte-identical to Mutable Instruments' build. It runs only at power-up and during updates, WAV updates never replace it, and a compiler change would only add risk to the recovery path.
+- **GCC 10+ rejection:** stock peak 99,516–100,899 vs 97,255 (+2.3–3.7%).
+  Of 13 long scenarios, 11 match; others differ up to 0.000296535 FS (11–14)
+  or 0.0282450 FS (15). Short suites missed this. Separate per-sample calls
+  in the saturated digital renderer add 1.60% instructions and 84.42% stack
+  instructions. Disabling contraction worsens sound differences.
+- **Bootloader:** GCC 4.9.3, byte-identical to Mutable Instruments' build.
+  Runs only at startup/updates; WAV updates never replace it. Keep recovery stable.
 
 ## Code changes
 
@@ -102,25 +130,68 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 | Grain Hermite read on the stored integers, scaled once | Mutable Instruments: Clouds' `ReadHermite` interpolates the unscaled samples and multiplies by `scale` once (`clouds/dsp/audio_buffer.h:241-277`) | diffuser change | 6,775 / 7,140 (run 2: 6,840 / 7,130) | 7,089 / 7,301 (run 2: 6,924 / 7,307) | -504 B | 0 | 28/28 Seed3 hashes (audio and buffers); host tests, 154 fault checks | kept |
 | Synth: two playing grains computed side by side, mixed in index order | Drizzlet: the in-order core overlaps two independent grains' sample and envelope chains; each grain's arithmetic is unchanged | current tree | unchanged (synth only) | unchanged (synth only) | +2,120 B | 0 | 14/14 synth and 28/28 granular Seed3 hashes; emulator long runs; host tests, `TestSynthGrainPairs` | kept |
 
-**Template.** The 2,669 / 2,828 peak savings come from the first paired baseline and template run (94,586 template peak); the Build comparison row shows the second template run (94,719), which gives 2,536 / 2,722 against the first baseline. It is not a gain everywhere: q1 stereo stress32 is 794 to 808 cycles slower at median, and some q1 and q2 cases regress. It improves the q3 and Clouds-style cases that set the peak.
+**Template:** first paired peak savings are 2,669/2,828 (template peak
+94,586). The second run in Build comparison peaks at 94,719, giving
+2,536/2,722 against the first baseline. q1 stereo stress32 slows 794–808
+median cycles; some q1/q2 cases regress. q3/Clouds-style set the peak.
 
-**Local frame.** The output values were loaded and stored once per grain per sample because stores to grain state may alias them; a local sum stays in registers and is added once. The additions and their order are unchanged. GCC keeps the grain player's `Render` out of line (hence the flash cost) and some off-peak cases slow down (dense and delay up to 558, q2 mono stress32 by 1,023, all at or below 60,000 cycles).
+**Local frame:** possible aliasing forced per-grain, per-sample output
+loads/stores. A local register sum adds once with identical addition order.
+GCC leaves `Render` out of line, costing flash. Off-peak dense/delay cases
+slow up to 558 cycles; q2 mono stress32 by 1,023 (all ≤60,000 cycles).
 
-**Unsigned modulo.** The read index is the write pointer plus a delay and every caller keeps it non-negative, so a signed `%` by a constant only adds a sign correction, run on every grain read. With both changes 26 of 28 scenarios get faster and the worst off-peak loss is 544.
+**Unsigned modulo:** callers keep write-pointer-plus-delay nonnegative.
+Unsigned `%` removes per-read sign correction. Combined changes improve
+26/28 scenarios; worst off-peak loss 544 cycles.
 
 **Freeze template.** Small gain, but it shifts GCC's inlining (q2 mono delay median 40,546 to 47,444) and changes the grain `Render` signature used at 17 host-test call sites.
 
-**Diffuser.** Removing the diffuser entirely saves 2,772 / 2,740 on the stress32 Clouds-style block, and running a second copy on a scratch buffer (same output) costs 2,819 / 2,878, so it takes about 2,800 cycles per 12-sample block (about 235 per sample) of the 2,700 to 3,200 Clouds-style adds over stock. The loop was latency bound: each all-pass read its tail, converted it and multiplied it after the previous all-pass had stored its head, and the compiler cannot hoist a load above a store that may alias, so every stage stalled the in-order core about 28 cycles. The eight reads of a sample never depend on its writes (the lines are disjoint), so they now come first; the compiler interleaves their conversions with the left and right filter chains and the loop drops to about 125 cycles per sample. Arithmetic and rounding are the same expressions (the Seed3 audio and buffer hashes match in all 28 scenarios), the engine is used for the delay line layout only, and `Start` no longer runs the unused LFO (-32 B RAM). The `mutation_check.py` diffuser case now mutates the all-pass output sign. Per-stage block loops are bit-identical but slower: an in-order core gets no overlap between loop iterations without unrolling. Float storage saves a further 449 to 602 cycles but drops the 16-bit rounding and clipping: in a host comparison with noise at 0.1 full scale the difference is -77 dBFS (above the -90 dBFS gate), and full-scale input clips in 16 bit but not in float, so it is not an optimization in the sense above. A two-samples-per-iteration unroll was not tried; it would not read like Mutable Instruments code.
+**Diffuser:** removal saves 2,772/2,740 cycles; a scratch second copy costs
+2,819/2,878. Cost is about 2,800 per 12-sample block (235/sample), of the
+2,700–3,200 Clouds-style overhead. Each dependent tail read/conversion/multiply
+stalled about 28 cycles after the previous store. Disjoint delay lines allow
+all eight reads first; interleaved conversions/filter chains reduce this to
+about 125 cycles/sample. Expressions/rounding and all 28 audio/buffer hashes
+match. The engine now supplies only layout; unused `Start` LFO is removed
+(-32 B RAM). Mutation check flips the all-pass output sign.
 
-**Integer Hermite.** Grain reads converted four stored samples to float and scaled each one before the Hermite polynomial. Like Clouds' `ReadHermite` (`clouds/dsp/audio_buffer.h:241-277`), they now interpolate the stored integers (`Item::raw`) and scale the result once: two multiplies per stereo read instead of eight. 8-bit µ-law lines and the delay taps keep the float read. Identical sound depends on keeping each rounding step in place: `c` stays `float(c) * 0.5f`, computed first, otherwise GCC fuses a different multiply-add and 10 of 28 hashes change (the delay taps differed the same way, so they keep the old read). `TestHermiteRawMatchesScaled` checks it on the host.
+Per-stage block loops match but slow down without overlap/unrolling.
+Float storage saves another 449–602 cycles but removes 16-bit rounding/clipping:
+0.1-FS noise differs at -77 dBFS, above the -90 dBFS gate; full-scale clips
+only in 16-bit. Two-sample unrolling was untried for style reasons.
 
-**Synth pairs.** The synth is not in the 28 scenarios; a 14-scenario synth probe measured it. Points of the budget saved, median / peak: worst synth case (Clouds-style reverb, reverb 0.7) 3.80 / 3.95; 32 grains 3.71 / 4.00; 32 grains with FREEZE held 3.35 / 3.25; stock synth 2.89 / 3.66 (run 2 within 0.15). When both grains of a fixed pair play, both samples are computed, then both envelopes, then both are mixed; otherwise each grain renders alone. In the emulator, 600,000 synth blocks at three qualities (FREEZE held and gated, all 32 grains playing, grains faded out or restarted) and the 20 fixtures match the old build bit for bit. Pairing whichever grains play, wherever they sit, saved only 0.3 to 0.6.
+**Integer Hermite:** interpolate `Item::raw`, then scale once, as Clouds'
+`ReadHermite` does (`clouds/dsp/audio_buffer.h:241-277`). Stereo reads need
+two multiplies instead of eight. µ-law and delay taps retain float reads.
+Keep `c` first as `float(c) * 0.5f`: another order changes fused rounding and
+10/28 hashes. Delay taps differ too. Host check: `TestHermiteRawMatchesScaled`.
+
+**Synth pairs:** separate 14-scenario probe (not the 28 granular scenarios).
+Saved median/peak budget points: worst synth (Clouds-style, reverb 0.7)
+3.80/3.95; 32 grains 3.71/4.00; 32 frozen grains 3.35/3.25; stock synth
+2.89/3.66; repeat within 0.15. Fixed pairs compute both samples, then both
+envelopes, then mix in order; lone grains render alone. Emulator: 600,000
+blocks across three qualities, FREEZE held/gated, 32 grains, fades/restarts,
+and 20 fixtures match bitwise. Pairing arbitrary active grains saved only
+0.3–0.6 points.
 
 **ITCM.** It helped some delay cases but cost more than it saved in the saturated case. Hot state and the stack already sit in fast core-coupled memory.
 
 **Result.** On the development board the stock worst block goes 97,255 (GCC 9 baseline) to 90,333 with the first three changes, and to 83,345 (69.5%) with the integer Hermite read; the worst of all 28 scenarios is 84,567 (70.5%), under the 90,000-cycle (75%) DSP-only target. On the module the whole callback is in the TL;DR table.
 
-**Untried ideas** (none fits the rules below): whole-block rendering per grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
+**Block-per-grain synth (rejected):** three bit-identical versions split
+blocks at grain starts. Development-board heavy-synth median worsened from
+83,099 to 84,332–87,093 cycles; retained block state gave no benefit.
+
+**Single Hermite synth read (rejected):** crossfade neighbouring wave
+samples before interpolation in `WavetableGrain::ReadSample`. Saves about six
+float operations in exact arithmetic, but costs about two budget points on
+Cortex-M7: two independent reads overlap; one combined chain cannot.
+Audio differs by about -87 dBFS RMS at 16-bit, peaks -35 dBFS at 4-bit.
+
+**Attack template (prototyped, not measured).** Templating the granular paths on the attack setting was prototyped but not kept: attacks already cost nothing when Off (worst block 84,434 against 84,643 without the feature).
+
+**Untried ideas** (none fits the rules below): whole-block rendering per granular grain (changes the sound through feedback and per-sample triggers); delay versus granular as a per-block template (1.7k slower); the local-sum idea in the multitap delay (not the peak).
 
 ## Method
 
@@ -133,7 +204,7 @@ Cycles saved on the Seed3 worst stock and worst Clouds-style cases, peak / media
 
 ### From Mutable Instruments
 
-These come from Mutable Instruments' code and tech notes ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/), "Timing and processes", the Beads history page).
+From Mutable Instruments code and tech notes ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/), "Timing and processes", the Beads history page).
 
 1. Specialize on configuration with template parameters: Clouds' grain renderer on channel count, quality and interpolation, stmlib's filter on its type, Warps on FIR templates. It is not always faster, as the freeze template shows.
 2. Look at the data format first. Mutable Instruments' own Beads gain was changing delay-line addresses from 47:16 to 21:10 fixed point, which avoids an int64-to-float conversion.
@@ -142,7 +213,7 @@ These come from Mutable Instruments' code and tech notes ([STM32 miscellania](ht
 
 ### Drizzlet's own rules
 
-Mutable Instruments' notes describe no sound-identity checks and none of the acceptance gates below; these are Drizzlet's, and stricter.
+These acceptance gates are Drizzlet policy.
 
 1. Follow [STYLE.md](STYLE.md): upstream master conventions win, Beads first; keep compatible Drizzlet policies marked `(Drizzlet)`.
 2. Measure the gain on the worst case (q3 stereo stress32, plus Clouds-style). Report peak and median, flash and RAM, and what got slower.

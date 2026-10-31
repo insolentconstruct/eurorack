@@ -12,12 +12,12 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="35" y="115" font-size="15" font-weight="normal" fill="#222" text-anchor="start">2. Change page: tap [M]. Pages 1-4 pulse</text>
 <text x="35" y="136" font-size="15" font-weight="normal" fill="#222" text-anchor="start">FEEDBACK, DRY/WET, REVERB, then all three.</text>
 <text x="35" y="160" font-size="15" font-weight="normal" fill="#222" text-anchor="start">3. [A] shows each stored value in turn. Turn a</text>
-<text x="35" y="181" font-size="15" font-weight="normal" fill="#222" text-anchor="start">knob to change it; it saves by itself.</text>
+<text x="35" y="181" font-size="15" font-weight="normal" fill="#222" text-anchor="start">mix knob (not a big knob) to change it.</text>
 <text x="35" y="205" font-size="15" font-weight="normal" fill="#222" text-anchor="start">4. Close: hold [M] 3 seconds or press another</text>
-<text x="35" y="226" font-size="15" font-weight="normal" fill="#222" text-anchor="start">button. With Scale selected, SEED taps step</text>
-<text x="35" y="247" font-size="15" font-weight="normal" fill="#222" text-anchor="start">the scale.</text>
-<text x="35" y="271" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Move a knob a little before it responds. Wait</text>
-<text x="35" y="292" font-size="15" font-weight="normal" fill="#222" text-anchor="start">a moment before powering off.</text>
+<text x="35" y="226" font-size="15" font-weight="normal" fill="#222" text-anchor="start">button. On page 1 with Pitch scale on Scale,</text>
+<text x="35" y="247" font-size="15" font-weight="normal" fill="#222" text-anchor="start">tap SEED to step the scale.</text>
+<text x="35" y="271" font-size="15" font-weight="normal" fill="#222" text-anchor="start">It saves by itself; wait before powering off.</text>
+<text x="35" y="292" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Move a knob a little before it responds.</text>
 <text x="405" y="70" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FIND THE CONTROLS</text>
 <text x="610" y="70" font-size="15" font-weight="normal" fill="#555" text-anchor="start">to scale</text>
 <rect x="490.0" y="94.0" width="200.7" height="221.1" fill="#f6f5f0"/>

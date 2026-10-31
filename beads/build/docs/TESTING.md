@@ -1,20 +1,27 @@
 # Testing
 
-**TL;DR:** 203 host tests in 17 programs cover 110 of 117 manual behaviours (3 only in part), backed by 190 deliberate-fault checks, 538 injected power-loss and flash-error points, reproducible builds, emulator comparisons and runs on one real module. Not covered: other modules, long sessions, limiter listening tests.
+TODO: final host-test, program, assertion, deliberate-fault and injected-fault
+totals; confirm at the final release commit. TODO: final module install count
+and automated run hours.
 
-- **Every push:** builds match pinned hashes; host tests mostly run the real firmware on a computer, from start-up and main loop down to the audio processor and synth.
-- **Before release:** sanitizer runs show the two out-of-bounds reads (#33, #35) before their fixes and not after. Emulator audio is identical in 44 of 44 scenarios against 2026.10.14, and 20 of 20 between GCC 9 and GCC 4.9.3 builds.
-- **On a module:** seven checks for 2026.10.14 and six for 2026.10.16 (installing, the crackle recipe, flash wear from a modulated FREEZE, monophonic grains, wavetable synth), using oscilloscope captures and the debug probe. For Beta 1, 28 scenarios on release candidate 3 against the vanilla source (22 shared), a shorter run on release candidate 5, every pitch scale on scale, and CPU load of 60–90.5% of the audio budget with no underruns. For Beta 2, a full run on the release code: quality changes, the quality button, CPU load and CV calibration.
-- **Totals:** 100 firmware installs on the test module, none failed to boot; about 28 hours of automated runs; CV calibration saved twice ([CALIBRATION.md](CALIBRATION.md)).
+Host tests, pinned builds, emulator comparisons and one module cover the
+firmware. Hygrostat profiles and its nine new options remain untested on the
+module. Other gaps are listed below.
 
-Counts come from the test calls in each program's `main()`, `CHECK` sites in those files, and the `cases` list in `mutation_check.py`. Spectral also runs a ShyFFT build, counted once. Assertions inside loops run more than once.
+Count `main()` test calls, `CHECK` sites and mutation `cases`. Count spectral
+once despite its ShyFFT build. Loop assertions execute repeatedly.
 
 ## Automated (every push)
+
+Host programs use sanitizers. After README edits, keep README.md and README.txt in step. After guide-generator edits, run
+`ASAN_OPTIONS=detect_leaks=0 ./build/options_tables | python3 beads/build/tools/options_guide.py`.
+`make -f beads/build/tools/options_tables.mk test` checks both formats,
+72-column text, firmware tables, guides and release packaging.
 
 | Check | What it covers |
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
-| `beads/test/options.mk` | Options page: entry, pages, knob zones, one-second save-on-settle, no idle close, close gestures, settings format. Stock UI: [M] routing, amounts and LEDs, the autosave chord and display, SEED latch gestures, quality cycling, the [A] gain hold, manual gain and meter, the input-level blink, the FREEZE LED while saving, recovery mode keeping calibration, input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, a corrupted calibration rewritten once. Limiter arithmetic and mode switching. Monophonic grain gesture, LED cue and saving; engine setting (zones, LED, applied when the page closes), storage and the [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate. Settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned |
+| `beads/test/options.mk` | Options page: entry, pages, knob zones, one-second save-on-settle, no idle close, close gestures, settings format. Stock UI: [M] routing, amounts and LEDs, the autosave chord and display, SEED latch gestures, quality cycling, the [A] gain hold, manual gain and meter, the input-level blink, the FREEZE LED while saving, recovery mode keeping calibration, input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, a corrupted calibration rewritten once. Limiter arithmetic and mode switching. Monophonic grain gesture, LED cue and saving; engine setting (zones, LED, applied when the page closes), storage and the [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate. Settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned. Settings storage (#149): a stale flash error flag, refused or stuck erases, refused programs and a non-blank free slot never write over old records, and normal saves match stmlib's byte for byte |
 | `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
@@ -31,31 +38,34 @@ Counts come from the test calls in each program's `main()`, `CHECK` sites in tho
 | `beads/test/attack.mk` | Attacks: hit detection on the input, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
 | `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, model detents on FEEDBACK, FREEZE sustain, RAM bounds |
+| `beads/test/profile.mk` | Profile validation, feature modes and control allocation, defaults and packed settings |
+| `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step |
 
 | Program | Tests | Assertion sites |
 |---|---:|---:|
-| attack | 3 | 20 |
-| backup | 16 | 106 |
-| clouds | 5 | 17 |
-| delay | 11 | 46 |
-| delay_mode | 9 | 40 |
-| feedback_diffuser | 3 | 17 |
-| firmware | 21 | 177 |
-| gain | 5 | 21 |
-| granular | 24 | 114 |
-| mix | 7 | 28 |
-| options | 53 | 536 |
-| pitch_quantizer | 3 | 29 |
-| plaits_synth | 4 | 31 |
-| processor | 10 | 36 |
-| spectral | 7 | 34 |
-| trigger | 10 | 27 |
-| wavetable | 12 | 61 |
-| **Total** | **203** | **1340** |
+| attack | TODO | TODO |
+| backup | TODO | TODO |
+| clouds | TODO | TODO |
+| delay | TODO | TODO |
+| delay_mode | TODO | TODO |
+| feedback_diffuser | TODO | TODO |
+| firmware | TODO | TODO |
+| gain | TODO | TODO |
+| granular | TODO | TODO |
+| mix | TODO | TODO |
+| options | TODO | TODO |
+| pitch_quantizer | TODO | TODO |
+| plaits_synth | TODO | TODO |
+| processor | TODO | TODO |
+| profile | TODO | TODO |
+| spectral | TODO | TODO |
+| storage | TODO | TODO |
+| trigger | TODO | TODO |
+| wavetable | TODO | TODO |
+| **Total** | **TODO** | **TODO** |
 
-The separate TSV/documentation check is not included in the C++ assertion counts.
-
-Run any test from the repository root with `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Where the firmware and the manual differ, the tests check the firmware (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). The backup test was checked by removing each safeguard in turn, and `beads/test/mutation_check.py` breaks the firmware in a recorded way for each newer test: every change makes its test fail. It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
+injects recorded faults into newer tests, each required to fail (TODO: final deliberate-fault total). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -65,7 +75,7 @@ Feature checks beyond the table:
 
 ## Coverage of the manual
 
-The developers listed 117 behaviours from the Beads manual, the module page and the [April 2021 update notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572). Host tests check 110 of them.
+Of 117 behaviours in the Beads manual, the module page and the [April 2021 update notes](https://forum.mutable-instruments.net/t/beads-firmware-update-release-candidate/18572), host tests check 110.
 
 | Area | Behaviours | Host tests | Not covered by host tests |
 |---|---:|---:|---|
@@ -87,7 +97,7 @@ The developers listed 117 behaviours from the Beads manual, the module page and 
 
 ## Before release
 
-Run by the developers; these scripts and results are not in this repository.
+External checks; scripts and results are not in this repository.
 
 | Check | Result |
 |---|---|
@@ -96,7 +106,7 @@ Run by the developers; these scripts and results are not in this repository.
 | Emulator comparison, GCC 9 against GCC 4.9.3 builds of the vanilla source (2026.10.16) | 20 of 20 scenarios bit-identical |
 | Emulator comparison against the previous release (2026.10.14) | 44 of 44 scenarios bit-identical: all four qualities, extreme knobs, wavetable synth, freeze, save/restore, clipping, input gain, 16 grain-scheduler cases |
 | Instruction counts | No audio-path function grew |
-| Code review | Five rounds by a second AI model; the first four led to fixes (three of them real bugs in the frozen-buffer save) |
+| Damaged settings, on a development board with the same processor and caches on | 8 of 8 cases pass with real uncorrectable flash errors: errors reported instead of crashing, no stale data from the cache, clean reads after a failed one, erase and rewrite, and interrupts held off for under 1 µs |
 
 ## On a module
 
@@ -166,11 +176,9 @@ threshold.
 | Drizzlet only: Clouds-style switching | | Inconclusive here, pass on release candidate 5 |
 | Drizzlet only: all nine pitch scales | | Measured, see below |
 
-Measured values were compared with the vanilla source. Every difference
-traced back to the test rather than the firmware, and those tests were fixed.
-No recording had dropouts or digital clipping. The click candidates found came
-from the audio itself (music on the dry path, delay echoes, wavetable synth), at
-similar counts on the vanilla source.
+Compared with vanilla source: no firmware differences, dropouts or digital
+clipping. Test errors were corrected. Click candidates came from music, delay
+echoes and synth audio, at similar counts in both builds.
 
 **Pitch scales.** With PITCH randomness turned up, 222 grains were detected
 across the nine scale settings. Every one landed on a note of its scale, the
@@ -194,10 +202,9 @@ digital, with inputs playing.
 No audio underruns in any capture. The vanilla source has no timing counters,
 so it was not timed the same way.
 
-**Release candidate 5** (2026-10-18), the Beta 1 code. Only the Clouds-style
-reverb's modulation rate, explicit rounding that keeps GCC 9's results, and
-code tidying changed since release candidate 3; the emulator gives identical
-audio in every scenario with default options. A short run checked them on the module:
+**Release candidate 5** (2026-10-18, Beta 1). Since candidate 3: Clouds-style
+modulation rate, explicit GCC 9 rounding and tidying. Default-option emulator
+audio remains identical. Module checks:
 
 | Check | Result |
 |---|---|
@@ -221,13 +228,16 @@ audio in every scenario with default options. A short run checked them on the mo
 | Reverse-engineered port | 0 | 1 |
 | **Total** | **35** | **13** |
 
-Every probe install was read back and checked; the module never failed to boot. Once, an update file played too quietly stopped partway; the bootloader was untouched and replaying at full volume fixed it.
+All probe installs verified; every install booted. One quiet audio update
+stopped partway; replaying at full volume worked and the bootloader was intact.
 
 About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 sessions), counted from run logs, excluding waits for a control to be moved; a run recorded by several instruments counts once.
 
 ### Beta 2
 
-The release code, including the converter fix, on 2026-10-27. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
+TODO: final-image module CPU figures, worst-case settings and underrun count. The measurements below are from earlier images.
+
+The release code, including the converter fix, on 2026-10-27, and with the storage fix (#149) on 2026-10-28. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
 
 | Check | Result |
 |---|---|
@@ -236,27 +246,59 @@ The release code, including the converter fix, on 2026-10-27. Outputs recorded w
 | Converter pop at changes that keep the sample rate, 12 per build (separate comparison, 2026-10-25) | About +18 dB above a −34 dBFS test tone before the fix, about −50 dB after (median; worst −35 dB) |
 | CV calibration with Intellijel Scales | Saved, then the factory calibration restored (below) |
 | Install by audio file; storage recovery tool; SEED at power-on (2026-10-25) | Pass: settings and frozen buffer erased, calibration kept |
+| Installing over Beta 1, with every Beta 1 option saved away from stock | Pass: all kept, live and saved; the new options at stock. This was before Hygrostat profiles; this release starts Drizzlet's own options from their defaults instead (not yet rechecked with profiles) |
+| [M] CV at 0 V and 2 V, assigned to stereo width, then to grain diffusion | Pass: each rose by 0.40 of its range (0.2 needed) |
+| Storage fix: the firmware's own settings saves (FREEZE held 60 s, then released) | Pass: two records appended, calibration unchanged |
+| Storage fix: the settings sector full, so the next save rewrites it | Pass: calibration byte-identical, one new settings record, the rest erased |
+| Storage fix: frozen buffer restored after a reset | Pass |
 
 | Settings | Peak audio load |
 |---|---:|
+| Wavetable synth, Clouds-style reverb, width at maximum, a pitch scale, SIZE near maximum | 86.3% (87.2% with the storage fix, within session-to-session spread) |
+| Wavetable synth, Clouds-style reverb, width at maximum, a pitch scale | 86.1% |
+| Wavetable synth, width at maximum, a pitch scale | 85.8% |
 | Evolving frozen feedback | 83.3% |
+| Granular features together, frozen: Clouds-style reverb, diffusion and width at maximum, a pitch scale, Evolving frozen feedback | 83.0% |
+| Granular features together, recording: as above with attacks (Snap and trigger) instead of Evolving | 81.3% |
+| Granular, random intervals drawing | 79.6% |
+| Plaits synth with Clouds-style reverb | 69.4% |
+| Spectral with Clouds-style reverb | 17.4% |
 | Plaits synth, string model | 69.8% |
 | Spectral, Sunny tape | 23.6% |
 | Spectral | 17.9% |
 
-No audio underruns. Not yet checked on the module: random intervals, attacks with Snap alone, and the hiss comparison with Beta 1 (#59).
+No audio underruns.
 
-**Test module totals** (2026-10-18 to 2026-10-27). Firmware installs:
+**Damaged settings** (2026-10-29), on the code with the startup guard, the module's own settings sector saved first and written back at the end:
+
+| Check | Result |
+|---|---|
+| Calibration record damaged, calibration copy blank | Pass: the module started, played on the factory calibration and default settings, and locked all flash writes. The 3 s LED warning was not confirmed: the rig's check for it was faulty |
+| Power on holding SEED | Pass: repaired with the factory calibration and the calibration copy written; the green repair blink was seen by eye |
+| Next start | Pass: normal, nothing locked |
+| Good calibration, calibration copy erased | Pass: normal start, no warning |
+| Own settings sector written back | Pass: byte-identical |
+| Heavy wavetable synth case, CPU | 87.2%; 84.0–84.2% with synth grains computed in pairs (#168); vanilla source 86.0%. Some repeat rows were rejected by the rig's audio check |
+
+Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. Hygrostat profiles and the nine new options remain untested on the module.
+
+**Historical test module totals** (2026-10-18 to 2026-10-28; excludes later sessions). Firmware and settings installs:
+
+TODO: final module install totals and automated run hours, including the damaged-settings, profiles and final-image sessions. The table and counts below are historical subtotals.
 
 | Firmware | Debug probe | Audio file |
 |---|---:|---:|
-| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 43 | 2 |
+| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 52 | 2 |
 | Vanilla source (timing build) | 2 | 0 |
-| Settings sector restore (factory calibration and settings) | 3 | – |
+| Settings sector restore (factory calibration and settings) | 7 | – |
+| Settings sector test images (Beta 1 settings, [M] assignments, synth settings, storage tests) | 10 | – |
 | Storage recovery tool | 0 | 2 |
-| **Total** | **48** | **4** |
+| **Total** | **71** | **4** |
 
-Since 2026-10-11: 100 installs (83 by debug probe, 17 by audio file). Every probe write read back its expected start address, and the module started normally after every audio file install. Two probe writes failed their checks and were repeated. One audio file install stopped with a bootloader error, and a replay worked. About 15 more hours of automated runs, 28 in all, counted as above.
+Since 2026-10-11: 123 installs (106 probe, 17 audio). Probe writes verified
+the expected start address; all audio installs booted. Two probe writes needed
+repeating after failed checks; one audio install needed replay after a
+bootloader error. About 18 additional automated hours, 31 total, counted as above.
 
 **CV calibration** ([M]+[A]):
 
@@ -273,7 +315,8 @@ Everything above used one module. Also done on it for release candidate 3 (2026-
 
 - More than one module, or different hardware revisions.
 - Long sessions and temperature.
-- Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite can reset calibration, settings or both to defaults; the host tests check this window and that the full rewrite keeps everything.
+- Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite loses the settings being saved; the calibration copy keeps the calibration. The host tests check this window and that the full rewrite keeps everything.
+- The module's noise floor (hiss, #59), planned for a later release.
 - Listening tests of the limiter modes. Their code is unchanged since the limiter's own measurements.
 - The full bench suite was not rerun on 2026.10.16.
 

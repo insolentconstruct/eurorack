@@ -7,6 +7,18 @@ The [options guide](OPTIONS.md) explains the controls, zones and LED patterns.
 The `drizzlet` branch, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. Planned uses come from the tentative roadmap in [#32](https://github.com/insolentconstruct/eurorack/issues/32); they can change until built. <!-- source: git trees fc549d7, d8f4739 -->
 Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzlet pins stmlib `d18def8` (stock `e3bd7c9`; the stmlib files cited here are identical in both); “linker script” means `stmlib/linker_scripts/stm32h7xx_flash_application_large.ld`, and `manual.md` is the Beads manual. <!-- source: git ls-tree fc549d7 stmlib; git ls-tree d8f4739 stmlib -->
 
+## Beta 2 behaviour
+
+Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth's reverb tail stops with it.
+
+SEED starts latched at power-up, as in stock firmware. LED brightness is a profile option; there is no power-on gesture. The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
+
+Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
+
+## Fixes
+
+Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
+
 ## Buttons and startup
 
 | Gesture | Allocation / action | Saved? |
@@ -27,7 +39,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 | Hold [M], press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | [M] + [A], either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold [A], press SEED | TAKEN: toggle monophonic grains; consumes both releases; [A] first | Yes <!-- beads/ui.cc:358-369 --> |
-| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch | Mutable Instruments’ original gesture; saves keep the length; stock loads full length |
+| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch | Mutable Instruments' original gesture; saves keep the length; stock loads full length |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + [M] | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration. With both copies of the calibration lost: repair with the factory calibration; result shown 3 s | Rewrites settings sector <!-- beads/settings.cc; beads/settings_storage.h --> |
@@ -183,31 +195,25 @@ No physical knob, CV jack, gate jack or LED is unallocated. New normal-mode cont
 
 ## Build options
 
-Buffer trim and monophonic grains use Mutable Instruments’ original gestures and are always enabled. Automatic (Stock) input mono/stereo detection remains active.
+Buffer trim and monophonic grains use Mutable Instruments' original gestures and are always enabled. Automatic (Stock) input mono/stereo detection remains active.
 `PROFILE_INTERRUPT` and bootloader `ENABLE_ERROR_DETECTION` are off; their debug-pin/error-check paths are excluded. `ENABLE_HARDWARE_24K`, `ENABLE_BANDWIDTH_CONTROL` and bootloader `ENABLE_ERASE_BUTTON_COMBO` are ON; their alternate branches are excluded. `TEST` hooks belong to host tests. <!-- beads/beads.cc:74,109-111,338-340; beads/bootloader/bootloader.cc:27-28,190-264; beads/dsp/processor.h:46,79-92; beads/dsp/multitap_delay.h:38,90; beads/ui.cc:546-549 -->
 `WasteCPUCycles(16)` is always called in main, including wavetable synth and spectral modes: it renders a dummy vintage-digital grain workload with memory accesses, discarding output. In spectral mode the main loop also computes the frames (`Processor::Buffer()`), one per channel per hop. Main-loop occupancy is not audio CPU headroom. <!-- beads/beads.cc:403-410; beads/dsp/processor.h:150-153; beads/dsp/granular_processor.h:116-147 -->
 
 ## Budgets
 
-Earlier combined pitch-scale and reverb build: 273,456 B of app flash, excluding the later trim changes. Off matches Stock audio in emulator fixtures; instruction counts vary with code generation.
-
-Historical: Drizzlet CI run `38491527444`, commit `0ca3a69`, GCC 4.9.3, before the GCC 9 app build and this cycle's features; remeasure before allocating this headroom. Values are bytes from `app.elf` sections and the link map, not the debug ELF file size. <!-- measurement: github.com/insolentconstruct/eurorack/actions/runs/38491527444; app.elf SHA256 f4b9d4903b63f26ba40cc5bfbad216cd6b47a321f950276d576aeb3dd2b49efb; objects/beads/link.txt -->
+Measured on the Beta 2 code before Hygrostat profiles and the synth grain pairs (the build pinned in `expected-hashes.sha256` when the startup guard merged): bytes from `app.elf` sections, not the debug ELF file size. These are historical sizes, not final-image headroom; profiles and the grain pairs add flash. The build checks the final image against the buffer boundary. <!-- measurement: app.bin SHA256 2e523f20dfc2f3a2550e8e04728b1ce1cada3406a1800fc69ce186681100b163, readelf -S app.elf; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld; beads/build/flash_bound.ld -->
 
 | Region | TAKEN | FREE / qualification |
 |---|---|---|
-| App flash before FRZZ (896 KiB) | 271,292: vectors 664 + text/rodata 269,432 + exidx 8 + data load 1,188 | 646,212; app ends 0x080623BC. Linker alone reports 1,694,788 free, but includes storage areas above <!-- measurement: CI 38491527444 app.elf sections, beads.map:2682,3664-3716; stmlib/linker_scripts/stm32h7xx_flash_application_large.ld:36 --> |
-| DTCM (128 KiB) | `.data` 1,188 + `.bss` 31,508; minimum heap/stack reservation 1,536 | 96,840 after reservation; actual stack grows from 0x20020000 and must also fit; no Drizzlet high-water measurement <!-- measurement: CI 38491527444 app.elf sections 4,5,10,12; linker script:29-32,170-178 --> |
-| ITCM (64 KiB) | 0 | 65,536 for explicitly placed code; adds flash load bytes <!-- measurement: CI 38491527444 app.elf section 11; linker script:37,152-162 --> |
-| D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM <!-- measurement: CI 38491527444 app.elf sections 7-9; beads/beads.cc:54-56; linker script:39-42 --> |
-| D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement <!-- measurement: CI 38491527444 app.elf section 6; linker script:41 --> |
+| App flash before FRZZ (896 KiB) | 626,248: vectors 664 + text/rodata 624,388 + exidx 8 + data load 1,188 | 291,256; app ends 0x080B8E48. The build fails if the image reaches bank 2 |
+| DTCM (128 KiB) | `.data` 1,188 + `.bss` 84,764; minimum heap/stack reservation 1,536 | 43,584 after reservation; the stack grows from 0x20020000 and must also fit; no Drizzlet high-water measurement |
+| ITCM (64 KiB) | 0 | 65,536 for explicitly placed code; adds flash load bytes |
+| D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM. Plaits borrows the first 168 KB of delay bank 0 in synth mode |
+| D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement |
 
-The GCC 9 Clouds-style build uses 270,808 app flash bytes and 35,700 DTCM
-`.bss` bytes, plus 1,188 `.data` bytes and the 1,536-byte minimum heap/stack
-reservation. D1/D2/D3 and DMA reservations are unchanged. Actual module stack
-high-water remains unverified; module callback timing is in TESTING.md.
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. TODO: final-image module CPU figures (whole callback, worst case and underruns). Earlier measurements are recorded in TESTING.md.
 
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. Module timing, whole callback: delay mode 60% of budget; heaviest grain case with default options 85–86%; Clouds-style 88.1%; wavetable synth mode 90.5%; no underruns (TESTING.md). <!-- beads/beads.cc:50,295; beads/drivers/system.cc:124-148 (8 MHz HSE, PLLM 1, PLLN 120, PLLP 2); beads/makefile:27-28 -->
-The dummy workload keeps the main loop busy, so main-loop activity is not idle time. Synth mode leaves 9.5% of the budget; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
+The dummy workload keeps the main loop busy, so main-loop activity is not idle time. The wavetable synth sets the peak; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
 ## Design aims
 
@@ -295,8 +301,8 @@ block is unchanged. The page-facing catalogue is
 `beads/build/profile-features.json`; costs are unknown until measured.
 
 Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
-when Adjustable or set via Hygrostat when Fixed. SEED latch uses Off / Ignore /
-Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
+when Adjustable or set via Hygrostat when Fixed. There is no power-on
+brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
 Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
 frame, including options and warning displays, and previews while turning. Off
 and Fixed 100% preserve every stock LED value. At 66% and 33%, RGB white also
