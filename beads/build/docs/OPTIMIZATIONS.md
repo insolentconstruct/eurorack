@@ -40,11 +40,11 @@ development-board stock peak, 24 scenarios, all hashes matched.
 | beads-tuneup with the integer Hermite read (not yet on that branch) | 82,911 | 69.1% |
 
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests; the emulator agreed wherever it was run (integer Hermite: 70 of 70 comparisons).
-- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter, synth grains rendered a block at a time, one Hermite read per synth sample.
+- **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter, synth grains rendered a block at a time, one Hermite read per synth sample (about 2 points slower on the Cortex-M7 and not bit-identical).
 
 ## Build comparison
 
-Budget is 120,000 cycles per block at 480 MHz. "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
+Budget is 120,000 cycles per block at 480 MHz. The DAC reads slightly ahead, so audio breaks a little earlier: at a callback maximum of about 115,800 cycles at 48 kHz (q1, q3 and the synth), 113,900 at 32 kHz (q2) and 111,500 at 24 kHz (q0), measured on the development board, not on the module. "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
 
 | Build | App flash | Stock peak / median | Clouds-style peak | Sound vs GCC 9 | Verdict |
 |---|---:|---|---:|---|---|
