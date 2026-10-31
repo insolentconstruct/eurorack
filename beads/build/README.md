@@ -2,7 +2,7 @@
 
 Alternative firmware for Mutable Instruments Beads, built on the vanilla Mutable Instruments source; not a Mutable Instruments product.
 
-**TL;DR:** Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks, evolving frozen feedback and random intervals, on a four-page options page, with quieter switching. A module with damaged settings flash now starts instead of crashing. [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/) builds your own update file: which features, where they sit, their defaults, and nine more options that are off in the standard firmware. In the standard firmware every option defaults to stock behaviour. Clouds-style reverb, the grains and the wavetable synth use less CPU, with the same sound.
+**TL;DR:** Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks, evolving frozen feedback and random intervals, on a four-page options page, with quieter switching. A module with damaged settings flash now starts instead of crashing. [Drizzlet Hygrostat](https://hygrostat.insolentconstruct.net/) builds your own update file: which features, where they sit, their defaults, and nine more options that are off in the standard firmware. In the standard firmware every option defaults to stock behaviour. Clouds-style reverb, the grains and the wavetable synth use less CPU, with the same sound.
 
 Tested on one module so far. Please report problems in [this repository's issues](https://github.com/insolentconstruct/eurorack/issues); questions, ideas and what works go in [Discussions](https://github.com/insolentconstruct/eurorack/discussions). Do not contact Mutable Instruments. [TESTING.md](docs/TESTING.md) shows how it was tested.
 
@@ -20,7 +20,7 @@ Buttons use the letters from the Beads manual: [A] is the quality button, and [M
 
 Hold the CV-assign button [M] for three seconds, then release, to open the options page. Tap [M] to change page; move a mix knob and rest it for one second to save. Guides: [text](docs/OPTIONS.md), [printable](docs/options-guide.svg).
 
-To choose which features your firmware has, where they sit and their defaults, build your own update file on [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/); it also makes the guides for that layout. The guides here are for the standard firmware.
+To choose which features your firmware has, where they sit and their defaults, build your own update file on [Drizzlet Hygrostat](https://hygrostat.insolentconstruct.net/); it also makes the guides for that layout. The guides here are for the standard firmware.
 
 ![Options page phone guide](docs/options-guide-mobile.svg)
 

@@ -1,4 +1,4 @@
-**Beta 2 "Fog".** Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks and more, on a four-page options page. Modules with damaged settings flash now start instead of crashing. [Drizzlet Hygrostat](https://insolentconstruct.github.io/eurorack/) builds your own update file in the browser: choose which features the firmware has, where they sit and their defaults, including nine new options that are off in the standard firmware. Tested on one module so far; please try it on yours and [report what you find](https://github.com/insolentconstruct/eurorack/issues).
+**Beta 2 "Fog".** Plaits as a second synth, a spectral processor, adjustable grain diffusion, attacks and more, on a four-page options page. Modules with damaged settings flash now start instead of crashing. [Drizzlet Hygrostat](https://hygrostat.insolentconstruct.net/) builds your own update file in the browser: choose which features the firmware has, where they sit and their defaults, including nine new options that are off in the standard firmware. Tested on one module so far; please try it on yours and [report what you find](https://github.com/insolentconstruct/eurorack/issues).
 
 TODO: release date; rename this file and replace `{TAG}` with `drizzlet-YYYY.MM.DD` before publishing.
 
@@ -35,7 +35,7 @@ Listed by the number of requests ([feature requests](https://github.com/insolent
 
 ### Drizzlet Hygrostat
 
-[Hygrostat](https://insolentconstruct.github.io/eurorack/) is a web page that builds the update file from this release in your browser; nothing is uploaded. Start from a template or by hand. Each feature can be Off or Fixed at a value, and most can also be Adjustable on the panel, at the options page knob or [A] gesture you choose, with your defaults. The page warns when a combination may be too heavy for the processor, and refuses one that is. It also makes printable and phone guides for your layout. Without changes it builds exactly the update file published here.
+[Hygrostat](https://hygrostat.insolentconstruct.net/) is a web page that builds the update file from this release in your browser; nothing is uploaded. Start from a template or by hand. Each feature can be Off or Fixed at a value, and most can also be Adjustable on the panel, at the options page knob or [A] gesture you choose, with your defaults. The page warns when a combination may be too heavy for the processor, and refuses one that is. It also makes printable and phone guides for your layout. Without changes it builds exactly the update file published here.
 
 Nine new options, off in the standard firmware, are available through Hygrostat:
 

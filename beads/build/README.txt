@@ -7,7 +7,7 @@ TL;DR: Beta 2 "Fog". New since Beta 1: Plaits as a second synth, a
 spectral processor, grain diffusion, attacks, evolving frozen feedback and
 random intervals, on a four-page options page. A module with damaged
 settings flash now starts instead of crashing. Drizzlet Hygrostat
-(https://insolentconstruct.github.io/eurorack/) builds your own update file,
+(https://hygrostat.insolentconstruct.net/) builds your own update file,
 with a profile choosing features, controls and defaults, and nine more
 options that are off in this standard firmware. Every option
 here defaults to stock behaviour. Details are in CHANGELOG.md in the
