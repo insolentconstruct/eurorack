@@ -1,15 +1,25 @@
 # Testing
 
-TODO: final host-test, program, assertion, deliberate-fault and injected-fault
-totals; confirm at the final release commit. TODO: final module install count
-and automated run hours.
+The expanded Beta 2 source contains 19 host programs, 265 named test sections,
+2,060 assertion sites and 392 deliberate fault patterns. These are source
+inventory counts, not a claim that final-candidate CI has passed. Previous
+candidate CI passed all 19 programs and detected all 372 then-defined faults;
+new focused checks do not replace the final full run.
 
-Host tests, pinned builds, emulator comparisons and one module cover the
-firmware. Hygrostat profiles and its nine new options remain untested on the
-module. Other gaps are listed below.
+TODO: record final-candidate host and mutation CI, reproducible app/WAV hashes,
+module CPU and underruns, profiles/options/scales/tail results, install totals
+and automated run hours. Earlier measurements below remain historical.
 
-Count `main()` test calls, `CHECK` sites and mutation `cases`. Count spectral
-once despite its ShyFFT build. Loop assertions execute repeatedly.
+Tests are separated into desktop/CI checks, STM32H7 development-board checks,
+unattended module measurements and attended module checks. The development
+board supports functional checks and relative cycle measurements; it cannot
+qualify Beads audio/CV, supply behaviour, physical LED colours or final timing.
+Group related module checks by exact firmware/profile image and keep physical
+setup together. No shorter final end-to-end duration is claimed here.
+
+Count named `test_checker.Start` sections and `CHECK` call sites in test
+sources; spectral counts once despite its alternate FFT build. Loop assertions
+execute repeatedly.
 
 ## Automated (every push)
 
@@ -22,7 +32,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
 | `beads/test/options.mk` | Options page: entry, pages, knob zones, one-second save-on-settle, no idle close, close gestures, settings format. Stock UI: [M] routing, amounts and LEDs, the autosave chord and display, SEED latch gestures, quality cycling, the [A] gain hold, manual gain and meter, the input-level blink, the FREEZE LED while saving, recovery mode keeping calibration, input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, a corrupted calibration rewritten once. Limiter arithmetic and mode switching. Monophonic grain gesture, LED cue and saving; engine setting (zones, LED, applied when the page closes), storage and the [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate. Settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned. Settings storage (#149): a stale flash error flag, refused or stuck erases, refused programs and a non-blank free slot never write over old records, and normal saves match stmlib's byte for byte |
-| `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales |
+| `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales; custom bank boundaries, repeat intervals and finite pitch ratios at the full synth input range |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
 | `beads/test/trigger.mk` | Grain triggering with sanitizers: free-running rates at both ends of DENSITY, silence at noon (free and clocked), clock probability and divisions, SEED and gate enabling, one grain per press or gate at noon, and density FM |
@@ -38,7 +48,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | `beads/test/attack.mk` | Attacks: hit detection on the input, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
 | `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, model detents on FEEDBACK, FREEZE sustain, RAM bounds |
-| `beads/test/profile.mk` | Profile validation, feature modes and control allocation, defaults and packed settings |
+| `beads/test/profile.mk` | Profile validation, feature modes/control allocation, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections |
 | `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step |
 
 | Program | Tests | Assertion sites |
@@ -49,31 +59,38 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | delay | 11 | 46 |
 | delay_mode | 9 | 40 |
 | feedback_diffuser | 3 | 17 |
-| firmware | 26 | 243 |
+| firmware | 27 | 265 |
 | gain | 6 | 29 |
 | granular | 24 | 114 |
 | mix | 7 | 28 |
-| options | 63 | 620 |
-| pitch_quantizer | 3 | 29 |
+| options | 64 | 633 |
+| pitch_quantizer | 5 | 49 |
 | plaits_synth | 4 | 31 |
 | processor | 11 | 45 |
-| profile | 3 | 24 |
+| profile | 4 | 58 |
 | spectral | 7 | 34 |
-| storage | 24 | 337 |
+| storage | 25 | 369 |
 | trigger | 11 | 31 |
-| wavetable | 13 | 64 |
-| **Total** | **258** | **1,935** |
+| wavetable | 14 | 68 |
+| **Total** | **265** | **2,060** |
 
-Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. All 19 programs pass in the release branch’s host CI.
+Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. Final-candidate CI for this expanded inventory is pending.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (372 deliberate faults, all detected by the release branch’s CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (392 current patterns; final full-run results pending, with 372 detected in previous-candidate CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
 Feature checks beyond the table:
 - **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, the [A]+DRY/WET gesture, its meter and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.
 - **Delay mode:** every stored byte value, preview and settled saving, Disabled at SIZE fully clockwise in every quality and channel mode, returning from delay to granular, detent boundaries, and neutral playback within 1e-7 FS with SIZE CV inside the detent.
+
+Expanded feature checks also cover custom scale ID15 through the actual audio
+callback in all four engines; reordered and removed saved selections; the
+permanent pitch extension distinguishing ID15 from legacy unset settings;
+and Keep/Clear reverb tails through both synths and actual exit paths. Factory
+reference output and finite custom-scale pitch conversion have focused checks.
+Final module confirmation remains pending.
 
 ## Coverage of the manual
 
@@ -282,7 +299,7 @@ No audio underruns.
 | Own settings sector written back | Pass: byte-identical |
 | Heavy wavetable synth case, CPU | 87.2%; 84.0–84.2% with synth grains computed in pairs (#168); vanilla source 86.0%. Some repeat rows were rejected by the rig's audio check |
 
-Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. Hygrostat profiles and the nine new options remain untested on the module.
+Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. Final-candidate Hygrostat profiles, custom scale selection/pitch/LEDs, the nine additional options and both synth-tail choices still need module qualification.
 
 **Historical test module totals** (2026-10-18 to 2026-10-28; excludes later sessions). Firmware and settings installs:
 

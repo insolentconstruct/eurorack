@@ -8,6 +8,9 @@ Put new changes under Unreleased. For a release, replace that heading with a dat
 ## YYYY.MM.DD (beta 2 "Fog")
 
 - Hygrostat builds custom firmware, controls, defaults and guides.
+- Replace and reorder the scale bank; edit notes, repeat intervals and LEDs.
+- Revise factory scale colours; pentatonics blink and Shri uses two pink pulses.
+- Keep synth reverb tails by default; optionally Clear on exit in Hygrostat.
 - Invalid profiles use standard controls without saving; storage repair remains available.
 - Older Drizzlet options, width and diffusion reset to profile defaults.
 - Add optional boot-version, delay and pitch-notch lights.

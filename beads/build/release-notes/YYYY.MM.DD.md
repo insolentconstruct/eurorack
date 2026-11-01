@@ -1,5 +1,5 @@
-**Beta 2 “Fog”** — alternative Beads firmware. Tested on one module;
-install at your own risk. Standard options default to stock behaviour.
+**Beta 2 “Fog”** — alternative Beads firmware. Earlier builds were tested on one module;
+final qualification of the expanded candidate is pending. Standard options default to stock behaviour.
 
 TODO: release date; rename this file and replace `{TAG}` with `drizzlet-YYYY.MM.DD` before publishing.
 
@@ -36,7 +36,7 @@ button to close. [A] previews the stored values.
   delay moves to page 2, FEEDBACK. Never is renamed Disabled, and Wide
   detent becomes Wide/smooth filter, with unchanged behaviour.
 - Synth start moves to page 3, REVERB; the limiter moves to page 4, REVERB.
-- Earlier controls remain: Chromatic and eight scales, Clouds-style reverb,
+- Earlier controls remain: Chromatic and the eight factory scales, Clouds-style reverb,
   manual synth start and the limiter. Hold [A], then press SEED for
   monophonic grains or FREEZE for buffer trim.
 - Changes between mono and stereo, and synth switching at 48 kHz, are
@@ -51,6 +51,24 @@ Off, Fixed or Adjustable, with your own controls and defaults. It warns when
 a combination may be too heavy for the CPU and refuses combinations that
 are too heavy. Per-feature CPU figures are estimates pending measurements
 on a module; the warning and refusal use those estimates.
+
+The complete scale bank is editable: include, define, remove or reorder up to
+14 scales, each with up to 24 notes including its root. Repeat intervals span
+0.01–128 semitones. Edit cents or semitones, or import Scala files within these
+limits. Choose each scale colour and steady/slow/fast/two-pulse indication;
+restore the factory bank at any time. Stable identities keep a saved choice
+when reordering; removing it falls back to Off. Off and Chromatic remain
+separate direct knob choices. Shared links and generated guides carry the bank.
+
+Factory indications now pair amber major with blue minor scales, slow blinks
+for pentatonics, coral Fifths, teal Pelog, violet Bhairav and two pink pulses
+for Shri. Use the generated guide for a customized bank. Custom-bank CPU costs
+still require final module measurements; factory costs do not bound every bank.
+
+Synth reverb tail is another profile choice: Keep (stock) is the default.
+Fixed Clear clears the tail when leaving either synth by manual stop, input
+patching or processor changes. No new panel gesture or page slot is needed.
+Sample-rate changes still restart the converter and interrupt audio briefly.
 
 Nine profile-only options are off in standard firmware:
 
@@ -95,9 +113,23 @@ when saving and loads trimmed buffers full-length. Earlier Drizzlet reads
 new settings as stock. SEED starts latched; latching in stock delay can pop.
 A patched SEED cable divides the clock only with SEED latch set to Off.
 
-TODO: final-image module CPU figures.
-TODO hours of automated runs and TODO firmware and settings installs.
-TODO: the Hygrostat profiles and options module session.
+## Known issues and release evidence
+
+- SEED latch/unlatch can pop in delay mode (#183), matching stock behaviour.
+  A fade is explicitly deferred beyond Beta 2. With the optional free-running
+  latch, this can also occur with SEED patched.
+- The unresponsive-module report #112 remains unresolved. Successful updater
+  completion and recovery have not been confirmed; these changes are not a
+  demonstrated cure for that report.
+- Plaits bank selection (#190) remains a proposal for Beta 3, not a Beta 2 control.
+
+TODO: final-candidate host/mutation CI and reproducible app/WAV hashes.
+The expanded source inventory is 19 programs, 265 named sections, 2,060 assertion
+sites and 392 deliberate fault patterns. Previous-candidate CI detected 372;
+final full results must replace this preparation status before publication.
+TODO: final-image module CPU peaks, spectral frame budget and underruns.
+TODO: attended profiles/options/scales/LEDs and Keep/Clear tail qualification.
+TODO: automated run hours and firmware/settings install totals.
 
 [Report problems](https://github.com/insolentconstruct/eurorack/issues) with the release,
 your settings or profile, the steps to reproduce the problem and a recording.

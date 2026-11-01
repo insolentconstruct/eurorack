@@ -13,7 +13,7 @@ Changes that keep the sample rate are pop-free: mono/stereo switching, and synth
 
 SEED starts latched at power-up, as in stock firmware. LED brightness is a profile option; there is no power-on gesture. The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
 
-Latching SEED in stock delay mode can pop; this is stock behaviour (#183).
+Latching SEED in stock delay mode can pop; this is stock behaviour (#183), explicitly deferred beyond Beta 2.
 
 ## Fixes
 
@@ -59,7 +59,7 @@ Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal 
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / all three | Reserved | Reserved | Limiter |
 
-Reserved knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green; other values follow the green/yellow/red ladder with steady, slow (0.98 Hz) or fast (3.91 Hz) blinking; Raag Shri uses two yellow pulses then a pause. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
+Reserved knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green. Other settings follow the green/yellow/red ladder. The factory scale bank uses coral Fifths, amber Major, blue Minor, amber/blue pentatonics with slow blinking, teal Pelog, violet Bhairav and two pink pulses for Shri. Slow is 0.98 Hz, fast is 3.91 Hz, and a two-pulse group repeats every 2.048 s. Hygrostat profiles can replace the scale definitions, order, colours and patterns; [Scale profiles](SCALE-PROFILES.md) specifies their format. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 
 ## Saved data
 
@@ -82,7 +82,7 @@ not-set values use the profile default.
 
 | Feature ID | Feature | Permanent field |
 |---|---|---|
-| 1 | Pitch scale | 0 (byte 10 low) |
+| 1 | Pitch scale | 0 (byte 10 low), extension 13 (byte 19 high) |
 | 2 | Reverb character | 1 (byte 10 high) |
 | 3 | Delay mode | 2 (byte 11 low) |
 | 4 | Processor | 3 (byte 11 high) |
@@ -105,9 +105,23 @@ not-set values use the profile default.
 | 21 | SEED latch (#13) | 11 (byte 18 high) |
 | 22 | Pitch notch indication (#7) | No saved value |
 | 23 | TIME modulation (#141) | 12 (byte 19 low) |
+| 24 | Synth reverb tail (#192) | No saved value |
 
-Fields 13–19 are unallocated in v1. Fields 10–12 are permanent from this
-release.
+Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
+pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
+field 0 is 15, and 9 means unset. Old erased extension values (15) are also
+unset. Unknown extension values use the profile default, never an implicit
+scale ID 15. Base selections 0–14 retain their original meanings and take
+precedence over the extension.
+
+Saving an Adjustable pitch choice writes extension 1 for ID 15 and extension 0
+for choices 0–14. Off and Fixed profiles preserve both dormant fields. A
+never-configured pitch field remains unset even when a later profile includes
+ID 15; that profile uses its own starting value. An explicitly saved ID 15
+falls back to Off if that ID is absent from the installed bank.
+
+Fields 14–19 remain unallocated in v1. Fields 10–13 are permanent from this
+release; the marker stays 0xC1 and every existing field keeps its position.
 The profile table in `beads/profile.cc` owns identities and allowed controls.
 Missing or invalid profiles use the release layout and lock settings writes;
 the boot guard's own recoveries still run from storage state. SEED at boot
@@ -346,3 +360,14 @@ Patching CV restores Random/attenuation, and pauses the scan; delay and
 spectral playback also pause it. The position resets at processor
 initialization and is not saved. Feature selection occurs once per block; only
 enabled Sync/Add inspect individual cable edges. Off adds no per-sample work.
+
+
+### Synth reverb tail
+
+Hygrostat feature ID 24 chooses Keep (stock) / Clear. Off or an omitted entry
+keeps the shared reverb memory when leaving either synth, allowing its tail to
+continue as in stock firmware. Fixed Clear clears it on manual stop, input
+patching and processor changes. This is a firmware-profile choice, with no
+panel slot or gesture. It has no saved-state nibble and no per-audio-block work;
+the check and optional clear run only during transitions. Fades and codec
+handling are independent of this choice.

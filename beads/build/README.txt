@@ -2,10 +2,10 @@ Drizzlet
 ========
 
 Drizzlet is alternative firmware for Mutable Instruments Beads, adding
-Plaits, spectral processing and grain controls. Beta 2 “Fog” has been
-tested on one module; install at your own risk. This is not a Mutable
-Instruments product. All settings save; standard defaults retain stock
-behaviour.
+Plaits, spectral processing and grain controls. Earlier builds were
+tested on one module. Final qualification of Beta 2 “Fog” is pending.
+Install at your own risk. This is not a Mutable Instruments product. All
+settings save; standard defaults retain stock behaviour.
 
 Downloads and installation
 --------------------------
@@ -74,7 +74,10 @@ without changing sample rate is pop-free, including synth switching at
 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the
 output and stop synth reverb.
 
-SEED starts latched. Latching it in stock delay can pop.
+SEED starts latched. Latching it in stock delay can pop (#183); this is
+explicitly deferred beyond Beta 2. The unresponsive-module report #112
+remains unresolved; successful updater completion and recovery have not
+been confirmed.
 
 Frozen-buffer autosave
 ----------------------
@@ -94,8 +97,9 @@ custom Off, Fixed and Adjustable settings. It warns about CPU load and
 refuses excessive combinations. Per-feature estimates await module
 measurements.
 
-Hygrostat profiles and these nine additional options remain untested on
-a module. All nine are off in standard firmware:
+Final-candidate profiles, custom scales, LED indications and tail
+choices still need module qualification. These nine additional options
+are off in standard firmware:
 
 - Version at boot flashes light-blue, then twice for Beta 2, without
   delaying startup.
@@ -122,6 +126,24 @@ a module. All nine are off in standard firmware:
   at noon, taking four seconds per buffer at either end. TIME offsets
   the wrapping position. Patching CV restores normal control and pauses
   scanning, as do delay, spectral and synth. Position is not saved.
+
+
+Hygrostat can replace the complete scale bank with up to 14 scales, each
+with 1–24 notes including its root and a repeat interval from 0.01 to
+128 semitones. Edit notes in semitones or cents, import Scala tuning
+files within these limits, include or remove scales, reorder them and
+choose RGB colours with steady, slow, fast or two-pulse indications.
+Factory reset restores the starting bank. Off and Chromatic remain
+direct choices. Reordering preserves saved identity; removing the
+selected scale falls back to Off. Shared links and generated guides
+include the chosen bank. Custom-bank CPU costs still need final module
+measurements.
+
+Synth reverb tail is a separate profile choice: Keep is the stock
+default; Fixed Clear clears the tail when leaving either synth by manual
+stop, input patching or processor changes. It adds no panel gesture or
+options-page slot. Sample-rate changes still restart the converter and
+briefly interrupt audio.
 
 Options page
 ------------
@@ -162,12 +184,17 @@ Output limiter: REVERB on page 4 selects Stock, Fast release or Off in
 thirds, indicated by steady green, yellow or red respectively. Off can
 hard-clip loud peaks.
 
-Pitch scale. Three zones: Off, Chromatic and Scale. Tap SEED in Scale
-to cycle Fifths and octaves, Major, Minor, Major pentatonic, Minor
-pentatonic, Pelog, Raag Bhairav and Raag Shri. Pelog and the raags are
-microtonal. Holds do nothing; taps neither trigger nor latch. Grains
+Pitch scale. Three zones: Off, Chromatic and Scale. The factory bank
+cycles through Fifths (steady coral), Major (steady amber), Minor
+(steady blue), Major pentatonic (slow amber), Minor pentatonic (slow
+blue), Pelog (steady teal), Raag Bhairav (steady violet) and Raag Shri
+(two pink pulses). Tap SEED in Scale to step; holds do nothing, and taps
+neither trigger nor latch. Pelog and the raags are microtonal. Grains
 combine knob, CV and randomness at birth and retain that pitch. Synth
 grains follow scales; the continuous oscillator and delay do not.
+Hygrostat can replace and reorder this bank, including each scale
+definition, colour and flash pattern. Use the guide generated for your
+profile.
 
 Random intervals selects Free or Fifths and octaves. The latter
 quantizes counter-clockwise PITCH randomness, including synth grains;
@@ -210,14 +237,14 @@ Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	FEEDBACK	Pitch scale	Off	green	steady
 1	FEEDBACK	FEEDBACK	Pitch scale	Chromatic	yellow	steady
-1	FEEDBACK	FEEDBACK	Pitch scale	Fifths and octaves	red	steady
-1	FEEDBACK	FEEDBACK	Pitch scale	Major	green	slow (0.98 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Minor	yellow	slow (0.98 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Major pentatonic	red	slow (0.98 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Minor pentatonic	green	fast (3.91 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Pelog	yellow	fast (3.91 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Raag Bhairav	red	fast (3.91 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	yellow	2 yellow pulses / 2.048 s
+1	FEEDBACK	FEEDBACK	Pitch scale	Fifths	coral	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Major	amber	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Minor	blue	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Pentatonic major	amber	slow (0.98 Hz)
+1	FEEDBACK	FEEDBACK	Pitch scale	Pentatonic minor	blue	slow (0.98 Hz)
+1	FEEDBACK	FEEDBACK	Pitch scale	Pelog	teal	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Raag Bhairav	violet	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	pink	2 pulses / 2.048 s
 1	FEEDBACK	DRY/WET	Random intervals	Free (Stock)	green	steady
 1	FEEDBACK	DRY/WET	Random intervals	Fifths and octaves	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Off	green	steady

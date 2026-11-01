@@ -1,6 +1,6 @@
 # Drizzlet
 
-Drizzlet is alternative firmware for Mutable Instruments Beads, adding Plaits, spectral processing and grain controls. Beta 2 “Fog” has been tested on one module; install at your own risk. This is not a Mutable Instruments product. All settings save; standard defaults retain stock behaviour.
+Drizzlet is alternative firmware for Mutable Instruments Beads, adding Plaits, spectral processing and grain controls. Earlier builds were tested on one module. Final qualification of Beta 2 “Fog” is pending. Install at your own risk. This is not a Mutable Instruments product. All settings save; standard defaults retain stock behaviour.
 
 ## Downloads and installation
 
@@ -24,7 +24,7 @@ Changes save about a second after turning stops. Wait before power-off. Hold [M]
 
 Output limiter: REVERB on page 4 selects Stock, Fast release or Off in thirds, indicated by steady green, yellow or red respectively. Off can hard-clip loud peaks.
 
-Pitch scale. Three zones: Off, Chromatic and Scale. Tap SEED in Scale to cycle Fifths and octaves, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Raag Bhairav and Raag Shri. Pelog and the raags are microtonal. Holds do nothing; taps neither trigger nor latch. Grains combine knob, CV and randomness at birth and retain that pitch. Synth grains follow scales; the continuous oscillator and delay do not.
+Pitch scale. Three zones: Off, Chromatic and Scale. The factory bank cycles through Fifths (steady coral), Major (steady amber), Minor (steady blue), Major pentatonic (slow amber), Minor pentatonic (slow blue), Pelog (steady teal), Raag Bhairav (steady violet) and Raag Shri (two pink pulses). Tap SEED in Scale to step; holds do nothing, and taps neither trigger nor latch. Pelog and the raags are microtonal. Grains combine knob, CV and randomness at birth and retain that pitch. Synth grains follow scales; the continuous oscillator and delay do not. Hygrostat can replace and reorder this bank, including each scale definition, colour and flash pattern. Use the guide generated for your profile.
 
 Random intervals selects Free or Fifths and octaves. The latter quantizes counter-clockwise PITCH randomness, including synth grains; clockwise stays continuous. The pitch scale still applies.
 
@@ -64,7 +64,7 @@ Hold [A], then press FREEZE to restart the recording window at zero length and c
 
 Releasing FREEZE resumes recording with a crossfade. Quality changes, input changes between mono and stereo, leaving wavetable synth, and power-up without a saved buffer start an empty recording. Switching without changing sample rate is pop-free, including synth switching at 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the output and stop synth reverb.
 
-SEED starts latched. Latching it in stock delay can pop.
+SEED starts latched. Latching it in stock delay can pop (#183); this is explicitly deferred beyond Beta 2. The unresponsive-module report #112 remains unresolved; neither a successful updater completion nor recovery has been confirmed.
 
 ## Frozen-buffer autosave
 
@@ -74,7 +74,7 @@ FREEZE saves after ten seconds. Interrupting a save doubles the next wait up to 
 
 https://hygrostat.insolentconstruct.net/ builds updates and guides locally. Choose features, controls and defaults, using templates or custom Off, Fixed and Adjustable settings. It warns about CPU load and refuses excessive combinations. Per-feature estimates await module measurements.
 
-Hygrostat profiles and these nine additional options remain untested on a module. All nine are off in standard firmware:
+Final-candidate profiles, custom scales, LED indications and tail choices still need module qualification. These nine additional options are off in standard firmware:
 
 - Version at boot flashes light-blue, then twice for Beta 2, without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.
@@ -85,6 +85,11 @@ Hygrostat profiles and these nine additional options remain untested on a module
 - LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds with preview; warnings dim too. The default is 100%; there is no power-on gesture.
 - SEED latch selects Off, Ignore, Sync or Add in quarters. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync restarts grain-clock phase per edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Unpatched attack triggers still work.
 - TIME modulation selects Random below noon or Scan above. With TIME CV unpatched, its attenurandomizer scans backwards or forwards, stopping at noon, taking four seconds per buffer at either end. TIME offsets the wrapping position. Patching CV restores normal control and pauses scanning, as do delay, spectral and synth. Position is not saved.
+
+
+Hygrostat can replace the complete scale bank with up to 14 scales, each with 1–24 notes including its root and a repeat interval from 0.01 to 128 semitones. Edit notes in semitones or cents, import Scala tuning files within these limits, include or remove scales, reorder them and choose RGB colours with steady, slow, fast or two-pulse indications. Factory reset restores the starting bank. Off and Chromatic remain direct choices. Reordering preserves saved identity; removing the selected scale falls back to Off. Shared links and generated guides include the chosen bank. Custom-bank CPU costs still need final module measurements.
+
+Synth reverb tail is a separate profile choice: Keep is the stock default; Fixed Clear clears the tail when leaving either synth by manual stop, input patching or processor changes. It adds no panel gesture or options-page slot. Sample-rate changes still restart the converter and briefly interrupt audio.
 
 ## Saved data
 
