@@ -42,8 +42,12 @@ const size_t kProfileSize = 4096;
 const uint32_t kProfileMagic = 0x46505a44;
 const uint8_t kMaxProfileEntries = 82;
 const uint8_t kNoField = 255;
-const uint32_t kProfileReleaseId = 0xa51e8760;
+const uint32_t kProfileReleaseId = 0x20261101;
 const uint8_t kSettingsFormat = 0xc1;
+// Field 0 keeps 15 as not-set; field 13 explicitly selects custom scale 15.
+const uint8_t kPitchExtensionField = 13;
+const uint8_t kPitchExtensionScale = 15;
+const uint8_t kPitchExtensionValue = 1;
 // Page slot 0 is none; 1 to 12 are the options pages' knobs, in order.
 const uint8_t kNumPageSlots = 13;
 
@@ -87,6 +91,7 @@ enum ProfileFeature {
   FEATURE_SEED_LATCH,
   FEATURE_PITCH_NOTCH,
   FEATURE_TIME_SCAN,
+  FEATURE_SYNTH_TAIL,
   FEATURE_LAST
 };
 

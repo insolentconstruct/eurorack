@@ -1188,8 +1188,7 @@ void TestPackedSettings() {
   off.SaveState();
   CHECK(restored.Init(false));
   CHECK(restored.pitch_scale() == PITCH_SCALE_SHRI);
-  // Nibble 15 is a permanent scale ID now, but absent from the factory bank.
-  // Its safe fallback is Off; the out-of-range high field uses its default.
+  // Base nibble 15 remains not-set; the invalid high field also defaults.
   restored.stored_state_.output_limiter_mode = 0x9f;
   restored.chunk_storage_.SaveState();
   ProfileTemplate(b);
@@ -1197,10 +1196,10 @@ void TestPackedSettings() {
   b[24] = 0;
   ProfileChecksum(b);
   CHECK(restored.Init(false, b));
-  CHECK(restored.pitch_scale() == PITCH_SCALE_OFF);
+  CHECK(restored.pitch_scale() == PITCH_SCALE_CHROMATIC);
   CHECK(!restored.clouds_style());
   CHECK((restored.stored_state_.output_limiter_mode & 15) == 15);
-  // Adding that same ID restores its meaning without changing the field index.
+  // Availability of ID15 alone cannot reinterpret the old not-set sentinel.
   const size_t scale_offset = 16 + 6 * b[5];
   const size_t payload = 6 * b[5] + kScaleRecordSize;
   b[6] = payload & 255;
@@ -1217,8 +1216,13 @@ void TestPackedSettings() {
   memcpy(scale + 48, &fifth, 4);
   ProfileChecksum(b);
   CHECK(restored.Init(false, b));
+  CHECK(restored.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  restored.set_pitch_scale(PitchScale(15));
+  restored.SaveState();
+  CHECK(restored.Init(false, b));
   CHECK(restored.pitch_scale() == 15);
   CHECK((restored.stored_state_.output_limiter_mode & 15) == 15);
+  CHECK((restored.stored_state_.attacks >> 4) == kPitchExtensionValue);
   CHECK(restored.Init(false));
   CHECK(restored.pitch_scale() == PITCH_SCALE_OFF);
   restored.stored_state_.random_intervals = 0xa5;
@@ -1226,6 +1230,88 @@ void TestPackedSettings() {
   CHECK(restored.Init(false));
   restored.SaveState();
   CHECK(restored.stored_state_.random_intervals == 0x95);
+}
+
+void Pitch15Profile(uint8_t* block, uint8_t value) {
+  ProfileTemplate(block);
+  block[18] = value;
+  const size_t offset = 16 + 6 * block[5];
+  const size_t bytes = 6 * block[5] + kScaleRecordSize;
+  block[6] = bytes & 255;
+  block[7] = bytes >> 8;
+  block[12] = block[13] = 1;
+  uint8_t* scale = block + offset;
+  memset(scale, 0, kScaleRecordSize);
+  scale[0] = 15;
+  scale[1] = 2;
+  memcpy(scale + 12, "Saved ID", 8);
+  const float period = 12.0f;
+  const float fifth = 7.0f;
+  memcpy(scale + 8, &period, 4);
+  memcpy(scale + 48, &fifth, 4);
+  ProfileChecksum(block);
+}
+
+void TestPitchExtensionSentinel() {
+  test_checker.Start("TestPitchExtensionSentinel");
+  CHECK(kPitchExtensionField == 13 && kPitchExtensionScale == 15);
+  CHECK(kPitchExtensionValue == 1);
+  uint8_t fixed[kProfileSize];
+  uint8_t custom[kProfileSize];
+  for (int first = PROFILE_OFF; first <= PROFILE_FIXED; ++first) {
+    Wipe();
+    ProfileTemplate(fixed);
+    fixed[17] = first;
+    fixed[18] = first ? PITCH_SCALE_CHROMATIC : PITCH_SCALE_OFF;
+    fixed[19] = 0;
+    ProfileChecksum(fixed);
+    Settings never;
+    never.Init(false, fixed);
+    never.SaveState();
+    CHECK((never.stored_state_.output_limiter_mode & 15) == 15);
+    CHECK((never.stored_state_.attacks >> 4) == 9);
+    for (int value = 0; value < 2; ++value) {
+      Pitch15Profile(custom, value);
+      Settings available;
+      CHECK(available.Init(false, custom));
+      CHECK(available.pitch_scale() == value);
+    }
+    Pitch15Profile(custom, 0);
+    Settings selected;
+    CHECK(selected.Init(false, custom));
+    selected.set_pitch_scale(PitchScale(15));
+    selected.SaveState();
+    CHECK((selected.stored_state_.output_limiter_mode & 15) == 15);
+    CHECK((selected.stored_state_.attacks >> 4) == 1);
+    CHECK(selected.Init(false, custom));
+    CHECK(selected.pitch_scale() == 15);
+    // Fixed/Off profiles keep both dormant pieces of the extended selection.
+    Settings dormant;
+    CHECK(dormant.Init(false, fixed));
+    CHECK(dormant.pitch_scale() == (first ? PITCH_SCALE_CHROMATIC : 0));
+    dormant.SaveState();
+    CHECK((dormant.stored_state_.output_limiter_mode & 15) == 15);
+    CHECK((dormant.stored_state_.attacks >> 4) == 1);
+    CHECK(selected.Init(false, custom));
+    CHECK(selected.pitch_scale() == 15);
+    // A normal selection clears the extension rather than leaving it stale.
+    selected.set_pitch_scale(PITCH_SCALE_CHROMATIC);
+    selected.SaveState();
+    CHECK((selected.stored_state_.output_limiter_mode & 15) == 1);
+    CHECK((selected.stored_state_.attacks >> 4) == 0);
+    CHECK(selected.Init(false, custom));
+    CHECK(selected.pitch_scale() == PITCH_SCALE_CHROMATIC);
+    // Unknown/legacy extension values are unset, never implicit custom ID15.
+    const uint8_t unset[] = { 0, 2, 8, 9, 15 };
+    for (size_t i = 0; i < sizeof(unset); ++i) {
+      selected.stored_state_.output_limiter_mode = 15;
+      selected.stored_state_.attacks = (unset[i] << 4) | 15;
+      selected.chunk_storage_.SaveState();
+      Pitch15Profile(custom, 1);
+      CHECK(selected.Init(false, custom));
+      CHECK(selected.pitch_scale() == PITCH_SCALE_CHROMATIC);
+    }
+  }
 }
 
 void TestStockSettingsCarryOver() {
@@ -1407,7 +1493,9 @@ void TestProfileDormantAmounts() {
     CHECK(s.Init(false));
     s.SaveState();
     for (size_t i = 0; i < sizeof(unused); ++i) {
-      CHECK(bytes[unused[i]] == 0x8e);
+      // Field 13 now records the adjustable pitch extension; its low nibble
+      // and all unrelated dormant fields still retain their original bits.
+      CHECK(bytes[unused[i]] == (unused[i] == 19 ? 0x0e : 0x8e));
     }
   }
 }
@@ -1465,6 +1553,7 @@ int main() {
   TestProfileLocks();
   TestProfileSettings();
   TestPackedSettings();
+  TestPitchExtensionSentinel();
   TestStockSettingsCarryOver();
   TestProfileDormantAmounts();
   TestProfileNewAssignment();

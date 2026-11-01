@@ -40,6 +40,34 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
+  ('TestPitchExtensionSentinel', 'storage', 'beads/settings.cc',
+    'extension == kPitchExtensionValue', 'extension <= 9'),
+  ('TestPitchExtensionSentinel', 'storage', 'beads/settings.cc',
+    '? kPitchExtensionValue : 0;', '? 0 : 0;'),
+  ('TestPitchExtensionSentinel', 'storage', 'beads/settings.cc',
+    '? kPitchExtensionValue : 0;', '? kPitchExtensionValue : kPitchExtensionValue;'),
+  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
+    'if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {\n'
+    '      processor.ClearReverb();',
+    'if (synth_mode) {\n      processor.ClearReverb();'),
+  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
+    'if (settings.FeatureValue(FEATURE_SYNTH_TAIL)) {\n'
+    '            processor.ClearReverb();',
+    'if (true) {\n            processor.ClearReverb();'),
+  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
+    'if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {\n'
+    '        processor.ClearReverb();',
+    'if (synth_mode) {\n        processor.ClearReverb();'),
+  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
+    'if (settings.FeatureValue(FEATURE_SYNTH_TAIL)) {\n'
+    '            processor.ClearReverb();',
+    'if (false) {\n            processor.ClearReverb();'),
+  ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
+    '{ 2, kNoField, false, false, false, false },  // Synth reverb tail.',
+    '{ 2, 0, false, false, false, false },  // Synth reverb tail.'),
+  ('TestCustomPitchRatioLimits', 'pitch_quantizer',
+    'beads/dsp/randomized_parameter.h',
+    'return stmlib::SemitonesToRatioSafe(pitch);', 'return 1.0f;'),
   ('TestCustomScaleBank', 'profile', 'beads/profile.cc',
     'period >= 0.01f && period <= 128.0f', 'period >= 0.0f && period <= 128.0f'),
   ('TestCustomScaleBank', 'profile', 'beads/profile.cc',
@@ -174,8 +202,8 @@ cases = [
     'uint8_t value = profile_.entry(feature).value;',
     'uint8_t value = 0;'),
   ('TestPackedSettings', 'storage', 'beads/settings.cc',
-    'const uint8_t shift = (field & 1) * 4;\n      packed_',
-    'const uint8_t shift = 0;\n      packed_'),
+    'const uint8_t shift = (field & 1) * 4;',
+    'const uint8_t shift = 0;'),
   ('TestPackedSettings', 'storage', 'beads/settings.cc',
     'field != kNoField && profile_.adjustable(ProfileFeature(i))',
     'field != kNoField'),

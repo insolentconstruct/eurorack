@@ -358,7 +358,13 @@ void Settings::LoadOptions() {
     } else if (marker == kSettingsFormat) {
       if (field != kNoField) {
         const uint8_t saved = (packed_[field / 2] >> ((field & 1) * 4)) & 15;
-        if (saved < kFeatureDefinitions[i].values) {
+        if (feature == FEATURE_PITCH && saved == kPitchExtensionScale) {
+          const uint8_t extension =
+              (packed_[kPitchExtensionField / 2] >> 4) & 15;
+          if (extension == kPitchExtensionValue) {
+            value = kPitchExtensionScale;
+          }
+        } else if (saved < kFeatureDefinitions[i].values) {
           value = saved;
         }
       } else if (feature < FEATURE_TRIM) {
@@ -387,8 +393,15 @@ void Settings::PackOptions() {
     const uint8_t field = kFeatureDefinitions[i].field;
     if (field != kNoField && profile_.adjustable(ProfileFeature(i))) {
       const uint8_t shift = (field & 1) * 4;
+      const uint8_t value = FeatureValue(ProfileFeature(i));
       packed_[field / 2] = (packed_[field / 2] & ~(15 << shift)) |
-          (FeatureValue(ProfileFeature(i)) << shift);
+          (value << shift);
+      if (i == FEATURE_PITCH) {
+        const uint8_t extension = value == kPitchExtensionScale
+            ? kPitchExtensionValue : 0;
+        packed_[kPitchExtensionField / 2] =
+            (packed_[kPitchExtensionField / 2] & 15) | (extension << 4);
+      }
     }
   }
   uint8_t* bytes = reinterpret_cast<uint8_t*>(&stored_state_);

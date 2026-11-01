@@ -42,7 +42,8 @@ const char* const kOptionNames[] = {
   "Synth start", "Random intervals",
   "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
   "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
-  "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan"
+  "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan",
+  "Synth reverb tail"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 const char* const kValueNames[] = {

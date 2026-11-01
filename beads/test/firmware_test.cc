@@ -1558,30 +1558,86 @@ void TestCodecKeepsClocks() {
   }
 }
 
-// Stopping the synth clears the reverb memory the synths share.
+// Tail handling is a profile choice; the codec transition remains the same.
+void SynthTailProfile() {
+  uint8_t block[kProfileSize];
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    block[i] = kProfileBlock[i];
+  }
+  const size_t offset = 16 + 6 * block[5];
+  ++block[5];
+  const size_t bytes = 6 * block[5];
+  block[6] = bytes & 255;
+  block[7] = bytes >> 8;
+  const uint8_t entry[] = {
+    FEATURE_SYNTH_TAIL, PROFILE_FIXED, 1, 0, 0, 0
+  };
+  memcpy(block + offset, entry, sizeof(entry));
+  const uint32_t crc = Profile::Crc32(block, 16 + bytes);
+  for (size_t i = 0; i < 4; ++i) {
+    block[16 + bytes + i] = crc >> (8 * i);
+  }
+  CHECK(settings.Init(false, block));
+  CHECK(!settings.profile_locked());
+  ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
+  ui.LoadOptions();
+  CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 1);
+}
+
 void TestSynthStopClearsReverb() {
   test_checker.Start("TestSynthStopClearsReverb");
   extern uint16_t reverb_buffer[];
-  Rig r(false, true);
-  PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
-  r.StartAutomatic();
-  CHECK(synth_mode);
-  r.Tick(500, true);
-  bool used = false;
-  for (int i = 0; i < 32768 && !used; ++i) {
-    used = reverb_buffer[i] != 0;
+  for (int clear = 0; clear < 2; ++clear) {
+    for (int plaits = 0; plaits < 2; ++plaits) {
+      for (int path = 0; path < 3; ++path) {
+        Rig r(path == 1, true);
+        if (clear) {
+          SynthTailProfile();
+          if (!plaits && !path) {
+            settings.SaveState();
+            CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 1);
+            SynthTailProfile();  // Same profile after a saved-state reload.
+          }
+        } else {
+          CHECK(settings.profile().entry(FEATURE_SYNTH_TAIL).state ==
+              PROFILE_OFF);
+          CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 0);
+        }
+        settings.set_plaits_synth(plaits);
+        ui.LoadOptions();
+        PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
+        StartSelfPlay(&r, path == 1);
+        CHECK(synth_mode);
+        r.Tick(500, true);
+        bool used = false;
+        for (int i = 0; i < 32768 && !used; ++i) {
+          used = reverb_buffer[i] != 0;
+        }
+        CHECK(used);
+        const int starts = codec.starts_;
+        const int stops = codec.stops_;
+        if (path == 0) {
+          r.left = true;
+        } else if (path == 1) {
+          r.HoldMedia(false);
+        } else {
+          settings.set_spectral(true);
+        }
+        for (int i = 0; i < 2000 && synth_mode; ++i) {
+          r.Tick(1, true);
+        }
+        CHECK(!synth_mode && codec_transition_frames > 0);
+        CHECK(processor.spectral() == (path == 2));
+        CHECK(codec.starts_ == starts && codec.stops_ == stops);
+        CHECK(codec.idle_stops_ == 0);
+        bool empty = true;
+        for (int i = 0; i < 32768 && empty; ++i) {
+          empty = reverb_buffer[i] == 0;
+        }
+        CHECK(empty == bool(clear));
+      }
+    }
   }
-  CHECK(used);
-  r.left = true;
-  for (int i = 0; i < 2000 && synth_mode; ++i) {
-    r.Tick(1, true);
-  }
-  CHECK(!synth_mode && codec_transition_frames > 0);
-  bool clear = true;
-  for (int i = 0; i < 32768 && clear; ++i) {
-    clear = reverb_buffer[i] == 0;
-  }
-  CHECK(clear);
 }
 
 void TestPitchNotchLaw() {

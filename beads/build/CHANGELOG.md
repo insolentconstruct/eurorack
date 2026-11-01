@@ -4,6 +4,9 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Hygrostat can keep synth reverb tails on exit (Stock, default) or clear
+  them explicitly, for both synths and manual, patched and processor changes
+  (#192).
 - Hygrostat can replace the musical scale bank, edit its notes and repeat
   intervals, reorder scales, and choose each scale's LED colour and flash
   pattern. Stable IDs keep a saved selection attached to its scale when the
@@ -24,7 +27,7 @@ heading; a release turns it into a dated heading.
 - Add random intervals (page 1, DRY/WET): with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. It works with any pitch scale (#8).
 - The options page now has four pages, lighting the mix LEDs left to right, then all three: 1 pitch scale, random intervals and attacks; 2 delay mode, reverb character and frozen feedback; 3 processor, synth and synth start; 4 limiter. Opening a page shows each stored value on [A] in turn. The wavetable synth's start (Automatic or Manual) is now its own setting, Synth start.
 - Stereo width moves off the options page: hold [A] and turn DRY/WET, like manual gain and grain diffusion.
-- Quality changes, mono/stereo switches and the wavetable synth starting or stopping now fade the output out briefly before the change takes effect, and the synth's reverb tail no longer plays on after it stops. Changes that keep the sample rate no longer stop the converter, which removes the pop it made in every earlier firmware; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it. The brief silence during a change, and the empty buffer after a quality change, remain (#53).
+- Quality changes, mono/stereo switches and the wavetable synth starting or stopping now fade the output out briefly before the change takes effect. Changes that keep the sample rate no longer stop the converter, which removes the pop it made in every earlier firmware; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it. The brief silence during a change, and the empty buffer after a quality change, remain (#53).
 - Add a spectral engine: Clouds' spectral processing in place of the grains, chosen with Processor (page 3, FEEDBACK): Granular (Stock) or Spectral. TIME picks the stored spectrum, SIZE warps, SHAPE quantizes, PITCH shifts (with the pitch scale), DENSITY sets the refresh rate and phase randomization, holding SEED glitches and FREEZE holds. Changing processor clears the recording; a frozen buffer saved to flash is kept (#3).
 - Add attacks (page 1, REVERB): Snap starts grains on the hits in the recording instead of partway through their decay; Snap and trigger also starts a grain on each hit (#58, #47).
 - Add frozen feedback (page 2, REVERB): Evolving runs the grains through a slowly moving all-pass loop while FREEZE is on, so a frozen sound drifts and softens instead of repeating exactly; FEEDBACK sets how far (#4).

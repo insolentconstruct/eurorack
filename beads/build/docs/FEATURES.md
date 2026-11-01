@@ -70,7 +70,7 @@ not-set values use the profile default.
 
 | Feature ID | Feature | Permanent field |
 |---|---|---|
-| 1 | Pitch scale | 0 (byte 10 low) |
+| 1 | Pitch scale | 0 (byte 10 low), extension 13 (byte 19 high) |
 | 2 | Reverb character | 1 (byte 10 high) |
 | 3 | Delay mode | 2 (byte 11 low) |
 | 4 | Processor | 3 (byte 11 high) |
@@ -94,8 +94,21 @@ not-set values use the profile default.
 | 22 | Pitch notch indication (#7) | No saved value |
 | 23 | TIME modulation (#141) | 12 (byte 19 low) |
 
-Fields 13–19 are unallocated in v1. Fields 10–12 are permanent from this
-release.
+Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
+pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
+field 0 is 15, and 9 means unset. Old erased extension values (15) are also
+unset. Unknown extension values use the profile default, never an implicit
+scale ID 15. Base selections 0–14 retain their original meanings and take
+precedence over the extension.
+
+Saving an Adjustable pitch choice writes extension 1 for ID 15 and extension 0
+for choices 0–14. Off and Fixed profiles preserve both dormant fields. A
+never-configured pitch field remains unset even when a later profile includes
+ID 15; that profile uses its own starting value. An explicitly saved ID 15
+falls back to Off if that ID is absent from the installed bank.
+
+Fields 14–19 remain unallocated in v1. Fields 10–13 are permanent from this
+release; the marker stays 0xC1 and every existing field keeps its position.
 The profile table in `beads/profile.cc` owns identities and allowed controls.
 Missing or invalid profiles use the release layout and lock settings writes;
 the boot guard's own recoveries still run from storage state. SEED at boot
@@ -340,3 +353,14 @@ Patching CV restores Random/attenuation, and pauses the scan; delay and
 spectral playback also pause it. The position resets at processor
 initialization and is not saved. Feature selection occurs once per block; only
 enabled Sync/Add inspect individual cable edges. Off adds no per-sample work.
+
+
+### Synth reverb tail
+
+Hygrostat feature ID 24 chooses Keep (stock) / Clear. Off or an omitted entry
+keeps the shared reverb memory when leaving either synth, allowing its tail to
+continue as in stock firmware. Fixed Clear clears it on manual stop, input
+patching and processor changes. This is a firmware-profile choice, with no
+panel slot or gesture. It has no saved-state nibble and no per-audio-block work;
+the check and optional clear run only during transitions. Fades and codec
+handling are independent of this choice.

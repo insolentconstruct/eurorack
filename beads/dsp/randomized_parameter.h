@@ -157,6 +157,9 @@ struct RandomizedParameter {
     }
     if (scale != PITCH_SCALE_OFF) {
       pitch = QuantizePitch(pitch, scale);
+      if (pitch < -120.0f || pitch > 120.0f) {
+        return stmlib::SemitonesToRatioSafe(pitch);
+      }
     }
     return stmlib::SemitonesToRatio(pitch);
   }

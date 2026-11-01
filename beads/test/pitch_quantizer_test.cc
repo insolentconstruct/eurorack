@@ -232,9 +232,71 @@ void TestCustomPitchGrids() {
   CHECK(QuantizePitch(2.0f, PITCH_SCALE_MAJOR) == 2.0004f);
 }
 
+void TestCustomPitchRatioLimits() {
+  test_checker.Start("TestCustomPitchRatioLimits");
+  for (int period = 0; period < 2; ++period) {
+    for (int side = 0; side < 2; ++side) {
+      PitchScaleDefinition bank[kMaxCustomScales] = { };
+      for (size_t i = 0; i < kMaxCustomScales; ++i) {
+        bank[i].id = i + 2;
+        bank[i].period = period ? 128.0f : 78.0f;
+        bank[i].size = period ? 1 : 2;
+        bank[i].notes[1] = period ? 0.0f : side ? 24.0f : 54.0f;
+        bank[i].name[0] = 'R';
+      }
+      ConfigurePitchScales(bank, kMaxCustomScales, true);
+      RandomizedParameter p;
+      // Synth::Render adds the clamped +/-60 CV to the +/-24 knob, then
+      // clears has_cv. Its attenuverter can add another +/-24 of randomness.
+      p.base = side ? -24.0f - 60.0f : 24.0f + 60.0f;
+      p.has_cv = false;
+      p.cv = 0.0f;
+      p.attenuverter = 0.9999f;
+      int outside = 0;
+      for (size_t id = 2; id <= kMaxPitchScaleId; ++id) {
+        for (int i = 0; i < 256; ++i) {
+          const uint32_t seed = 0x12345678 + uint32_t(i) * 997;
+          stmlib::Random::Seed(seed);
+          const float raw = p.value(NULL, 0, 24.0f, false);
+          const float q = QuantizePitch(raw, PitchScale(id));
+          outside += q < -120.0f || q > 120.0f;
+          CHECK(fabsf(raw) <= 108.0f);
+          CHECK(fabsf(q) <= 144.0f);
+          stmlib::Random::Seed(seed);
+          const float ratio = p.pitch_value(PitchScale(id), false);
+          const float reference = powf(2.0f, q / 12.0f);
+          CHECK(ratio > 0.0f && ratio <= 4096.0f);
+          CHECK(fabsf(ratio / reference - 1.0f) < 0.001f);
+          CHECK(ratio == stmlib::SemitonesToRatioSafe(q));
+        }
+      }
+      CHECK(outside > 0);
+      const float off = stmlib::SemitonesToRatio(p.base);
+      p.has_cv = true;
+      p.attenuverter = 0.0f;
+      CHECK(p.pitch_value(PITCH_SCALE_OFF, false) == off);
+    }
+  }
+  ConfigurePitchScales(NULL, 0, false);
+  // Keep the factory path bit-identical over every reachable synth input.
+  RandomizedParameter p;
+  p.cv = 0.0f;
+  p.has_cv = true;
+  p.attenuverter = 0.0f;
+  for (int scale = PITCH_SCALE_OFF; scale < PITCH_SCALE_LAST; ++scale) {
+    for (int i = -10800; i <= 10800; i += 11) {
+      p.base = float(i) * 0.01f;
+      const float expected = stmlib::SemitonesToRatio(
+          QuantizePitch(p.base, PitchScale(scale)));
+      CHECK(p.pitch_value(PitchScale(scale), false) == expected);
+    }
+  }
+}
+
 int main() {
   TestPitchGrids();
   TestCustomPitchGrids();
+  TestCustomPitchRatioLimits();
   TestRandomizedPitchGrid();
   TestRandomIntervals();
   return test_checker.failures() ? 1 : 0;
