@@ -43,29 +43,31 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 
 | Program | Tests | Assertion sites |
 |---|---:|---:|
-| attack | TODO | TODO |
-| backup | TODO | TODO |
-| clouds | TODO | TODO |
-| delay | TODO | TODO |
-| delay_mode | TODO | TODO |
-| feedback_diffuser | TODO | TODO |
-| firmware | TODO | TODO |
-| gain | TODO | TODO |
-| granular | TODO | TODO |
-| mix | TODO | TODO |
-| options | TODO | TODO |
-| pitch_quantizer | TODO | TODO |
-| plaits_synth | TODO | TODO |
-| processor | TODO | TODO |
-| profile | TODO | TODO |
-| spectral | TODO | TODO |
-| storage | TODO | TODO |
-| trigger | TODO | TODO |
-| wavetable | TODO | TODO |
-| **Total** | **TODO** | **TODO** |
+| attack | 3 | 20 |
+| backup | 25 | 166 |
+| clouds | 5 | 17 |
+| delay | 11 | 46 |
+| delay_mode | 9 | 40 |
+| feedback_diffuser | 3 | 17 |
+| firmware | 26 | 243 |
+| gain | 6 | 29 |
+| granular | 24 | 114 |
+| mix | 7 | 28 |
+| options | 63 | 620 |
+| pitch_quantizer | 3 | 29 |
+| plaits_synth | 4 | 31 |
+| processor | 11 | 45 |
+| profile | 3 | 24 |
+| spectral | 7 | 34 |
+| storage | 24 | 337 |
+| trigger | 11 | 31 |
+| wavetable | 13 | 64 |
+| **Total** | **258** | **1,935** |
+
+Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. All 19 programs pass in the release branch’s host CI.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (TODO: final deliberate-fault total). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (372 deliberate faults, all detected by the release branch’s CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
