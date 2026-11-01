@@ -1,14 +1,20 @@
 # Testing
 
 The expanded Beta 2 source contains 19 host programs, 265 named test sections,
-2,060 assertion sites and 392 deliberate fault patterns. These are source
-inventory counts, not a claim that final-candidate CI has passed. Previous
-candidate CI passed all 19 programs and detected all 372 then-defined faults;
-new focused checks do not replace the final full run.
+2,060 assertion sites and 392 deliberate fault patterns. On firmware candidate
+`eedbc74`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41351226347)
+passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/41351226486)
+detected all 392 faults across eight shards. Named sections and assertion sites
+are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
-TODO: record final-candidate host and mutation CI, reproducible app/WAV hashes,
-module CPU and underruns, profiles/options/scales/tail results, install totals
-and automated run hours. Earlier measurements below remain historical.
+The candidate application is pinned as `09b43688…`, timing image `7488ae8b…`
+and WAV `a84d6060…`. Independent build/decoder checks match those pins; the WAV
+passes both playback sample rates and rejects corruption/truncation controls.
+The merged release documentation and generated guides also pass their checker.
+
+TODO: record final module CPU and underruns, profiles/options/scales/tail
+results, install totals and automated run hours. Earlier measurements below
+remain historical; software checks do not establish module qualification.
 
 Tests are separated into desktop/CI checks, STM32H7 development-board checks,
 unattended module measurements and attended module checks. The development
@@ -74,10 +80,10 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | wavetable | 14 | 68 |
 | **Total** | **265** | **2,060** |
 
-Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. Final-candidate CI for this expanded inventory is pending.
+Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked candidate CI covers this expanded inventory.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (392 current patterns; final full-run results pending, with 372 detected in previous-candidate CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (all 392 current patterns detected by the linked candidate CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 

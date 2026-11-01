@@ -123,10 +123,11 @@ A patched SEED cable divides the clock only with SEED latch set to Off.
   demonstrated cure for that report.
 - Plaits bank selection (#190) remains a proposal for Beta 3, not a Beta 2 control.
 
-TODO: final-candidate host/mutation CI and reproducible app/WAV hashes.
-The expanded source inventory is 19 programs, 265 named sections, 2,060 assertion
-sites and 392 deliberate fault patterns. Previous-candidate CI detected 372;
-final full results must replace this preparation status before publication.
+The candidate passes all 19 host programs, with 265 named sections and 2,060
+assertion sites in the source. CI detected all 392 deliberate faults. The app
+(`09b43688…`) and WAV (`a84d6060…`) match their build pins; decoder checks pass
+at both playback sample rates and reject corrupted/truncated controls. These
+software results do not establish final module qualification.
 TODO: final-image module CPU peaks, spectral frame budget and underruns.
 TODO: attended profiles/options/scales/LEDs and Keep/Clear tail qualification.
 TODO: automated run hours and firmware/settings install totals.

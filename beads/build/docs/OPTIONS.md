@@ -9,10 +9,10 @@
 
 1. Open: hold the CV-assign button [M] 3 seconds, release.
 2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then all three.
-3. [A] shows each stored value in turn. Turn a knob to change it; it saves by itself.
-4. Close: hold [M] 3 seconds or press another button. With Scale selected, SEED taps step the scale.
+3. [A] shows each stored value in turn. Turn a mix knob (not a big knob) to change it.
+4. Close: hold [M] 3 seconds or press another button. On page 1 with Pitch scale on Scale, tap SEED to step the scale.
 
-Move a knob a little before it responds. Wait a moment before powering off.
+It saves by itself; wait before powering off. Move a knob a little before it responds.
 
 The quality LED [A] shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
