@@ -9,15 +9,15 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 
 ## Beta 2 behaviour
 
-Changes that keep the sample rate are pop-free: mono/stereo switching, and synth start/stop at 48 kHz. Quality presses that change the rate to or from 32 or 24 kHz fade the output but still restart the converter. The brief silence and empty recording buffer remain; the synth's reverb tail stops with it.
+Same-rate mono/stereo changes and synth start/stop at 48 kHz are pop-free. Rate changes still fade, restart the converter, clear the recording and cut reverb tails.
 
-SEED starts latched at power-up, as in stock firmware. LED brightness is a profile option; there is no power-on gesture. The brown-out reset level option (#165) is not in Beta 2; the reset level stays as in the Mutable Instruments firmware.
+SEED starts latched, as in stock. LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
 
-Latching SEED in stock delay mode can pop; this is stock behaviour (#183), explicitly deferred beyond Beta 2.
+Delay-mode SEED latching can pop, as in stock; its fix (#183) is deferred.
 
 ## Fixes
 
-Settings and frozen-buffer saves are skipped while the supply sags. A save cut short is handled like a power cut; saving can resume once the supply recovers (#175).
+Low supply voltage blocks settings and buffer saves. Interrupted saves follow the power-cut path; saving resumes after voltage recovers (#175).
 
 ## Buttons and startup
 

@@ -71,6 +71,7 @@ Observed upstream DSP conventions and design principles:
 ## Comments
 
 - Brief `//` comments explain intent; trailing comments usually have two spaces before `//`. Short labels and units are fine. Measured-cost comments, honest hack labels, owned `TODO(...)` notes and retained commented profiling switches are useful upstream idioms, not required boilerplate.
+- (Drizzlet) Keep implementation comments to one line, or two when needed. Move longer explanations to documentation; preserve licence headers.
 - (Drizzlet) New files use the existing header format (`//` in C/C++, `#` in Python, shell and makefiles) with Insolent Construct attribution: `// Copyright YEAR Insolent Construct.`, `// Author: Insolent Construct`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
 
 ## Project policy
