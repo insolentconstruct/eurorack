@@ -113,7 +113,8 @@ long before powering off. Close by holding [M] for three seconds or pressing
 another button. Mix controls then catch up smoothly. On page 1 with Scale
 selected, short SEED taps step the scale instead of closing.
 Every first value, including Pitch Off, is steady green. Other values follow
-yellow, red, then green/yellow/red slow and fast blinking. Raag Shri uses two yellow pulses then a pause.
+yellow and red. The scale bank uses warm major and cool minor colours, slow
+blinks for pentatonics, and distinct colours for Pelog and the raags.
 The page LED flashes on entry, close and save. See below for every value.
 
 Delay mode: Auto (Stock) keeps the usual switch to delay at SIZE fully clockwise.
@@ -248,9 +249,9 @@ firmware ignores it.
 
 Pitch quantization: page 1 (FEEDBACK LED), FEEDBACK knob. Three zones
 select Off (steady green), Chromatic (steady yellow), or Scale. In Scale,
-tap SEED briefly to cycle Fifths and octaves (steady red), Major (slow green),
-Minor (slow yellow), Major pentatonic (slow red), Minor pentatonic (fast green),
-Pelog (fast yellow), Raag Bhairav (fast red), and Raag Shri (two yellow pulses
+tap SEED briefly to cycle Fifths and octaves (steady coral), Major (steady amber),
+Minor (steady blue), Major pentatonic (slow amber), Minor pentatonic (slow blue),
+Pelog (steady teal), Raag Bhairav (steady violet), and Raag Shri (two pink pulses
 then a pause). Holds do not cycle. SEED taps here do not trigger or latch
 grains; other buttons close the page. The setting is saved; default is Off.
 
@@ -261,19 +262,22 @@ synth oscillator and delay mode keep their existing pitch behaviour.
 Scales use Mutable Instruments Marbles' tunings and notes with weight at
 least 64 (Pelog has four notes). Major and Minor pentatonic are subsets
 of its Major and Minor scales. Pelog and the raags are microtonal.
+Hygrostat can replace these scales, reorder the bank and choose each scale's
+colour and blink pattern. Its generated guide follows the selected profile.
+Off and Chromatic remain direct knob choices.
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	FEEDBACK	Pitch scale	Off	green	steady
 1	FEEDBACK	FEEDBACK	Pitch scale	Chromatic	yellow	steady
-1	FEEDBACK	FEEDBACK	Pitch scale	Fifths and octaves	red	steady
-1	FEEDBACK	FEEDBACK	Pitch scale	Major	green	slow (0.98 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Minor	yellow	slow (0.98 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Major pentatonic	red	slow (0.98 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Minor pentatonic	green	fast (3.91 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Pelog	yellow	fast (3.91 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Raag Bhairav	red	fast (3.91 Hz)
-1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	yellow	2 yellow pulses / 2.048 s
+1	FEEDBACK	FEEDBACK	Pitch scale	Fifths	coral	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Major	amber	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Minor	blue	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Pentatonic major	amber	slow (0.98 Hz)
+1	FEEDBACK	FEEDBACK	Pitch scale	Pentatonic minor	blue	slow (0.98 Hz)
+1	FEEDBACK	FEEDBACK	Pitch scale	Pelog	teal	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Raag Bhairav	violet	steady
+1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	pink	2 pulses / 2.048 s
 1	FEEDBACK	DRY/WET	Random intervals	Free (Stock)	green	steady
 1	FEEDBACK	DRY/WET	Random intervals	Fifths and octaves	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Off	green	steady

@@ -115,32 +115,32 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="60" y="504" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Chromatic</text>
 <text x="347" y="504" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
 <text x="35" y="525" font-size="15" font-weight="bold" fill="#222" text-anchor="start">Scale (tap SEED to step through):</text>
-<circle cx="44" cy="546" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="60" y="551" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Fifths and octaves</text>
-<text x="347" y="551" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
-<circle cx="44" cy="567" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<circle cx="44" cy="546" r="8" fill="#ff4020" stroke="#333" stroke-width="2"/>
+<text x="60" y="551" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Fifths</text>
+<text x="347" y="551" font-size="15" font-weight="normal" fill="#555" text-anchor="end">coral; steady</text>
+<circle cx="44" cy="567" r="8" fill="#ffa000" stroke="#333" stroke-width="2"/>
 <text x="60" y="572" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Major</text>
-<text x="347" y="572" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; slow</text>
-<circle cx="44" cy="588" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="347" y="572" font-size="15" font-weight="normal" fill="#555" text-anchor="end">amber; steady</text>
+<circle cx="44" cy="588" r="8" fill="#2060ff" stroke="#333" stroke-width="2"/>
 <text x="60" y="593" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Minor</text>
-<text x="347" y="593" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; slow</text>
-<circle cx="44" cy="609" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="60" y="614" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Major pentatonic</text>
-<text x="347" y="614" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; slow</text>
-<circle cx="44" cy="630" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
-<text x="60" y="635" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Minor pentatonic</text>
-<text x="347" y="635" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; fast</text>
-<circle cx="44" cy="651" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="347" y="593" font-size="15" font-weight="normal" fill="#555" text-anchor="end">blue; steady</text>
+<circle cx="44" cy="609" r="8" fill="#ffa000" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="60" y="614" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Pentatonic major</text>
+<text x="347" y="614" font-size="15" font-weight="normal" fill="#555" text-anchor="end">amber; slow</text>
+<circle cx="44" cy="630" r="8" fill="#2060ff" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="60" y="635" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Pentatonic minor</text>
+<text x="347" y="635" font-size="15" font-weight="normal" fill="#555" text-anchor="end">blue; slow</text>
+<circle cx="44" cy="651" r="8" fill="#00dca0" stroke="#333" stroke-width="2"/>
 <text x="60" y="656" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Pelog</text>
-<text x="347" y="656" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; fast</text>
-<circle cx="44" cy="672" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="347" y="656" font-size="15" font-weight="normal" fill="#555" text-anchor="end">teal; steady</text>
+<circle cx="44" cy="672" r="8" fill="#a030ff" stroke="#333" stroke-width="2"/>
 <text x="60" y="677" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Raag Bhairav</text>
-<text x="347" y="677" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; fast</text>
-<circle cx="44" cy="693" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="347" y="677" font-size="15" font-weight="normal" fill="#555" text-anchor="end">violet; steady</text>
+<circle cx="44" cy="693" r="8" fill="#ff2090" stroke="#333" stroke-width="2"/>
 <circle cx="40" cy="693" r="1" fill="#222" stroke="#333" stroke-width="2"/>
 <circle cx="48" cy="693" r="1" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="60" y="698" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Raag Shri</text>
-<text x="347" y="698" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; two pulses</text>
+<text x="347" y="698" font-size="15" font-weight="normal" fill="#555" text-anchor="end">pink; two pulses</text>
 <text x="365" y="366" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Random intervals</text>
 <circle cx="522.5" cy="438" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 522.5 438 v -16" stroke="#222" stroke-width="2"/>

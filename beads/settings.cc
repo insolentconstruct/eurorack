@@ -47,6 +47,8 @@ bool Settings::Init(bool recovery_mode) {
 bool Settings::Init(bool recovery_mode,
     const volatile uint8_t* profile_block) {
   profile_locked_ = !profile_.Init(profile_block);
+  ConfigurePitchScales(&profile_.scale(0), profile_.scale_count(),
+      profile_.custom_bank());
   AdcCalibrationData calibration;
   calibration.scale = -2.0f;
   calibration.offset = 1.0f;

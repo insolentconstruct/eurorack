@@ -86,6 +86,12 @@ COLOURS = {
     "green": "#247443",
     "yellow": "#a87900",
     "red": "#bd3030",
+    "coral": "#ff4020",
+    "amber": "#ffa000",
+    "blue": "#2060ff",
+    "teal": "#00dca0",
+    "violet": "#a030ff",
+    "pink": "#ff2090",
     "meter": "#777",
     "unchanged": "#777",
 }
@@ -216,8 +222,9 @@ DETAILS = [
     "page LED flashes when you open, close, and when a change is saved.",
     "After the stored values, [A] shows the page's first setting, then "
     "the last knob you took over. The first value of every setting is steady green. Other "
-    "values follow in yellow and red, then as slow blinks, then as fast "
-    "blinks. Raag Shri is two yellow pulses and a pause. Unused knobs "
+    "values use yellow and red. The factory scale bank uses warm major and "
+    "cool minor colours, with slow blinks for pentatonics. Raag Shri is two "
+    "pink pulses and a pause. Unused knobs "
     "leave the LED alone.",
     "Scale: on page 1, tap SEED [C] to step through the eight scales "
     "instead of closing; a long press does not step, and the taps do not "
@@ -226,6 +233,9 @@ DETAILS = [
     "wavetable oscillator and delay pitch keep their pitch. The root is "
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
+    "Hygrostat can replace the factory scale bank, change its order and choose "
+    "each scale's colour and blink pattern. Use the guide made with that "
+    "profile; this guide lists the factory bank.",
     "Random intervals: with the PITCH attenurandomizer counter-clockwise, "
     "each grain's random offset lands on fifths and octaves around the "
     "knob's pitch; clockwise it stays continuous. The scale still applies.",

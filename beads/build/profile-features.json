@@ -7,14 +7,20 @@
       "values": [
         "Off",
         "Chromatic",
-        "Fifths and octaves",
+        "Fifths",
         "Major",
         "Minor",
-        "Major pentatonic",
-        "Minor pentatonic",
+        "Pentatonic major",
+        "Pentatonic minor",
         "Pelog",
         "Raag Bhairav",
-        "Raag Shri"
+        "Raag Shri",
+        "User scale 10",
+        "User scale 11",
+        "User scale 12",
+        "User scale 13",
+        "User scale 14",
+        "User scale 15"
       ],
       "states": [
         "Off",

@@ -160,32 +160,32 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="47" y="2133.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Chromatic</text>
 <text x="47" y="2152.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
 <text x="22" y="2177.102362204724" font-size="15" font-weight="bold" fill="#222" text-anchor="start">Scale (tap SEED to step through):</text>
-<circle cx="31" cy="2198.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="47" y="2203.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Fifths and octaves</text>
-<text x="47" y="2222.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
-<circle cx="31" cy="2242.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<circle cx="31" cy="2198.102362204724" r="8" fill="#ff4020" stroke="#333" stroke-width="2"/>
+<text x="47" y="2203.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Fifths</text>
+<text x="47" y="2222.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">coral; steady</text>
+<circle cx="31" cy="2242.102362204724" r="8" fill="#ffa000" stroke="#333" stroke-width="2"/>
 <text x="47" y="2247.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Major</text>
-<text x="47" y="2266.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
-<circle cx="31" cy="2286.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="2266.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">amber; steady</text>
+<circle cx="31" cy="2286.102362204724" r="8" fill="#2060ff" stroke="#333" stroke-width="2"/>
 <text x="47" y="2291.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Minor</text>
-<text x="47" y="2310.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; slow blink</text>
-<circle cx="31" cy="2330.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="2335.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Major pentatonic</text>
-<text x="47" y="2354.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; slow blink</text>
-<circle cx="31" cy="2374.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
-<text x="47" y="2379.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Minor pentatonic</text>
-<text x="47" y="2398.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; fast blink</text>
-<circle cx="31" cy="2418.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="47" y="2310.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">blue; steady</text>
+<circle cx="31" cy="2330.102362204724" r="8" fill="#ffa000" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="2335.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Pentatonic major</text>
+<text x="47" y="2354.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">amber; slow blink</text>
+<circle cx="31" cy="2374.102362204724" r="8" fill="#2060ff" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="2379.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Pentatonic minor</text>
+<text x="47" y="2398.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">blue; slow blink</text>
+<circle cx="31" cy="2418.102362204724" r="8" fill="#00dca0" stroke="#333" stroke-width="2"/>
 <text x="47" y="2423.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Pelog</text>
-<text x="47" y="2442.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; fast blink</text>
-<circle cx="31" cy="2462.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="47" y="2442.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">teal; steady</text>
+<circle cx="31" cy="2462.102362204724" r="8" fill="#a030ff" stroke="#333" stroke-width="2"/>
 <text x="47" y="2467.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Raag Bhairav</text>
-<text x="47" y="2486.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; fast blink</text>
-<circle cx="31" cy="2506.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="47" y="2486.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">violet; steady</text>
+<circle cx="31" cy="2506.102362204724" r="8" fill="#ff2090" stroke="#333" stroke-width="2"/>
 <circle cx="27" cy="2506.102362204724" r="1" fill="#222" stroke="#333" stroke-width="2"/>
 <circle cx="35" cy="2506.102362204724" r="1" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="47" y="2511.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Raag Shri</text>
-<text x="47" y="2530.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; two pulses</text>
+<text x="47" y="2530.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pink; two pulses</text>
 <text x="22" y="2575.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Random intervals</text>
 <circle cx="195.0" cy="2647.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 2647.102362204724 v -16" stroke="#222" stroke-width="2"/>

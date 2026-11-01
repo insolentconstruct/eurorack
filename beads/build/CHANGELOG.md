@@ -4,6 +4,12 @@ Changes to Drizzlet, newest first. New changes go under an "Unreleased"
 heading; a release turns it into a dated heading.
 
 ## Unreleased
+- Hygrostat can replace the musical scale bank, edit its notes and repeat
+  intervals, reorder scales, and choose each scale's LED colour and flash
+  pattern. Stable IDs keep a saved selection attached to its scale when the
+  order changes. Off and Chromatic remain separate knob choices (#189).
+- Factory scale indications now use warm major and cool minor colours, slow
+  blinks for pentatonics, and distinct colours for Pelog and the raags.
 - Add optional boot version, delay, pitch-notch, live assignment and saved
   FREEZE indications; global LED brightness; manual attenuation to silence;
   free-running SEED latch; and granular TIME scan. All default off.

@@ -168,12 +168,13 @@ for row in rows:
     if setting == "Not used yet":
         assert color == "unchanged" and pulse == "steady"
         continue
-    assert color in {"green", "yellow", "red"}
+    assert color in {"green", "yellow", "red", "coral", "amber", "blue",
+                     "teal", "violet", "pink"}
     assert pulse in {
         "steady",
         "slow (0.98 Hz)",
         "fast (3.91 Hz)",
-        "2 yellow pulses / 2.048 s",
+        "2 pulses / 2.048 s",
     }
     seen = values.setdefault(setting, set())
     if not seen:

@@ -26,14 +26,14 @@ The quality LED [A] shows the setting value: steady, slow blink, fast blink or t
 
 Scale (tap SEED to step through):
 
-- Fifths and octaves: red; steady
-- Major: green; slow blink
-- Minor: yellow; slow blink
-- Major pentatonic: red; slow blink
-- Minor pentatonic: green; fast blink
-- Pelog: yellow; fast blink
-- Raag Bhairav: red; fast blink
-- Raag Shri: yellow; two pulses
+- Fifths: coral; steady
+- Major: amber; steady
+- Minor: blue; steady
+- Pentatonic major: amber; slow blink
+- Pentatonic minor: blue; slow blink
+- Pelog: teal; steady
+- Raag Bhairav: violet; steady
+- Raag Shri: pink; two pulses
 
 ## Page 2 — DRY/WET LED pulsing
 
@@ -82,9 +82,11 @@ Move a knob far enough to take it over; small bumps before that are ignored. Pit
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
 
-After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values follow in yellow and red, then as slow blinks, then as fast blinks. Raag Shri is two yellow pulses and a pause. Unused knobs leave the LED alone.
+After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
+
+Hygrostat can replace the factory scale bank, change its order and choose each scale's colour and blink pattern. Use the guide made with that profile; this guide lists the factory bank.
 
 Random intervals: with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. The scale still applies.
 

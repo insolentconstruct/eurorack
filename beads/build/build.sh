@@ -76,7 +76,7 @@ for target, origin in [('beads_bootloader', '08000000'), ('beads', '08020000')]:
     if target == 'beads':
         profile = next((line.split() for line in sections.splitlines()
                         if '.profile' in line), None)
-        if not profile or profile[3] != '08020400' or profile[2] != '00000200':
+        if not profile or profile[3] != '08020400' or profile[2] != '00001000':
             raise SystemExit(
                 'Missing or misplaced profile section: '+repr(profile))
 b = (p/'bootloader.bin').read_bytes()

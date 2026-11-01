@@ -1003,7 +1003,7 @@ void ProfileTemplate(uint8_t* b) {
 }
 
 void ProfileChecksum(uint8_t* b) {
-  const size_t size = 16 + 6 * b[5];
+  const size_t size = 16 + uint16_t(b[6]) + (uint16_t(b[7]) << 8);
   const uint32_t crc = Profile::Crc32(b, size);
   for (int i = 0; i < 4; ++i) {
     b[size + i] = crc >> (8 * i);
@@ -1188,7 +1188,8 @@ void TestPackedSettings() {
   off.SaveState();
   CHECK(restored.Init(false));
   CHECK(restored.pitch_scale() == PITCH_SCALE_SHRI);
-  // Not-set low and high fields select the profile defaults.
+  // Nibble 15 is a permanent scale ID now, but absent from the factory bank.
+  // Its safe fallback is Off; the out-of-range high field uses its default.
   restored.stored_state_.output_limiter_mode = 0x9f;
   restored.chunk_storage_.SaveState();
   ProfileTemplate(b);
@@ -1196,8 +1197,30 @@ void TestPackedSettings() {
   b[24] = 0;
   ProfileChecksum(b);
   CHECK(restored.Init(false, b));
-  CHECK(restored.pitch_scale() == PITCH_SCALE_CHROMATIC);
+  CHECK(restored.pitch_scale() == PITCH_SCALE_OFF);
   CHECK(!restored.clouds_style());
+  CHECK((restored.stored_state_.output_limiter_mode & 15) == 15);
+  // Adding that same ID restores its meaning without changing the field index.
+  const size_t scale_offset = 16 + 6 * b[5];
+  const size_t payload = 6 * b[5] + kScaleRecordSize;
+  b[6] = payload & 255;
+  b[7] = payload >> 8;
+  b[12] = b[13] = 1;
+  uint8_t* scale = b + scale_offset;
+  memset(scale, 0, kScaleRecordSize);
+  scale[0] = 15;
+  scale[1] = 2;
+  memcpy(scale + 12, "Saved ID", 8);
+  const float period = 12.0f;
+  const float fifth = 7.0f;
+  memcpy(scale + 8, &period, 4);
+  memcpy(scale + 48, &fifth, 4);
+  ProfileChecksum(b);
+  CHECK(restored.Init(false, b));
+  CHECK(restored.pitch_scale() == 15);
+  CHECK((restored.stored_state_.output_limiter_mode & 15) == 15);
+  CHECK(restored.Init(false));
+  CHECK(restored.pitch_scale() == PITCH_SCALE_OFF);
   restored.stored_state_.random_intervals = 0xa5;
   restored.chunk_storage_.SaveState();
   CHECK(restored.Init(false));

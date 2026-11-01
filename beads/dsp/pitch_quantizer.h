@@ -47,6 +47,22 @@ enum PitchScale {
   PITCH_SCALE_LAST
 };
 
+const uint8_t kMaxPitchScaleId = 15;
+const uint8_t kMaxCustomScales = 14;
+const uint8_t kMaxScaleDegrees = 24;
+const size_t kScaleNameSize = 32;
+const size_t kScaleRecordSize = 144;
+
+struct PitchScaleDefinition {
+  uint8_t id;
+  uint8_t size;
+  uint8_t color[3];
+  uint8_t pulses;
+  float period;
+  char name[kScaleNameSize];
+  float notes[kMaxScaleDegrees];
+};
+
 struct PitchScaleNotes {
   uint8_t offset;
   uint8_t size;
@@ -55,7 +71,10 @@ struct PitchScaleNotes {
 extern const float kPitchScaleNotes[];
 extern const PitchScaleNotes kPitchScales[];
 
+void ConfigurePitchScales(const PitchScaleDefinition* scales, size_t count,
+    bool custom);
 float QuantizePitch(float pitch, PitchScale scale);
+float QuantizeFifths(float pitch);
 
 }  // namespace beads
 

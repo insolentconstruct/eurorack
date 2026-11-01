@@ -18,6 +18,9 @@ endif
 
 ifneq ($(filter settings.cc,$(CC_FILES)),)
 CC_FILES += profile.cc
+ifeq ($(filter pitch_quantizer.cc,$(CC_FILES)),)
+CC_FILES += pitch_quantizer.cc
+endif
 endif
 
 OBJ_FILES = $(CC_FILES:.cc=.o)

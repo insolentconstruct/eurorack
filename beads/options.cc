@@ -42,14 +42,14 @@ const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },
   { OPTION_PITCH, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_PITCH, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 3, { 0, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 4, { 255, 255, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 5, { 255, 0, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 6, { 0, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 7, { 255, 255, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 8, { 255, 0, 0 }, PULSE_FAST },
-  { OPTION_PITCH, 9, { 255, 255, 0 }, PULSE_DOUBLE },
+  { OPTION_PITCH, 2, { 255, 64, 32 }, PULSE_STEADY },
+  { OPTION_PITCH, 3, { 255, 160, 0 }, PULSE_STEADY },
+  { OPTION_PITCH, 4, { 32, 96, 255 }, PULSE_STEADY },
+  { OPTION_PITCH, 5, { 255, 160, 0 }, PULSE_SLOW },
+  { OPTION_PITCH, 6, { 32, 96, 255 }, PULSE_SLOW },
+  { OPTION_PITCH, 7, { 0, 220, 160 }, PULSE_STEADY },
+  { OPTION_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
+  { OPTION_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
   { OPTION_REVERB, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_REVERB, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_DELAY, 0, { 0, 255, 0 }, PULSE_STEADY },
@@ -115,6 +115,7 @@ void Options::Init() {
   attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
+  profile_ = NULL;
   delay_preview_ = DELAY_MODE_AUTO;
   seed_held_ = false;
   seed_time_ = 0;
@@ -128,6 +129,7 @@ void Options::Init() {
 }
 
 void Options::Configure(const Profile& profile) {
+  profile_ = &profile;
   any_page_ = false;
   for (int i = 0; i < OPTION_LAST; ++i) {
     profile_preview_[i] = 0;
@@ -407,7 +409,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
     plaits_preview_ = settings.plaits_synth();
     pitch_preview_ = settings.pitch_scale();
     scale_ = settings.pitch_scale() >= PITCH_SCALE_FIFTHS
-        ? settings.pitch_scale() : PITCH_SCALE_FIFTHS;
+        ? settings.pitch_scale() : settings.profile().FirstScale();
     delay_preview_ = settings.delay_mode();
     evolving_preview_ = settings.evolving_feedback();
     attack_preview_ = settings.attack_mode();
@@ -449,6 +451,18 @@ int Options::Value(OptionSetting setting) const {
 
 const OptionValue& Options::indication() const {
   const int value = Value(selected_);
+  if (selected_ == OPTION_PITCH && profile_) {
+    const PitchScaleDefinition* scale = profile_->FindScale(value);
+    if (scale) {
+      pitch_indication_.setting = OPTION_PITCH;
+      pitch_indication_.value = value;
+      pitch_indication_.color.r = scale->color[0];
+      pitch_indication_.color.g = scale->color[1];
+      pitch_indication_.color.b = scale->color[2];
+      pitch_indication_.pulses = PulsePattern(scale->pulses);
+      return pitch_indication_;
+    }
+  }
   for (size_t i = 0; i < kNumOptionValues; ++i) {
     if (kOptionValues[i].setting == selected_ &&
         kOptionValues[i].value == value) {
@@ -465,8 +479,9 @@ void Options::ApplySeedTaps() {
   }
   while (seed_taps_) {
     --seed_taps_;
-    scale_ = scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
-        : PitchScale(scale_ + 1);
+    scale_ = profile_ ? profile_->NextScale(scale_)
+        : scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
+            : PitchScale(scale_ + 1);
     pitch_preview_ = scale_;
     preview_knob_ = -1;
     selected_ = OPTION_PITCH;

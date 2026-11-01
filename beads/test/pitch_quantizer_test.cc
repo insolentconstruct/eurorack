@@ -177,8 +177,64 @@ void TestRandomIntervals() {
   }
 }
 
+void TestCustomPitchGrids() {
+  test_checker.Start("TestCustomPitchGrids");
+  PitchScaleDefinition bank[kMaxCustomScales] = { };
+  for (size_t i = 0; i < kMaxCustomScales; ++i) {
+    bank[i].id = 2 + i;
+    bank[i].period = 13.0f;
+    bank[i].size = 1 + i;
+    for (size_t j = 0; j < bank[i].size; ++j) {
+      bank[i].notes[j] = float(j) * 13.0f / float(bank[i].size);
+    }
+  }
+  bank[0].size = 24;
+  for (size_t j = 0; j < bank[0].size; ++j) {
+    bank[0].notes[j] = float(j) * 13.0f / float(bank[0].size);
+  }
+  ConfigurePitchScales(bank, kMaxCustomScales, true);
+  for (size_t s = 0; s < kMaxCustomScales; ++s) {
+    const PitchScale scale = PitchScale(bank[s].id);
+    float previous = -1000.0f;
+    for (int i = -12000; i < 12000; ++i) {
+      const float pitch = float(i) * 0.01f;
+      const float q = QuantizePitch(pitch, scale);
+      CHECK(q >= previous);
+      CHECK(fabsf(QuantizePitch(q, scale) - q) < 0.0001f);
+      CHECK(fabsf(QuantizePitch(pitch + 13.0f, scale) - q - 13.0f)
+          < 0.0001f || fabsf(pitch - q) > 0.25f);
+      previous = q;
+    }
+    for (size_t i = 0; i < bank[s].size; ++i) {
+      CHECK(QuantizePitch(bank[s].notes[i], scale) == bank[s].notes[i]);
+    }
+  }
+  // The caller may discard or edit its decoded profile after installation.
+  bank[0].notes[1] = 0.01f;
+  CHECK(QuantizePitch(0.5f, PITCH_SCALE_FIFTHS) > 0.5f);
+  CHECK(QuantizePitch(3.5f, PITCH_SCALE_CHROMATIC) == 3.0f);
+  CHECK(QuantizeFifths(3.5f) == 0.0f);
+  CHECK(QuantizeFifths(9.5f) == 7.0f);
+  RandomizedParameter random;
+  random.base = 2.5f;
+  random.cv = 0.0f;
+  random.has_cv = false;
+  random.attenuverter = -0.8f;
+  for (int i = 0; i < 128; ++i) {
+    const float offset = 12.0f * log2f(
+        random.pitch_value(PITCH_SCALE_OFF, true)) - random.base;
+    CHECK(fabsf(offset - QuantizeFifths(offset)) < 0.001f);
+  }
+  CHECK(QuantizePitch(2.345f, PITCH_SCALE_OFF) == 2.345f);
+  ConfigurePitchScales(NULL, 0, true);
+  CHECK(QuantizePitch(2.345f, PitchScale(15)) == 2.345f);
+  ConfigurePitchScales(NULL, 0, false);
+  CHECK(QuantizePitch(2.0f, PITCH_SCALE_MAJOR) == 2.0004f);
+}
+
 int main() {
   TestPitchGrids();
+  TestCustomPitchGrids();
   TestRandomizedPitchGrid();
   TestRandomIntervals();
   return test_checker.failures() ? 1 : 0;
