@@ -54,7 +54,7 @@ Initialize the two required submodules, then run from the repository root:
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
 docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
-beads/build/build.sh /tmp/beads-base-build --wav
+beads/build/build.sh "$PWD/beads-base-build" --wav
 ```
 
 The output directory must be empty. Named releases check every firmware hash
@@ -72,7 +72,7 @@ Docker's copy API. Compiler archive hashes and the base image digest are in
 With `RELEASE_NAME` unset or `beads-base-dev`, hash mismatches warn and the
 build continues. Other release names fail on a mismatch. To accept intentional
 firmware and WAV changes, use `UPDATE_HASHES=1 beads/build/build.sh
-/tmp/beads-base-update --wav` and commit both updated hash files. Re-pin after
+"$PWD/beads-base-update" --wav` and commit both updated hash files. Re-pin after
 cherry-picking an optimization if its expected hashes conflict.
 
 To back up and restore the settings sector (calibration and settings) with
@@ -97,7 +97,7 @@ damaged-settings warning.
 Host tests run in the same Docker image:
 
 ```sh
-beads/test/run.sh /tmp/beads-base-tests
+beads/test/run.sh "$PWD/beads-base-tests"
 ```
 
 Most suites use address and undefined-behaviour sanitizers. The backup suite
