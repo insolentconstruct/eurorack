@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <cstring>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include "beads/test/test_checker.h"
 
@@ -48,6 +49,8 @@ int test_fail_at = 0;
 int test_ops = 0;
 int test_erases = 0;
 bool test_half_erase = false;
+bool test_stale_flags = false;
+int test_stuck_erases = 0;
 namespace stmlib {
 
 SystemClock system_clock;
@@ -141,6 +144,7 @@ struct Rig {
 };
 
 void Wipe() {
+  TestFlashRepairAll();
   memset(kFlash, 255, 0x100000);
   test_ops = 0;
   test_erases = 0;
@@ -289,8 +293,8 @@ void CheckPowerLoss(bool half, bool stock) {
   }
 }
 
-void TestFlashErrors() {
-  test_checker.Start("TestFlashErrors");
+void TestFailedOperations() {
+  test_checker.Start("TestFailedOperations");
   int checked = 0;
   for (int fail = 1; fail <= 24010; fail += fail < 40 ? 1 :
        fail < 23960 ? 997 : 1) {
@@ -547,11 +551,278 @@ void TestBackupRestoredThaw() {
   CHECK(after.Boot() && Restored(20));
 }
 
+bool Cleared() {
+  for (size_t i = 0; i < kAudio; ++i) {
+    if (processor.data_[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void TestDamagedBuffer() {
+  test_checker.Start("TestDamagedBuffer");
+  // An uncorrectable word in the header, in the audio (found by the CRC
+  // pass), and in a stock backup's audio (found by the copy).
+  const uint32_t words[] = { 0, 32, 32 * 1000, 32 + kAudio - 32 };
+  for (int stock = 0; stock < 2; ++stock) {
+    for (size_t i = 0; i < sizeof(words) / sizeof(words[0]); ++i) {
+      Wipe();
+      if (stock) {
+        WriteStock(3, 0, 123, 7);
+      } else {
+        Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+      }
+      TestFlashDamage(0x08100000 + words[i]);
+      Rig r;
+      memset(processor.data_, 0x55, kAudio);
+      CHECK(!r.Boot());
+      CHECK(!r.settings.write_locked());
+      CHECK(Cleared());
+      // Caught before the processor is touched, except by a stock copy.
+      CHECK(processor.configured_ == (stock && words[i] ? 1 : 0));
+      // The next freeze saves over it.
+      processor.Configure(Processor::MEDIA_DIGITAL, false);
+      Fill(8);
+      CHECK(r.Freeze(0));
+      CHECK(TestFlash().num_damaged == 0);
+      Rig after;
+      CHECK(after.Boot() && Restored(8));
+    }
+  }
+  CHECK(TestFlash().violations == 0);
+}
+
+void TestFrozenNoReads() {
+  test_checker.Start("TestFrozenNoReads");
+  // Frozen after a load, or after a save, the main loop reads no flash.
+  for (int stock = 0; stock < 2; ++stock) {
+    Wipe();
+    if (stock) {
+      WriteStock(3, 0, 123, 7);
+    } else {
+      Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+    }
+    Rig r;
+    CHECK(r.Boot());
+    const int reads = TestFlash().masked_reads;
+    const int ops = test_ops;
+    for (int i = 0; i < 100; ++i) {
+      r.backup.Process(true);
+    }
+    CHECK(TestFlash().masked_reads == reads);
+    CHECK(test_ops == ops);
+    CHECK(r.settings.state().frozen);
+    CHECK(!r.backup.busy());
+  }
+}
+
+void TestStaleFlags() {
+  test_checker.Start("TestStaleFlags");
+  // An error flag left by an earlier operation: the HAL would refuse the
+  // next erase or program, and the save be abandoned.
+  Wipe();
+  Rig r;
+  r.Boot();
+  processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
+  Fill(5);
+  const int erases = test_erases;
+  test_stale_flags = true;
+  CHECK(r.Freeze(0));
+  test_stale_flags = false;
+  CHECK(r.settings.state().frozen);
+  CHECK(test_erases == erases + 6);  // None refused and retried.
+  Rig after;
+  CHECK(after.Boot() && Restored(5));
+}
+
+void TestLockedBackup() {
+  test_checker.Start("TestLockedBackup");
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+  // Both copies of the calibration lost.
+  TestFlashDamage(0x081e0000 + 32);
+  TestFlashDamage(0x081c0000 + 32);
+  Rig r;
+  CHECK(!r.Boot());  // The stored frozen flag isn't trusted.
+  CHECK(r.settings.write_locked());
+  const int erases = test_erases;
+  const int ops = test_ops;
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  r.Freeze(0);
+  CHECK(test_erases == erases && test_ops == ops);
+  CHECK(!r.settings.state().frozen);
+  CHECK(!r.backup.busy());
+  // Nor a program, even mid-save.
+  r.backup.write_offset_ = 0;
+  r.backup.remaining_bytes_ = kAudio;
+  r.backup.WriteBlock();
+  CHECK(test_ops == ops);
+  TestFlashRepairAll();
+}
+
+void TestEraseDamagedSectors() {
+  test_checker.Start("TestEraseDamagedSectors");
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+  TestFlashDamage(0x08120000 + 4096);
+  TestFlashDamage(0x08180000 + 0x1ffe0);
+  Rig r;
+  r.Boot();
+  int erases = test_erases;
+  test_locked = true;
+  // A refused erase, then one that does nothing: retried until blank.
+  test_fail_at = test_ops + 1;
+  test_stuck_erases = 1;
+  r.backup.EraseDamagedSectors();
+  test_fail_at = 0;
+  CHECK(test_erases == erases + 4);
+  CHECK(TestFlash().num_damaged == 0);
+  CHECK(kFlash[0x20000] == 0xff && kFlash[0x80000] == 0xff);
+  CHECK(TestFlash().wide_sectors == 0);
+  // The other sectors are left as they were.
+  CHECK(kHeader->tag == 0x5a5a5246 && kFlash[0x40000] != 0xff);
+  // An erase that never works leaves the damage.
+  TestFlashDamage(0x08140000);
+  erases = test_erases;
+  test_stuck_erases = 100;
+  r.backup.EraseDamagedSectors();
+  test_stuck_erases = 0;
+  CHECK(test_erases == erases + 3);
+  CHECK(TestFlash().num_damaged == 1);
+  TestFlashRepairAll();
+}
+
+void TestRetriedBufferErase() {
+  test_checker.Start("TestRetriedBufferErase");
+  // A refused erase is retried, and the save completes.
+  Wipe();
+  Rig r;
+  r.Boot();
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(6);
+  test_fail_at = test_ops + 1;
+  CHECK(r.Freeze(0));
+  test_fail_at = 0;
+  CHECK(r.settings.state().frozen);
+  Rig after;
+  CHECK(after.Boot() && Restored(6));
+}
+
+void TestStuckBufferErase() {
+  test_checker.Start("TestStuckBufferErase");
+  // An erase that reports success but leaves the old backup: the save is
+  // abandoned before any audio is written over it.
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+  Rig r;
+  CHECK(r.Boot());
+  r.backup.Process(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  const int ops = test_ops;
+  test_stuck_erases = 3;  // Every attempt.
+  r.Freeze(0);
+  test_stuck_erases = 0;
+  CHECK(test_ops == ops + 3);
+  CHECK(!r.settings.state().frozen);
+  CHECK(!r.backup.busy());
+  CHECK(TestFlash().wide_sectors == 0);
+}
+
 void TestPowerLoss() {
   test_checker.Start("TestPowerLoss");
   for (int i = 0; i < 4; ++i) {
     CheckPowerLoss(i & 1, i & 2);
   }
+}
+
+void TestLowSupplyBackup() {
+  test_checker.Start("TestLowSupplyBackup");
+  TestFlashPowerUp();
+  // A low supply when the backup starts: no erase or program, and the save
+  // is abandoned as a failed erase abandons it.
+  Wipe();
+  Save(Processor::MEDIA_DIGITAL, false, 123, 7);
+  Rig r;
+  CHECK(r.Boot());
+  r.backup.Process(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  const int ops = test_ops;
+  const int erases = test_erases;
+  TestFlash().supply_low = true;
+  r.Freeze(0);
+  CHECK(test_ops == ops && test_erases == erases);
+  CHECK(!r.backup.busy());
+  CHECK(!r.settings.state().frozen);
+  // Nor a program, even mid-save.
+  r.backup.write_offset_ = 0;
+  r.backup.remaining_bytes_ = kAudio;
+  r.backup.WriteBlock();
+  CHECK(test_ops == ops);
+  CHECK(!r.backup.busy());
+  // The old backup is still in flash, but no longer flagged.
+  CHECK(kHeader->tag == 0x5a5a5246);
+  Rig after;
+  CHECK(!after.Boot());
+  // With the supply back, thawing and freezing again saves normally.
+  TestFlash().supply_low = false;
+  after.backup.Process(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(9);
+  CHECK(after.Freeze(0));
+  Rig again;
+  CHECK(again.Boot() && Restored(9));
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
+void TestSupplyDropBackup() {
+  test_checker.Start("TestSupplyDropBackup");
+  TestFlashPowerUp();
+  // The supply drops after an erase, an audio word, the header or the
+  // settings save that flags it: the save stops there and doesn't load
+  // unless it completed, and the next one completes.
+  const int last = 6 + 24000 + 1 + int((8 + sizeof(State) + 31) / 32);
+  const int drops[] = { 1, 5, 6, 7, 12000, 24005, 24006, 24007, last - 1,
+      last };
+  for (size_t i = 0; i < sizeof(drops) / sizeof(drops[0]); ++i) {
+    Wipe();
+    Save(Processor::MEDIA_DIGITAL, false, 100, 1);
+    Rig r;
+    CHECK(r.Boot());
+    r.backup.Process(false);
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    processor.write_ptr_ = 200;
+    Fill(2);
+    TestFlash().supply_budget = drops[i];
+    r.Freeze(0);
+    CHECK(TestFlash().supply_low);
+    CHECK(!r.backup.busy());
+    TestFlash().supply_low = false;
+    TestFlash().supply_budget = 0;
+    Rig after;
+    if (drops[i] == last) {
+      CHECK(after.Boot() && processor.write_ptr_ == 200 && Restored(2));
+    } else {
+      CHECK(!after.Boot());
+    }
+    after.backup.Process(false);
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    processor.write_ptr_ = 300;
+    Fill(3);
+    CHECK(after.Freeze(0));
+    Rig again;
+    CHECK(again.Boot() && processor.write_ptr_ == 300 && Restored(3));
+  }
+  CHECK(TestFlash().low_supply_writes == 0);
+}
+
+void OnUnmaskedRead(int) {
+  printf("ERROR: %s: unmasked read of a damaged flash word\n",
+      test_checker.test());
+  _exit(1);
 }
 
 int main() {
@@ -562,6 +833,7 @@ int main() {
       -1, 0) == reinterpret_cast<void*>(0x08100000))) {
     return 1;
   }
+  TestFlashGuard(&OnUnmaskedRead);
   TestFreezeDeadlineAndCancel();
   TestModulatedFreeze();
   TestBackupBackoff();
@@ -574,7 +846,16 @@ int main() {
   TestStock();
   TestCorruption();
   TestPowerLoss();
-  TestFlashErrors();
+  TestFailedOperations();
   TestSettingsSaves();
+  TestDamagedBuffer();
+  TestFrozenNoReads();
+  TestStaleFlags();
+  TestLockedBackup();
+  TestEraseDamagedSectors();
+  TestRetriedBufferErase();
+  TestStuckBufferErase();
+  TestLowSupplyBackup();
+  TestSupplyDropBackup();
   return test_checker.failures() ? 1 : 0;
 }

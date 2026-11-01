@@ -62,9 +62,9 @@ cases = [
   # backup against an interrupted replacement: only both together are visible.
   ('TestPowerLoss', 'backup',
     ('beads/background_buffer_backup.cc', 'beads/background_buffer_backup.cc'),
-    ('erase_params.Sector = 8 + kNumSectors - remaining_sectors_;',
+    ('const uint32_t sector = kNumSectors - remaining_sectors_;',
      'SaveState(false);  // Stale: its backup was not loaded at boot.'),
-    ('erase_params.Sector = 8 + remaining_sectors_ - 1;',
+    ('const uint32_t sector = remaining_sectors_ - 1;',
      '(void)0;  // Stale: its backup was not loaded at boot.')),
   ('TestSettingsSaves', 'backup', 'beads/background_buffer_backup.cc',
     '    HAL_FLASH_Unlock();  // A settings save may have locked it.\n',
@@ -85,10 +85,8 @@ cases = [
     '  h.crc = 0;',
     '  h.crc = 0; h.write_ptr = 0;'),
   ('TestFormat', 'backup', 'beads/background_buffer_backup.cc',
-    '      kDelayBufferSizeBits / 8);\n'
-    '  return crc32(crc, &h',
-    '      kDelayBufferSizeBits / 16);\n'
-    '  return crc32(crc, &h'),
+    'i < kDelayBufferSizeBits / 8; i += sizeof(block)) {',
+    'i < kDelayBufferSizeBits / 16; i += sizeof(block)) {'),
   ('TestFormat', 'backup', 'beads/background_buffer_backup.cc',
     '      header.crc = crc32(crc_, &header, sizeof(header));',
     '      header.crc = crc_;'),
@@ -143,25 +141,292 @@ cases = [
     '      ClearErrors();\n      if (HAL_FLASH_Program(',
     '      if (HAL_FLASH_Program('),
   ('TestFailedErase', 'storage', 'beads/settings_storage.h',
-    '      if (!IsBlank(address, BLOCK_SIZE)) {\n        return false;\n      }\n',
+    '      if (!Flash::IsBlank(address, BLOCK_SIZE)) {\n        return false;\n      }\n',
     ''),
   ('TestFailedProgram', 'storage', 'beads/settings_storage.h',
     'const int kFlashAttempts = 3;',
     'const int kFlashAttempts = 1;'),
   ('TestNonBlankSlot', 'storage', 'beads/settings_storage.h',
-    '      if (WriteChunk(next_state_chunk_index_, state_data_)) {',
-    '      WriteChunk(next_state_chunk_index_, state_data_);\n      if (true) {'),
+    '      if (WriteChunk(chunk_address(next_state_chunk_index_), state_data_)) {',
+    '      WriteChunk(chunk_address(next_state_chunk_index_), state_data_);\n'
+    '      if (true) {'),
+  # #148: the boot guard (masked reads, calibration mirror, write lock, SEED
+  # repair, storage warning) and damaged frozen buffers; #165: no flash
+  # writes on a low supply.
+  ('TestLowSupply', 'storage', 'beads/settings.cc',
+    '  Flash::Init();  // Every write checks the supply from here on.',
+    '  // Every write checks the supply from here on.'),
+  ('TestLowSupply', 'storage', 'beads/drivers/flash.h',
+    '    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);',
+    '    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS);'),
+  ('TestLowSupply', 'storage', 'beads/drivers/flash.h',
+    '    MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);',
+    '    PWR->CR1 = PWR_CR1_PLS_LEV6;'),
+  ('TestLowSupply', 'storage', 'beads/drivers/flash.h',
+    '    return READ_BIT(PWR->CSR1, PWR_CSR1_PVDO);',
+    '    return false;'),
+  ('TestLowSupply', 'storage', 'beads/settings_storage.h',
+    '    if (Flash::SupplyLow()) {\n'
+    '      return;  // Kept in RAM; the next save writes it.\n'
+    '    }\n',
+    ''),
+  ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
+    '      if (Flash::SupplyLow()) {\n'
+    '        return false;\n'
+    '      }\n'
+    '      ClearErrors();\n'
+    '      FLASH_EraseInitTypeDef',
+    '      ClearErrors();\n'
+    '      FLASH_EraseInitTypeDef'),
+  ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
+    '      if (Flash::SupplyLow()) {\n'
+    '        return false;\n'
+    '      }\n'
+    '      ClearErrors();\n'
+    '      if (HAL_FLASH_Program(',
+    '      ClearErrors();\n'
+    '      if (HAL_FLASH_Program('),
+  ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (Flash::SupplyLow()) {\n'
+    '      return false;\n'
+    '    }\n',
+    ''),
+  ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (Flash::SupplyLow()) {\n'
+    '      remaining_sectors_ = remaining_bytes_ = 0;\n'
+    '      return;\n'
+    '    }\n',
+    ''),
+  ('TestSupplyDropBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '      if (Flash::SupplyLow()) {\n'
+    '        return;\n'
+    '      }\n',
+    ''),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;',
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk;'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;\n'
+    '      __DSB();\n'
+    '    }\n'
+    '    __set_FAULTMASK(faultmask);',
+    '      __DSB();\n'
+    '    }\n'
+    '    __set_FAULTMASK(faultmask);\n'
+    '    if (!clean) {\n'
+    '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;\n'
+    '    }'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '    __set_FAULTMASK(1);',
+    '    __set_FAULTMASK(0);'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '    SCB->CCR = ccr | SCB_CCR_BFHFNMIGN_Msk;',
+    '    SCB->CCR = ccr;'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '    __set_FAULTMASK(faultmask);',
+    '    __set_FAULTMASK(0 * faultmask);'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '    SCB->CCR = ccr;\n    __DSB();',
+    '    __DSB();'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '    __HAL_FLASH_CLEAR_FLAG_BANK2(FLASH_FLAG_DBECCERR_BANK2);\n    // With',
+    '    // With'),
+  ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
+    '      // Keep the undefined words out of the cache.\n'
+    '      Invalidate(address, size);',
+    '      // Keep the undefined words out of the cache.'),
+  ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
+    '    if (calibration != CHUNK_VALID) {\n      return STORAGE_CALIBRATION_LOST;',
+    '    if (calibration == CHUNK_UNREADABLE) {\n      return STORAGE_CALIBRATION_LOST;'),
+  ('TestCalibrationLost', 'storage', 'beads/settings_storage.h',
+    '    if (calibration != CHUNK_VALID) {\n      return STORAGE_CALIBRATION_LOST;',
+    '    if (calibration == CHUNK_UNREADABLE) {\n      return STORAGE_CALIBRATION_LOST;'),
+  ('TestBlankSector', 'storage', 'beads/settings_storage.h',
+    '      if (mirror == CHUNK_VALID) {\n        return STORAGE_RESTORED;',
+    '      if (mirror == CHUNK_VALID) {\n        return STORAGE_NEW;'),
+  ('TestBlankSector', 'storage', 'beads/settings_storage.h',
+    '          ? STORAGE_NEW\n          : STORAGE_DAMAGED;',
+    '          ? STORAGE_NEW\n          : STORAGE_NEW;'),
+  ('TestStateTerminator', 'storage', 'beads/settings_storage.h',
+    '      if (ReadChunk(chunk_address(index), state_data) != CHUNK_VALID) {',
+    '      if (ReadChunk(chunk_address(index), state_data) == CHUNK_INVALID) {'),
+  ('TestCalibrationWithoutState', 'storage', 'beads/settings_storage.h',
+    '      // Rewritten, then the power went before the first state.\n'
+    '      return STORAGE_RESTORED;',
+    '      // Rewritten, then the power went before the first state.\n'
+    '      return STORAGE_NEW;'),
+  ('TestWriteLock', 'storage', 'beads/settings_storage.h',
+    '  void Lock() {\n    locked_ = true;',
+    '  void Lock() {\n    locked_ = false;'),
+  ('TestWriteLock', 'storage', 'beads/settings_storage.h',
+    '  bool EraseSector(uint32_t index, uint32_t address) {\n    if (locked_) {',
+    '  bool EraseSector(uint32_t index, uint32_t address) {\n    if (false) {'),
+  ('TestWriteLock', 'storage', 'beads/settings_storage.h',
+    '  bool ProgramWord(uint32_t address, const uint8_t* buffer) {\n'
+    '    if (locked_) {',
+    '  bool ProgramWord(uint32_t address, const uint8_t* buffer) {\n'
+    '    if (false) {'),
+  ('TestMirrorWrites', 'storage', 'beads/settings_storage.h',
+    '      erase_params.Sector = index % 8;  // Within its bank.',
+    '      erase_params.Sector = index;  // Within its bank.'),
+  ('TestInterruptedRewrite', 'storage', 'beads/settings_storage.h',
+    '    if (MirrorPersistentData() && \\',
+    '    if (true && \\'),
+  ('TestMirrorWrites', 'storage', 'beads/settings_storage.h',
+    '        !memcmp(&mirror, persistent_data_, sizeof(PersistentData))) {\n'
+    '      return true;',
+    '        false) {\n'
+    '      return true;'),
+  ('TestMirrorWrites', 'storage', 'beads/settings_storage.h',
+    '        WriteChunk(MIRROR_BASE, persistent_data_) && \\',
+    '        true && \\'),
+  ('TestRepair', 'storage', 'beads/settings_storage.h',
+    '    locked_ = false;\n    RewriteSector();',
+    '    RewriteSector();'),
+  ('TestRepairFailures', 'storage', 'beads/settings_storage.h',
+    '    return !locked_;\n  }',
+    '    return true;\n  }'),
+  ('TestCalibrationFromMirror', 'storage', 'beads/settings.cc',
+    '      (status == STORAGE_OK || status == STORAGE_RESTORED) && \\',
+    '      false && \\'),
+  ('TestRestoredCalibrationChoice', 'storage', 'beads/settings.cc',
+    '      (status == STORAGE_OK || status == STORAGE_RESTORED) && \\',
+    '      status == STORAGE_OK && \\'),
+  ('TestCalibrationWithoutState', 'storage', 'beads/settings.cc',
+    '  if (status == STORAGE_RESTORED) {\n    chunk_storage_.SavePersistentData();',
+    '  if (false) {\n    chunk_storage_.SavePersistentData();'),
+  ('TestRetriedBufferErase', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (!EraseBufferSector(sector, kFlashAttempts)) {',
+    '    if (!EraseBufferSector(sector, 1)) {'),
+  ('TestCalibrationLost', 'storage', 'beads/settings.cc',
+    '      CalibrationPlausible(mirror, factory)) {',
+    '      true) {'),
+  ('TestCalibrationFromMirror', 'storage', 'beads/settings.cc',
+    '    if (recovery_mode) {\n      state_ = defaults;\n    }\n'
+    '    status = STORAGE_RESTORED;',
+    '    status = STORAGE_RESTORED;'),
+  ('TestCalibrationLost', 'storage', 'beads/settings.cc',
+    '  } else if (lost) {\n    status = STORAGE_DAMAGED;',
+    '  } else if (lost) {\n    status = STORAGE_OK;'),
+  ('TestCalibrationLost', 'storage', 'beads/settings.cc',
+    '    chunk_storage_.Lock();\n',
+    ''),
+  ('TestCalibrationLost', 'storage', 'beads/settings.cc',
+    '    chunk_storage_.Lock();\n    state_ = defaults;',
+    '    chunk_storage_.Lock();'),
+  ('TestCalibrationFromMirror', 'storage', 'beads/settings.cc',
+    '    if (!(fabsf(c.scale / f.scale - 1.0f) <= 0.25f) || \\',
+    '    if (!(fabsf(c.scale / f.scale - 1.0f) <= 0.8f) || \\'),
+  ('TestRepair', 'storage', 'beads/settings.cc',
+    '      repair_ = chunk_storage_.Repair()\n',
+    '      repair_ = !chunk_storage_.Repair()\n'),
+  ('TestInterruptedRewrite', 'storage', 'beads/settings.cc',
+    '  return status != STORAGE_NEW || recovery_mode;',
+    '  return status == STORAGE_OK || recovery_mode;'),
+  ('TestBlankSector', 'storage', 'beads/settings.cc',
+    '  return status != STORAGE_NEW || recovery_mode;',
+    '  return status != STORAGE_NEW;'),
+  ('TestDamagedBuffer', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (Flash::Read(Sector<8>::start, &header, sizeof(header)) && \\',
+    '    if ((memcpy(&header, (const void*)(Sector<8>::start), sizeof(header)),'
+    ' true) && \\'),
+  ('TestDamagedBuffer', 'backup', 'beads/background_buffer_backup.cc',
+    '            Sector<8>::start + kFlashWordSize + uint32_t(i), block, size)) {\n'
+    '      return false;',
+    '            Sector<8>::start + kFlashWordSize + uint32_t(i), block, size)) {\n'
+    '      return true;'),
+  ('TestDamagedBuffer', 'backup', 'beads/background_buffer_backup.cc',
+    '        readable = Flash::Read(address, words, kFlashWordSize);',
+    '        Flash::Read(address, words, kFlashWordSize);'),
+  ('TestDamagedBuffer', 'backup', 'beads/background_buffer_backup.cc',
+    '          fill(&bytes[0], &bytes[kFlashWordSize], 0);',
+    '          (void)bytes;'),
+  ('TestStaleFlags', 'backup', 'beads/background_buffer_backup.cc',
+    '    Flash::ClearErrors();\n'
+    '    if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK && \\',
+    '    if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK && \\'),
+  ('TestStaleFlags', 'backup', 'beads/background_buffer_backup.cc',
+    '    Flash::ClearErrors();\n    if (settings_->write_locked() || HAL_FLASH_Program(',
+    '    if (settings_->write_locked() || HAL_FLASH_Program('),
+  ('TestStaleFlags', 'backup', 'beads/background_buffer_backup.cc',
+    '      Flash::ClearErrors();\n      if (settings_->write_locked() || HAL_FLASH_Program(',
+    '      if (settings_->write_locked() || HAL_FLASH_Program('),
+  ('TestLockedBackup', 'backup', 'beads/background_buffer_backup.cc',
+    'int attempts) {\n  if (settings_->write_locked()) {',
+    'int attempts) {\n  if (false) {'),
+  ('TestLockedBackup', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (settings_->write_locked() || HAL_FLASH_Program(\n'
+    '        FLASH_TYPEPROGRAM_FLASHWORD,\n'
+    '        flash_address,',
+    '    if (false || HAL_FLASH_Program(\n'
+    '        FLASH_TYPEPROGRAM_FLASHWORD,\n'
+    '        flash_address,'),
+  ('TestEraseDamagedSectors', 'backup', 'beads/background_buffer_backup.cc',
+    '    if (!Flash::IsReadable(Sector<8>::start + i * kSectorSize, kSectorSize)) {',
+    '    if (true) {'),
+  ('TestEraseDamagedSectors', 'backup', 'beads/background_buffer_backup.cc',
+    '      EraseBufferSector(i, kFlashAttempts);',
+    '      EraseBufferSector(i, 1);'),
+  ('TestStuckBufferErase', 'backup', 'beads/background_buffer_backup.cc',
+    ' HAL_OK && \\\n'
+    '        Flash::IsBlank(Sector<8>::start + sector * kSectorSize, kSectorSize)) {',
+    ' HAL_OK) {'),
+  ('TestStuckBufferErase', 'backup', 'beads/background_buffer_backup.cc',
+    '    erase_params.Sector = sector;',
+    '    erase_params.Sector = sector + 8;'),
+  ('TestStorageRepair', 'firmware', 'beads/beads.cc',
+    '    background_buffer_backup.EraseDamagedSectors();',
+    '    (void)0;'),
+  ('TestStorageWarning', 'firmware', 'beads/beads.cc',
+    '    ui.ShowStorageStatus();\n',
+    ''),
+  ('TestStorageWarning', 'firmware', 'beads/ui.cc',
+    '      mode_ = MODE_STORAGE_WARNING;',
+    '      mode_ = MODE_NORMAL;'),
+  ('TestStorageWarning', 'firmware', 'beads/ui.cc',
+    '  const bool accept_switch_events = !showing_storage_status();',
+    '  const bool accept_switch_events = true;'),
+  ('TestStorageWarning', 'firmware', 'beads/ui.cc',
+    'const uint32_t kStorageStatusTime = 3000;',
+    'const uint32_t kStorageStatusTime = 4000;'),
+  ('TestStorageWarning', 'firmware', 'beads/ui.cc',
+    '    case MODE_PANIC:\n    case MODE_STORAGE_WARNING:\n',
+    '    case MODE_STORAGE_WARNING:\n      break;\n    case MODE_PANIC:\n'),
+  ('TestStorageWarning', 'firmware', 'beads/ui.cc',
+    '  if (mode_ != MODE_FACTORY_TEST && !showing_storage_status()) {',
+    '  if (mode_ != MODE_FACTORY_TEST) {'),
+  ('TestStorageRepair', 'firmware', 'beads/ui.cc',
+    '          color.g = blink ? 255 : 0;',
+    '          color.g = blink ? 255 : 255;'),
+  ('TestStorageRepair', 'firmware', 'beads/ui.cc',
+    '          color.g = blink ? 255 : 0;\n'
+    '          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {\n'
+    '            leds_.set(Led(LED_ASSIGN_1 + i), 255);',
+    '          color.g = blink ? 255 : 0;\n'
+    '          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {\n'
+    '            leds_.set(Led(LED_ASSIGN_1 + i), 0);'),
+  ('TestStorageRepair', 'firmware', 'beads/ui.cc',
+    '          color.r = fast_blink ? 255 : 0;',
+    '          color.r = 255;'),
+  ('TestRepair', 'storage', 'beads/settings.cc',
+    '    if (recovery_mode && status == STORAGE_OK) {',
+    '    if (false) {'),
   # #53: codec restarts fade out first, FREEZE cancels the fade, and leaving
-  # the synth clears its reverb.
+  # the synth keeps its stock reverb tail.
   ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
     '      if (!FadedOut()) {\n        return;\n      }\n      // elapsed',
     '      // elapsed'),
   ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
     '    codec_fade = false;\n    return;',
     '    return;'),
-  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
-    '        processor.ClearReverb();\n',
-    ''),
+  ('TestSynthStopPreservesReverb', 'firmware', 'beads/beads.cc',
+    '      processor.Configure(media, mono);\n'
+    '      ConfigureAndStartCodec(false, mono_changed || synth_mode);',
+    '      processor.Configure(media, mono);\n'
+    '      if (synth_mode) {\n'
+    '        processor.ClearReverb();\n'
+    '      }\n'
+    '      ConfigureAndStartCodec(false, mono_changed || synth_mode);'),
 ]
 GUARD = 'const int16_t wav_integrated_waves[] = {'
 # A case with several edits gives tuples of equal length.
@@ -273,7 +538,7 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     try:
       if suite != 'wavetable':
         # Run only the named test: it must fail by itself.
-        main = original_test.index('int main(')
+        main = original_test.index('\nint main(')
         first = re.compile(r'\n  Test\w+\(\);').search(
             original_test, main).group(0)[1:]
         cut = original_test.index(first, main)

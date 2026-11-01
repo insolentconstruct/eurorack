@@ -47,7 +47,7 @@
 using namespace beads;
 
 bool test_down[4] = { };
-unsigned test_writes = 0;
+uint32_t test_writes = 0;
 namespace stmlib {
 SystemClock system_clock;
 }  // namespace stmlib

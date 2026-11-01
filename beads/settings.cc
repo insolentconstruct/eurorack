@@ -67,20 +67,82 @@ bool Settings::Init(bool recovery_mode) {
   state_.frozen = 0;
   state_.disable_autosave = 0;
   state_.monophonic_mode = 0;
+  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
+  fill(
+      &persistent_data_.padding[0],
+      &persistent_data_.padding[sizeof(persistent_data_.padding)],
+      0);
+  const PersistentData factory = persistent_data_;
+  const State defaults = state_;
+  repair_ = STORAGE_REPAIR_NONE;
   
-  if (recovery_mode) {
-    chunk_storage_.Recover(&persistent_data_, &state_);
+  Flash::Init();  // Every write checks the supply from here on.
+  StorageStatus status = chunk_storage_.Init(&persistent_data_, &state_);
+  
+  // A lost or implausible calibration comes back from the mirror, the
+  // module's own calibration, with the states that loaded. Chosen before
+  // anything is written, so a worse calibration never replaces the mirror.
+  const bool lost = status == STORAGE_CALIBRATION_LOST;
+  const bool implausible = \
+      (status == STORAGE_OK || status == STORAGE_RESTORED) && \
+      !CalibrationPlausible(persistent_data_, factory);
+  PersistentData mirror;
+  if ((lost || implausible) && \
+      chunk_storage_.ReadMirror(&mirror) && \
+      CalibrationPlausible(mirror, factory)) {
+    persistent_data_ = mirror;
+    if (recovery_mode) {
+      state_ = defaults;
+    }
+    status = STORAGE_RESTORED;
+  } else if (lost) {
+    status = STORAGE_DAMAGED;
+  }
+  if (status == STORAGE_RESTORED) {
+    chunk_storage_.SavePersistentData();
   }
   
-  bool success = chunk_storage_.Init(&persistent_data_, &state_);
-  
-  if (success) {
+  if (status == STORAGE_DAMAGED) {
+    // Neither copy of the calibration is usable: play on the factory values
+    // and default settings held in RAM, unfrozen since the stored flag can't
+    // be trusted. Only SEED at power-up writes.
+    chunk_storage_.Lock();
+    state_ = defaults;
+    persistent_data_ = factory;
+    if (recovery_mode) {
+      repair_ = chunk_storage_.Repair()
+          ? STORAGE_REPAIR_CALIBRATION_RESET
+          : STORAGE_REPAIR_FAILED;
+    }
+  } else {
+    if (recovery_mode && status == STORAGE_OK) {
+      state_ = defaults;
+      chunk_storage_.Recover(&persistent_data_, &state_);
+    }
     // Sanitize settings read from flash.
     CONSTRAIN(state_.media, 0, 3);
     CONSTRAIN(state_.assignable_cv_destination, 0, 3);
   }
   
-  return success;
+  // A new module runs the factory test, unless SEED is held.
+  return status != STORAGE_NEW || recovery_mode;
+}
+
+/* static */
+bool Settings::CalibrationPlausible(
+    const PersistentData& data,
+    const PersistentData& factory) {
+  // Within 25% of the factory values, as FIX_OUTLIER checks.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    const AdcCalibrationData& c = data.adc_calibration[i];
+    const AdcCalibrationData& f = factory.adc_calibration[i];
+    // Written so that NaN fails.
+    if (!(fabsf(c.scale / f.scale - 1.0f) <= 0.25f) || \
+        !(fabsf(c.offset / f.offset - 1.0f) <= 0.25f)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void Settings::SavePersistentData() {

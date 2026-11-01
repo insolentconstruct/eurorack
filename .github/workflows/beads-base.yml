@@ -83,6 +83,8 @@ jobs:
         run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
       - name: Run host tests, storage compatibility and audio reference
         run: beads/test/run.sh "$RUNNER_TEMP/host-tests"
+      - name: Check the settings sector tool against stmlib's loader
+        run: make -f beads/build/tools/settings_sector.mk test
   release-build:
     needs: build-kit
     runs-on: ubuntu-24.04
