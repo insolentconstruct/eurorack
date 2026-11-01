@@ -41,4 +41,3 @@ Older releases have no `.hex`; make one from the `.bin`:
 ```sh
 arm-none-eabi-objcopy -I binary -O ihex --change-addresses 0x08000000 drizzlet-YYYY.MM.DD-combo.bin drizzlet-YYYY.MM.DD-combo.hex
 ```
-
