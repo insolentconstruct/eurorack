@@ -15,12 +15,20 @@ if [[ -z "${TOOLCHAIN_PATH:-}" ]]; then
   [[ -f "$root/stm_audio_bootloader/qpsk/encoder.py" && -f "$root/stmlib/makefile.inc" ]] || { echo "Initialize submodules first" >&2; exit 1; }
   [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == 39d95a8be305c6bc4a99fd218518d832c7ff821c ]] || { echo "Wrong encoder commit" >&2; exit 1; }
   mkdir -p "$out"
+  cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/beads-build"
+  mkdir -p "$cache_root"
+  archive_dir=$(mktemp -d "$cache_root/artifacts.XXXXXX")
+  container=
+  trap 'if [[ -n "$container" ]]; then docker rm -f "$container" >/dev/null || true; fi
+    rm -f "$archive_dir/out.tar.gz" || true
+    rmdir "$archive_dir" || true' EXIT
   container=$(docker create --platform linux/amd64 --network none \
     -e UPDATE_HASHES="${UPDATE_HASHES:-0}" \
     -e JOBS="${JOBS:-8}" \
     -e RELEASE_NAME="${RELEASE_NAME:-beads-base-dev}" \
-    "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" bash beads/build/build.sh /out --wav)
-  trap 'docker rm -f "$container" >/dev/null' EXIT
+    "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" \
+    bash beads/build/tools/archive_build.sh /out /out.tar.gz \
+    bash beads/build/build.sh /out --wav)
   docs=()
   [[ ! -f "$root/README-BASE.md" ]] || docs+=(README-BASE.md)
   tar -C "$root" --exclude=.git --exclude=build --exclude='*_test' \
@@ -29,13 +37,18 @@ if [[ -z "${TOOLCHAIN_PATH:-}" ]]; then
   docker cp "$root/beads/build" "$container:/src/beads/build"
   docker start -a "$container" || true
   status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
-  docker cp "$container:/out/." "$out"
+  transfer_status=0
+  docker cp "$container:/out.tar.gz" "$archive_dir/out.tar.gz" || transfer_status=$?
+  if [[ "$transfer_status" == 0 ]]; then
+    tar -xzf "$archive_dir/out.tar.gz" -C "$out" || transfer_status=$?
+  fi
+  [[ "$status" == 0 ]] || exit "$status"
+  [[ "$transfer_status" == 0 ]] || exit "$transfer_status"
   if [[ ${UPDATE_HASHES:-0} == 1 && "$status" == 0 ]]; then
     docker cp "$container:/src/beads/build/expected-hashes.sha256" "$root/beads/build/expected-hashes.sha256"
     docker cp "$container:/src/beads/build/expected-wav.sha256" "$root/beads/build/expected-wav.sha256"
   fi
-  [[ "$status" == 0 ]]
-  exit 0
+  exit "$status"
 fi
 # In-container mode lets the kit invoke the pinned compilers without nesting Docker.
 [[ -n "${TOOLCHAIN_PATH:-}" ]] || { echo "Use --wav on the host; the other mode runs inside the build container" >&2; exit 2; }
