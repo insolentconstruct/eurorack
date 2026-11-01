@@ -227,6 +227,8 @@ class Options {
   bool evolving_preview_;
   AttackMode attack_preview_;
   PitchScale scale_;
+  const Profile* profile_;
+  mutable OptionValue pitch_indication_;
   bool seed_held_;
   uint32_t seed_time_;
   uint32_t seed_taps_;

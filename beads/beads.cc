@@ -589,7 +589,7 @@ void MonitorStateChange() {
     }
     processor.Configure(Processor::Media(settings.state().media),
         normalization_detector.mono());
-    if (synth_mode) {
+    if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {
       processor.ClearReverb();
     }
     if (!processor.spectral() && background_buffer_backup.Load()) {
@@ -614,7 +614,9 @@ void MonitorStateChange() {
         if (synth_mode) {
           processor.Configure(Processor::Media(settings.state().media),
               normalization_detector.mono());
-          processor.ClearReverb();
+          if (settings.FeatureValue(FEATURE_SYNTH_TAIL)) {
+            processor.ClearReverb();
+          }
         }
         ConfigureAndStartCodec(!synth_mode, true);
       }
@@ -657,8 +659,7 @@ void MonitorStateChange() {
       // elapsed = system_clock.milliseconds();
       codec.Pause();
       processor.Configure(media, mono);
-      if (synth_mode) {
-        // The synth's reverb tail would otherwise play on.
+      if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {
         processor.ClearReverb();
       }
       ConfigureAndStartCodec(false, mono_changed || synth_mode);

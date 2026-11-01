@@ -605,11 +605,57 @@ void TestSynthStereoWidth() {
   CHECK(widest > 0.2);
 }
 
+void TestCustomSynthPitchLimits() {
+  test_checker.Start("TestCustomSynthPitchLimits");
+  static SynthHarness h;
+  int low_notes = 0;
+  int clipped_notes = 0;
+  for (int period = 0; period < 2; ++period) {
+    for (int side = 0; side < 2; ++side) {
+      PitchScaleDefinition bank = { };
+      bank.id = 15;
+      bank.period = period ? 128.0f : 78.0f;
+      bank.size = period ? 1 : 2;
+      bank.notes[1] = period ? 0.0f : side ? 24.0f : 54.0f;
+      bank.name[0] = 'R';
+      ConfigurePitchScales(&bank, 1, true);
+      for (int quality = 0; quality < 4; ++quality) {
+        for (int i = 0; i < 128; ++i) {
+          h.Init();
+          h.resolution = Synth::Resolution(quality);
+          h.parameters.pitch.base = side ? -24.0f : 24.0f;
+          h.parameters.pitch.cv = side ? -60.0f : 60.0f;
+          h.parameters.pitch.has_cv = true;
+          h.parameters.pitch.attenuverter = 0.9999f;
+          h.synth.set_pitch_scale(PitchScale(15));
+          stmlib::Random::Seed(0x12345678 + uint32_t(i) * 997);
+          const FloatFrame out = h.Tick(true, false);
+          const WavetableGrain& grain =
+              h.synth.wavetable_granular_player_.grain_[0];
+          CHECK(std::isfinite(out.l) && std::isfinite(out.r));
+          CHECK(std::isfinite(grain.frequency_));
+          CHECK(grain.frequency_ > 0.0f && grain.frequency_ <= 0.25f);
+          if (side) {
+            low_notes += grain.frequency_ <
+                stmlib::SemitonesToRatio(-120.0f) *
+                    kWavetableRootNote / kSynthSampleRate;
+          } else {
+            clipped_notes += grain.frequency_ == 0.25f;
+          }
+        }
+      }
+    }
+  }
+  CHECK(low_notes > 0 && clipped_notes > 0);
+  ConfigurePitchScales(NULL, 0, false);
+}
+
 int main() {
   TestSynthMixEndpoints();
   TestSynthFreeze();
   TestSynthGrainPairs();
   TestQuantizedSynthGrains();
+  TestCustomSynthPitchLimits();
   TestRandomIntervalSynthGrains();
   TestSynthStereoWidth();
   TestSynthResolution();

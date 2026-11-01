@@ -168,12 +168,13 @@ for row in rows:
     if setting == "Not used yet":
         assert color == "unchanged" and pulse == "steady"
         continue
-    assert color in {"green", "yellow", "red"}
+    assert color in {"green", "yellow", "red", "coral", "amber", "blue",
+                     "teal", "violet", "pink"}
     assert pulse in {
         "steady",
         "slow (0.98 Hz)",
         "fast (3.91 Hz)",
-        "2 yellow pulses / 2.048 s",
+        "2 pulses / 2.048 s",
     }
     seen = values.setdefault(setting, set())
     if not seen:
@@ -484,7 +485,7 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 23
+assert len(catalog["features"]) == len(exported) == 24
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 for feature, row in zip(catalog["features"], exported):

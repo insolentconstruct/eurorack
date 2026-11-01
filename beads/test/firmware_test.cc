@@ -1093,6 +1093,85 @@ void SurveySynthGrains(Rig* r, PitchScale scale, int* off_scale,
   }
 }
 
+void TestCustomScaleCallbackChain() {
+  test_checker.Start("TestCustomScaleCallbackChain");
+  uint8_t block[kProfileSize];
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    block[i] = kProfileBlock[i];
+  }
+  const size_t records = 16 + 6 * block[5];
+  const size_t bytes = 6 * block[5] + kScaleRecordSize;
+  block[6] = bytes & 255;
+  block[7] = bytes >> 8;
+  block[12] = block[13] = 1;
+  uint8_t* scale = block + records;
+  memset(scale, 0, kScaleRecordSize);
+  scale[0] = 15;
+  scale[1] = 3;
+  memcpy(scale + 12, "Custom callback", 15);
+  const float values[] = { 13.0f, 0.0f, 3.25f, 8.125f };
+  for (size_t i = 0; i < 4; ++i) {
+    uint32_t bits;
+    memcpy(&bits, &values[i], 4);
+    const size_t offset = i ? 44 + 4 * (i - 1) : 8;
+    for (size_t j = 0; j < 4; ++j) {
+      scale[offset + j] = bits >> (8 * j);
+    }
+  }
+  const uint32_t crc = Profile::Crc32(block, 16 + bytes);
+  for (size_t i = 0; i < 4; ++i) {
+    block[16 + bytes + i] = crc >> (8 * i);
+  }
+  Rig r(true, true);
+  r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+  r.cv[CV_ADC_CHANNEL_PITCH] = 30365;  // About 4.4 semitones.
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+  PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 32768;
+  for (int boot = 0; boot < 2; ++boot) {
+    if (boot) {
+      r.Reboot(false);
+    }
+    // The ROM default is immutable in this host binary. Exercise the same
+    // Settings::Init overload with a decoded custom block, retaining flash.
+    CHECK(settings.Init(false, block));
+    if (!boot) {
+      settings.set_pitch_scale(PitchScale(15));
+      settings.SaveState();
+    }
+    CHECK(settings.pitch_scale() == 15);
+    ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
+    ui.LoadOptions();
+    StartSelfPlay(&r, true);
+    CHECK(ui.pitch_scale() == 15);
+    CHECK(synth.wavetable_granular_player_.pitch_scale_ == 15);
+    CHECK(fabsf(NextSynthGrainSemitones(&r) - 3.25f) < 0.01f);
+  }
+  settings.set_plaits_synth(true);
+  r.Settle();
+  r.Tick(50, true);
+  CHECK(plaits_synth.pitch_scale_ == 15);
+  bool plaits_note = false;
+  for (int i = 0; i < kNumPlaitsVoices; ++i) {
+    plaits_note |= fabsf(plaits_synth.patch_[i].note - kPlaitsRootNote - 3.25f)
+        < 0.01f;
+  }
+  CHECK(plaits_note);
+  r.left = r.right = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 65535;
+  r.Settle();
+  r.Tick(30, true);
+  CHECK(!synth_mode);
+  CHECK(processor.processor_digital_.granular_player_.pitch_scale_ == 15);
+  const float speed = NextGrainSpeed(&r);
+  CHECK(fabsf(speed - stmlib::SemitonesToRatio(3.25f)) < 2.0f / 1024.0f);
+  settings.set_spectral(true);
+  r.Settle();
+  r.Tick(30, true);
+  CHECK(processor.spectral());
+  CHECK(processor.spectral_processor_.pitch_scale_ == 15);
+  CHECK(fabsf(processor.spectral_processor_.parameters_.pitch - 3.25f) < 0.01f);
+}
+
 void TestSynthPitchScaleChain() {
   test_checker.Start("TestSynthPitchScaleChain");
   const PitchScale scale = PITCH_SCALE_PENTATONIC_MAJOR;
@@ -1479,30 +1558,86 @@ void TestCodecKeepsClocks() {
   }
 }
 
-// Stopping the synth clears the reverb memory the synths share.
+// Tail handling is a profile choice; the codec transition remains the same.
+void SynthTailProfile() {
+  uint8_t block[kProfileSize];
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    block[i] = kProfileBlock[i];
+  }
+  const size_t offset = 16 + 6 * block[5];
+  ++block[5];
+  const size_t bytes = 6 * block[5];
+  block[6] = bytes & 255;
+  block[7] = bytes >> 8;
+  const uint8_t entry[] = {
+    FEATURE_SYNTH_TAIL, PROFILE_FIXED, 1, 0, 0, 0
+  };
+  memcpy(block + offset, entry, sizeof(entry));
+  const uint32_t crc = Profile::Crc32(block, 16 + bytes);
+  for (size_t i = 0; i < 4; ++i) {
+    block[16 + bytes + i] = crc >> (8 * i);
+  }
+  CHECK(settings.Init(false, block));
+  CHECK(!settings.profile_locked());
+  ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
+  ui.LoadOptions();
+  CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 1);
+}
+
 void TestSynthStopClearsReverb() {
   test_checker.Start("TestSynthStopClearsReverb");
   extern uint16_t reverb_buffer[];
-  Rig r(false, true);
-  PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
-  r.StartAutomatic();
-  CHECK(synth_mode);
-  r.Tick(500, true);
-  bool used = false;
-  for (int i = 0; i < 32768 && !used; ++i) {
-    used = reverb_buffer[i] != 0;
+  for (int clear = 0; clear < 2; ++clear) {
+    for (int plaits = 0; plaits < 2; ++plaits) {
+      for (int path = 0; path < 3; ++path) {
+        Rig r(path == 1, true);
+        if (clear) {
+          SynthTailProfile();
+          if (!plaits && !path) {
+            settings.SaveState();
+            CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 1);
+            SynthTailProfile();  // Same profile after a saved-state reload.
+          }
+        } else {
+          CHECK(settings.profile().entry(FEATURE_SYNTH_TAIL).state ==
+              PROFILE_OFF);
+          CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 0);
+        }
+        settings.set_plaits_synth(plaits);
+        ui.LoadOptions();
+        PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
+        StartSelfPlay(&r, path == 1);
+        CHECK(synth_mode);
+        r.Tick(500, true);
+        bool used = false;
+        for (int i = 0; i < 32768 && !used; ++i) {
+          used = reverb_buffer[i] != 0;
+        }
+        CHECK(used);
+        const int starts = codec.starts_;
+        const int stops = codec.stops_;
+        if (path == 0) {
+          r.left = true;
+        } else if (path == 1) {
+          r.HoldMedia(false);
+        } else {
+          settings.set_spectral(true);
+        }
+        for (int i = 0; i < 2000 && synth_mode; ++i) {
+          r.Tick(1, true);
+        }
+        CHECK(!synth_mode && codec_transition_frames > 0);
+        CHECK(processor.spectral() == (path == 2));
+        CHECK(codec.starts_ == starts && codec.stops_ == stops);
+        CHECK(codec.idle_stops_ == 0);
+        bool empty = true;
+        for (int i = 0; i < 32768 && empty; ++i) {
+          empty = reverb_buffer[i] == 0;
+        }
+        CHECK(empty == bool(clear));
+      }
+    }
   }
-  CHECK(used);
-  r.left = true;
-  for (int i = 0; i < 2000 && synth_mode; ++i) {
-    r.Tick(1, true);
-  }
-  CHECK(!synth_mode && codec_transition_frames > 0);
-  bool clear = true;
-  for (int i = 0; i < 32768 && clear; ++i) {
-    clear = reverb_buffer[i] == 0;
-  }
-  CHECK(clear);
 }
 
 void TestPitchNotchLaw() {
@@ -1623,6 +1758,7 @@ int main() {
   }
   TestSynthWidthCallback();
   TestSynthPitchScaleChain();
+  TestCustomScaleCallbackChain();
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
   TestRequestedSelfPlay();

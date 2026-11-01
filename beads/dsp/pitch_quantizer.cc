@@ -61,6 +61,57 @@ const PitchScaleNotes kPitchScales[] = {
   { 49, 7 },
 };
 
+struct CustomPitchScale {
+  uint8_t size;
+  float period;
+  float notes[kMaxScaleDegrees];
+};
+
+static bool custom_bank;
+static CustomPitchScale custom_scales[kMaxPitchScaleId + 1];
+
+void ConfigurePitchScales(const PitchScaleDefinition* scales, size_t count,
+    bool custom) {
+  custom_bank = custom;
+  if (!custom) {
+    return;
+  }
+  for (size_t i = 0; i <= kMaxPitchScaleId; ++i) {
+    custom_scales[i].size = 0;
+  }
+  for (size_t i = 0; i < count && i < kMaxCustomScales; ++i) {
+    const PitchScaleDefinition& from = scales[i];
+    if (from.id < PITCH_SCALE_FIFTHS || from.id > kMaxPitchScaleId ||
+        !from.size || from.size > kMaxScaleDegrees) {
+      continue;
+    }
+    CustomPitchScale& to = custom_scales[from.id];
+    to.size = from.size;
+    to.period = from.period;
+    for (size_t j = 0; j < from.size; ++j) {
+      to.notes[j] = from.notes[j];
+    }
+  }
+}
+
+static float QuantizeDegrees(float pitch, const float* degrees,
+    size_t size, float period) {
+  const float root = floorf(pitch / period) * period;
+  float lower = root;
+  for (size_t i = 1; i <= size; ++i) {
+    const float upper = root + (i == size ? period : degrees[i]);
+    if (pitch <= 0.5f * (lower + upper)) {
+      return lower;
+    }
+    lower = upper;
+  }
+  return lower;
+}
+
+float QuantizeFifths(float pitch) {
+  return QuantizeDegrees(pitch, &kPitchScaleNotes[12], 2, 12.0f);
+}
+
 float QuantizePitch(float pitch, PitchScale scale) {
   if (scale == PITCH_SCALE_OFF) {
     return pitch;
@@ -68,8 +119,19 @@ float QuantizePitch(float pitch, PitchScale scale) {
   if (scale == PITCH_SCALE_CHROMATIC) {
     return ceilf(pitch - 0.5f);
   }
-  const float octave = floorf(pitch / 12.0f) * 12.0f;
+  if (custom_bank) {
+    if (scale < PITCH_SCALE_FIFTHS || scale > kMaxPitchScaleId ||
+        !custom_scales[scale].size) {
+      return pitch;
+    }
+    const CustomPitchScale& notes = custom_scales[scale];
+    return QuantizeDegrees(pitch, notes.notes, notes.size, notes.period);
+  }
+  if (scale < PITCH_SCALE_FIFTHS || scale >= PITCH_SCALE_LAST) {
+    return pitch;
+  }
   const PitchScaleNotes& notes = kPitchScales[scale - 1];
+  const float octave = floorf(pitch / 12.0f) * 12.0f;
   const float* degrees = &kPitchScaleNotes[notes.offset];
   float lower = octave;
   for (int i = 1; i <= notes.size; ++i) {

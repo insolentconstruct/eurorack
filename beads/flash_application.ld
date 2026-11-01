@@ -88,7 +88,7 @@ SECTIONS
   ASSERT(ADDR(.isr_vector) + SIZEOF(.isr_vector) <= 0x08020400,
       "Vectors overlap the profile")
   ASSERT(ADDR(.profile) == 0x08020400, "Profile address changed")
-  ASSERT(SIZEOF(.profile) == 512, "Profile size changed")
+  ASSERT(SIZEOF(.profile) == 4096, "Profile size changed")
 
 	.text :
 	{

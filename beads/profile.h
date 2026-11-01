@@ -34,14 +34,20 @@
 
 #include "stmlib/stmlib.h"
 
+#include "beads/dsp/pitch_quantizer.h"
+
 namespace beads {
 
-const size_t kProfileSize = 512;
+const size_t kProfileSize = 4096;
 const uint32_t kProfileMagic = 0x46505a44;
 const uint8_t kMaxProfileEntries = 82;
 const uint8_t kNoField = 255;
-const uint32_t kProfileReleaseId = 0xa51e8760;
+const uint32_t kProfileReleaseId = 0x20261101;
 const uint8_t kSettingsFormat = 0xc1;
+// Field 0 keeps 15 as not-set; field 13 explicitly selects custom scale 15.
+const uint8_t kPitchExtensionField = 13;
+const uint8_t kPitchExtensionScale = 15;
+const uint8_t kPitchExtensionValue = 1;
 // Page slot 0 is none; 1 to 12 are the options pages' knobs, in order.
 const uint8_t kNumPageSlots = 13;
 
@@ -85,6 +91,7 @@ enum ProfileFeature {
   FEATURE_SEED_LATCH,
   FEATURE_PITCH_NOTCH,
   FEATURE_TIME_SCAN,
+  FEATURE_SYNTH_TAIL,
   FEATURE_LAST
 };
 
@@ -134,13 +141,28 @@ class Profile {
     return entries_[feature].state == PROFILE_ADJUSTABLE;
   }
 
+  inline bool custom_bank() const { return custom_bank_; }
+  inline uint8_t scale_count() const { return scale_count_; }
+  inline const PitchScaleDefinition& scale(size_t index) const {
+    return scales_[index];
+  }
+  const PitchScaleDefinition* FindScale(uint8_t id) const;
+  bool HasScale(uint8_t id) const;
+  PitchScale FirstScale() const;
+  PitchScale NextScale(PitchScale current) const;
+
   ProfileFeature Page(uint8_t slot) const;
   ProfileFeature Amount(uint8_t slot) const;
   ProfileFeature Action(uint8_t slot) const;
 
  private:
   bool Parse(const volatile uint8_t* block);
+  void FactoryScales();
+  bool ParseScales(const volatile uint8_t* block, uint8_t count);
   ProfileEntry entries_[FEATURE_LAST];
+  bool custom_bank_;
+  uint8_t scale_count_;
+  PitchScaleDefinition scales_[kMaxCustomScales];
 
   DISALLOW_COPY_AND_ASSIGN(Profile);
 };

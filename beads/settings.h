@@ -183,12 +183,14 @@ class Settings {
 
   inline PitchScale pitch_scale() const {
     const uint8_t value = state_.pitch_scale;
-    return value >= (kOptionTag + 1) && value <= (kOptionTag + 9)
+    return value >= (kOptionTag + 1) && value <= (kOptionTag + kMaxPitchScaleId)
+        && profile_.HasScale(value - kOptionTag)
         ? PitchScale(value - kOptionTag) : PITCH_SCALE_OFF;
   }
 
   inline void set_pitch_scale(PitchScale scale) {
-    state_.pitch_scale = scale > PITCH_SCALE_OFF && scale < PITCH_SCALE_LAST
+    state_.pitch_scale = scale > PITCH_SCALE_OFF && scale <= kMaxPitchScaleId &&
+        profile_.HasScale(scale)
         ? kOptionTag + scale : 0;
   }
 

@@ -2095,9 +2095,11 @@ void TestOptionsPalette() {
       CHECK(v.color.r == 0 && v.color.g == 255 &&
           v.color.b == 0 && v.pulses == 0);
     }
-    CHECK(v.color.b == 0);
-    CHECK((v.color.r == 0 && v.color.g == 255) ||
-        (v.color.r == 255 && (v.color.g == 0 || v.color.g == 255)));
+    if (v.setting != OPTION_PITCH) {
+      CHECK(v.color.b == 0);
+      CHECK((v.color.r == 0 && v.color.g == 255) ||
+          (v.color.r == 255 && (v.color.g == 0 || v.color.g == 255)));
+    }
     for (size_t j = i + 1; j < kNumOptionValues; ++j) {
       const OptionValue& w = kOptionValues[j];
       if (v.setting == w.setting) {
@@ -2152,7 +2154,9 @@ void TestOptionsPalette() {
         break;
     }
     const OptionValue& indication = r.ui.options_.indication();
-    CHECK(&indication == &v);
+    if (v.setting != OPTION_PITCH || v.value < PITCH_SCALE_FIFTHS) {
+      CHECK(&indication == &v);
+    }
     CHECK(indication.setting == v.setting && indication.value == v.value);
     CHECK(indication.color.r == v.color.r && indication.color.g == v.color.g &&
         indication.color.b == v.color.b && indication.pulses == v.pulses);
@@ -2376,6 +2380,84 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->ui.Init(&r->settings, &r->gain, &r->calibration, &r->backup);
   r->ui.LoadOptions();
   r->Tick(40, true);
+}
+
+void ScaleFloat(uint8_t* p, float value) {
+  uint32_t bits;
+  memcpy(&bits, &value, sizeof(bits));
+  for (size_t i = 0; i < 4; ++i) {
+    p[i] = bits >> (8 * i);
+  }
+}
+
+void ScaleChecksum(uint8_t* b) {
+  const size_t size = 16 + uint16_t(b[6]) + (uint16_t(b[7]) << 8);
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+void TestCustomScalePersistenceAndLeds() {
+  test_checker.Start("TestCustomScalePersistenceAndLeds");
+  Rig r(false);
+  uint8_t b[kProfileSize];
+  CustomProfile(b, FEATURE_PITCH, 1, 0, 0);
+  b[6] = uint8_t(6 + 2 * kScaleRecordSize);
+  b[7] = (6 + 2 * kScaleRecordSize) >> 8;
+  b[12] = 1;
+  b[13] = 2;
+  for (int i = 0; i < 2; ++i) {
+    uint8_t* p = b + 22 + i * kScaleRecordSize;
+    memset(p, 0, kScaleRecordSize);
+    p[0] = i ? 3 : 15;
+    p[1] = 2;
+    p[2] = i ? 17 : 29;
+    p[3] = 83;
+    p[4] = 199;
+    p[5] = i ? PULSE_FAST : PULSE_DOUBLE;
+    memcpy(p + 12, "Custom", 6);
+    ScaleFloat(p + 8, 13.0f);
+    ScaleFloat(p + 48, 4.125f);
+  }
+  ScaleChecksum(b);
+  ApplyCustomProfile(&r, b);
+  r.settings.set_pitch_scale(PitchScale(15));
+  r.settings.SaveState();
+  CHECK(r.settings.pitch_scale() == 15);
+  CHECK(r.settings.state().pitch_scale == 0xaf);
+  CHECK((reinterpret_cast<const uint8_t*>(&r.settings.stored_state_)[10] & 15)
+      == 15);
+  CHECK(r.settings.stored_state_.padding[0] == kSettingsFormat);
+  // Cycle order is independent of the permanent saved ID.
+  uint8_t record[kScaleRecordSize];
+  memcpy(record, b + 22, sizeof(record));
+  memcpy(b + 22, b + 22 + sizeof(record), sizeof(record));
+  memcpy(b + 22 + sizeof(record), record, sizeof(record));
+  ScaleChecksum(b);
+  ApplyCustomProfile(&r, b);
+  CHECK(r.settings.pitch_scale() == 15);
+  CHECK(r.settings.profile().FirstScale() == 3);
+  r.Enter();
+  r.Down(SWITCH_SEED);
+  r.Up(SWITCH_SEED);
+  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  const OptionValue& indication = r.ui.options_.indication();
+  CHECK(indication.value == 3 && indication.color.r == 17);
+  CHECK(indication.color.g == 83 && indication.color.b == 199);
+  CHECK(indication.pulses == PULSE_FAST);
+  r.Tick(1100, true);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+  // Removing the saved ID cannot make that nibble select another scale.
+  r.settings.set_pitch_scale(PitchScale(15));
+  r.settings.SaveState();
+  b[6] = 6 + kScaleRecordSize;
+  b[7] = 0;
+  b[13] = 1;
+  ScaleChecksum(b);
+  ApplyCustomProfile(&r, b);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_OFF);
+  CHECK(r.settings.profile().FirstScale() == PITCH_SCALE_MAJOR);
 }
 
 void TestProfilePages() {
@@ -2837,6 +2919,7 @@ int main() {
   TestStorage();
   TestDsp();
   TestProfilePages();
+  TestCustomScalePersistenceAndLeds();
   TestDefaultLedIdentity();
   TestBetaOptionsLeds();
   TestBetaOptionPages();

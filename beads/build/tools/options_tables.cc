@@ -42,51 +42,80 @@ const char* const kOptionNames[] = {
   "Synth start", "Random intervals",
   "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
   "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
-  "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan"
+  "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan",
+  "Synth reverb tail"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
-struct ValueNames {
-  const char* name;
-  const char* color;
+const char* const kValueNames[] = {
+  "Not used yet",
+  "Off",
+  "Chromatic",
+  "Fifths",
+  "Major",
+  "Minor",
+  "Pentatonic major",
+  "Pentatonic minor",
+  "Pelog",
+  "Raag Bhairav",
+  "Raag Shri",
+  "Stock",
+  "Clouds-style",
+  "Auto (Stock)",
+  "Disabled",
+  "Wide/smooth filter",
+  "Granular (Stock)",
+  "Spectral",
+  "Stock",
+  "Fast release",
+  "Off",
+  "Stock",
+  "Evolving",
+  "Beads (Stock)",
+  "Plaits",
+  "Off",
+  "Snap",
+  "Snap and trigger",
+  "Automatic (Stock)",
+  "Manual",
+  "Free (Stock)",
+  "Fifths and octaves",
+  "100%",
+  "66%",
+  "33%",
+  "Off",
+  "Ignore",
+  "Sync",
+  "Add",
+  "Random",
+  "Scan",
 };
-const ValueNames kValueNames[] = {
-  { "Not used yet", "unchanged" },
-  { "Off", "green" },
-  { "Chromatic", "yellow" },
-  { "Fifths and octaves", "red" },
-  { "Major", "green" },
-  { "Minor", "yellow" },
-  { "Major pentatonic", "red" },
-  { "Minor pentatonic", "green" },
-  { "Pelog", "yellow" },
-  { "Raag Bhairav", "red" },
-  { "Raag Shri", "yellow" },
-  { "Stock", "green" },
-  { "Clouds-style", "yellow" },
-  { "Auto (Stock)", "green" },
-  { "Disabled", "yellow" },
-  { "Wide/smooth filter", "red" },
-  { "Granular (Stock)", "green" },
-  { "Spectral", "yellow" },
-  { "Stock", "green" },
-  { "Fast release", "yellow" },
-  { "Off", "red" },
-  { "Stock", "green" },
-  { "Evolving", "yellow" },
-  { "Beads (Stock)", "green" },
-  { "Plaits", "yellow" },
-  { "Off", "green" },
-  { "Snap", "yellow" },
-  { "Snap and trigger", "red" },
-  { "Automatic (Stock)", "green" },
-  { "Manual", "yellow" },
-  { "Free (Stock)", "green" },
-  { "Fifths and octaves", "yellow" },
-  { "100%", "green" }, { "66%", "yellow" }, { "33%", "red" },
-  { "Off", "green" }, { "Ignore", "yellow" },
-  { "Sync", "red" }, { "Add", "green" },
-  { "Random", "green" }, { "Scan", "yellow" },
-};
+
+const char* ColorName(const beads::Leds::Color& color) {
+  struct NamedColor {
+    beads::Leds::Color color;
+    const char* name;
+  };
+  static const NamedColor colors[] = {
+    { { 0, 0, 0 }, "unchanged" },
+    { { 0, 255, 0 }, "green" },
+    { { 255, 255, 0 }, "yellow" },
+    { { 255, 0, 0 }, "red" },
+    { { 255, 64, 32 }, "coral" },
+    { { 255, 160, 0 }, "amber" },
+    { { 32, 96, 255 }, "blue" },
+    { { 0, 220, 160 }, "teal" },
+    { { 160, 48, 255 }, "violet" },
+    { { 255, 32, 144 }, "pink" },
+  };
+  for (size_t i = 0; i < sizeof(colors) / sizeof(colors[0]); ++i) {
+    const beads::Leds::Color& candidate = colors[i].color;
+    if (candidate.r == color.r && candidate.g == color.g &&
+        candidate.b == color.b) {
+      return colors[i].name;
+    }
+  }
+  return "unknown";
+}
 
 }  // namespace
 
@@ -118,13 +147,13 @@ int main(int argc, char** argv) {
               1000.0 / (value.pulses == 1
                   ? kOptionsSlowPeriod : kOptionsFastPeriod));
         } else {
-          snprintf(pulse, sizeof(pulse), "2 yellow pulses / %.3f s",
+          snprintf(pulse, sizeof(pulse), "2 pulses / %.3f s",
               kOptionsPulsePeriod / 1000.0);
         }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
             kPageNames[kOptionPages[page].led_index], kOptionKnobNames[knob],
-            kOptionNames[setting], kValueNames[i].name,
-            kValueNames[i].color, pulse);
+            kOptionNames[setting], kValueNames[i],
+            ColorName(value.color), pulse);
       }
     }
   }
