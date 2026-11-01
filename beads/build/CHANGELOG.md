@@ -10,7 +10,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 - A damaged calibration record no longer resets the calibration and starts the factory test; a record with no saved settings after it keeps the calibration and resets only the settings (#148).
 - Settings and frozen-buffer saves are skipped while the module's 3.3 V supply is below about 2.8 V, so flash is never erased or written out of spec. A save cut short is handled like a power cut; the next save completes it (#165).
 - The build refuses an application large enough to reach the frozen buffer and settings flash (#155).
-- Quality, mono/stereo and synth changes now fade the output out over 10 ms instead of cutting it at full level, and fade back in afterwards. The synth's reverb tail no longer plays on after the synth stops (#53).
+- Quality, mono/stereo and synth changes now fade the output out over 10 ms instead of cutting it at full level, and fade back in afterwards. The stock synth reverb tail is retained when the synth stops (#53).
 - Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Each flash operation is now checked, and settings are only written onto erased flash (#149).
 - Quality, mono/stereo and synth changes that keep the sample rate no longer stop the converter, which removes the pop it made; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it (#53).
 - Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, from 10 s up to 320 s; a completed save, a minute unfrozen or a reboot resets it (#56).

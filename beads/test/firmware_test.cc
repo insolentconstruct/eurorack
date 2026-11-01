@@ -935,9 +935,10 @@ void TestCodecRestartFade() {
   r.Settle();
 }
 
-// Stopping the synth clears the reverb memory it shares.
-void TestSynthStopClearsReverb() {
-  test_checker.Start("TestSynthStopClearsReverb");
+// Stock reverb memory keeps decaying after the synth stops. Same-rate mode
+// changes still fade and keep the converter running.
+void TestSynthStopPreservesReverb() {
+  test_checker.Start("TestSynthStopPreservesReverb");
   extern uint16_t reverb_buffer[];
   Rig r;
   PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
@@ -945,14 +946,36 @@ void TestSynthStopClearsReverb() {
   CHECK(synth_mode);
   r.Tick(500);
   bool used = false;
-  for (int i = 0; i < 32768 && !used; ++i) used = reverb_buffer[i] != 0;
+  for (int i = 0; i < 32768 && !used; ++i) {
+    used = reverb_buffer[i] != 0;
+  }
   CHECK(used);
+  const int starts = codec.starts_;
+  const int stops = codec.stops_;
   r.left = true;
-  for (int i = 0; i < 2000 && synth_mode; ++i) r.Tick(1);
+  for (int i = 0; i < 2000 && synth_mode; ++i) {
+    r.Tick(1);
+  }
   CHECK(!synth_mode && codec_transition_frames > 0);
-  bool clear = true;
-  for (int i = 0; i < 32768 && clear; ++i) clear = reverb_buffer[i] == 0;
-  CHECK(clear);
+  CHECK(codec.callback_ == &Process);
+  CHECK(codec.starts_ == starts && codec.stops_ == stops);
+  used = false;
+  for (int i = 0; i < 32768 && !used; ++i) {
+    used = reverb_buffer[i] != 0;
+  }
+  CHECK(used);
+  std::vector<int32_t> peaks;
+  r.peaks = &peaks;
+  r.Settle();
+  r.peaks = NULL;
+  CHECK(!codec_fade && codec_fade_gain == 1.0f);
+  CHECK(codec_transition_frames == 0 && codec.callback_ == &Process);
+  CHECK(!peaks.empty());
+  const int32_t tail_peak = peaks.empty() ? 0
+      : *std::max_element(peaks.begin(), peaks.end());
+  printf("Synth stop: tail peak %d, converter restarts %d\n",
+      tail_peak, codec.starts_ - starts);
+  CHECK(tail_peak > 0x10000);
 }
 
 int main() {
@@ -975,6 +998,6 @@ int main() {
   TestPitchChain();
   TestCodecKeepsClocks();
   TestCodecRestartFade();
-  TestSynthStopClearsReverb();
+  TestSynthStopPreservesReverb();
   return test_checker.failures() ? 1 : 0;
 }

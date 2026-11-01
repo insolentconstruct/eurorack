@@ -482,10 +482,6 @@ void MonitorStateChange() {
       // elapsed = system_clock.milliseconds();
       codec.Pause();
       processor.Configure(media, mono);
-      if (synth_mode) {
-        // The synth's reverb tail would otherwise play on.
-        processor.ClearReverb();
-      }
       ConfigureAndStartCodec(false, mono_changed || synth_mode);
     }
     synth_mode_start_time = 0;

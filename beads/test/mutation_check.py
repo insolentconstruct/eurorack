@@ -412,16 +412,21 @@ cases = [
     '    if (recovery_mode && status == STORAGE_OK) {',
     '    if (false) {'),
   # #53: codec restarts fade out first, FREEZE cancels the fade, and leaving
-  # the synth clears its reverb.
+  # the synth keeps its stock reverb tail.
   ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
     '      if (!FadedOut()) {\n        return;\n      }\n      // elapsed',
     '      // elapsed'),
   ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
     '    codec_fade = false;\n    return;',
     '    return;'),
-  ('TestSynthStopClearsReverb', 'firmware', 'beads/beads.cc',
-    '        processor.ClearReverb();\n',
-    ''),
+  ('TestSynthStopPreservesReverb', 'firmware', 'beads/beads.cc',
+    '      processor.Configure(media, mono);\n'
+    '      ConfigureAndStartCodec(false, mono_changed || synth_mode);',
+    '      processor.Configure(media, mono);\n'
+    '      if (synth_mode) {\n'
+    '        processor.ClearReverb();\n'
+    '      }\n'
+    '      ConfigureAndStartCodec(false, mono_changed || synth_mode);'),
 ]
 GUARD = 'const int16_t wav_integrated_waves[] = {'
 # A case with several edits gives tuples of equal length.
