@@ -47,6 +47,28 @@ Changes from master, one line per change:
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 
+## Install by audio
+
+Use the WAV from the release's WAV ZIP. Keep the file at its supplied level;
+do not normalize it or add EQ, effects or automatic gain control. These steps
+follow the [Mutable Instruments manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware).
+
+1. Power off. Disconnect every CV input/output and disconnect speakers or
+   monitors from the playback interface. Disable notification sounds and other
+   audio playback: the update signal is loud and can damage hearing.
+2. Connect the playback interface to IN L and put TIME near its middle position.
+   Power on while holding FREEZE.
+3. Play the complete WAV. Adjust TIME for a yellow recording-quality LED, which
+   indicates the right input level. A consumer line output may need maximum gain.
+4. Beads restarts automatically at the end. If it does not, repeat from the
+   beginning. If all LEDs blink red, press FREEZE and retry with higher playback
+   gain. If that fails, try another computer or audio interface with no effects
+   in the signal path.
+
+The combo ZIP is for an external programmer and includes the bootloader. Its
+HEX carries the load address; its BIN goes at 0x08000000. Erase only sectors
+being written: a full-chip erase also removes calibration and settings.
+
 ## Build and verify
 
 Initialize the two required submodules, then run from the repository root:
