@@ -44,9 +44,8 @@ const int kStartOffset = 64 + 4;  // kMinDelay in delay_controller.cc.
 typedef DelayLine<RESOLUTION_16_BIT, kMaxDelay, 2> Line;
 static uint8_t line_data[3 * 262144 + 2048];
 
-// Render delay and check every tap. SEED pulses every `period` samples from
-// `offset` (period 0: no external clock, free-running). Frozen from
-// `freeze_at`. Returns the number of sounding taps while frozen.
+// SEED uses period/offset (0 = free-running); freeze at freeze_at.
+// Return the count of sounding frozen taps.
 int Check(int period, int offset, int freeze_at, float density, float fm) {
   DelayController c;
   c.Init(48000, kMaxDelay);
@@ -429,11 +428,8 @@ void TestDelayRandomModulation() {
   CHECK(fabsf(sequence[1500] - sequence[0]) > 0.01f);
 }
 
-// The grains read the stored integers and scale once; the taps read floats.
-// Both must give the same samples on every line format, across the bank edges
-// (1024-byte banks: every format, mono and stereo, spans several) and the wrap
-// of the write pointer. Exact bit identity on the Cortex-M7 is checked by the
-// Seed3 output hashes; here a compiler that fuses is allowed to differ.
+// Compare integer grains with float taps across formats, bank edges and wraps.
+// Seed3 requires bit identity; host compilers may fuse and differ.
 template<Resolution resolution, int num_channels>
 void CheckHermiteRaw(uint32_t* seed) {
   typedef DelayLine<resolution, 1500, num_channels, 1024, 6> SmallLine;

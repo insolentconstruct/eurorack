@@ -72,10 +72,8 @@ struct Bracket {
   uint32_t histogram[kHistogramBins];
 };
 
-// Main-loop spectral frames of one channel. Frame times are DWT cycles from
-// before STFT::Buffer to after it: wall includes interrupts, exclusive
-// subtracts the callback bracket that interrupted the frame. Discontinuities
-// count frames that do not follow the channel's last one (an STFT restart).
+// Time STFT::Buffer per channel: wall cycles and wall minus audio callbacks.
+// Discontinuities count nonconsecutive frames, including STFT restarts.
 struct FrameChannel {
   uint32_t generation;
   uint32_t produced;

@@ -76,10 +76,8 @@ void TestSignal(size_t t, float sample_rate, FloatFrame* frame) {
 
 #ifdef USE_ARM_FFT
 
-// ShyFFT's spectrum is all real parts then all imaginary parts, with the
-// Nyquist bin in slot N/2; CMSIS interleaves them, with Nyquist in slot 1.
-// The imaginary parts have opposite signs, and only CMSIS' inverse scales
-// by 1/N.
+// ShyFFT: split real/imaginary, Nyquist N/2; CMSIS: interleaved, Nyquist 1.
+// Signs differ; only CMSIS inverse scales by 1/N.
 void TestFftConventions() {
   test_checker.Start("TestFftConventions");
   static float frame[kFftSize];

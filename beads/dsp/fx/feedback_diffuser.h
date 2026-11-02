@@ -61,11 +61,8 @@ const size_t kFeedbackClearSlice = 512;  // Samples per idle block
 // smallest subnormal and stays there; the loop state is cleared below this.
 const float kFeedbackDenormal = 1.0e-20f;
 
-// Loop gain follows FEEDBACK up to the knee, then rises at a reduced slope to
-// a ceiling of 0.7. The loop output is matched to the level of its input by a
-// slow power tracker, and mixed with the input at constant power; the wet
-// share follows a smooth step of FEEDBACK, so that the attacks of the input
-// are mostly gone at high settings and untouched at low ones.
+// Feedback rises slowly above the knee to 0.7; power-match the mix.
+// Smooth wet gain preserves low-FEEDBACK attacks and smears them at high.
 const float kFeedbackLoopGain = 0.85f;
 const float kFeedbackLoopKnee = 0.51f;
 const float kFeedbackLoopSlope = 0.56f;

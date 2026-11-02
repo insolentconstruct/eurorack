@@ -1370,9 +1370,8 @@ double RunSquare(Rig* r, int blocks) {
   return energy;
 }
 
-// Engine changes fade out, clear the recording and fade back in. A frozen
-// buffer saved to flash is kept, and returns with the granular engine.
-// Spectral never starts the wavetable synth.
+// Engine fades clear recording; granular restores saved freezes.
+// Spectral must never start wavetable synthesis.
 void TestSpectralEngine() {
   test_checker.Start("TestSpectralEngine");
   extern float reverb_style_gain;

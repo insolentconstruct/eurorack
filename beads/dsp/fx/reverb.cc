@@ -35,10 +35,8 @@ namespace beads {
 const float kAllPassCoefficient = 0.625f;
 
 void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
-  // This is the Griesinger topology described in the Dattorro paper
-  // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
-  // Modulation is applied in the loop of the first diffuser AP for additional
-  // smearing; and to the two long delays for a slow shimmer/chorus effect.
+  // Dattorro/Griesinger: four input APs, then two 2AP+delay blocks in a loop.
+  // Modulate the first diffuser for smear and long delays for shimmer.
   typedef E::Reserve<113,
     E::Reserve<162,
     E::Reserve<241,

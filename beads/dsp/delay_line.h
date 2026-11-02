@@ -437,9 +437,8 @@ class DelayLine {
     return (((a * t) - b_neg) * t + c) * t + x[1];
   }
 
-  // The same polynomial on the stored integers, scaled once at the end, with
-  // the same rounding steps as the float code: coefficients are doubled and
-  // the 0.5 moves into t_half.
+  // Match float rounding on stored integers, then scale once at the end.
+  // Double the coefficients and move 0.5 into t_half.
   inline FloatFrame ReadHermite(int i, float t, Selector<1> selector) const {
     IntFrame x[4];
     LoadQuad<RawAccess>(i, x);

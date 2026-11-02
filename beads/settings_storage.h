@@ -106,9 +106,8 @@ class ChunkStorage {
  public:
   ChunkStorage() { }
   ~ChunkStorage() { }
-  // Loads the latest saved data. A new module's blank sector is written;
-  // anything else is left for the caller to write once it has chosen the
-  // calibration.
+  // Initialize only a blank sector; otherwise load without writing.
+  // The caller chooses calibration before any later write.
   StorageStatus Init(PersistentData* persistent_data, StateData* state_data) {
     return Init(persistent_data, state_data, false);
   }
@@ -210,9 +209,8 @@ class ChunkStorage {
   inline bool storage_damaged() const { return locked_; }
 
  private:
-  // Reads the sector as stmlib's loader does: the calibration, then the
-  // states up to the first one that fails its checks or can't be read, as
-  // an interrupted save leaves it. Nothing past that one is read.
+  // Read CALI, then STAT records until the first invalid or unreadable record.
+  // Never scan past a partial save.
   StorageStatus Load(
       PersistentData* persistent_data,
       StateData* state_data,

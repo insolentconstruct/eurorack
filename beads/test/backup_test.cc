@@ -325,11 +325,8 @@ void TestCorruption() {
   printf("PASS corrupted audio or header is refused\n");
 }
 
-// An old, complete backup is on flash and the frozen flag is set but stale
-// (autosave was off at power-up). The new backup loses power after `budget`
-// flash operations, with a half-done erase if `half`; at the next power-up,
-// either complete backup may load, never a mix. The old backup has no CRC
-// if `stock` wrote it.
+// With autosave off, interrupt a save over an old backup (no CRC for stock).
+// Reboot must load one complete version, even after a partial erase.
 void CheckPowerLoss(bool half, bool stock) {
   int checked = 0, loaded[3] = { 0, 0, 0 };
   for (int budget = 0; budget <= 24010; budget += budget < 40 ? 1 :

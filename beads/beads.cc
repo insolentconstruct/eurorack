@@ -58,10 +58,8 @@ uint8_t delay_buffer_1[512 * 1024] __attribute__ ((section (".ramd1")));
 uint8_t delay_buffer_2[256 * 1024] __attribute__ ((section (".ramd2")));
 uint16_t reverb_buffer[32768] __attribute__ ((section (".ramd3")));
 
-// The Plaits voices borrow the first delay bank in synth mode, when nothing
-// else reads or writes it. Leaving synth mode clears every delay bank
-// (Processor::Configure) before the granular processor or the buffer backup
-// use it again. Bank 0's last byte, which 12-bit media never clear, stays out.
+// Plaits borrows bank 0; Configure clears it before other users return.
+// Exclude its last byte: 12-bit media never clear it.
 STATIC_ASSERT(kPlaitsSynthRamSize < 256 * 1024, plaits_voices_in_bank_0);
 
 BackgroundBufferBackup background_buffer_backup;

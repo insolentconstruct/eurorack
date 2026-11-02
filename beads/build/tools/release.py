@@ -76,9 +76,7 @@ def proof(out):
         corrupt[30*SAMPLE_RATE:31*SAMPLE_RATE] = 0
         corrupted = work / 'corrupted.wav'
         wav_write(corrupted, corrupt)
-        # Truncated ending: must not decode. The encoder ends with the pause
-        # after the last block (3 s if it starts a flash sector, else 0.2 s)
-        # and 5 s of outro; cut all but 0.1 s of that.
+        # Keep only 0.1 s of the final pause/outro; decoding must fail.
         last_block = 0x08020000 + payload_size - BLOCK_SIZE
         tail = 5.0 + (3.0 if last_block % 0x20000 == 0 else 0.2)
         truncated = work / 'missing-eot.wav'

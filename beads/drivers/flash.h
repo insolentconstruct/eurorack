@@ -51,9 +51,8 @@ class Flash {
   Flash() { }
   ~Flash() { }
 
-  // Starts the programmable voltage detector at level 6: 2.69 to 2.83 V
-  // falling, 100 mV of hysteresis. Programs at x64 parallelism are rated
-  // down to 1.8 V. Not an option byte: nothing persists.
+  // PVD level 6: 2.69-2.83 V falling, 100 mV hysteresis; no option-byte write.
+  // Flash x64 programming is rated down to 1.8 V.
   static void Init() {
     MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);
     SET_BIT(PWR->CR1, PWR_CR1_PVDEN);
@@ -65,9 +64,8 @@ class Flash {
     return READ_BIT(PWR->CSR1, PWR_CSR1_PVDO);
   }
 
-  // Copies size bytes (a multiple of 4, at most kFlashMaxReadSize) from bank
-  // 2 to a word-aligned destination. Returns false if the read hit an
-  // uncorrectable ECC error; the words read are then undefined.
+  // Read <= kFlashMaxReadSize bank-2 bytes into aligned words; size is 4n.
+  // Uncorrectable ECC returns false and leaves the copied words undefined.
   static bool Read(uint32_t address, void* destination, size_t size) {
     // Read the flash itself, not lines cached before an erase or program.
     Invalidate(address, size);

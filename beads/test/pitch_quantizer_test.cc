@@ -144,9 +144,8 @@ void TestRandomizedPitchGrid() {
   }
 }
 
-// Random intervals (#8): counter-clockwise, the random offset lands on fifths
-// and octaves around the knob's pitch, and the scale still applies; clockwise
-// it stays continuous.
+// CCW random pitch uses fifths/octaves, then scale quantization (#8).
+// CW stays continuous.
 void TestRandomIntervals() {
   test_checker.Start("TestRandomIntervals");
   RandomizedParameter p;

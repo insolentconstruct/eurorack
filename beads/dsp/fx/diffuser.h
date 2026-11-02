@@ -42,11 +42,8 @@ const size_t kDiffuserBufferSize = 2048;
 const float kDiffuserModulationDepth = 16.0f;  // Samples
 const float kAllPassCoefficient = 0.625f;
 
-// Delay lines laid out by FxEngine::Reserve, on a 16-bit buffer of a power of
-// two. The engine only lays the lines out; the buffer is accessed here, so that
-// the oldest sample ("tail") of every line of a sample can be read before any
-// of its writes: the compiler cannot move a load above an earlier store that
-// may alias, and the reads do not depend on the writes.
+// FxEngine lays out power-of-two, 16-bit delay lines; access stays here.
+// Read every tail before writing to avoid alias-dependent load ordering.
 template<size_t size>
 class AllPassMemory {
  public:
@@ -114,9 +111,8 @@ class Diffuser {
     amount_ = amount;
   }
 
-  // The body of Process. With modulated set, the longest all-pass of each
-  // channel is read through an interpolated tap that moves by up to
-  // kDiffuserModulationDepth samples; modulation is 0..1.
+  // Modulation 0..1 moves each channel's longest all-pass tap by up to
+  // kDiffuserModulationDepth samples, using interpolation.
   template<bool modulated>
   void Run(FloatFrame* in_out, size_t size, float modulation);
 
