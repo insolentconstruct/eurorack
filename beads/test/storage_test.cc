@@ -1590,10 +1590,13 @@ void TestProfileDormantAmounts() {
     CHECK(s.Init(false));
     s.SaveState();
     for (size_t i = 0; i < sizeof(unused); ++i) {
-      // Field 13 now records the adjustable pitch extension; its low nibble
-      // and all unrelated dormant fields still retain their original bits.
-      CHECK(bytes[unused[i]] == (unused[i] == 19 ? 0x0e : 0x8e));
+      // Brightness/latch reject invalid nibbles; field 13 is pitch extension.
+      // All unrelated dormant fields still retain their original bits.
+      CHECK(bytes[unused[i]] == (unused[i] == 18 ? 0 :
+          unused[i] == 19 ? 0x0e : 0x8e));
     }
+    CHECK(s.FeatureValue(FEATURE_BRIGHTNESS) == 0);
+    CHECK(s.FeatureValue(FEATURE_SEED_LATCH) == 0);
   }
 }
 
