@@ -1170,8 +1170,10 @@ cases = [
     'if (!level) {',
     'if (false) {'),
   ('TestBetaOptionPages', 'options', 'beads/options.cc',
-    'while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f)',
-    'while (value < 1 && pot > float(value + 1) / 3.0f + 0.025f)'),
+    'while (value < 2 &&\n'
+    '                pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand)',
+    'while (value < 1 &&\n'
+    '                pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand)'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'leds_.Scale(level);',
     'if (mode_ != MODE_STORAGE_WARNING) leds_.Scale(level);'),
