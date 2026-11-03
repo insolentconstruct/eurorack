@@ -84,6 +84,7 @@ const float kOptionsHalfHigh = 0.53f;
 const float kOptionsZoneLow = 1.0f / 3.0f;
 const float kOptionsZoneHigh = 2.0f / 3.0f;
 const float kOptionsZoneBand = 0.03f;
+const float kOptionsProfileZoneBand = 0.025f;
 const uint32_t kOptionsSettleTime = 1000;
 const uint32_t kOptionsFlashTime = 100;
 const uint32_t kOptionsSlowPeriod = 1024;

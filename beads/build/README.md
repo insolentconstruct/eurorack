@@ -18,7 +18,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
-4 / all three       Not used yet  Not used yet      Limiter
+4 / all three       LED brightness  SEED latch      Limiter
 
 Changes save about a second after turning stops. Wait before power-off. Hold [M] for three seconds or press another button to close; mix controls catch up smoothly. On page 1 with Scale selected, SEED taps step the scale instead of closing. The page LED flashes on entry, close and save. First values are steady green; later values use yellow, red and blinking colours. See [OPTIONS.md](docs/OPTIONS.md) for every value.
 
@@ -82,8 +82,8 @@ Final-candidate profiles, custom scales, LED indications and tail choices still 
 - Live assignment LEDs follow CV magnitude, retaining assignment patterns and stock weighting.
 - FREEZE during saves keeps its LED fully lit.
 - Input attenuation extends [A]+FEEDBACK to silence, with unity near noon, marked green, and gain above. Saved gain immediately uses this range. Automatic gain never attenuates; hold [A] to restart.
-- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds with preview; warnings dim too. The default is 100%; there is no power-on gesture.
-- SEED latch selects Off, Ignore, Sync or Add in quarters. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync restarts grain-clock phase per edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Unpatched attack triggers still work.
+- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds with preview; warnings dim too. The default is 100%; select it with FEEDBACK on page 4. There is no power-on gesture.
+- SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync restarts grain-clock phase per edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Unpatched attack triggers still work.
 - TIME modulation selects Random below noon or Scan above. With TIME CV unpatched, its attenurandomizer scans backwards or forwards, stopping at noon, taking four seconds per buffer at either end. TIME offsets the wrapping position. Patching CV restores normal control and pauses scanning, as do delay, spectral and synth. Position is not saved.
 
 

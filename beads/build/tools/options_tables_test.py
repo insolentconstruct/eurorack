@@ -39,7 +39,7 @@ import zipfile
 sys.path.insert(0, str(Path("beads/build/tools").resolve()))
 import release_package
 from release_package import package
-from options_guide import SHORT, WIDTH_ROWS, indication, generate
+from options_guide import SHORT, WIDTH_ROWS, indication, generate, read_tsv, zone_bands
 
 # Words and units that belong in FEATURES.md, not in text a musician reads.
 STYLE_BANNED = ("%", " Hz", " ms", "dead band", "threshold", "qualified")
@@ -187,7 +187,9 @@ for setting in ("Delay mode", "Attacks", "Limiter"):
 for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
                 "Synth start", "Random pitch steps"):
     assert len(values[setting]) == 2, setting
-assert len(values) == 10 and "Stereo width" not in values
+assert len(values["LED brightness"]) == 3
+assert len(values["SEED latch"]) == 4
+assert len(values) == 12 and "Stereo width" not in values
 # [A]+DRY/WET width keeps its meter on the guides.
 assert [indication(row) for row in WIDTH_ROWS] == [
     "green; steady", "green → yellow → red"
@@ -221,7 +223,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
             root = ET.fromstring(generated)
             assert root.tag == "{http://www.w3.org/2000/svg}svg"
             if name == "options-guide.svg":
-                assert root.attrib["width"] == "190mm"
+                assert 170 <= float(root.attrib["width"].removesuffix("mm")) <= 190
                 assert float(root.attrib["height"].removesuffix("mm")) <= 254
             else:
                 assert root.attrib["width"] == "390"
@@ -271,8 +273,9 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
                 f"{' / '.join(indications)} |"
             ) in page_text
     # User-facing prose carries no exact numbers; those live in FEATURES.md.
+    prose = re.sub(r"(?<![0-9])(100|66|33)%", "", markdown)
     for banned in STYLE_BANNED:
-        assert banned not in markdown, ("OPTIONS.md", banned)
+        assert banned not in prose, ("OPTIONS.md", banned)
     for phrase in ("Wide/smooth filter", "Raag Shri", "about a second and a half",
                    "each stored value in turn", "about two seconds",
                    "hold [A] and turn DRY/WET"):
@@ -320,6 +323,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         assert "Scale (tap SEED to step through):" in labels
         assert all(float(node.attrib["font-size"]) >= 15 for node in texts)
         flat = " ".join(labels)
+        flat = re.sub(r"(?<![0-9])(100|66|33)%", "", flat)
         for phrase in STYLE_BANNED:
             assert phrase not in flat, (name, phrase)
         assert {"[A]", "CV assign", "[M]"} <= set(labels)
@@ -338,6 +342,13 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         "a second",
     ):
         assert phrase in section, phrase
+    _, pages = read_tsv(export)
+    for knob, count in (("FEEDBACK", 3), ("DRY/WET", 4)):
+        bands = zone_bands(pages["4"][knob])
+        assert len(bands) == count - 1
+        for index, (low, high) in enumerate(bands, 1):
+            assert abs((low + high) / 2 - index / count) < 1e-6
+            assert abs((high - low) / 2 - 0.025) < 1e-6
     # The exact constants belong in FEATURES.md, built from the same export.
     constants = {}
     for line in export.split("\nconstant\tname\tvalue\n")[1].splitlines():
@@ -501,6 +512,8 @@ for feature, row in zip(catalog["features"], exported):
     assert bool(feature["actions"]) == bool(action)
     assert feature.get("stateless", False) == bool(stateless)
     assert ("Adjustable" in feature["states"]) == bool(page or amount or action)
-    if identity >= 15:
+    if identity in (18, 21):
+        assert feature["default_state"] == "Adjustable" and feature["default"] == 0
+    elif identity >= 15:
         assert feature["default_state"] == "Off" and feature["default"] == 0
 print("Profile page catalogue: PASS")

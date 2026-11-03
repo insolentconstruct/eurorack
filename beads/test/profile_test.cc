@@ -63,6 +63,14 @@ void TestDefaultPageTwoAndExplicitLayouts() {
   CHECK(kFeatureDefinitions[FEATURE_REVERB].field == 1);
   CHECK(kFeatureDefinitions[FEATURE_DELAY].field == 2);
   CHECK(kFeatureDefinitions[FEATURE_FROZEN].field == 5);
+  CHECK(embedded.Page(10) == FEATURE_BRIGHTNESS);
+  CHECK(embedded.Page(11) == FEATURE_SEED_LATCH);
+  CHECK(fallback.Page(10) == FEATURE_BRIGHTNESS);
+  CHECK(fallback.Page(11) == FEATURE_SEED_LATCH);
+  CHECK(embedded.entry(FEATURE_BRIGHTNESS).value == 0);
+  CHECK(embedded.entry(FEATURE_SEED_LATCH).value == 0);
+  CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].field == 10);
+  CHECK(kFeatureDefinitions[FEATURE_SEED_LATCH].field == 11);
   uint8_t b[kProfileSize];
   Template(b);
   for (size_t i = 0; i < b[5]; ++i) {
@@ -218,6 +226,8 @@ void TestProfileParser() {
   Checksum(b);
   CHECK(p.Init(b));
   CHECK(p.Page(1) == FEATURE_NONE);
+  CHECK(p.Page(10) == FEATURE_NONE);
+  CHECK(p.Page(11) == FEATURE_NONE);
 }
 
 void TestProfileKinds() {

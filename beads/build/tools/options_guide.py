@@ -184,6 +184,11 @@ def zone_bands(rows):
     if setting == "Stereo width":
         return [(CONSTANTS["kWidthStockThreshold"],
                  CONSTANTS["kWidthEnabledThreshold"])]
+    if setting in ("LED brightness", "SEED latch"):
+        count = len(rows)
+        band = CONSTANTS["kOptionsProfileZoneBand"]
+        return [(i / count - band, i / count + band)
+                for i in range(1, count)]
     if len(rows) == 2:
         return [(CONSTANTS["kOptionsHalfLow"],
                  CONSTANTS["kOptionsHalfHigh"])]
@@ -754,7 +759,7 @@ def svg(pages, mobile=False):
                     margin + 660, y + heights[2] - 14, 40, True, part="page"
                 ) - y
             if page == "4":
-                # The gestures fill the two knobs not used yet.
+                # Keep the off-page gestures beneath the first two controls.
                 for i in range(2):
                     heights[i] = d.gestures(
                         margin + i * 330, y + heights[i] + 14, 40, True,
@@ -772,10 +777,12 @@ def svg(pages, mobile=False):
     if mobile:
         physical = f'width="390" height="{height}"'
     else:
-        print_height = 190 * height / width
-        physical = f'width="190mm" height="{print_height:.2f}mm"'
+        print_width = min(190, 253.9 * width / height)
+        print_height = print_width * height / width
+        physical = (f'width="{print_width:.2f}mm" '
+                    f'height="{print_height:.2f}mm"')
     assert (
-        mobile or height / width < 254 / 190
+        mobile or print_width >= 170 and print_height < 254
     ), f"Exceeds Letter-safe print area: {height}x{width}"
     return SVG_HEADER.format(physical=physical, width=width, height=height) + (
         "\n".join(d.items) + "\n</g>\n</svg>\n"

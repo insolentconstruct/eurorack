@@ -36,7 +36,7 @@ const OptionPage kOptionPages[kNumOptionPages] = {
   { 0, { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS } },
   { 1, { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB } },
   { 2, { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START } },
-  { MIX_PARAMETER_LAST, { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER } }
+  { MIX_PARAMETER_LAST, { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER } }
 };
 const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },
@@ -267,10 +267,10 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_SEED_LATCH:
           {
             int value = profile_preview_[setting];
-            while (value < 3 && pot > float(value + 1) * 0.25f + 0.025f) {
+            while (value < 3 && pot > float(value + 1) * 0.25f + kOptionsProfileZoneBand) {
               ++value;
             }
-            while (value > 0 && pot < float(value) * 0.25f - 0.025f) {
+            while (value > 0 && pot < float(value) * 0.25f - kOptionsProfileZoneBand) {
               --value;
             }
             profile_preview_[setting] = value;
@@ -279,10 +279,10 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_BRIGHTNESS:
           {
             int value = profile_preview_[setting];
-            while (value < 2 && pot > float(value + 1) / 3.0f + 0.025f) {
+            while (value < 2 && pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand) {
               ++value;
             }
-            while (value > 0 && pot < float(value) / 3.0f - 0.025f) {
+            while (value > 0 && pot < float(value) / 3.0f - kOptionsProfileZoneBand) {
               --value;
             }
             profile_preview_[setting] = value;

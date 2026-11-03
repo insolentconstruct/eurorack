@@ -173,6 +173,8 @@ int main(int argc, char** argv) {
   printf("constant\tkOptionsHalfLow\t%.9g\n", double(kOptionsHalfLow));
   printf("constant\tkOptionsHalfHigh\t%.9g\n", double(kOptionsHalfHigh));
   printf("constant\tkOptionsZoneBand\t%.9g\n", double(kOptionsZoneBand));
+  printf("constant\tkOptionsProfileZoneBand\t%.9g\n",
+      double(kOptionsProfileZoneBand));
   printf("constant\tkOptionsSettleTime\t%.9g\n", double(kOptionsSettleTime));
   printf("constant\tkOptionsFlashTime\t%.9g\n", double(kOptionsFlashTime));
   printf("constant\tkOptionsSlowPeriod\t%.9g\n", double(kOptionsSlowPeriod));

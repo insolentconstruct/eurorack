@@ -59,8 +59,8 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Not used yet | — | — |
-| DRY/WET | Not used yet | — | — |
+| FEEDBACK | LED brightness | 100% / 66% / 33% | green; steady / yellow; steady / red; steady |
+| DRY/WET | SEED latch | Off / Ignore / Sync / Add | green; steady / yellow; steady / red; steady / green; slow blink |
 | REVERB | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
 
 ## Other gestures

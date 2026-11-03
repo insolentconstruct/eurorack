@@ -116,7 +116,7 @@ are off in standard firmware:
 - LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds
   with preview; warnings dim too. The default is 100%; there is no
   power-on gesture.
-- SEED latch selects Off, Ignore, Sync or Add in quarters. With a cable
+- SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable
   patched and SEED latched, Off retains the divider; Ignore free-runs
   without cable triggers or flashes; Sync restarts grain-clock phase per
   edge; Add adds a grain per edge. Synth clocks follow these modes;
@@ -161,7 +161,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
-4 / all three       Not used yet  Not used yet      Limiter
+4 / all three       LED brightness  SEED latch      Limiter
 
 Changes save about a second after turning stops. Wait before power-off.
 Hold [M] for three seconds or press another button to close; mix
@@ -269,8 +269,13 @@ page	LED	knob	setting	value	colour	pulse
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
 3	REVERB	REVERB	Synth start	Automatic (Stock)	green	steady
 3	REVERB	REVERB	Synth start	Manual	yellow	steady
-4	all three	FEEDBACK	Not used yet	Not used yet	unchanged	steady
-4	all three	DRY/WET	Not used yet	Not used yet	unchanged	steady
+4	all three	FEEDBACK	LED brightness	100%	green	steady
+4	all three	FEEDBACK	LED brightness	66%	yellow	steady
+4	all three	FEEDBACK	LED brightness	33%	red	steady
+4	all three	DRY/WET	SEED latch	Off	green	steady
+4	all three	DRY/WET	SEED latch	Ignore	yellow	steady
+4	all three	DRY/WET	SEED latch	Sync	red	steady
+4	all three	DRY/WET	SEED latch	Add	green	slow (0.98 Hz)
 4	all three	REVERB	Limiter	Stock	green	steady
 4	all three	REVERB	Limiter	Fast release	yellow	steady
 4	all three	REVERB	Limiter	Off	red	steady

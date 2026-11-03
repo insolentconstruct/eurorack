@@ -546,7 +546,7 @@
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Off",
+      "default_state": "Adjustable",
       "default": 0,
       "page_slots": [
         1,
@@ -625,7 +625,7 @@
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Off",
+      "default_state": "Adjustable",
       "default": 0,
       "page_slots": [
         1,

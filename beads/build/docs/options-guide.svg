@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="252.35mm"
- viewBox="0 0 1100 1461" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="170.72mm" height="253.90mm"
+ viewBox="0 0 1100 1636" role="img" aria-labelledby="title desc">
 <title id="title">Drizzlet hidden options guide</title>
 <desc id="desc">Four pages of mix knob settings with quality LED [A] colour and blink
 indications. Full text version in OPTIONS.md.</desc>
@@ -309,8 +309,52 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="256" y="1162" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
 <circle cx="278" cy="1157" r="7" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="291" y="1162" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pulsing</text>
-<text x="35" y="1196" font-size="15" font-weight="normal" fill="#737373" text-anchor="start">FEEDBACK: Not used yet</text>
-<text x="365" y="1196" font-size="15" font-weight="normal" fill="#737373" text-anchor="start">DRY/WET: Not used yet</text>
+<text x="35" y="1196" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: LED brightness</text>
+<circle cx="192.5" cy="1268" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 192.5 1268 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 164.900 1292.642 A 37 37 0 0 1 162.195 1246.772" fill="none" stroke="#555" stroke-width="3"/>
+<text x="139.59" y="1276.12" font-size="15" font-weight="normal" fill="#222" text-anchor="end">100%</text>
+<path d="M 171.272 1237.695 A 37 37 0 0 1 213.728 1237.695" fill="none" stroke="#555" stroke-width="3"/>
+<text x="192.5" y="1220.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">66%</text>
+<path d="M 222.805 1246.772 A 37 37 0 0 1 220.100 1292.642" fill="none" stroke="#555" stroke-width="3"/>
+<text x="245.41" y="1276.12" font-size="15" font-weight="normal" fill="#222" text-anchor="start">33%</text>
+<path d="M 163.443 1245.094 A 37 37 0 0 1 169.594 1238.943" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 215.406 1238.943 A 37 37 0 0 1 221.557 1245.094" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="44" cy="1308" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="60" y="1313" font-size="15" font-weight="normal" fill="#222" text-anchor="start">100%</text>
+<text x="347" y="1313" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
+<circle cx="44" cy="1329" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="60" y="1334" font-size="15" font-weight="normal" fill="#222" text-anchor="start">66%</text>
+<text x="347" y="1334" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
+<circle cx="44" cy="1350" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="60" y="1355" font-size="15" font-weight="normal" fill="#222" text-anchor="start">33%</text>
+<text x="347" y="1355" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
+<text x="365" y="1196" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: SEED latch</text>
+<circle cx="522.5" cy="1268" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 522.5 1268 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 494.900 1292.642 A 37 37 0 0 1 486.378 1259.985" fill="none" stroke="#555" stroke-width="3"/>
+<text x="471.22" y="1286.38" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Off</text>
+<path d="M 491.291 1248.125 A 37 37 0 0 1 516.081 1231.561" fill="none" stroke="#555" stroke-width="3"/>
+<text x="493.05" y="1228.93" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Ignore</text>
+<path d="M 528.919 1231.561 A 37 37 0 0 1 553.709 1248.125" fill="none" stroke="#555" stroke-width="3"/>
+<text x="551.95" y="1228.93" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Sync</text>
+<path d="M 558.622 1259.985 A 37 37 0 0 1 550.100 1292.642" fill="none" stroke="#555" stroke-width="3"/>
+<text x="573.78" y="1286.38" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Add</text>
+<path d="M 486.889 1257.957 A 37 37 0 0 1 490.218 1249.921" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 518.151 1231.256 A 37 37 0 0 1 526.849 1231.256" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 554.782 1249.921 A 37 37 0 0 1 558.111 1257.957" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="374" cy="1308" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="390" y="1313" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Off</text>
+<text x="677" y="1313" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
+<circle cx="374" cy="1329" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="390" y="1334" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Ignore</text>
+<text x="677" y="1334" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
+<circle cx="374" cy="1350" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="390" y="1355" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Sync</text>
+<text x="677" y="1355" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
+<circle cx="374" cy="1371" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="390" y="1376" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Add</text>
+<text x="677" y="1376" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; slow</text>
 <text x="695" y="1196" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Limiter</text>
 <circle cx="852.5" cy="1268" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 852.5 1268 v -16" stroke="#222" stroke-width="2"/>
@@ -331,19 +375,19 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="704" cy="1350" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
 <text x="720" y="1355" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Off</text>
 <text x="1007" y="1355" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
-<text x="35" y="1236" font-size="20" font-weight="bold" fill="#222" text-anchor="start">OTHER GESTURES</text>
-<text x="35" y="1266" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Monophonic grains</text>
-<text x="35" y="1288" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], press SEED [C]. Suits square</text>
-<text x="35" y="1309" font-size="15" font-weight="normal" fill="#222" text-anchor="start">and decay shapes.</text>
-<text x="35" y="1340" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Buffer trim</text>
-<text x="35" y="1362" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], press FREEZE [B]: the next</text>
-<text x="35" y="1383" font-size="15" font-weight="normal" fill="#222" text-anchor="start">freeze keeps only what follows.</text>
-<text x="365" y="1266" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Grain diffusion</text>
-<text x="365" y="1288" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], turn REVERB; fully CCW is</text>
-<text x="365" y="1309" font-size="15" font-weight="normal" fill="#222" text-anchor="start">none. [M] can route CV to it.</text>
-<text x="365" y="1340" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth (Manual)</text>
-<text x="365" y="1362" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Synth start Manual, no inputs, FREEZE</text>
-<text x="365" y="1383" font-size="15" font-weight="normal" fill="#222" text-anchor="start">off: hold [A] 1.5 s.</text>
-<text x="35" y="1431" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch • Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).</text>
+<text x="35" y="1390" font-size="20" font-weight="bold" fill="#222" text-anchor="start">OTHER GESTURES</text>
+<text x="35" y="1420" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Monophonic grains</text>
+<text x="35" y="1442" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], press SEED [C]. Suits square</text>
+<text x="35" y="1463" font-size="15" font-weight="normal" fill="#222" text-anchor="start">and decay shapes.</text>
+<text x="35" y="1494" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Buffer trim</text>
+<text x="35" y="1516" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], press FREEZE [B]: the next</text>
+<text x="35" y="1537" font-size="15" font-weight="normal" fill="#222" text-anchor="start">freeze keeps only what follows.</text>
+<text x="365" y="1441" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Grain diffusion</text>
+<text x="365" y="1463" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Hold [A], turn REVERB; fully CCW is</text>
+<text x="365" y="1484" font-size="15" font-weight="normal" fill="#222" text-anchor="start">none. [M] can route CV to it.</text>
+<text x="365" y="1515" font-size="16" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth (Manual)</text>
+<text x="365" y="1537" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Synth start Manual, no inputs, FREEZE</text>
+<text x="365" y="1558" font-size="15" font-weight="normal" fill="#222" text-anchor="start">off: hold [A] 1.5 s.</text>
+<text x="35" y="1606" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch • Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).</text>
 </g>
 </svg>

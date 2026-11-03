@@ -15,7 +15,7 @@ button to close. [A] previews the stored values.
 | 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
 | 2 / DRY/WET | Frozen feedback | Delay mode | Reverb character |
 | 3 / REVERB | Processor | Synth | Synth start |
-| 4 / all three | Unused | Unused | Limiter |
+| 4 / all three | LED brightness | SEED latch | Limiter |
 
 - Hold [A] and turn REVERB to set grain diffusion with either reverb.
   It can also receive assignable CV through [M].

@@ -1856,7 +1856,7 @@ void TestOptionsTablesAndLifetime() {
     { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS },
     { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB },
     { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
-    { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER }
+    { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER }
   };
   CHECK(kNumOptionPages == 4);
   Rig r(false);
@@ -1866,7 +1866,7 @@ void TestOptionsTablesAndLifetime() {
     CHECK(r.ui.options_.page() == page);
     // Left to right; the last page lights all three.
     CHECK(kOptionPages[page].led_index == page);
-    const int preview = page == 3 ? 2 : 0;
+    const int preview = 0;
     CHECK(r.ui.options_.preview_knob() == preview);
     for (int knob = 0; knob < 3; ++knob) {
       CHECK(kOptionPages[page].knobs[knob] == expected[page][knob]);
@@ -1948,7 +1948,10 @@ void TestOptionsKnobsAndSettling() {
           ? r.settings.random_intervals() : setting == OPTION_FROZEN
           ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
           ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
-          ? int(r.settings.attack_mode())
+          ? int(r.settings.attack_mode()) : setting == OPTION_BRIGHTNESS
+          ? r.settings.FeatureValue(FEATURE_BRIGHTNESS)
+          : setting == OPTION_SEED_LATCH
+          ? r.settings.FeatureValue(FEATURE_SEED_LATCH)
           : int(r.settings.output_limiter_mode())));
       r.Tick(5000, true);
       CHECK(test_writes == writes + 1);
@@ -2241,11 +2244,11 @@ void TestOptionsPreview() {
   }
   CHECK(r.ui.options_.preview_knob() == -1);
   CHECK(r.ui.options_.indication().setting == OPTION_FROZEN);
-  // Reserved knobs are skipped; a knob ends the preview at once.
+  // Page four previews brightness, latch and limiter; a knob ends preview.
   r.Tap();
   r.Tap();
   CHECK(r.ui.options_.page() == 3);
-  CHECK(r.ui.options_.preview_knob() == 2);
+  CHECK(r.ui.options_.preview_knob() == 0);
   r.Tap();
   CHECK(r.ui.options_.page() == 0);
   CHECK(r.ui.options_.preview_knob() == 0);
@@ -2426,6 +2429,32 @@ void TestPageTwoKnobRoutingAndSavedMeaning() {
     CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     CHECK(loaded.profile().Page(4) == FEATURE_FROZEN);
   }
+}
+
+void TestDefaultPageFourControls() {
+  test_checker.Start("TestDefaultPageFourControls");
+  Rig r(false);
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 0);
+  CHECK(r.settings.FeatureValue(FEATURE_SEED_LATCH) == 0);
+  r.EnterPage(3);
+  r.feedback = 0.15f;
+  r.Tick(1100, true);
+  r.feedback = 0.5f;
+  r.Tick(1100, true);
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 1);
+  r.pot = 0.65f;
+  r.Tick(1100, true);
+  CHECK(r.settings.FeatureValue(FEATURE_SEED_LATCH) == 2);
+  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(loaded.FeatureValue(FEATURE_BRIGHTNESS) == 1);
+  CHECK(loaded.FeatureValue(FEATURE_SEED_LATCH) == 2);
+  r.feedback = 0.1f;
+  r.pot = 0.1f;
+  r.Tick(1100, true);
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 0);
+  CHECK(r.settings.FeatureValue(FEATURE_SEED_LATCH) == 0);
 }
 
 void ScaleFloat(uint8_t* p, float value) {
@@ -2914,6 +2943,7 @@ int main() {
   TestOptionsKnobsAndSettling();
   TestOptionsSeed();
   TestPageTwoKnobRoutingAndSavedMeaning();
+  TestDefaultPageFourControls();
   TestOptionsPreview();
   TestOptionsPalette();
   TestOptionsConfirmations();

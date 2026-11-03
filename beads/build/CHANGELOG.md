@@ -4,6 +4,8 @@ Put new changes under Unreleased. For a release, replace that heading with a dat
 
 ## Unreleased
 
+- Add LED brightness and SEED latch to page 4, initially 100% and Stock.
+
 - Match page 2 knobs: FEEDBACK selects Frozen feedback, DRY/WET selects Delay mode, and REVERB selects Reverb character. Custom layouts and saved values keep their meanings.
 
 <!-- TODO: release date; replace YYYY.MM.DD in the heading and tag. -->
