@@ -50,7 +50,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 4 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. On page 1 with Scale selected, short SEED taps step the scale instead of closing.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 4 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
@@ -231,7 +231,7 @@ The dummy workload keeps the main loop busy, so main-loop activity is not idle t
 
 ## Design aims
 
-Mutable Instruments built Beads as a real-time granular texture tool around one model: "a fixed-length tape loop. This is not a sampler." The panel should say what the module does ("I want to keep this module WYSIWYG"), and the stock firmware was to get "no further additional feature that will require a button combo". Drizzlet adds some things Mutable Instruments declined for stock (diffusion, scales, trim, mono grains), so a new feature is judged by these tests instead:
+Mutable Instruments built Beads as a real-time granular texture tool around one model: "a fixed-length tape loop. This is not a sampler." The panel should say what the module does ("I want to keep this module WYSIWYG"), and the stock firmware was to get "no further additional feature that will require a button combo" ([Beads diffuser, post 7](https://forum.mutable-instruments.net/t/beads-diffuser/18782/7)). Drizzlet adds some things Mutable Instruments declined for stock (diffusion, scales, trim, mono grains), so a new feature is judged by these tests instead:
 
 - It shapes the sound live (texture), not edits or files it (studio).
 - It is off by default and hard to reach by accident.
@@ -290,7 +290,7 @@ Free and clockwise remain continuous before Pitch scale; subsequent scale quanti
 
 The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
 
-- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Zone boundaries have a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; halves switch below 47% and above 53%. Pitch scale, Delay mode, Attacks and Limiter use thirds; the other settings use halves. Opening a page shows each stored value for 2.048 s each.
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
 - **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.

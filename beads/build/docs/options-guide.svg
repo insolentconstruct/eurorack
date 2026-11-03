@@ -7,16 +7,16 @@ indications. Full text version in OPTIONS.md.</desc>
 <rect width="100%" height="100%" fill="white"/>
 <g font-family="sans-serif" fill="#222">
 <text x="35" y="35" font-size="24" font-weight="bold" fill="#222" text-anchor="start">Drizzlet Hidden Options</text>
-<text x="35" y="55" font-size="15" font-weight="normal" fill="#222" text-anchor="start">1. Open: hold CV assign [M] 3 seconds;</text>
-<text x="35" y="76" font-size="15" font-weight="normal" fill="#222" text-anchor="start">release.</text>
+<text x="35" y="55" font-size="15" font-weight="normal" fill="#222" text-anchor="start">1. Open: hold [M] 3 seconds (all mix LEDs</text>
+<text x="35" y="76" font-size="15" font-weight="normal" fill="#222" text-anchor="start">pulse), release.</text>
 <text x="35" y="100" font-size="15" font-weight="normal" fill="#222" text-anchor="start">2. Tap [M] for pages 1-4: FEEDBACK, DRY/WET,</text>
 <text x="35" y="121" font-size="15" font-weight="normal" fill="#222" text-anchor="start">REVERB, then all three pulse.</text>
-<text x="35" y="145" font-size="15" font-weight="normal" fill="#222" text-anchor="start">3. [A] previews stored values. Turn a mix</text>
-<text x="35" y="166" font-size="15" font-weight="normal" fill="#222" text-anchor="start">knob, not a big knob, to edit.</text>
-<text x="35" y="190" font-size="15" font-weight="normal" fill="#222" text-anchor="start">4. Close: hold [M] 3 seconds or press another</text>
-<text x="35" y="211" font-size="15" font-weight="normal" fill="#222" text-anchor="start">button. Page 1 Scale: tap SEED to step.</text>
-<text x="35" y="235" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wait after edits before power-off. Move a knob</text>
-<text x="35" y="256" font-size="15" font-weight="normal" fill="#222" text-anchor="start">slightly before it responds.</text>
+<text x="35" y="145" font-size="15" font-weight="normal" fill="#222" text-anchor="start">3. [A] shows values; turn a mix knob to edit.</text>
+<text x="35" y="169" font-size="15" font-weight="normal" fill="#222" text-anchor="start">4. Close: hold [M] 3 seconds or press another</text>
+<text x="35" y="190" font-size="15" font-weight="normal" fill="#222" text-anchor="start">button; release before normal use. Page 1</text>
+<text x="35" y="211" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Scale: SEED steps.</text>
+<text x="35" y="235" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wait before power-off. Take over: move a knob</text>
+<text x="35" y="256" font-size="15" font-weight="normal" fill="#222" text-anchor="start">more than a tenth of its travel.</text>
 <text x="405" y="20" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FIND THE CONTROLS</text>
 <text x="610" y="20" font-size="15" font-weight="normal" fill="#555" text-anchor="start">to scale</text>
 <rect x="490.0" y="44.0" width="200.7" height="221.1" fill="#f6f5f0"/>

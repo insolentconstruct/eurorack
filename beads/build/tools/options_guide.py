@@ -100,24 +100,25 @@ ATTRIBUTION = (
     "geometry only (CC BY-SA 3.0)."
 )
 STEPS = [
-    "Open: hold the CV-assign button [M] {hold}, release.",
+    "Open: hold the CV-assign button [M] {hold}; all three mix LEDs pulse. Release.",
     "Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, "
     "then all three.",
     "[A] shows each stored value in turn. Turn a mix knob (not a big "
     "knob) to change it.",
     "Close: hold [M] {hold} or press another button. On page 1 with Pitch "
-    "scale on Scale, tap SEED to step the scale.",
+    "scale on Scale, tap SEED to step the scale. Release the exit button "
+    "before normal use.",
 ]
 NOTES = [
-    "It saves by itself; wait before powering off. Move a knob a little "
-    "before it responds.",
+    "It saves by itself; wait before powering off. Move a knob more than "
+    "a tenth of its travel before it responds.",
 ]
 PRINT_STEPS = [
-    "Open: hold CV assign [M] {hold}; release.",
+    "Open: hold [M] {hold} (all mix LEDs pulse), release.",
     "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then all three pulse.",
-    "[A] previews stored values. Turn a mix knob, not a big knob, to edit.",
-    "Close: hold [M] {hold} or press another button. Page 1 Scale: "
-    "tap SEED to step.",
+    "[A] shows values; turn a mix knob to edit.",
+    "Close: hold [M] {hold} or press another button; release before normal use. "
+    "Page 1 Scale: SEED steps.",
 ]
 SHORT = {
     "Clouds-style": "Clouds",
@@ -222,15 +223,17 @@ def indication(row):
 
 DETAILS = [
     "Hold the CV-assign button [M] for three seconds, with the mix knobs still, then "
-    "release. Tap [M] to move between the pages; Beads remembers the last "
+    "release; all three mix LEDs pulse while held. Tap [M] to move between "
+    "the pages; Beads remembers the last "
     "page until it is powered off. Hold [M] again, or press another "
-    "button, to close.",
+    "button, to close. That press does nothing else until the button is released.",
     "When a page opens, the quality LED [A] shows each stored value in "
     "turn, left to right, for about two seconds each, with that knob's mix "
     "LED lit. Turning a knob, or tapping SEED to step the scale, ends this.",
-    "Move a knob far enough to take it over; small bumps before that are "
-    "ignored. Pitch scale, Delay mode, Attacks and Limiter use the knob's "
-    "three thirds; the other settings use its two halves. Near a boundary, "
+    "Move a knob more than a tenth of its travel to take it over; smaller "
+    "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
+    "brightness use the knob's three thirds; SEED latch uses four quarters; "
+    "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
     "Settings save by themselves about a second after you stop turning. "
     "Closing keeps your changes, and there is no timeout or cancel. The "
@@ -733,8 +736,8 @@ def svg(pages, mobile=False):
     y = 70 if mobile else 55
     for i, line in enumerate(instructions(STEPS if mobile else PRINT_STEPS), 1):
         y = d.lines(margin, y, f"{i}. {line}", columns) + 3
-    print_notes = ["Wait after edits before power-off. Move a knob slightly "
-                   "before it responds."]
+    print_notes = ["Wait before power-off. Take over: move a knob more than "
+                   "a tenth of its travel."]
     for note in instructions(NOTES if mobile else print_notes):
         y = d.lines(margin, y, note, columns)
     if mobile:

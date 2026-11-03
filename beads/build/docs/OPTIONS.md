@@ -7,12 +7,12 @@
 
 ## Steps
 
-1. Open: hold the CV-assign button [M] 3 seconds, release.
+1. Open: hold the CV-assign button [M] 3 seconds; all three mix LEDs pulse. Release.
 2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then all three.
 3. [A] shows each stored value in turn. Turn a mix knob (not a big knob) to change it.
-4. Close: hold [M] 3 seconds or press another button. On page 1 with Pitch scale on Scale, tap SEED to step the scale.
+4. Close: hold [M] 3 seconds or press another button. On page 1 with Pitch scale on Scale, tap SEED to step the scale. Release the exit button before normal use.
 
-It saves by itself; wait before powering off. Move a knob a little before it responds.
+It saves by itself; wait before powering off. Move a knob more than a tenth of its travel before it responds.
 
 The quality LED [A] shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
@@ -76,11 +76,11 @@ Scale (tap SEED to step through):
 
 ## Details
 
-Hold the CV-assign button [M] for three seconds, with the mix knobs still, then release. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close.
+Hold the CV-assign button [M] for three seconds, with the mix knobs still, then release; all three mix LEDs pulse while held. Tap [M] to move between the pages; Beads remembers the last page until it is powered off. Hold [M] again, or press another button, to close. That press does nothing else until the button is released.
 
 When a page opens, the quality LED [A] shows each stored value in turn, left to right, for about two seconds each, with that knob's mix LED lit. Turning a knob, or tapping SEED to step the scale, ends this.
 
-Move a knob far enough to take it over; small bumps before that are ignored. Pitch scale, Delay mode, Attacks and Limiter use the knob's three thirds; the other settings use its two halves. Near a boundary, turn a little past it to switch.
+Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
 
