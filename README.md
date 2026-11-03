@@ -5,6 +5,8 @@ Start with [installation and controls](beads/build/README.md).
 
 ## Options page
 
+Pitch scale snaps final grain pitch; Random pitch steps snaps relative pitch variation before the scale.
+
 See the [options guide](beads/build/docs/OPTIONS.md) or
 [printable guide](beads/build/docs/options-guide.svg).
 

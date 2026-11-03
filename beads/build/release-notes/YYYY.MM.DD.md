@@ -12,7 +12,7 @@ button to close. [A] previews the stored values.
 
 | Page / LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
-| 1 / FEEDBACK | Pitch scale | Random intervals | Attacks |
+| 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
 | 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / all three | Unused | Unused | Limiter |

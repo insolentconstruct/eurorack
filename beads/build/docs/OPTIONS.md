@@ -21,8 +21,10 @@ The quality LED [A] shows the setting value: steady, slow blink, fast blink or t
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Pitch scale | Off / Chromatic / Scale | green; steady / yellow; steady / see scale list |
-| DRY/WET | Random intervals | Free (Stock) / Fifths and octaves | green; steady / yellow; steady |
+| DRY/WET | Random pitch steps | Free (Stock) / Fifths and octaves | green; steady / yellow; steady |
 | REVERB | Attacks | Off / Snap / Snap and trigger | green; steady / yellow; steady / red; steady |
+
+**Random pitch steps:** Relative to PITCH; scale follows.
 
 Scale (tap SEED to step through):
 
@@ -84,11 +86,11 @@ Settings save by themselves about a second after you stop turning. Closing keeps
 
 After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
 
-Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. The scale snaps the pitch of new grains, including wavetable synth grains. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
+Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. Pitch scale snaps each new grain's final pitch after combining PITCH, CV and randomness, including Beads wavetable grains. Plaits and Spectral also follow Pitch scale. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
 Hygrostat can replace the factory scale bank, change its order and choose each scale's colour and blink pattern. Use the guide made with that profile; this guide lists the factory bank.
 
-Random intervals: with the PITCH attenurandomizer counter-clockwise, each grain's random offset lands on fifths and octaves around the knob's pitch; clockwise it stays continuous. The scale still applies.
+Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
 

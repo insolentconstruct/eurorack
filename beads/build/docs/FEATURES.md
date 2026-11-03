@@ -54,7 +54,7 @@ Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal 
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
-| 1 / FEEDBACK | Pitch scale | Random intervals | Attacks |
+| 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
 | 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / all three | Reserved | Reserved | Limiter |
@@ -91,7 +91,7 @@ not-set values use the profile default.
 | 7 | Synth | 6 (byte 13 low) |
 | 8 | Attacks | 7 (byte 13 high) |
 | 9 | Synth start | 8 (byte 15 low) |
-| 10 | Random intervals | 9 (byte 15 high) |
+| 10 | Random pitch steps | 9 (byte 15 high) |
 | 11 | Stereo width | Full byte 14 |
 | 12 | Diffusion | Full byte 17 |
 | 13 | Monophonic grains | Stock byte 9 |
@@ -153,7 +153,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 19 | `attacks` | Attacks: 0xA1 = Snap, 0xA2 = Snap and trigger; 0 and all unknown values = Off; canonicalized on load/save |
 | 20 | `engine` | Processor: 0xA1 = Spectral; 0 and all unknown values = Granular (Stock); canonicalized on load/save |
 | 21 | `synth_engine` | Synth: 0 Beads (Stock), 0xA1 Plaits; unknown values read Beads (Stock); canonicalized on load/save |
-| 22 | `random_intervals` | Random intervals: 0xA1 = Fifths and octaves; 0 and all unknown values = Free (Stock); canonicalized on load/save |
+| 22 | `random_intervals` | Random pitch steps: 0xA1 = Fifths and octaves; 0 and all unknown values = Free (Stock); canonicalized on load/save |
 | 23 | `padding[0]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
@@ -279,6 +279,12 @@ Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality
 | Byte 14 | 0 Stock; 1..255 enabled width |
 | Byte 16 | 0 unassigned; 1 WIDTH assigned; all other values unassigned |
 | [M] | Optional fourth destination when width is enabled |
+
+Pitch scale quantizes the total pitch of each new grain (PITCH, CV and random variation), rooted at the unshifted recording; Plaits and Spectral also use the selected scale.
+
+Random pitch steps first quantizes counter-clockwise random offsets relative to PITCH to the fixed octave/fifth family: … −12, −5, 0, +7, +12 … semitones; for C, C/G across octaves includes a downward fourth.
+
+Free and clockwise remain continuous before Pitch scale; subsequent scale quantization can change an interval. Random pitch steps affects granular playback and Beads wavetable grains, not the continuous wavetable oscillator, Plaits or Spectral; custom scales do not redefine its fixed offset pattern.
 
 ## Exact option values
 

@@ -126,7 +126,10 @@ SHORT = {
 PAGE_GESTURES = ("Manual gain",)
 OFF_PAGES = "Off the pages: "
 # A line under a setting's card in the guides.
-CARD_NOTES = {"Processor": "Switching clears the recording."}
+CARD_NOTES = {
+    "Processor": "Switching clears the recording.",
+    "Random pitch steps": "Relative to PITCH; scale follows.",
+}
 # Stereo width is set with [A]+DRY/WET, outside the pages.
 WIDTH_ROWS = [
     dict(knob="[A] + DRY/WET", setting="Stereo width", value=value,
@@ -228,17 +231,21 @@ DETAILS = [
     "leave the LED alone.",
     "Scale: on page 1, tap SEED [C] to step through the eight scales "
     "instead of closing; a long press does not step, and the taps do not "
-    "play grains. The scale snaps the pitch of new grains, including "
-    "wavetable synth grains. Grains already playing, the continuous "
+    "play grains. Pitch scale snaps each new grain's final pitch after "
+    "combining PITCH, CV and randomness, including Beads wavetable grains. "
+    "Plaits and Spectral also follow Pitch scale. Grains already playing, the continuous "
     "wavetable oscillator and delay pitch keep their pitch. The root is "
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
     "Hygrostat can replace the factory scale bank, change its order and choose "
     "each scale's colour and blink pattern. Use the guide made with that "
     "profile; this guide lists the factory bank.",
-    "Random intervals: with the PITCH attenurandomizer counter-clockwise, "
-    "each grain's random offset lands on fifths and octaves around the "
-    "knob's pitch; clockwise it stays continuous. The scale still applies.",
+    "Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH "
+    "randomness relative to the PITCH setting. For a C note, this gives C/G "
+    "across octaves; G below C is a downward fourth. Free and clockwise "
+    "stay continuous before Pitch scale, which applies afterward and can "
+    "change the interval. This affects granular playback and Beads wavetable "
+    "grains, not the continuous oscillator, Plaits or Spectral.",
     "Attacks: Snap starts grains on the hits in the recording; Snap and "
     "trigger also starts a grain on each hit.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "

@@ -15,7 +15,7 @@ Updating is not a remedy for unexplained module behaviour. Disconnect speakers: 
 [A] previews each stored value in turn for about two seconds, with its knob LED steady. Turn a knob or tap SEED to end preview. Move a knob slightly to take over; [A] shows its setting. Unused knobs do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
-1 / FEEDBACK        Pitch scale   Random intervals  Attacks
+1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Delay mode    Reverb character  Frozen feedback
 3 / REVERB          Processor     Synth             Synth start
 4 / all three       Not used yet  Not used yet      Limiter
@@ -24,9 +24,9 @@ Changes save about a second after turning stops. Wait before power-off. Hold [M]
 
 Output limiter: REVERB on page 4 selects Stock, Fast release or Off in thirds, indicated by steady green, yellow or red respectively. Off can hard-clip loud peaks.
 
-Pitch scale. Three zones: Off, Chromatic and Scale. The factory bank cycles through Fifths (steady coral), Major (steady amber), Minor (steady blue), Major pentatonic (slow amber), Minor pentatonic (slow blue), Pelog (steady teal), Raag Bhairav (steady violet) and Raag Shri (two pink pulses). Tap SEED in Scale to step; holds do nothing, and taps neither trigger nor latch. Pelog and the raags are microtonal. Grains combine knob, CV and randomness at birth and retain that pitch. Synth grains follow scales; the continuous oscillator and delay do not. Hygrostat can replace and reorder this bank, including each scale definition, colour and flash pattern. Use the guide generated for your profile.
+Pitch scale. Three zones: Off, Chromatic and Scale. The factory bank cycles through Fifths (steady coral), Major (steady amber), Minor (steady blue), Major pentatonic (slow amber), Minor pentatonic (slow blue), Pelog (steady teal), Raag Bhairav (steady violet) and Raag Shri (two pink pulses). Tap SEED in Scale to step; holds do nothing, and taps neither trigger nor latch. Pelog and the raags are microtonal. Pitch scale snaps each new grain's final pitch after combining PITCH, CV and randomness, including Beads wavetable grains. Plaits and Spectral also follow Pitch scale. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. Hygrostat can replace and reorder this bank, including each scale definition, colour and flash pattern. Use the guide generated for your profile.
 
-Random intervals selects Free or Fifths and octaves. The latter quantizes counter-clockwise PITCH randomness, including synth grains; clockwise stays continuous. The pitch scale still applies.
+Random pitch steps selects Free or Fifths and octaves. The latter snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves grain starts onto recorded hits; Snap and trigger also triggers a grain per hit. Patched SEED still works; only granular playback uses marks.
 

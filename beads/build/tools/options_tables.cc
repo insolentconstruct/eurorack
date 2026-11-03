@@ -39,7 +39,7 @@ const char* const kPageNames[] = {
 const char* const kOptionNames[] = {
   "Not used yet", "Pitch scale", "Reverb character", "Delay mode",
   "Processor", "Limiter", "Frozen feedback", "Synth", "Attacks",
-  "Synth start", "Random intervals",
+  "Synth start", "Random pitch steps",
   "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
   "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
   "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan",

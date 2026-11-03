@@ -185,7 +185,7 @@ assert len(values["Pitch scale"]) == 10
 for setting in ("Delay mode", "Attacks", "Limiter"):
     assert len(values[setting]) == 3, setting
 for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
-                "Synth start", "Random intervals"):
+                "Synth start", "Random pitch steps"):
     assert len(values[setting]) == 2, setting
 assert len(values) == 10 and "Stereo width" not in values
 # [A]+DRY/WET width keeps its meter on the guides.
@@ -492,6 +492,8 @@ for feature, row in zip(catalog["features"], exported):
     identity, name, count, field, page, amount, action, stateless = (
         int(x) if x.isdigit() else x for x in row.split("\t"))
     assert feature["id"] == identity
+    if identity in (1, 10):
+        assert feature["name"] == name
     assert len(feature["values"] or []) == count
     assert feature["field"] == (None if field == 255 else field)
     assert feature["page_slots"] == (list(range(1, 13)) if page else [])

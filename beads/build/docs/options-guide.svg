@@ -97,6 +97,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="283" cy="327" r="7" fill="white" stroke="#333" stroke-width="2"/>
 <text x="312" y="332" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
 <circle cx="334" cy="327" r="7" fill="white" stroke="#333" stroke-width="2"/>
+<text x="1065" y="332" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="end">Random pitch steps: relative to pitch; scale follows.</text>
 <text x="35" y="366" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Pitch scale</text>
 <circle cx="192.5" cy="438" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 192.5 438 v -16" stroke="#222" stroke-width="2"/>
@@ -141,7 +142,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="48" cy="693" r="1" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="60" y="698" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Raag Shri</text>
 <text x="347" y="698" font-size="15" font-weight="normal" fill="#555" text-anchor="end">pink; two pulses</text>
-<text x="365" y="366" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Random intervals</text>
+<text x="365" y="366" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Random pitch steps</text>
 <circle cx="522.5" cy="438" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 522.5 438 v -16" stroke="#222" stroke-width="2"/>
 <path d="M 494.900 462.642 A 37 37 0 0 1 515.225 401.722" fill="none" stroke="#555" stroke-width="3"/>
