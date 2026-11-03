@@ -98,8 +98,9 @@ refuses excessive combinations. Per-feature estimates await module
 measurements.
 
 Final-candidate profiles, custom scales, LED indications and tail
-choices still need module qualification. These nine additional options
-are off in standard firmware:
+choices still need module qualification. Page 4 provides LED brightness
+and SEED latch with stock starting values. Seven additional options are off in
+standard firmware:
 
 - Version at boot flashes light-blue, then twice for Beta 2, without
   delaying startup.
@@ -113,20 +114,26 @@ are off in standard firmware:
 - Input attenuation extends [A]+FEEDBACK to silence, with unity near
   noon, marked green, and gain above. Saved gain immediately uses this
   range. Automatic gain never attenuates; hold [A] to restart.
-- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds
-  with preview; warnings dim too. The default is 100%; there is no
-  power-on gesture.
-- SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable
-  patched and SEED latched, Off retains the divider; Ignore free-runs
-  without cable triggers or flashes; Sync restarts grain-clock phase per
-  edge; Add adds a grain per edge. Synth clocks follow these modes;
-  delay free-runs outside Off. Unpatched attack triggers still work.
 - TIME modulation selects Random below noon or Scan above. With TIME CV
   unpatched, its attenurandomizer scans backwards or forwards, stopping
   at noon, taking four seconds per buffer at either end. TIME offsets
   the wrapping position. Patching CV restores normal control and pauses
   scanning, as do delay, spectral and synth. Position is not saved.
 
+Page 4 controls:
+
+- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds
+  with preview; warnings dim too. The default is 100%; use FEEDBACK on
+  page 4. There is no power-on gesture.
+- SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with
+  DRY/WET on page 4. With a cable patched and SEED latched, Off retains
+  the divider; Ignore free-runs
+  without cable triggers or flashes; Sync restarts grain-clock phase per
+  edge; Add adds a grain per edge. Synth clocks follow these modes;
+  delay free-runs outside Off. Unpatched attack triggers still work.
+
+The factory layout is a starting point. Customize it with Hygrostat
+and share feedback to help shape Beta 3.
 
 Hygrostat can replace the complete scale bank with up to 14 scales, each
 with 1–24 notes including its root and a repeat interval from 0.01 to

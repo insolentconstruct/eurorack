@@ -70,17 +70,19 @@ Fixed Clear clears the tail when leaving either synth by manual stop, input
 patching or processor changes. No new panel gesture or page slot is needed.
 Sample-rate changes still restart the converter and interrupt audio briefly.
 
-Nine profile-only options are off in standard firmware:
+The factory layout is a starting point: use Hygrostat to customize it, and share
+feedback to help shape Beta 3. Page 4 makes LED brightness and SEED latch
+adjustable, starting at 100% brightness and Off (Stock).
+
+Seven profile-only options are off in standard firmware:
 
 | Option | Action |
 |---|---|
 | Version | Flashes light-blue at boot, then twice for Beta 2 |
 | Input attenuation | Extends [A]+FEEDBACK to silence, with unity at noon |
 | Delay indication | Flashes [A] red when entering or leaving delay |
-| Brightness | Selects 100%, 66% or 33% from the profile or a page knob |
 | Live assignment LEDs | Follow the assignable CV |
 | FREEZE during saves | Keeps FREEZE lit while saving |
-| SEED latch | Retains the divider with Off, free-runs with Ignore, restarts phase with Sync or adds a grain per edge with Add |
 | Pitch notches | Lights [A] green at unison and octave knob positions |
 | TIME scan | Scans backwards or forwards with the attenurandomizer when TIME CV is unpatched |
 
@@ -123,11 +125,11 @@ A patched SEED cable divides the clock only with SEED latch set to Off.
   demonstrated cure for that report.
 - Plaits bank selection (#190) remains a proposal for Beta 3, not a Beta 2 control.
 
-The candidate passes all 19 host programs, with 265 named sections and 2,060
-assertion sites in the source. CI detected all 392 deliberate faults. The app
-(`09b43688…`) and WAV (`a84d6060…`) match their build pins; decoder checks pass
-at both playback sample rates and reject corrupted/truncated controls. These
-software results do not establish final module qualification.
+The accepted-layout app (`b11fe81c…`) matches its retained candidate build,
+and its WAV (`d40a5dc2…`) decodes byte for byte. The candidate passes focused
+profile, options, storage and guide/package checks. Earlier host-suite and
+fault-injection results cover their original inputs; exact release CI remains
+pending. These software results do not establish final module qualification.
 TODO: final-image module CPU peaks, spectral frame budget and underruns.
 TODO: attended profiles/options/scales/LEDs and Keep/Clear tail qualification.
 TODO: automated run hours and firmware/settings install totals.
