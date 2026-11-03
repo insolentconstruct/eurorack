@@ -223,7 +223,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
             root = ET.fromstring(generated)
             assert root.tag == "{http://www.w3.org/2000/svg}svg"
             if name == "options-guide.svg":
-                assert 170 <= float(root.attrib["width"].removesuffix("mm")) <= 190
+                assert root.attrib["width"] == "190mm"
                 assert float(root.attrib["height"].removesuffix("mm")) <= 254
             else:
                 assert root.attrib["width"] == "390"
@@ -299,10 +299,13 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         assert labels.count("F") == markers + 1  # page markers + panel knob F
         printable = name == "options-guide.svg"
         # The printable shows the [A] gestures off the pages on page 1.
-        assert labels.count("Off the pages: [A] + DRY/WET" if printable
-                            else "[A] + DRY/WET: Stereo width") == 1
-        assert labels.count("Off the pages: Manual gain" if printable
-                            else "Manual gain") == 1
+        flat = " ".join(labels)
+        if printable:
+            assert labels.count("Off the pages: [A] + DRY/WET") == 1
+            assert "Manual gain: Hold [A], turn FEEDBACK" in flat
+        else:
+            assert labels.count("[A] + DRY/WET: Stereo width") == 1
+            assert labels.count("Manual gain") == 1
         assert labels.count("Processor: switching clears the recording."
                             if printable
                             else "Switching clears the recording.") == 1
@@ -312,7 +315,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         assert labels.count("OTHER GESTURES") == 1
         for title in ("Monophonic grains", "Buffer trim",
                       "Wavetable synth (Manual)"):
-            assert title in labels, title
+            assert title in " ".join(labels), title
         assert warning in " ".join(labels), name
         for knob in ("FEEDBACK", "DRY/WET", "REVERB"):
             reserved = sum(1 for row in rows

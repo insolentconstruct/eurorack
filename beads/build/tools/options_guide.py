@@ -112,6 +112,13 @@ NOTES = [
     "It saves by itself; wait before powering off. Move a knob a little "
     "before it responds.",
 ]
+PRINT_STEPS = [
+    "Open: hold CV assign [M] {hold}; release.",
+    "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then all three pulse.",
+    "[A] previews stored values. Turn a mix knob, not a big knob, to edit.",
+    "Close: hold [M] {hold} or press another button. Page 1 Scale: "
+    "tap SEED to step.",
+]
 SHORT = {
     "Clouds-style": "Clouds",
     "Auto (Stock)": "Auto",
@@ -567,6 +574,19 @@ class Drawing:
             self.text(x, y + 22 + 21 * i, line, 15, "bold", COLOURS["red"])
         return y + box
 
+    def compact_gestures(self, x, y, titles, heading=False):
+        if heading:
+            self.text(x, y, "OTHER GESTURES", 20, "bold")
+            y += 24
+        for title in titles:
+            brief = next(g[2] for g in GESTURES if g[0] == title)
+            if title == "Wavetable synth (Manual)":
+                self.text(x, y, title, 15, "bold")
+                y = self.lines(x, y + 21, brief, 43) + 2
+            else:
+                y = self.lines(x, y, title + ": " + brief, 43) + 2
+        return y
+
     def marker(self, x, y, led):
         """Mix LEDs on the title line: filled is pulsing."""
         for knob, label, width in zip(KNOBS, ("F", "D/W", "R"), (10, 31, 11)):
@@ -710,10 +730,12 @@ def svg(pages, mobile=False):
     margin = 22 if mobile else 35
     columns = 43 if mobile else 46
     d.text(margin, 35, "Drizzlet Hidden Options", 24, "bold")
-    y = 70
-    for i, line in enumerate(instructions(STEPS), 1):
+    y = 70 if mobile else 55
+    for i, line in enumerate(instructions(STEPS if mobile else PRINT_STEPS), 1):
         y = d.lines(margin, y, f"{i}. {line}", columns) + 3
-    for note in instructions(NOTES):
+    print_notes = ["Wait after edits before power-off. Move a knob slightly "
+                   "before it responds."]
+    for note in instructions(NOTES if mobile else print_notes):
         y = d.lines(margin, y, note, columns)
     if mobile:
         y += d.panel(margin, y + 15, 1.0) + 52
@@ -723,11 +745,9 @@ def svg(pages, mobile=False):
         y += d.card(margin, y + 15, width - 2 * margin, WIDTH_ROWS, True) + 30
         y = d.warning(margin, y, width - 2 * margin, 43) + 35
     else:
-        panel_height = d.panel(margin + 370, 70, 1.0)
+        panel_height = d.panel(margin + 370, 20, 1.0)
         d.legend(margin + 745, 70)
-        warned = d.warning(margin + 745, 270, 285, 31)
-        # Card titles sit 34 below the page title, clear of the warning.
-        y = math.ceil(max(y + 15, 70 + panel_height + 16, warned - 14))
+        y = math.ceil(max(y + 8, 20 + panel_height + 16))
     for page, knobs in pages.items():
         d.text(margin, y, f"PAGE {page}", 20, "bold")
         d.marker(margin + 100, y, next(iter(knobs.values()))[0]["LED"])
@@ -750,22 +770,26 @@ def svg(pages, mobile=False):
                 for i, k in enumerate(KNOBS)
             ]
             if page == "1":
-                # Beside the scale list: the [A] gestures off the pages.
                 heights[1] += 16 + d.card(
                     margin + 330, y + heights[1] + 16, 315, WIDTH_ROWS,
                     title=OFF_PAGES + "[A] + DRY/WET"
                 )
-                heights[2] = d.gestures(
-                    margin + 660, y + heights[2] - 14, 40, True, part="page"
+                heights[2] = d.compact_gestures(
+                    margin + 660, y + heights[2] + 16,
+                    ("Manual gain", "Monophonic grains", "Buffer trim")
                 ) - y
             if page == "4":
-                # Keep the off-page gestures beneath the first two controls.
-                for i in range(2):
-                    heights[i] = d.gestures(
-                        margin + i * 330, y + heights[i] + 14, 40, True,
-                        part=i
-                    ) - y
-            y += max(heights) + 12
+                heights[0] = d.compact_gestures(
+                    margin, y + heights[0] + 16, ("Grain diffusion",), True
+                ) - y
+                heights[1] = d.compact_gestures(
+                    margin + 330, y + heights[1] + 16,
+                    ("Wavetable synth (Manual)",)
+                ) - y
+                heights[2] = d.warning(
+                    margin + 660, y + heights[2] + 14, 315, 34
+                ) - y
+            y += max(heights) + 9
     y -= 16
     for line in textwrap.wrap(
         "Author: Insolent Construct • Control sketch • " + ATTRIBUTION,
@@ -777,12 +801,10 @@ def svg(pages, mobile=False):
     if mobile:
         physical = f'width="390" height="{height}"'
     else:
-        print_width = min(190, 253.9 * width / height)
-        print_height = print_width * height / width
-        physical = (f'width="{print_width:.2f}mm" '
-                    f'height="{print_height:.2f}mm"')
+        print_height = 190 * height / width
+        physical = f'width="190mm" height="{print_height:.2f}mm"'
     assert (
-        mobile or print_width >= 170 and print_height < 254
+        mobile or print_height < 254
     ), f"Exceeds Letter-safe print area: {height}x{width}"
     return SVG_HEADER.format(physical=physical, width=width, height=height) + (
         "\n".join(d.items) + "\n</g>\n</svg>\n"
