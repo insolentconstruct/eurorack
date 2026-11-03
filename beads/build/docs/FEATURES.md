@@ -55,7 +55,7 @@ Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
 | 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
-| 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
+| 2 / DRY/WET | Frozen feedback | Delay mode | Reverb character |
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / all three | Reserved | Reserved | Limiter |
 

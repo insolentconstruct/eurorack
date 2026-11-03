@@ -13,7 +13,7 @@ button to close. [A] previews the stored values.
 | Page / LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
 | 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
-| 2 / DRY/WET | Delay mode | Reverb character | Frozen feedback |
+| 2 / DRY/WET | Frozen feedback | Delay mode | Reverb character |
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / all three | Unused | Unused | Limiter |
 
@@ -26,14 +26,14 @@ button to close. [A] previews the stored values.
   warps it, SHAPE quantizes it and PITCH shifts it. DENSITY controls renewal
   and phase scrambling. Hold SEED to glitch; FREEZE holds the spectrum.
   Switching processor clears the recording.
-- Select Evolving frozen feedback with REVERB on page 2. FEEDBACK controls
+- Select Evolving frozen feedback with FEEDBACK on page 2. FEEDBACK controls
   how far the frozen sound drifts and softens.
 - Select random fifths and octaves with DRY/WET on page 1. They apply to
   counter-clockwise PITCH randomness and work with any scale.
 - Select Attacks with REVERB on page 1. Off keeps normal playback; Snap
   starts grains on recorded hits; Snap and trigger also triggers per hit.
-- Stereo width now uses [A]+DRY/WET. Reverb moves to page 2, DRY/WET;
-  delay moves to page 2, FEEDBACK. Never is renamed Disabled, and Wide
+- Stereo width now uses [A]+DRY/WET. Reverb moves to page 2, REVERB;
+  delay moves to page 2, DRY/WET. Never is renamed Disabled, and Wide
   detent becomes Wide/smooth filter, with unchanged behaviour.
 - Synth start moves to page 3, REVERB; the limiter moves to page 4, REVERB.
 - Earlier controls remain: Chromatic and the eight factory scales, Clouds-style reverb,

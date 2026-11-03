@@ -4,6 +4,8 @@ Put new changes under Unreleased. For a release, replace that heading with a dat
 
 ## Unreleased
 
+- Match page 2 knobs: FEEDBACK selects Frozen feedback, DRY/WET selects Delay mode, and REVERB selects Reverb character. Custom layouts and saved values keep their meanings.
+
 <!-- TODO: release date; replace YYYY.MM.DD in the heading and tag. -->
 ## YYYY.MM.DD (beta 2 "Fog")
 
@@ -25,7 +27,7 @@ Put new changes under Unreleased. For a release, replace that heading with a dat
 - Make mono/stereo and synth switching pop-free at 48 kHz.
 - Add Spectral processing at page 3, FEEDBACK.
 - Add attack snapping/triggers at page 1, REVERB.
-- Add evolving frozen feedback at page 2, REVERB.
+- Add evolving frozen feedback at page 2, FEEDBACK.
 - Add six-voice, 24-model Plaits synth at page 3, DRY/WET.
 - Set grain diffusion with [A]+REVERB; assign CV with [M].
 - Add addressed combo HEX for ST-Link recovery. Erase only the sectors being written. Never use a full-chip or mass erase: it also wipes calibration and settings.

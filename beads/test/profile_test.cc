@@ -48,6 +48,49 @@ void Checksum(uint8_t* b) {
   }
 }
 
+void TestDefaultPageTwoAndExplicitLayouts() {
+  test_checker.Start("TestDefaultPageTwoAndExplicitLayouts");
+  Profile embedded;
+  CHECK(embedded.Init(kProfileBlock));
+  Profile fallback;
+  fallback.Defaults();
+  CHECK(embedded.Page(4) == FEATURE_FROZEN);
+  CHECK(embedded.Page(5) == FEATURE_DELAY);
+  CHECK(embedded.Page(6) == FEATURE_REVERB);
+  CHECK(fallback.Page(4) == embedded.Page(4));
+  CHECK(fallback.Page(5) == embedded.Page(5));
+  CHECK(fallback.Page(6) == embedded.Page(6));
+  CHECK(kFeatureDefinitions[FEATURE_REVERB].field == 1);
+  CHECK(kFeatureDefinitions[FEATURE_DELAY].field == 2);
+  CHECK(kFeatureDefinitions[FEATURE_FROZEN].field == 5);
+  uint8_t b[kProfileSize];
+  Template(b);
+  for (size_t i = 0; i < b[5]; ++i) {
+    uint8_t* entry = b + 16 + 6 * i;
+    if (entry[0] == FEATURE_REVERB) {
+      entry[3] = 5;
+    } else if (entry[0] == FEATURE_DELAY) {
+      entry[3] = 4;
+    } else if (entry[0] == FEATURE_FROZEN) {
+      entry[3] = 6;
+    }
+  }
+  Checksum(b);
+  Profile explicit_layout;
+  CHECK(explicit_layout.Init(b));
+  CHECK(explicit_layout.Page(4) == FEATURE_DELAY);
+  CHECK(explicit_layout.Page(5) == FEATURE_REVERB);
+  CHECK(explicit_layout.Page(6) == FEATURE_FROZEN);
+  uint8_t legacy[512];
+  memcpy(legacy, b, sizeof(legacy));
+  legacy[4] = 1;
+  Checksum(legacy);
+  CHECK(explicit_layout.Init(legacy));
+  CHECK(explicit_layout.Page(4) == FEATURE_DELAY);
+  CHECK(explicit_layout.Page(5) == FEATURE_REVERB);
+  CHECK(explicit_layout.Page(6) == FEATURE_FROZEN);
+}
+
 void TestProfileParser() {
   test_checker.Start("TestProfileParser");
   uint8_t b[kProfileSize];
@@ -400,6 +443,7 @@ void TestCustomScaleBank() {
 }
 
 int main() {
+  TestDefaultPageTwoAndExplicitLayouts();
   TestProfileParser();
   TestCustomScaleBank();
   TestProfileKinds();

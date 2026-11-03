@@ -230,53 +230,53 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="227" y="3116.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pulsing</text>
 <text x="299" y="3116.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
 <circle cx="321" cy="3111.102362204724" r="7" fill="white" stroke="#333" stroke-width="2"/>
-<text x="22" y="3150.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Delay mode</text>
+<text x="22" y="3150.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Frozen feedback</text>
 <circle cx="195.0" cy="3222.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 3222.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 3246.745 A 37 37 0 0 1 164.203 3201.595" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.13" y="3230.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Auto</text>
-<path d="M 174.492 3191.306 A 37 37 0 0 1 215.508 3191.306" fill="none" stroke="#555" stroke-width="3"/>
-<text x="195.0" y="3174.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Disabled</text>
-<path d="M 225.797 3201.595 A 37 37 0 0 1 222.600 3246.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="247.87" y="3230.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide</text>
-<path d="M 165.412 3199.887 A 37 37 0 0 1 172.784 3192.514" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 217.216 3192.514 A 37 37 0 0 1 224.588 3199.887" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 167.400 3246.745 A 37 37 0 0 1 187.725 3185.825" fill="none" stroke="#555" stroke-width="3"/>
+<text x="144.72" y="3210.33" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
+<path d="M 202.275 3185.825 A 37 37 0 0 1 222.600 3246.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="245.28" y="3210.33" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Evolving</text>
+<path d="M 189.787 3185.471 A 37 37 0 0 1 200.213 3185.471" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="31" cy="3262.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="47" y="3267.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Auto (Stock)</text>
+<text x="47" y="3267.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Stock</text>
 <text x="47" y="3286.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
 <circle cx="31" cy="3306.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="47" y="3311.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Disabled</text>
+<text x="47" y="3311.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Evolving</text>
 <text x="47" y="3330.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
-<circle cx="31" cy="3350.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="47" y="3355.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide/smooth filter</text>
-<text x="47" y="3374.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
-<text x="22" y="3419.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Reverb character</text>
-<circle cx="195.0" cy="3491.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
-<path d="M 195.0 3491.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 3515.745 A 37 37 0 0 1 187.725 3454.825" fill="none" stroke="#555" stroke-width="3"/>
-<text x="144.72" y="3479.33" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
-<path d="M 202.275 3454.825 A 37 37 0 0 1 222.600 3515.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="245.28" y="3479.33" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Clouds</text>
-<path d="M 189.787 3454.471 A 37 37 0 0 1 200.213 3454.471" fill="none" stroke="#aaa" stroke-width="8"/>
-<circle cx="31" cy="3531.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="47" y="3536.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Stock</text>
-<text x="47" y="3555.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
-<circle cx="31" cy="3575.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="47" y="3580.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Clouds-style</text>
-<text x="47" y="3599.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
-<text x="22" y="3644.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Frozen feedback</text>
+<text x="22" y="3375.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Delay mode</text>
+<circle cx="195.0" cy="3447.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 195.0 3447.102362204724 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 167.400 3471.745 A 37 37 0 0 1 164.203 3426.595" fill="none" stroke="#555" stroke-width="3"/>
+<text x="142.13" y="3455.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Auto</text>
+<path d="M 174.492 3416.306 A 37 37 0 0 1 215.508 3416.306" fill="none" stroke="#555" stroke-width="3"/>
+<text x="195.0" y="3399.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Disabled</text>
+<path d="M 225.797 3426.595 A 37 37 0 0 1 222.600 3471.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="247.87" y="3455.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide</text>
+<path d="M 165.412 3424.887 A 37 37 0 0 1 172.784 3417.514" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 217.216 3417.514 A 37 37 0 0 1 224.588 3424.887" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="31" cy="3487.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="47" y="3492.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Auto (Stock)</text>
+<text x="47" y="3511.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
+<circle cx="31" cy="3531.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="47" y="3536.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Disabled</text>
+<text x="47" y="3555.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
+<circle cx="31" cy="3575.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="47" y="3580.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wide/smooth filter</text>
+<text x="47" y="3599.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
+<text x="22" y="3644.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Reverb character</text>
 <circle cx="195.0" cy="3716.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 3716.102362204724 v -16" stroke="#222" stroke-width="2"/>
 <path d="M 167.400 3740.745 A 37 37 0 0 1 187.725 3679.825" fill="none" stroke="#555" stroke-width="3"/>
 <text x="144.72" y="3704.33" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
 <path d="M 202.275 3679.825 A 37 37 0 0 1 222.600 3740.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="245.28" y="3704.33" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Evolving</text>
+<text x="245.28" y="3704.33" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Clouds</text>
 <path d="M 189.787 3679.471 A 37 37 0 0 1 200.213 3679.471" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="31" cy="3756.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
 <text x="47" y="3761.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Stock</text>
 <text x="47" y="3780.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
 <circle cx="31" cy="3800.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="47" y="3805.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Evolving</text>
+<text x="47" y="3805.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Clouds-style</text>
 <text x="47" y="3824.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
 <text x="22" y="3869.102362204724" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 3</text>
 <text x="122" y="3869.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">F</text>

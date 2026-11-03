@@ -16,7 +16,7 @@ Updating is not a remedy for unexplained module behaviour. Disconnect speakers: 
 
 Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
-2 / DRY/WET         Delay mode    Reverb character  Frozen feedback
+2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
 4 / all three       Not used yet  Not used yet      Limiter
 
@@ -42,7 +42,7 @@ Synth start selects Automatic (Stock), starting after ten seconds with both inpu
 
 ## Delay mode
 
-Delay mode: Auto (Stock) enters delay at SIZE fully clockwise. Disabled keeps granular playback there. Wide/smooth filter retains delay with a neutral middle and no resonant boost at either end. SIZE CV and its attenurandomizer control the filter. FEEDBACK on page 2 selects these values in thirds; [A] shows steady green / yellow / red respectively. The saved default is Auto (Stock). This does not affect wavetable synth mode.
+Delay mode: Auto (Stock) enters delay at SIZE fully clockwise. Disabled keeps granular playback there. Wide/smooth filter retains delay with a neutral middle and no resonant boost at either end. SIZE CV and its attenurandomizer control the filter. DRY/WET on page 2 selects these values in thirds; [A] shows steady green / yellow / red respectively. The saved default is Auto (Stock). This does not affect wavetable synth mode.
 
 ## Stereo width
 

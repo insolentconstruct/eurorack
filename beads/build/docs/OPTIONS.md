@@ -41,9 +41,9 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
-| DRY/WET | Reverb character | Stock / Clouds-style | green; steady / yellow; steady |
-| REVERB | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
+| FEEDBACK | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
+| DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
+| REVERB | Reverb character | Stock / Clouds-style | green; steady / yellow; steady |
 
 ## Page 3 — REVERB LED pulsing
 

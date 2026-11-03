@@ -159,7 +159,7 @@ slightly to take over; [A] shows its setting. Unused knobs do nothing.
 
 Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
-2 / DRY/WET         Delay mode    Reverb character  Frozen feedback
+2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
 4 / all three       Not used yet  Not used yet      Limiter
 
@@ -175,7 +175,7 @@ See below for every value.
 Delay mode: Auto (Stock) enters delay at SIZE fully clockwise. Disabled
 keeps granular playback there. Wide/smooth filter retains delay with a
 neutral middle and no resonant boost at either end. SIZE CV and its
-attenurandomizer control the filter. FEEDBACK on page 2 selects these
+attenurandomizer control the filter. DRY/WET on page 2 selects these
 values in thirds; [A] shows steady green / yellow / red respectively.
 The saved default is Auto (Stock). This does not affect wavetable synth
 mode.
@@ -256,13 +256,13 @@ page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	REVERB	Attacks	Off	green	steady
 1	FEEDBACK	REVERB	Attacks	Snap	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Snap and trigger	red	steady
-2	DRY/WET	FEEDBACK	Delay mode	Auto (Stock)	green	steady
-2	DRY/WET	FEEDBACK	Delay mode	Disabled	yellow	steady
-2	DRY/WET	FEEDBACK	Delay mode	Wide/smooth filter	red	steady
-2	DRY/WET	DRY/WET	Reverb character	Stock	green	steady
-2	DRY/WET	DRY/WET	Reverb character	Clouds-style	yellow	steady
-2	DRY/WET	REVERB	Frozen feedback	Stock	green	steady
-2	DRY/WET	REVERB	Frozen feedback	Evolving	yellow	steady
+2	DRY/WET	FEEDBACK	Frozen feedback	Stock	green	steady
+2	DRY/WET	FEEDBACK	Frozen feedback	Evolving	yellow	steady
+2	DRY/WET	DRY/WET	Delay mode	Auto (Stock)	green	steady
+2	DRY/WET	DRY/WET	Delay mode	Disabled	yellow	steady
+2	DRY/WET	DRY/WET	Delay mode	Wide/smooth filter	red	steady
+2	DRY/WET	REVERB	Reverb character	Stock	green	steady
+2	DRY/WET	REVERB	Reverb character	Clouds-style	yellow	steady
 3	REVERB	FEEDBACK	Processor	Granular (Stock)	green	steady
 3	REVERB	FEEDBACK	Processor	Spectral	yellow	steady
 3	REVERB	DRY/WET	Synth	Beads (Stock)	green	steady

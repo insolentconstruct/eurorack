@@ -996,11 +996,11 @@ void TestFrozenFeedbackStorage() {
     CHECK(!loaded.evolving_feedback());
     CHECK(r.settings.Init(false));
   }
-  // Page 2, REVERB: upper half is Evolving, saved when the page settles.
+  // Page 2, FEEDBACK: upper half is Evolving, saved when the page settles.
   Rig s(false);
   s.Enter();
   s.Tap();
-  s.reverb = 0.9f;
+  s.feedback = 0.9f;
   s.Tick(20, true);
   CHECK(s.ui.evolving_feedback());
   s.Tick(1100, true);
@@ -1314,11 +1314,11 @@ void TestSettingsRollover() {
     const PersistentData old_calibration = r.settings.persistent_data();
     r.EnterPage(1);
     CHECK(!r.ui.options_.clouds_preview());
-    // Real settled saves: the DRY/WET knob alone flips the style each time.
+    // Real settled saves: the REVERB knob alone flips the style each time.
     const uint32_t erases = TestFlashErases();
     for (int i = 0; i < 2; ++i) {
       const uint32_t writes = test_writes;
-      r.pot = i ? .1f : .9f;
+      r.reverb = i ? .1f : .9f;
       r.Tick(1100, true);
       CHECK(test_writes == writes + 1);
     }
@@ -1334,7 +1334,7 @@ void TestSettingsRollover() {
 
     const uint32_t writes = test_writes;
     TestFlashBudget() = cut;
-    r.pot = .9f;
+    r.reverb = .9f;
     r.Tick(1100, true);
     TestFlashBudget() = -1;
     CHECK(r.settings.clouds_style());
@@ -1854,7 +1854,7 @@ void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
   const OptionSetting expected[4][3] = {
     { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS },
-    { OPTION_DELAY, OPTION_REVERB, OPTION_FROZEN },
+    { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB },
     { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
     { OPTION_RESERVED, OPTION_RESERVED, OPTION_LIMITER }
   };
@@ -2047,18 +2047,18 @@ void TestOptionsZonesAndSaveBatch() {
   {
     Rig halves(false);
     halves.EnterPage(1);
-    halves.pot = .9f;
+    halves.reverb = .9f;
     halves.Tick(1, true);
-    halves.pot = .5f;
+    halves.reverb = .5f;
     halves.Tick(1, true);
     CHECK(halves.ui.options_.clouds_preview());
-    halves.pot = .46f;
+    halves.reverb = .46f;
     halves.Tick(1, true);
     CHECK(!halves.ui.options_.clouds_preview());
-    halves.pot = .54f;
+    halves.reverb = .54f;
     halves.Tick(1, true);
     const uint32_t writes = test_writes;
-    halves.reverb = .9f;
+    halves.feedback = .9f;
     halves.Tick(1001, true);
     CHECK(test_writes == writes + 1);
     CHECK(halves.settings.clouds_style());
@@ -2229,8 +2229,8 @@ void TestOptionsPreview() {
   r.settings.set_evolving_feedback(false);
   r.ui.LoadOptions();
   r.EnterPage(1);
-  const OptionSetting order[3] = { OPTION_DELAY, OPTION_REVERB, OPTION_FROZEN };
-  const int values[3] = { DELAY_MODE_WIDE_DETENT, 1, 0 };
+  const OptionSetting order[3] = { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB };
+  const int values[3] = { 0, DELAY_MODE_WIDE_DETENT, 1 };
   for (int knob = 0; knob < 3; ++knob) {
     CHECK(r.ui.options_.preview_knob() == knob);
     const OptionValue& v = r.ui.options_.indication();
@@ -2240,7 +2240,7 @@ void TestOptionsPreview() {
     r.Tick(2048 - 1, true);
   }
   CHECK(r.ui.options_.preview_knob() == -1);
-  CHECK(r.ui.options_.indication().setting == OPTION_DELAY);
+  CHECK(r.ui.options_.indication().setting == OPTION_FROZEN);
   // Reserved knobs are skipped; a knob ends the preview at once.
   r.Tap();
   r.Tap();
@@ -2380,6 +2380,52 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->ui.Init(&r->settings, &r->gain, &r->calibration, &r->backup);
   r->ui.LoadOptions();
   r->Tick(40, true);
+}
+
+void TestPageTwoKnobRoutingAndSavedMeaning() {
+  test_checker.Start("TestPageTwoKnobRoutingAndSavedMeaning");
+  for (int explicit_old = 0; explicit_old < 2; ++explicit_old) {
+    uint8_t b[kProfileSize];
+    for (size_t i = 0; i < kProfileSize; ++i) {
+      b[i] = kProfileBlock[i];
+    }
+    if (explicit_old) {
+      for (size_t i = 0; i < b[5]; ++i) {
+        uint8_t* entry = b + 16 + 6 * i;
+        if (entry[0] == FEATURE_REVERB) {
+          entry[3] = 5;
+        } else if (entry[0] == FEATURE_DELAY) {
+          entry[3] = 4;
+        } else if (entry[0] == FEATURE_FROZEN) {
+          entry[3] = 6;
+        }
+      }
+      const size_t size = 16 + b[6];
+      const uint32_t crc = Profile::Crc32(b, size);
+      for (int i = 0; i < 4; ++i) {
+        b[size + i] = crc >> (8 * i);
+      }
+    }
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.EnterPage(1);
+    float* pots[] = { &r.feedback, &r.pot, &r.reverb };
+    for (int knob = 0; knob < 3; ++knob) {
+      const ProfileFeature feature = r.settings.profile().Page(4 + knob);
+      const uint8_t value = kFeatureDefinitions[feature].values - 1;
+      *pots[knob] = 0.9f;
+      r.Tick(1100, true);
+      CHECK(r.settings.FeatureValue(feature) == value);
+    }
+    CHECK(r.settings.evolving_feedback());
+    CHECK(r.settings.clouds_style());
+    CHECK(r.settings.delay_mode() == DELAY_MODE_WIDE_DETENT);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.evolving_feedback() && loaded.clouds_style());
+    CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
+    CHECK(loaded.profile().Page(4) == FEATURE_FROZEN);
+  }
 }
 
 void ScaleFloat(uint8_t* p, float value) {
@@ -2867,6 +2913,7 @@ int main() {
   TestOptionsTablesAndLifetime();
   TestOptionsKnobsAndSettling();
   TestOptionsSeed();
+  TestPageTwoKnobRoutingAndSavedMeaning();
   TestOptionsPreview();
   TestOptionsPalette();
   TestOptionsConfirmations();
