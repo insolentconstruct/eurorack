@@ -139,7 +139,9 @@ void TestProfileParser() {
     CHECK(!p.Init(b));
   }
   Template(b);
-  b[6] = 90;
+  const uint16_t extra_bytes = uint16_t(b[6]) + (uint16_t(b[7]) << 8) + 6;
+  b[6] = extra_bytes & 255;
+  b[7] = extra_bytes >> 8;
   Checksum(b);
   CHECK(!p.Init(b));
   Template(b);
