@@ -267,10 +267,12 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_SEED_LATCH:
           {
             int value = profile_preview_[setting];
-            while (value < 3 && pot > float(value + 1) * 0.25f + kOptionsProfileZoneBand) {
+            while (value < 3 &&
+                pot > float(value + 1) * 0.25f + kOptionsProfileZoneBand) {
               ++value;
             }
-            while (value > 0 && pot < float(value) * 0.25f - kOptionsProfileZoneBand) {
+            while (value > 0 &&
+                pot < float(value) * 0.25f - kOptionsProfileZoneBand) {
               --value;
             }
             profile_preview_[setting] = value;
@@ -279,10 +281,12 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         case OPTION_BRIGHTNESS:
           {
             int value = profile_preview_[setting];
-            while (value < 2 && pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand) {
+            while (value < 2 &&
+                pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand) {
               ++value;
             }
-            while (value > 0 && pot < float(value) / 3.0f - kOptionsProfileZoneBand) {
+            while (value > 0 &&
+                pot < float(value) / 3.0f - kOptionsProfileZoneBand) {
               --value;
             }
             profile_preview_[setting] = value;
