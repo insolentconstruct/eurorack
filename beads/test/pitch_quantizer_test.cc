@@ -176,6 +176,52 @@ void TestRandomIntervals() {
   }
 }
 
+void TestCustomIntervalInteractions() {
+  test_checker.Start("TestCustomIntervalInteractions");
+  PitchScaleDefinition custom = { };
+  custom.id = 15;
+  custom.size = 3;
+  custom.period = 13.0f;
+  custom.notes[1] = 3.25f;
+  custom.notes[2] = 8.125f;
+  ConfigurePitchScales(&custom, 1, true);
+  int changed[2] = { 0, 0 };
+  for (int patched = 0; patched < 2; ++patched) {
+    RandomizedParameter p;
+    p.base = 2.5f;
+    p.cv = 12.0f;
+    p.has_cv = patched;
+    for (int side = 0; side < 2; ++side) {
+      p.attenuverter = side ? 0.8f : -0.8f;
+      for (int i = 0; i < 256; ++i) {
+        float ratio[2];
+        for (int intervals = 0; intervals < 2; ++intervals) {
+          stmlib::Random::Seed(0x81273849U + uint32_t(i) * 997);
+          ratio[intervals] = p.pitch_value(PitchScale(15), intervals);
+          const float pitch = 12.0f * log2f(ratio[intervals]);
+          float phase = fmodf(pitch, custom.period);
+          if (phase < 0.0f) {
+            phase += custom.period;
+          }
+          bool on_scale = phase < 0.002f ||
+              custom.period - phase < 0.002f;
+          for (int note = 1; note < custom.size; ++note) {
+            on_scale |= fabsf(phase - custom.notes[note]) < 0.002f;
+          }
+          CHECK(on_scale);
+        }
+        if (side) {
+          CHECK(ratio[0] == ratio[1]);
+        } else {
+          changed[patched] += ratio[0] != ratio[1];
+        }
+      }
+    }
+    CHECK(changed[patched] > 0);
+  }
+  ConfigurePitchScales(NULL, 0, false);
+}
+
 void TestCustomPitchGrids() {
   test_checker.Start("TestCustomPitchGrids");
   PitchScaleDefinition bank[kMaxCustomScales] = { };
@@ -294,6 +340,7 @@ void TestCustomPitchRatioLimits() {
 
 int main() {
   TestPitchGrids();
+  TestCustomIntervalInteractions();
   TestCustomPitchGrids();
   TestCustomPitchRatioLimits();
   TestRandomizedPitchGrid();
