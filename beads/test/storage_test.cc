@@ -1252,6 +1252,103 @@ void Pitch15Profile(uint8_t* block, uint8_t value) {
   ProfileChecksum(block);
 }
 
+void TestPackedFeaturePairs() {
+  test_checker.Start("TestPackedFeaturePairs");
+  ProfileFeature features[FEATURE_LAST];
+  size_t count = 0;
+  uint8_t block[kProfileSize];
+  Pitch15Profile(block, 0);
+  uint8_t scale[kScaleRecordSize];
+  memcpy(scale, block + 16 + 6 * block[5], sizeof(scale));
+  for (int id = 1; id < FEATURE_LAST; ++id) {
+    if (kFeatureDefinitions[id].field == kNoField) {
+      continue;
+    }
+    features[count] = ProfileFeature(id);
+    uint8_t* entry = block + 16 + 6 * count++;
+    memset(entry, 0, 6);
+    entry[0] = id;
+    entry[1] = PROFILE_ADJUSTABLE;
+  }
+  CHECK(count == 13);
+  block[5] = count;
+  const size_t bytes = 6 * count + sizeof(scale);
+  block[6] = bytes & 255;
+  block[7] = bytes >> 8;
+  memcpy(block + 16 + 6 * count, scale, sizeof(scale));
+  ProfileChecksum(block);
+  Wipe();
+  Settings dense;
+  dense.Init(false, block);
+  CHECK(!dense.profile_locked());
+  for (size_t i = 0; i < count; ++i) {
+    dense.SetFeatureValue(
+        features[i], kFeatureDefinitions[features[i]].values - 1);
+  }
+  dense.SaveState();
+  for (size_t changed = 0; changed < count; ++changed) {
+    CHECK(dense.Init(false, block));
+    for (size_t i = 0; i < count; ++i) {
+      CHECK(dense.FeatureValue(features[i]) ==
+          kFeatureDefinitions[features[i]].values - 1);
+    }
+    dense.SetFeatureValue(features[changed], 0);
+    dense.SaveState();
+    CHECK(dense.Init(false, block));
+    for (size_t i = 0; i < count; ++i) {
+      CHECK(dense.FeatureValue(features[i]) ==
+          (i == changed ? 0 : kFeatureDefinitions[features[i]].values - 1));
+    }
+    dense.SetFeatureValue(
+        features[changed], kFeatureDefinitions[features[changed]].values - 1);
+    dense.SaveState();
+  }
+  size_t pairs = 0;
+  for (size_t a = 0; a < count; ++a) {
+    for (size_t b = a + 1; b < count; ++b) {
+      ++pairs;
+      Wipe();
+      Settings initial;
+      initial.Init(false, block);
+      CHECK(!initial.profile_locked());
+      initial.mutable_state()->gain = 137;
+      initial.mutable_state()->assignable_cv_amount[1] = 173;
+      initial.SaveState();
+      for (int state = PROFILE_OFF; state <= PROFILE_FIXED; ++state) {
+        Settings both;
+        CHECK(both.Init(false, block));
+        both.SetFeatureValue(
+            features[a], kFeatureDefinitions[features[a]].values - 1);
+        both.SetFeatureValue(
+            features[b], kFeatureDefinitions[features[b]].values - 1);
+        both.SaveState();
+        Settings loaded;
+        CHECK(loaded.Init(false, block));
+        for (size_t i = 0; i < count; ++i) {
+          CHECK(loaded.FeatureValue(features[i]) ==
+              (i == a || i == b
+                  ? kFeatureDefinitions[features[i]].values - 1 : 0));
+        }
+        uint8_t dormant[kProfileSize];
+        memcpy(dormant, block, sizeof(dormant));
+        dormant[16 + 6 * a + 1] = state;
+        ProfileChecksum(dormant);
+        CHECK(loaded.Init(false, dormant));
+        CHECK(loaded.FeatureValue(features[a]) == 0);
+        loaded.SetFeatureValue(features[b], 0);
+        loaded.SaveState();
+        CHECK(loaded.Init(false, block));
+        CHECK(loaded.FeatureValue(features[a]) ==
+            kFeatureDefinitions[features[a]].values - 1);
+        CHECK(loaded.FeatureValue(features[b]) == 0);
+        CHECK(loaded.state().gain == 137);
+        CHECK(loaded.state().assignable_cv_amount[1] == 173);
+      }
+    }
+  }
+  CHECK(pairs == 78);
+}
+
 void TestPitchExtensionSentinel() {
   test_checker.Start("TestPitchExtensionSentinel");
   CHECK(kPitchExtensionField == 13 && kPitchExtensionScale == 15);
@@ -1553,6 +1650,7 @@ int main() {
   TestProfileLocks();
   TestProfileSettings();
   TestPackedSettings();
+  TestPackedFeaturePairs();
   TestPitchExtensionSentinel();
   TestStockSettingsCarryOver();
   TestProfileDormantAmounts();

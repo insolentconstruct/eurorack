@@ -171,9 +171,78 @@ void TestFrozenFeedback() {
   }
 }
 
+void TestFrozenEffectCombinations() {
+  test_checker.Start("TestFrozenEffectCombinations");
+  static Processor processor;
+  static uint8_t banks[3][262144];
+  static uint8_t frozen[3][262144];
+  static uint16_t reverb[32768];
+  uint8_t* buffers[] = { banks[0], banks[1], banks[2] };
+  uint32_t hashes[8];
+  for (int combination = 0; combination < 8; ++combination) {
+    memset(static_cast<void*>(&processor), 0, sizeof(processor));
+    memset(banks, 0, sizeof(banks));
+    memset(reverb, 0, sizeof(reverb));
+    processor.Init(buffers, reverb);
+    processor.set_evolving_feedback(combination & 1);
+    processor.set_diffusion(combination & 2 ? 0.5f : 0.0f);
+    processor.SetCloudsStyle(combination & 4);
+    stmlib::Random::Seed(0x18276345);
+    Parameters p;
+    memset(&p, 0, sizeof(p));
+    p.time.base = 0.02f;
+    p.size.base = p.shape.base = 0.5f;
+    ModulatedParameter density;
+    density.base = 0.95f;
+    density.cv = 0.0f;
+    Processor::MixParameters mix;
+    mix.feedback = 0.8f;
+    mix.dry_wet = 1.0f;
+    mix.reverb_amount = 0.5f;
+    mix.output_gate = false;
+    uint32_t hash = 2166136261U;
+    double energy = 0.0;
+    for (int block = 0; block < 8000; ++block) {
+      FloatFrame in[12], out[12];
+      bool freeze[12];
+      for (size_t i = 0; i < 12; ++i) {
+        in[i].l = 0.1f * sinf(float(block * 12 + i) * 0.031f);
+        in[i].r = 0.1f * cosf(float(block * 12 + i) * 0.043f);
+        freeze[i] = block >= 4000;
+      }
+      processor.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze,
+          density, p, mix, in, out, 12);
+      if (block == 5000) {
+        memcpy(frozen, banks, sizeof(banks));
+      }
+      for (size_t i = 0; i < 12; ++i) {
+        CHECK(std::isfinite(out[i].l) && std::isfinite(out[i].r));
+        CHECK(fabsf(out[i].l) < 2.0f && fabsf(out[i].r) < 2.0f);
+        if (block >= 6000) {
+          uint32_t words[2];
+          memcpy(words, &out[i], sizeof(words));
+          hash = (hash ^ words[0]) * 16777619U;
+          hash = (hash ^ words[1]) * 16777619U;
+          energy += out[i].l * out[i].l + out[i].r * out[i].r;
+        }
+      }
+    }
+    CHECK(memcmp(frozen, banks, sizeof(banks)) == 0);
+    CHECK(energy > 0.000001);
+    CHECK(processor.feedback_diffuser_.idle() == !(combination & 1));
+    hashes[combination] = hash;
+  }
+  for (int combination = 0; combination < 8; ++combination) {
+    for (int flag = 1; flag <= 4; flag <<= 1) {
+      CHECK(hashes[combination] != hashes[combination ^ flag]);
+    }
+  }
+}
+
 int main() {
   TestFeedbackDiffuser();
   TestFeedbackIdle();
   TestFrozenFeedback();
+  TestFrozenEffectCombinations();
   return test_checker.failures() ? 1 : 0;
 }
