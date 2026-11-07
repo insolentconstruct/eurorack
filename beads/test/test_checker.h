@@ -45,6 +45,7 @@ class TestChecker {
     return condition;
   }
   int failures() const { return failures_; }
+  const char* test() const { return test_; }
 
  private:
   const char* test_;

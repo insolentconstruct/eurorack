@@ -31,6 +31,7 @@
 #include "stmlib/system/system_clock.h"
 #include "stmlib/utils/crc32.h"
 
+#include "beads/drivers/flash.h"
 #include "beads/dsp/processor.h"
 #include "beads/settings.h"
 
@@ -44,6 +45,7 @@ const uint32_t kBackupDelay = 10000; // milliseconds
 const uint32_t kMaxBackupDelay = 320000;
 const uint32_t kBackupResetDelay = 60000;
 const size_t kNumSectors = 6;
+const uint32_t kSectorSize = Sector<9>::start - Sector<8>::start;
 const uint32_t kCrcTag = 0x31435243;  // CRC1
 
 // Stereo frames in the buffer, by media. Mono has twice as many.
@@ -73,23 +75,37 @@ bool BackgroundBufferBackup::Load() {
   bool frozen = settings_->state().frozen && \
       !settings_->state().disable_autosave;
   if (frozen) {
-    const char* flash_ptr = (const char*)(Sector<8>::start);
-    const BufferBackupHeader* header = (const BufferBackupHeader*)(flash_ptr);
-    if (Valid(*header)) {
+    BufferBackupHeader header;
+    if (Flash::Read(Sector<8>::start, &header, sizeof(header)) && \
+        Valid(header)) {
       processor_->Configure(
-          Processor::Media(header->media),
-          bool(header->mono));
+          Processor::Media(header.media),
+          bool(header.mono));
 
-      for (size_t i = 0; i < kDelayBufferSizeBits / 8; i += kFlashWordSize) {
+      bool readable = true;
+      for (size_t i = 0;
+           readable && i < kDelayBufferSizeBits / 8;
+           i += kFlashWordSize) {
         uint32_t address = Sector<8>::start + uint32_t(i) + kFlashWordSize;
-        const uint8_t* flash_ptr = (const uint8_t*)(address);
+        uint32_t words[kFlashWordSize / 4];
+        readable = Flash::Read(address, words, kFlashWordSize);
+        const uint8_t* flash_ptr = (const uint8_t*)(words);
         copy(
             &flash_ptr[0],
             &flash_ptr[kFlashWordSize],
             processor_->delay_buffer_raw_bytes(i));
       }
 
-      *processor_->mutable_delay_write_ptr() = header->write_ptr;
+      if (readable) {
+        *processor_->mutable_delay_write_ptr() = header.write_ptr;
+      } else {
+        // An unreadable word: start unfrozen, without the partial copy.
+        for (size_t i = 0; i < kDelayBufferSizeBits / 8; i += kFlashWordSize) {
+          uint8_t* bytes = processor_->delay_buffer_raw_bytes(i);
+          fill(&bytes[0], &bytes[kFlashWordSize], 0);
+        }
+        frozen = false;
+      }
     } else {
       frozen = false;
     }
@@ -113,10 +129,16 @@ bool BackgroundBufferBackup::Valid(const BufferBackupHeader& header) const {
   }
   BufferBackupHeader h = header;
   h.crc = 0;
-  uint32_t crc = crc32(
-      0,
-      (const void*)(Sector<8>::start + kFlashWordSize),
-      kDelayBufferSizeBits / 8);
+  uint32_t crc = 0;
+  uint32_t block[kFlashCheckBlockSize / 4];
+  for (size_t i = 0; i < kDelayBufferSizeBits / 8; i += sizeof(block)) {
+    const size_t size = min(kDelayBufferSizeBits / 8 - i, sizeof(block));
+    if (!Flash::Read(
+            Sector<8>::start + kFlashWordSize + uint32_t(i), block, size)) {
+      return false;
+    }
+    crc = crc32(crc, block, size);
+  }
   return crc32(crc, &h, sizeof(h)) == header.crc;
 }
 
@@ -128,16 +150,9 @@ void BackgroundBufferBackup::SaveState(bool frozen) {
 void BackgroundBufferBackup::EraseSector() {
   if (remaining_sectors_) {
     save_started_ = true;
-    HAL_FLASH_Unlock();
-    FLASH_EraseInitTypeDef erase_params;
-    erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
-    erase_params.Banks = FLASH_BANK_2;
     // The header's sector first: an interrupted backup is never loaded.
-    erase_params.Sector = 8 + kNumSectors - remaining_sectors_;
-    erase_params.NbSectors = 1;
-    erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
-    uint32_t sector_error;
-    if (HAL_FLASHEx_Erase(&erase_params, &sector_error) != HAL_OK) {
+    const uint32_t sector = kNumSectors - remaining_sectors_;
+    if (!EraseBufferSector(sector, kFlashAttempts)) {
       remaining_sectors_ = remaining_bytes_ = 0;
       return;
     }
@@ -160,7 +175,12 @@ void BackgroundBufferBackup::WriteBlock() {
         
     uint32_t flash_address = \
         Sector<8>::start + uint32_t(write_offset_) + kFlashWordSize;
-    if (HAL_FLASH_Program(
+    if (Flash::SupplyLow()) {
+      remaining_sectors_ = remaining_bytes_ = 0;
+      return;
+    }
+    Flash::ClearErrors();
+    if (settings_->write_locked() || HAL_FLASH_Program(
         FLASH_TYPEPROGRAM_FLASHWORD,
         flash_address,
         (uint64_t)(&buffer[0])) != HAL_OK) {
@@ -183,7 +203,11 @@ void BackgroundBufferBackup::WriteBlock() {
       header.crc_tag = kCrcTag;
       fill(&header.reserved[0], &header.reserved[sizeof(header.reserved)], 0);
       header.crc = crc32(crc_, &header, sizeof(header));
-      if (HAL_FLASH_Program(
+      if (Flash::SupplyLow()) {
+        return;
+      }
+      Flash::ClearErrors();
+      if (settings_->write_locked() || HAL_FLASH_Program(
           FLASH_TYPEPROGRAM_FLASHWORD,
           Sector<8>::start,
           (uint64_t)(&header)) != HAL_OK) {
@@ -233,5 +257,39 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
   WriteBlock();
 }
 
+void BackgroundBufferBackup::EraseDamagedSectors() {
+  for (uint32_t i = 0; i < kNumSectors; ++i) {
+    if (!Flash::IsReadable(Sector<8>::start + i * kSectorSize, kSectorSize)) {
+      EraseBufferSector(i, kFlashAttempts);
+    }
+  }
+  HAL_FLASH_Lock();
+}
+
+// Bank 2 sectors 0 to 5, checked as settings_storage.h checks its erases.
+bool BackgroundBufferBackup::EraseBufferSector(uint32_t sector, int attempts) {
+  if (settings_->write_locked()) {
+    return false;
+  }
+  HAL_FLASH_Unlock();
+  for (int attempt = 0; attempt < attempts; ++attempt) {
+    FLASH_EraseInitTypeDef erase_params;
+    erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
+    erase_params.Banks = FLASH_BANK_2;
+    erase_params.Sector = sector;
+    erase_params.NbSectors = 1;
+    erase_params.VoltageRange = FLASH_VOLTAGE_RANGE_4;
+    uint32_t sector_error;
+    if (Flash::SupplyLow()) {
+      return false;
+    }
+    Flash::ClearErrors();
+    if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK && \
+        Flash::IsBlank(Sector<8>::start + sector * kSectorSize, kSectorSize)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 }  // namespace beads

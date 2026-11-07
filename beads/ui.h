@@ -62,7 +62,10 @@ class Ui {
     MODE_CALIBRATION_4,
     MODE_DISPLAY_AUTOSAVE,
     MODE_FACTORY_TEST,
-    MODE_PANIC
+    MODE_PANIC,
+    MODE_STORAGE_WARNING,
+    MODE_REPAIR_CALIBRATION_RESET,
+    MODE_REPAIR_FAILED
   };
   
   enum MixParameter {
@@ -83,6 +86,8 @@ class Ui {
   void Panic() {
     mode_ = MODE_PANIC;
   }
+  // At power-up: damaged storage, or the result of its repair.
+  void ShowStorageStatus();
   
   inline bool should_ignore_state_change() const {
     bool frozen = freeze_led_state_;
@@ -161,6 +166,10 @@ class Ui {
   void UpdateLeds();
   void NextCalibrationStep();
 
+  inline bool showing_storage_status() const {
+    return mode_ >= MODE_STORAGE_WARNING;
+  }
+
   stmlib::EventQueue<16> queue_;
 
   Leds leds_;
@@ -186,6 +195,7 @@ class Ui {
   BackgroundBufferBackup* background_buffer_backup_;
   
   PotController assignable_cv_pot_[MIX_PARAMETER_LAST];
+  uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
   

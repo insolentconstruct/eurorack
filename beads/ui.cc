@@ -44,6 +44,8 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
+const uint32_t kStorageStatusTime = 3000;
+
 /* static */
 const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
   4000, 4000, 1500, 0x7fffffff
@@ -65,6 +67,7 @@ void Ui::Init(
   background_buffer_backup_ = background_buffer_backup;
   
   mode_ = MODE_NORMAL;
+  storage_status_time_ = 0;
   
   queue_.Init();
   
@@ -86,32 +89,58 @@ void Ui::Init(
   }
 }
 
+void Ui::ShowStorageStatus() {
+  switch (settings_->repair()) {
+    case STORAGE_REPAIR_CALIBRATION_RESET:
+      mode_ = MODE_REPAIR_CALIBRATION_RESET;
+      break;
+    case STORAGE_REPAIR_FAILED:
+      mode_ = MODE_REPAIR_FAILED;
+      break;
+    default:
+      if (!settings_->write_locked()) {
+        return;
+      }
+      mode_ = MODE_STORAGE_WARNING;
+      break;
+  }
+  storage_status_time_ = system_clock.milliseconds();
+}
+
 void Ui::Poll() {
   system_clock.Tick();
   switches_.Debounce();
   
+  // Ignore buttons held through the storage status shown at power-up.
+  const bool accept_switch_events = !showing_storage_status();
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
     
     if (switches_.just_pressed(s)) {
-      queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      if (accept_switch_events) {
+        queue_.AddEvent(CONTROL_SWITCH, i, 0);
+      }
       press_time_[i] = system_clock.milliseconds();
-      ignore_release_[i] = false;
+      ignore_release_[i] = !accept_switch_events;
     }
     
     if (switches_.pressed(s) && !ignore_release_[i]) {
       uint32_t pressed_time = system_clock.milliseconds() - press_time_[i];
       if (pressed_time >= long_press_duration[i]) {
-        queue_.AddEvent(CONTROL_SWITCH, i, pressed_time);
+        if (accept_switch_events) {
+          queue_.AddEvent(CONTROL_SWITCH, i, pressed_time);
+        }
         ignore_release_[i] = true;
       }
     }
     
     if (switches_.released(s) && !ignore_release_[i]) {
-      queue_.AddEvent(
-          CONTROL_SWITCH,
-          i,
-          system_clock.milliseconds() - press_time_[i] + 1);
+      if (accept_switch_events) {
+        queue_.AddEvent(
+            CONTROL_SWITCH,
+            i,
+            system_clock.milliseconds() - press_time_[i] + 1);
+      }
       ignore_release_[i] = true;
     }
   }
@@ -154,6 +183,7 @@ void Ui::UpdateLeds() {
   
   switch (mode_) {
     case MODE_PANIC:
+    case MODE_STORAGE_WARNING:
       {
         bool blink = system_clock.milliseconds() & 64;
         for (int i = 0; i < LED_LAST; ++i) {
@@ -226,9 +256,37 @@ void Ui::UpdateLeds() {
         leds_.set(Led(i), triangle);
       }
       break;
+
+    case MODE_REPAIR_CALIBRATION_RESET:
+    case MODE_REPAIR_FAILED:
+      {
+        // Repaired: slow green blink, ASSIGN LEDs lit. Failed: fast red
+        // blink, ASSIGN LEDs blinking.
+        const uint32_t elapsed = system_clock.milliseconds() - \
+            storage_status_time_;
+        const bool blink = (elapsed % 1000) < 500;
+        const bool fast_blink = (elapsed % 250) < 125;
+        Leds::Color color;
+        color.r = 0;
+        color.g = 0;
+        color.b = 0;
+        if (mode_ == MODE_REPAIR_FAILED) {
+          color.r = fast_blink ? 255 : 0;
+          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+            leds_.set(Led(LED_ASSIGN_1 + i), fast_blink ? 255 : 0);
+          }
+        } else {
+          color.g = blink ? 255 : 0;
+          for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+            leds_.set(Led(LED_ASSIGN_1 + i), 255);
+          }
+        }
+        leds_.set_media(color);
+      }
+      break;
   }
   
-  if (mode_ != MODE_FACTORY_TEST) {
+  if (mode_ != MODE_FACTORY_TEST && !showing_storage_status()) {
     if (gain_control_->adjusting()) {
       leds_.set(LED_VU_METER, (system_clock.milliseconds() & 128) ? 128 : 0);
     } else {
@@ -463,6 +521,12 @@ void Ui::DoEvents() {
   }
   
   if (queue_.idle_time() > 1000 && (mode_ == MODE_PANIC || mode_ == MODE_DISPLAY_AUTOSAVE)) {
+    mode_ = MODE_NORMAL;
+  }
+
+  if (showing_storage_status() &&
+      system_clock.milliseconds() - storage_status_time_ >=
+          kStorageStatusTime) {
     mode_ = MODE_NORMAL;
   }
 
