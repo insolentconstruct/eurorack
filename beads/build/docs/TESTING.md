@@ -1,7 +1,7 @@
 # Testing
 
 The Beta 2 source contains 20 host programs, 275 named test sections,
-2,195 assertion sites and 396 deliberate fault patterns. On the release source
+2,199 assertion sites and 396 deliberate fault patterns. On the release source
 `6729648`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070756)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070775)
 detected all 392 faults across eight shards. Named sections and assertion sites
@@ -71,12 +71,12 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | pitch_quantizer | 6 | 52 |
 | plaits_synth | 4 | 31 |
 | processor | 11 | 45 |
-| profile | 5 | 86 |
+| profile | 5 | 90 |
 | spectral | 7 | 34 |
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **275** | **2,195** |
+| **Total** | **275** | **2,199** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked release CI predates the codec sequencing checks.
 
