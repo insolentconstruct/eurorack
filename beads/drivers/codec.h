@@ -69,6 +69,12 @@ class Codec {
   
   bool Init();
   bool Start(int32_t sample_rate, size_t block_size, FillBufferCallback callback = NULL);
+  // Changes the sample rate with the converter held in reset (#53).
+  bool Restart(
+      int32_t previous_sample_rate,
+      int32_t sample_rate,
+      size_t block_size,
+      FillBufferCallback callback);
   void Stop();
   // Detach the callback while the converter keeps running on silence, so that
   // a change at the same sample rate does not stop its clocks (#53).

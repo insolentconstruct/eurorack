@@ -354,10 +354,11 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
     return;
   }
   if (codec_sample_rate) {
-    codec.Stop();
+    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);
+  } else {
+    codec.Start(sr, sr / kBlockRate, &Process);
   }
   codec_sample_rate = sr;
-  codec.Start(sr, sr / kBlockRate, &Process);
 }
 
 void Init() {

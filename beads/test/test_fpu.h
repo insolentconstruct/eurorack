@@ -27,7 +27,7 @@
 
 #ifndef BEADS_TEST_TEST_FPU_H_
 #define BEADS_TEST_TEST_FPU_H_
-#include <cstdint>
+#include <stdint.h>
 #if defined(__SSE__)
 #include <xmmintrin.h>
 #endif

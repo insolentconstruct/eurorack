@@ -858,8 +858,8 @@ void TestPitchChain() {
 
 
 
-// A change at the same sample rate keeps the converter clocked (#53): only
-// the 24 and 32 kHz qualities stop and restart it.
+// A change at the same sample rate keeps the converter clocked (#53):
+// rate changes use the reset-held restart sequence.
 void TestCodecKeepsClocks() {
   test_checker.Start("TestCodecKeepsClocks");
   Rig r(false);
@@ -875,6 +875,7 @@ void TestCodecKeepsClocks() {
     const int previous_rate = codec.sample_rate_;
     const int starts = codec.starts_;
     const int stops = codec.stops_;
+    const int previous_restarts = codec.restarts_;
     settings.mutable_state()->media = media[i];
     for (int j = 0; j < 200 && processor.media() != media[i]; ++j) {
       r.Tick(1);
@@ -884,8 +885,15 @@ void TestCodecKeepsClocks() {
     const int rate = int(processor.sample_rate());
     const int restarts = rate == previous_rate ? 0 : 1;
     CHECK(codec.sample_rate_ == rate);
-    CHECK(codec.starts_ == starts + restarts);
-    CHECK(codec.stops_ == stops + restarts);
+    CHECK(codec.starts_ == starts);
+    CHECK(codec.stops_ == stops);
+    CHECK(codec.restarts_ == previous_restarts + restarts);
+    if (restarts) {
+      CHECK(codec.previous_sample_rate_ == previous_rate);
+    }
+    CHECK(codec.block_size_ == size_t(rate / 4000));
+    CHECK(codec.running_);
+    CHECK(codec.idle_stops_ == 0);
     r.Settle();
   }
 }
