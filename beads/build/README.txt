@@ -349,7 +349,9 @@ firmware and GCC 4.9 to reproduce Mutable Instruments' bootloader
 exactly, and pinned Debian packages, so it takes a while; later builds
 reuse the image. The build runs entirely in Docker, with Python 3.
 Running the Python 2 makefiles on the host is not supported; use the
-commands above.
+commands above. Use build.sh. Plain make may try to regenerate the
+resource tables with python; if you use it, add
+-o beads/resources.cc -o beads/resources.h.
 
 Licence and credits
 -------------------
