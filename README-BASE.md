@@ -12,7 +12,7 @@ and patching. The storage repair is covered by host tests, not by a module
 test of this build.
 
 CPU, peak audio-callback load on that module (timing builds, heavy test
-patches; the limit is 92%):
+patches):
 
 | Patch | Vanilla source | This branch |
 |---|---:|---:|
