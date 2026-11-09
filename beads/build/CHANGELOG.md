@@ -2,6 +2,10 @@
 
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
+## Unreleased
+
+- Hold the codec in reset before stopping clocks on quality changes (#53).
+
 ## 2026.11.01 (tag `drizzlet-2026.11.01`, beta 2 "Fog")
 
 - Hygrostat builds custom firmware, controls, defaults and guides.

@@ -46,7 +46,8 @@ class Codec {
       const Event*, const Frame*, Frame*, size_t);
   bool Init() {
     callback_ = NULL;
-    starts_ = stops_ = idle_stops_ = 0;
+    starts_ = stops_ = idle_stops_ = restarts_ = 0;
+    previous_sample_rate_ = 0;
     running_ = false;
     return true;
   }
@@ -56,6 +57,19 @@ class Codec {
     callback_ = callback;
     running_ = true;
     ++starts_;
+    return true;
+  }
+  bool Restart(
+      int32_t previous_rate,
+      int32_t rate,
+      size_t size,
+      FillBufferCallback callback) {
+    previous_sample_rate_ = previous_rate;
+    sample_rate_ = rate;
+    block_size_ = size;
+    callback_ = callback;
+    running_ = true;
+    ++restarts_;
     return true;
   }
   // The HAL faults when the SAI is stopped before its first start.
@@ -69,6 +83,8 @@ class Codec {
   int sample_rate_;
   size_t block_size_;
   FillBufferCallback callback_;
+  int previous_sample_rate_;
+  int restarts_;
   int starts_;
   int stops_;
   int idle_stops_;
