@@ -304,9 +304,9 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 A lightweight requested feature may ship Off by default. Its Off state must
 leave the audio unchanged and add no measurable audio-path cost; branches
 belong outside sample loops. Measure each feature and interacting controls.
-Stock Beads' measured worst case is the ceiling (provisionally 92%). Warn from
-91%; block above 92%, for measured and estimated combinations alike. The
-ceiling must stay below the earliest measured DAC deadline at every sample
+Hygrostat's internal threshold follows stock Beads' measured worst case
+(provisionally 92%): it warns from 91% and blocks above 92%, for measured and
+estimated combinations alike. The threshold must stay below the earliest measured DAC deadline at every sample
 rate. New features still require flash, permanent storage fields, controls and
 maintenance.
 

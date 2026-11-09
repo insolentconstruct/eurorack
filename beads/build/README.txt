@@ -97,9 +97,9 @@ refuses excessive combinations. Per-feature estimates await module
 measurements.
 
 Profiles, custom scales, LED indications and tail choices are checked
-by host tests, not yet on a module. Page 4 provides LED brightness
-and SEED latch with stock starting values. Seven additional options are off in
-standard firmware:
+by host tests, not yet on a module. Page 4 provides LED brightness and
+SEED latch with stock starting values. Seven additional options are off
+in standard firmware:
 
 - Version at boot flashes light-blue, then twice for Beta 2, without
   delaying startup.
