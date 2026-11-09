@@ -20,7 +20,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
         qemu-user-static:amd64 \
         libc6:i386 libstdc++6:i386 zlib1g:i386 \
  && rm -rf /var/lib/apt/lists/* \
- && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/beads-build-kit-packages.txt
+ && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/mi-toolchain-packages.txt
 
 ARG TC_LOCAL=
 COPY . /kit-context/
@@ -49,7 +49,7 @@ RUN arm-none-eabi-gcc --version | sed -n 1p \
  && arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 /tmp/probe.c -o /tmp/probe.o \
  && rm -f /tmp/probe.c /tmp/probe.o
 
-LABEL org.opencontainers.image.title="beads-tuneup" \
+LABEL org.opencontainers.image.title="mi-toolchain" \
       org.beads.toolchain="gcc-arm-none-eabi-9-2020-q2-update"
 
 WORKDIR /src

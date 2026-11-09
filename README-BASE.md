@@ -86,11 +86,16 @@ Initialize the two required submodules, then run from the repository root:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
-docker build --platform linux/amd64 -t beads-tuneup beads/build
+docker pull ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST>
+docker tag ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST> beads-tuneup
 beads/build/build.sh "$PWD/beads-base-build" --wav
 ```
 
-The first build downloads two pinned toolchains (GCC 9 for the firmware,
+The published image is built by CI on the `drizzlet` branch from its
+`beads/build/Dockerfile`, with the same pinned toolchains. To build it yourself,
+replace the pull and tag with
+`docker build --platform linux/amd64 -t beads-tuneup beads/build`.
+That first build downloads two pinned toolchains (GCC 9 for the firmware,
 GCC 4.9 to reproduce Mutable Instruments' bootloader exactly) and pinned Debian
 packages, so it can take a while; later builds reuse the cached image. The
 build runs entirely in Docker with Python 3: running the older Python 2
