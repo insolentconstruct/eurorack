@@ -120,6 +120,9 @@ docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
+The first image build downloads two pinned compilers, GCC 9 for the firmware and GCC 4.9 to reproduce Mutable Instruments' bootloader exactly, and pinned Debian packages, so it takes a while; later builds reuse the image.
+The build runs entirely in Docker, with Python 3. Running the Python 2 makefiles on the host is not supported; use the commands above.
+
 ## Licence and credits
 
 Code: MIT, from the Mutable Instruments source, with credits to Frédéric Meslin / Fred's Lab and Oliver Rockstedt; see [LICENSE](LICENSE).
