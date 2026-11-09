@@ -238,7 +238,7 @@ cases = [
   ('TestProfileParser', 'profile', 'beads/profile.cc',
     'Crc32(b, 16 + bytes) != Read32(b + 16 + bytes)', 'false'),
   ('TestProfileParser', 'profile', 'beads/profile.cc',
-    'Read32(b + 8) != kProfileReleaseId', 'false'),
+    'Read32(b + 8) != kProfileFormat', 'false'),
   ('TestProfileParser', 'profile', 'beads/profile.cc',
     'id >= FEATURE_LAST || seen[id]', 'id >= FEATURE_LAST || (seen[id] && id == 0)'),
   ('TestProfileParser', 'profile', 'beads/profile.cc',

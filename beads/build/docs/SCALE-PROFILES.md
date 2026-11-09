@@ -33,7 +33,7 @@ separate. Version 1 profiles retain their legacy 512-byte parser bounds.
 | 4 | Version 2 |
 | 5 | Feature entry count |
 | 6–7 | Payload bytes: 6 × feature count + 144 × scale count |
-| 8–11 | Release identity |
+| 8–11 | Profile format, little endian (1) |
 | 12 | Custom bank: 0 factory, 1 explicit bank |
 | 13 | Scale count, 0–14 |
 | 14–15 | Zero |
@@ -42,6 +42,13 @@ Six-byte feature entries follow the header, then the scale records, then CRC32
 of the header and payload. Factory mode requires no scale records. An explicit
 empty bank has custom-bank byte 1 and count 0. Payload bounds are checked before
 the checksum or any record reads.
+
+The profile format number is assigned, not a date or a hash. Firmware accepts
+only its own number. Increase it only when an existing byte, feature ID, value
+or placement changes meaning or becomes invalid. New features, values and
+reserved-byte uses that older firmware already rejects keep the number; so do
+default and layout changes. The Beta 2 candidate's date number (0x20261101) is
+no longer accepted.
 
 | Scale record byte(s) | Meaning |
 | --- | --- |

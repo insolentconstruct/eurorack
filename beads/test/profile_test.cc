@@ -138,6 +138,17 @@ void TestProfileParser() {
     }
     CHECK(!p.Init(b));
   }
+  // Format 1 is embedded; the former date ID is refused with a valid CRC.
+  Template(b);
+  CHECK(b[8] == 1 && !b[9] && !b[10] && !b[11]);
+  b[8] = 0x01;
+  b[9] = 0x11;
+  b[10] = 0x26;
+  b[11] = 0x20;
+  Checksum(b);
+  CHECK(!p.Init(b));
+  CHECK(p.Page(1) == FEATURE_PITCH);
+  CHECK(p.Action(2) == FEATURE_TRIM);
   Template(b);
   const uint16_t extra_bytes = uint16_t(b[6]) + (uint16_t(b[7]) << 8) + 6;
   b[6] = extra_bytes & 255;
