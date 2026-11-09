@@ -157,6 +157,7 @@ Then, from the repository root, build the bootloader, the application and the co
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
 export LC_ALL=C
+mkdir -p build/beads_bootloader build/beads
 make -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
   KIT_MAKEFILE=beads/bootloader/makefile KIT_GCC9=0 \
   TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/ -j"$(nproc)" bin hex
