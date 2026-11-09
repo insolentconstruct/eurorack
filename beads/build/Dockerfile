@@ -20,7 +20,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
         qemu-user-static:amd64 \
         libc6:i386 libstdc++6:i386 zlib1g:i386 \
  && rm -rf /var/lib/apt/lists/* \
- && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/drizzlet-packages.txt
+ && dpkg-query -W -f='${binary:Package} ${Version}\n' | LC_ALL=C sort > /usr/local/share/mi-toolchain-packages.txt
 
 ARG TC_LOCAL=
 COPY . /kit-context/
@@ -35,6 +35,7 @@ ARG GCC9_LOCAL=
 # Verified Arm archive.
 RUN if [ -n "$GCC9_LOCAL" ]; then cp "/kit-context/$GCC9_LOCAL" /tmp/gcc9.tar.bz2; else curl -fsSL -o /tmp/gcc9.tar.bz2 "$GCC9_URL"; fi \
  && echo "$GCC9_SHA256  /tmp/gcc9.tar.bz2" | sha256sum -c - \
+ && echo "2b9eeccc33470f9d3cda26983b9d2dc6  /tmp/gcc9.tar.bz2" | md5sum -c - \
  && tar -xjf /tmp/gcc9.tar.bz2 -C /opt \
  && rm -f /tmp/gcc9.tar.bz2
 
@@ -48,7 +49,7 @@ RUN arm-none-eabi-gcc --version | sed -n 1p \
  && arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 /tmp/probe.c -o /tmp/probe.o \
  && rm -f /tmp/probe.c /tmp/probe.o
 
-LABEL org.opencontainers.image.title="drizzlet" \
+LABEL org.opencontainers.image.title="mi-toolchain" \
       org.beads.toolchain="gcc-arm-none-eabi-9-2020-q2-update"
 
 WORKDIR /src
