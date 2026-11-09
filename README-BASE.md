@@ -1,12 +1,23 @@
 # Beads base for firmware modders
 
 This branch starts at the vanilla source in `origin/master` (`f4cfa76`).
-It carries bug fixes, a reproducible compiler kit and five audio-preserving
-CPU optimizations. Controls, gestures, settings layout and default sound
-follow that source; a copy of the calibration is also kept in bank 2
-sector 6, which stock firmware leaves unused. Options that master compiles
-out stay compiled out.
-Hardware operation has not been tested as part of this port.
+It carries bug fixes, flash and start-up protections, short output fades,
+a reproducible compiler kit and five audio-preserving CPU optimizations.
+Controls, gestures, settings layout and default sound follow that source; a
+copy of the calibration is also kept in bank 2 sector 6, which stock firmware
+leaves unused. Options that master compiles out stay compiled out.
+
+Tested on one 2021 module: installing by audio, playback, the quality button
+and patching. The storage repair is covered by host tests, not by a module
+test of this build.
+
+CPU, peak audio-callback load on that module (timing builds, heavy test
+patches):
+
+| Patch | Vanilla source | This branch |
+|---|---:|---:|
+| Granular | 91% | 77% |
+| Wavetable synth | 86% | 83% |
 
 CPU, busiest stock audio block on a development board (same die and clock as
 Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
@@ -86,9 +97,9 @@ build runs entirely in Docker with Python 3: running the older Python 2
 makefiles on the host is not supported.
 
 The output directory must be empty. Named releases check every firmware hash
-against `beads/build/expected-hashes.sha256`, checks the encoded WAV against
-`expected-wav.sha256`, decodes the WAV through the bootloader decoder and
-collects source and compiler-runtime notices. It produces WAV and combo ZIPs.
+against `beads/build/expected-hashes.sha256`, check the encoded WAV against
+`expected-wav.sha256`, decode the WAV through the bootloader decoder and
+collect source and compiler-runtime notices. It produces WAV and combo ZIPs.
 The combo ZIP holds bootloader + app as `.hex`, which needs no address, and
 `.bin`, which goes at 0x08000000. Erase only the sectors being written: a
 full-chip or mass erase also wipes calibration and settings.
@@ -96,6 +107,9 @@ full-chip or mass erase also wipes calibration and settings.
 Docker's copy API. Compiler archive hashes and the base image digest are in
 `beads/build/Dockerfile`; local verified archives can be supplied with its
 `TC_LOCAL` and `GCC9_LOCAL` build arguments.
+
+Use build.sh. Plain `make` may try to regenerate the resource tables with
+`python`; if you use it, add `-o beads/resources.cc -o beads/resources.h`.
 
 With `RELEASE_NAME` unset or `beads-base-dev`, hash mismatches warn and the
 build continues. Other release names fail on a mismatch. To accept intentional

@@ -2,7 +2,7 @@
 
 Run `beads/test/run.sh OUTPUT_DIR` from the repository root. It wraps the
 build kit Docker image and runs eleven suites, bidirectional stock storage
-compatibility, a golden audio hash and the optional optimization comparison.
+compatibility, a golden audio hash and the optimization comparison.
 Most suites use address and undefined-behaviour sanitizers. Backup and storage
 use mapped flash models with injected failures. No module is needed.
 
@@ -49,7 +49,7 @@ Everything runs in the build kit image; no module is needed:
 
 ```sh
 docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
-beads/test/run.sh /tmp/beads-tests
+beads/test/run.sh "$PWD/beads-tests"
 ```
 
 One suite, from the repository root (inside the image):
@@ -84,8 +84,9 @@ audio drivers. A plain run executes all suites, storage compatibility and audio
 reference checks, including the optimization comparison.
 
 CI builds the shared kit, then runs one host-tests job and two independent
-release builds in parallel. A final job waits for all three and diffs the two
-release `SHA256SUMS` manifests. All host suites together take about 40 seconds
+release builds in parallel. A final job waits for both release builds and
+diffs their `SHA256SUMS` manifests. The host-tests job also checks
+`settings_sector.py` against stmlib's loader. All host suites together take about 40 seconds
 in Docker; sharding costs more in per-job image downloads than it saves.
 
 `TestMainLoopMatchesHarness` in `firmware_test.cc` compares the source text of
@@ -95,7 +96,7 @@ If DSP changes intentionally, inspect and listen to the capture, then re-baselin
 in the pinned image:
 
 ```sh
-UPDATE=1 beads/test/run.sh /tmp/beads-tests
+UPDATE=1 beads/test/run.sh "$PWD/beads-tests"
 ```
 
 Or, inside the image, run `UPDATE=1 beads/test/audio_reference.sh /tmp/beads-tests`.
@@ -103,7 +104,7 @@ Commit `beads/test/audio_reference.sha256` with the change. The full runner also
 checks preserved optimization headers; intentional changes to those optimizations
 may require refreshing the preserved headers or running the golden check alone.
 Firmware and WAV hashes are re-pinned with
-`UPDATE_HASHES=1 beads/build/build.sh /tmp/beads-base-update --wav`.
+`UPDATE_HASHES=1 beads/build/build.sh "$PWD/beads-base-update" --wav`.
 
 The runner mounts source read-only by default, read/write for `UPDATE=1`.
 For a remote Docker daemon, copy the checkout into a container, export stock
@@ -117,17 +118,19 @@ the same in-container runner. `JOBS` controls parallel compilation (default min(
 the named test, which must fail (`ERROR: TEST:` or a sanitizer report; a
 mutation that does not compile is an error). Survivors are listed and fail
 the run. `--patterns-only` checks, without building, that every replaced text
-occurs exactly once. The cases cover #33, #57, #36, #56 and #35 and the
-local grain sum. Run it inside the image, from the repository root:
+occurs exactly once. The 103 cases cover #33, #57, #36, #56, #35, #149, #148,
+the low-supply guard (#175), the #53 fades and synth reverb tail, the integer
+Hermite read, synth grain pairs and the local grain sum. Run it inside the image, from the repository root:
 
 ```sh
-mkdir -p /tmp/mutations
-docker run --rm --network none -v "$PWD:/src" -v /tmp/mutations:/out \
+mkdir -p "$PWD/mutations"
+docker run --rm --network none -v "$PWD:/src" -v "$PWD/mutations:/out" \
   -w /src beads-build-kit:gcc9 python3 beads/test/mutation_check.py /out
 ```
 
 The script makes a scratch copy under `beads/test`, so the checkout must be
-writable. The weekly `Mutation check` workflow runs it. About 15 seconds.
+writable. The `Mutation check` workflow runs it weekly and on pull requests,
+in eight shards (`--shard N/8`), then joins their reports with `--merge`.
 
 Not covered, because the tests cannot see them: the upper slice bound (#33),
 the flash-failure aborts in `TestFlashErrors` (#36), the dummy grain trigger

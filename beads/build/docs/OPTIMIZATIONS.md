@@ -6,7 +6,7 @@ Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overloa
 
 ## TL;DR
 
-On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These figures were not measured on a module.
+On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These are development-board figures. On a 2021 module, peak audio-callback load (timing builds, heavy test patches) falls from 91% to 77% in granular mode and from 86% to 83% in the wavetable synth.
 
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|

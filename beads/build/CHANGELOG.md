@@ -5,7 +5,7 @@ change, one line each, is in [README-BASE.md](../../README-BASE.md). Changes
 from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
-## Unreleased
+## beads-tuneup-YYYY.MM.DD (release date not yet set)
 - A module whose settings flash is damaged no longer crashes at every start. The calibration is kept in a second sector and restored from it when needed, so a save interrupted by a power cut keeps the calibration; at worst the settings return to their defaults. If both copies of the calibration are lost, the module plays on the factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing to flash; hold SEED at power-up to repair it, then recalibrate. A damaged frozen buffer is skipped instead of crashing (#148).
 - A damaged calibration record no longer resets the calibration and starts the factory test; a record with no saved settings after it keeps the calibration and resets only the settings (#148).
 - No flash erase or write starts while the module's 3.3 V supply is below about 2.8 V. An operation already underway cannot be stopped; an interrupted save is handled like a power cut (#175).
@@ -19,7 +19,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 - Frozen delay with negative FM no longer reads outside the buffer, and very fast SEED clocks no longer create a zero-length slice (#33).
 - Fixed undefined reads in the dummy CPU-load grains and past the last wavetable; output unchanged (#34, #35).
 - App built with GCC 9 instead of 4.9.3; the sound is unchanged.
-- More CPU headroom: about 16,600 fewer cycles per audio block in the heaviest stock case, with the same sound.
-- The wavetable synth uses less CPU: about 6,800 fewer cycles per audio block in its busiest case, with the same sound.
+- More CPU headroom, with the same sound: about 16,600 fewer cycles per audio block in the heaviest stock case on a development board. On a module, the peak load of a heavy granular patch falls from 91% to 77%.
+- The wavetable synth uses less CPU, with the same sound: about 6,800 fewer cycles per audio block in its busiest case on a development board. On a module, the peak load of a heavy synth patch falls from 86% to 83%.
 
 Controls, settings and the default sound are those of the vanilla source; no features are added.
