@@ -13,4 +13,4 @@ make -j"$(nproc)" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestRe
 
 No arguments runs everything. Unknown names fail before any test runs; several names run in the normal test order, each printing its elapsed time. Delay quantizer checks are split into Digital (the two digital qualities) and Tape (the two tape qualities), each covering mono and stereo.
 
-`ci-jobs.json` defines the nine CI jobs and their shell commands. When changing it, keep every suite and every listed function in exactly one job. The `list-host-tests` workflow job supplies the list to the host matrix.
+`ci-jobs.json` defines the ten CI jobs and their shell commands. When changing it, keep every suite and every listed function in exactly one job. The `list-host-tests` workflow job supplies the list to the host matrix.

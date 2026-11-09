@@ -3,8 +3,8 @@
 Beta 2 scale profiles let Hygrostat replace the musical scale bank, choose its
 cycle order, and assign each scale an RGB colour and indication pattern.
 Off and Chromatic remain the first two direct knob choices. The Scale choice
-uses the editable bank. This document describes the development format; final
-release qualification is pending.
+uses the editable bank. This document describes the Beta 2 format. Custom banks
+are checked by host tests, not yet on a module.
 
 ## Identity and limits
 

@@ -1,20 +1,16 @@
 # Testing
 
-The expanded Beta 2 source contains 19 host programs, 265 named test sections,
-2,060 assertion sites and 392 deliberate fault patterns. On firmware candidate
-`eedbc74`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41351226347)
-passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/41351226486)
+The Beta 2 source contains 19 host programs, 271 named test sections,
+2,135 assertion sites and 392 deliberate fault patterns. On the release source
+`6729648`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070756)
+passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070775)
 detected all 392 faults across eight shards. Named sections and assertion sites
 are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
-The candidate application is pinned as `09b43688…`, timing image `7488ae8b…`
-and WAV `a84d6060…`. Independent build/decoder checks match those pins; the WAV
-passes both playback sample rates and rejects corruption/truncation controls.
-The merged release documentation and generated guides also pass their checker.
-
-TODO: record final module CPU and underruns, profiles/options/scales/tail
-results, install totals and automated run hours. Earlier measurements below
-remain historical; software checks do not establish module qualification.
+The release build reproduces the pinned application `b11fe81c…`, timing image
+`8234e3b9…` and WAV `d40a5dc2…`, and decodes the WAV back to the application.
+The release documentation and generated guides pass their checker. Module
+results for the release image are under [Beta 2](#beta-2).
 
 Tests are separated into desktop/CI checks, STM32H7 development-board checks,
 unattended module measurements and attended module checks. The development
@@ -64,26 +60,26 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | clouds | 5 | 17 |
 | delay | 11 | 46 |
 | delay_mode | 9 | 40 |
-| feedback_diffuser | 3 | 17 |
+| feedback_diffuser | 4 | 23 |
 | firmware | 27 | 265 |
 | gain | 6 | 29 |
 | granular | 24 | 114 |
 | mix | 7 | 28 |
-| options | 64 | 633 |
-| pitch_quantizer | 5 | 49 |
+| options | 66 | 651 |
+| pitch_quantizer | 6 | 52 |
 | plaits_synth | 4 | 31 |
 | processor | 11 | 45 |
-| profile | 4 | 58 |
+| profile | 5 | 86 |
 | spectral | 7 | 34 |
-| storage | 25 | 369 |
+| storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **265** | **2,060** |
+| **Total** | **271** | **2,135** |
 
-Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked candidate CI covers this expanded inventory.
+Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked CI covers this inventory.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (all 392 current patterns detected by the linked candidate CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (all 392 current patterns detected by the linked CI). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -96,7 +92,7 @@ callback in all four engines; reordered and removed saved selections; the
 permanent pitch extension distinguishing ID15 from legacy unset settings;
 and Keep/Clear reverb tails through both synths and actual exit paths. Factory
 reference output and finite custom-scale pitch conversion have focused checks.
-Final module confirmation remains pending.
+These are not yet checked on a module.
 
 ## Coverage of the manual
 
@@ -260,9 +256,35 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 
 ### Beta 2
 
-TODO: final-image module CPU figures, worst-case settings and underrun count. The measurements below are from earlier images.
+**Release image** (2026-11-07 and 2026-11-08): application `b11fe81c…`, standard
+options. Peak load of the whole audio callback from timing builds of the same
+code; Stock is a GCC 4.9.3 build of the vanilla source, Tuneup is beads-tuneup.
+Budget 120,000 cycles; limit 92%.
 
-The release code, including the converter fix, on 2026-10-27, and with the storage fix (#149) on 2026-10-28. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
+| Heavy test patch | Stock | Tuneup | Beta 2 |
+|---|---:|---:|---:|
+| Granular | 91% | 77% | 79% |
+| Wavetable synth | 86% | 83% | 84% |
+| Wavetable synth, Clouds-style reverb, SIZE 97% | | | 84% (83.7%) |
+| Plaits string model | | | 70% |
+| Spectral | | | 18% |
+
+No audio underruns in any capture; no late or skipped spectral frames.
+
+| Check | Result |
+|---|---|
+| Install by audio file | Pass: application and WAV as pinned |
+| Upgrade from Beta 1 (2026.10.18) | Pass: expected settings, calibration kept |
+| Invalid Hygrostat profile | Pass: standard options, calibration kept |
+| Storage repair (SEED at power-on), then a normal start | Pass |
+| Settings after a power cycle | Pass: kept |
+| Beta 1 or a vanilla build started once without saving, then Beta 2 | Pass: settings kept |
+| Pops and fades at quality, mono/stereo and synth changes | Pending |
+
+Profiles, custom scales, LED indications and synth-tail choices were not
+checked on the module.
+
+**Earlier images.** The release code, including the converter fix, on 2026-10-27, and with the storage fix (#149) on 2026-10-28. Outputs recorded with an Expert Sleepers ES-8; CPU load from a timing build of the same code.
 
 | Check | Result |
 |---|---|
@@ -305,11 +327,11 @@ No audio underruns.
 | Own settings sector written back | Pass: byte-identical |
 | Heavy wavetable synth case, CPU | 87.2%; 84.0–84.2% with synth grains computed in pairs (#168); vanilla source 86.0%. Some repeat rows were rejected by the rig's audio check |
 
-Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. Final-candidate Hygrostat profiles, custom scale selection/pitch/LEDs, the nine additional options and both synth-tail choices still need module qualification.
+Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. Hygrostat profiles, custom scale selection/pitch/LEDs, the nine additional options and both synth-tail choices were not checked on the module.
 
 **Historical test module totals** (2026-10-18 to 2026-10-28; excludes later sessions). Firmware and settings installs:
 
-TODO: final module install totals and automated run hours, including the damaged-settings, profiles and final-image sessions. The table and counts below are historical subtotals.
+Installs and automated hours after 2026-10-28 were not counted.
 
 | Firmware | Debug probe | Audio file |
 |---|---:|---:|
@@ -372,7 +394,7 @@ The test regenerates all three guide files in a temporary directory and compares
 
 ## Host CI groups
 
-- `beads/test/ci-jobs.json` lists the host jobs and their commands; the workflow's `list-host-tests` job reads it into the matrix. Short suites share three jobs; delay mode uses three and Clouds two.
+- `beads/test/ci-jobs.json` lists the host jobs and their commands; the workflow's `list-host-tests` job reads it into the matrix. Short suites share three jobs; delay mode uses three, Clouds two, and spectral and Plaits one each.
 - Each make call uses `-j$(nproc)` and keeps its sanitizer flags. Native tests use `-O1` rather than `-Os`, which made sanitized DSP renders slow on the Ubuntu 24.04 compiler. Firmware flags are unchanged.
 - The quantizer delay comparison warms each quality/channel processor once and restores that state, keeping all eight quality/channel cases, the 16000-block warmup and 1200 comparison blocks per output.
 - Selection and local commands: [host test README](../../test/README.md).

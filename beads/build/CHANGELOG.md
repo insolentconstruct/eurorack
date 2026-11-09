@@ -1,15 +1,8 @@
 # Changelog
 
-Put new changes under Unreleased. For a release, replace that heading with a dated heading.
+Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
-## Unreleased
-
-- Add LED brightness and SEED latch to page 4, initially 100% and Stock.
-
-- Match page 2 knobs: FEEDBACK selects Frozen feedback, DRY/WET selects Delay mode, and REVERB selects Reverb character. Custom layouts and saved values keep their meanings.
-
-<!-- TODO: release date; replace YYYY.MM.DD in the heading and tag. -->
-## YYYY.MM.DD (beta 2 "Fog")
+## 2026.11.01 (tag `drizzlet-2026.11.01`, beta 2 "Fog")
 
 - Hygrostat builds custom firmware, controls, defaults and guides.
 - Replace and reorder the scale bank; edit notes, repeat intervals and LEDs.
@@ -19,9 +12,9 @@ Put new changes under Unreleased. For a release, replace that heading with a dat
 - Older Drizzlet options, width and diffusion reset to profile defaults.
 - Add optional boot-version, delay and pitch-notch lights.
 - Add optional manual input attenuation with unity at noon.
-- Add optional 100%, 66% and 33% LED brightness.
 - Add optional live CV-assignment lights and fully lit FREEZE during saves.
-- Add optional SEED latch Ignore, Sync and Add modes.
+- Add LED brightness (100%, 66%, 33%) and SEED latch (Off, Ignore, Sync, Add) at page 4, initially 100% and Off.
+- Page 2: FEEDBACK selects Frozen feedback, DRY/WET Delay mode, REVERB Reverb character.
 - Add optional TIME scanning with the attenurandomizer.
 - Add random fifths/octaves at page 1, DRY/WET.
 - Expand options to four pages with stored-value previews.

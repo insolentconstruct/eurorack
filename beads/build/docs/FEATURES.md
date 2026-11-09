@@ -225,7 +225,7 @@ Measured on the Beta 2 code before Hygrostat profiles and the synth grain pairs 
 | D1 / D2 / D3 RAM | 524,288 delay / 262,144 delay / 65,536 reverb | 0 / 0 / 0 linker space; not interchangeable with DMA or TCM. Plaits borrows the first 168 KB of delay bank 0 in synth mode |
 | D2 DMA RAM (32 KiB) | 1,216 | 31,552 static space; preserve uncached DMA placement |
 
-Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. TODO: final-image module CPU figures (whole callback, worst case and underruns). Earlier measurements are recorded in TESTING.md.
+Audio callback period is 250 µs (4,000 blocks/s): nominal budget 120,000 cycles at 480 MHz, before interrupt overhead. The makefile's 400 MHz `F_CPU` is not what the clock setup programs. On the Beta 2 image, one module peaked at 83.7% (wavetable synth, Clouds-style reverb, SIZE 97%) with no underruns; see TESTING.md.
 
 The dummy workload keeps the main loop busy, so main-loop activity is not idle time. The wavetable synth sets the peak; time dense stereo grains, synth, delay transitions, backup and interrupt overlap before budgeting new DSP. <!-- beads/beads.cc:403-410 -->
 
@@ -237,9 +237,9 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - It is off by default and hard to reach by accident.
 - One manual paragraph explains it; no hidden state the panel can't show.
 - Patching can't already do it.
-- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source.
+- CPU: the worst measured block stays at or under 92% of the budget, the stock worst case (see [Off-by-default features](#off-by-default-features)).
 
-Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the page is full once the planned options land).
+Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (all twelve page slots are taken).
 
 ## Planning rules
 

@@ -1,6 +1,6 @@
 # Drizzlet
 
-Drizzlet is alternative firmware for Mutable Instruments Beads, adding Plaits, spectral processing and grain controls. Earlier builds were tested on one module. Final qualification of Beta 2 “Fog” is pending. Install at your own risk. This is not a Mutable Instruments product. All settings save; standard defaults retain stock behaviour.
+Drizzlet is alternative firmware for Mutable Instruments Beads, adding Plaits, spectral processing and grain controls. Beta 2 “Fog” was tested on one module; see [TESTING.md](docs/TESTING.md). Install at your own risk. This is not a Mutable Instruments product. All settings save; standard defaults retain stock behaviour.
 
 ## Downloads and installation
 
@@ -64,7 +64,7 @@ Hold [A], then press FREEZE to restart the recording window at zero length and c
 
 Releasing FREEZE resumes recording with a crossfade. Quality changes, input changes between mono and stereo, leaving wavetable synth, and power-up without a saved buffer start an empty recording. Switching without changing sample rate is pop-free, including synth switching at 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the output and stop synth reverb.
 
-SEED starts latched. Latching it in stock delay can pop (#183); this is explicitly deferred beyond Beta 2. The unresponsive-module report #112 remains unresolved; neither a successful updater completion nor recovery has been confirmed.
+SEED starts latched. Latching it in stock delay can pop (#183); this is explicitly deferred beyond Beta 2. The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
 
 ## Frozen-buffer autosave
 
@@ -74,7 +74,7 @@ FREEZE saves after ten seconds. Interrupting a save doubles the next wait up to 
 
 https://hygrostat.insolentconstruct.net/ builds updates and guides locally. Choose features, controls and defaults, using templates or custom Off, Fixed and Adjustable settings. It warns about CPU load and refuses excessive combinations. Per-feature estimates await module measurements.
 
-Final-candidate profiles, custom scales, LED indications and tail choices still need module qualification. Page 4 provides LED brightness and SEED latch with stock starting values. Seven additional options are off in standard firmware:
+Profiles, custom scales, LED indications and tail choices are checked by host tests, not yet on a module. Page 4 provides LED brightness and SEED latch with stock starting values. Seven additional options are off in standard firmware:
 
 - Version at boot flashes light-blue, then twice for Beta 2, without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.

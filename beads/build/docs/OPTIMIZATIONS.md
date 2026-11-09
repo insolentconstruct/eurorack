@@ -37,7 +37,11 @@ development-board stock peak, 24 scenarios, all hashes matched.
 |---|---:|---:|
 | Vanilla source (beads-build-kit, GCC 4.9.3) | 99,511 | 82.9% |
 | beads-tuneup (GCC 9 and the first three code changes) | 90,529 | 75.4% |
-| beads-tuneup with the integer Hermite read (not yet on that branch) | 82,911 | 69.1% |
+| beads-tuneup with the integer Hermite read | 82,911 | 69.1% |
+
+On a module (timing builds, one 2021 Beads, heavy test patches), peak load is
+91% stock, 77% beads-tuneup and 79% Beta 2 in granular mode; 86%, 83% and 84%
+in wavetable synth mode. See [TESTING.md](TESTING.md).
 
 - **Sound:** GCC 9 matched 4.9.3 in 20 of 20 emulator scenarios. Each code change matched bit for bit on the development board (28 of 28 hashes) and in the host tests; the emulator agreed wherever it was run (integer Hermite: 70 of 70 comparisons).
 - **Rejected:** newer compilers (slower as plain builds, no clear gain with tuning), ITCM code placement, an extra grain/delay template, freeze state as a template parameter, synth grains rendered a block at a time, one Hermite read per synth sample (about 2 points slower on the Cortex-M7 and not bit-identical).
