@@ -7,8 +7,8 @@ passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/r
 detected all 392 faults across eight shards. Named sections and assertion sites
 are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
-The release build reproduces the pinned application `b11fe81c…`, timing image
-`8234e3b9…` and WAV `d40a5dc2…`, and decodes the WAV back to the application.
+The release build reproduces the pinned application `2558dd77…`, timing image
+`8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
 The release documentation and generated guides pass their checker. Module
 results for the release image are under [Beta 2](#beta-2).
 
