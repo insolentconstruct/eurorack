@@ -93,4 +93,4 @@ Observed upstream DSP conventions and design principles:
 
 ## Python
 
-- Resource scripts follow MI's own (`beads/resources/wavetables.py`, Plaits and Stages `resources/`): two-space indent, `snake_case` functions, `UPPER_CASE` constants, `import numpy` (not `np`), one statement per line.
+- Resource scripts follow Mutable Instruments' own (`beads/resources/wavetables.py`, Plaits and Stages `resources/`): two-space indent, `snake_case` functions, `UPPER_CASE` constants, `import numpy` (not `np`), one statement per line.

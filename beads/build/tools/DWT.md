@@ -22,8 +22,7 @@ The helper runs locally in the prepared build environment. It builds the current
 working tree, including uncommitted changes, without Docker, SSH or hardware
 access. Output must be an empty absolute directory without whitespace.
 It checks `release/beads/beads.bin` against the pinned `app.bin` SHA256 in
-`beads/build/expected-hashes.sha256` before building calibration:
-`a221ee50f3ce05d8fdde174f6e0065aefc3b566a51563ae192f3b9dca514c2f2`.
+`beads/build/expected-hashes.sha256` before building calibration.
 A mismatch fails the build. The helper writes logs, object/link lists, sizes,
 SHA256SUMS and a copy of `dwt.py` with BUILD_SHA set to the calibration binary's
 hash. The source decoder has no application pin.
@@ -46,8 +45,8 @@ for a release or bootloader build.
 
 The stock calibration port's deterministic stimulus and version-1 RAM ABI are
 preserved, allowing comparison with the stock GCC 4.9.3 calibration image.
-No drizzlet options or spectral counters are imported. Do not use the current
-drizzlet version-2 decoder. Compare matched settled panel workloads and the
+No Drizzlet options or spectral counters are imported. Do not use the current
+Drizzlet version-2 decoder. Compare matched settled panel workloads and the
 q3 stereo stress32 fixture, interleave stock/tuneup captures, and report spread
 as well as maxima. CPU numbers require module captures; offline checks do not
 measure CPU cycles.
