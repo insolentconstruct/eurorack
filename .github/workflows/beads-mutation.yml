@@ -55,12 +55,12 @@ jobs:
         run: |
           docker build --platform linux/amd64 \
             --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
-            -t beads-build-kit:gcc9 beads/build
-          docker save --output /tmp/beads-build-kit.tar beads-build-kit:gcc9
+            -t beads-tuneup beads/build
+          docker save --output /tmp/beads-tuneup.tar beads-tuneup
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: beads-mutation-build-kit
-          path: /tmp/beads-build-kit.tar
+          path: /tmp/beads-tuneup.tar
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -83,14 +83,14 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: beads-mutation-build-kit
-          path: /tmp/beads-build-kit
+          path: /tmp/beads-tuneup
       - name: Load build kit
-        run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
+        run: docker load --input /tmp/beads-tuneup/beads-tuneup.tar
       - name: Break the firmware in each recorded way; every test must fail
         run: |
           mkdir -p "$RUNNER_TEMP/mutation-report"
           docker run --rm --network none -v "$PWD:/src" \
-            -v "$RUNNER_TEMP/mutation-report:/out" -w /src beads-build-kit:gcc9 \
+            -v "$RUNNER_TEMP/mutation-report:/out" -w /src beads-tuneup \
             python3 beads/test/mutation_check.py --shard ${{ matrix.shard }}/8 /out
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()

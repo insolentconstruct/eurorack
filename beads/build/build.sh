@@ -19,7 +19,7 @@ if [[ -z "${TOOLCHAIN_PATH:-}" ]]; then
     -e UPDATE_HASHES="${UPDATE_HASHES:-0}" \
     -e JOBS="${JOBS:-8}" \
     -e RELEASE_NAME="${RELEASE_NAME:-beads-base-dev}" \
-    "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" bash beads/build/build.sh /out --wav)
+    "${BEADS_BUILD_IMAGE:-beads-tuneup}" bash beads/build/build.sh /out --wav)
   trap 'docker rm -f "$container" >/dev/null' EXIT
   docs=()
   [[ ! -f "$root/README-BASE.md" ]] || docs+=(README-BASE.md)

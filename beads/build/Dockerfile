@@ -49,7 +49,7 @@ RUN arm-none-eabi-gcc --version | sed -n 1p \
  && arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 /tmp/probe.c -o /tmp/probe.o \
  && rm -f /tmp/probe.c /tmp/probe.o
 
-LABEL org.opencontainers.image.title="beads-build-kit" \
+LABEL org.opencontainers.image.title="beads-tuneup" \
       org.beads.toolchain="gcc-arm-none-eabi-9-2020-q2-update"
 
 WORKDIR /src

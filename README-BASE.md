@@ -75,9 +75,15 @@ Initialize the two required submodules, then run from the repository root:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
-docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
+docker build --platform linux/amd64 -t beads-tuneup beads/build
 beads/build/build.sh "$PWD/beads-base-build" --wav
 ```
+
+The first build downloads two pinned toolchains (GCC 9 for the firmware,
+GCC 4.9 to reproduce Mutable Instruments' bootloader exactly) and pinned Debian
+packages, so it can take a while; later builds reuse the cached image. The
+build runs entirely in Docker with Python 3: running the older Python 2
+makefiles on the host is not supported.
 
 The output directory must be empty. Named releases check every firmware hash
 against `beads/build/expected-hashes.sha256`, checks the encoded WAV against

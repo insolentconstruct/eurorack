@@ -54,12 +54,12 @@ jobs:
         run: |
           docker build --platform linux/amd64 \
             --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
-            -t beads-build-kit:gcc9 beads/build
-          docker save --output /tmp/beads-build-kit.tar beads-build-kit:gcc9
+            -t beads-tuneup beads/build
+          docker save --output /tmp/beads-tuneup.tar beads-tuneup
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: beads-build-kit
-          path: /tmp/beads-build-kit.tar
+          name: beads-tuneup
+          path: /tmp/beads-tuneup.tar
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -77,10 +77,10 @@ jobs:
         run: git submodule update --init stmlib stm_audio_bootloader
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: beads-build-kit
-          path: /tmp/beads-build-kit
+          name: beads-tuneup
+          path: /tmp/beads-tuneup
       - name: Load build kit
-        run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
+        run: docker load --input /tmp/beads-tuneup/beads-tuneup.tar
       - name: Run host tests, storage compatibility and audio reference
         run: beads/test/run.sh "$RUNNER_TEMP/host-tests"
       - name: Check the settings sector tool against stmlib's loader
@@ -104,10 +104,10 @@ jobs:
         run: git submodule update --init stmlib stm_audio_bootloader
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: beads-build-kit
-          path: /tmp/beads-build-kit
+          name: beads-tuneup
+          path: /tmp/beads-tuneup
       - name: Load build kit
-        run: docker load --input /tmp/beads-build-kit/beads-build-kit.tar
+        run: docker load --input /tmp/beads-tuneup/beads-tuneup.tar
       - name: Build reproducible release
         run: JOBS="$(nproc)" RELEASE_NAME=beads-base-ci beads/build/build.sh "$RUNNER_TEMP/release" --wav
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
