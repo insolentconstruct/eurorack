@@ -20,7 +20,7 @@ if [[ "$mode" == --wav ]]; then
   mkdir -p "$out"
   name=${RELEASE_NAME:-drizzlet-dev}
   [[ "$name" =~ ^drizzlet-[A-Za-z0-9._-]+$ ]] || { echo "RELEASE_NAME must match drizzlet-[A-Za-z0-9._-]+" >&2; exit 2; }
-  build_image=${BEADS_BUILD_IMAGE:-beads-build-kit}
+  build_image=${BEADS_BUILD_IMAGE:-drizzlet}
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
     --mount "type=bind,src=$root,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" "$build_image" \
     nice -n 10 bash beads/build/build.sh /out

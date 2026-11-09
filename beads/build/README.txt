@@ -333,7 +333,7 @@ From the repository root on an amd64 host with Docker:
 git submodule update --init stmlib stm_audio_bootloader
 docker build --platform linux/amd64 \
   --target compiler \
-  -t beads-build-kit beads/build
+  -t drizzlet beads/build
 bash beads/build/build.sh "$PWD/artifacts" --wav
 
 Licence and credits

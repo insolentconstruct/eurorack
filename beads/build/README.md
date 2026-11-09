@@ -116,7 +116,7 @@ From the repository root on an amd64 host with Docker:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
-docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/build
+docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 

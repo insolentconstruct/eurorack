@@ -11,7 +11,7 @@ Build from a committed checkout (including the stmlib submodule):
 bash beads/build/tools/build_dwt.sh "$PWD/dwt-output"
 ```
 
-Plain local Docker works too; the image is `${BEADS_BUILD_IMAGE:-beads-build-kit}`. Flash the calibration application with your usual application-only procedure at 0x08020000, preserving bootloader, settings and calibration, and verify the binary SHA256 against `calibration.bin` in `expected-hashes.sha256`. Flashing and reset requests need an operator at the bench.
+Plain local Docker works too; the image is `${BEADS_BUILD_IMAGE:-drizzlet}`. Flash the calibration application with your usual application-only procedure at 0x08020000, preserving bootloader, settings and calibration, and verify the binary SHA256 against `calibration.bin` in `expected-hashes.sha256`. Flashing and reset requests need an operator at the bench.
 
 Start OpenOCD with an ST-LINK and a board-appropriate configuration that
 attaches without resetting or halting the running core, for example:

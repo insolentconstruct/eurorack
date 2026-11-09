@@ -26,7 +26,7 @@ if [[ "$mode" != --inside ]]; then
   printf '%s\n' "eurorack $release" "stmlib $stmlib" > "$out/source-commits.txt"
   docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" \
     --mount "type=bind,src=$out/source,dst=/src,readonly" --mount "type=bind,src=$out,dst=/out" \
-    "${BEADS_BUILD_IMAGE:-beads-build-kit}" nice -n 10 bash beads/build/golden.sh /out --inside
+    "${BEADS_BUILD_IMAGE:-drizzlet}" nice -n 10 bash beads/build/golden.sh /out --inside
   exit 0
 fi
 [[ -n "${GOLDEN_TOOLCHAIN_PATH:-}" ]] || { echo "Run in the compiler container" >&2; exit 2; }

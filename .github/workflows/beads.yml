@@ -57,7 +57,7 @@ jobs:
         run: |
           docker build --platform linux/amd64 --target compiler \
             --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
-            -t beads-build-kit beads/build
+            -t drizzlet beads/build
       - name: Build hashes, new WAV, vendor decode proof and deterministic zip
         env:
           RELEASE_NAME: ${{ startsWith(github.ref, 'refs/tags/drizzlet-') && github.ref_name || 'drizzlet-dev' }}

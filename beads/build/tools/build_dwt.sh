@@ -12,7 +12,7 @@ mkdir -p "$lane"
 git archive HEAD > "$lane/source.tar"
 git -C stmlib archive HEAD > "$lane/stmlib.tar"
 container="dwt-build-$$"
-"${docker_cmd[@]}" run -d --name "$container" "${BEADS_BUILD_IMAGE:-beads-build-kit}" sleep infinity
+"${docker_cmd[@]}" run -d --name "$container" "${BEADS_BUILD_IMAGE:-drizzlet}" sleep infinity
 trap '"${docker_cmd[@]}" rm -f "$container" >/dev/null' EXIT
 "${docker_cmd[@]}" cp "$lane/source.tar" "$container:/tmp/source.tar"
 "${docker_cmd[@]}" cp "$lane/stmlib.tar" "$container:/tmp/stmlib.tar"
