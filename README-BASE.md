@@ -49,6 +49,7 @@ Changes from master, one line per change:
 - Refuse to link an application that reaches bank 2 ([#155](https://github.com/insolentconstruct/eurorack/issues/155)).
 - Add `beads/build/tools/settings_sector.py`: restore the calibration, the settings or both from a settings-sector backup.
 - **Behaviour fix:** quality, mono/stereo and synth changes that keep the sample rate leave the converter running on silence instead of stopping it, which removes the pop it made; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
+- **Behaviour fix:** a sample rate change asserts the converter reset while silence keeps the old clocks running, holds it for 2048 frames at the old rate, then changes the clocks and releases reset once they run, as the PCM3060 data sheet requires; this removes a short pulse after the fade ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
 - **Behaviour fix:** quality, mono/stereo and synth changes fade the output out over 10 ms before the converter pauses or restarts, then fade it back in ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
 - Compile the app with pinned GCC 9 and the bootloader with pinned GCC 4.9.3; explicit `fmaf` preserves random-pan rounding.
 - Round pan, shape and speed explicitly: sound is identical to the previous build in 20 emulated scenarios, and GCC 9-16 now match as measured on Drizzlet.
