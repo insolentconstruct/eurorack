@@ -125,13 +125,13 @@ jobs:
           ACTOR: ${{ github.actor }}
           SHA: ${{ github.sha }}
         run: |
-          image=ghcr.io/insolentconstruct/drizzlet
+          image=ghcr.io/insolentconstruct/mi-toolchain
           docker login ghcr.io -u "$ACTOR" --password-stdin <<< "$GH_TOKEN"
-          for tag in gcc9 "$SHA"; do
+          for tag in gcc9-2020q2 "$SHA"; do
             docker tag drizzlet "$image:$tag"
             docker push "$image:$tag"
           done
-          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$image:gcc9")
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$image:gcc9-2020q2")
           echo "Pushed $digest"
           echo "Pushed \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
   release:

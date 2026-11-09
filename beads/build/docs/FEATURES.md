@@ -237,7 +237,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - It is off by default and hard to reach by accident.
 - One manual paragraph explains it; no hidden state the panel can't show.
 - Patching can't already do it.
-- CPU: the worst measured block stays at or under 92% of the budget, the stock worst case (see [Off-by-default features](#off-by-default-features)).
+- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source.
 
 Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (all twelve page slots are taken).
 

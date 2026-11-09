@@ -116,8 +116,8 @@ From the repository root on an amd64 host with Docker, using the published build
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
-docker pull ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST>
-docker tag ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST> drizzlet
+docker pull ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST>
+docker tag ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST> drizzlet
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 

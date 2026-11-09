@@ -259,7 +259,7 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 **Release image** (2026-11-07 and 2026-11-08): application `b11fe81c…`, standard
 options. Peak load of the whole audio callback from timing builds of the same
 code; Stock is a GCC 4.9.3 build of the vanilla source, Tuneup is beads-tuneup.
-Budget 120,000 cycles; limit 92%.
+Budget 120,000 cycles.
 
 | Heavy test patch | Stock | Tuneup | Beta 2 |
 |---|---:|---:|---:|

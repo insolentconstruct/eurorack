@@ -26,6 +26,11 @@ if [[ -f $page ]]; then
 else
   notes+=$'\n\n## Changes\n'"$changes"
 fi
+# Refuse release text with unfilled placeholders.
+if grep -qF -e '[PENDING' -e '{TAG}' <<<"$changes"$'\n'"$notes"; then
+  echo "Unfilled [PENDING or {TAG} in the CHANGELOG section or release notes" >&2
+  exit 1
+fi
 # The heading's label, e.g. "alpha 2" from "## 2026.10.16 (tag `...`, alpha 2)", goes in the title.
 heading=$(awk -v v="${tag#drizzlet-}" '/^## / && $2 == v {print; exit}' "$changelog")
 if [[ $heading =~ ,\ ([^,()]+)\)$ ]]; then

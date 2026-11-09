@@ -2,10 +2,10 @@ Drizzlet
 ========
 
 Drizzlet is alternative firmware for Mutable Instruments Beads, adding
-Plaits, spectral processing and grain controls. Earlier builds were
-tested on one module. Final qualification of Beta 2 “Fog” is pending.
-Install at your own risk. This is not a Mutable Instruments product. All
-settings save; standard defaults retain stock behaviour.
+Plaits, spectral processing and grain controls. Beta 2 “Fog” was
+tested on one module; see docs/TESTING.md. Install at your own risk.
+This is not a Mutable Instruments product. All settings save; standard
+defaults retain stock behaviour.
 
 Downloads and installation
 --------------------------
@@ -75,9 +75,8 @@ without changing sample rate is pop-free, including synth switching at
 output and stop synth reverb.
 
 SEED starts latched. Latching it in stock delay can pop (#183); this is
-explicitly deferred beyond Beta 2. The unresponsive-module report #112
-remains unresolved; successful updater completion and recovery have not
-been confirmed.
+explicitly deferred beyond Beta 2. The unresponsive-module report (#112)
+is unresolved; this release is not a demonstrated cure.
 
 Frozen-buffer autosave
 ----------------------
@@ -97,8 +96,8 @@ custom Off, Fixed and Adjustable settings. It warns about CPU load and
 refuses excessive combinations. Per-feature estimates await module
 measurements.
 
-Final-candidate profiles, custom scales, LED indications and tail
-choices still need module qualification. Page 4 provides LED brightness
+Profiles, custom scales, LED indications and tail choices are checked
+by host tests, not yet on a module. Page 4 provides LED brightness
 and SEED latch with stock starting values. Seven additional options are off in
 standard firmware:
 
@@ -332,8 +331,9 @@ From the repository root on an amd64 host with Docker, using the
 published build image:
 
 git submodule update --init stmlib stm_audio_bootloader
-docker pull ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST>
-docker tag ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST> drizzlet
+docker pull ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST>
+docker tag ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST> \
+  drizzlet
 bash beads/build/build.sh "$PWD/artifacts" --wav
 
 This repository's CI builds that image from beads/build/Dockerfile,
