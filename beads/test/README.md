@@ -48,14 +48,14 @@ owns its initial state. Shared LED methods live in `stubs/leds.cc`.
 Everything runs in the build kit image; no module is needed:
 
 ```sh
-docker build --platform linux/amd64 -t beads-build-kit:gcc9 beads/build
+docker build --platform linux/amd64 -t beads-tuneup beads/build
 beads/test/run.sh "$PWD/beads-tests"
 ```
 
 One suite, from the repository root (inside the image):
 
 ```sh
-docker run --rm --network none -v "$PWD:/src:ro" beads-build-kit:gcc9 \
+docker run --rm --network none -v "$PWD:/src:ro" beads-tuneup \
   make -j4 -f beads/test/mix.mk BUILD_ROOT=/tmp/t/ TARGET=/tmp/t/mix_test test
 ```
 
@@ -125,7 +125,7 @@ Hermite read, synth grain pairs and the local grain sum. Run it inside the image
 ```sh
 mkdir -p "$PWD/mutations"
 docker run --rm --network none -v "$PWD:/src" -v "$PWD/mutations:/out" \
-  -w /src beads-build-kit:gcc9 python3 beads/test/mutation_check.py /out
+  -w /src beads-tuneup python3 beads/test/mutation_check.py /out
 ```
 
 The script makes a scratch copy under `beads/test`, so the checkout must be

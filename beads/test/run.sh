@@ -34,7 +34,7 @@ if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
     # Remote contexts cannot bind-mount local paths: copy sources in, results out.
     container=$(docker create --platform linux/amd64 --network none -w /src \
       -e BEADS_TEST_CONTAINER=1 -e JOBS="${JOBS:-4}" -e UPDATE="${UPDATE:-0}" \
-      -e STOCK_SOURCE_DIR=/stock-source "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" \
+      -e STOCK_SOURCE_DIR=/stock-source "${BEADS_BUILD_IMAGE:-beads-tuneup}" \
       bash beads/test/run.sh /out)
     tar -C "$root" --exclude=.git --exclude=build --exclude='*_test' \
       -cf - beads stmlib stm_audio_bootloader tools | docker cp - "$container:/src"
@@ -52,7 +52,7 @@ if [[ ${BEADS_TEST_CONTAINER:-0} != 1 ]]; then
     -e BEADS_TEST_CONTAINER=1 -e JOBS="${JOBS:-$(n=$(nproc); echo $(( n < 4 ? n : 4 )))}" -e UPDATE="${UPDATE:-0}" \
     -e STOCK_SOURCE_DIR=/stock-source -v "$stock:/stock-source:ro" \
     -v "$root:/src:$( [[ ${UPDATE:-0} == 1 ]] && echo rw || echo ro )" \
-    -v "$out:/out" "${BEADS_BUILD_IMAGE:-beads-build-kit:gcc9}" \
+    -v "$out:/out" "${BEADS_BUILD_IMAGE:-beads-tuneup}" \
     bash beads/test/run.sh /out
   exit
 fi
