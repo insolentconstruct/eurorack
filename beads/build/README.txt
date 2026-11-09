@@ -353,6 +353,66 @@ commands above. Use build.sh. Plain make may try to regenerate the
 resource tables with python; if you use it, add
 -o beads/resources.cc -o beads/resources.h.
 
+Without Docker: these steps were checked on x86-64 Debian 13 (trixie);
+on other hosts use Docker. They replace build.sh and skip the
+resource-table regeneration, so the Docker-only notes above do not
+apply. The two pinned Arm compilers are GCC 9-2020-q2 for the firmware
+and GCC 4.9-2015-q2 for Mutable Instruments' bootloader; the GCC 4.9
+build is 32-bit, hence the i386 libraries. Outside the repository:
+
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get install --no-install-recommends ca-certificates curl bzip2 git make \
+  python3 python3-numpy libc6:i386 libstdc++6:i386 zlib1g:i386
+curl -fLO https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q2-update/+download/gcc-arm-none-eabi-4_9-2015q2-20150609-linux.tar.bz2
+curl -fLO https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+printf '%s\n' \
+  '3a574c5becfca496bafe07bbd76e9deae1fd0cc99c5a9de0f8c610750f2f89ac  gcc-arm-none-eabi-4_9-2015q2-20150609-linux.tar.bz2' \
+  '5adc2ee03904571c2de79d5cfc0f7fe2a5c5f54f44da5b645c17ee57b217f11f  gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2' \
+  | sha256sum -c -
+sudo tar -xjf gcc-arm-none-eabi-4_9-2015q2-20150609-linux.tar.bz2 -C /opt
+sudo tar -xjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 -C /opt
+
+Then, from the repository root, build the bootloader, the application
+and the combo image, and check them:
+
+git submodule update --init stmlib stm_audio_bootloader
+export LC_ALL=C
+make -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
+  KIT_MAKEFILE=beads/bootloader/makefile KIT_GCC9=0 \
+  TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-4_9-2015q2/ -j"$(nproc)" bin hex
+make -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
+  KIT_MAKEFILE=beads/makefile KIT_GCC9=1 \
+  TOOLCHAIN_PATH=/opt/gcc-arm-none-eabi-9-2020-q2-update/ -j"$(nproc)" \
+  bin hex build/beads/beads_bootloader_combo.bin
+mkdir -p artifacts
+cp build/beads_bootloader/beads_bootloader.bin artifacts/bootloader.bin
+cp build/beads/beads.bin artifacts/app.bin
+cp build/beads/beads_bootloader_combo.bin artifacts/combo.bin
+(cd artifacts && grep -E ' (bootloader|app|combo)\.bin$' ../beads/build/expected-hashes.sha256 | sha256sum -c -)
+
+Encode the update WAV:
+
+PYTHONPATH=. python3 stm_audio_bootloader/qpsk/encoder.py \
+  -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 artifacts/app.bin
+
+This WAV decodes to the same firmware, but numpy's floating-point
+results depend on the CPU, so its hash may differ from the release.
+build.sh runs the encoder under QEMU with a fixed CPU model; to match
+the published WAV (checked with trixie's numpy 2.2.4), encode the same
+way:
+
+sudo apt-get install --no-install-recommends qemu-user-static
+PYTHONPATH=. qemu-x86_64-static -cpu SandyBridge,-avx,-x2apic,-tsc-deadline \
+  /usr/bin/python3 stm_audio_bootloader/qpsk/encoder.py \
+  -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 artifacts/app.bin
+(cd artifacts && sha256sum -c ../beads/build/expected-wav.sha256)
+
+Matching the published hashes needs exactly these compilers and, for the
+WAV, this encoder setup; other compiler versions may build, but produce
+different binaries. app.elf also records build paths: it matches only
+when built from /src with BUILD_ROOT=/out/objects/.
+
 Licence and credits
 -------------------
 
