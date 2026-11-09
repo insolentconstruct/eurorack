@@ -104,7 +104,7 @@ if [[ "$mode" == --wav ]]; then
     /usr/bin/python3 stm_audio_bootloader/qpsk/encoder.py \
     -t stm32h7 -k -s 48000 -b 12000 -c 6000 -p 256 "$out/app.bin"
   name=${RELEASE_NAME:-beads-base-dev}
-  [[ "$name" =~ ^beads-base-[A-Za-z0-9._-]+$ ]] || exit 2
+  [[ "$name" =~ ^beads-(base|tuneup)-[A-Za-z0-9._-]+$ ]] || exit 2
   mv "$out/app.wav" "$out/$name.wav"
   if [[ ${UPDATE_HASHES:-0} == 1 ]]; then
     (cd "$out" && sha256sum "$name.wav") | \

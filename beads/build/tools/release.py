@@ -18,8 +18,8 @@ from scipy.signal import resample_poly
 ROOT = Path('/src')
 HERE = ROOT / 'beads/build'
 NAME = os.environ.get('RELEASE_NAME', 'beads-base-dev')
-if not re.fullmatch(r'beads-base-[A-Za-z0-9._-]+', NAME):
-  raise SystemExit('RELEASE_NAME must match beads-base-[A-Za-z0-9._-]+')
+if not re.fullmatch(r'beads-(base|tuneup)-[A-Za-z0-9._-]+', NAME):
+  raise SystemExit('RELEASE_NAME must match beads-(base|tuneup)-[A-Za-z0-9._-]+')
 WAV = NAME + '.wav'
 ZIP = NAME + '-wav.zip'
 COMBO = NAME + '-combo.bin'
