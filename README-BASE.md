@@ -86,8 +86,8 @@ Initialize the two required submodules, then run from the repository root:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
-docker pull ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST>
-docker tag ghcr.io/insolentconstruct/mi-toolchain@sha256:<DIGEST> beads-tuneup
+docker pull ghcr.io/insolentconstruct/mi-toolchain@sha256:06d243bb94bb7d714cd3a5a79f8de48745f0f99c0ce95011cbafdd89041156fd
+docker tag ghcr.io/insolentconstruct/mi-toolchain@sha256:06d243bb94bb7d714cd3a5a79f8de48745f0f99c0ce95011cbafdd89041156fd beads-tuneup
 beads/build/build.sh "$PWD/beads-base-build" --wav
 ```
 
