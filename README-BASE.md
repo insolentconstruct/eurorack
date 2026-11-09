@@ -102,6 +102,9 @@ Docker's copy API. Compiler archive hashes and the base image digest are in
 `beads/build/Dockerfile`; local verified archives can be supplied with its
 `TC_LOCAL` and `GCC9_LOCAL` build arguments.
 
+Use build.sh. Plain `make` may try to regenerate the resource tables with
+`python`; if you use it, add `-o beads/resources.cc -o beads/resources.h`.
+
 With `RELEASE_NAME` unset or `beads-base-dev`, hash mismatches warn and the
 build continues. Other release names fail on a mismatch. To accept intentional
 firmware and WAV changes, use `UPDATE_HASHES=1 beads/build/build.sh
