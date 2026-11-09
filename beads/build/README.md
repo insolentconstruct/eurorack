@@ -112,12 +112,21 @@ Back up calibration before ST-Link recovery. Erase only written sectors; a full-
 
 ## Building it yourself
 
-From the repository root on an amd64 host with Docker:
+From the repository root on an amd64 host with Docker, using the published build image:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader
-docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
+docker pull ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST>
+docker tag ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST> drizzlet
 bash beads/build/build.sh "$PWD/artifacts" --wav
+```
+
+This repository's CI builds that image from `beads/build/Dockerfile`, with the same pinned toolchain hashes.
+
+To build the image from source instead, replace the pull and tag with:
+
+```sh
+docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
 ```
 
 The first image build downloads two pinned compilers, GCC 9 for the firmware and GCC 4.9 to reproduce Mutable Instruments' bootloader exactly, and pinned Debian packages, so it takes a while; later builds reuse the image.

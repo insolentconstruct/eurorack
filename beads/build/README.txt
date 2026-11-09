@@ -328,13 +328,21 @@ Use backups only on their original module.
 Building it yourself
 --------------------
 
-From the repository root on an amd64 host with Docker:
+From the repository root on an amd64 host with Docker, using the
+published build image:
 
 git submodule update --init stmlib stm_audio_bootloader
+docker pull ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST>
+docker tag ghcr.io/insolentconstruct/drizzlet@sha256:<DIGEST> drizzlet
+bash beads/build/build.sh "$PWD/artifacts" --wav
+
+This repository's CI builds that image from beads/build/Dockerfile,
+with the same pinned toolchain hashes. To build the image from source
+instead, replace the pull and tag with:
+
 docker build --platform linux/amd64 \
   --target compiler \
   -t drizzlet beads/build
-bash beads/build/build.sh "$PWD/artifacts" --wav
 
 The first image build downloads two pinned compilers, GCC 9 for the
 firmware and GCC 4.9 to reproduce Mutable Instruments' bootloader

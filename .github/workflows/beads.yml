@@ -102,6 +102,38 @@ jobs:
             artifacts/objects/*/objects.txt
             artifacts/objects/*/link.txt
             artifacts/objects/*/*.map
+  image:
+    # Publishes the build image after a green build on drizzlet, so users can pull it.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/drizzlet' && github.repository == 'insolentconstruct/eurorack'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: false
+          persist-credentials: false
+          sparse-checkout: beads/build
+      # No local archives: the Dockerfile downloads both toolchains and checks their pinned hashes.
+      - name: Build the image
+        run: docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
+      - name: Push to GitHub Container Registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+        run: |
+          image=ghcr.io/insolentconstruct/drizzlet
+          docker login ghcr.io -u "$ACTOR" --password-stdin <<< "$GH_TOKEN"
+          for tag in gcc9 "$SHA"; do
+            docker tag drizzlet "$image:$tag"
+            docker push "$image:$tag"
+          done
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$image:gcc9")
+          echo "Pushed $digest"
+          echo "Pushed \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
   release:
     if: startsWith(github.ref, 'refs/tags/drizzlet-')
     needs: build
