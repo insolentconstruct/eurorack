@@ -7,17 +7,17 @@ Controls, gestures, settings layout and default sound follow that source; a
 copy of the calibration is also kept in bank 2 sector 6, which stock firmware
 leaves unused. Options that master compiles out stay compiled out.
 
-Tested on one 2021 module: installing by audio, playback, the quality button
-and patching. The storage repair is covered by host tests, not by a module
-test of this build.
+Tested on one 2021 module: installing by audio, playback and the quality button.
+SIZE and input-patching checks reuse the previous build's results for unchanged
+code. Storage repair is covered by host tests, not a module test of this build.
 
 CPU, peak audio-callback load on that module (timing builds, heavy test
 patches):
 
 | Patch | Vanilla source | This branch |
 |---|---:|---:|
-| Granular | 91% | 77% |
-| Wavetable synth | 86% | 83% |
+| Granular | 91% | 76–78% |
+| Wavetable synth | 85–86% | 82–83% |
 
 CPU, busiest stock audio block on a development board (same die and clock as
 Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
@@ -49,7 +49,7 @@ Changes from master, one line per change:
 - Refuse to link an application that reaches bank 2 ([#155](https://github.com/insolentconstruct/eurorack/issues/155)).
 - Add `beads/build/tools/settings_sector.py`: restore the calibration, the settings or both from a settings-sector backup.
 - **Behaviour fix:** quality, mono/stereo and synth changes that keep the sample rate leave the converter running on silence instead of stopping it, which removes the pop it made; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
-- **Behaviour fix:** a sample rate change asserts the converter reset while silence keeps the old clocks running, holds it for 2048 frames at the old rate, then changes the clocks and releases reset once they run, as the PCM3060 data sheet requires; this removes a short pulse after the fade ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
+- **Behaviour fix:** a sample rate change holds the converter in reset with the old clocks running for 2048 frames, changes clocks while it is powered down and releases reset once the new clocks run, as the PCM3060 datasheet specifies. The same change cut the click by about 25 dB in Drizzlet Beta 2; a small click remains ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
 - **Behaviour fix:** quality, mono/stereo and synth changes fade the output out over 10 ms before the converter pauses or restarts, then fade it back in ([#53](https://github.com/insolentconstruct/eurorack/issues/53)).
 - Compile the app with pinned GCC 9 and the bootloader with pinned GCC 4.9.3; explicit `fmaf` preserves random-pan rounding.
 - Round pan, shape and speed explicitly: sound is identical to the previous build in 20 emulated scenarios, and GCC 9-16 now match as measured on Drizzlet.

@@ -13,14 +13,14 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 - Quality, mono/stereo and synth changes now fade the output out over 10 ms instead of cutting it at full level, and fade back in afterwards. The stock synth reverb tail is retained when the synth stops (#53).
 - Fix a settings save that could, rarely, skip erasing the flash and write over the old settings, leaving a module that crashes at every start. Each flash operation is now checked, and settings are only written onto erased flash (#149).
 - Quality, mono/stereo and synth changes that keep the sample rate no longer stop the converter, which removes the pop it made; changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) still restart it (#53).
-- Changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) hold the converter in reset until its new clocks run, removing the short pulse left after the fade (#53).
+- Changes to or from vintage digital (32 kHz) and dirty tape (24 kHz) hold the converter in reset while its clocks change, as its datasheet specifies. The same change cut the click by about 25 dB in Drizzlet Beta 2; a small click remains (#53).
 - Less flash wear from a modulated FREEZE: each interrupted buffer save doubles the wait before the next, from 10 s up to 320 s; a completed save, a minute unfrozen or a reboot resets it (#56).
 - Frozen-buffer backups carry a CRC and are range-checked; stock backups still load. An interrupted or failed backup is never restored, and a setting saved during a backup no longer breaks it (#36).
 - Delay mode: no tempo glitch on the first clock after about 12 hours without one (#57).
 - Frozen delay with negative FM no longer reads outside the buffer, and very fast SEED clocks no longer create a zero-length slice (#33).
 - Fixed undefined reads in the dummy CPU-load grains and past the last wavetable; output unchanged (#34, #35).
 - App built with GCC 9 instead of 4.9.3; the sound is unchanged.
-- More CPU headroom, with the same sound: about 16,600 fewer cycles per audio block in the heaviest stock case on a development board. On a module, the peak load of a heavy granular patch falls from 91% to 77%.
-- The wavetable synth uses less CPU, with the same sound: about 6,800 fewer cycles per audio block in its busiest case on a development board. On a module, the peak load of a heavy synth patch falls from 86% to 83%.
+- More CPU headroom, with the same sound: about 16,600 fewer cycles per audio block in the heaviest stock case on a development board. On a module, the peak load of a heavy granular patch falls from 91% to 76–78%.
+- The wavetable synth uses less CPU, with the same sound: about 6,800 fewer cycles per audio block in its busiest case on a development board. On a module, the peak load of a heavy synth patch falls from 85–86% to 82–83%.
 
 Controls, settings and the default sound are those of the vanilla source; no features are added.
