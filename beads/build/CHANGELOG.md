@@ -2,11 +2,10 @@
 
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
-## Unreleased
+## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 
-- Hold the codec in reset before stopping clocks on quality changes (#53).
-
-## 2026.11.01 (tag `drizzlet-2026.11.01`, beta 2 "Fog")
+- Hold the converter in reset while its clocks change on quality changes; the click is about 25 dB quieter, not gone.
+- Mark profiles with format number 1 instead of a release date; firmware accepts profiles of its own format.
 
 - Hygrostat builds custom firmware, controls, defaults and guides.
 - Replace and reorder the scale bank; edit notes, repeat intervals and LEDs.
