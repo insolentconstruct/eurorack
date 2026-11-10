@@ -42,7 +42,8 @@ const size_t kProfileSize = 4096;
 const uint32_t kProfileMagic = 0x46505a44;
 const uint8_t kMaxProfileEntries = 82;
 const uint8_t kNoField = 255;
-const uint32_t kProfileReleaseId = 0x20261101;
+// Changes only for incompatible profile meanings (SCALE-PROFILES.md).
+const uint32_t kProfileFormat = 1;
 const uint8_t kSettingsFormat = 0xc1;
 // Field 0 keeps 15 as not-set; field 13 explicitly selects custom scale 15.
 const uint8_t kPitchExtensionField = 13;

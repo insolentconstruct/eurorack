@@ -238,7 +238,7 @@ cases = [
   ('TestProfileParser', 'profile', 'beads/profile.cc',
     'Crc32(b, 16 + bytes) != Read32(b + 16 + bytes)', 'false'),
   ('TestProfileParser', 'profile', 'beads/profile.cc',
-    'Read32(b + 8) != kProfileReleaseId', 'false'),
+    'Read32(b + 8) != kProfileFormat', 'false'),
   ('TestProfileParser', 'profile', 'beads/profile.cc',
     'id >= FEATURE_LAST || seen[id]', 'id >= FEATURE_LAST || (seen[id] && id == 0)'),
   ('TestProfileParser', 'profile', 'beads/profile.cc',
@@ -1259,6 +1259,28 @@ cases = [
 
   ('TestSeedLatchPatched', 'firmware', 'beads/beads.cc',
     '      seed_input = NULL;', '      seed_input = seed;'),
+
+  ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
+    '  HAL_SAI_DMAResume(&sai_tx_);\n'
+    '  HAL_SAI_DMAResume(&sai_rx_);\n'
+    '  // All clocks must run before the power-up sequence (PCM3060, p.16).\n'
+    '  HAL_Delay(1);\n'
+    '  // Release reset only after the clocks have stabilized (PCM3060, p.16).\n'
+    '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;',
+    '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;\n'
+    '  HAL_SAI_DMAResume(&sai_tx_);\n'
+    '  HAL_SAI_DMAResume(&sai_rx_);\n'
+    '  HAL_Delay(1);'),
+  ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
+    '  HAL_Delay(kResetFrames * 1000 / previous_sample_rate + 2);',
+    '  HAL_Delay(kResetFrames * 1000 / sample_rate + 2);'),
+  ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
+    '  const int32_t kResetFrames = 2048;',
+    '  const int32_t kResetFrames = 1024;'),
+  ('TestCodecKeepsClocks', 'firmware', 'beads/beads.cc',
+    '    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);',
+    '    codec.Stop();\n'
+    '    codec.Start(sr, sr / kBlockRate, &Process);'),
 
 ]
 # Validate every replacement before creating a disposable source tree.
