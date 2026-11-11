@@ -389,7 +389,8 @@ inline void Abort(uint8_t reason, bool block = true) {
   Unmask(primask);
 }
 
-// Codec Start, Restart and Resume, once the callback is installed again.
+// Codec Start, Restart and Resume, just before the callback is installed:
+// until then no callback runs, so no request can be refused.
 inline void Unblock() {
   live.blocked = false;
 }
