@@ -48,6 +48,7 @@ class Script(dict):
     self.tx = list(tx)
     self.rx = rx
     self.lisr = lisr
+    self.lisr_reads = 0
 
   def get(self, key, default=0):
     if key == CYCCNT and hasattr(self, "time"):
@@ -59,6 +60,11 @@ class Script(dict):
     if key == RX_NDTR and getattr(self, "rx", None) is not None:
       return self.rx
     if key == LISR and getattr(self, "lisr", None) is not None:
+      # The trace's entry snapshot reads LISR first; the handler's dispatch reads it next.
+      if isinstance(self.lisr, tuple):
+        value = self.lisr[0] if self.traced and not self.lisr_reads else self.lisr[1]
+        self.lisr_reads += 1
+        return value
       return self.lisr
     return dict.get(self, key, default)
 
@@ -78,6 +84,8 @@ CASES = [
   ("cadence", ((26, 40, 41, 42), None, (70000, 0, True), "invalid")),
   ("lap", ((26, 40, 41, 42), None, (250000, 2, False), "invalid")),
   ("spurious", ((26, 40, 41, 42), 0, (0, 0, False), "invalid")),
+  # TC raised after the entry snapshot: the handler writes half 1.
+  ("late_tc", ((26, 40, 41, 42), (HT, HT | TC), (0, 0, False), "invalid")),
 ]
 
 
@@ -98,6 +106,7 @@ class Run:
     script = Script(m.mmio)
     m.mmio = script
     self.script = script
+    script.traced = False
     obj = lambda name: SD.defined_symbol(table, name, "OBJECT").value
     self.isr = SD.defined_symbol(table, "DMA1_Stream1_IRQHandler", "FUNC").value & ~1
     # The 2024 driver has no Pause; its Stop completes the trace the same way.
@@ -146,6 +155,8 @@ class Run:
       self.script.begin(self.block, tx, ndtr(N // 2 if half == 0 else 0),
                         (TC if half else HT) if lisr is None else lisr, *jump)
       x.block_index = p.b
+      # Live (deadline_trace.h) begins with pending and active: an entry snapshot reads LISR.
+      self.script.traced = self.live is not None and any(m.read(self.live, 2))
       m.call(self.isr, [], fpscr=M.FZ)
       self.audio += m.read(self.tx + 8 * n * half, 8 * n)
       if p.b % 4 == 3:
@@ -174,7 +185,7 @@ def scenario(run):
   run.step(1)
   if run.live is not None:
     h = T.decode_header(run.region())
-    checks["after_prime"] = dict(state=h["state"], total=h["total"])
+    checks["after_first"] = dict(state=h["state"], total=h["total"])
   run.step(8)  # codec transition: the silence path
   run.m.write(run.transition, struct.pack("<i", 0))
   expected = []
@@ -194,10 +205,19 @@ def scenario(run):
     checks["integrity"] = decoded["integrity"]
     checks["totals"] = decoded["header"]["totals"]
     checks["trigger_index"] = decoded["header"]["trigger_index"]
-    checks["expected"] = ["on_time"] * 8 + expected if run.armed else []
+    checks["expected"] = ["on_time"] * 9 + expected if run.armed else []
+    # The stats window starts at the request block; the trace at the next one.
+    checks["stats_count"] = dwt.decode(run.m.read(dwt.BASE, dwt.SIZE))["brackets"][0]["count"]
+    checks["total"] = decoded["header"]["total"]
+    checks["spurious"] = sum("spurious" in f for f in checks["flags"])
+  # Request 1 disarms a recording trace.
+  run.request(1)
+  run.step(1)
+  if run.live is not None:
+    checks["disarm"] = T.decode_header(run.region())
   # Window end: two blocks short of the window, then two more.
   run.request(T.REQUEST)
-  run.step(2)
+  run.step(1)
   if run.live is not None and run.armed:
     run.m.w32(run.live + LIVE_TOTAL, T.WINDOW - 2)
     run.m.w32(run.live + LIVE_TOTAL + 4, (T.WINDOW - 2) % T.RECORDS)
@@ -255,11 +275,18 @@ def main():
   assert disarmed["after_request"]["state"] == "idle"
   assert disarmed["window_end"]["state"] == "idle" and disarmed["abort"]["state"] == "idle"
   assert armed["after_request"] == dict(state="pending", generation=1, request=0)
-  assert armed["after_prime"] == dict(state="recording", total=0)
+  assert armed["after_first"] == dict(state="recording", total=1)
   assert armed["integrity"] == [], armed["integrity"]
   assert armed["classes"] == armed["expected"], (armed["classes"], armed["expected"])
   assert armed["firmware_classes"] == armed["classes"]
-  assert all("silence" in f for f in armed["flags"][:8])
+  assert all("silence" in f for f in armed["flags"][:9])
+  late = 9 + 3 * [name for name, _ in CASES].index("late_tc") + 2
+  assert armed["flags"][late] == ["coalesced"], armed["flags"][late]
+  assert armed["stats_count"] == armed["total"] + 1 - armed["spurious"]
+  assert disarmed["disarm"]["state"] == "idle"
+  disarm = armed["disarm"]
+  assert (disarm["state"], disarm["reason"], disarm["window_invalid"], disarm["generation"]) == \
+      ("complete", "abort", True, 1)
   assert armed["trigger_index"] == armed["expected"].index("stale")
   end = armed["window_end"]
   assert (end["state"], end["reason"], end["window_invalid"], end["total"], end["generation"]) == \

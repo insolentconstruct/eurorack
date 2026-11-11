@@ -153,10 +153,13 @@ class Callback {
  public:
   Callback() : preparation_(0), start_(0), active_(false) {
 #ifdef DEADLINE_TRACE
-    // Request 4 is request 1 with the deadline trace armed.
+    // Request 4 is request 1 with the deadline trace armed; 1 and 3 disarm it.
     if (stats.reset_request == trace::kRequest) {
       trace::Request();
       stats.reset_request = kResetPanel;
+    } else if (stats.reset_request == kResetPanel ||
+        stats.reset_request == kResetSynthetic) {
+      trace::Abort(trace::REASON_ABORT);
     }
 #endif  // DEADLINE_TRACE
     const bool reset = stats.reset_request == kResetPanel ||

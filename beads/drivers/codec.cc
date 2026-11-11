@@ -371,6 +371,9 @@ void Codec::Pause() {
 }
 
 void Codec::Fill(size_t offset) {
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Dispatch(offset);
+#endif  // DEADLINE_TRACE
   if (callback_) {
     offset *= block_size_;
     
