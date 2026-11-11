@@ -244,6 +244,13 @@ def scenario(run):
   run.step(4)
   if run.live is not None:
     checks["abort"] = T.decode_header(run.region())
+  # A request served by a callback after the abort, before the codec stops
+  # calling back, must not re-arm: the callback is run directly here.
+  run.request(T.REQUEST)
+  x = run.p.x
+  x.block(bytes(8 * x.block_size), bytes(x.block_size), [32768] * 6, [0] * 12, M.FZ, False)
+  if run.live is not None:
+    checks["after_abort_request"] = T.decode_header(run.region())
   return checks
 
 
@@ -307,6 +314,9 @@ def main():
   end = armed["window_end"]
   assert (end["state"], end["reason"], end["window_invalid"], end["total"], end["generation"]) == \
       ("complete", "window_end", False, T.WINDOW, 2) and end["frozen_after"]
+  late_request = armed["after_abort_request"]
+  assert (late_request["state"], late_request["reason"], late_request["generation"]) == \
+      ("complete", "abort", 3), late_request
   abort = armed["abort"]
   assert (abort["state"], abort["reason"], abort["window_invalid"], abort["generation"]) == \
       ("complete", "abort", True, 3)

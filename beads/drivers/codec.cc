@@ -236,6 +236,9 @@ bool Codec::Start(
   }
   
   callback_ = callback;
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Unblock();
+#endif  // DEADLINE_TRACE
 
   // Enable the codec.
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;  
@@ -341,6 +344,9 @@ bool Codec::Restart(
   // Release reset only after the clocks have stabilized (PCM3060, p.16).
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;
   callback_ = callback;
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Unblock();
+#endif  // DEADLINE_TRACE
   return true;
 }
 

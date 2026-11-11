@@ -34,6 +34,9 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/drivers/pins.h"
+#ifdef DEADLINE_TRACE
+#include "beads/deadline_trace.h"
+#endif  // DEADLINE_TRACE
 
 namespace beads {
 
@@ -79,7 +82,12 @@ class Codec {
   // Detach the callback while the converter keeps running on silence, so that
   // a change at the same sample rate does not stop its clocks (#53).
   void Pause();
-  void Resume(FillBufferCallback callback) { callback_ = callback; }
+  void Resume(FillBufferCallback callback) {
+#ifdef DEADLINE_TRACE
+    dwt_calibration::trace::Unblock();
+#endif  // DEADLINE_TRACE
+    callback_ = callback;
+  }
   
   void Fill(size_t offset);
   inline static Codec* GetInstance() { return instance_; }

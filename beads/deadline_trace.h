@@ -183,6 +183,8 @@ struct Live {
   volatile bool active;
   bool open;
   bool begun;
+  // Set by Abort until the codec runs a callback again: no request arms then.
+  volatile bool blocked;
   uint32_t previous_entry;
   volatile uint32_t p0_cycles;
   volatile uint32_t p0_count;
@@ -332,6 +334,9 @@ inline void Open(const Snapshot& s, bool cadence) {
 // record 0, so both windows start here. Its snapshot is late by the callback's
 // prologue and its cadence cannot be checked.
 inline void Request() {
+  if (live.blocked) {
+    return;
+  }
   live.active = false;
   live.open = false;
   live.total = 0;
@@ -371,15 +376,22 @@ inline void Request() {
   live.active = true;
 }
 
-// Codec Pause, Stop and Restart, before the callback or the DMA stops.
-inline void Abort(uint8_t reason) {
+// Codec Pause, Stop and Restart, before the callback or the DMA stops; they
+// also block requests until the callback is installed again.
+inline void Abort(uint8_t reason, bool block = true) {
   const uint32_t primask = Mask();
+  live.blocked = live.blocked || block;
   if (live.active) {
     live.active = false;
     live.open = false;
     Publish(STATE_COMPLETE, reason);
   }
   Unmask(primask);
+}
+
+// Codec Start, Restart and Resume, once the callback is installed again.
+inline void Unblock() {
+  live.blocked = false;
 }
 
 inline void Entry() {
