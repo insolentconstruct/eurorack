@@ -75,6 +75,16 @@ void DelayController::Init(float sample_rate, int max_delay) {
   
   freeze_ = false;
   seed_button_state_ = SEED_BUTTON_STATE_OFF;
+
+  synchronized_ = false;
+  timing_gain_ = TIMING_GAIN_STEPS + 1;
+}
+
+inline float DelayController::KnobInterval(float density, float fm) const {
+  return max(
+      float(kMinDelay),
+      fm * float(max_delay_) * \
+          SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
 }
 
 const int kNumDelayRatios = 20;
@@ -116,17 +126,32 @@ void DelayController::Render(
     const RandomizedParameter& shape,
     Output* out,
     size_t size) {
-  if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
-    RenderInternal<false>(
-        seed_button_state,
-        external_input,
-        freeze,
-        density,
-        linear_fm,
-        exponential_fm,
-        position,
-        shape, out, size);
-  } else {
+  const bool synchronized = !(
+      seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input);
+
+  // After Init, start in the requested timing at once, as stock.
+  if (timing_gain_ > TIMING_GAIN_STEPS) {
+    synchronized_ = synchronized;
+    timing_gain_ = TIMING_GAIN_STEPS;
+  }
+
+  // Fade the taps out before switching between tapped and knob timing.
+  const int previous_gain = timing_gain_;
+  if (synchronized != synchronized_) {
+    if (timing_gain_ == 0) {
+      synchronized_ = synchronized;
+      if (!synchronized_) {
+        // Start knob timing at its target rather than gliding from the tap.
+        clock_.Update(KnobInterval(density_, fm_), 1.0f);
+      }
+    } else {
+      --timing_gain_;
+    }
+  } else if (timing_gain_ < TIMING_GAIN_STEPS) {
+    ++timing_gain_;
+  }
+
+  if (synchronized_) {
     RenderInternal<true>(
         seed_button_state,
         external_input,
@@ -136,6 +161,29 @@ void DelayController::Render(
         exponential_fm,
         position,
         shape, out, size);
+  } else {
+    RenderInternal<false>(
+        seed_button_state,
+        external_input,
+        freeze,
+        density,
+        linear_fm,
+        exponential_fm,
+        position,
+        shape, out, size);
+  }
+
+  if (previous_gain != TIMING_GAIN_STEPS || timing_gain_ != TIMING_GAIN_STEPS) {
+    const float step = 1.0f / float(TIMING_GAIN_STEPS);
+    float start = float(previous_gain) * step;
+    ParameterInterpolator gain(&start, float(timing_gain_) * step, size);
+    while (size--) {
+      const float g = gain.Next();
+      for (int i = 0; i < NUM_TAPS; ++i) {
+        out->tap[i].gain *= g;
+      }
+      ++out;
+    }
   }
 }
 
@@ -219,10 +267,7 @@ void DelayController::RenderInternal(
       tap_ratio[0] *= fm;
       tap_ratio[1] *= fm;
     } else {
-      const float new_interval = max(
-          float(kMinDelay),
-          fm * float(max_delay_) * \
-              SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
+      const float new_interval = KnobInterval(density, fm);
       float lp_coefficient = 10.0f / new_interval;
       CONSTRAIN(lp_coefficient, 0.005f, 0.7f);
       

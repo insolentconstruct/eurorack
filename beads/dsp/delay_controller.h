@@ -183,6 +183,7 @@ class DelayController {
     NUM_RATIOS = 2,
     NUM_HEADS = NUM_INTERVALS * NUM_RATIOS,
     NUM_TAPS = NUM_HEADS * 2,
+    TIMING_GAIN_STEPS = 40,  // Blocks: 10 ms at 4000 blocks per second.
   };
   
   struct Output {
@@ -210,9 +211,15 @@ class DelayController {
   inline float test_multiplier() const { return multiplier_lp_; }
   inline PlayHead* test_play_heads() { return play_head_; }
   inline PlayHead* test_slave_play_heads() { return slave_play_head_; }
+  inline bool test_synchronized() const { return synchronized_; }
+  inline float test_timing_change_gain() const {
+    return float(timing_gain_) / float(TIMING_GAIN_STEPS);
+  }
 #endif  // TEST
 
  private:
+  float KnobInterval(float density, float fm) const;
+
   template<bool synchronized>
   void RenderInternal(
       SeedButtonState seed_button_state,
@@ -252,6 +259,9 @@ class DelayController {
   
   bool freeze_;
   SeedButtonState seed_button_state_;
+  // Timing-change state fits the padding; Init sets gain above full scale.
+  bool synchronized_;
+  uint8_t timing_gain_;
 
   DISALLOW_COPY_AND_ASSIGN(DelayController);
 };

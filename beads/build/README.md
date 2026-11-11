@@ -64,7 +64,7 @@ Hold [A], then press FREEZE to restart the recording window at zero length and c
 
 Releasing FREEZE resumes recording with a crossfade. Quality changes, input changes between mono and stereo, leaving wavetable synth, and power-up without a saved buffer start an empty recording. Switching without changing sample rate is pop-free, including synth switching at 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the output and stop synth reverb.
 
-SEED starts latched. Latching it in stock delay can pop (#183); this is explicitly deferred beyond Beta 2. The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
+SEED starts latched. In delay mode, latching, unlatching or patching SEED while latched briefly fades the delay out and back in, instead of popping as in stock (#183). The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
 
 ## Frozen-buffer autosave
 

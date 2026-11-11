@@ -13,7 +13,7 @@ Same-rate mono/stereo changes and synth start/stop at 48 kHz are pop-free. Rate 
 
 SEED starts latched, as in stock. LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
 
-Delay-mode SEED latching can pop, as in stock; its fix (#183) is deferred.
+Delay-mode SEED latching popped in Beta 2, as in stock. Since then the delay fades out for 10 ms, switches timing and fades back in (#183).
 
 ## Fixes
 

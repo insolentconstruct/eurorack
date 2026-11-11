@@ -50,8 +50,13 @@ struct Rig {
   Processor::MixParameters mix;
   int sample;
   float frequency;
+  float amplitude;
+  SeedButtonState seed;
+  const stmlib::GateFlags* seed_input;
+  bool frozen;
 
-  Rig() : sample(0), frequency(750.0f) {
+  Rig() : sample(0), frequency(750.0f), amplitude(0.05f),
+      seed(SEED_BUTTON_STATE_LOCKED), seed_input(NULL), frozen(false) {
     memset(banks, 0, sizeof(banks));
     memset(reverb, 0, sizeof(reverb));
     memset(&parameters, 0, sizeof(parameters));
@@ -69,15 +74,16 @@ struct Rig {
     const int size = int(processor.sample_rate()) / 4000;
     FloatFrame in[12];
     FloatFrame out[12];
-    bool freeze[12] = { };
+    bool freeze[12];
+    std::fill(&freeze[0], &freeze[12], frozen);
     for (int i = 0; i < size; ++i) {
-      const float x = 0.05f * sin(
+      const float x = amplitude * sin(
           6.283185307179586 * frequency *
           (sample++ % int(processor.sample_rate())) / processor.sample_rate());
       in[i].l = x;
       in[i].r = x;
     }
-    processor.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze, density,
+    processor.Process(seed, seed_input, freeze, density,
         parameters, mix, in, out, size);
     if (capture) {
       for (int i = 0; i < size; ++i) {
@@ -407,6 +413,311 @@ void TestDelayModeSwitchClick() {
   }
 }
 
+const stmlib::GateFlags kSeedLow[12] = {
+  stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW,
+  stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW,
+  stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW,
+  stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW, stmlib::GATE_FLAG_LOW,
+};
+
+// Delay mode at DENSITY 0.3 with a tapped 500 ms tempo, unlatched (#183).
+void PrepareTappedDelay(Rig* r, int media, int offset) {
+  r->processor.Configure(Processor::Media(media), false);
+  r->frequency = 220.0f;
+  r->amplitude = 0.25f;
+  r->density.base = 0.3f;
+  r->seed = SEED_BUTTON_STATE_OFF;
+  r->processor.delay_mode_transition_ = 1.5f;
+  r->Run(4000 + offset);
+  for (int tap = 0; tap < 2; ++tap) {
+    r->seed = SEED_BUTTON_STATE_ON;
+    r->Run(400);
+    r->seed = SEED_BUTTON_STATE_OFF;
+    r->Run(1600);
+  }
+}
+
+// Largest step within 100 ms of a SEED change, against the steady output
+// in the 500 ms before and in 500 ms starting 200 ms after it.
+float SeedStepRatio(Rig* r, SeedButtonState seed,
+    const stmlib::GateFlags* seed_input) {
+  std::vector<float> before;
+  for (int i = 0; i < 2000; ++i) {
+    r->Block(&before);
+  }
+  r->seed = seed;
+  r->seed_input = seed_input;
+  std::vector<float> event;
+  for (int i = 0; i < 400; ++i) {
+    r->Block(&event);
+  }
+  r->Run(400);
+  std::vector<float> after;
+  for (int i = 0; i < 2000; ++i) {
+    r->Block(&after);
+  }
+  const float reference = std::max(
+      MaximumStep(before, before.size()),
+      MaximumStep(after, after.size()));
+  const float step = std::max(
+      MaximumStep(event, event.size()), fabsf(event[0] - before.back()));
+  // Silence or NaN would make the ratio pass vacuously.
+  bool finite = true;
+  for (size_t i = 0; i < event.size(); ++i) {
+    finite = finite && fabsf(event[i]) < 10.0f;
+  }
+  CHECK(finite);
+  CHECK(reference > 0.001f);
+  return step / reference;
+}
+
+float LatchAndUnlatch(Rig* r, const stmlib::GateFlags* seed_input) {
+  const float latch = SeedStepRatio(r, SEED_BUTTON_STATE_LOCKED, seed_input);
+  CHECK(!r->processor.delay_controller_.test_synchronized());
+  // Unlatching switches back at the press.
+  const float unlatch = SeedStepRatio(r, SEED_BUTTON_STATE_ON, seed_input);
+  CHECK(r->processor.delay_controller_.test_synchronized());
+  return std::max(latch, unlatch);
+}
+
+void TestSeedLatchFade() {
+  test_checker.Start("TestSeedLatchFade");
+  // SEED unpatched: latching switches tapped to knob timing, then back.
+  float worst = 0.0f;
+  for (int media = 0; media < 4; ++media) {
+    for (int offset = 0; offset < 300; offset += 101) {
+      Rig r;
+      PrepareTappedDelay(&r, media, offset);
+      worst = std::max(worst, LatchAndUnlatch(&r, NULL));
+    }
+  }
+  printf("Unpatched latch/unlatch step ratio: %.3f\n", worst);
+  CHECK(worst < 1.5f);
+
+  // FEEDBACK at noon, and FREEZE.
+  Rig feedback;
+  feedback.mix.feedback = 0.5f;
+  PrepareTappedDelay(&feedback, Processor::MEDIA_DIGITAL, 0);
+  const float feedback_ratio = LatchAndUnlatch(&feedback, NULL);
+  Rig frozen;
+  PrepareTappedDelay(&frozen, Processor::MEDIA_DIGITAL, 0);
+  frozen.frozen = true;
+  frozen.Run(2000);
+  const float frozen_ratio = LatchAndUnlatch(&frozen, NULL);
+  printf("Feedback, frozen step ratio: %.3f, %.3f\n",
+      feedback_ratio, frozen_ratio);
+  CHECK(feedback_ratio < 1.5f);
+  CHECK(frozen_ratio < 1.5f);
+
+  // The free-running latch option ignores a patched SEED input.
+  Rig free_running;
+  free_running.seed_input = kSeedLow;
+  PrepareTappedDelay(&free_running, Processor::MEDIA_DIGITAL, 0);
+  const float free_running_ratio = SeedStepRatio(
+      &free_running, SEED_BUTTON_STATE_IGNORE, kSeedLow);
+  CHECK(!free_running.processor.delay_controller_.test_synchronized());
+
+  // Unplugging and replugging SEED while latched.
+  Rig cable;
+  cable.seed_input = kSeedLow;
+  PrepareTappedDelay(&cable, Processor::MEDIA_DIGITAL, 0);
+  cable.seed = SEED_BUTTON_STATE_LOCKED;
+  cable.Run(2000);
+  const float unplug = SeedStepRatio(&cable, SEED_BUTTON_STATE_LOCKED, NULL);
+  CHECK(!cable.processor.delay_controller_.test_synchronized());
+  const float plug = SeedStepRatio(
+      &cable, SEED_BUTTON_STATE_LOCKED, kSeedLow);
+  CHECK(cable.processor.delay_controller_.test_synchronized());
+  printf("Free-running, unplug, plug step ratio: %.3f, %.3f, %.3f\n",
+      free_running_ratio, unplug, plug);
+  CHECK(free_running_ratio < 1.5f);
+  CHECK(unplug < 1.5f);
+  CHECK(plug < 1.5f);
+}
+
+void TestSeedLatchFadePolicy() {
+  test_checker.Start("TestSeedLatchFadePolicy");
+  // A clocked latch keeps the timing, and never touches the tap gains.
+  Rig clocked;
+  clocked.seed_input = kSeedLow;
+  PrepareTappedDelay(&clocked, Processor::MEDIA_DIGITAL, 0);
+  clocked.seed = SEED_BUTTON_STATE_LOCKED;
+  for (int i = 0; i < 400; ++i) {
+    clocked.Block(NULL);
+    CHECK(clocked.processor.delay_controller_.test_timing_change_gain()
+        == 1.0f);
+  }
+  CHECK(clocked.processor.delay_controller_.test_synchronized());
+
+  // A latch released within the fade-out never switches timing.
+  Rig rapid;
+  PrepareTappedDelay(&rapid, Processor::MEDIA_DIGITAL, 0);
+  rapid.seed = SEED_BUTTON_STATE_LOCKED;
+  rapid.Run(20);
+  const float dip = rapid.processor.delay_controller_.test_timing_change_gain();
+  CHECK(dip > 0.0f && dip < 1.0f);
+  rapid.seed = SEED_BUTTON_STATE_OFF;
+  float lowest = dip;
+  for (int i = 0; i < 100; ++i) {
+    rapid.Block(NULL);
+    CHECK(rapid.processor.delay_controller_.test_synchronized());
+    lowest = std::min(
+        lowest, rapid.processor.delay_controller_.test_timing_change_gain());
+  }
+  CHECK(lowest == dip);
+  CHECK(rapid.processor.delay_controller_.test_timing_change_gain() == 1.0f);
+
+  // The fade reaches silence before the switch and lasts 10 ms each way.
+  Rig timing;
+  PrepareTappedDelay(&timing, Processor::MEDIA_DIGITAL, 0);
+  timing.seed = SEED_BUTTON_STATE_LOCKED;
+  int switch_block = -1;
+  int recovered_block = -1;
+  for (int i = 0; i < 200 && recovered_block < 0; ++i) {
+    timing.Block(NULL);
+    const DelayController& c = timing.processor.delay_controller_;
+    if (switch_block < 0 && !c.test_synchronized()) {
+      CHECK(c.test_timing_change_gain() == 0.0f);
+      switch_block = i;
+    } else if (switch_block >= 0 && c.test_timing_change_gain() == 1.0f) {
+      recovered_block = i;
+    }
+  }
+  // Float rounding may leave one more block at either end.
+  CHECK(switch_block >= 40 && switch_block <= 41);
+  CHECK(recovered_block - switch_block >= 40);
+  CHECK(recovered_block - switch_block <= 41);
+
+}
+
+void TestSeedLatchFadeTransitions() {
+  test_checker.Start("TestSeedLatchFadeTransitions");
+  // Leaving delay mode mid-fade, and re-entering, completes the fade.
+  Rig exit;
+  PrepareTappedDelay(&exit, Processor::MEDIA_DIGITAL, 0);
+  exit.seed = SEED_BUTTON_STATE_LOCKED;
+  exit.Run(20);
+  const float exit_gain =
+      exit.processor.delay_controller_.test_timing_change_gain();
+  exit.parameters.size.base = 0.5f;
+  exit.processor.delay_mode_transition_ = 0.0001f;
+  exit.Run(1);
+  CHECK(exit.processor.delay_mode_transition_ < 0.0f);
+  CHECK(exit.processor.delay_controller_.test_timing_change_gain()
+      < exit_gain);
+  exit.parameters.size.base = 65535.0f / 65536.0f;
+  exit.Run(90);
+  CHECK(exit.processor.delay_mode_transition_ > 0.0f);
+  CHECK(!exit.processor.delay_controller_.test_synchronized());
+  CHECK(exit.processor.delay_controller_.test_timing_change_gain() == 1.0f);
+
+  // A quality change mid-fade, frozen, in either direction, restarts in the
+  // requested timing at once.
+  for (int from_latched = 0; from_latched < 2; ++from_latched) {
+    for (int latched = 0; latched < 2; ++latched) {
+      Rig quality;
+      PrepareTappedDelay(&quality, Processor::MEDIA_DIGITAL, 0);
+      const DelayController& c = quality.processor.delay_controller_;
+      quality.frozen = true;
+      if (from_latched) {
+        quality.seed = SEED_BUTTON_STATE_LOCKED;
+        quality.Run(200);
+        CHECK(!c.test_synchronized());
+      }
+      quality.seed = from_latched
+          ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_LOCKED;
+      quality.Run(20);
+      CHECK(c.test_synchronized() == !from_latched);
+      CHECK(c.test_timing_change_gain() > 0.4f);
+      CHECK(c.test_timing_change_gain() < 0.6f);
+      quality.seed = latched
+          ? SEED_BUTTON_STATE_LOCKED : SEED_BUTTON_STATE_OFF;
+      quality.processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
+      for (int i = 0; i < 400; ++i) {
+        quality.Block(NULL);
+        CHECK(c.test_synchronized() == !latched);
+        CHECK(c.test_timing_change_gain() == 1.0f);
+      }
+    }
+  }
+
+  // A latch change made outside delay mode fades in on entry, while the
+  // granular/delay crossfade still silences the wet signal.
+  Rig entry;
+  entry.processor.delay_mode_transition_ = 1.5f;
+  entry.Run(10);
+  CHECK(!entry.processor.delay_controller_.test_synchronized());
+  entry.seed = SEED_BUTTON_STATE_OFF;
+  entry.processor.delay_mode_transition_ = -0.0001f;
+  entry.Run(2);
+  CHECK(entry.processor.delay_mode_transition_ > 0.0f);
+  CHECK(entry.processor.delay_controller_.test_timing_change_gain() < 1.0f);
+  entry.Run(90);
+  CHECK(entry.processor.delay_mode_transition_ < 0.025f);
+  CHECK(entry.processor.delay_controller_.test_synchronized());
+  CHECK(entry.processor.delay_controller_.test_timing_change_gain() == 1.0f);
+}
+
+void TestSeedLatchFadeTaps() {
+  test_checker.Start("TestSeedLatchFadeTaps");
+  // SEED edges during the fade-out toward tapped timing are not recorded,
+  // and the tap counter only runs while tapped timing is rendered.
+  Rig edges;
+  PrepareTappedDelay(&edges, Processor::MEDIA_DIGITAL, 0);
+  edges.seed = SEED_BUTTON_STATE_LOCKED;
+  edges.Run(200);
+  const DelayController& e = edges.processor.delay_controller_;
+  CHECK(!e.test_synchronized());
+  DelayClock* clock = const_cast<DelayClock*>(&e.test_clock());
+  const int counter = clock->test_next_interval();
+  edges.seed = SEED_BUTTON_STATE_ON;
+  edges.Run(4);
+  edges.seed = SEED_BUTTON_STATE_OFF;
+  edges.Run(4);
+  edges.seed = SEED_BUTTON_STATE_ON;
+  int synchronized_blocks = 0;
+  for (int i = 0; i < 60; ++i) {
+    edges.Block(NULL);
+    synchronized_blocks += e.test_synchronized();
+  }
+  CHECK(synchronized_blocks > 0 && synchronized_blocks < 60);
+  CHECK(clock->test_next_interval() - counter == 12 * synchronized_blocks);
+  // The first accepted tap records the interval spanning the switch.
+  edges.seed = SEED_BUTTON_STATE_OFF;
+  edges.Run(100);
+  const int spanning = clock->test_next_interval() + 1;
+  edges.seed = SEED_BUTTON_STATE_ON;
+  edges.Run(1);
+  CHECK(clock->interval(clock->new_interval_index()) == float(spanning));
+
+  // Taps after a latch cycle record the same interval as without one.
+  Rig plain;
+  Rig cycled;
+  PrepareTappedDelay(&plain, Processor::MEDIA_DIGITAL, 0);
+  PrepareTappedDelay(&cycled, Processor::MEDIA_DIGITAL, 0);
+  plain.Run(4400);
+  cycled.seed = SEED_BUTTON_STATE_LOCKED;
+  cycled.Run(2000);
+  cycled.seed = SEED_BUTTON_STATE_ON;
+  cycled.Run(400);
+  cycled.seed = SEED_BUTTON_STATE_OFF;
+  cycled.Run(2000);
+  for (int tap = 0; tap < 3; ++tap) {
+    plain.seed = cycled.seed = SEED_BUTTON_STATE_ON;
+    plain.Run(400);
+    cycled.Run(400);
+    plain.seed = cycled.seed = SEED_BUTTON_STATE_OFF;
+    plain.Run(1200);
+    cycled.Run(1200);
+  }
+  const DelayClock& a = plain.processor.delay_controller_.test_clock();
+  const DelayClock& b = cycled.processor.delay_controller_.test_clock();
+  printf("Tapped interval, plain / after latch: %.1f / %.1f\n",
+      a.interval(a.new_interval_index()), b.interval(b.new_interval_index()));
+  CHECK(fabsf(a.interval(a.new_interval_index()) - 19200.0f) < 20.0f);
+  CHECK(fabsf(b.interval(b.new_interval_index()) - 19200.0f) < 20.0f);
+}
+
 int main(int argc, char** argv) {
   setbuf(stdout, NULL);
   const HostTest tests[] = {
@@ -419,6 +730,10 @@ int main(int argc, char** argv) {
     { "TestDelayModeFade", TestDelayModeFade },
     { "TestDelayRotaryPitch", TestDelayRotaryPitch },
     { "TestDelayBandwidthAndCv", TestDelayBandwidthAndCv },
+    { "TestSeedLatchFade", TestSeedLatchFade },
+    { "TestSeedLatchFadePolicy", TestSeedLatchFadePolicy },
+    { "TestSeedLatchFadeTransitions", TestSeedLatchFadeTransitions },
+    { "TestSeedLatchFadeTaps", TestSeedLatchFadeTaps },
   };
   const int result = RunHostTests(argc, argv, tests,
       sizeof(tests) / sizeof(tests[0]));

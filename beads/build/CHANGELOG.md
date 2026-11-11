@@ -2,6 +2,10 @@
 
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
+## Unreleased
+
+- Fade the delay around delay-mode SEED latch changes instead of popping (#183).
+
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 
 - Hold the converter in reset while its clocks change on quality changes; the click is about 25 dB quieter, not gone.
