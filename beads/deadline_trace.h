@@ -210,6 +210,8 @@ struct Snapshot {
   uint32_t tx_ndtr;
   uint32_t rx_ndtr;
   uint32_t lisr;
+  uint32_t p0_cycles;
+  uint32_t p0_count;
   bool long_window;
 };
 
@@ -233,6 +235,8 @@ inline void Take(Snapshot* s) {
   s->tx_ndtr = Register(kTxNdtr);
   s->rx_ndtr = Register(kRxNdtr);
   s->lisr = Register(kDmaLisr);
+  s->p0_cycles = live.p0_cycles;
+  s->p0_count = live.p0_count;
   s->long_window = Register(kCyccnt) - s->cycles > kSnapshotBound;
   Unmask(primask);
 }
@@ -292,11 +296,12 @@ inline void Init() {
   region.header.state = STATE_IDLE;
 }
 
-// Request 4, from the stats callback: a new generation starts at the next
-// codec interrupt, which only primes the cadence reference.
+// Request 4, from the stats callback: the next codec interrupt is the first
+// record; this interrupt's callback is the cadence reference.
 inline void Request() {
   live.active = false;
   live.open = false;
+  live.previous_entry = Register(kCyccnt);
   live.total = 0;
   live.write_index = 0;
   live.trigger_index = kNone;
@@ -346,10 +351,8 @@ inline void Entry() {
   if (live.pending) {
     live.pending = false;
     live.active = true;
-    live.open = false;
-    live.previous_entry = s.cycles;
-    live.p0_cycles_window = live.p0_cycles;
-    live.p0_count_window = live.p0_count;
+    live.p0_cycles_window = s.p0_cycles;
+    live.p0_count_window = s.p0_count;
     live.sai_baseline[0] = Register(kSaiASr);
     live.sai_baseline[1] = Register(kSaiBSr);
     BeginWrite();
@@ -357,7 +360,6 @@ inline void Entry() {
     region.header.sai_baseline[1] = live.sai_baseline[1];
     region.header.state = STATE_RECORDING;
     EndWrite();
-    return;
   }
   Record& r = live.record;
   const uint32_t ht_tc = s.lisr & (kTcif1 | kHtif1);
@@ -383,21 +385,34 @@ inline void Entry() {
   r.p0_cycles_store = 0;
   r.p0_count_pre = 0;
   r.p0_count_store = 0;
-  live.p0_cycles_mark = live.p0_cycles;
-  live.p0_count_mark = live.p0_count;
+  live.p0_cycles_mark = s.p0_cycles;
+  live.p0_count_mark = s.p0_count;
   live.begun = false;
   live.open = true;
 }
 
+// Codec::Fill: the half actually written. A flag raised between the entry
+// snapshot and the dispatch changes it; that block is coalesced.
+inline void Dispatch(size_t half) {
+  if (!live.open) {
+    return;
+  }
+  Record& r = live.record;
+  if (half != r.half) {
+    r.half = half;
+    r.flags |= FLAG_COALESCED;
+  }
+}
+
 // Immediately before the output stores; the compile-time delay is Seed3's.
 inline void StoreBegin(size_t size, bool silence = false) {
+  if (!live.open) {
+    return;
+  }
 #if DEADLINE_TRACE_DELAY > 0
   const uint32_t delay_start = Register(kCyccnt);
   while (Register(kCyccnt) - delay_start < DEADLINE_TRACE_DELAY) { }
 #endif  // DEADLINE_TRACE_DELAY
-  if (!live.open) {
-    return;
-  }
   if (live.block_size != size) {
     if (live.block_size) {
       Abort(REASON_GEOMETRY);
@@ -418,12 +433,10 @@ inline void StoreBegin(size_t size, bool silence = false) {
   live.begun = true;
   if (s.long_window) r.flags |= FLAG_SNAPSHOT_LONG;
   if (silence) r.flags |= FLAG_SILENCE;
-  const uint32_t p0_cycles = live.p0_cycles;
-  const uint32_t p0_count = live.p0_count;
-  r.p0_cycles_pre = Saturate16(p0_cycles - live.p0_cycles_mark);
-  r.p0_count_pre = Saturate8(p0_count - live.p0_count_mark);
-  live.p0_cycles_mark = p0_cycles;
-  live.p0_count_mark = p0_count;
+  r.p0_cycles_pre = Saturate16(s.p0_cycles - live.p0_cycles_mark);
+  r.p0_count_pre = Saturate8(s.p0_count - live.p0_count_mark);
+  live.p0_cycles_mark = s.p0_cycles;
+  live.p0_count_mark = s.p0_count;
 }
 
 // Immediately after the output stores, once they have completed.
@@ -439,8 +452,8 @@ inline void StoreEnd() {
   r.tx_ndtr[2] = s.tx_ndtr;
   if (s.long_window) r.flags |= FLAG_SNAPSHOT_LONG;
   if (live.begun) r.flags &= ~FLAG_NO_STORE;
-  r.p0_cycles_store = Saturate16(live.p0_cycles - live.p0_cycles_mark);
-  r.p0_count_store = Saturate8(live.p0_count - live.p0_count_mark);
+  r.p0_cycles_store = Saturate16(s.p0_cycles - live.p0_cycles_mark);
+  r.p0_count_store = Saturate8(s.p0_count - live.p0_count_mark);
 }
 
 // Lower-bound slack in DMA words: negative once the half's first word may
@@ -523,12 +536,10 @@ inline void Exit() {
     }
   }
 
-  const uint32_t p0_cycles = live.p0_cycles;
-  const uint32_t p0_count = live.p0_count;
-  t.p0_cycles += p0_cycles - live.p0_cycles_window;
-  t.p0_count += p0_count - live.p0_count_window;
-  live.p0_cycles_window = p0_cycles;
-  live.p0_count_window = p0_count;
+  t.p0_cycles += s.p0_cycles - live.p0_cycles_window;
+  t.p0_count += s.p0_count - live.p0_count_window;
+  live.p0_cycles_window = s.p0_cycles;
+  live.p0_count_window = s.p0_count;
 
   if (trigger && live.trigger_index == kNone) {
     r.flags |= FLAG_TRIGGER;
