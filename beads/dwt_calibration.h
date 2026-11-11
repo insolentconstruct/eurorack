@@ -160,7 +160,7 @@ class Callback {
       trace::Request();
     } else if (stats.reset_request == kResetPanel ||
         stats.reset_request == kResetSynthetic) {
-      trace::Abort(trace::REASON_ABORT);
+      trace::Abort(trace::REASON_ABORT, false);
     }
 #endif  // DEADLINE_TRACE
     const bool reset = stats.reset_request == kResetPanel ||
