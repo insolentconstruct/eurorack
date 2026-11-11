@@ -29,7 +29,7 @@ HT, TC = 1 << 10, 1 << 11
 SEED_PIN, FREEZE_PIN = 1 << 10, 1 << 11
 REQUEST = dwt.BASE + 12
 N = 48
-# Live (deadline_trace.h): total, write_index at +32, +36.
+# Live (deadline_trace.h): total at +32.
 LIVE_TOTAL = 32
 
 
@@ -176,17 +176,14 @@ class Run:
 def scenario(run):
   checks = {}
   run.step(20)
+  # The request block is record 0; the stats window starts with it too.
   run.request(T.REQUEST)
   run.step(1)
   if run.live is not None:
     h = T.decode_header(run.region())
     checks["after_request"] = dict(state=h["state"], generation=h["generation"],
-                                   request=run.m.read(REQUEST, 1)[0])
-  run.step(1)
-  if run.live is not None:
-    h = T.decode_header(run.region())
-    checks["after_first"] = dict(state=h["state"], total=h["total"])
-  run.step(8)  # codec transition: the silence path
+                                   total=h["total"], request=run.m.read(REQUEST, 1)[0])
+  run.step(9)  # codec transition: the silence path
   run.m.write(run.transition, struct.pack("<i", 0))
   expected = []
   for name, case in CASES:
@@ -203,10 +200,8 @@ def scenario(run):
     checks["firmware_classes"] = [r["firmware_class"] for r in records]
     checks["flags"] = [r["flag_names"] for r in records]
     checks["integrity"] = decoded["integrity"]
-    checks["totals"] = decoded["header"]["totals"]
     checks["trigger_index"] = decoded["header"]["trigger_index"]
-    checks["expected"] = ["on_time"] * 9 + expected if run.armed else []
-    # The stats window starts at the request block; the trace at the next one.
+    checks["expected"] = ["on_time"] * 10 + expected if run.armed else []
     checks["stats_count"] = dwt.decode(run.m.read(dwt.BASE, dwt.SIZE))["brackets"][0]["count"]
     checks["total"] = decoded["header"]["total"]
     checks["spurious"] = sum("spurious" in f for f in checks["flags"])
@@ -215,18 +210,34 @@ def scenario(run):
   run.step(1)
   if run.live is not None:
     checks["disarm"] = T.decode_header(run.region())
-  # Window end: two blocks short of the window, then two more.
+  # Generation 2: wrap the ring, trigger at record 801, freeze 384 records later.
   run.request(T.REQUEST)
-  run.step(1)
+  run.step(801)
+  run.step(1, CASES[1][1])
+  run.step(384)
+  frozen = run.region()
+  run.step(10)
+  if run.live is not None and run.armed:
+    decoded = T.decode(frozen, generation=2)
+    later = T.decode(run.region(), generation=2)
+    ring = decoded["records"]
+    checks["freeze"] = dict(
+      state=decoded["header"]["state"], trigger=decoded["header"]["trigger_index"],
+      first=ring[0]["index"], last=ring[-1]["index"], count=len(ring),
+      stale=[r["index"] for r in ring if r["class"] == "stale"],
+      integrity=decoded["integrity"],
+      ring_unchanged=frozen[T.HEADER_SIZE:] == run.region()[T.HEADER_SIZE:],
+      total_after=later["header"]["total"], write_index_after=later["header"]["write_index"],
+      write_index=decoded["header"]["write_index"])
+  # Window end: two blocks short of the window, then two more.
   if run.live is not None and run.armed:
     run.m.w32(run.live + LIVE_TOTAL, T.WINDOW - 2)
-    run.m.w32(run.live + LIVE_TOTAL + 4, (T.WINDOW - 2) % T.RECORDS)
   run.step(2)
   end = run.region()
   run.step(2)
   if run.live is not None:
     checks["window_end"] = dict(T.decode_header(end), frozen_after=run.region() == end)
-  # Abort: re-arm, record one block, then Pause.
+  # Abort: re-arm, record three blocks, then Pause (Stop on the 2024 driver).
   run.request(T.REQUEST)
   run.step(3)
   run.m.call(run.pause, [run.m.u32(run.instance)], fpscr=M.FZ)
@@ -273,21 +284,26 @@ def main():
   assert all(r["nonzero"] for r in rows)
   disarmed, armed = rows[2]["checks"], rows[3]["checks"]
   assert disarmed["after_request"]["state"] == "idle"
+  assert "freeze" not in disarmed
   assert disarmed["window_end"]["state"] == "idle" and disarmed["abort"]["state"] == "idle"
-  assert armed["after_request"] == dict(state="pending", generation=1, request=0)
-  assert armed["after_first"] == dict(state="recording", total=1)
+  assert armed["after_request"] == dict(state="recording", generation=1, total=1, request=0)
   assert armed["integrity"] == [], armed["integrity"]
   assert armed["classes"] == armed["expected"], (armed["classes"], armed["expected"])
   assert armed["firmware_classes"] == armed["classes"]
-  assert all("silence" in f for f in armed["flags"][:9])
-  late = 9 + 3 * [name for name, _ in CASES].index("late_tc") + 2
+  assert all("silence" in f for f in armed["flags"][:10])
+  late = 10 + 3 * [name for name, _ in CASES].index("late_tc") + 2
   assert armed["flags"][late] == ["coalesced"], armed["flags"][late]
-  assert armed["stats_count"] == armed["total"] + 1 - armed["spurious"]
+  # Same window: every record but the spurious one ran a callback.
+  assert armed["stats_count"] == armed["total"] - armed["spurious"]
   assert disarmed["disarm"]["state"] == "idle"
   disarm = armed["disarm"]
   assert (disarm["state"], disarm["reason"], disarm["window_invalid"], disarm["generation"]) == \
       ("complete", "abort", True, 1)
   assert armed["trigger_index"] == armed["expected"].index("stale")
+  f = armed["freeze"]
+  assert (f["state"], f["trigger"], f["first"], f["last"], f["count"], f["stale"], f["integrity"]) == \
+      ("ring_frozen", 801, 801 + 385 - 768, 801 + 384, 768, [801], []), f
+  assert f["ring_unchanged"] and f["total_after"] == 801 + 385 + 10 and f["write_index_after"] == f["write_index"]
   end = armed["window_end"]
   assert (end["state"], end["reason"], end["window_invalid"], end["total"], end["generation"]) == \
       ("complete", "window_end", False, T.WINDOW, 2) and end["frozen_after"]

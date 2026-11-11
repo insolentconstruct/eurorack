@@ -76,6 +76,13 @@ class ClassifyTest(unittest.TestCase):
     got = self.check(0, (44, 3, 5), "stale", -6)
     self.assertEqual(got[2] - N, 3)
 
+  def test_whole_half_consumed(self):
+    # NDTR 4, 18, 17 on half 0: the DMA is past the half at StoreBegin.
+    records = [record(0, 0, (4, 18, 17))]
+    result = T.decode(dump(records, 1, state=2, reason=0))
+    self.assertEqual(result["records"][0]["class"], "stale")
+    self.assertEqual(result["records"][0]["stale_words"], N // 2)
+
   def test_invalid_flags(self):
     for name in ("no_store", "snapshot_long", "coalesced", "cadence", "lap", "spurious"):
       flag = dict(T.FLAGS)[name]

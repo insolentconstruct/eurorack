@@ -187,7 +187,8 @@ def decode(data, generation=None, sample_rate=48000):
     cls, slack, begin, end = classify(r, n) if n else ("invalid", None, None, None)
     r["class"] = cls
     r["slack"] = slack
-    r["stale_words"] = begin - n if cls == "stale" else 0
+    # A late start can see the whole half consumed: at most n // 2 words.
+    r["stale_words"] = min(n // 2, begin - n) if cls == "stale" else 0
     r["flag_names"] = flag_names(r["flags"])
     r["lisr_entry_names"] = lisr_names(r["lisr_entry"])
     r["lisr_exit_names"] = lisr_names(r["lisr_exit"])
