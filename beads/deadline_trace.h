@@ -180,7 +180,6 @@ STATIC_ASSERT(sizeof(Region) == 24832, trace_region_size);
 // The live state, in DTCM: the priority-0 counters are shared with SysTick
 // and TIM8; everything else is the codec interrupt's.
 struct Live {
-  volatile bool pending;
   volatile bool active;
   bool open;
   bool begun;
@@ -296,71 +295,8 @@ inline void Init() {
   region.header.state = STATE_IDLE;
 }
 
-// Request 4, from the stats callback: the next codec interrupt is the first
-// record; this interrupt's callback is the cadence reference.
-inline void Request() {
-  live.active = false;
-  live.open = false;
-  live.previous_entry = Register(kCyccnt);
-  live.total = 0;
-  live.write_index = 0;
-  live.trigger_index = kNone;
-  live.post_trigger = 0;
-  live.block_size = 0;
-  for (unsigned i = 0; i < 2 * kSaiBits; ++i) {
-    live.sai_first[i] = kNone;
-  }
-  uint32_t* totals = reinterpret_cast<uint32_t*>(&live.totals);
-  for (unsigned i = 0; i < sizeof(Totals) / 4; ++i) {
-    totals[i] = 0;
-  }
-  live.totals.min_slack = 0x7fffffff;
-  BeginWrite();
-  region.header.generation = region.header.generation + 1;
-  region.header.state = STATE_PENDING;
-  region.header.reason = REASON_NONE;
-  region.header.window_invalid = 0;
-  region.header.sample_rate = 0;
-  region.header.block_size = 0;
-  region.header.buffer_words = 0;
-  region.header.write_index = 0;
-  region.header.total = 0;
-  region.header.trigger_index = kNone;
-  EndWrite();
-  live.pending = true;
-}
-
-// Codec Pause, Stop and Restart, before the callback or the DMA stops.
-inline void Abort(uint8_t reason) {
-  const uint32_t primask = Mask();
-  if (live.pending || live.active) {
-    live.pending = false;
-    live.active = false;
-    live.open = false;
-    Publish(STATE_COMPLETE, reason);
-  }
-  Unmask(primask);
-}
-
-inline void Entry() {
-  if (!live.pending && !live.active) {
-    return;
-  }
-  Snapshot s;
-  Take(&s);
-  if (live.pending) {
-    live.pending = false;
-    live.active = true;
-    live.p0_cycles_window = s.p0_cycles;
-    live.p0_count_window = s.p0_count;
-    live.sai_baseline[0] = Register(kSaiASr);
-    live.sai_baseline[1] = Register(kSaiBSr);
-    BeginWrite();
-    region.header.sai_baseline[0] = live.sai_baseline[0];
-    region.header.sai_baseline[1] = live.sai_baseline[1];
-    region.header.state = STATE_RECORDING;
-    EndWrite();
-  }
+// Opens the record of the block being handled from a snapshot.
+inline void Open(const Snapshot& s, bool cadence) {
   Record& r = live.record;
   const uint32_t ht_tc = s.lisr & (kTcif1 | kHtif1);
   const uint32_t interval = s.cycles - live.previous_entry;
@@ -378,7 +314,8 @@ inline void Entry() {
   if (s.long_window) r.flags |= FLAG_SNAPSHOT_LONG;
   if (ht_tc == (kTcif1 | kHtif1)) r.flags |= FLAG_COALESCED;
   if (!ht_tc) r.flags |= FLAG_SPURIOUS;
-  if (interval < kBlockCycles / 2 || interval > kBlockCycles * 3 / 2) {
+  if (cadence &&
+      (interval < kBlockCycles / 2 || interval > kBlockCycles * 3 / 2)) {
     r.flags |= FLAG_CADENCE;
   }
   r.p0_cycles_pre = 0;
@@ -389,6 +326,69 @@ inline void Entry() {
   live.p0_count_mark = s.p0_count;
   live.begun = false;
   live.open = true;
+}
+
+// Request 4, from the stats callback that clears the stats: this block is
+// record 0, so both windows start here. Its snapshot is late by the callback's
+// prologue and its cadence cannot be checked.
+inline void Request() {
+  live.active = false;
+  live.open = false;
+  live.total = 0;
+  live.write_index = 0;
+  live.trigger_index = kNone;
+  live.post_trigger = 0;
+  live.block_size = 0;
+  for (unsigned i = 0; i < 2 * kSaiBits; ++i) {
+    live.sai_first[i] = kNone;
+  }
+  uint32_t* totals = reinterpret_cast<uint32_t*>(&live.totals);
+  for (unsigned i = 0; i < sizeof(Totals) / 4; ++i) {
+    totals[i] = 0;
+  }
+  live.totals.min_slack = 0x7fffffff;
+  Snapshot s;
+  Take(&s);
+  live.p0_cycles_window = s.p0_cycles;
+  live.p0_count_window = s.p0_count;
+  live.sai_baseline[0] = Register(kSaiASr);
+  live.sai_baseline[1] = Register(kSaiBSr);
+  BeginWrite();
+  region.header.generation = region.header.generation + 1;
+  region.header.state = STATE_RECORDING;
+  region.header.reason = REASON_NONE;
+  region.header.window_invalid = 0;
+  region.header.sample_rate = 0;
+  region.header.block_size = 0;
+  region.header.buffer_words = 0;
+  region.header.write_index = 0;
+  region.header.total = 0;
+  region.header.trigger_index = kNone;
+  region.header.sai_baseline[0] = live.sai_baseline[0];
+  region.header.sai_baseline[1] = live.sai_baseline[1];
+  EndWrite();
+  Open(s, false);
+  live.active = true;
+}
+
+// Codec Pause, Stop and Restart, before the callback or the DMA stops.
+inline void Abort(uint8_t reason) {
+  const uint32_t primask = Mask();
+  if (live.active) {
+    live.active = false;
+    live.open = false;
+    Publish(STATE_COMPLETE, reason);
+  }
+  Unmask(primask);
+}
+
+inline void Entry() {
+  if (!live.active) {
+    return;
+  }
+  Snapshot s;
+  Take(&s);
+  Open(s, true);
 }
 
 // Codec::Fill: the half actually written. A flag raised between the entry

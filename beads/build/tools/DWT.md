@@ -121,8 +121,9 @@ make -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
 ```
 
 The trace is disarmed at boot. Request byte 4 is request 1 plus an armed
-trace: the next codec interrupt primes the cadence, and the following
-240000 blocks are recorded. Each record (32 bytes) holds CYCCNT at interrupt
+trace: the request's own block is record 0 (its entry snapshot is taken in the
+callback, and its cadence is not checked), so the stats and the trace cover the
+same 240000 blocks. Requests 1 and 3 disarm a running trace. Each record (32 bytes) holds CYCCNT at interrupt
 entry, before and after the output stores and at exit; DMA1 stream 0 (DAC)
 NDTR at those points; stream 1 NDTR and LISR at entry; and priority-0
 (SysTick, TIM8) time inside the bracket. The firmware classifies each block:
