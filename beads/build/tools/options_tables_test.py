@@ -510,7 +510,7 @@ for feature, row in zip(catalog["features"], exported):
         assert feature["name"] == name
     assert len(feature["values"] or []) == count
     assert feature["field"] == (None if field == 255 else field)
-    assert feature["page_slots"] == (list(range(1, 13)) if page else [])
+    assert feature["page_slots"] == (list(range(1, 22)) if page else [])
     assert bool(feature["amount_slots"]) == bool(amount)
     assert bool(feature["actions"]) == bool(action)
     assert feature.get("stateless", False) == bool(stateless)

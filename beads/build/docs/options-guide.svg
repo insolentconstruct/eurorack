@@ -10,7 +10,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="35" y="55" font-size="15" font-weight="normal" fill="#222" text-anchor="start">1. Open: hold [M] 3 seconds (all mix LEDs</text>
 <text x="35" y="76" font-size="15" font-weight="normal" fill="#222" text-anchor="start">pulse), release.</text>
 <text x="35" y="100" font-size="15" font-weight="normal" fill="#222" text-anchor="start">2. Tap [M] for pages 1-4: FEEDBACK, DRY/WET,</text>
-<text x="35" y="121" font-size="15" font-weight="normal" fill="#222" text-anchor="start">REVERB, then all three pulse.</text>
+<text x="35" y="121" font-size="15" font-weight="normal" fill="#222" text-anchor="start">REVERB, then FEEDBACK+DRY/WET.</text>
 <text x="35" y="145" font-size="15" font-weight="normal" fill="#222" text-anchor="start">3. [A] shows values; turn a mix knob to edit.</text>
 <text x="35" y="169" font-size="15" font-weight="normal" fill="#222" text-anchor="start">4. Close: hold [M] 3 seconds or press another</text>
 <text x="35" y="190" font-size="15" font-weight="normal" fill="#222" text-anchor="start">button; release before normal use. Page 1</text>
@@ -305,7 +305,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="185" y="1106" font-size="15" font-weight="normal" fill="#222" text-anchor="start">D/W</text>
 <circle cx="227" cy="1101" r="7" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="256" y="1106" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
-<circle cx="278" cy="1101" r="7" fill="#222" stroke="#333" stroke-width="2"/>
+<circle cx="278" cy="1101" r="7" fill="white" stroke="#333" stroke-width="2"/>
 <text x="291" y="1106" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pulsing</text>
 <text x="35" y="1140" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: LED brightness</text>
 <circle cx="192.5" cy="1212" r="22" fill="white" stroke="#333" stroke-width="2"/>

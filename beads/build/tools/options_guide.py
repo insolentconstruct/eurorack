@@ -102,7 +102,7 @@ ATTRIBUTION = (
 STEPS = [
     "Open: hold the CV-assign button [M] {hold}; all three mix LEDs pulse. Release.",
     "Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, "
-    "then all three.",
+    "then FEEDBACK and DRY/WET together.",
     "[A] shows each stored value in turn. Turn a mix knob (not a big "
     "knob) to change it.",
     "Close: hold [M] {hold} or press another button. On page 1 with Pitch "
@@ -113,9 +113,13 @@ NOTES = [
     "It saves by itself; wait before powering off. Move a knob more than "
     "a tenth of its travel before it responds.",
 ]
+CUSTOM_PAGES = (
+    "Custom layouts can add pages 5-7: FEEDBACK and REVERB, DRY/WET and "
+    "REVERB, then all three. Taps skip empty pages."
+)
 PRINT_STEPS = [
     "Open: hold [M] {hold} (all mix LEDs pulse), release.",
-    "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then all three pulse.",
+    "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then FEEDBACK+DRY/WET.",
     "[A] shows values; turn a mix knob to edit.",
     "Close: hold [M] {hold} or press another button; release before normal use. "
     "Page 1 Scale: SEED steps.",
@@ -355,9 +359,14 @@ def instructions(lines):
     return [line.format(hold="3 seconds") for line in lines]
 
 
+def lit_leds(led):
+    """Mix LEDs named by a page's LED column."""
+    return KNOBS if led == "all three" else led.split(" and ")
+
+
 def page_leds(knobs):
     led = next(iter(knobs.values()))[0]["LED"]
-    return led + (" LEDs" if led == "all three" else " LED")
+    return led + (" LEDs" if len(lit_leds(led)) > 1 else " LED")
 
 
 def markdown(rows, pages):
@@ -378,6 +387,8 @@ def markdown(rows, pages):
     out += [
         "",
         *instructions(NOTES),
+        "",
+        CUSTOM_PAGES,
         "",
         "The quality LED [A] shows the setting value: steady, slow blink, "
         "fast blink or two pulses; "
@@ -592,15 +603,16 @@ class Drawing:
 
     def marker(self, x, y, led):
         """Mix LEDs on the title line: filled is pulsing."""
+        single = len(lit_leds(led)) == 1
         for knob, label, width in zip(KNOBS, ("F", "D/W", "R"), (10, 31, 11)):
             self.text(x, y, label, 15)
-            lit = led in (knob, "all three")
+            lit = knob in lit_leds(led)
             self.circle(x + width + 11, y - 5, 7, "#222" if lit else "white")
             x += width + 40
-            if lit and led != "all three":
+            if lit and single:
                 self.text(x - 16, y, "pulsing", 15, colour="#555")
                 x += 56
-        if led == "all three":
+        if not single:
             self.text(x - 16, y, "pulsing", 15, colour="#555")
 
     def panel(self, x, y, scale):
