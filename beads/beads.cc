@@ -81,6 +81,9 @@ volatile bool ready = false;
 extern "C" {
   
 void SysTick_Handler() {
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Preemption preemption;
+#endif  // DEADLINE_TRACE
   // Takes about 2µs to complete
   HAL_IncTick();
   Watchdog::Reload();
@@ -185,7 +188,13 @@ void Process(
     Codec::Frame silence;
     silence.l = 0;
     silence.r = 0;
+#ifdef DEADLINE_TRACE
+    dwt_calibration::trace::StoreBegin(size, true);
+#endif  // DEADLINE_TRACE
     fill(&out[0], &out[size], silence);
+#ifdef DEADLINE_TRACE
+    dwt_calibration::trace::StoreEnd();
+#endif  // DEADLINE_TRACE
     return;
   }
   
@@ -272,7 +281,13 @@ void Process(
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
+#ifdef DEADLINE_TRACE
+      dwt_calibration::trace::StoreBegin(size, true);
+#endif  // DEADLINE_TRACE
       fill(&out[0], &out[size], silence);
+#ifdef DEADLINE_TRACE
+      dwt_calibration::trace::StoreEnd();
+#endif  // DEADLINE_TRACE
       return;
     }
   } else if (codec_fade_gain < 1.0f) {
@@ -317,6 +332,9 @@ void Process(
   }
 
   // Conversion of output samples into integers.
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::StoreBegin(size);
+#endif  // DEADLINE_TRACE
   for (size_t i = 0; i < size; ++i) {
     float l = float_out[i].l;
     float r = float_out[i].r;
@@ -328,6 +346,9 @@ void Process(
     out[i].l = static_cast<int32_t>(l * 2147483648.0f);
     out[i].r = static_cast<int32_t>(r * 2147483648.0f);
   }
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::StoreEnd();
+#endif  // DEADLINE_TRACE
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {

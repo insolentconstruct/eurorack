@@ -34,3 +34,11 @@ ifeq ($(DWT_CALIBRATION),1)
 CPPFLAGS += -DDWT_CALIBRATION
 LDFLAGS := -T beads/build/dwt.ld $(LDFLAGS)
 endif
+
+ifeq ($(DEADLINE_TRACE),1)
+ifneq ($(DWT_CALIBRATION),1)
+$(error DEADLINE_TRACE requires DWT_CALIBRATION=1)
+endif
+CPPFLAGS += -DDEADLINE_TRACE
+LDFLAGS := -T beads/build/deadline_trace.ld $(LDFLAGS)
+endif
