@@ -1,14 +1,16 @@
 # Testing
 
-The Beta 2 source contains 20 host programs, 275 named test sections,
-2,199 assertion sites and 396 deliberate fault patterns. On the release source
+This source contains 20 host programs, 276 named test sections, 2,253
+assertion sites and 405 deliberate fault patterns (Beta 2: 275, 2,199 and
+396). On the release source
 `6729648`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070756)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070775)
 detected all 392 faults across eight shards. Named sections and assertion sites
 are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
-The release build reproduces the pinned application `2558dd77…`, timing image
+The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
+This source pins its own unreleased application `f7b4934c…` and WAV `5a9b691e…`.
 The release documentation and generated guides pass their checker. Module
 results for the release image are under [Beta 2](#beta-2).
 
@@ -33,7 +35,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | Check | What it covers |
 |---|---|
 | Reproducible build | App, bootloader, combo and update file must match pinned SHA-256 hashes; the update file is decoded back to the app with the bootloader's own decoder |
-| `beads/test/options.mk` | Options page: entry, pages, knob zones, one-second save-on-settle, no idle close, close gestures, settings format. Stock UI: [M] routing, amounts and LEDs, the autosave chord and display, SEED latch gestures, quality cycling, the [A] gain hold, manual gain and meter, the input-level blink, the FREEZE LED while saving, recovery mode keeping calibration, input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, a corrupted calibration rewritten once. Limiter arithmetic and mode switching. Monophonic grain gesture, LED cue and saving; engine setting (zones, LED, applied when the page closes), storage and the [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate. Settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned. Settings storage (#149): a stale flash error flag, refused or stuck erases, refused programs and a non-blank free slot never write over old records, and normal saves match stmlib's byte for byte |
+| `beads/test/options.mk` | Options page: entry, pages, knob zones, one-second save-on-settle, close gestures, the optional idle timeout (off by default; restarts, jitter and drift, holds, clock wrap, unchanged and pending saves), settings format. Stock UI: [M] routing, amounts and LEDs, the autosave chord and display, SEED latch gestures, quality cycling, the [A] gain hold, manual gain and meter, the input-level blink, the FREEZE LED while saving, recovery mode keeping calibration, input patch detection, the quality lock while frozen, the trigger-output chord, the overwrite indicator, a corrupted calibration rewritten once. Limiter arithmetic and mode switching. Monophonic grain gesture, LED cue and saving; engine setting (zones, LED, applied when the page closes), storage and the [A] hold; pitch and reverb option storage, zones and scale cycling; trim gesture and FREEZE gate. Settings saves until the flash sector fills and rolls over, with power cut at each of the six rewrite steps: options and calibration survive a clean rollover, and the windows where the stock storage loses them are pinned. Settings storage (#149): a stale flash error flag, refused or stuck erases, refused programs and a non-blank free slot never write over old records, and normal saves match stmlib's byte for byte |
 | `beads/test/pitch_quantizer.mk` | Major and Minor pentatonic grids and nearest-note boundaries, negative pitches, octave wrapping and ties; randomized pitch on scale notes, including microtonal scales; custom bank boundaries, repeat intervals and finite pitch ratios at the full synth input range |
 | `beads/test/clouds.mk` | Stock output hashes, Clouds-style output and switching, diffuser impulse energy and stereo channels |
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
@@ -67,7 +69,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | gain | 6 | 29 |
 | granular | 24 | 114 |
 | mix | 7 | 28 |
-| options | 66 | 651 |
+| options | 67 | 705 |
 | pitch_quantizer | 6 | 52 |
 | plaits_synth | 4 | 31 |
 | processor | 11 | 45 |
@@ -76,12 +78,12 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **275** | **2,199** |
+| **Total** | **276** | **2,253** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked release CI predates the codec sequencing checks.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (396 current patterns; the linked release CI detected the earlier 392). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (405 current patterns; the Beta 2 source had 396 and the linked release CI detected the earlier 392). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 

@@ -722,6 +722,30 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": true
+    },
+    {
+      "id": 25,
+      "issue": 202,
+      "name": "Options page idle timeout",
+      "values": [
+        "Off (stay open)",
+        "15 s",
+        "30 s",
+        "60 s",
+        "120 s"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."
