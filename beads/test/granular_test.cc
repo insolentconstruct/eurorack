@@ -375,6 +375,47 @@ DelayGranularPlayer& Player() {
   return processor.processor_digital_.granular_player_;
 }
 
+// 2024 stealing: sort from 5 ms on, with no fade swap below 25 ms.
+void TestLegacyGrainStealing() {
+  test_checker.Start("TestLegacyGrainStealing");
+  const int rates[] = { 24000, 32000, 48000 };
+  for (int rate = 0; rate < 3; ++rate) {
+    const int instant = rates[rate] / 200;
+    const int simple = rates[rate] / 40;
+    const int preemptive = rates[rate] / 10;
+    const int intervals[] = {
+      instant - 1, instant, instant + 1,
+      simple - 1, simple, simple + 1, preemptive + 1
+    };
+    for (int test = 0; test < 7; ++test) {
+      DelayGranularPlayer player;
+      player.Init(float(rates[rate]));
+      for (int i = 0; i < 32; ++i) {
+        player.grain_[i].remaining_samples_ = 100000 + 31 - i;
+      }
+      const int interval = intervals[test];
+      player.grain_interval_ = interval;
+      player.SortGrainList(false);
+      for (int i = 0; i < 4; ++i) {
+        const int index = interval < instant ? i + 1 : 31 - i;
+        CHECK(player.grain_priority_list_[i] == &player.grain_[index]);
+        int duration = i == 3 ? preemptive : instant;
+        if (interval < instant) {
+          if (i == 0) {
+            duration = interval + 1;
+          }
+        } else if (i == 2) {
+          duration = std::min(interval, preemptive);
+        } else if (i == 3) {
+          duration = std::max(interval, preemptive);
+        }
+        CHECK(player.grain_priority_list_[i]->remaining_samples() == duration);
+      }
+      CHECK(player.grain_interval_ == 0);
+    }
+  }
+}
+
 void TestMonophonicGrains() {
   test_checker.Start("TestMonophonicGrains");
   for (int interval = 48; interval <= 480; interval *= 10) {
@@ -664,6 +705,7 @@ void TestCvChannelIsolation() {
 
 int main() {
   InitTestFpu();
+  TestLegacyGrainStealing();
   TestMonophonicGrains();
   TestProcessorGrainLatch();
   TestProcessorEnvelopeCompletion();
