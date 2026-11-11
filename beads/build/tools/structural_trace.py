@@ -100,7 +100,9 @@ class Run:
     self.script = script
     obj = lambda name: SD.defined_symbol(table, name, "OBJECT").value
     self.isr = SD.defined_symbol(table, "DMA1_Stream1_IRQHandler", "FUNC").value & ~1
-    self.pause = SD.defined_symbol(table, "_ZN5beads5Codec5PauseEv", "FUNC").value & ~1
+    # The 2024 driver has no Pause; its Stop completes the trace the same way.
+    stop = "_ZN5beads5Codec5PauseEv" if "_ZN5beads5Codec5PauseEv" in table else "_ZN5beads5Codec4StopEv"
+    self.pause = SD.defined_symbol(table, stop, "FUNC").value & ~1
     self.instance = obj("_ZN5beads5Codec9instance_E")
     self.tx = obj("_ZN5beads5Codec14tx_dma_buffer_E")
     self.rx = obj("_ZN5beads5Codec14rx_dma_buffer_E")
