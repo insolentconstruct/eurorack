@@ -36,6 +36,9 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/processor.h"
+#ifdef DEADLINE_TRACE
+#include "beads/deadline_trace.h"
+#endif  // DEADLINE_TRACE
 
 namespace beads {
 namespace dwt_calibration {
@@ -123,6 +126,9 @@ inline void Init() {
   stats.reserved[1] = 0;
   Clear();
   stats.sequence = 2;
+#ifdef DEADLINE_TRACE
+  trace::Init();
+#endif  // DEADLINE_TRACE
 }
 
 inline void Record(unsigned b, uint32_t elapsed) {
@@ -146,6 +152,13 @@ inline void Record(unsigned b, uint32_t elapsed) {
 class Callback {
  public:
   Callback() : preparation_(0), start_(0), active_(false) {
+#ifdef DEADLINE_TRACE
+    // Request 4 is request 1 with the deadline trace armed.
+    if (stats.reset_request == trace::kRequest) {
+      trace::Request();
+      stats.reset_request = kResetPanel;
+    }
+#endif  // DEADLINE_TRACE
     const bool reset = stats.reset_request == kResetPanel ||
         stats.reset_request == kResetSynthetic;
     active_ = reset ||

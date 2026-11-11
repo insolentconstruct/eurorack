@@ -107,3 +107,48 @@ environment. It tests callback brackets, reset acknowledgment, fixture fills,
 capture stop and flag-on/off audio equality. CYCCNT advances 1000 synthetic
 ticks per read; these are structural results, never CPU measurements. The
 short test skips most warmup. No hardware operation is part of these checks.
+
+## Deadline trace
+
+`DEADLINE_TRACE=1` (with `DWT_CALIBRATION=1`) adds `beads/deadline_trace.h`:
+a per-block record of when the output stores ran against the DAC DMA. Without
+it the calibration image is unchanged. Use its own BUILD_ROOT:
+
+```sh
+make -o beads/resources.cc -o beads/resources.h -f beads/build/link-order.mk \
+  KIT_MAKEFILE=beads/makefile TOOLCHAIN_PATH="$TOOLCHAIN_PATH" KIT_GCC9=1 \
+  BUILD_ROOT="$PWD/dwt-output/trace/" DWT_CALIBRATION=1 DEADLINE_TRACE=1 -j8 bin
+```
+
+The trace is disarmed at boot. Request byte 4 is request 1 plus an armed
+trace: the next codec interrupt primes the cadence, and the following
+240000 blocks are recorded. Each record (32 bytes) holds CYCCNT at interrupt
+entry, before and after the output stores and at exit; DMA1 stream 0 (DAC)
+NDTR at those points; stream 1 NDTR and LISR at entry; and priority-0
+(SysTick, TIM8) time inside the bracket. The firmware classifies each block:
+on time if the DAC DMA had not reached the half's first word when the stores
+completed; definitely stale if it had already read past it before the first
+store; ambiguous otherwise. Coalesced interrupts, cadence breaks, laps, missing
+store brackets and long snapshots are invalid. A 768-record ring freezes 384
+records after the first trigger (lower-bound slack of 1 word or less, a
+coalesced or off-cadence interrupt, or a new SAI fault bit); the totals cover
+the whole window and are published when it completes.
+
+The 24832-byte NOLOAD section sits at 0x30041460 in uncached SRAM3, after the
+stats; the linker asserts its size, address and the uncached region's end. The
+live state is in DTCM's `.dtcm` section, so every other RAM address matches the
+calibration image. The header (256 bytes) holds magic 0x444C5452, version 1,
+a sequence counter (odd while writing), state, completion reason (window end,
+abort, geometry), a window-invalid flag, generation, geometry, ring position,
+total block count, trigger index, the compile-time delay, SAI status baseline
+and first-set blocks, and the totals: minimum lower-bound slack, per-class
+counts, per-reason invalid counts, priority-0 time and a slack histogram.
+Codec Pause, Stop and Restart complete the window as aborted.
+`deadline_trace.py DUMP --generation G` decodes a dump and reports whether the
+window is admissible; `structural_trace.py ROOT` (as `structural_dwt.py`, with
+`ROOT/trace` added) drives the codec interrupt in the oracle and checks audio
+equality, classes, completion, abort and the order of the executed output
+stores. `DEADLINE_TRACE_DELAY=N` spins N cycles before the stores; it is for
+Seed3 validation only and has no makefile switch.
+
+Offline decoder tests: `python3 -m unittest discover -s beads/build/tools -p test_deadline_trace.py`.

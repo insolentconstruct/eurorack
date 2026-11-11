@@ -32,6 +32,10 @@
 #include <cstring>
 #include <algorithm>
 
+#ifdef DEADLINE_TRACE
+#include "beads/deadline_trace.h"
+#endif  // DEADLINE_TRACE
+
 namespace beads {
 
 using namespace std;
@@ -365,6 +369,9 @@ void PotsAdc::Cycle() {
 extern "C" {
 
 void TIM8_UP_TIM13_IRQHandler() {
+#ifdef DEADLINE_TRACE
+  beads::dwt_calibration::trace::Preemption preemption;
+#endif  // DEADLINE_TRACE
   beads::PotsAdc* pots_adc = beads::PotsAdc::GetInstance();
   if (pots_adc) {
     pots_adc->Cycle();

@@ -32,6 +32,10 @@
 
 #include <cstring>
 
+#ifdef DEADLINE_TRACE
+#include "beads/deadline_trace.h"
+#endif  // DEADLINE_TRACE
+
 // Internal hardware definitions / configuration
 #define CODEC_SAI                   SAI1
 #define CODEC_DMA                   DMA1
@@ -55,6 +59,13 @@
 namespace beads {
 
 using namespace std;
+
+#ifdef DEADLINE_TRACE
+volatile dwt_calibration::trace::Region dwt_calibration::trace::region
+    __attribute__((section(".deadline_trace"), aligned(8)));
+dwt_calibration::trace::Live dwt_calibration::trace::live
+    __attribute__((section(".dtcm")));
+#endif  // DEADLINE_TRACE
 
 /* static */
 Codec* Codec::instance_;
@@ -271,6 +282,9 @@ bool Codec::Restart(
     int32_t sample_rate,
     size_t block_size,
     FillBufferCallback callback) {
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Abort(dwt_calibration::trace::REASON_ABORT);
+#endif  // DEADLINE_TRACE
   if (!callback) {
     return false;
   }
@@ -331,6 +345,9 @@ bool Codec::Restart(
 }
 
 void Codec::Stop() {
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Abort(dwt_calibration::trace::REASON_ABORT);
+#endif  // DEADLINE_TRACE
   HAL_DMA_Abort(&dma_sai_tx_);
   HAL_DMA_Abort(&dma_sai_rx_);
   HAL_DMA_Abort(&dma_sai_idr_);
@@ -346,6 +363,9 @@ void Codec::Stop() {
 }
 
 void Codec::Pause() {
+#ifdef DEADLINE_TRACE
+  dwt_calibration::trace::Abort(dwt_calibration::trace::REASON_ABORT);
+#endif  // DEADLINE_TRACE
   callback_ = NULL;
   memset(tx_dma_buffer_, 0, sizeof(tx_dma_buffer_));
 }
@@ -374,6 +394,9 @@ void Codec::Fill(size_t offset) {
 extern "C" {
 
 void CODEC_ADC_STREAM_HANDLER(void) {
+#ifdef DEADLINE_TRACE
+  beads::dwt_calibration::trace::Entry();
+#endif  // DEADLINE_TRACE
   if (CODEC_ADC_DMA_ISR & CODEC_ADC_DMA_ISR_FLAG_TC) {
     beads::Codec::GetInstance()->Fill(1);
     CODEC_ADC_DMA_IFCR = CODEC_ADC_DMA_ISR_FLAG_TC;
@@ -381,6 +404,9 @@ void CODEC_ADC_STREAM_HANDLER(void) {
     beads::Codec::GetInstance()->Fill(0);
     CODEC_ADC_DMA_IFCR = CODEC_ADC_DMA_ISR_FLAG_HT;
   }
+#ifdef DEADLINE_TRACE
+  beads::dwt_calibration::trace::Exit();
+#endif  // DEADLINE_TRACE
 }
 
 }
