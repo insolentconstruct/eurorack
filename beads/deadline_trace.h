@@ -393,6 +393,7 @@ inline void Abort(uint8_t reason, bool block = true) {
 // until then no callback runs, so no request can be refused.
 inline void Unblock() {
   live.blocked = false;
+  __asm volatile("" ::: "memory");
 }
 
 inline void Entry() {
