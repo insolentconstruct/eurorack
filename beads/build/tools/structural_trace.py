@@ -86,6 +86,8 @@ CASES = [
   ("spurious", ((26, 40, 41, 42), 0, (0, 0, False), "invalid")),
   # TC raised after the entry snapshot: the handler writes half 1.
   ("late_tc", ((26, 40, 41, 42), (HT, HT | TC), (0, 0, False), "invalid")),
+  # RX a full half past the event (RX position 0 on an HT block), TC not yet visible.
+  ("rx_half_late", ((2, 40, 41, 42), None, (0, 0, False), "invalid", 0)),
 ]
 
 
@@ -135,7 +137,8 @@ class Run:
 
   def step(self, count=1, case=ON_TIME):
     p, m, x = self.p, self.m, self.p.x
-    positions, lisr, jump, _ = case
+    positions, lisr, jump = case[:3]
+    rx_position = case[4] if len(case) > 4 else None
     for _ in range(count):
       p.inputs.due(p.b)
       x.set_inputs(p.inputs.idr_words())
@@ -152,7 +155,10 @@ class Run:
         struct.pack("<II", (0 if g & 1 else SEED_PIN) | (0 if g & 2 else FREEZE_PIN), 0) for g in gates))
       shift = 0 if half == 0 else (N // 2)
       tx = [ndtr((q + shift) % N) for q in positions]
-      self.script.begin(self.block, tx, ndtr(N // 2 if half == 0 else 0),
+      rx = N // 2 if half == 0 else 0
+      if rx_position is not None:
+        rx = (rx_position + shift) % N
+      self.script.begin(self.block, tx, ndtr(rx),
                         (TC if half else HT) if lisr is None else lisr, *jump)
       x.block_index = p.b
       # Live (deadline_trace.h) begins with pending and active: an entry snapshot reads LISR.
@@ -300,6 +306,8 @@ def main():
   assert all("silence" in f for f in armed["flags"][:10])
   late = 10 + 3 * [name for name, _ in CASES].index("late_tc") + 2
   assert armed["flags"][late] == ["coalesced"], armed["flags"][late]
+  rx_late = 10 + 3 * [name for name, _ in CASES].index("rx_half_late") + 2
+  assert armed["flags"][rx_late] == ["coalesced"], armed["flags"][rx_late]
   # Same window: every record but the spurious one ran a callback.
   assert armed["stats_count"] == armed["total"] - armed["spurious"]
   assert disarmed["disarm"]["state"] == "idle"
