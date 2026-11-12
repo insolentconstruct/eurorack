@@ -419,10 +419,6 @@ void Settings::PackOptions() {
       (dormant_destination_ == 2 && !profile_.adjustable(FEATURE_DIFFUSION))) {
     stored_state_.width_assigned = dormant_destination_;
   }
-  // The default gain is saved blank, so the profile still decides (#19).
-  if (stored_state_.gain == DefaultGain()) {
-    stored_state_.gain = 0;
-  }
   stored_state_.padding[0] = kSettingsFormat;
 }
 

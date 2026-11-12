@@ -422,9 +422,10 @@ stock. Fixed Manual starts a blank gain at unity manual gain instead: the
 lowest setting on the stock law, or 128 (unity, green) with input
 attenuation. A saved manual gain always wins. [A]+FEEDBACK still sets and
 saves manual gain, and holding [A] still restarts automatic gain until the
-next power-on. The unity default is saved as blank, so stock firmware and an
-Automatic profile read automatic gain. This is a firmware-profile choice,
-with no panel slot or saved-state nibble; it runs at power-on and on saves.
+next power-on. The unity value is saved with the next settings save, like any
+manual gain, so it stays after switching back to Automatic until [A] is
+held. This is a firmware-profile choice, with no panel slot or saved-state
+nibble; it runs only at power-on.
 
 ### Attack sensitivity
 
@@ -460,5 +461,6 @@ major third, fifth, one and two octaves) but moves linearly between them,
 without the flat zone around each. Calibrated PITCH CV and the PITCH
 attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
 Smooth. Grains, delay pitch and both synths follow the knob law. The law is
-chosen in the main loop; the knob is read once per audio block, and Notches
-runs the stock law plus one comparison. No panel slot or saved-state nibble.
+chosen at power-on, before audio starts; the knob is read once per audio
+block, and Notches runs the stock law plus one comparison. No panel slot or
+saved-state nibble.

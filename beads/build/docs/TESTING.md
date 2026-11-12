@@ -65,7 +65,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | delay | 11 | 46 |
 | delay_mode | 14 | 89 |
 | feedback_diffuser | 4 | 23 |
-| firmware | 32 | 314 |
+| firmware | 32 | 316 |
 | gain | 6 | 29 |
 | granular | 25 | 118 |
 | mix | 7 | 28 |
@@ -78,12 +78,12 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **290** | **2,405** |
+| **Total** | **290** | **2,407** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked release CI predates the codec sequencing checks.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (436 current patterns; the Beta 2 source had 396 and the linked release CI detected the earlier 392). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (435 current patterns; the Beta 2 source had 396 and the linked release CI detected the earlier 392). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -96,10 +96,10 @@ callback in all four engines; reordered and removed saved selections; the
 permanent pitch extension distinguishing ID15 from legacy unset settings;
 Keep/Clear reverb tails through both synths and actual exit paths; stock
 versus faded delay-mode SEED latching in all four qualities; and the four
-profile choices of IDs 27-30 through the firmware callback: unity manual gain
-for a blank gain (saved gains win), Attacks thresholds, SEED unlatched at
-power-on with the latch options and fade, and the smooth PITCH law without
-the notch cue, plus the Off defaults. Factory
+profile choices of IDs 27-30, powered on through the firmware's own profile
+block: unity manual gain for a blank gain (saved gains win), Attacks
+thresholds, SEED unlatched with the latch options and fade, and the smooth
+PITCH law without the notch cue, plus the Off defaults. Factory
 reference output and finite custom-scale pitch conversion have focused checks.
 These are not yet checked on a module.
 

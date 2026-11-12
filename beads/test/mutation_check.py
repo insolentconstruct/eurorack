@@ -674,8 +674,6 @@ cases = [
     'if (!profile_values_[FEATURE_MANUAL_GAIN]) {', 'if (false) {'),
   ('TestManualGainProfile', 'firmware', 'beads/settings.cc',
     '    state_.gain = DefaultGain();', '    state_.gain = 0;'),
-  ('TestManualGainProfile', 'firmware', 'beads/settings.cc',
-    'if (stored_state_.gain == DefaultGain()) {', 'if (false) {'),
   ('TestAttackSensitivity', 'attack', 'beads/dsp/attack_detector.h',
     'kAttackThresholds[] = { 1.5f, 2.0f, 1.3f };',
     'kAttackThresholds[] = { 1.4f, 2.0f, 1.3f };'),

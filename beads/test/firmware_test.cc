@@ -1565,12 +1565,18 @@ void TestCodecKeepsClocks() {
   }
 }
 
-// Loads the factory profile plus Fixed entries, as feature/value pairs.
-void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
-  uint8_t block[kProfileSize];
-  for (size_t i = 0; i < kProfileSize; ++i) {
-    block[i] = kProfileBlock[i];
+uint8_t factory_profile[kProfileSize];
+bool factory_profile_read;
+
+// The factory profile plus Fixed entries, as feature/value pairs.
+void BuildProfile(uint8_t* block, const uint8_t* pairs, size_t count) {
+  if (!factory_profile_read) {
+    for (size_t i = 0; i < kProfileSize; ++i) {
+      factory_profile[i] = kProfileBlock[i];
+    }
+    factory_profile_read = true;
   }
+  memcpy(block, factory_profile, kProfileSize);
   for (size_t i = 0; i < count; ++i) {
     const uint8_t entry[] = {
       pairs[2 * i], PROFILE_FIXED, pairs[2 * i + 1], 0, 0, 0
@@ -1585,6 +1591,34 @@ void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
   for (size_t i = 0; i < 4; ++i) {
     block[16 + bytes + i] = crc >> (8 * i);
   }
+}
+
+// Writes a profile into the firmware's own block, as a profile update does.
+void FlashProfile(const uint8_t* block) {
+  const uintptr_t start = reinterpret_cast<uintptr_t>(kProfileBlock);
+  const uintptr_t page = start & ~uintptr_t(4095);
+  CHECK(!mprotect(reinterpret_cast<void*>(page), start + kProfileSize - page,
+      PROT_READ | PROT_WRITE));
+  volatile uint8_t* target = const_cast<volatile uint8_t*>(kProfileBlock);
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    target[i] = block[i];
+  }
+}
+
+// Powers on through Init() with Fixed entries, then restores the factory
+// profile block for later tests.
+void BootWithProfile(Rig* r, const uint8_t* pairs, size_t count) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, pairs, count);
+  FlashProfile(block);
+  r->Reboot(false);
+  FlashProfile(factory_profile);
+}
+
+// Loads the factory profile plus Fixed entries, as feature/value pairs.
+void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, pairs, count);
   CHECK(settings.Init(false, block));
   CHECK(!settings.profile_locked());
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
@@ -1811,36 +1845,40 @@ void TestManualGainProfile() {
   r.Settle();
   CHECK(settings.state().gain == 0);
   CHECK(gain_control.auto_gain_ && gain_control.gain_ > 1.5f);
-  // A blank gain starts at unity: 1 on the stock law.
-  FixedFeatureProfile(FEATURE_MANUAL_GAIN);
+  // A blank gain powers on at unity: 1 on the stock law.
+  const uint8_t manual[] = { FEATURE_MANUAL_GAIN, 1 };
+  BootWithProfile(&r, manual, 1);
   CHECK(settings.state().gain == 1);
-  RunBlocks(&r, 400);
+  r.Settle();
   CHECK(!gain_control.auto_gain_);
   CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
-  // The default is saved blank, so an Automatic profile still reads stock.
-  settings.SaveState();
-  CHECK(settings.stored_state_.gain == 0);
-  settings.mutable_state()->gain = 200;
-  settings.SaveState();
-  CHECK(settings.stored_state_.gain == 200);
-  FixedFeatureProfile(FEATURE_MANUAL_GAIN);
-  CHECK(settings.state().gain == 200);
-  // Holding [A] still restarts automatic gain for the session.
-  settings.mutable_state()->gain = 1;
+  // Holding [A] restarts automatic gain; the next power-on is manual again.
   r.HoldMedia(true);
   CHECK(settings.state().gain == 0);
   RunBlocks(&r, 4);
   CHECK(gain_control.auto_gain_);
-  // With input attenuation, unity is the middle of its range.
-  const uint8_t pairs[] = { FEATURE_MANUAL_GAIN, 1, FEATURE_ATTENUATION, 1 };
-  FixedFeaturesProfile(pairs, 2);
-  CHECK(settings.state().gain == 128);
-  MonitorStateChange();
-  RunBlocks(&r, 400);
-  CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
+  BootWithProfile(&r, manual, 1);
+  CHECK(settings.state().gain == 1);
+  // Saved gains win, including a saved unity under the factory profile.
+  settings.mutable_state()->gain = 200;
   settings.SaveState();
-  CHECK(settings.stored_state_.gain == 0);
+  BootWithProfile(&r, manual, 1);
+  CHECK(settings.state().gain == 200);
+  settings.mutable_state()->gain = 1;
+  settings.SaveState();
+  r.Reboot(false);
+  CHECK(settings.state().gain == 1);
+  // With input attenuation, unity is the middle of its range.
+  settings.mutable_state()->gain = 0;
+  settings.SaveState();
+  const uint8_t pairs[] = { FEATURE_MANUAL_GAIN, 1, FEATURE_ATTENUATION, 1 };
+  BootWithProfile(&r, pairs, 2);
+  CHECK(settings.state().gain == 128);
+  r.Settle();
+  CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
   // The factory profile omits the entry: a blank gain is automatic.
+  settings.mutable_state()->gain = 0;
+  settings.SaveState();
   r.Reboot(false);
   CHECK(settings.state().gain == 0);
 }
@@ -1852,19 +1890,17 @@ void TestAttackSensitivityProfile() {
   r.Settle();
   settings.set_attack_mode(ATTACK_MODE_SNAP);
   settings.SaveState();
-  ui.LoadOptions();
+  r.Reboot(false);
   CHECK(ui.attack_threshold() == kAttackThreshold);
-  processor.SetAttacks(ATTACK_MODE_OFF, 0.0f);
-  r.Block();
+  r.Settle();
   CHECK(processor.attack_input_.mode() == ATTACK_MODE_SNAP);
   CHECK(processor.attack_input_.threshold_ == kAttackThreshold);
   const float thresholds[] = { 1.5f, 2.0f, 1.3f };
   for (uint8_t value = 0; value < 3; ++value) {
     const uint8_t pair[] = { FEATURE_ATTACK_SENSITIVITY, value };
-    FixedFeaturesProfile(pair, 1);
+    BootWithProfile(&r, pair, 1);
     CHECK(settings.attack_mode() == ATTACK_MODE_SNAP);
-    processor.SetAttacks(ATTACK_MODE_OFF, 0.0f);
-    r.Block();
+    r.Settle();
     CHECK(processor.attack_input_.threshold_ == thresholds[value]);
   }
 }
@@ -1889,9 +1925,10 @@ void TestSeedStartProfile() {
   PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 65535;
   r.Tick(50, true);
   CHECK(CountGrainBlocks(&r, 2000) > 10);
-  FixedFeatureProfile(FEATURE_SEED_START);
+  const uint8_t unlatched[] = { FEATURE_SEED_START, 1 };
+  BootWithProfile(&r, unlatched, 1);
   CHECK(!ui.seed_button_locked());
-  r.Tick(50, true);
+  r.Settle();
   CHECK(CountGrainBlocks(&r, 2000) == 0);
   // A SEED gate still starts grains; Ignore applies only once latched.
   settings.SetFeatureValue(FEATURE_SEED_LATCH, 1);
@@ -1935,29 +1972,35 @@ void TestSeedStartProfile() {
   CHECK(ui.seed_button_locked());
 }
 
-// The smooth PITCH law is a profile choice (#43); it has no notch cue and
-// leaves the PITCH CV alone.
+// The smooth PITCH law is a profile choice (#43), set before the codec can
+// start; it has no notch cue and leaves the PITCH CV alone.
 void TestPitchLawProfile() {
   test_checker.Start("TestPitchLawProfile");
   Rig r(false, false);
   r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
   r.cv[CV_ADC_CHANNEL_PITCH] = 26214;
   r.Settle();
-  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
   // Inside the first plateau above noon.
   PotsAdc::values_[POTS_ADC_CHANNEL_PITCH] = 33300;
+  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
   r.Tick(100, true);
   const float cv = cv_reader.cv(CV_ADC_CHANNEL_PITCH);
   CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
   CHECK(ui.pitch_on_notch_);
-  FixedFeatureProfile(FEATURE_PITCH_LAW);
-  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
+  const uint8_t pairs[] = { FEATURE_PITCH_LAW, 1, FEATURE_PITCH_NOTCH, 1 };
+  BootWithProfile(&r, pairs, 2);
+  CHECK(cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law() ==
+      PotChannel::LAW_DETUNE_SMOOTH);
+  r.Settle();
   r.Tick(100, true);
   CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) > 0.05f);
   CHECK(!ui.pitch_on_notch_);
   CHECK(cv_reader.cv(CV_ADC_CHANNEL_PITCH) == cv);
   // The factory profile omits the entry: the notches return.
   r.Reboot(false);
+  CHECK(cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law() ==
+      PotChannel::LAW_DETUNE);
+  r.Settle();
   r.Tick(100, true);
   CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
 }

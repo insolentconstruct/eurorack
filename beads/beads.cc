@@ -526,6 +526,7 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);
@@ -563,7 +564,6 @@ void MonitorStateChange() {
   seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
-  cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
