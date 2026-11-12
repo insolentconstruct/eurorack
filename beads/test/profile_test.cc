@@ -317,7 +317,8 @@ void TestBetaProfileDefinitions() {
   uint8_t b[kProfileSize];
   CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
   const uint8_t fields[] = {
-    255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255
+    255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
+    255, 255, 255, 255
   };
   for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
     CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);

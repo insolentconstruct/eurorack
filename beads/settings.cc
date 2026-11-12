@@ -162,6 +162,9 @@ bool Settings::Init(bool recovery_mode,
 
   NormalizeOptions();
   ApplyProfile();
+  if (!state_.gain) {
+    state_.gain = DefaultGain();
+  }
   // A new module runs the factory test, unless SEED is held.
   return status != STORAGE_NEW || recovery_mode;
 }
@@ -416,7 +419,19 @@ void Settings::PackOptions() {
       (dormant_destination_ == 2 && !profile_.adjustable(FEATURE_DIFFUSION))) {
     stored_state_.width_assigned = dormant_destination_;
   }
+  // The default gain is saved blank, so the profile still decides (#19).
+  if (stored_state_.gain == DefaultGain()) {
+    stored_state_.gain = 0;
+  }
   stored_state_.padding[0] = kSettingsFormat;
+}
+
+// Blank gain starts automatic, or at unity manual gain (#19).
+uint8_t Settings::DefaultGain() const {
+  if (!profile_values_[FEATURE_MANUAL_GAIN]) {
+    return 0;
+  }
+  return profile_values_[FEATURE_ATTENUATION] ? 128 : 1;
 }
 
 }  // namespace beads

@@ -45,7 +45,9 @@ const char* const kOptionNames[] = {
   "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
   "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
   "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan",
-  "Synth reverb tail", "Options page idle timeout", "Delay SEED latch fade"
+  "Synth reverb tail", "Options page idle timeout", "Delay SEED latch fade",
+  "Input gain at power-on", "Attack sensitivity", "SEED at power-on",
+  "PITCH knob"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 const char* const kValueNames[] = {

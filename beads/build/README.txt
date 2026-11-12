@@ -156,6 +156,13 @@ the stock default; Fixed Fade briefly dips the delay around a delay-mode
 SEED latch, unlatch or cable change, instead of popping. It adds no
 panel gesture or options-page slot.
 
+Four more profile choices keep stock or Beta 2 behaviour by default and
+add no panel gesture or options-page slot. Input gain at power-on:
+Manual starts at unity manual gain when no gain is saved; a saved gain
+wins. Attack sensitivity: Normal, Low or High. SEED at power-on:
+Unlatched waits for SEED presses or gates. PITCH knob: Smooth glides
+between the intervals without notches; PITCH CV is unchanged.
+
 Options page
 ------------
 

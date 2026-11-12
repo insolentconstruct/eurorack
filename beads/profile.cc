@@ -60,6 +60,10 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Synth reverb tail.
   { 5, kNoField, false, false, false, false },  // Idle timeout.
   { 2, kNoField, false, false, false, false },  // Seed latch fade.
+  { 2, kNoField, false, false, false, false },  // Manual gain.
+  { 3, kNoField, false, false, false, false },  // Attack sensitivity.
+  { 2, kNoField, false, false, false, false },  // Seed start.
+  { 2, kNoField, false, false, false, false },  // Pitch law.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

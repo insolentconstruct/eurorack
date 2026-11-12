@@ -25,11 +25,11 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 |---|---|---|
 | the quality button [A] tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
 | [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and Synth start on Manual, toggle wavetable synth; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
-| [A] + feedback knob | TAKEN: manual input gain; release saves. Planned: manual gain improvements (#19) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
+| [A] + feedback knob | TAKEN: manual input gain; release saves. A profile can start a blank gain in manual gain ([ID 27](#input-gain-at-power-on)) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
 | [A] + dry/wet knob | TAKEN by Drizzlet: stereo width; release saves | Yes |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state save starts after 10 s (with interruption backoff below) if autosave enabled, outside wavetable synth and spectral modes <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
-| SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot <!-- beads/ui.cc:81-83,406-411,463-469 --> |
+| SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot, or unlatched with [ID 29](#seed-at-power-on) <!-- beads/ui.cc:81-83,406-411,463-469 --> |
 | SEED hold, 4 s | TAKEN: latch generation | No <!-- beads/ui.cc:48-50,463-469; manual.md:59 --> |
 | the CV-assign button [M] tap | TAKEN: cycle feedback / dry/wet / reverb CV destination | Yes <!-- beads/ui.cc:499-515 --> |
 | [M] + mix knobs | TAKEN: set three independent CV amounts; release saves | Yes <!-- beads/ui.cc:178-180,499-515 --> |
@@ -108,6 +108,10 @@ not-set values use the profile default.
 | 24 | Synth reverb tail (#192) | No saved value |
 | 25 | Options page idle timeout (#202) | No saved value |
 | 26 | Delay SEED latch fade (#183) | No saved value |
+| 27 | Input gain at power-on (#19) | No saved value |
+| 28 | Attack sensitivity (#58, #47) | No saved value |
+| 29 | SEED at power-on (#41) | No saved value |
+| 30 | PITCH knob (#43) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -409,3 +413,52 @@ Patching SEED while latched fades the same way. A clocked latch never fades.
 This is a firmware-profile choice, with no panel slot or saved-state nibble.
 The choice is made once per block outside the sample loop; Off runs the stock
 delay code.
+
+### Input gain at power-on
+
+Hygrostat feature ID 27 chooses Automatic (stock) / Manual (#19). Off or an
+omitted entry starts in automatic gain unless a manual gain is saved, as
+stock. Fixed Manual starts a blank gain at unity manual gain instead: the
+lowest setting on the stock law, or 128 (unity, green) with input
+attenuation. A saved manual gain always wins. [A]+FEEDBACK still sets and
+saves manual gain, and holding [A] still restarts automatic gain until the
+next power-on. The unity default is saved as blank, so stock firmware and an
+Automatic profile read automatic gain. This is a firmware-profile choice,
+with no panel slot or saved-state nibble; it runs at power-on and on saves.
+
+### Attack sensitivity
+
+Hygrostat feature ID 28 chooses Normal (default) / Low / High for Attacks
+(#58, #47). A block is an attack when its peak exceeds the threshold times
+the larger of a fast reference (instant attack, 50 ms release) and half the
+input's slow peak (0.5 s release). Normal keeps Beta 2's 1.5 (+3.5 dB). Low
+is 2.0 (+6 dB): from 2 the slow-peak term alone asks for a hit louder than
+the recent peak, so softer notes after a hit are ignored. High is 1.3
+(+2.3 dB). On host renders of synthetic drums, High caught ghost notes 6 dB
+below the main hit where Normal caught about half; Low kept every main hit and ignored ghosts 3 dB down. On
+noise whose level jumped by up to 6 dB every 10 ms, High marked 4 false
+attacks in 4 s, Normal none; steady and tremolo tones marked none at any
+setting. Not yet checked on a module. The threshold is chosen at power-on and
+passed with the Attacks mode; Snap and Snap and trigger share it. No panel
+slot or saved-state nibble.
+
+### SEED at power-on
+
+Hygrostat feature ID 29 chooses Latched (stock) / Unlatched (#41). Fixed
+Unlatched powers on as after a SEED tap: grains start only from SEED presses
+or gates, and in delay mode SEED taps set the time. Holding SEED for 4 s or
+SEED+FREEZE latches as usual; the SEED latch options (#13) apply once
+latched, and with the delay SEED latch fade the delay starts in tapped
+timing without a fade. Power-on only, with no panel slot or saved-state
+nibble.
+
+### PITCH knob
+
+Hygrostat feature ID 30 chooses Notches (stock) / Smooth (#43). Smooth keeps
+the knob's intervals at the same positions (unison, semitone, minor and
+major third, fifth, one and two octaves) but moves linearly between them,
+without the flat zone around each. Calibrated PITCH CV and the PITCH
+attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
+Smooth. Grains, delay pitch and both synths follow the knob law. The law is
+chosen in the main loop; the knob is read once per audio block, and Notches
+runs the stock law plus one comparison. No panel slot or saved-state nibble.

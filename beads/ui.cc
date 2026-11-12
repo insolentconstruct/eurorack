@@ -141,11 +141,15 @@ void Ui::LoadOptions() {
   evolving_feedback_ = settings_->evolving_feedback();
   plaits_synth_ = settings_->plaits_synth();
   attack_mode_ = settings_->attack_mode();
+  attack_threshold_ = kAttackThresholds[
+      settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
   spectral_ = settings_->spectral();
   pitch_scale_ = settings_->pitch_scale();
   random_intervals_ = settings_->random_intervals();
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
+  // SEED starts latched, or unlatched when the profile asks (#41).
+  seed_button_locked_ = !settings_->FeatureValue(FEATURE_SEED_START);
 }
 
 void Ui::Poll() {

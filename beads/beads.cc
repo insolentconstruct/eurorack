@@ -160,7 +160,7 @@ void Process(
   
   const AttackMode attack_mode = ui.attack_mode();
   if (attack_mode != processor.attack_input()->mode()) {
-    processor.SetAttacks(attack_mode, kAttackThreshold);
+    processor.SetAttacks(attack_mode, ui.attack_threshold());
   }
   bool attack_onset = false;
   if (attack_mode && !codec_transition_frames && !freeze_block &&
@@ -563,6 +563,7 @@ void MonitorStateChange() {
   seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
+  cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));

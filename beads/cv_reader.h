@@ -93,7 +93,8 @@ class PotChannel {
   enum Law {
     LAW_NORMAL,
     LAW_ATTENUVERTER,
-    LAW_DETUNE
+    LAW_DETUNE,
+    LAW_DETUNE_SMOOTH
   };
   
   void Init(Law law, float lp_coefficient, float hysteresis) {
@@ -111,7 +112,7 @@ class PotChannel {
       v -= 0.5f;
       v = (2.0f / 0.47f) * v * std::max(fabsf(v) - 0.03f, 0.0f);
       // v = v * v * v * 8.0f;
-    } else if (law_ == LAW_DETUNE) {
+    } else if (law_ >= LAW_DETUNE) {
       float detune = 2.0f * v - 1.0f;
       float sign = detune < 0.0f ? -1.0f : 1.0f;
       detune = detune * sign * 6.0f;
@@ -121,18 +122,23 @@ class PotChannel {
         0.0f, 1.0f, 3.0f, 4.0f, 7.0f, 12.0f, 24.0f, 24.0f
       };
       
-      detune_fractional = std::max(
-          (detune_fractional - 0.33333333f) * 1.5f, 0.0f);
+      // The smooth law skips the plateaus at each interval (#43).
+      if (law_ == LAW_DETUNE) {
+        detune_fractional = stmlib::SmoothStep(std::max(
+            (detune_fractional - 0.33333333f) * 1.5f, 0.0f));
+      }
   
       float a = intervals[detune_integral];
       float b = intervals[detune_integral + 1];
-      v = stmlib::Crossfade(a, b, stmlib::SmoothStep(detune_fractional)) * sign;
+      v = stmlib::Crossfade(a, b, detune_fractional) * sign;
     }
     ONE_POLE(lp_, v, lp_coefficient_);
     hysteresis_filter_.Process(lp_);
   }
   
   inline float value() const { return hysteresis_filter_.value(); }
+  inline Law law() const { return law_; }
+  inline void set_law(Law law) { law_ = law; }
   
  private:
   float lp_;
@@ -165,7 +171,17 @@ class CvReader {
     return pot_channel_[channel].value();
   }
 
+  inline void set_smooth_pitch(bool smooth) {
+    pot_channel_[POTS_ADC_CHANNEL_PITCH].set_law(smooth
+        ? PotChannel::LAW_DETUNE_SMOOTH : PotChannel::LAW_DETUNE);
+  }
+
   bool pitch_on_notch() {
+    // The smooth law has no notches to show (#43).
+    if (pot_channel_[POTS_ADC_CHANNEL_PITCH].law() != PotChannel::LAW_DETUNE) {
+      pitch_on_notch_ = false;
+      return false;
+    }
     // Knob only, before smoothing. Hold the cue 0.002 of knob travel past
     // each plateau edge; enter only inside the plateau. Include both ends.
     const float detune = fabsf(

@@ -333,6 +333,7 @@ class Settings {
   void LoadOptions();
   void PackOptions();
   void ApplyProfile();
+  uint8_t DefaultGain() const;
   static bool CalibrationPlausible(
       const PersistentData& data,
       const PersistentData& factory);

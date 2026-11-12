@@ -1565,21 +1565,22 @@ void TestCodecKeepsClocks() {
   }
 }
 
-// Loads the factory profile plus one Fixed entry with value 1.
-void FixedFeatureProfile(ProfileFeature feature) {
+// Loads the factory profile plus Fixed entries, as feature/value pairs.
+void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
   uint8_t block[kProfileSize];
   for (size_t i = 0; i < kProfileSize; ++i) {
     block[i] = kProfileBlock[i];
   }
-  const size_t offset = 16 + 6 * block[5];
-  ++block[5];
+  for (size_t i = 0; i < count; ++i) {
+    const uint8_t entry[] = {
+      pairs[2 * i], PROFILE_FIXED, pairs[2 * i + 1], 0, 0, 0
+    };
+    memcpy(block + 16 + 6 * block[5], entry, sizeof(entry));
+    ++block[5];
+  }
   const size_t bytes = 6 * block[5];
   block[6] = bytes & 255;
   block[7] = bytes >> 8;
-  const uint8_t entry[] = {
-    uint8_t(feature), PROFILE_FIXED, 1, 0, 0, 0
-  };
-  memcpy(block + offset, entry, sizeof(entry));
   const uint32_t crc = Profile::Crc32(block, 16 + bytes);
   for (size_t i = 0; i < 4; ++i) {
     block[16 + bytes + i] = crc >> (8 * i);
@@ -1588,7 +1589,16 @@ void FixedFeatureProfile(ProfileFeature feature) {
   CHECK(!settings.profile_locked());
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
   ui.LoadOptions();
-  CHECK(settings.FeatureValue(feature) == 1);
+  for (size_t i = 0; i < count; ++i) {
+    CHECK(settings.FeatureValue(ProfileFeature(pairs[2 * i])) ==
+        pairs[2 * i + 1]);
+  }
+}
+
+// Loads the factory profile plus one Fixed entry with value 1.
+void FixedFeatureProfile(ProfileFeature feature) {
+  const uint8_t pair[] = { uint8_t(feature), 1 };
+  FixedFeaturesProfile(pair, 1);
 }
 
 // Tail handling is a profile choice; the codec transition remains the same.
@@ -1788,6 +1798,170 @@ void TestSeedLatchFadeProfile() {
   CHECK(!delay.test_timing_fade());
 }
 
+void RunBlocks(Rig* r, int blocks) {
+  while (blocks--) {
+    r->Block();
+  }
+}
+
+// Manual gain at power-on is a profile choice (#19); a saved gain wins.
+void TestManualGainProfile() {
+  test_checker.Start("TestManualGainProfile");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(settings.state().gain == 0);
+  CHECK(gain_control.auto_gain_ && gain_control.gain_ > 1.5f);
+  // A blank gain starts at unity: 1 on the stock law.
+  FixedFeatureProfile(FEATURE_MANUAL_GAIN);
+  CHECK(settings.state().gain == 1);
+  RunBlocks(&r, 400);
+  CHECK(!gain_control.auto_gain_);
+  CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
+  // The default is saved blank, so an Automatic profile still reads stock.
+  settings.SaveState();
+  CHECK(settings.stored_state_.gain == 0);
+  settings.mutable_state()->gain = 200;
+  settings.SaveState();
+  CHECK(settings.stored_state_.gain == 200);
+  FixedFeatureProfile(FEATURE_MANUAL_GAIN);
+  CHECK(settings.state().gain == 200);
+  // Holding [A] still restarts automatic gain for the session.
+  settings.mutable_state()->gain = 1;
+  r.HoldMedia(true);
+  CHECK(settings.state().gain == 0);
+  RunBlocks(&r, 4);
+  CHECK(gain_control.auto_gain_);
+  // With input attenuation, unity is the middle of its range.
+  const uint8_t pairs[] = { FEATURE_MANUAL_GAIN, 1, FEATURE_ATTENUATION, 1 };
+  FixedFeaturesProfile(pairs, 2);
+  CHECK(settings.state().gain == 128);
+  MonitorStateChange();
+  RunBlocks(&r, 400);
+  CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
+  settings.SaveState();
+  CHECK(settings.stored_state_.gain == 0);
+  // The factory profile omits the entry: a blank gain is automatic.
+  r.Reboot(false);
+  CHECK(settings.state().gain == 0);
+}
+
+// Attack sensitivity is a profile choice (#58); Off is the Beta 2 threshold.
+void TestAttackSensitivityProfile() {
+  test_checker.Start("TestAttackSensitivityProfile");
+  Rig r(false, false);
+  r.Settle();
+  settings.set_attack_mode(ATTACK_MODE_SNAP);
+  settings.SaveState();
+  ui.LoadOptions();
+  CHECK(ui.attack_threshold() == kAttackThreshold);
+  processor.SetAttacks(ATTACK_MODE_OFF, 0.0f);
+  r.Block();
+  CHECK(processor.attack_input_.mode() == ATTACK_MODE_SNAP);
+  CHECK(processor.attack_input_.threshold_ == kAttackThreshold);
+  const float thresholds[] = { 1.5f, 2.0f, 1.3f };
+  for (uint8_t value = 0; value < 3; ++value) {
+    const uint8_t pair[] = { FEATURE_ATTACK_SENSITIVITY, value };
+    FixedFeaturesProfile(pair, 1);
+    CHECK(settings.attack_mode() == ATTACK_MODE_SNAP);
+    processor.SetAttacks(ATTACK_MODE_OFF, 0.0f);
+    r.Block();
+    CHECK(processor.attack_input_.threshold_ == thresholds[value]);
+  }
+}
+
+int CountGrainBlocks(Rig* r, int blocks) {
+  DelayGranularPlayer& player = processor.processor_digital_.granular_player_;
+  int count = 0;
+  while (blocks--) {
+    r->Block();
+    count += player.grain_interval_ <= int(codec.block_size_);
+  }
+  return count;
+}
+
+// SEED can start unlatched (#41): grains wait for SEED, the latch modes
+// apply once latched, and a delay latch fade does not fade at power-on.
+void TestSeedStartProfile() {
+  test_checker.Start("TestSeedStartProfile");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(ui.seed_button_locked());
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 65535;
+  r.Tick(50, true);
+  CHECK(CountGrainBlocks(&r, 2000) > 10);
+  FixedFeatureProfile(FEATURE_SEED_START);
+  CHECK(!ui.seed_button_locked());
+  r.Tick(50, true);
+  CHECK(CountGrainBlocks(&r, 2000) == 0);
+  // A SEED gate still starts grains; Ignore applies only once latched.
+  settings.SetFeatureValue(FEATURE_SEED_LATCH, 1);
+  r.seed_patched = true;
+  r.Tick(600, true);
+  test_seed_input = true;
+  CHECK(CountGrainBlocks(&r, 200) > 0);
+  CHECK(ui.seed_led_state_);
+  test_seed_input = false;
+  ui.seed_button_locked_ = true;
+  MonitorStateChange();
+  r.Tick(50, true);
+  test_seed_input = true;
+  RunBlocks(&r, 30);
+  CHECK(!ui.seed_led_state_);
+  test_seed_input = false;
+  // With the delay fade, delay mode starts in tapped timing at full level,
+  // as after the processor's power-on configuration.
+  const uint8_t pairs[] = {
+    FEATURE_SEED_START, 1, FEATURE_SEED_LATCH_FADE, 1
+  };
+  r.seed_patched = false;
+  FixedFeaturesProfile(pairs, 2);
+  CHECK(!ui.seed_button_locked());
+  PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
+  r.Tick(2000, true);
+  CHECK(processor.delay_active());
+  processor.Configure(Processor::Media(settings.state().media), false);
+  MonitorStateChange();
+  const DelayController& delay = processor.delay_controller_;
+  for (int i = 0; i < 200; ++i) {
+    r.Block();
+    CHECK(delay.test_timing_change_gain() >= 1.0f);
+  }
+  CHECK(delay.test_timing_fade() && delay.test_synchronized());
+  CHECK(delay.test_timing_change_gain() == 1.0f);
+  PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 32768;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+  // The factory profile omits the entry: SEED starts latched.
+  r.Reboot(false);
+  CHECK(ui.seed_button_locked());
+}
+
+// The smooth PITCH law is a profile choice (#43); it has no notch cue and
+// leaves the PITCH CV alone.
+void TestPitchLawProfile() {
+  test_checker.Start("TestPitchLawProfile");
+  Rig r(false, false);
+  r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+  r.cv[CV_ADC_CHANNEL_PITCH] = 26214;
+  r.Settle();
+  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
+  // Inside the first plateau above noon.
+  PotsAdc::values_[POTS_ADC_CHANNEL_PITCH] = 33300;
+  r.Tick(100, true);
+  const float cv = cv_reader.cv(CV_ADC_CHANNEL_PITCH);
+  CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
+  CHECK(ui.pitch_on_notch_);
+  FixedFeatureProfile(FEATURE_PITCH_LAW);
+  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
+  r.Tick(100, true);
+  CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) > 0.05f);
+  CHECK(!ui.pitch_on_notch_);
+  CHECK(cv_reader.cv(CV_ADC_CHANNEL_PITCH) == cv);
+  // The factory profile omits the entry: the notches return.
+  r.Reboot(false);
+  r.Tick(100, true);
+  CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -1823,5 +1997,9 @@ int main() {
   TestPitchNotchLaw();
   TestSeedLatchPatched();
   TestSeedLatchFadeProfile();
+  TestManualGainProfile();
+  TestAttackSensitivityProfile();
+  TestSeedStartProfile();
+  TestPitchLawProfile();
   return test_checker.failures() ? 1 : 0;
 }

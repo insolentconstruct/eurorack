@@ -351,6 +351,33 @@ void TestPitchNotches() {
   CHECK(fabsf(pot.value() - 24.0f) < 0.001f);
 }
 
+// The smooth law passes through the same intervals with no plateaus (#43).
+void TestSmoothPitchLaw() {
+  test_checker.Start("TestSmoothPitchLaw");
+  PotChannel pot;
+  pot.Init(PotChannel::LAW_DETUNE_SMOOTH, 1.0f, 0.0f);
+  const float intervals[] = { 0.0f, 1.0f, 3.0f, 4.0f, 7.0f, 12.0f, 24.0f };
+  for (int sign = -1; sign <= 1; sign += 2) {
+    for (int i = 0; i < 6; ++i) {
+      // Inside each stock plateau the knob now moves the pitch.
+      pot.Process(uint16_t(32768.0f * (1.0f + sign * (i + 0.2f) / 6.0f)));
+      const float expected = sign * (intervals[i] +
+          0.2f * (intervals[i + 1] - intervals[i]));
+      CHECK(fabsf(pot.value() - expected) < 0.01f);
+    }
+  }
+  float previous = -25.0f;
+  for (int raw = 0; raw < 65536; raw += 64) {
+    pot.Process(uint16_t(raw));
+    CHECK(pot.value() > previous);
+    previous = pot.value();
+  }
+  pot.Process(0);
+  CHECK(pot.value() == -24.0f);
+  pot.Process(65535);
+  CHECK(fabsf(pot.value() - 24.0f) < 0.01f);
+}
+
 void TestPatchedAndNoon() {
   test_checker.Start("TestPatchedAndNoon");
   RandomizedParameter p = { 0.25f, 0.0f, 0.5f, true };
@@ -1040,6 +1067,7 @@ int main() {
   TestGrainDuration();
   TestGrainShape();
   TestPitchNotches();
+  TestSmoothPitchLaw();
   TestPatchedAndNoon();
   TestPatchedRandomDepth();
   TestInternalDistributions();
