@@ -2450,6 +2450,7 @@ void TestOptionsIdleTimeout() {
     CHECK(Idle(&r, 200000));
   }
   IdleProfile(b, PROFILE_FIXED, 1);
+  CHECK(kOptionsIdleTimeouts[1] == 5000);
   // Counts from the entry release; previews and unchanged exit write nothing.
   {
     Rig r(false);
@@ -2458,7 +2459,7 @@ void TestOptionsIdleTimeout() {
     r.Enter();
     CHECK(Idle(&r, 3000));
     CHECK(r.ui.options_.preview_knob() == 1);
-    CHECK(Idle(&r, 11980));
+    CHECK(Idle(&r, 1980));
     CHECK(!Idle(&r, 20));
     CHECK(r.ui.options_flash_time_);
     r.Tick(10, true);
@@ -2470,7 +2471,7 @@ void TestOptionsIdleTimeout() {
     // Reopen restarts the timer; the next button press is a normal event.
     r.Tick(100, true);
     r.Enter();
-    CHECK(Idle(&r, 14900));
+    CHECK(Idle(&r, 4900));
     CHECK(!Idle(&r, 120));
     CHECK(test_writes == writes);
     const bool freeze = r.ui.freeze_button_state_;
@@ -2478,26 +2479,26 @@ void TestOptionsIdleTimeout() {
     r.Up(SWITCH_FREEZE);
     CHECK(r.ui.freeze_button_state_ != freeze);
   }
-  // Page taps and deliberate knob turns before pickup restart the timer.
+  // Page taps and knob turns before pickup restart the timer.
   {
     Rig r(false);
     ApplyCustomProfile(&r, b);
     r.Enter();
-    CHECK(Idle(&r, 10000));
+    CHECK(Idle(&r, 4000));
     r.Tap();
     CHECK(r.ui.options_.page() == 1);
-    CHECK(Idle(&r, 10000));
+    CHECK(Idle(&r, 4000));
     r.reverb = 0.55f;
-    CHECK(Idle(&r, 14900));
+    CHECK(Idle(&r, 4900));
     CHECK(!r.ui.options_.qualified_[2]);
     CHECK(!Idle(&r, 120));
   }
-  // Pot jitter does not keep the page open.
+  // Pot jitter below 2% never keeps the page open.
   {
     Rig r(false);
     ApplyCustomProfile(&r, b);
     r.Enter();
-    for (int i = 0; i < 14900; ++i) {
+    for (int i = 0; i < 4900; ++i) {
       r.feedback = (i & 1) ? 0.508f : 0.492f;
       r.pot = (i & 2) ? 0.51f : 0.49f;
       r.Tick(1, true);
@@ -2517,33 +2518,32 @@ void TestOptionsIdleTimeout() {
     AppendIdleTimeout(custom, PROFILE_FIXED, 1);
     ApplyCustomProfile(&r, custom);
     r.Enter();
-    for (int i = 0; i < 14900; ++i) {
+    for (int i = 0; i < 4900; ++i) {
       r.pot = (i / 100) & 1 ? 0.9f : 0.1f;
       r.Tick(1, true);
     }
     CHECK(r.ui.options_.active());
     CHECK(!Idle(&r, 120));
   }
-  // A quick turn counts whatever its phase against the anchors.
-  for (int offset = 0; offset < 1000; offset += 100) {
-    Rig r(false);
-    ApplyCustomProfile(&r, b);
-    r.Enter();
-    CHECK(Idle(&r, 13500 + offset));
-    for (int i = 1; i <= 400; ++i) {
-      r.feedback = 0.5f + 0.03f * float(i) / 400.0f;
-      r.Tick(1, true);
-    }
-    CHECK(Idle(&r, 14400));
-    CHECK(!Idle(&r, 1000));
-  }
-  // Slow drift does not add up to a turn.
+  // A turn slower than 2% per second counts once it adds up to 2%.
   {
     Rig r(false);
     ApplyCustomProfile(&r, b);
     r.Enter();
-    for (int i = 0; i < 14900; ++i) {
-      r.reverb = 0.5f + 0.1f * float(i) / 14900.0f;
+    for (int i = 0; i < 4900; ++i) {
+      r.reverb = 0.5f + 0.03f * float(i) / 4900.0f;
+      r.Tick(1, true);
+    }
+    CHECK(Idle(&r, 3200));
+    CHECK(!Idle(&r, 300));
+  }
+  // A slow movement smaller than 2% in total never counts.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int i = 0; i < 4900; ++i) {
+      r.reverb = 0.5f + 0.015f * float(i) / 4900.0f;
       r.Tick(1, true);
     }
     CHECK(r.ui.options_.active());
@@ -2554,15 +2554,15 @@ void TestOptionsIdleTimeout() {
   {
     Rig r(false);
     ApplyCustomProfile(&r, b);
-    stmlib::system_clock.count_ = 0xffffffff - 20000;
+    stmlib::system_clock.count_ = 0xffffffff - 10000;
     r.Enter();
-    CHECK(Idle(&r, 14000));
+    CHECK(Idle(&r, 4000));
     r.Down(SWITCH_ASSIGN);
     CHECK(Idle(&r, 2500));
     r.Up(SWITCH_ASSIGN);
     CHECK(r.ui.options_.page() == 1);
     CHECK(stmlib::system_clock.milliseconds() > 0xffffffff - 5000);
-    CHECK(Idle(&r, 14900));
+    CHECK(Idle(&r, 4900));
     CHECK(stmlib::system_clock.milliseconds() < 20000);
     CHECK(!Idle(&r, 120));
   }
@@ -2575,7 +2575,7 @@ void TestOptionsIdleTimeout() {
     r.Down(SWITCH_SEED);
     CHECK(Idle(&r, 30000));
     r.Up(SWITCH_SEED);
-    CHECK(Idle(&r, 14900));
+    CHECK(Idle(&r, 4900));
     CHECK(!Idle(&r, 120));
     CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
   }
@@ -2595,7 +2595,7 @@ void TestOptionsIdleTimeout() {
     const AttackMode mode = r.settings.attack_mode();
     r.Enter();
     r.reverb = 0.9f;
-    r.Tick(15100, false);
+    r.Tick(5100, false);
     CHECK(!r.ui.options_.active());
     CHECK(r.ui.options_.commit_requested());
     CHECK(test_writes == writes);
@@ -2987,12 +2987,12 @@ void TestOptionalPages() {
   Rig idle(false);
   ApplyCustomProfile(&idle, b);
   idle.Enter();
-  idle.Tick(10000, true);
+  idle.Tick(4000, true);
   idle.Tap();
-  idle.Tick(10000, true);
+  idle.Tick(4000, true);
   idle.Tap();
   CHECK(idle.ui.options_.page() == 6);
-  for (int i = 0; i < 14900; ++i) {
+  for (int i = 0; i < 4900; ++i) {
     idle.feedback = (i / 100) & 1 ? 0.9f : 0.1f;
     idle.Tick(1, true);
   }

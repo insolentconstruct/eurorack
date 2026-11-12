@@ -5,7 +5,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 ## Unreleased
 
 - Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.
-- Optional options-page idle timeout in Hygrostat (Off, 15, 30, 60 or 120 s); Off by default.
+- Optional options-page idle timeout in Hygrostat (Off, 5, 10, 20 or 30 s); Off by default.
 
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 

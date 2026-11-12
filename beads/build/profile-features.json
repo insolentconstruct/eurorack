@@ -846,10 +846,10 @@
       "name": "Options page idle timeout",
       "values": [
         "Off (stay open)",
-        "15 s",
-        "30 s",
-        "60 s",
-        "120 s"
+        "5 s",
+        "10 s",
+        "20 s",
+        "30 s"
       ],
       "field": null,
       "states": [

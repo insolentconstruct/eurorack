@@ -381,16 +381,17 @@ handling are independent of this choice.
 
 ### Options page idle timeout
 
-Hygrostat feature ID 25 chooses Off / 15 s / 30 s / 60 s / 120 s. Off or an
+Hygrostat feature ID 25 chooses Off / 5 s / 10 s / 20 s / 30 s. Off or an
 omitted entry keeps the pages open until you close them, as in earlier
 releases. A Fixed time closes the pages after that long without interaction,
 counted from releasing the opening hold. Pressing a button, tapping [M] to
-change page and turning a page knob restart the count; knob jitter, slow
-drift, CV and the stored-value preview do not. Moving a knob more than 2% of
-its travel within half a second counts as a turn; movement slower than 2% per
-second never does. Unused knobs on a custom page do not count. The timeout
-never closes the pages while a button is held, and holding [M] or pressing
-another button still closes them at any time. Closing by timeout is the same
-as holding [M]: changes are kept, saved once if still unsaved, and nothing is
-written when nothing changed. This is a firmware-profile choice, with no panel
-slot and no saved-state nibble; it runs only while the pages are open.
+change page and turning a page knob restart the count; knob jitter, CV and
+the stored-value preview do not. As with the Clouds blend knob, a knob
+counts as turned once it is more than 2% of its travel from where it was
+last counted, however slowly it got there. Unused knobs on a custom page do
+not count. The timeout never closes the pages while a button is held, and
+holding [M] or pressing another button still closes them at any time.
+Closing by timeout is the same as holding [M]: changes are kept, saved once
+if still unsaved, and nothing is written when nothing changed. This is a
+firmware-profile choice, with no panel slot and no saved-state nibble; it
+runs only while the pages are open.
