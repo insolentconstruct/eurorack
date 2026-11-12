@@ -119,39 +119,24 @@ void DelayController::Render(
     const RandomizedParameter& shape,
     Output* out,
     size_t size) {
-  if (timing_gain_ != TIMING_FADE_OFF) {
-    RenderWithTimingFade(
-        seed_button_state,
-        external_input,
-        freeze,
-        density,
-        linear_fm,
-        exponential_fm,
-        position,
-        shape, out, size);
-    return;
+  // One tail call through a pointer, so the fade test adds no work (#183).
+  RenderFn fn = &DelayController::RenderWithTimingFade;
+  if (timing_gain_ == TIMING_FADE_OFF) {
+    if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
+      fn = &DelayController::RenderInternal<false>;
+    } else {
+      fn = &DelayController::RenderInternal<true>;
+    }
   }
-  if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
-    RenderInternal<false>(
-        seed_button_state,
-        external_input,
-        freeze,
-        density,
-        linear_fm,
-        exponential_fm,
-        position,
-        shape, out, size);
-  } else {
-    RenderInternal<true>(
-        seed_button_state,
-        external_input,
-        freeze,
-        density,
-        linear_fm,
-        exponential_fm,
-        position,
-        shape, out, size);
-  }
+  (this->*fn)(
+      seed_button_state,
+      external_input,
+      freeze,
+      density,
+      linear_fm,
+      exponential_fm,
+      position,
+      shape, out, size);
 }
 
 void DelayController::RenderWithTimingFade(

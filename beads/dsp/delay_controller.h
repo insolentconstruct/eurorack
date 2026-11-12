@@ -231,6 +231,18 @@ class DelayController {
 #endif  // TEST
 
  private:
+  typedef void (DelayController::*RenderFn)(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* external_input,
+      const bool* freeze,
+      float density,
+      float linear_fm,
+      float exponential_fm,
+      const RandomizedParameter& position,
+      const RandomizedParameter& shape,
+      Output* out,
+      size_t size);
+
   void RenderWithTimingFade(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* external_input,

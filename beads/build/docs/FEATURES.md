@@ -412,7 +412,7 @@ the delay taps for 10 ms, switches timing at silence and fades back in over
 Patching SEED while latched fades the same way. A clocked latch never fades.
 This is a firmware-profile choice, with no panel slot or saved-state nibble.
 The choice is made once per block outside the sample loop; Off runs the stock
-delay code.
+delay code, with no extra instructions per block.
 
 ### Input gain at power-on
 
