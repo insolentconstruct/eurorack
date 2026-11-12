@@ -1270,7 +1270,7 @@ void TestPackedFeaturePairs() {
     entry[0] = id;
     entry[1] = PROFILE_ADJUSTABLE;
   }
-  CHECK(count == 13);
+  CHECK(count == 14);
   block[5] = count;
   const size_t bytes = 6 * count + sizeof(scale);
   block[6] = bytes & 255;
@@ -1346,7 +1346,7 @@ void TestPackedFeaturePairs() {
       }
     }
   }
-  CHECK(pairs == 78);
+  CHECK(pairs == 91);
 }
 
 void TestPitchExtensionSentinel() {

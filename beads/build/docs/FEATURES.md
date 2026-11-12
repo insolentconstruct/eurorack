@@ -39,7 +39,7 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 | Hold [M], press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | [M] + [A], either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold [A], press SEED | TAKEN: toggle monophonic grains; consumes both releases; [A] first | Yes <!-- beads/ui.cc:358-369 --> |
-| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch | Mutable Instruments' original gesture; saves keep the length; stock loads full length |
+| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch. In Plaits synth play with an Adjustable [Plaits bank](#plaits-bank) (ID 31), it steps the bank instead and leaves FREEZE alone | Mutable Instruments' original gesture; saves keep the length; stock loads full length. The bank is saved |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + [M] | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration. With both copies of the calibration lost: repair with the factory calibration; result shown 3 s | Rewrites settings sector <!-- beads/settings.cc; beads/settings_storage.h --> |
@@ -112,6 +112,7 @@ not-set values use the profile default.
 | 28 | Attack sensitivity (#58, #47) | No saved value |
 | 29 | SEED at power-on (#41) | No saved value |
 | 30 | PITCH knob (#43) | No saved value |
+| 31 | Plaits bank (#190) | 14 (byte 20 low) |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -126,8 +127,8 @@ never-configured pitch field remains unset even when a later profile includes
 ID 15; that profile uses its own starting value. An explicitly saved ID 15
 falls back to Off if that ID is absent from the installed bank.
 
-Fields 14–19 remain unallocated in v1. Fields 10–13 are permanent from this
-release; the marker stays 0xC1 and every existing field keeps its position.
+Field 14 holds the Plaits bank (ID 31, Beta 3); fields 15–19 remain
+unallocated in v1. Fields 10–13 are permanent from this release; the marker stays 0xC1 and every existing field keeps its position.
 The profile table in `beads/profile.cc` owns identities and allowed controls.
 Missing or invalid profiles use the release layout and lock settings writes;
 the boot guard's own recoveries still run from storage state. SEED at boot
@@ -265,7 +266,7 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Factory cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
-- **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
+- **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim, or the Plaits bank step in Plaits synth play when the profile makes the bank Adjustable; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
 
 Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
 mapping, with Clouds delay lengths and modulation. The grain wet path adds
@@ -464,3 +465,24 @@ Smooth. Grains, delay pitch and both synths follow the knob law. The law is
 chosen at power-on, before audio starts; the knob is read once per audio
 block, and Notches runs the stock law plus one comparison. No panel slot or
 saved-state nibble.
+
+### Plaits bank
+
+Hygrostat feature ID 31 chooses how FEEDBACK selects Plaits synth models
+(#190): All 24 (stock) / Green / Red / Yellow. Off or an omitted entry keeps
+all 24 models on FEEDBACK, about 11 degrees each. A bank puts eight models on
+FEEDBACK, about 34 degrees each, in Plaits' own groups: green is its first
+bank (virtual analog to speech), red the second (swarm to hi-hat), yellow the
+eight models added in Plaits 1.2. Fixed plays one bank. Adjustable starts
+from the chosen value and adds a gesture: while the Plaits synth plays, hold
+[A] and press FREEZE to step green, red, yellow, then green again; [A] shows
+the new bank's colour for half a second and the bank is saved (field 14).
+From All 24 the first step goes to green; a SEED power-on reset returns to
+the profile's value. There the gesture leaves FREEZE as it was: FREEZE
+alone still sustains. Elsewhere (granular, delay, spectral, the wavetable
+synth), and with Off or Fixed, [A]+FREEZE is buffer trim as before. The step
+shares Buffer trim's gesture, so a custom profile that moves Buffer trim
+moves the step with it, and one without Buffer trim cannot step. The bank
+is applied from the main loop; the audio path runs the same per-block code
+for every choice, with each bank's range inset so its end models never reach
+a neighbouring bank.

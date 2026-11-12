@@ -2005,6 +2005,80 @@ void TestPitchLawProfile() {
   CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
 }
 
+// Installs an Adjustable Plaits bank profile.
+void FlashPlaitsBankProfile(uint8_t bank) {
+  const uint8_t pair[] = { FEATURE_PLAITS_BANK, bank };
+  uint8_t block[kProfileSize];
+  BuildProfile(block, pair, 1);
+  block[16 + 6 * (block[5] - 1) + 1] = PROFILE_ADJUSTABLE;
+  const size_t bytes = 6 * block[5];
+  const uint32_t crc = Profile::Crc32(block, 16 + bytes);
+  for (size_t i = 0; i < 4; ++i) {
+    block[16 + bytes + i] = crc >> (8 * i);
+  }
+  FlashProfile(block);
+}
+
+// Powers on and waits for the synth to start.
+void StartPlaits(Rig* r) {
+  r->Reboot(false);
+  r->Settle();
+  r->Advance(10001);
+  r->Settle();
+}
+
+// The model the drone plays with FEEDBACK at this pot value.
+int PlaitsModel(Rig* r, uint16_t feedback) {
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = feedback;
+  r->Tick(50, true);
+  CHECK(synth_mode && plaits_synth.drone_);
+  return plaits_synth.patch_[plaits_synth.active_voice_].model;
+}
+
+// The Plaits bank (#190): [A]+FREEZE steps it in Plaits synth play, keeps
+// FREEZE and survives power cycles; Off keeps all 24 models on FEEDBACK.
+void TestPlaitsBankProfile() {
+  test_checker.Start("TestPlaitsBankProfile");
+  Rig r(false, true);
+  // ASSIGN CV at 0 V: the host probe would otherwise modulate FEEDBACK.
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  settings.set_plaits_synth(true);
+  settings.SaveState();
+  StartPlaits(&r);
+  CHECK(PlaitsModel(&r, 65535) == 23);
+  FlashPlaitsBankProfile(0);
+  StartPlaits(&r);
+  CHECK(PlaitsModel(&r, 65535) == 23);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(10, true);
+  test_down[SWITCH_FREEZE] = false;
+  r.Tick(10, true);
+  CHECK(ui.freeze_button_state());
+  const int last[] = { 15, 23, 7, 15 };
+  for (int step = 0; step < 4; ++step) {
+    test_down[SWITCH_MEDIA] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = test_down[SWITCH_MEDIA] = false;
+    r.Tick(10, true);
+    CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == step % 3 + 1);
+    CHECK(ui.freeze_button_state() && !ui.trim_flag());
+    CHECK(PlaitsModel(&r, 65535) == last[step]);
+    CHECK(PlaitsModel(&r, 0) == last[step] - 7);
+  }
+  // Saved: the bank returns after a power cycle with the same profile.
+  StartPlaits(&r);
+  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 1);
+  CHECK(PlaitsModel(&r, 65535) == 15);
+  // The factory profile omits the entry: all 24 models again.
+  FlashProfile(factory_profile);
+  StartPlaits(&r);
+  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+  CHECK(PlaitsModel(&r, 65535) == 23);
+  CHECK(PlaitsModel(&r, 0) == 0);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2044,5 +2118,6 @@ int main() {
   TestAttackSensitivityProfile();
   TestSeedStartProfile();
   TestPitchLawProfile();
+  TestPlaitsBankProfile();
   return test_checker.failures() ? 1 : 0;
 }

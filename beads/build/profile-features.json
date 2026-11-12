@@ -969,6 +969,30 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": true
+    },
+    {
+      "id": 31,
+      "issue": 190,
+      "name": "Plaits bank",
+      "values": [
+        "All 24 (stock)",
+        "Green",
+        "Red",
+        "Yellow"
+      ],
+      "field": 14,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."

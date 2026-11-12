@@ -100,6 +100,8 @@ Delay SEED latch fade is a separate profile choice: switching at once is the sto
 
 Four more profile choices keep stock or Beta 2 behaviour by default and add no panel gesture or options-page slot. Input gain at power-on: Manual starts at unity manual gain when no gain is saved; a saved gain wins. Attack sensitivity: Normal, Low or High. SEED at power-on: Unlatched waits for SEED presses or gates. PITCH knob: Smooth glides between the intervals without notches; PITCH CV is unchanged.
 
+Plaits bank is a profile choice for the Plaits synth: All 24 models on FEEDBACK is the default, as before; Green, Red or Yellow puts Plaits' eight models of that bank on FEEDBACK. When Adjustable, hold [A] and press FREEZE while the Plaits synth plays to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim.
+
 ## Saved data
 
 Stock settings and calibration carry over; earlier Drizzlet options, width and diffusion reset to profile defaults. Frozen buffers remain stock-compatible. Disable monophonic grains before downgrading. Stock clears Drizzlet options when saving and loads trimmed buffers full-length; earlier Drizzlet reads new settings as stock.

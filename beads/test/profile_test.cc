@@ -318,8 +318,9 @@ void TestBetaProfileDefinitions() {
   CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
-    255, 255, 255, 255
+    255, 255, 255, 255, 14
   };
+  CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
     CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);
     for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
@@ -333,8 +334,10 @@ void TestBetaProfileDefinitions() {
         b[19] = b[20] = b[21] = 0;
         Checksum(b);
         Profile p;
+        // Adjustable needs a page, or a saved field set by a gesture.
         const bool valid = value < kFeatureDefinitions[id].values &&
-            (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page);
+            (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page ||
+                kFeatureDefinitions[id].field != kNoField);
         CHECK(p.Init(b) == valid);
       }
     }

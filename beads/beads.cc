@@ -574,6 +574,8 @@ void MonitorStateChange() {
         cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
   ui.set_no_input(normalization_detector.no_input());
+  ui.set_synth_mode(synth_mode);
+  plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();

@@ -49,6 +49,8 @@ using namespace stmlib;
 // Keep the width meter below set_meter's wrap at 1.0.
 const float kWidthMeterSpan = 0.749f;
 const uint32_t kStorageStatusTime = 3000;
+const uint8_t kNumPlaitsBanks = 3;
+const uint32_t kPlaitsBankCueTime = 500;
 
 /* static */
 const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
@@ -99,12 +101,15 @@ void Ui::Init(
   assign_modulation_ = 0.0f;
   delay_cue_time_ = 0;
   boot_cue_time_ = system_clock.milliseconds();
+  bank_cue_time_ = 0;
+  bank_cue_ = 0;
   
   seed_button_state_ = false;
   seed_button_locked_ = true;
   seed_led_state_ = false;
   trim_flag_ = false;
   no_input_ = self_play_requested_ = false;
+  synth_mode_ = false;
   
   overwrite_reserve_ = 1.0f;
   
@@ -296,6 +301,13 @@ const Leds::Color Ui::media_palette_[4] = {
   { 192, 192, 208 },
 };
 
+/* static */
+const Leds::Color Ui::plaits_bank_palette_[3] = {
+  { 0, 255, 0 },
+  { 255, 0, 0 },
+  { 255, 255, 0 },
+};
+
 void Ui::UpdateLeds() {
   leds_.Clear();
   
@@ -389,6 +401,11 @@ void Ui::UpdateLeds() {
               0, uint8_t(lit ? 128 : 0), uint8_t(lit ? 255 : 0)
             };
             leds_.set_media(cue);
+          }
+          if (bank_cue_time_ &&
+              uint32_t(system_clock.milliseconds() - bank_cue_time_) <
+                  kPlaitsBankCueTime) {
+            leds_.set_media(plaits_bank_palette_[bank_cue_]);
           }
         }
         
@@ -759,7 +776,8 @@ void Ui::DoEvents() {
     bool profile_changed = false;
     for (int i = FEATURE_VERSION; i < FEATURE_LAST; ++i) {
       const ProfileFeature f = ProfileFeature(i);
-      if (settings_->profile().adjustable(f) &&
+      // Pages commit their settings; a gesture saves the Plaits bank.
+      if (kFeatureDefinitions[i].page && settings_->profile().adjustable(f) &&
           options_.Value(OptionSetting(i)) != settings_->FeatureValue(f)) {
         settings_->SetFeatureValue(f, options_.Value(OptionSetting(i)));
         profile_changed = true;
@@ -838,6 +856,17 @@ bool Ui::DoAction(uint8_t slot) {
     }
     return true;
   } else if (feature == FEATURE_TRIM) {
+    if (synth_mode_ && plaits_synth_ &&
+        settings_->profile().adjustable(FEATURE_PLAITS_BANK)) {
+      // Plaits plays nothing to trim: step the bank and keep FREEZE.
+      const uint8_t bank = settings_->FeatureValue(FEATURE_PLAITS_BANK) %
+          kNumPlaitsBanks + 1;
+      settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
+      settings_->SaveState();
+      bank_cue_ = bank - 1;
+      bank_cue_time_ = system_clock.milliseconds();
+      return true;
+    }
     trim_flag_ = true;
     freeze_button_state_ = false;
     return true;

@@ -64,6 +64,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 3, kNoField, false, false, false, false },  // Attack sensitivity.
   { 2, kNoField, false, false, false, false },  // Seed start.
   { 2, kNoField, false, false, false, false },  // Pitch law.
+  { 4, 14, false, false, false, false },  // Plaits bank.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
@@ -848,8 +849,9 @@ bool Profile::Parse(const volatile uint8_t* b) {
         e.action >= ACTION_LAST) {
       return false;
     }
+    // Adjustable needs a page, or a saved field a gesture changes.
     if (id >= FEATURE_VERSION && e.state == PROFILE_ADJUSTABLE &&
-        !d.page) {
+        !d.page && d.field == kNoField) {
       return false;
     }
     if ((e.page_slot && (!d.page || e.state != PROFILE_ADJUSTABLE)) ||

@@ -171,6 +171,7 @@ class Ui {
   }
   
   inline void set_no_input(bool no_input) { no_input_ = no_input; }
+  inline void set_synth_mode(bool synth_mode) { synth_mode_ = synth_mode; }
   inline bool self_play_requested() const { return self_play_requested_; }
   inline void ClearSelfPlayRequest() { self_play_requested_ = false; }
 
@@ -214,6 +215,7 @@ class Ui {
   
   bool trim_flag_;
   bool no_input_;
+  bool synth_mode_;
   bool self_play_requested_;
   bool freeze_button_state_;
   bool freeze_led_state_;
@@ -226,6 +228,8 @@ class Ui {
   float assign_modulation_;
   uint32_t delay_cue_time_;
   uint32_t boot_cue_time_;
+  uint32_t bank_cue_time_;
+  uint8_t bank_cue_;
   bool seed_led_state_;
   
   float overwrite_reserve_;
@@ -256,6 +260,7 @@ class Ui {
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
+  static const Leds::Color plaits_bank_palette_[3];
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

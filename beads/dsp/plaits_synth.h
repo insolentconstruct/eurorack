@@ -31,8 +31,6 @@
 
 #include "stmlib/stmlib.h"
 
-#include "stmlib/dsp/hysteresis_quantizer.h"
-
 #include "beads/dsp/plaits_voice.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
@@ -48,6 +46,53 @@ const float kPlaitsRootNote = 48.0f - 0.0429f;
 
 // Engine RAM for all voices, lent by the caller while the synth plays.
 const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize;
+
+// Plaits' banks of eight models: 1 green, 2 red, 3 yellow; 0 plays all 24.
+const int kPlaitsBankSize = 8;
+
+// stmlib's HysteresisQuantizer2 over a range of models that the main loop
+// can move; a bank is inset so that hysteresis never reaches its neighbour.
+class ModelQuantizer {
+ public:
+  ModelQuantizer() { }
+  ~ModelQuantizer() { }
+
+  void Init(float hysteresis) {
+    hysteresis_ = hysteresis;
+    quantized_value_ = 0;
+    Configure(0, kNumPlaitsModels, 0.0f);
+  }
+
+  void Configure(int first, int count, float inset) {
+    scale_ = static_cast<float>(count) - 2.0f * inset;
+    offset_ = static_cast<float>(first) - 0.5f + inset;
+  }
+
+  inline int Process(float value) {
+    value *= scale_;
+    value += offset_;
+
+    float hysteresis_sign = value > static_cast<float>(quantized_value_)
+        ? -1.0f
+        : +1.0f;
+    int q = static_cast<int>(value + hysteresis_sign * hysteresis_ + 0.5f);
+    CONSTRAIN(q, 0, kNumPlaitsModels - 1);
+    quantized_value_ = q;
+    return q;
+  }
+
+  inline int quantized_value() const {
+    return quantized_value_;
+  }
+
+ private:
+  float hysteresis_;
+  float scale_;
+  float offset_;
+  int quantized_value_;
+
+  DISALLOW_COPY_AND_ASSIGN(ModelQuantizer);
+};
 
 class PlaitsSynth {
  public:
@@ -86,6 +131,9 @@ class PlaitsSynth {
     pitch_scale_ = scale;
   }
 
+  // From the main loop; a block may see a half-moved range, still a model.
+  void set_bank(int bank);
+
  private:
   void StartNote(const Parameters& p, int model);
 
@@ -108,7 +156,8 @@ class PlaitsSynth {
   RandomWalkModulation timbre_modulation_;
   RandomWalkModulation morph_modulation_;
 
-  stmlib::HysteresisQuantizer2 model_quantizer_;
+  ModelQuantizer model_quantizer_;
+  int bank_;
   float stereo_width_;
   bool width_enabled_;
   PitchScale pitch_scale_;

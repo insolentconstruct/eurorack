@@ -268,6 +268,75 @@ void TestModelDetents() {
   CHECK(model == 0);
 }
 
+// A bank puts eight models on FEEDBACK (#190): green 8-15, red 16-23,
+// yellow 0-7. Both ends stay in the bank whatever came before, and
+// returning to all 24 restores the stock mapping.
+void TestBankDetents() {
+  test_checker.Start("TestBankDetents");
+  Reset();
+  Controls c;
+  FloatFrame out[kBlockSize];
+  const int first[] = { 0, 8, 16, 0 };
+  const int kSteps = 8000;
+  for (int pass = 0; pass < 2; ++pass) {
+    for (int bank = 1; bank <= 3; ++bank) {
+      // Switch at either end of the knob from the previous range.
+      const int previous = bank > 1 ? bank - 1 : (pass ? 3 : 0);
+      for (int end = 0; end < 2; ++end) {
+        synth.set_bank(previous);
+        c.mix.feedback = end ? 1.0f : 0.0f;
+        Block(c, out);
+        synth.set_bank(bank);
+        Block(c, out);
+        CHECK(synth.patch_[synth.active_voice_].model ==
+            first[bank] + (end ? kPlaitsBankSize - 1 : 0));
+      }
+      int model = first[bank] + kPlaitsBankSize - 1;
+      int steps = 0;
+      for (int i = kSteps; i >= 0; --i) {
+        c.mix.feedback = float(i) / kSteps;
+        Block(c, out);
+        const int selected = synth.model_quantizer_.quantized_value();
+        if (selected != model) {
+          CHECK(selected == model - 1);
+          model = selected;
+          ++steps;
+        }
+        CHECK(synth.patch_[synth.active_voice_].model == model);
+      }
+      CHECK(model == first[bank] && steps == kPlaitsBankSize - 1);
+      for (int i = 0; i <= kSteps; ++i) {
+        c.mix.feedback = float(i) / kSteps;
+        Block(c, out);
+        const int selected = synth.model_quantizer_.quantized_value();
+        if (selected != model) {
+          // Range 8 - 2 * 0.06 wide; steps up at inset - hysteresis early.
+          CHECK(selected == model + 1);
+          const float position = (selected - first[bank] - 0.012f) / 7.88f;
+          CHECK(fabsf(c.mix.feedback - position) < 0.0005f);
+          model = selected;
+        }
+      }
+      CHECK(model == first[bank] + kPlaitsBankSize - 1);
+    }
+    synth.set_bank(0);
+    CHECK(synth.model_quantizer_.scale_ == 24.0f);
+    CHECK(synth.model_quantizer_.offset_ == -0.5f);
+  }
+  // Notes keep the model they started with when the bank changes.
+  Reset();
+  synth.set_bank(2);
+  c.mix.feedback = 1.0f;
+  c.seed = SEED_BUTTON_STATE_ON;
+  Block(c, out);
+  const int voice = synth.active_voice_;
+  CHECK(synth.patch_[voice].model == 23);
+  c.seed = SEED_BUTTON_STATE_OFF;
+  synth.set_bank(3);
+  Block(c, out);
+  CHECK(synth.patch_[voice].model == 23);
+}
+
 // FREEZE holds a ringing note at its level instead of letting it decay.
 void TestFreezeSustains() {
   test_checker.Start("TestFreezeSustains");
@@ -325,6 +394,7 @@ void TestFreezeSustains() {
 int main() {
   TestVoiceAllocation();
   TestModelDetents();
+  TestBankDetents();
   TestFreezeSustains();
   TestEveryModelRenders();
   return test_checker.failures() ? 1 : 0;

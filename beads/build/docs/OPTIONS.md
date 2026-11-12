@@ -68,7 +68,7 @@ Scale (tap SEED to step through):
 ## Other gestures
 
 - **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
-- **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
+- **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since. If a profile makes the Plaits bank adjustable, the same gesture steps the bank (green, red, yellow) while the Plaits synth plays, and leaves FREEZE alone.
 - **Stereo width:** Hold [A] and turn DRY/WET; fully CCW is Stock. The [A] LED shows the width as a meter; releasing [A] saves it. Once on, [M] can route CV to it (all three mix LEDs pulsing).
 - **Manual gain:** Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] LED shows it as a meter. With an input patched, a long press of [A] returns to automatic gain.
 - **Grain diffusion:** Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can route CV to it (REVERB LED pulsing).

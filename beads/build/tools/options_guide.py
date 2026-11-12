@@ -319,7 +319,10 @@ GESTURES = [
     (
         "Buffer trim",
         "Hold [A], then press FREEZE [B] to start a fresh recording window. "
-        "The next freeze keeps only what was recorded since.",
+        "The next freeze keeps only what was recorded since. If a profile "
+        "makes the Plaits bank adjustable, the same gesture steps the bank "
+        "(green, red, yellow) while the Plaits synth plays, and leaves "
+        "FREEZE alone.",
         "Hold [A], press FREEZE [B]: the next freeze keeps only what follows.",
     ),
     (

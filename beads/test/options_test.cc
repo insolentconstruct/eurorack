@@ -2391,11 +2391,11 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->Tick(40, true);
 }
 
-// Appends an idle timeout entry to a profile without scales.
-void AppendIdleTimeout(uint8_t* b, int state, int value) {
+// Appends an entry with no control slots to a profile without scales.
+void AppendEntry(uint8_t* b, int id, int state, int value) {
   CHECK(!b[13]);
   uint8_t* entry = b + 16 + 6 * b[5];
-  entry[0] = FEATURE_IDLE_TIMEOUT;
+  entry[0] = id;
   entry[1] = state;
   entry[2] = value;
   entry[3] = entry[4] = entry[5] = 0;
@@ -2407,6 +2407,10 @@ void AppendIdleTimeout(uint8_t* b, int state, int value) {
   for (int i = 0; i < 4; ++i) {
     b[16 + bytes + i] = crc >> (8 * i);
   }
+}
+
+void AppendIdleTimeout(uint8_t* b, int state, int value) {
+  AppendEntry(b, FEATURE_IDLE_TIMEOUT, state, value);
 }
 
 void IdleProfile(uint8_t* b, int state, int value) {
@@ -3057,6 +3061,113 @@ void TestProfileActions() {
   CHECK(!off.ui.trim_flag_);
 }
 
+// The factory profile plus a Plaits bank entry.
+void PlaitsBankProfile(uint8_t* b, int state, int value) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  AppendEntry(b, FEATURE_PLAITS_BANK, state, value);
+}
+
+// Holds [A], presses FREEZE and releases both.
+void TrimGesture(Rig* r) {
+  r->Down(SWITCH_MEDIA);
+  r->Down(SWITCH_FREEZE);
+  r->Up(SWITCH_FREEZE);
+  r->Up(SWITCH_MEDIA);
+}
+
+// Plays the Plaits (or wavetable) synth with FREEZE latched.
+void PlaySynth(Rig* r, bool synth_mode, bool plaits) {
+  r->settings.set_plaits_synth(plaits);
+  r->ui.set_no_input(synth_mode);
+  r->ui.set_synth_mode(synth_mode);
+  r->Down(SWITCH_FREEZE);
+  r->Up(SWITCH_FREEZE);
+  CHECK(r->ui.freeze_button_state_);
+  CHECK(r->ui.plaits_synth() == plaits);
+}
+
+// [A]+FREEZE steps an Adjustable Plaits bank in Plaits synth play (#190),
+// keeping FREEZE; everywhere else, and Off or Fixed, it trims as before.
+void TestPlaitsBankGesture() {
+  test_checker.Start("TestPlaitsBankGesture");
+  uint8_t b[kProfileSize];
+  CHECK(kFeatureDefinitions[FEATURE_PLAITS_BANK].field == 14);
+  PlaitsBankProfile(b, PROFILE_ADJUSTABLE, 0);
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+    PlaySynth(&r, true, true);
+    const uint8_t media = r.settings.state().media;
+    // Green, red, yellow, then green again; each step is saved.
+    const uint8_t banks[] = { 1, 2, 3, 1, 2 };
+    for (int i = 0; i < 5; ++i) {
+      const uint32_t writes = test_writes;
+      r.Down(SWITCH_MEDIA);
+      r.Down(SWITCH_FREEZE);
+      CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
+      CHECK(test_writes == writes + 1);
+      CHECK(!r.ui.trim_flag_);
+      CHECK(r.ui.freeze_button_state_);
+      const uint8_t* led = &r.ui.leds_.intensity_[LED_MEDIA_R];
+      CHECK((led[0] != 0) == (banks[i] != 1));
+      CHECK((led[1] != 0) == (banks[i] != 2));
+      CHECK(led[2] == 0);
+      r.Up(SWITCH_FREEZE);
+      r.Up(SWITCH_MEDIA);
+      CHECK(r.settings.state().media == media);
+      CHECK(r.ui.freeze_button_state_);
+      Settings loaded;
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
+      // Field 14 is byte 20's low nibble; field 15 stays unset.
+      CHECK(loaded.stored_state_.engine == (0x90 | banks[i]));
+    }
+    // The cue lasts half a second, then [A] shows the quality again.
+    r.Tick(400, true);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    r.Tick(200, true);
+    const Leds::Color quality = r.ui.media_palette_[media];
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
+    // FREEZE alone still toggles sustain.
+    r.Down(SWITCH_FREEZE);
+    r.Up(SWITCH_FREEZE);
+    CHECK(!r.ui.freeze_button_state_);
+    // An options page commit keeps the gesture's bank.
+    r.EnterLimiter();
+    r.reverb = 0.9f;
+    r.Tick(1200, true);
+    r.Down(SWITCH_ASSIGN);
+    r.Tick(3100, true);
+    r.Up(SWITCH_ASSIGN);
+    CHECK(r.settings.output_limiter_mode() != OUTPUT_LIMITER_STOCK);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+  }
+  // Factory Off, the wavetable synth, Fixed, and granular: buffer trim.
+  const uint8_t states[] = { 0, PROFILE_ADJUSTABLE, PROFILE_FIXED,
+      PROFILE_ADJUSTABLE };
+  const uint8_t starts[] = { 0, 0, 2, 3 };
+  for (int c = 0; c < 4; ++c) {
+    Rig r(false);
+    if (states[c]) {
+      PlaitsBankProfile(b, states[c], starts[c]);
+      ApplyCustomProfile(&r, b);
+    }
+    const uint8_t bank = starts[c];
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == bank);
+    PlaySynth(&r, c != 3, c != 1);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.trim_flag_);
+    CHECK(!r.ui.freeze_button_state_);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == bank);
+    r.Up(SWITCH_FREEZE);
+    r.Up(SWITCH_MEDIA);
+  }
+}
+
 void TestProfileAmounts() {
   test_checker.Start("TestProfileAmounts");
   uint8_t b[kProfileSize];
@@ -3435,6 +3546,7 @@ int main() {
   TestBetaOptionsLeds();
   TestBetaOptionPages();
   TestProfileActions();
+  TestPlaitsBankGesture();
   TestProfileAmounts();
   TestOptionsIdleTimeout();
   return test_checker.failures() ? 1 : 0;

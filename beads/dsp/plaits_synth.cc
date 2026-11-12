@@ -40,6 +40,8 @@ using namespace stmlib;
 // 10 Vpp per voice in the centre, as the wavetable synth's dry oscillator.
 const float kPlaitsVoiceGain = 2.0f / 3.0f;
 const float kModelHysteresis = 0.048f;
+// Larger than the hysteresis, so a bank's end models stay in the bank.
+const float kBankInset = 0.06f;
 
 void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   clouds_style_ = false;
@@ -54,7 +56,8 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   harmonics_modulation_.Init(1.01f / sr);
   timbre_modulation_.Init(1.01f / sr);
   morph_modulation_.Init(1.01f / sr);
-  model_quantizer_.Init(kNumPlaitsModels, kModelHysteresis, false);
+  model_quantizer_.Init(kModelHysteresis);
+  bank_ = 0;
 
   stereo_width_ = 0.0f;
   width_enabled_ = false;
@@ -74,6 +77,20 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
   active_voice_ = 0;
   noon_ = false;
   drone_ = false;
+}
+
+void PlaitsSynth::set_bank(int bank) {
+  if (bank == bank_) {
+    return;
+  }
+  bank_ = bank;
+  if (bank) {
+    model_quantizer_.Configure(
+        bank * kPlaitsBankSize % kNumPlaitsModels, kPlaitsBankSize,
+        kBankInset);
+  } else {
+    model_quantizer_.Configure(0, kNumPlaitsModels, 0.0f);
+  }
 }
 
 void PlaitsSynth::StartNote(const Parameters& p, int model) {

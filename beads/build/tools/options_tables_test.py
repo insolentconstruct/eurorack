@@ -499,7 +499,7 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 30
+assert len(catalog["features"]) == len(exported) == 31
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 for feature, row in zip(catalog["features"], exported):
@@ -514,7 +514,10 @@ for feature, row in zip(catalog["features"], exported):
     assert bool(feature["amount_slots"]) == bool(amount)
     assert bool(feature["actions"]) == bool(action)
     assert feature.get("stateless", False) == bool(stateless)
-    assert ("Adjustable" in feature["states"]) == bool(page or amount or action)
+    # The Plaits bank is Adjustable through its saved field, not a page.
+    gesture = identity == 31 and field == 14 and not page
+    assert ("Adjustable" in feature["states"]) == bool(
+        page or amount or action or gesture)
     if identity in (18, 21):
         assert feature["default_state"] == "Adjustable" and feature["default"] == 0
     elif identity >= 15:
