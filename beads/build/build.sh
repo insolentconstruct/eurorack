@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+
 # Run from the repository root.
 set -euo pipefail
 export LC_ALL=C

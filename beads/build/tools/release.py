@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Insolent Construct.
+# Author: Insolent Construct
+
 """Check the WAV with the vendor decoder, collect notices, package the release."""
 import hashlib
 import os
