@@ -1590,10 +1590,10 @@ void TestProfileDormantAmounts() {
     CHECK(s.Init(false));
     s.SaveState();
     for (size_t i = 0; i < sizeof(unused); ++i) {
-      // Brightness/latch reject invalid nibbles; field 13 is pitch extension.
-      // All unrelated dormant fields still retain their original bits.
+      // Brightness/latch reject invalid nibbles; field 13 is pitch extension;
+      // field 14 saves the Plaits bank. Other dormant fields keep their bits.
       CHECK(bytes[unused[i]] == (unused[i] == 18 ? 0 :
-          unused[i] == 19 ? 0x0e : 0x8e));
+          unused[i] == 19 ? 0x0e : unused[i] == 20 ? 0x80 : 0x8e));
     }
     CHECK(s.FeatureValue(FEATURE_BRIGHTNESS) == 0);
     CHECK(s.FeatureValue(FEATURE_SEED_LATCH) == 0);

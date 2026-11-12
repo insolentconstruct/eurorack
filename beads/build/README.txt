@@ -163,12 +163,12 @@ wins. Attack sensitivity: Normal, Low or High. SEED at power-on:
 Unlatched waits for SEED presses or gates. PITCH knob: Smooth glides
 between the intervals without notches; PITCH CV is unchanged.
 
-Plaits bank is a profile choice for the Plaits synth: All 24 models on
-FEEDBACK is the default, as before; Green, Red or Yellow puts Plaits'
-eight models of that bank on FEEDBACK. When Adjustable, hold [A] and
-press FREEZE while the Plaits synth plays to step to the next bank; [A]
-flashes the bank colour and FREEZE stays as it was. Everywhere else
-[A]+FREEZE is still buffer trim.
+Plaits synth banks: FEEDBACK selects one of the eight models of the
+current bank, as on Plaits: green (its first bank), red (noise and
+drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,
+hold [A] and press FREEZE to step to the next bank; [A] flashes the bank
+colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still
+buffer trim. A profile can choose the starting bank (green by default).
 
 Options page
 ------------

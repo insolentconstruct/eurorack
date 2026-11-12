@@ -284,7 +284,8 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     warning = ("Don't hold SEED while powering on: it resets all settings "
                "to defaults (calibration is kept).")
     assert "## Other gestures" in markdown and warning in markdown
-    for phrase in ("Monophonic grains", "Buffer trim", "Manual gain",
+    for phrase in ("Monophonic grains", "Buffer trim", "Plaits banks",
+                   "Manual gain",
                    "Wavetable synth (Manual)", "FREEZE [B]",
                    "Switching clears the recording."):
         assert phrase in markdown.split("## Details")[0], phrase
@@ -316,6 +317,9 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         for title in ("Monophonic grains", "Buffer trim",
                       "Wavetable synth (Manual)"):
             assert title in " ".join(labels), title
+        # The printable has room only for the bank step inside Buffer trim.
+        assert ("next bank, green/red/yellow" if printable
+                else "Plaits banks") in " ".join(labels)
         assert warning in " ".join(labels), name
         for knob in ("FEEDBACK", "DRY/WET", "REVERB"):
             reserved = sum(1 for row in rows
@@ -518,7 +522,7 @@ for feature, row in zip(catalog["features"], exported):
     gesture = identity == 31 and field == 14 and not page
     assert ("Adjustable" in feature["states"]) == bool(
         page or amount or action or gesture)
-    if identity in (18, 21):
+    if identity in (18, 21, 31):
         assert feature["default_state"] == "Adjustable" and feature["default"] == 0
     elif identity >= 15:
         assert feature["default_state"] == "Off" and feature["default"] == 0

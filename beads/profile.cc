@@ -64,12 +64,12 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 3, kNoField, false, false, false, false },  // Attack sensitivity.
   { 2, kNoField, false, false, false, false },  // Seed start.
   { 2, kNoField, false, false, false, false },  // Pitch law.
-  { 4, 14, false, false, false, false },  // Plaits bank.
+  { kNumPlaitsBanks, 14, false, false, false, false },  // Plaits bank.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
     __attribute__((section(".profile"), used, aligned(32))) = {
-  0x44, 0x5a, 0x50, 0x46, 0x02, 0x10, 0x60, 0x00,
+  0x44, 0x5a, 0x50, 0x46, 0x02, 0x11, 0x66, 0x00,
   0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02,
   0x00, 0x06, 0x00, 0x00, 0x03, 0x02, 0x00, 0x05,
@@ -83,8 +83,8 @@ const volatile uint8_t kProfileBlock[kProfileSize]
   0x0d, 0x02, 0x00, 0x00, 0x00, 0x01, 0x0e, 0x01,
   0x01, 0x00, 0x00, 0x02, 0x12, 0x02, 0x00, 0x0a,
   0x00, 0x00, 0x15, 0x02, 0x00, 0x0b, 0x00, 0x00,
-  0x52, 0x7a, 0x57, 0x14, 0xff, 0xff, 0xff, 0xff,
-  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0x1f, 0x02, 0x00, 0x00, 0x00, 0x00, 0x27, 0x5a,
+  0x14, 0x94, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -790,6 +790,8 @@ void Profile::Defaults() {
       AMOUNT_NONE, ACTION_NONE },  // Brightness.
     { FEATURE_SEED_LATCH, PROFILE_ADJUSTABLE, 0, 11,
       AMOUNT_NONE, ACTION_NONE },  // SEED latch.
+    { FEATURE_PLAITS_BANK, PROFILE_ADJUSTABLE, 0, 0,
+      AMOUNT_NONE, ACTION_NONE },  // Plaits bank.
   };
   for (size_t i = 0; i < sizeof(defaults) / sizeof(defaults[0]); ++i) {
     entries_[defaults[i].feature] = defaults[i];
@@ -854,6 +856,10 @@ bool Profile::Parse(const volatile uint8_t* b) {
         !d.page && d.field == kNoField) {
       return false;
     }
+    // The Plaits bank is always stepped on the panel; only its start varies.
+    if (id == FEATURE_PLAITS_BANK && e.state != PROFILE_ADJUSTABLE) {
+      return false;
+    }
     if ((e.page_slot && (!d.page || e.state != PROFILE_ADJUSTABLE)) ||
         (e.amount_slot && (!d.amount || e.state != PROFILE_ADJUSTABLE)) ||
         (e.action && (!d.action || e.state == PROFILE_OFF ||
@@ -874,6 +880,11 @@ bool Profile::Parse(const volatile uint8_t* b) {
   }
   if (!HasScale(entries_[FEATURE_PITCH].value)) {
     return false;
+  }
+  // Profiles from before the banks start on the first one.
+  if (!seen[FEATURE_PLAITS_BANK]) {
+    entries_[FEATURE_PLAITS_BANK].feature = FEATURE_PLAITS_BANK;
+    entries_[FEATURE_PLAITS_BANK].state = PROFILE_ADJUSTABLE;
   }
   return true;
 }

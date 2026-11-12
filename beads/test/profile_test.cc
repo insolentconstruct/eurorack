@@ -321,6 +321,19 @@ void TestBetaProfileDefinitions() {
     255, 255, 255, 255, 14
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
+  // The factory profile lists the Plaits bank; older profiles imply it.
+  Template(b);
+  Profile p;
+  CHECK(p.Init(b));
+  CHECK(p.adjustable(FEATURE_PLAITS_BANK));
+  CHECK(!p.entry(FEATURE_PLAITS_BANK).value);
+  CHECK(b[16 + 6 * (b[5] - 1)] == FEATURE_PLAITS_BANK);
+  --b[5];
+  b[6] -= 6;
+  Checksum(b);
+  CHECK(p.Init(b));
+  CHECK(p.adjustable(FEATURE_PLAITS_BANK));
+  CHECK(p.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
   for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
     CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);
     for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
@@ -334,10 +347,12 @@ void TestBetaProfileDefinitions() {
         b[19] = b[20] = b[21] = 0;
         Checksum(b);
         Profile p;
-        // Adjustable needs a page, or a saved field set by a gesture.
+        // Adjustable needs a page, or a saved field set by a gesture; the
+        // Plaits bank is only Adjustable.
         const bool valid = value < kFeatureDefinitions[id].values &&
             (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page ||
-                kFeatureDefinitions[id].field != kNoField);
+                kFeatureDefinitions[id].field != kNoField) &&
+            (id != FEATURE_PLAITS_BANK || state == PROFILE_ADJUSTABLE);
         CHECK(p.Init(b) == valid);
       }
     }

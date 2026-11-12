@@ -190,8 +190,8 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="695" y="557" font-size="15" font-weight="normal" fill="#222" text-anchor="start">to automatic.</text>
 <text x="695" y="580" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Monophonic grains: Hold [A], press SEED</text>
 <text x="695" y="601" font-size="15" font-weight="normal" fill="#222" text-anchor="start">[C]. Suits square and decay shapes.</text>
-<text x="695" y="624" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Buffer trim: Hold [A], press FREEZE [B]:</text>
-<text x="695" y="645" font-size="15" font-weight="normal" fill="#222" text-anchor="start">the next freeze keeps only what follows.</text>
+<text x="695" y="624" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Buffer trim: Hold [A], press FREEZE [B];</text>
+<text x="695" y="645" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Plaits play: next bank, green/red/yellow.</text>
 <text x="35" y="681" font-size="20" font-weight="bold" fill="#222" text-anchor="start">PAGE 2</text>
 <text x="135" y="681" font-size="15" font-weight="normal" fill="#222" text-anchor="start">F</text>
 <circle cx="156" cy="676" r="7" fill="white" stroke="#333" stroke-width="2"/>

@@ -975,18 +975,15 @@
       "issue": 190,
       "name": "Plaits bank",
       "values": [
-        "All 24 (stock)",
         "Green",
         "Red",
         "Yellow"
       ],
       "field": 14,
       "states": [
-        "Off",
-        "Fixed",
         "Adjustable"
       ],
-      "default_state": "Off",
+      "default_state": "Adjustable",
       "default": 0,
       "page_slots": [],
       "amount_slots": [],

@@ -1117,7 +1117,8 @@ void TestEngineStorage() {
   PersistentData calibration = { };
   stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
   CHECK(legacy.Init(&calibration, &legacy_state));
-  CHECK(legacy_state.padding[10] == 0x9f);
+  // Byte 20: the Plaits bank (green) and an unset field 15.
+  CHECK(legacy_state.padding[10] == 0x90);
   memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
   legacy.SaveState();
   CHECK(loaded.Init(false) && !loaded.spectral());
@@ -2391,11 +2392,11 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->Tick(40, true);
 }
 
-// Appends an entry with no control slots to a profile without scales.
-void AppendEntry(uint8_t* b, int id, int state, int value) {
+// Appends an idle timeout entry to a profile without scales.
+void AppendIdleTimeout(uint8_t* b, int state, int value) {
   CHECK(!b[13]);
   uint8_t* entry = b + 16 + 6 * b[5];
-  entry[0] = id;
+  entry[0] = FEATURE_IDLE_TIMEOUT;
   entry[1] = state;
   entry[2] = value;
   entry[3] = entry[4] = entry[5] = 0;
@@ -2407,10 +2408,6 @@ void AppendEntry(uint8_t* b, int id, int state, int value) {
   for (int i = 0; i < 4; ++i) {
     b[16 + bytes + i] = crc >> (8 * i);
   }
-}
-
-void AppendIdleTimeout(uint8_t* b, int state, int value) {
-  AppendEntry(b, FEATURE_IDLE_TIMEOUT, state, value);
 }
 
 void IdleProfile(uint8_t* b, int state, int value) {
@@ -3061,20 +3058,19 @@ void TestProfileActions() {
   CHECK(!off.ui.trim_flag_);
 }
 
-// The factory profile plus a Plaits bank entry.
-void PlaitsBankProfile(uint8_t* b, int state, int value) {
+// The factory profile with the Plaits bank starting elsewhere.
+void PlaitsBankProfile(uint8_t* b, int value) {
   for (size_t i = 0; i < kProfileSize; ++i) {
     b[i] = kProfileBlock[i];
   }
-  AppendEntry(b, FEATURE_PLAITS_BANK, state, value);
-}
-
-// Holds [A], presses FREEZE and releases both.
-void TrimGesture(Rig* r) {
-  r->Down(SWITCH_MEDIA);
-  r->Down(SWITCH_FREEZE);
-  r->Up(SWITCH_FREEZE);
-  r->Up(SWITCH_MEDIA);
+  uint8_t* entry = b + 16 + 6 * (b[5] - 1);
+  CHECK(entry[0] == FEATURE_PLAITS_BANK && entry[1] == PROFILE_ADJUSTABLE);
+  entry[2] = value;
+  const size_t size = 16 + 6 * b[5];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
 }
 
 // Plays the Plaits (or wavetable) synth with FREEZE latched.
@@ -3088,21 +3084,19 @@ void PlaySynth(Rig* r, bool synth_mode, bool plaits) {
   CHECK(r->ui.plaits_synth() == plaits);
 }
 
-// [A]+FREEZE steps an Adjustable Plaits bank in Plaits synth play (#190),
-// keeping FREEZE; everywhere else, and Off or Fixed, it trims as before.
+// [A]+FREEZE steps the Plaits bank in Plaits synth play (#190), keeping
+// FREEZE; granular, spectral and the wavetable synth keep buffer trim.
 void TestPlaitsBankGesture() {
   test_checker.Start("TestPlaitsBankGesture");
-  uint8_t b[kProfileSize];
   CHECK(kFeatureDefinitions[FEATURE_PLAITS_BANK].field == 14);
-  PlaitsBankProfile(b, PROFILE_ADJUSTABLE, 0);
   {
     Rig r(false);
-    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.profile().adjustable(FEATURE_PLAITS_BANK));
     CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
     PlaySynth(&r, true, true);
     const uint8_t media = r.settings.state().media;
-    // Green, red, yellow, then green again; each step is saved.
-    const uint8_t banks[] = { 1, 2, 3, 1, 2 };
+    // Red, yellow, then green, red and yellow again; each step is saved.
+    const uint8_t banks[] = { 1, 2, 0, 1, 2 };
     for (int i = 0; i < 5; ++i) {
       const uint32_t writes = test_writes;
       r.Down(SWITCH_MEDIA);
@@ -3111,23 +3105,33 @@ void TestPlaitsBankGesture() {
       CHECK(test_writes == writes + 1);
       CHECK(!r.ui.trim_flag_);
       CHECK(r.ui.freeze_button_state_);
-      const uint8_t* led = &r.ui.leds_.intensity_[LED_MEDIA_R];
-      CHECK((led[0] != 0) == (banks[i] != 1));
-      CHECK((led[1] != 0) == (banks[i] != 2));
-      CHECK(led[2] == 0);
+      const Leds::Color color = r.ui.plaits_bank_cues_[banks[i]].color;
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == color.r);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == color.g);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == color.b);
       r.Up(SWITCH_FREEZE);
       r.Up(SWITCH_MEDIA);
       CHECK(r.settings.state().media == media);
       CHECK(r.ui.freeze_button_state_);
       Settings loaded;
-      CHECK(loaded.Init(false, b));
+      CHECK(loaded.Init(false));
       CHECK(loaded.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
       // Field 14 is byte 20's low nibble; field 15 stays unset.
       CHECK(loaded.stored_state_.engine == (0x90 | banks[i]));
     }
-    // The cue lasts half a second, then [A] shows the quality again.
+    // Each bank has its own colour; the cue lasts half a second.
+    const Ui::BankCue* cues = r.ui.plaits_bank_cues_;
+    for (int i = 0; i < kNumPlaitsBanks; ++i) {
+      CHECK(cues[i].color.r || cues[i].color.g || cues[i].color.b);
+      for (int j = 0; j < i; ++j) {
+        CHECK(cues[i].color.r != cues[j].color.r ||
+            cues[i].color.g != cues[j].color.g ||
+            cues[i].color.b != cues[j].color.b ||
+            cues[i].pulses != cues[j].pulses);
+      }
+    }
     r.Tick(400, true);
-    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 0);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
     r.Tick(200, true);
     const Leds::Color quality = r.ui.media_palette_[media];
     CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
@@ -3145,26 +3149,62 @@ void TestPlaitsBankGesture() {
     CHECK(r.settings.output_limiter_mode() != OUTPUT_LIMITER_STOCK);
     CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
   }
-  // Factory Off, the wavetable synth, Fixed, and granular: buffer trim.
-  const uint8_t states[] = { 0, PROFILE_ADJUSTABLE, PROFILE_FIXED,
-      PROFILE_ADJUSTABLE };
-  const uint8_t starts[] = { 0, 0, 2, 3 };
-  for (int c = 0; c < 4; ++c) {
+  // A profile chooses the bank on a blank sector; a saved bank wins.
+  {
+    uint8_t b[kProfileSize];
+    PlaitsBankProfile(b, 2);
     Rig r(false);
-    if (states[c]) {
-      PlaitsBankProfile(b, states[c], starts[c]);
-      ApplyCustomProfile(&r, b);
-    }
-    const uint8_t bank = starts[c];
-    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == bank);
-    PlaySynth(&r, c != 3, c != 1);
+    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+    // A blank sector reports a new module, as the factory test expects.
+    memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
+    CHECK(!r.settings.Init(false, b));
+    r.ui.Init(&r.settings, &r.gain, &r.calibration, &r.backup);
+    r.ui.LoadOptions();
+    r.Tick(40, true);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+    PlaySynth(&r, true, true);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+  }
+  // Granular and the wavetable synth: buffer trim.
+  for (int c = 0; c < 2; ++c) {
+    Rig r(false);
+    PlaySynth(&r, c == 1, c == 0);
     r.Down(SWITCH_MEDIA);
     r.Down(SWITCH_FREEZE);
     CHECK(r.ui.trim_flag_);
     CHECK(!r.ui.freeze_button_state_);
-    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == bank);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
     r.Up(SWITCH_FREEZE);
     r.Up(SWITCH_MEDIA);
+  }
+  // Synth start placed on [A]+FREEZE keeps it, to stop the synth.
+  {
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_SYNTH_START, 0, 0, ACTION_FREEZE);
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.settings.set_self_play_on_request(true);
+    PlaySynth(&r, true, true);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.self_play_requested());
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+  }
+  // Monophonic grains on [A]+FREEZE give way in Plaits play only.
+  for (int plaits = 0; plaits < 2; ++plaits) {
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_MONOPHONIC, 0, 0, ACTION_FREEZE);
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.profile().adjustable(FEATURE_PLAITS_BANK));
+    PlaySynth(&r, true, plaits);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(bool(r.settings.state().monophonic_mode) == !plaits);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == plaits);
   }
 }
 

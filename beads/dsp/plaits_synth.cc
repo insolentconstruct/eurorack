@@ -43,6 +43,9 @@ const float kModelHysteresis = 0.048f;
 // Larger than the hysteresis, so a bank's end models stay in the bank.
 const float kBankInset = 0.06f;
 
+// First model of each bank, in Plaits' order: green, red, yellow.
+const uint8_t kPlaitsBankFirstModel[kNumPlaitsBanks] = { 8, 16, 0 };
+
 void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   clouds_style_ = false;
   output_limiter_mode_ = OUTPUT_LIMITER_STOCK;
@@ -57,7 +60,8 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   timbre_modulation_.Init(1.01f / sr);
   morph_modulation_.Init(1.01f / sr);
   model_quantizer_.Init(kModelHysteresis);
-  bank_ = 0;
+  bank_ = -1;
+  set_bank(0);
 
   stereo_width_ = 0.0f;
   width_enabled_ = false;
@@ -84,13 +88,8 @@ void PlaitsSynth::set_bank(int bank) {
     return;
   }
   bank_ = bank;
-  if (bank) {
-    model_quantizer_.Configure(
-        bank * kPlaitsBankSize % kNumPlaitsModels, kPlaitsBankSize,
-        kBankInset);
-  } else {
-    model_quantizer_.Configure(0, kNumPlaitsModels, 0.0f);
-  }
+  model_quantizer_.Configure(
+      kPlaitsBankFirstModel[bank], kPlaitsBankSize, kBankInset);
 }
 
 void PlaitsSynth::StartNote(const Parameters& p, int model) {

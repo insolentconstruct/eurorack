@@ -2005,12 +2005,13 @@ void TestPitchLawProfile() {
   CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
 }
 
-// Installs an Adjustable Plaits bank profile.
+// Installs the factory profile with the Plaits bank starting elsewhere.
 void FlashPlaitsBankProfile(uint8_t bank) {
-  const uint8_t pair[] = { FEATURE_PLAITS_BANK, bank };
   uint8_t block[kProfileSize];
-  BuildProfile(block, pair, 1);
-  block[16 + 6 * (block[5] - 1) + 1] = PROFILE_ADJUSTABLE;
+  BuildProfile(block, NULL, 0);
+  uint8_t* entry = block + 16 + 6 * (block[5] - 1);
+  CHECK(entry[0] == FEATURE_PLAITS_BANK);
+  entry[2] = bank;
   const size_t bytes = 6 * block[5];
   const uint32_t crc = Profile::Crc32(block, 16 + bytes);
   for (size_t i = 0; i < 4; ++i) {
@@ -2035,8 +2036,9 @@ int PlaitsModel(Rig* r, uint16_t feedback) {
   return plaits_synth.patch_[plaits_synth.active_voice_].model;
 }
 
-// The Plaits bank (#190): [A]+FREEZE steps it in Plaits synth play, keeps
-// FREEZE and survives power cycles; Off keeps all 24 models on FEEDBACK.
+// Plaits banks (#190): FEEDBACK plays the green bank from a blank sector;
+// [A]+FREEZE steps red, yellow, green, keeps FREEZE and survives power
+// cycles; a profile chooses the starting bank.
 void TestPlaitsBankProfile() {
   test_checker.Start("TestPlaitsBankProfile");
   Rig r(false, true);
@@ -2045,16 +2047,14 @@ void TestPlaitsBankProfile() {
   settings.set_plaits_synth(true);
   settings.SaveState();
   StartPlaits(&r);
-  CHECK(PlaitsModel(&r, 65535) == 23);
-  FlashPlaitsBankProfile(0);
-  StartPlaits(&r);
-  CHECK(PlaitsModel(&r, 65535) == 23);
+  CHECK(PlaitsModel(&r, 65535) == 15);
+  CHECK(PlaitsModel(&r, 0) == 8);
   test_down[SWITCH_FREEZE] = true;
   r.Tick(10, true);
   test_down[SWITCH_FREEZE] = false;
   r.Tick(10, true);
   CHECK(ui.freeze_button_state());
-  const int last[] = { 15, 23, 7, 15 };
+  const int last[] = { 23, 7, 15, 23 };
   for (int step = 0; step < 4; ++step) {
     test_down[SWITCH_MEDIA] = true;
     r.Tick(10, true);
@@ -2062,21 +2062,25 @@ void TestPlaitsBankProfile() {
     r.Tick(10, true);
     test_down[SWITCH_FREEZE] = test_down[SWITCH_MEDIA] = false;
     r.Tick(10, true);
-    CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == step % 3 + 1);
+    CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == (step + 1) % 3);
     CHECK(ui.freeze_button_state() && !ui.trim_flag());
     CHECK(PlaitsModel(&r, 65535) == last[step]);
     CHECK(PlaitsModel(&r, 0) == last[step] - 7);
   }
-  // Saved: the bank returns after a power cycle with the same profile.
+  // Saved: red returns after a power cycle.
   StartPlaits(&r);
   CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 1);
-  CHECK(PlaitsModel(&r, 65535) == 15);
-  // The factory profile omits the entry: all 24 models again.
-  FlashProfile(factory_profile);
-  StartPlaits(&r);
-  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
   CHECK(PlaitsModel(&r, 65535) == 23);
-  CHECK(PlaitsModel(&r, 0) == 0);
+  // A profile's starting bank applies to a blank or stock sector.
+  FlashPlaitsBankProfile(2);
+  Rig blank(false, true);
+  blank.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  settings.set_plaits_synth(true);
+  settings.SaveState();
+  StartPlaits(&blank);
+  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+  CHECK(PlaitsModel(&blank, 65535) == 7);
+  FlashProfile(factory_profile);
 }
 
 int main() {

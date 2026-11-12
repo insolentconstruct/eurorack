@@ -49,8 +49,20 @@ using namespace stmlib;
 // Keep the width meter below set_meter's wrap at 1.0.
 const float kWidthMeterSpan = 0.749f;
 const uint32_t kStorageStatusTime = 3000;
-const uint8_t kNumPlaitsBanks = 3;
 const uint32_t kPlaitsBankCueTime = 500;
+
+// Marbles' 4:1 slow/fast blink ratio.
+static bool PulseLit(PulsePattern pulses, uint32_t elapsed) {
+  const uint32_t phase = elapsed % kOptionsPulsePeriod;
+  return pulses == PULSE_STEADY ||
+      (pulses == PULSE_SLOW &&
+          (elapsed % kOptionsSlowPeriod) < kOptionsSlowPeriod / 2) ||
+      (pulses == PULSE_FAST &&
+          (elapsed % kOptionsFastPeriod) < kOptionsFastPeriod / 2) ||
+      (pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
+          (phase >= kOptionsFastPeriod &&
+          phase < kOptionsFastPeriod * 3 / 2)));
+}
 
 /* static */
 const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
@@ -302,10 +314,10 @@ const Leds::Color Ui::media_palette_[4] = {
 };
 
 /* static */
-const Leds::Color Ui::plaits_bank_palette_[3] = {
-  { 0, 255, 0 },
-  { 255, 0, 0 },
-  { 255, 255, 0 },
+const Ui::BankCue Ui::plaits_bank_cues_[kNumPlaitsBanks] = {
+  { { 0, 255, 0 }, PULSE_STEADY },
+  { { 255, 0, 0 }, PULSE_STEADY },
+  { { 255, 255, 0 }, PULSE_STEADY },
 };
 
 void Ui::UpdateLeds() {
@@ -402,10 +414,12 @@ void Ui::UpdateLeds() {
             };
             leds_.set_media(cue);
           }
-          if (bank_cue_time_ &&
-              uint32_t(system_clock.milliseconds() - bank_cue_time_) <
-                  kPlaitsBankCueTime) {
-            leds_.set_media(plaits_bank_palette_[bank_cue_]);
+          const uint32_t bank_elapsed =
+              system_clock.milliseconds() - bank_cue_time_;
+          if (bank_cue_time_ && bank_elapsed < kPlaitsBankCueTime) {
+            const BankCue& cue = plaits_bank_cues_[bank_cue_];
+            leds_.set_media(
+                cue.color, PulseLit(cue.pulses, bank_elapsed) ? 1.0f : 0.0f);
           }
         }
         
@@ -496,19 +510,9 @@ void Ui::UpdateLeds() {
     }
     const OptionValue& indication = options_.indication();
     const Leds::Color color = indication.color;
-    // Marbles' 4:1 slow/fast blink ratio.
     const uint32_t now = system_clock.milliseconds() -
         options_.indication_time();
-    const uint32_t phase = now % kOptionsPulsePeriod;
-    const bool lit = indication.pulses == PULSE_STEADY ||
-        (indication.pulses == PULSE_SLOW &&
-            (now % kOptionsSlowPeriod) < kOptionsSlowPeriod / 2) ||
-        (indication.pulses == PULSE_FAST &&
-            (now % kOptionsFastPeriod) < kOptionsFastPeriod / 2) ||
-        (indication.pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
-            (phase >= kOptionsFastPeriod &&
-            phase < kOptionsFastPeriod * 3 / 2)));
-    leds_.set_media(color, lit ? 1.0f : 0.0f);
+    leds_.set_media(color, PulseLit(indication.pulses, now) ? 1.0f : 0.0f);
   }
 
   if (options_flash_time_ &&
@@ -846,8 +850,24 @@ void Ui::DoEvents() {
   }
 }
 
+void Ui::StepPlaitsBank() {
+  const uint8_t bank =
+      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks;
+  settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
+  settings_->SaveState();
+  bank_cue_ = bank;
+  bank_cue_time_ = system_clock.milliseconds();
+}
+
 bool Ui::DoAction(uint8_t slot) {
   const ProfileFeature feature = settings_->profile().Action(slot);
+  // Plaits plays nothing to trim: [A]+FREEZE steps its bank, keeping FREEZE,
+  // unless a profile puts Synth start there.
+  if (slot == ACTION_FREEZE && synth_mode_ && plaits_synth_ &&
+      feature != FEATURE_SYNTH_START) {
+    StepPlaitsBank();
+    return true;
+  }
   if (feature == FEATURE_MONOPHONIC) {
     State* state = settings_->mutable_state();
     if (settings_->profile().adjustable(feature)) {
@@ -856,17 +876,6 @@ bool Ui::DoAction(uint8_t slot) {
     }
     return true;
   } else if (feature == FEATURE_TRIM) {
-    if (synth_mode_ && plaits_synth_ &&
-        settings_->profile().adjustable(FEATURE_PLAITS_BANK)) {
-      // Plaits plays nothing to trim: step the bank and keep FREEZE.
-      const uint8_t bank = settings_->FeatureValue(FEATURE_PLAITS_BANK) %
-          kNumPlaitsBanks + 1;
-      settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
-      settings_->SaveState();
-      bank_cue_ = bank - 1;
-      bank_cue_time_ = system_clock.milliseconds();
-      return true;
-    }
     trim_flag_ = true;
     freeze_button_state_ = false;
     return true;

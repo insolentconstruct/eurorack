@@ -185,6 +185,7 @@ class Ui {
   
  private:
   void FlashOptionsPage();
+  void StepPlaitsBank();
   // Returns true when the action is handled.
   bool DoAction(uint8_t slot);
 
@@ -260,7 +261,12 @@ class Ui {
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
-  static const Leds::Color plaits_bank_palette_[3];
+  // A bank's colour and blink pattern, shown on [A] when the step lands.
+  struct BankCue {
+    Leds::Color color;
+    PulsePattern pulses;
+  };
+  static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

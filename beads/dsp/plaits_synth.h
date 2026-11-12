@@ -35,6 +35,7 @@
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/dsp/fx/reverb.h"
+#include "beads/profile.h"
 
 namespace beads {
 
@@ -47,11 +48,11 @@ const float kPlaitsRootNote = 48.0f - 0.0429f;
 // Engine RAM for all voices, lent by the caller while the synth plays.
 const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize;
 
-// Plaits' banks of eight models: 1 green, 2 red, 3 yellow; 0 plays all 24.
+// FEEDBACK selects one of the eight models of the current bank.
 const int kPlaitsBankSize = 8;
 
-// stmlib's HysteresisQuantizer2 over a range of models that the main loop
-// can move; a bank is inset so that hysteresis never reaches its neighbour.
+// stmlib's HysteresisQuantizer2 over a bank of models that the main loop
+// can move; the range is inset so hysteresis never reaches the next bank.
 class ModelQuantizer {
  public:
   ModelQuantizer() { }
@@ -60,7 +61,6 @@ class ModelQuantizer {
   void Init(float hysteresis) {
     hysteresis_ = hysteresis;
     quantized_value_ = 0;
-    Configure(0, kNumPlaitsModels, 0.0f);
   }
 
   void Configure(int first, int count, float inset) {
