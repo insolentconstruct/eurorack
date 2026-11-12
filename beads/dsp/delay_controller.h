@@ -214,7 +214,7 @@ class DelayController {
       timing_gain_ = TIMING_GAIN_STEPS + 1;
     }
   }
-  
+
 #ifdef TEST
   inline const DelayClock& test_clock() const { return clock_; }
   inline float test_density() const { return density_; }

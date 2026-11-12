@@ -1765,6 +1765,7 @@ void TestSeedLatchPatched() {
 void TestSeedLatchFadeProfile() {
   test_checker.Start("TestSeedLatchFadeProfile");
   Rig r(false, false);
+  r.Settle();
   CHECK(settings.profile().entry(FEATURE_SEED_LATCH_FADE).state ==
       PROFILE_OFF);
   const DelayController& delay = processor.delay_controller_;
@@ -1772,15 +1773,16 @@ void TestSeedLatchFadeProfile() {
   MonitorStateChange();
   CHECK(!delay.test_timing_fade());
   FixedFeatureProfile(FEATURE_SEED_LATCH_FADE);
-  MonitorStateChange();
+  r.Settle();
   CHECK(delay.test_timing_fade());
   // A quality change turns it off until the next main loop pass.
   processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
   CHECK(!delay.test_timing_fade());
-  MonitorStateChange();
+  r.Settle();
   CHECK(delay.test_timing_fade());
   // The factory profile omits the entry, so a reboot returns to stock.
   r.Reboot(false);
+  r.Settle();
   processor.set_seed_latch_fade(true);
   MonitorStateChange();
   CHECK(!delay.test_timing_fade());
