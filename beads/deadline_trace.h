@@ -505,6 +505,11 @@ inline void Exit() {
   if (!(r.flags & FLAG_NO_STORE) && r.t_store_end - r.t_entry >= kLapCycles) {
     r.flags |= FLAG_LAP;
   }
+  // RX a full half past this half's event at entry: the next event is due.
+  const unsigned n = live.block_size * 4;
+  if (n && (2 * n - r.rx_ndtr_entry - n / 2 * (1 - (r.half & 1))) % n >= n / 2) {
+    r.flags |= FLAG_COALESCED;
+  }
   r.sequence = live.total;
 
   Totals& t = live.totals;
