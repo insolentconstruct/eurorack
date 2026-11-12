@@ -863,6 +863,27 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": false
+    },
+    {
+      "id": 26,
+      "issue": 183,
+      "name": "Delay SEED latch fade",
+      "values": [
+        "Switch at once (stock)",
+        "Fade"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."

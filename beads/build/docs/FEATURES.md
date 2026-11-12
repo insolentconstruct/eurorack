@@ -13,7 +13,7 @@ Same-rate mono/stereo changes and synth start/stop at 48 kHz are pop-free. Rate 
 
 SEED starts latched, as in stock. LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
 
-Delay-mode SEED latching can pop, as in stock; its fix (#183) is deferred.
+Delay-mode SEED latching can pop, as in stock. A Hygrostat profile can fade it instead ([Delay SEED latch fade](#delay-seed-latch-fade), #183).
 
 ## Fixes
 
@@ -107,6 +107,7 @@ not-set values use the profile default.
 | 23 | TIME modulation (#141) | 12 (byte 19 low) |
 | 24 | Synth reverb tail (#192) | No saved value |
 | 25 | Options page idle timeout (#202) | No saved value |
+| 26 | Delay SEED latch fade (#183) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -395,3 +396,16 @@ Closing by timeout is the same as holding [M]: changes are kept, saved once
 if still unsaved, and nothing is written when nothing changed. This is a
 firmware-profile choice, with no panel slot and no saved-state nibble; it
 runs only while the pages are open.
+
+### Delay SEED latch fade
+
+Hygrostat feature ID 26 chooses Switch at once (stock) / Fade. Off or an
+omitted entry keeps the stock delay: latching or unlatching SEED in delay mode
+(SIZE fully clockwise, SEED unpatched or the free-running latch) switches
+between tapped and knob timing in one sample, which can pop. Fixed Fade dips
+the delay taps for 10 ms, switches timing at silence and fades back in over
+10 ms; knob timing starts at its target, so the short chirp is gone too.
+Patching SEED while latched fades the same way. A clocked latch never fades.
+This is a firmware-profile choice, with no panel slot or saved-state nibble.
+The choice is made once per block outside the sample loop; Off runs the stock
+delay code.
