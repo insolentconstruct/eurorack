@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 20 host programs, 292 named test sections, 2,468
-assertion sites and 453 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 20 host programs, 292 named test sections, 2,472
+assertion sites and 457 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On the release source
 `6729648`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070756)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070775)
@@ -10,7 +10,7 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased application `d2968836…` and WAV `e80b78cc…`.
+This source pins its own unreleased application `57856bc2…` and WAV `9539970f…`.
 The release documentation and generated guides pass their checker. Module
 results for the release image are under [Beta 2](#beta-2).
 
@@ -52,7 +52,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | `beads/test/delay_mode.mk` | Delay mode through the processor with sanitizers: continuous playback with SIZE fully clockwise, the fade when switching modes, the pitch shifter and its bypass at noon, the delay bandwidth control and SIZE CV |
 | `beads/test/attack.mk` | Attacks: hit detection on the input and its three sensitivities, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
-| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, the eight-model banks on FEEDBACK (detents, both ends after a bank change, notes keeping their model), FREEZE sustain, RAM bounds |
+| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent after a bank change, notes keeping their model), FREEZE sustain, RAM bounds |
 | `beads/test/profile.mk` | Profile validation, feature modes/control allocation, page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections |
 | `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step |
 
@@ -69,16 +69,16 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | gain | 6 | 29 |
 | granular | 25 | 118 |
 | mix | 7 | 28 |
-| options | 69 | 785 |
+| options | 69 | 787 |
 | pitch_quantizer | 6 | 52 |
-| plaits_synth | 4 | 34 |
+| plaits_synth | 4 | 36 |
 | processor | 11 | 45 |
 | profile | 6 | 108 |
 | spectral | 7 | 34 |
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **292** | **2,468** |
+| **Total** | **292** | **2,472** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked release CI predates the codec sequencing checks.
 
@@ -365,6 +365,22 @@ bootloader error. About 18 additional automated hours, 31 total, counted as abov
 
 The factory calibration was restored by debug probe after each saved run. Before calibrating, the Module Tester's 1 V and 3 V read about 2.5 mV low and Scales' 2–4 mV high, against the factory calibration.
 
+## Beta 3 host measurements
+
+- Attack sensitivity, synthetic drums: High caught ghost notes 6 dB below the
+  main hit where Normal caught about half; Low kept every main hit and ignored
+  ghosts 3 dB down. Noise jumping by up to 6 dB every 10 ms: High marked 4
+  false attacks in 4 s, Normal none. Steady and tremolo tones: none at any
+  setting.
+- Delay SEED latch fade: the choice is made once per block outside the sample
+  loop; Off runs the stock delay code with no extra instructions per block
+  (GCC 9 disassembly).
+- PITCH knob: read once per audio block; Notches runs the stock law plus one
+  comparison.
+- Plaits banks: FEEDBACK uses stmlib's hysteresis quantizer over eight equal
+  detents. Against the first Beta 3 build's inset range, detent edges move by
+  at most 0.58% of the knob's travel, and a bank change keeps the detent.
+
 ## Not tested
 
 Everything above used one module. Also done on it for release candidate 3 (2026-10-17): trim, freeze, power cycle and stock downgrade with a trimmed save. Options page LED colours were checked by eye for all pitch scales, the limiter and a few other settings, not yet for every value.
@@ -373,6 +389,7 @@ Everything above used one module. Also done on it for release candidate 3 (2026-
 - Long sessions and temperature.
 - Power cuts while the settings memory is rewritten. About once every 4,000 settings saves, Mutable Instruments' storage code erases the settings sector and rewrites calibration and settings. A power cut during that rewrite loses the settings being saved; the calibration copy keeps the calibration. The host tests check this window and that the full rewrite keeps everything.
 - The module's noise floor (hiss, #59), planned for a later release.
+- Attack sensitivity on a module.
 - Listening tests of the limiter modes. Their code is unchanged since the limiter's own measurements.
 - The full bench suite was not rerun on 2026.10.16.
 

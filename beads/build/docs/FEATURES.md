@@ -388,33 +388,23 @@ handling are independent of this choice.
 ### Options page idle timeout
 
 Hygrostat feature ID 25 chooses Off / 5 s / 10 s / 20 s / 30 s. Off or an
-omitted entry keeps the pages open until you close them, as in earlier
-releases. A Fixed time closes the pages after that long without interaction,
-counted from releasing the opening hold. Pressing a button, tapping [M] to
-change page and turning a page knob restart the count; knob jitter, CV and
-the stored-value preview do not. As with the Clouds blend knob, a knob
-counts as turned once it is more than 2% of its travel from where it was
-last counted, however slowly it got there. Unused knobs on a custom page do
-not count. The timeout never closes the pages while a button is held, and
-holding [M] or pressing another button still closes them at any time.
-Closing by timeout is the same as holding [M]: changes are kept, saved once
-if still unsaved, and nothing is written when nothing changed. This is a
-firmware-profile choice, with no panel slot and no saved-state nibble; it
-runs only while the pages are open.
-
+omitted entry keeps the pages open until you close them. A Fixed time closes
+the pages after that long without a button press, page change or knob turn,
+counted from releasing the opening hold, and never while a button is held. A
+knob counts as turned once it is more than 2% of its travel from where it was
+last counted, however slowly; jitter, CV and the stored-value preview don't
+count. Closing by timeout is the same as holding [M]: changes are kept and
+saved once if unsaved. Firmware-profile choice, with no panel slot or
+saved-state nibble.
 ### Delay SEED latch fade
 
-Hygrostat feature ID 26 chooses Switch at once (stock) / Fade. Off or an
-omitted entry keeps the stock delay: latching or unlatching SEED in delay mode
-(SIZE fully clockwise, SEED unpatched or the free-running latch) switches
-between tapped and knob timing in one sample, which can pop. Fixed Fade dips
-the delay taps for 10 ms, switches timing at silence and fades back in over
-10 ms; knob timing starts at its target, so the short chirp is gone too.
-Patching SEED while latched fades the same way. A clocked latch never fades.
-This is a firmware-profile choice, with no panel slot or saved-state nibble.
-The choice is made once per block outside the sample loop; Off runs the stock
-delay code, with no extra instructions per block.
-
+Hygrostat feature ID 26 chooses Switch at once (stock) / Fade. In delay mode
+(SIZE fully clockwise), stock latching or unlatching SEED switches between
+tapped and knob timing in one sample, which can pop. Fade dips the delay taps
+for 10 ms, switches timing at silence and fades back in over 10 ms, without
+the short chirp. Patching SEED while latched fades the same way; a clocked
+latch never fades. Firmware-profile choice, with no panel slot or saved-state
+nibble.
 ### Input gain at power-on
 
 Hygrostat feature ID 27 chooses Automatic (stock) / Manual (#19). Off or an
@@ -434,15 +424,11 @@ Hygrostat feature ID 28 chooses Normal (default) / Low / High for Attacks
 (#58, #47). A block is an attack when its peak exceeds the threshold times
 the larger of a fast reference (instant attack, 50 ms release) and half the
 input's slow peak (0.5 s release). Normal keeps Beta 2's 1.5 (+3.5 dB). Low
-is 2.0 (+6 dB): from 2 the slow-peak term alone asks for a hit louder than
-the recent peak, so softer notes after a hit are ignored. High is 1.3
-(+2.3 dB). On host renders of synthetic drums, High caught ghost notes 6 dB
-below the main hit where Normal caught about half; Low kept every main hit and ignored ghosts 3 dB down. On
-noise whose level jumped by up to 6 dB every 10 ms, High marked 4 false
-attacks in 4 s, Normal none; steady and tremolo tones marked none at any
-setting. Not yet checked on a module. The threshold is chosen at power-on and
-passed with the Attacks mode; Snap and Snap and trigger share it. No panel
-slot or saved-state nibble.
+is 2.0 (+6 dB) and ignores softer notes after a hit. High is 1.3 (+2.3 dB):
+it catches quieter ghost notes, and more false attacks on noisy input. The
+threshold is chosen at power-on; Snap and Snap and trigger share it. No panel
+slot or saved-state nibble. Host measurements are in
+[Testing](TESTING.md#beta-3-host-measurements).
 
 ### SEED at power-on
 
@@ -462,9 +448,7 @@ major third, fifth, one and two octaves) but moves linearly between them,
 without the flat zone around each. Calibrated PITCH CV and the PITCH
 attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
 Smooth. Grains, delay pitch and both synths follow the knob law. The law is
-chosen at power-on, before audio starts; the knob is read once per audio
-block, and Notches runs the stock law plus one comparison. No panel slot or
-saved-state nibble.
+chosen at power-on. No panel slot or saved-state nibble.
 
 ### Plaits bank
 
@@ -488,7 +472,5 @@ meaning everywhere else; only Synth start, which can stop the synth, keeps
 Hygrostat feature ID 31 chooses the starting bank (Green / Red / Yellow,
 default Green) and is Adjustable only. Profiles without the entry start on
 green. A blank or stock settings sector, a SEED power-on reset or a saved
-value the firmware doesn't know starts on the profile's bank. Banks are
-rows in two tables (first model in `dsp/plaits_synth.cc`, colour and blink
-pattern in `ui.cc`), sized by `kNumPlaitsBanks`; more banks, such as Plaits
-Palette models (#194), add a row to each and grow the ID's value count.
+value the firmware doesn't know starts on the profile's bank. More banks,
+such as Plaits Palette models (#194), would add values to this ID.
