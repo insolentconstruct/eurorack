@@ -58,6 +58,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Pitch notch.
   { 2, 12, true, false, false, false },  // Time scan.
   { 2, kNoField, false, false, false, false },  // Synth reverb tail.
+  { 5, kNoField, false, false, false, false },  // Idle timeout.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

@@ -85,6 +85,10 @@ const OptionValue kOptionValues[] = {
   { OPTION_TIME_SCAN, 1, { 255, 255, 0 }, PULSE_STEADY },
 };
 
+const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts] = {
+  0, 15000, 30000, 60000, 120000
+};
+
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
   bool enabled = current != 0;
   if (pot < kWidthStockThreshold) {
@@ -112,6 +116,8 @@ void Options::Init() {
   selected_ = OPTION_PITCH;
   preview_knob_ = -1;
   preview_time_ = indication_time_ = 0;
+  idle_timeout_ = idle_time_ = idle_anchor_time_ = 0;
+  idle_anchor_ = 0;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
   spectral_preview_ = manual_start_preview_ = intervals_preview_ = false;
@@ -125,7 +131,7 @@ void Options::Init() {
   seed_taps_ = 0;
   seed_action_time_ = 0;
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    origin_[i] = previous_[i] = 0.0f;
+    idle_pot_[0][i] = idle_pot_[1][i] = origin_[i] = previous_[i] = 0.0f;
     qualified_[i] = false;
     zone_[i] = 0;
   }
@@ -133,6 +139,9 @@ void Options::Init() {
 
 void Options::Configure(const Profile& profile) {
   profile_ = &profile;
+  const ProfileEntry& idle = profile.entry(FEATURE_IDLE_TIMEOUT);
+  idle_timeout_ = idle.state == PROFILE_FIXED
+      ? kOptionsIdleTimeouts[idle.value] : 0;
   any_page_ = false;
   for (int i = 0; i < OPTION_LAST; ++i) {
     profile_preview_[i] = 0;
@@ -181,9 +190,41 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       if (all_up) {
         stage_ = STAGE_EDITING;
         holding_ = false;
+        idle_time_ = now;
         StartPreview(now, 0);
       }
       return;
+    }
+
+    // Held buttons and deliberate knob turns restart the idle timeout.
+    if (idle_timeout_) {
+      if (!all_up) {
+        idle_time_ = now;
+      }
+      for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+        if (pages_[page_].knobs[i] != OPTION_RESERVED &&
+            (fabsf(pots[i] - idle_pot_[0][i]) > kOptionsIdleMovement ||
+             fabsf(pots[i] - idle_pot_[1][i]) > kOptionsIdleMovement)) {
+          idle_time_ = now;
+        }
+      }
+      // Two staggered anchors catch any quick turn but never slow drift.
+      if (idle_time_ == now ||
+          uint32_t(now - idle_anchor_time_) >= kOptionsIdleWindow) {
+        idle_anchor_time_ = now;
+        idle_anchor_ = 1 - idle_anchor_;
+        for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+          idle_pot_[idle_anchor_][i] = pots[i];
+          if (idle_time_ == now) {
+            idle_pot_[1 - idle_anchor_][i] = pots[i];
+          }
+        }
+      }
+      if (uint32_t(now - idle_time_) >= idle_timeout_) {
+        Finish();
+        RequestCommit(now);
+        return;
+      }
     }
 
     if (just_pressed) {
@@ -507,7 +548,7 @@ void Options::RequestCommit(uint32_t now) {
 
 void Options::ResetPots(const float* pots) {
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    origin_[i] = previous_[i] = pots[i];
+    idle_pot_[0][i] = idle_pot_[1][i] = origin_[i] = previous_[i] = pots[i];
     qualified_[i] = false;
   }
 

@@ -2391,6 +2391,224 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->Tick(40, true);
 }
 
+// Appends an idle timeout entry to a profile without scales.
+void AppendIdleTimeout(uint8_t* b, int state, int value) {
+  CHECK(!b[13]);
+  uint8_t* entry = b + 16 + 6 * b[5];
+  entry[0] = FEATURE_IDLE_TIMEOUT;
+  entry[1] = state;
+  entry[2] = value;
+  entry[3] = entry[4] = entry[5] = 0;
+  ++b[5];
+  const size_t bytes = 6 * b[5];
+  b[6] = bytes & 255;
+  b[7] = bytes >> 8;
+  const uint32_t crc = Profile::Crc32(b, 16 + bytes);
+  for (int i = 0; i < 4; ++i) {
+    b[16 + bytes + i] = crc >> (8 * i);
+  }
+}
+
+void IdleProfile(uint8_t* b, int state, int value) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  AppendIdleTimeout(b, state, value);
+}
+
+bool Idle(Rig* r, int ticks) {
+  r->Tick(ticks, true);
+  return r->ui.options_.stage() == Options::STAGE_EDITING;
+}
+
+void TestOptionsIdleTimeout() {
+  test_checker.Start("TestOptionsIdleTimeout");
+  CHECK(kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].values == kNumIdleTimeouts);
+  CHECK(kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].field == kNoField);
+  CHECK(!kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].page &&
+      !kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].amount &&
+      !kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].action);
+  uint8_t b[kProfileSize];
+  for (int state = PROFILE_OFF; state <= PROFILE_FIXED; ++state) {
+    for (int value = 0; value < kNumIdleTimeouts; ++value) {
+      Rig r(false);
+      IdleProfile(b, state, value);
+      ApplyCustomProfile(&r, b);
+      CHECK(r.ui.options_.idle_timeout_ ==
+          (state == PROFILE_FIXED ? kOptionsIdleTimeouts[value] : 0));
+    }
+  }
+  // Absent, Off and Fixed Off keep the page open indefinitely.
+  for (int kind = 0; kind < 3; ++kind) {
+    Rig r(false);
+    if (kind) {
+      IdleProfile(b, kind == 1 ? PROFILE_OFF : PROFILE_FIXED,
+          kind == 1 ? kNumIdleTimeouts - 1 : 0);
+      ApplyCustomProfile(&r, b);
+    }
+    r.Enter();
+    CHECK(Idle(&r, 200000));
+  }
+  IdleProfile(b, PROFILE_FIXED, 1);
+  // Counts from the entry release; previews and unchanged exit write nothing.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    const uint32_t writes = test_writes;
+    r.Enter();
+    CHECK(Idle(&r, 3000));
+    CHECK(r.ui.options_.preview_knob() == 1);
+    CHECK(Idle(&r, 11980));
+    CHECK(!Idle(&r, 20));
+    CHECK(r.ui.options_flash_time_);
+    r.Tick(10, true);
+    CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+    CHECK(test_writes == writes);
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      CHECK(r.ui.assignable_cv_pot_[i].state_ != POT_STATE_LOCKING);
+    }
+    // Reopen restarts the timer; the next button press is a normal event.
+    r.Tick(100, true);
+    r.Enter();
+    CHECK(Idle(&r, 14900));
+    CHECK(!Idle(&r, 120));
+    CHECK(test_writes == writes);
+    const bool freeze = r.ui.freeze_button_state_;
+    r.Down(SWITCH_FREEZE);
+    r.Up(SWITCH_FREEZE);
+    CHECK(r.ui.freeze_button_state_ != freeze);
+  }
+  // Page taps and deliberate knob turns before pickup restart the timer.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    CHECK(Idle(&r, 10000));
+    r.Tap();
+    CHECK(r.ui.options_.page() == 1);
+    CHECK(Idle(&r, 10000));
+    r.reverb = 0.55f;
+    CHECK(Idle(&r, 14900));
+    CHECK(!r.ui.options_.qualified_[2]);
+    CHECK(!Idle(&r, 120));
+  }
+  // Pot jitter does not keep the page open.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int i = 0; i < 14900; ++i) {
+      r.feedback = (i & 1) ? 0.508f : 0.492f;
+      r.pot = (i & 2) ? 0.51f : 0.49f;
+      r.Tick(1, true);
+    }
+    CHECK(r.ui.options_.active());
+    for (int i = 0; i < 120; ++i) {
+      r.feedback = (i & 1) ? 0.508f : 0.492f;
+      r.Tick(1, true);
+    }
+    CHECK(!r.ui.options_.active());
+  }
+  // Reserved knobs do nothing on a page, so they do not keep it open.
+  {
+    Rig r(false);
+    uint8_t custom[kProfileSize];
+    CustomProfile(custom, FEATURE_PITCH, 1, 0, 0);
+    AppendIdleTimeout(custom, PROFILE_FIXED, 1);
+    ApplyCustomProfile(&r, custom);
+    r.Enter();
+    for (int i = 0; i < 14900; ++i) {
+      r.pot = (i / 100) & 1 ? 0.9f : 0.1f;
+      r.Tick(1, true);
+    }
+    CHECK(r.ui.options_.active());
+    CHECK(!Idle(&r, 120));
+  }
+  // A quick turn counts whatever its phase against the anchors.
+  for (int offset = 0; offset < 1000; offset += 100) {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    CHECK(Idle(&r, 13500 + offset));
+    for (int i = 1; i <= 400; ++i) {
+      r.feedback = 0.5f + 0.03f * float(i) / 400.0f;
+      r.Tick(1, true);
+    }
+    CHECK(Idle(&r, 14400));
+    CHECK(!Idle(&r, 1000));
+  }
+  // Slow drift does not add up to a turn.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int i = 0; i < 14900; ++i) {
+      r.reverb = 0.5f + 0.1f * float(i) / 14900.0f;
+      r.Tick(1, true);
+    }
+    CHECK(r.ui.options_.active());
+    CHECK(!Idle(&r, 120));
+  }
+  // Idle expiry never interrupts a hold and counts from the release, across
+  // clock wrap; holding [M] 3 seconds still closes as before.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    stmlib::system_clock.count_ = 0xffffffff - 20000;
+    r.Enter();
+    CHECK(Idle(&r, 14000));
+    r.Down(SWITCH_ASSIGN);
+    CHECK(Idle(&r, 2500));
+    r.Up(SWITCH_ASSIGN);
+    CHECK(r.ui.options_.page() == 1);
+    CHECK(stmlib::system_clock.milliseconds() > 0xffffffff - 5000);
+    CHECK(Idle(&r, 14900));
+    CHECK(stmlib::system_clock.milliseconds() < 20000);
+    CHECK(!Idle(&r, 120));
+  }
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+    r.Enter();
+    CHECK(r.ui.options_.seed_allowed());
+    r.Down(SWITCH_SEED);
+    CHECK(Idle(&r, 30000));
+    r.Up(SWITCH_SEED);
+    CHECK(Idle(&r, 14900));
+    CHECK(!Idle(&r, 120));
+    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  }
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    CHECK(Idle(&r, 1000));
+    r.Down(SWITCH_ASSIGN);
+    CHECK(!Idle(&r, 3000));
+  }
+  // A pending edit is kept and saved once through the normal drain.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    const uint32_t writes = test_writes;
+    const AttackMode mode = r.settings.attack_mode();
+    r.Enter();
+    r.reverb = 0.9f;
+    r.Tick(15100, false);
+    CHECK(!r.ui.options_.active());
+    CHECK(r.ui.options_.commit_requested());
+    CHECK(test_writes == writes);
+    r.ui.DoEvents();
+    r.Tick(100, true);
+    CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+    CHECK(r.settings.attack_mode() != mode);
+    CHECK(test_writes == writes + 1);
+    r.Tick(60000, true);
+    CHECK(test_writes == writes + 1);
+  }
+}
+
 void TestPageTwoKnobRoutingAndSavedMeaning() {
   test_checker.Start("TestPageTwoKnobRoutingAndSavedMeaning");
   for (int explicit_old = 0; explicit_old < 2; ++explicit_old) {
@@ -3189,5 +3407,6 @@ int main() {
   TestBetaOptionPages();
   TestProfileActions();
   TestProfileAmounts();
+  TestOptionsIdleTimeout();
   return test_checker.failures() ? 1 : 0;
 }
