@@ -119,7 +119,7 @@ void DelayController::Render(
     const RandomizedParameter& shape,
     Output* out,
     size_t size) {
-  // One tail call through a pointer, so the fade test adds no work (#183).
+  // One tail call through a pointer, so the fade test adds no work.
   RenderFn fn = &DelayController::RenderWithTimingFade;
   if (timing_gain_ == TIMING_FADE_OFF) {
     if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {

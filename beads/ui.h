@@ -38,6 +38,7 @@
 #include "beads/profile.h"
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
+#include "beads/dsp/plaits_synth.h"
 
 namespace beads {
 

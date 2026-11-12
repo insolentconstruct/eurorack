@@ -122,7 +122,7 @@ class PotChannel {
         0.0f, 1.0f, 3.0f, 4.0f, 7.0f, 12.0f, 24.0f, 24.0f
       };
       
-      // The smooth law skips the plateaus at each interval (#43).
+      // The smooth law skips the plateaus at each interval.
       if (law_ == LAW_DETUNE) {
         detune_fractional = stmlib::SmoothStep(std::max(
             (detune_fractional - 0.33333333f) * 1.5f, 0.0f));
@@ -177,7 +177,7 @@ class CvReader {
   }
 
   bool pitch_on_notch() {
-    // The smooth law has no notches to show (#43).
+    // The smooth law has no notches to show.
     if (pot_channel_[POTS_ADC_CHANNEL_PITCH].law() != PotChannel::LAW_DETUNE) {
       pitch_on_notch_ = false;
       return false;

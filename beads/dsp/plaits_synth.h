@@ -30,12 +30,12 @@
 #define BEADS_DSP_PLAITS_SYNTH_H_
 
 #include "stmlib/stmlib.h"
+#include "stmlib/dsp/hysteresis_quantizer.h"
 
 #include "beads/dsp/plaits_voice.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/dsp/fx/reverb.h"
-#include "beads/profile.h"
 
 namespace beads {
 
@@ -50,49 +50,8 @@ const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize;
 
 // FEEDBACK selects one of the eight models of the current bank.
 const int kPlaitsBankSize = 8;
-
-// stmlib's HysteresisQuantizer2 over a bank of models that the main loop
-// can move; the range is inset so hysteresis never reaches the next bank.
-class ModelQuantizer {
- public:
-  ModelQuantizer() { }
-  ~ModelQuantizer() { }
-
-  void Init(float hysteresis) {
-    hysteresis_ = hysteresis;
-    quantized_value_ = 0;
-  }
-
-  void Configure(int first, int count, float inset) {
-    scale_ = static_cast<float>(count) - 2.0f * inset;
-    offset_ = static_cast<float>(first) - 0.5f + inset;
-  }
-
-  inline int Process(float value) {
-    value *= scale_;
-    value += offset_;
-
-    float hysteresis_sign = value > static_cast<float>(quantized_value_)
-        ? -1.0f
-        : +1.0f;
-    int q = static_cast<int>(value + hysteresis_sign * hysteresis_ + 0.5f);
-    CONSTRAIN(q, 0, kNumPlaitsModels - 1);
-    quantized_value_ = q;
-    return q;
-  }
-
-  inline int quantized_value() const {
-    return quantized_value_;
-  }
-
- private:
-  float hysteresis_;
-  float scale_;
-  float offset_;
-  int quantized_value_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModelQuantizer);
-};
+// Banks in Plaits' order: green, red, yellow.
+const int kNumPlaitsBanks = 3;
 
 class PlaitsSynth {
  public:
@@ -131,7 +90,6 @@ class PlaitsSynth {
     pitch_scale_ = scale;
   }
 
-  // From the main loop; a block may see a half-moved range, still a model.
   void set_bank(int bank);
 
  private:
@@ -156,8 +114,8 @@ class PlaitsSynth {
   RandomWalkModulation timbre_modulation_;
   RandomWalkModulation morph_modulation_;
 
-  ModelQuantizer model_quantizer_;
-  int bank_;
+  stmlib::HysteresisQuantizer2 model_quantizer_;
+  int first_model_;
   float stereo_width_;
   bool width_enabled_;
   PitchScale pitch_scale_;

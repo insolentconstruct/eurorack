@@ -323,17 +323,17 @@ void TestBetaProfileDefinitions() {
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank; older profiles imply it.
   Template(b);
-  Profile p;
-  CHECK(p.Init(b));
-  CHECK(p.adjustable(FEATURE_PLAITS_BANK));
-  CHECK(!p.entry(FEATURE_PLAITS_BANK).value);
+  Profile factory;
+  CHECK(factory.Init(b));
+  CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
+  CHECK(!factory.entry(FEATURE_PLAITS_BANK).value);
   CHECK(b[16 + 6 * (b[5] - 1)] == FEATURE_PLAITS_BANK);
   --b[5];
   b[6] -= 6;
   Checksum(b);
-  CHECK(p.Init(b));
-  CHECK(p.adjustable(FEATURE_PLAITS_BANK));
-  CHECK(p.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
+  CHECK(factory.Init(b));
+  CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
+  CHECK(factory.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
   for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
     CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);
     for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {

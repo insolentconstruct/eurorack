@@ -245,11 +245,11 @@ void TestVoiceAllocation() {
 
 // FEEDBACK selects one of eight models in the current bank (#190): green
 // 8-15 (the power-on bank), red 16-23, yellow 0-7. Both ends stay in the
-// bank whatever came before.
+// bank whatever came before; a bank change keeps the knob's detent.
 void TestBankDetents() {
   test_checker.Start("TestBankDetents");
   Reset();
-  CHECK(synth.bank_ == 0);
+  CHECK(synth.first_model_ == 8);
   Controls c;
   FloatFrame out[kBlockSize];
   const int kSteps = 8000;
@@ -272,7 +272,7 @@ void TestBankDetents() {
       for (int i = kSteps; i >= 0; --i) {
         c.mix.feedback = float(i) / kSteps;
         Block(c, out);
-        const int selected = synth.model_quantizer_.quantized_value();
+        const int selected = first + synth.model_quantizer_.quantized_value();
         if (selected != model) {
           CHECK(selected == model - 1);
           model = selected;
@@ -284,11 +284,11 @@ void TestBankDetents() {
       for (int i = 0; i <= kSteps; ++i) {
         c.mix.feedback = float(i) / kSteps;
         Block(c, out);
-        const int selected = synth.model_quantizer_.quantized_value();
+        const int selected = first + synth.model_quantizer_.quantized_value();
         if (selected != model) {
-          // Range 8 - 2 * 0.06 wide; steps up at inset - hysteresis early.
+          // Eight equal detents; steps up one hysteresis late.
           CHECK(selected == model + 1);
-          const float position = (selected - first - 0.012f) / 7.88f;
+          const float position = (selected - first + 0.048f) / 8.0f;
           CHECK(fabsf(c.mix.feedback - position) < 0.0005f);
           model = selected;
         }
@@ -308,6 +308,20 @@ void TestBankDetents() {
   synth.set_bank(2);
   Block(c, out);
   CHECK(synth.patch_[voice].model == 23);
+  // Inside the hysteresis band, a bank change keeps the detent.
+  for (int bank = 0; bank < kNumPlaitsBanks; ++bank) {
+    synth.set_bank(0);
+    c.mix.feedback = 0.4f;
+    Block(c, out);
+    c.mix.feedback = 2.98f / 8.0f;
+    Block(c, out);
+    CHECK(synth.model_quantizer_.quantized_value() == 3);
+    synth.set_bank(bank);
+    c.seed = SEED_BUTTON_STATE_ON;
+    Block(c, out);
+    c.seed = SEED_BUTTON_STATE_OFF;
+    CHECK(synth.patch_[synth.active_voice_].model == kBankFirst[bank] + 3);
+  }
 }
 
 // FREEZE holds a ringing note at its level instead of letting it decay.

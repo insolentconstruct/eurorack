@@ -51,8 +51,6 @@ const uint8_t kPitchExtensionScale = 15;
 const uint8_t kPitchExtensionValue = 1;
 // Page slot 0 is none; 1 to 21 are the options pages' knobs, in order.
 const uint8_t kNumPageSlots = 22;
-// Plaits synth banks of eight models (#190): green, red, yellow.
-const uint8_t kNumPlaitsBanks = 3;
 
 enum ActionSlot {
   ACTION_NONE,

@@ -64,7 +64,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 3, kNoField, false, false, false, false },  // Attack sensitivity.
   { 2, kNoField, false, false, false, false },  // Seed start.
   { 2, kNoField, false, false, false, false },  // Pitch law.
-  { kNumPlaitsBanks, 14, false, false, false, false },  // Plaits bank.
+  { 3, 14, false, false, false, false },  // Plaits bank.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

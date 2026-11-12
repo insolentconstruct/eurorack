@@ -165,7 +165,7 @@ void Ui::LoadOptions() {
   random_intervals_ = settings_->random_intervals();
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
-  // SEED starts latched, or unlatched when the profile asks (#41).
+  // SEED starts latched, or unlatched when the profile asks.
   seed_button_locked_ = !settings_->FeatureValue(FEATURE_SEED_START);
 }
 
@@ -851,8 +851,8 @@ void Ui::DoEvents() {
 }
 
 void Ui::StepPlaitsBank() {
-  const uint8_t bank =
-      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks;
+  const uint8_t bank = uint8_t(
+      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
   settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
   settings_->SaveState();
   bank_cue_ = bank;

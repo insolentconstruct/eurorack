@@ -943,6 +943,9 @@ void TestSelfPlayStorage() {
 
 void TestAttackStorage() {
   test_checker.Start("TestAttackStorage");
+  // One threshold per Attack sensitivity value.
+  CHECK(kFeatureDefinitions[FEATURE_ATTACK_SENSITIVITY].values ==
+      sizeof(kAttackThresholds) / sizeof(kAttackThresholds[0]));
   Rig r(false);
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->attacks = value;
@@ -3089,6 +3092,7 @@ void PlaySynth(Rig* r, bool synth_mode, bool plaits) {
 void TestPlaitsBankGesture() {
   test_checker.Start("TestPlaitsBankGesture");
   CHECK(kFeatureDefinitions[FEATURE_PLAITS_BANK].field == 14);
+  CHECK(kFeatureDefinitions[FEATURE_PLAITS_BANK].values == kNumPlaitsBanks);
   {
     Rig r(false);
     CHECK(r.settings.profile().adjustable(FEATURE_PLAITS_BANK));

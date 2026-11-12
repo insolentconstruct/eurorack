@@ -40,8 +40,6 @@ using namespace stmlib;
 // 10 Vpp per voice in the centre, as the wavetable synth's dry oscillator.
 const float kPlaitsVoiceGain = 2.0f / 3.0f;
 const float kModelHysteresis = 0.048f;
-// Larger than the hysteresis, so a bank's end models stay in the bank.
-const float kBankInset = 0.06f;
 
 // First model of each bank, in Plaits' order: green, red, yellow.
 const uint8_t kPlaitsBankFirstModel[kNumPlaitsBanks] = { 8, 16, 0 };
@@ -59,8 +57,7 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   harmonics_modulation_.Init(1.01f / sr);
   timbre_modulation_.Init(1.01f / sr);
   morph_modulation_.Init(1.01f / sr);
-  model_quantizer_.Init(kModelHysteresis);
-  bank_ = -1;
+  model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, false);
   set_bank(0);
 
   stereo_width_ = 0.0f;
@@ -73,7 +70,8 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
     voice_[i].Init(ram + i * kPlaitsVoiceRamSize);
 
     PlaitsPatch& patch = patch_[i];
-    patch.model = model_quantizer_.quantized_value();
+    // Voices idle on model 0 until they play, as at power-on.
+    patch.model = 0;
     patch.note = kPlaitsRootNote;
     patch.harmonics = patch.timbre = patch.morph = 0.5f;
     gain_l_[i] = gain_r_[i] = kPlaitsVoiceGain * 0.75f;
@@ -84,12 +82,7 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
 }
 
 void PlaitsSynth::set_bank(int bank) {
-  if (bank == bank_) {
-    return;
-  }
-  bank_ = bank;
-  model_quantizer_.Configure(
-      kPlaitsBankFirstModel[bank], kPlaitsBankSize, kBankInset);
+  first_model_ = kPlaitsBankFirstModel[bank];
 }
 
 void PlaitsSynth::StartNote(const Parameters& p, int model) {
@@ -162,7 +155,8 @@ void PlaitsSynth::Render(
   noon_ = noon;
   drone_ = drone_ && noon && !trigger;
 
-  const int model = model_quantizer_.Process(mix_parameters.feedback);
+  const int model = first_model_ +
+      model_quantizer_.Process(mix_parameters.feedback);
   if (trigger) {
     StartNote(p, model);
   } else if (drone_) {

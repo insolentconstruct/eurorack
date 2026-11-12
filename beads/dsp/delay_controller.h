@@ -206,7 +206,7 @@ class DelayController {
       Output* out,
       size_t size);
   
-  // Off, the Init state, switches timing at once, as stock (#183).
+  // Off, the Init state, switches timing at once, as stock.
   inline void set_timing_fade(bool enabled) {
     if (!enabled) {
       timing_gain_ = TIMING_FADE_OFF;

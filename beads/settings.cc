@@ -422,7 +422,7 @@ void Settings::PackOptions() {
   stored_state_.padding[0] = kSettingsFormat;
 }
 
-// Blank gain starts automatic, or at unity manual gain (#19).
+// Blank gain starts automatic, or at unity manual gain.
 uint8_t Settings::DefaultGain() const {
   if (!profile_values_[FEATURE_MANUAL_GAIN]) {
     return 0;
