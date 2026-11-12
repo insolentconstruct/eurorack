@@ -2979,6 +2979,35 @@ void TestOptionalPages() {
     CHECK(locked.ui.options_.page() == page % 4);
     locked.Tap();
   }
+
+  // The idle timeout closes page 7 like the first four; its reserved knobs
+  // do not keep it open, and reopening returns to it.
+  PagesProfile(b, sparse, 3);
+  AppendIdleTimeout(b, PROFILE_FIXED, 1);
+  Rig idle(false);
+  ApplyCustomProfile(&idle, b);
+  idle.Enter();
+  idle.Tick(10000, true);
+  idle.Tap();
+  idle.Tick(10000, true);
+  idle.Tap();
+  CHECK(idle.ui.options_.page() == 6);
+  for (int i = 0; i < 14900; ++i) {
+    idle.feedback = (i / 100) & 1 ? 0.9f : 0.1f;
+    idle.Tick(1, true);
+  }
+  int ticks = 0;
+  while (idle.ui.options_.active() && ticks < 1000) {
+    idle.Tick(1, true);
+    ++ticks;
+  }
+  CHECK(ticks > 0 && ticks <= 120);
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    CHECK(idle.ui.leds_.intensity_[LED_ASSIGN_1 + i] == 255);
+  }
+  idle.Tick(100, true);
+  idle.Enter();
+  CHECK(idle.ui.options_.page() == 6);
 }
 
 void TestProfileActions() {

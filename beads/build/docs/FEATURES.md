@@ -50,7 +50,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles the populated pages in order, 1 → 2 → 3 → 4 → 1 for the factory layout; custom profiles can use up to seven pages (slots 1–21) and empty pages are skipped; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses: pages 1–3 FEEDBACK, DRY/WET or REVERB; 4 FEEDBACK and DRY/WET; 5 FEEDBACK and REVERB; 6 DRY/WET and REVERB; 7 all three. Beta 2 lit all three for page 4.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles the populated pages in order, 1 → 2 → 3 → 4 → 1 for the factory layout; custom profiles can use up to seven pages (slots 1–21) and empty pages are skipped; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close unless a profile sets an [idle timeout](#options-page-idle-timeout). Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses: pages 1–3 FEEDBACK, DRY/WET or REVERB; 4 FEEDBACK and DRY/WET; 5 FEEDBACK and REVERB; 6 DRY/WET and REVERB; 7 all three. Beta 2 lit all three for page 4.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
@@ -240,7 +240,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - Patching can't already do it.
 - CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source.
 
-Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (all twelve page slots are taken).
+Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the factory layout's twelve page slots are taken).
 
 ## Planning rules
 
@@ -258,7 +258,7 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 - **Saved fields keep their meaning permanently.** Layout and defaults in
   [Saved data](#saved-data); byte 23 holds the format marker.
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
-- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Factory cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
 
@@ -315,7 +315,7 @@ maintenance.
 
 IDs 15–23 default to Off. LED brightness Off means full brightness. Brightness,
 SEED latch and TIME modulation allow Off, Fixed or Adjustable; an Adjustable
-choice can occupy any of the twelve page slots. They have no amount, action,
+choice can occupy any page slot (1–21). They have no amount, action,
 SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
 only, with no control placement. Omitted entries are Off. The default profile
 block is unchanged. The page-facing catalogue is
