@@ -8,11 +8,13 @@
 ## Steps
 
 1. Open: hold the CV-assign button [M] 3 seconds; all three mix LEDs pulse. Release.
-2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then all three.
+2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then FEEDBACK and DRY/WET together.
 3. [A] shows each stored value in turn. Turn a mix knob (not a big knob) to change it.
 4. Close: hold [M] 3 seconds or press another button. On page 1 with Pitch scale on Scale, tap SEED to step the scale. Release the exit button before normal use.
 
 It saves by itself; wait before powering off. Move a knob more than a tenth of its travel before it responds.
+
+Custom layouts can add pages 5-7: FEEDBACK and REVERB, DRY/WET and REVERB, then all three. Taps skip empty pages.
 
 The quality LED [A] shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
@@ -55,7 +57,7 @@ Scale (tap SEED to step through):
 
 **Processor:** Switching clears the recording.
 
-## Page 4 — all three LEDs pulsing
+## Page 4 — FEEDBACK and DRY/WET LEDs pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|

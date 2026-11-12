@@ -33,8 +33,10 @@
 
 namespace {
 
+// By the page's mix LED mask.
 const char* const kPageNames[] = {
-  "FEEDBACK", "DRY/WET", "REVERB", "all three"
+  "none", "FEEDBACK", "DRY/WET", "FEEDBACK and DRY/WET", "REVERB",
+  "FEEDBACK and REVERB", "DRY/WET and REVERB", "all three"
 };
 const char* const kOptionNames[] = {
   "Not used yet", "Pitch scale", "Reverb character", "Delay mode",
@@ -133,6 +135,9 @@ int main(int argc, char** argv) {
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       const OptionSetting setting = kOptionPages[page].knobs[knob];
+      if (setting == OPTION_RESERVED) {
+        continue;
+      }
       for (size_t i = 0; i < kNumOptionValues; ++i) {
         const OptionValue& value = kOptionValues[i];
         if (value.setting != setting) {
@@ -151,7 +156,7 @@ int main(int argc, char** argv) {
               kOptionsPulsePeriod / 1000.0);
         }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
-            kPageNames[kOptionPages[page].led_index], kOptionKnobNames[knob],
+            kPageNames[kOptionPages[page].leds], kOptionKnobNames[knob],
             kOptionNames[setting], kValueNames[i],
             ColorName(value.color), pulse);
       }

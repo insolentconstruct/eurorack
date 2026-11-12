@@ -99,6 +99,47 @@ void TestDefaultPageTwoAndExplicitLayouts() {
   CHECK(explicit_layout.Page(6) == FEATURE_FROZEN);
 }
 
+void TestOptionalPageSlots() {
+  test_checker.Start("TestOptionalPageSlots");
+  Profile embedded;
+  CHECK(embedded.Init(kProfileBlock));
+  Profile fallback;
+  fallback.Defaults();
+  // The factory layout stays on pages 1-4, which Beta 2 also accepts.
+  for (int slot = 1; slot < kNumPageSlots; ++slot) {
+    CHECK((embedded.Page(slot) != FEATURE_NONE) == (slot <= 12));
+    CHECK(fallback.Page(slot) == embedded.Page(slot));
+  }
+  CHECK(embedded.Page(1) == FEATURE_PITCH);
+  uint8_t b[kProfileSize];
+  for (int slot = 13; slot <= kNumPageSlots; ++slot) {
+    Template(b);
+    uint8_t* pitch = NULL;
+    uint8_t* limiter = NULL;
+    for (size_t i = 0; i < b[5]; ++i) {
+      uint8_t* entry = b + 16 + 6 * i;
+      if (entry[0] == FEATURE_PITCH) {
+        pitch = entry;
+      } else if (entry[0] == FEATURE_LIMITER) {
+        limiter = entry;
+      }
+    }
+    CHECK(pitch && limiter);
+    pitch[3] = slot;
+    Checksum(b);
+    Profile p;
+    CHECK(p.Init(b) == (slot < kNumPageSlots));
+    if (slot < kNumPageSlots) {
+      CHECK(p.Page(slot) == FEATURE_PITCH);
+      CHECK(p.Page(1) == FEATURE_NONE);
+      // Two features on one high slot are refused.
+      limiter[3] = slot;
+      Checksum(b);
+      CHECK(!p.Init(b));
+    }
+  }
+}
+
 void TestProfileParser() {
   test_checker.Start("TestProfileParser");
   uint8_t b[kProfileSize];
@@ -162,7 +203,7 @@ void TestProfileParser() {
   CHECK(!p.Init(b));
   const uint8_t bad[][2] = {
     { 16, 0 }, { 16, FEATURE_LAST }, { 22, FEATURE_PITCH },
-    { 17, 3 }, { 18, 10 }, { 24, 2 }, { 19, 13 }, { 20, 3 }, { 21, 4 },
+    { 17, 3 }, { 18, 10 }, { 24, 2 }, { 19, 22 }, { 20, 3 }, { 21, 4 },
     { 17, PROFILE_OFF }, { 17, PROFILE_FIXED },
     { 20, 1 }, { 21, 1 }, { 25, 1 },
     { 79, 1 }, { 86, 1 }, { 93, 2 }, { 95, 0 }, { 96, 0 }
@@ -185,7 +226,7 @@ void TestProfileParser() {
     b[16] = kind == 0 ? FEATURE_PITCH :
         kind == 1 ? FEATURE_WIDTH : FEATURE_MONOPHONIC;
     b[19] = b[20] = b[21] = 0;
-    b[19 + kind] = kind == 0 ? 13 : kind == 1 ? 3 : 4;
+    b[19 + kind] = kind == 0 ? kNumPageSlots : kind == 1 ? 3 : 4;
     Checksum(b);
     CHECK(!p.Init(b));
   }
@@ -249,8 +290,8 @@ void TestProfileKinds() {
   for (int id = 1; id < FEATURE_LAST; ++id) {
     const FeatureDefinition& d = kFeatureDefinitions[id];
     for (int kind = 0; kind < 3; ++kind) {
-      const int max_slot = kind == 0 ? 12 : kind == 1 ? 2 : 3;
-      for (int slot = 1; slot <= max_slot; ++slot) {
+      const int max_slot = kind == 0 ? 21 : kind == 1 ? 2 : 3;
+      for (int slot = 1; slot <= max_slot + 1; ++slot) {
         Template(b);
         b[5] = 1;
         b[6] = 6;
@@ -261,8 +302,11 @@ void TestProfileKinds() {
         b[19 + kind] = slot;
         Checksum(b);
         Profile p;
-        CHECK(p.Init(b) ==
-              (kind == 0 ? d.page : kind == 1 ? d.amount : d.action));
+        CHECK(p.Init(b) == (slot <= max_slot &&
+              (kind == 0 ? d.page : kind == 1 ? d.amount : d.action)));
+        if (kind == 0 && d.page && slot <= max_slot) {
+          CHECK(p.Page(slot) == ProfileFeature(id));
+        }
       }
     }
   }
@@ -466,6 +510,7 @@ void TestCustomScaleBank() {
 }
 
 int main() {
+  TestOptionalPageSlots();
   TestDefaultPageTwoAndExplicitLayouts();
   TestProfileParser();
   TestCustomScaleBank();

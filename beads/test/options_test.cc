@@ -1842,7 +1842,7 @@ void TestWidthGestureAndMeter() {
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       CHECK(kOptionPages[page].knobs[knob] != OPTION_RESERVED ||
-          page == 0 || page == 3);
+          page == 0 || page >= 3);
     }
   }
   r.pot = .02f;
@@ -1858,14 +1858,20 @@ void TestOptionsTablesAndLifetime() {
     { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
     { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER }
   };
-  CHECK(kNumOptionPages == 4);
+  CHECK(kNumOptionPages == 7);
+  // Pages 1-3 light one LED, then two together, then all three.
+  const uint8_t masks[7] = { 1, 2, 4, 3, 5, 6, 7 };
+  for (int page = 0; page < kNumOptionPages; ++page) {
+    CHECK(kOptionPages[page].leds == masks[page]);
+    for (int knob = 0; knob < 3; ++knob) {
+      CHECK((kOptionPages[page].knobs[knob] == OPTION_RESERVED) == (page >= 4));
+    }
+  }
   Rig r(false);
   r.Enter();
   r.Tick(100, true);  // Entry confirmation has ended.
-  for (int page = 0; page < kNumOptionPages; ++page) {
+  for (int page = 0; page < 4; ++page) {
     CHECK(r.ui.options_.page() == page);
-    // Left to right; the last page lights all three.
-    CHECK(kOptionPages[page].led_index == page);
     const int preview = 0;
     CHECK(r.ui.options_.preview_knob() == preview);
     for (int knob = 0; knob < 3; ++knob) {
@@ -1873,7 +1879,7 @@ void TestOptionsTablesAndLifetime() {
       const int led = LED_ASSIGN_1 + knob;
       if (knob == preview) {
         CHECK(r.ui.leds_.intensity_[led] == 255);
-      } else if (page != 3 && knob != page) {
+      } else if (!(masks[page] & (1 << knob))) {
         CHECK(r.ui.leds_.intensity_[led] == 0);
       }
     }
@@ -1902,8 +1908,8 @@ void TestOptionsTablesAndLifetime() {
 
 void TestOptionsKnobsAndSettling() {
   test_checker.Start("TestOptionsKnobsAndSettling");
-  // Every physical knob.
-  for (int page = 0; page < kNumOptionPages; ++page) {
+  // Every physical knob of the four factory pages.
+  for (int page = 0; page < 4; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       Rig r(false);
       r.Enter();
@@ -2211,14 +2217,14 @@ void TestOptionsConfirmations() {
   r.Tick(100, true);
   CHECK(stmlib::system_clock.milliseconds() - r.ui.options_flash_time_ >= 100);
   CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] < 255);
-  // The last page flashes all three.
+  // Page four flashes FEEDBACK and DRY/WET.
   Rig last(false);
   last.EnterLimiter();
   last.reverb = .9f;
   last.Tick(1010, true);
-  for (int i = LED_ASSIGN_1; i < LED_ASSIGN_1 + 3; ++i) {
-    CHECK(last.ui.leds_.intensity_[i] == 255);
-  }
+  CHECK(last.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
+  CHECK(last.ui.leds_.intensity_[LED_ASSIGN_2] == 255);
+  CHECK(last.ui.leds_.intensity_[LED_ASSIGN_3] == 0);
   CHECK(last.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
 }
 
@@ -2549,7 +2555,7 @@ void TestProfilePages() {
     if (!kFeatureDefinitions[id].page) {
       continue;
     }
-    for (int slot = 1; slot <= 12; ++slot) {
+    for (int slot = 1; slot < kNumPageSlots; ++slot) {
       Rig r(false);
       CustomProfile(b, id, slot, 0, 0);
       ApplyCustomProfile(&r, b);
@@ -2575,6 +2581,186 @@ void TestProfilePages() {
   CHECK(!memcmp(&before, &empty.settings.state(), sizeof(before)));
   CHECK(empty.ui.options_.stage() == Options::STAGE_INACTIVE);
   CHECK(empty.ui.options_.preview_knob() == -1);
+}
+
+// Features placed on page slots { id, slot }, Adjustable at value 0.
+void PagesProfile(uint8_t* b, const uint8_t (*placed)[2], int count) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  b[5] = count;
+  b[6] = 6 * count;
+  for (int i = 0; i < count; ++i) {
+    uint8_t* entry = b + 16 + 6 * i;
+    entry[0] = placed[i][0];
+    entry[1] = PROFILE_ADJUSTABLE;
+    entry[2] = entry[4] = entry[5] = 0;
+    entry[3] = placed[i][1];
+  }
+  const size_t size = 16 + b[6];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+// The previewed knob is lit steady; once the preview ends, LEDs outside
+// the page's mask stay dark and those inside it pulse.
+void CheckPageLeds(Rig* r, int page) {
+  const uint8_t masks[7] = { 1, 2, 4, 3, 5, 6, 7 };
+  const uint8_t mask = masks[page];
+  r->Tick(100, true);  // The entry flash has ended.
+  const int preview = r->ui.options_.preview_knob();
+  CHECK(preview < 0 || r->ui.leds_.intensity_[LED_ASSIGN_1 + preview] == 255);
+  for (int t = 0; t < 3 * 2048 && r->ui.options_.preview_knob() >= 0; ++t) {
+    r->Tick(1, true);
+  }
+  CHECK(r->ui.options_.preview_knob() == -1);
+  int peak[3] = { 0, 0, 0 };
+  for (int t = 0; t < 1500; ++t) {
+    r->Tick(1, true);
+    for (int i = 0; i < 3; ++i) {
+      const int level = r->ui.leds_.intensity_[LED_ASSIGN_1 + i];
+      CHECK(level == 0 || (mask & (1 << i)));
+      peak[i] = std::max(peak[i], level);
+    }
+  }
+  for (int i = 0; i < 3; ++i) {
+    CHECK((peak[i] > 0) == bool(mask & (1 << i)));
+  }
+}
+
+void TestOptionalPages() {
+  test_checker.Start("TestOptionalPages");
+  uint8_t b[kProfileSize];
+  // Sparse: pages 1, 5 and 7 keep their numbers, LEDs and knob columns.
+  const uint8_t sparse[][2] = {
+    { FEATURE_PITCH, 1 }, { FEATURE_DELAY, 14 }, { FEATURE_LIMITER, 21 }
+  };
+  Rig r(false);
+  PagesProfile(b, sparse, 3);
+  ApplyCustomProfile(&r, b);
+  r.Enter();
+  const int order[] = { 0, 4, 6, 0, 4 };
+  const int knob[] = { 0, 1, 2, 0, 1 };
+  const OptionSetting setting[] = {
+    OPTION_PITCH, OPTION_DELAY, OPTION_LIMITER, OPTION_PITCH, OPTION_DELAY
+  };
+  for (int i = 0; i < 5; ++i) {
+    if (i) {
+      r.Tap();
+    }
+    CHECK(r.ui.options_.page() == order[i]);
+    CHECK(r.ui.options_.preview_knob() == knob[i]);
+    CHECK(r.ui.options_.selected_ == setting[i]);
+    CheckPageLeds(&r, order[i]);
+  }
+  // Close on page 5: its two LEDs flash; reopening returns to page 5.
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000, true);
+  CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 255);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(!r.ui.options_.active());
+  r.Tick(30, true);
+  r.Enter();
+  CHECK(r.ui.options_.page() == 4);
+  // Seven pages edit and save like the first four.
+  r.Tap();
+  CHECK(r.ui.options_.page() == 6);
+  r.reverb = 0.9f;
+  r.Tick(1100, true);
+  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  Settings loaded;
+  CHECK(loaded.Init(false, b));
+  CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+
+  // A single page 6 opens at startup and stays there.
+  const uint8_t single[][2] = { { FEATURE_SEED_LATCH, 17 } };
+  Rig one(false);
+  PagesProfile(b, single, 1);
+  ApplyCustomProfile(&one, b);
+  CHECK(one.ui.options_.page() == 5);
+  one.Enter();
+  CHECK(one.ui.options_.page() == 5);
+  CHECK(one.ui.options_.preview_knob() == 1);
+  CheckPageLeds(&one, 5);
+  one.Tap();
+  CHECK(one.ui.options_.page() == 5);
+  CHECK(one.ui.options_.preview_knob() == 1);
+
+  // Every page-capable feature across all seven pages.
+  const uint8_t full[][2] = {
+    { FEATURE_PITCH, 1 }, { FEATURE_REVERB, 4 }, { FEATURE_DELAY, 8 },
+    { FEATURE_PROCESSOR, 10 }, { FEATURE_LIMITER, 12 },
+    { FEATURE_FROZEN, 13 }, { FEATURE_SYNTH, 15 },
+    { FEATURE_ATTACKS, 17 }, { FEATURE_INTERVALS, 18 },
+    { FEATURE_BRIGHTNESS, 19 }, { FEATURE_SEED_LATCH, 20 },
+    { FEATURE_TIME_SCAN, 21 }, { FEATURE_SYNTH_START, 11 }
+  };
+  const OptionSetting first[] = {
+    OPTION_PITCH, OPTION_REVERB, OPTION_DELAY, OPTION_PROCESSOR,
+    OPTION_FROZEN, OPTION_ATTACKS, OPTION_BRIGHTNESS
+  };
+  Rig all(false);
+  PagesProfile(b, full, 13);
+  ApplyCustomProfile(&all, b);
+  all.Enter();
+  for (int page = 0; page <= kNumOptionPages; ++page) {
+    CHECK(all.ui.options_.page() == page % kNumOptionPages);
+    CHECK(all.ui.options_.selected_ == first[page % kNumOptionPages]);
+    all.Tap();
+  }
+  // TIME scan on page 7, REVERB, saves to its own value.
+  Rig scan(false);
+  ApplyCustomProfile(&scan, b);
+  scan.EnterPage(6);
+  CHECK(scan.ui.options_.page() == 6);
+  CheckPageLeds(&scan, 6);
+  scan.reverb = 0.9f;
+  scan.Tick(1100, true);
+  CHECK(scan.settings.FeatureValue(FEATURE_TIME_SCAN) == 1);
+  CHECK(loaded.Init(false, b));
+  CHECK(loaded.FeatureValue(FEATURE_TIME_SCAN) == 1);
+
+  // Reconfiguring keeps a remembered page 7 only while it has controls;
+  // otherwise the next populated page, wrapping, takes over.
+  scan.Down(SWITCH_ASSIGN);
+  scan.Tick(3000, true);
+  scan.Up(SWITCH_ASSIGN);
+  scan.Tick(30, true);
+  CHECK(!scan.ui.options_.active() && scan.ui.options_.page() == 6);
+  const uint8_t second[][2] = { { FEATURE_DELAY, 5 }, { FEATURE_REVERB, 14 } };
+  PagesProfile(b, second, 2);
+  CHECK(scan.settings.Init(false, b));
+  scan.ui.LoadOptions();
+  CHECK(scan.ui.options_.page() == 1);
+  scan.Tick(30, true);
+  scan.Enter();
+  CHECK(scan.ui.options_.page() == 1);
+  scan.Tap();
+  CHECK(scan.ui.options_.page() == 4);
+  PagesProfile(b, sparse, 3);
+  CHECK(scan.settings.Init(false, b));
+  scan.ui.LoadOptions();
+  CHECK(scan.ui.options_.page() == 4);
+
+  // A slot past page 7 locks the profile: factory pages, no saving.
+  const uint8_t beyond[][2] = { { FEATURE_PITCH, kNumPageSlots } };
+  PagesProfile(b, beyond, 1);
+  Rig locked(false);
+  locked.settings.Init(false, b);
+  CHECK(locked.settings.profile_locked());
+  locked.ui.Init(&locked.settings, &locked.gain, &locked.calibration,
+      &locked.backup);
+  locked.ui.LoadOptions();
+  locked.Tick(40, true);
+  locked.Enter();
+  for (int page = 0; page < 5; ++page) {
+    CHECK(locked.ui.options_.page() == page % 4);
+    locked.Tap();
+  }
 }
 
 void TestProfileActions() {
@@ -2869,7 +3055,7 @@ void TestBetaOptionPages() {
     FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_TIME_SCAN
   };
   for (int f = 0; f < 3; ++f) {
-    for (int slot = 1; slot <= 12; ++slot) {
+    for (int slot = 1; slot < kNumPageSlots; ++slot) {
       Rig r(false);
       uint8_t b[kProfileSize];
       CustomProfile(b, features[f], slot, 0, 0);
@@ -2996,6 +3182,7 @@ int main() {
   TestStorage();
   TestDsp();
   TestProfilePages();
+  TestOptionalPages();
   TestCustomScalePersistenceAndLeds();
   TestDefaultLedIdentity();
   TestBetaOptionsLeds();

@@ -465,11 +465,11 @@ void Ui::UpdateLeds() {
   
   if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
       options_.stage() == Options::STAGE_EDITING) {
-    const int page_led = kOptionPages[options_.page()].led_index;
+    const uint8_t page_leds = kOptionPages[options_.page()].leds;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       // While a page opens, the knob whose value [A] shows is lit steady.
       const bool page = options_.stage() == Options::STAGE_WAIT_RELEASE ||
-          page_led == MIX_PARAMETER_LAST || i == page_led;
+          (page_leds & (1 << i));
       leds_.set(Led(LED_ASSIGN_1 + i), i == options_.preview_knob() ? 255
           : page ? triangle : 0);
     }
@@ -493,9 +493,9 @@ void Ui::UpdateLeds() {
   if (options_flash_time_ &&
       uint32_t(system_clock.milliseconds() - options_flash_time_) <
           kOptionsFlashTime) {
-    const int page_led = kOptionPages[options_flash_page_].led_index;
+    const uint8_t page_leds = kOptionPages[options_flash_page_].leds;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      if (page_led == MIX_PARAMETER_LAST || i == page_led) {
+      if (page_leds & (1 << i)) {
         leds_.set(Led(LED_ASSIGN_1 + i), 255);
       }
     }

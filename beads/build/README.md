@@ -10,7 +10,7 @@ Updating is not a remedy for unexplained module behaviour. Disconnect speakers: 
 
 ## Options page
 
-[A] is the quality button; [M] is CV assign. Hold [M] alone for three seconds with the mix knobs still, then release. Tap [M] to change pages. All three mix LEDs pulse while the entry hold continues; after release, the indicated page LED pulses. Reopening remembers the page until power-off; startup selects page 1.
+[A] is the quality button; [M] is CV assign. Hold [M] alone for three seconds with the mix knobs still, then release. Tap [M] to change pages. All three mix LEDs pulse while the entry hold continues; after release, the indicated page LEDs pulse. Reopening remembers the page until power-off; startup selects page 1. Custom layouts can add pages 5-7 (FEEDBACK and REVERB, DRY/WET and REVERB, then all three); taps skip empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more than a tenth of its travel to take over; [A] shows its setting. Unused knobs do nothing.
 
@@ -18,7 +18,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
-4 / all three       LED brightness  SEED latch      Limiter
+4 / FEEDBACK and DRY/WET  LED brightness  SEED latch    Limiter
 
 Changes save about a second after turning stops. Wait before power-off. Hold [M] for three seconds or press another button to close; mix controls catch up smoothly. On page 1 with Scale selected, SEED taps step the scale instead of closing. The exit press does nothing else until the button is released. The page LED flashes on entry, close and save. First values are steady green; later values use yellow, red and blinking colours. See [OPTIONS.md](docs/OPTIONS.md) for every value.
 
