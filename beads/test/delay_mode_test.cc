@@ -54,9 +54,11 @@ struct Rig {
   SeedButtonState seed;
   const stmlib::GateFlags* seed_input;
   bool frozen;
+  bool latch_fade;
 
   Rig() : sample(0), frequency(750.0f), amplitude(0.05f),
-      seed(SEED_BUTTON_STATE_LOCKED), seed_input(NULL), frozen(false) {
+      seed(SEED_BUTTON_STATE_LOCKED), seed_input(NULL), frozen(false),
+      latch_fade(true) {
     memset(banks, 0, sizeof(banks));
     memset(reverb, 0, sizeof(reverb));
     memset(&parameters, 0, sizeof(parameters));
@@ -423,6 +425,7 @@ const stmlib::GateFlags kSeedLow[12] = {
 // Delay mode at DENSITY 0.3 with a tapped 500 ms tempo, unlatched (#183).
 void PrepareTappedDelay(Rig* r, int media, int offset) {
   r->processor.Configure(Processor::Media(media), false);
+  r->processor.set_seed_latch_fade(r->latch_fade);
   r->frequency = 220.0f;
   r->amplitude = 0.25f;
   r->density.base = 0.3f;
@@ -633,6 +636,8 @@ void TestSeedLatchFadeTransitions() {
       quality.seed = latched
           ? SEED_BUTTON_STATE_LOCKED : SEED_BUTTON_STATE_OFF;
       quality.processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
+      CHECK(!c.test_timing_fade());
+      quality.processor.set_seed_latch_fade(true);  // The next main loop pass.
       for (int i = 0; i < 400; ++i) {
         quality.Block(NULL);
         CHECK(c.test_synchronized() == !latched);
@@ -644,6 +649,7 @@ void TestSeedLatchFadeTransitions() {
   // A latch change made outside delay mode fades in on entry, while the
   // granular/delay crossfade still silences the wet signal.
   Rig entry;
+  entry.processor.set_seed_latch_fade(true);
   entry.processor.delay_mode_transition_ = 1.5f;
   entry.Run(10);
   CHECK(!entry.processor.delay_controller_.test_synchronized());
@@ -656,6 +662,26 @@ void TestSeedLatchFadeTransitions() {
   CHECK(entry.processor.delay_mode_transition_ < 0.025f);
   CHECK(entry.processor.delay_controller_.test_synchronized());
   CHECK(entry.processor.delay_controller_.test_timing_change_gain() == 1.0f);
+}
+
+// Off, the profile default, keeps the stock switch and its pop.
+void TestSeedLatchFadeOff() {
+  test_checker.Start("TestSeedLatchFadeOff");
+  float worst = 0.0f;
+  for (int media = 0; media < 4; ++media) {
+    for (int offset = 0; offset < 300; offset += 101) {
+      Rig r;
+      r.latch_fade = false;
+      PrepareTappedDelay(&r, media, offset);
+      const float latch = SeedStepRatio(&r, SEED_BUTTON_STATE_LOCKED, NULL);
+      const float unlatch = SeedStepRatio(&r, SEED_BUTTON_STATE_ON, NULL);
+      worst = std::max(worst, std::max(latch, unlatch));
+      // The fading path never ran.
+      CHECK(!r.processor.delay_controller_.test_timing_fade());
+    }
+  }
+  printf("Off latch/unlatch step ratio: %.3f\n", worst);
+  CHECK(worst > 4.0f);
 }
 
 void TestSeedLatchFadeTaps() {
@@ -734,6 +760,7 @@ int main(int argc, char** argv) {
     { "TestSeedLatchFadePolicy", TestSeedLatchFadePolicy },
     { "TestSeedLatchFadeTransitions", TestSeedLatchFadeTransitions },
     { "TestSeedLatchFadeTaps", TestSeedLatchFadeTaps },
+    { "TestSeedLatchFadeOff", TestSeedLatchFadeOff },
   };
   const int result = RunHostTests(argc, argv, tests,
       sizeof(tests) / sizeof(tests[0]));

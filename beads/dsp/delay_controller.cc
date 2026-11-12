@@ -77,14 +77,7 @@ void DelayController::Init(float sample_rate, int max_delay) {
   seed_button_state_ = SEED_BUTTON_STATE_OFF;
 
   synchronized_ = false;
-  timing_gain_ = TIMING_GAIN_STEPS + 1;
-}
-
-inline float DelayController::KnobInterval(float density, float fm) const {
-  return max(
-      float(kMinDelay),
-      fm * float(max_delay_) * \
-          SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
+  timing_gain_ = TIMING_FADE_OFF;
 }
 
 const int kNumDelayRatios = 20;
@@ -126,10 +119,56 @@ void DelayController::Render(
     const RandomizedParameter& shape,
     Output* out,
     size_t size) {
+  if (timing_gain_ != TIMING_FADE_OFF) {
+    RenderWithTimingFade(
+        seed_button_state,
+        external_input,
+        freeze,
+        density,
+        linear_fm,
+        exponential_fm,
+        position,
+        shape, out, size);
+    return;
+  }
+  if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
+    RenderInternal<false>(
+        seed_button_state,
+        external_input,
+        freeze,
+        density,
+        linear_fm,
+        exponential_fm,
+        position,
+        shape, out, size);
+  } else {
+    RenderInternal<true>(
+        seed_button_state,
+        external_input,
+        freeze,
+        density,
+        linear_fm,
+        exponential_fm,
+        position,
+        shape, out, size);
+  }
+}
+
+void DelayController::RenderWithTimingFade(
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* external_input,
+    const bool* freeze,
+    float density,
+    float linear_fm,
+    float exponential_fm,
+    const RandomizedParameter& position,
+    const RandomizedParameter& shape,
+    Output* out,
+    size_t size) {
   const bool synchronized = !(
       seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input);
 
-  // After Init, start in the requested timing at once, as stock.
+  // After enabling, start in the requested timing at once, as stock.
   if (timing_gain_ > TIMING_GAIN_STEPS) {
     synchronized_ = synchronized;
     timing_gain_ = TIMING_GAIN_STEPS;
@@ -142,7 +181,11 @@ void DelayController::Render(
       synchronized_ = synchronized;
       if (!synchronized_) {
         // Start knob timing at its target rather than gliding from the tap.
-        clock_.Update(KnobInterval(density_, fm_), 1.0f);
+        const float interval = max(
+            float(kMinDelay),
+            fm_ * float(max_delay_) * \
+                SemitonesToRatio(-fabsf(density_ - 0.5f) * 216.0f));
+        clock_.Update(interval, 1.0f);
       }
     } else {
       --timing_gain_;
@@ -267,7 +310,10 @@ void DelayController::RenderInternal(
       tap_ratio[0] *= fm;
       tap_ratio[1] *= fm;
     } else {
-      const float new_interval = KnobInterval(density, fm);
+      const float new_interval = max(
+          float(kMinDelay),
+          fm * float(max_delay_) * \
+              SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
       float lp_coefficient = 10.0f / new_interval;
       CONSTRAIN(lp_coefficient, 0.005f, 0.7f);
       

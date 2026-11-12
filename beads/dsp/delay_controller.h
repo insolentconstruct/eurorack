@@ -184,6 +184,7 @@ class DelayController {
     NUM_HEADS = NUM_INTERVALS * NUM_RATIOS,
     NUM_TAPS = NUM_HEADS * 2,
     TIMING_GAIN_STEPS = 40,  // Blocks: 10 ms at 4000 blocks per second.
+    TIMING_FADE_OFF = 255,  // Gain value selecting the stock switch.
   };
   
   struct Output {
@@ -205,6 +206,15 @@ class DelayController {
       Output* out,
       size_t size);
   
+  // Off, the Init state, switches timing at once, as stock (#183).
+  inline void set_timing_fade(bool enabled) {
+    if (!enabled) {
+      timing_gain_ = TIMING_FADE_OFF;
+    } else if (timing_gain_ == TIMING_FADE_OFF) {
+      timing_gain_ = TIMING_GAIN_STEPS + 1;
+    }
+  }
+  
 #ifdef TEST
   inline const DelayClock& test_clock() const { return clock_; }
   inline float test_density() const { return density_; }
@@ -212,13 +222,26 @@ class DelayController {
   inline PlayHead* test_play_heads() { return play_head_; }
   inline PlayHead* test_slave_play_heads() { return slave_play_head_; }
   inline bool test_synchronized() const { return synchronized_; }
+  inline bool test_timing_fade() const {
+    return timing_gain_ != TIMING_FADE_OFF;
+  }
   inline float test_timing_change_gain() const {
     return float(timing_gain_) / float(TIMING_GAIN_STEPS);
   }
 #endif  // TEST
 
  private:
-  float KnobInterval(float density, float fm) const;
+  void RenderWithTimingFade(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* external_input,
+      const bool* freeze,
+      float density,
+      float linear_fm,
+      float exponential_fm,
+      const RandomizedParameter& position,
+      const RandomizedParameter& shape,
+      Output* out,
+      size_t size);
 
   template<bool synchronized>
   void RenderInternal(
@@ -259,7 +282,7 @@ class DelayController {
   
   bool freeze_;
   SeedButtonState seed_button_state_;
-  // Timing-change state fits the padding; Init sets gain above full scale.
+  // Timing-change state fits the padding; gain above full scale restarts.
   bool synchronized_;
   uint8_t timing_gain_;
 

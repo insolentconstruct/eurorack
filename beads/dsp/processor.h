@@ -85,6 +85,10 @@ class Processor {
   }
 
   inline void set_time_scan(bool enabled) { time_scan_enabled_ = enabled; }
+  // Configure turns it off; the main loop sets it again each pass.
+  inline void set_seed_latch_fade(bool enabled) {
+    delay_controller_.set_timing_fade(enabled);
+  }
 
   inline bool delay_active() const {
     return delay_mode_transition_ > 0.0f && !spectral_;

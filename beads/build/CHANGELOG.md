@@ -4,7 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
-- Fade the delay around delay-mode SEED latch changes instead of popping (#183).
+- Optional delay-mode SEED latch fade in Hygrostat (Off: stock switch; Fade: 10 ms dip, no pop); Off by default (#183).
 
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 

@@ -1565,8 +1565,8 @@ void TestCodecKeepsClocks() {
   }
 }
 
-// Tail handling is a profile choice; the codec transition remains the same.
-void SynthTailProfile() {
+// Loads the factory profile plus one Fixed entry with value 1.
+void FixedFeatureProfile(ProfileFeature feature) {
   uint8_t block[kProfileSize];
   for (size_t i = 0; i < kProfileSize; ++i) {
     block[i] = kProfileBlock[i];
@@ -1577,7 +1577,7 @@ void SynthTailProfile() {
   block[6] = bytes & 255;
   block[7] = bytes >> 8;
   const uint8_t entry[] = {
-    FEATURE_SYNTH_TAIL, PROFILE_FIXED, 1, 0, 0, 0
+    uint8_t(feature), PROFILE_FIXED, 1, 0, 0, 0
   };
   memcpy(block + offset, entry, sizeof(entry));
   const uint32_t crc = Profile::Crc32(block, 16 + bytes);
@@ -1588,7 +1588,12 @@ void SynthTailProfile() {
   CHECK(!settings.profile_locked());
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
   ui.LoadOptions();
-  CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 1);
+  CHECK(settings.FeatureValue(feature) == 1);
+}
+
+// Tail handling is a profile choice; the codec transition remains the same.
+void SynthTailProfile() {
+  FixedFeatureProfile(FEATURE_SYNTH_TAIL);
 }
 
 void TestSynthStopClearsReverb() {
@@ -1756,6 +1761,31 @@ void TestSeedLatchPatched() {
   CHECK(processor.trigger_generator_.elapsed_since_last_pulse_ > before);
 }
 
+// The delay latch fade is a profile choice; Off or omitted keeps stock.
+void TestSeedLatchFadeProfile() {
+  test_checker.Start("TestSeedLatchFadeProfile");
+  Rig r(false, false);
+  CHECK(settings.profile().entry(FEATURE_SEED_LATCH_FADE).state ==
+      PROFILE_OFF);
+  const DelayController& delay = processor.delay_controller_;
+  processor.set_seed_latch_fade(true);
+  MonitorStateChange();
+  CHECK(!delay.test_timing_fade());
+  FixedFeatureProfile(FEATURE_SEED_LATCH_FADE);
+  MonitorStateChange();
+  CHECK(delay.test_timing_fade());
+  // A quality change turns it off until the next main loop pass.
+  processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
+  CHECK(!delay.test_timing_fade());
+  MonitorStateChange();
+  CHECK(delay.test_timing_fade());
+  // The factory profile omits the entry, so a reboot returns to stock.
+  r.Reboot(false);
+  processor.set_seed_latch_fade(true);
+  MonitorStateChange();
+  CHECK(!delay.test_timing_fade());
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -1790,5 +1820,6 @@ int main() {
   TestSynthStopClearsReverb();
   TestPitchNotchLaw();
   TestSeedLatchPatched();
+  TestSeedLatchFadeProfile();
   return test_checker.failures() ? 1 : 0;
 }

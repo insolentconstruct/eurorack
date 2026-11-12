@@ -43,7 +43,7 @@ const char* const kOptionNames[] = {
   "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
   "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
   "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan",
-  "Synth reverb tail"
+  "Synth reverb tail", "Reserved", "Delay SEED latch fade"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 const char* const kValueNames[] = {
@@ -123,6 +123,9 @@ int main(int argc, char** argv) {
   using namespace beads;
   if (argc > 1) {
     for (int id = FEATURE_PITCH; id < FEATURE_LAST; ++id) {
+      if (id == FEATURE_RESERVED_25) {
+        continue;
+      }
       const FeatureDefinition& d = kFeatureDefinitions[id];
       printf("%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n", id, kOptionNames[id],
           d.values, d.field, d.page, d.amount, d.action, d.stateless);

@@ -64,7 +64,7 @@ Hold [A], then press FREEZE to restart the recording window at zero length and c
 
 Releasing FREEZE resumes recording with a crossfade. Quality changes, input changes between mono and stereo, leaving wavetable synth, and power-up without a saved buffer start an empty recording. Switching without changing sample rate is pop-free, including synth switching at 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the output and stop synth reverb.
 
-SEED starts latched. In delay mode, latching, unlatching or patching SEED while latched briefly fades the delay out and back in, instead of popping as in stock (#183). The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
+SEED starts latched. Latching it in stock delay can pop (#183); a Hygrostat profile can fade it instead (below). The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
 
 ## Frozen-buffer autosave
 
@@ -95,6 +95,8 @@ feedback to help shape Beta 3.
 Hygrostat can replace the complete scale bank with up to 14 scales, each with 1–24 notes including its root and a repeat interval from 0.01 to 128 semitones. Edit notes in semitones or cents, import Scala tuning files within these limits, include or remove scales, reorder them and choose RGB colours with steady, slow, fast or two-pulse indications. Factory reset restores the starting bank. Off and Chromatic remain direct choices. Reordering preserves saved identity; removing the selected scale falls back to Off. Shared links and generated guides include the chosen bank. Custom-bank CPU costs still need final module measurements.
 
 Synth reverb tail is a separate profile choice: Keep is the stock default; Fixed Clear clears the tail when leaving either synth by manual stop, input patching or processor changes. It adds no panel gesture or options-page slot. Sample-rate changes still restart the converter and briefly interrupt audio.
+
+Delay SEED latch fade is a separate profile choice: switching at once is the stock default; Fixed Fade briefly dips the delay around a delay-mode SEED latch, unlatch or cable change, instead of popping. It adds no panel gesture or options-page slot.
 
 ## Saved data
 

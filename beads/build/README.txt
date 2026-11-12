@@ -74,10 +74,9 @@ without changing sample rate is pop-free, including synth switching at
 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the
 output and stop synth reverb.
 
-SEED starts latched. In delay mode, latching, unlatching or patching SEED
-while latched briefly fades the delay out and back in, instead of popping
-as in stock (#183). The unresponsive-module report (#112) is
-unresolved; this release is not a demonstrated cure.
+SEED starts latched. Latching it in stock delay can pop (#183); a
+Hygrostat profile can fade it instead (below). The unresponsive-module
+report (#112) is unresolved; this release is not a demonstrated cure.
 
 Frozen-buffer autosave
 ----------------------
@@ -151,6 +150,11 @@ default; Fixed Clear clears the tail when leaving either synth by manual
 stop, input patching or processor changes. It adds no panel gesture or
 options-page slot. Sample-rate changes still restart the converter and
 briefly interrupt audio.
+
+Delay SEED latch fade is a separate profile choice: switching at once is
+the stock default; Fixed Fade briefly dips the delay around a delay-mode
+SEED latch, unlatch or cable change, instead of popping. It adds no
+panel gesture or options-page slot.
 
 Options page
 ------------

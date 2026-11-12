@@ -61,9 +61,9 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | clouds | 5 | 17 |
 | codec | 4 | 55 |
 | delay | 11 | 46 |
-| delay_mode | 9 | 40 |
+| delay_mode | 14 | 89 |
 | feedback_diffuser | 4 | 23 |
-| firmware | 27 | 270 |
+| firmware | 28 | 276 |
 | gain | 6 | 29 |
 | granular | 24 | 114 |
 | mix | 7 | 28 |
@@ -76,12 +76,12 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **275** | **2,199** |
+| **Total** | **281** | **2,254** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked release CI predates the codec sequencing checks.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (400 current patterns; the linked release CI detected the earlier 392). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (406 current patterns; the linked release CI detected the earlier 392). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -92,7 +92,8 @@ Feature checks beyond the table:
 Expanded feature checks also cover custom scale ID15 through the actual audio
 callback in all four engines; reordered and removed saved selections; the
 permanent pitch extension distinguishing ID15 from legacy unset settings;
-and Keep/Clear reverb tails through both synths and actual exit paths. Factory
+Keep/Clear reverb tails through both synths and actual exit paths; and stock
+versus faded delay-mode SEED latching in all four qualities. Factory
 reference output and finite custom-scale pitch conversion have focused checks.
 These are not yet checked on a module.
 
