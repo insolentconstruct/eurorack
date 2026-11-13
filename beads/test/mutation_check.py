@@ -105,9 +105,9 @@ cases = [
     'exponent && exponent != 0x7f800000', 'exponent != 0x7f800000'),
   ('TestCustomScaleBank', 'profile', 'beads/profile.cc',
     'if (!HasScale(entries_[FEATURE_PITCH].value))', 'if (false)'),
-  ('TestCustomPitchGrids', 'pitch_quantizer', 'beads/dsp/randomized_parameter.h',
-    'pitch = base + QuantizeFifths(pitch - base);',
-    'pitch = base + QuantizePitch(pitch - base, PITCH_SCALE_FIFTHS);'),
+  ('TestCustomPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
+    '    return QuantizeFifths(offset);\n',
+    '    return QuantizePitch(offset, PITCH_SCALE_FIFTHS);\n'),
   ('TestCustomScaleCallbackChain', 'firmware', 'beads/settings.cc',
     'ConfigurePitchScales(&profile_.scale(0), profile_.scale_count(),\n'
     '      profile_.custom_bank());',
