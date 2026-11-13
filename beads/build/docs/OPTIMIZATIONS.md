@@ -114,6 +114,19 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 - **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, wavetable synth mode (measured separately: Synth pairs). The full callback on a module is higher.
 - **Bit-identical checks.** Development-board output and buffer hashes; 20 short and 13 long emulator scenarios (272,000 blocks in all) compared sample by sample. CI compares native-host audio byte for byte against checked-in pre-optimization DSP headers across 20 scenarios, including all four recording qualities and synth resolutions; host floating-point comparisons do not establish linked-ARM equivalence. See `beads/test/README.md` for the exact checks and limits.
 
+## Audio deadline
+
+Measured in November 2026 on a development board with the same chip and clock, and on one 2021 module at 48 kHz.
+
+**TL;DR:** Audio most likely breaks [inferred] when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it. That comes before a full-block underrun, and the SAI flags nothing. In the crackle recipe this branch peaks about 14 points under the inferred 48 kHz module deadline; the 32 and 24 kHz deadlines are lower.
+
+- **Development board (measured).** With the check made at callback exit (has the DMA already read the first word?), the callback maximum was clean up to about 91.5% of the block at 48 kHz, 87.5% at 32 kHz and 83.5% at 24 kHz; every block failed from 92.1%, 88.1% and 84.1%. The first store comes before exit, so the true deadline sits a little above these bounds. Three repeats per rate, 60 s per step. No SAI underrun or overrun at any load up to 105%.
+- **Module (inferred).** About 92.6 to 93% at 48 kHz, from the click study below; a rough figure from one recipe. The module's 32 kHz and 24 kHz deadlines are not measured yet.
+- **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
+- **The historical left-channel click.** Reproduced on one module with the 2024 source rebuilt with GCC 9 (plus deadline tracing), in the historical crackle recipe: Bright digital (48 kHz), DENSITY 0.98, PITCH +24, SIZE 0.92. Its callback peaked at 93.5 to 94.0% and OUT L clicked. In the same recipe, this branch's code with the 2024 grain stealing (81.7 to 82.7%) and this branch (78.1 to 78.8%) stayed clean [measured]. The clicks are block-locked and match the output one ring lap earlier, which points to a late first left word [inferred; moderately high confidence, exploratory, not seen on the codec data line].
+- **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
+- **Headroom.** At 48 kHz the development board was clean only up to about 91.5%, not 99%. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, set from module measurements at those rates.
+
 ## Rules for future changes
 
 ### From Mutable Instruments
