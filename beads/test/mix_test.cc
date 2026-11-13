@@ -607,8 +607,10 @@ static float DictaphoneRms(bool dictaphone, float frequency, float amplitude,
     bool mono = false, float feedback = 0.0f, int input_blocks = 8000) {
   memset(banks, 0, sizeof(banks));
   Init(mono);
-  processor.set_dictaphone(dictaphone);
   processor.Configure(Processor::MEDIA_CLEAN_TAPE, mono);
+  processor.set_dictaphone(dictaphone);
+  // The Dictaphone keeps its level across Configure; start each run afresh.
+  processor.InitDictaphone();
   mix.feedback = feedback;
   // Grains read what was recorded, also on the twice longer mono tape.
   parameters.time.base = 0.02f;
@@ -636,9 +638,9 @@ static float DictaphoneRms(bool dictaphone, float frequency, float amplitude,
 void TestDictaphone() {
   test_checker.Start("TestDictaphone");
   Init(false);
-  processor.set_dictaphone(true);
   for (int media = 0; media < 4; ++media) {
     processor.Configure(Processor::Media(media), false);
+    processor.set_dictaphone(true);
     CHECK(processor.options_ == (media == Processor::MEDIA_CLEAN_TAPE
         ? Processor::OPTION_DICTAPHONE : 0));
   }

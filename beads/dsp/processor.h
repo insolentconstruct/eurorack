@@ -98,10 +98,13 @@ class Processor {
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_REVERB_ON_GRAINS, grains);
   }
-  // The Clean tape position records on a Dictaphone instead.
+  // The Clean tape position records on a Dictaphone instead; the main loop
+  // sets it again each pass, so it follows the media.
   inline void set_dictaphone(bool dictaphone) {
-    dictaphone_ = dictaphone;
-    SetOption(OPTION_DICTAPHONE, dictaphone_ && media_ == MEDIA_CLEAN_TAPE);
+    if (dictaphone && !processor_clean_tape_.dictaphone()) {
+      InitDictaphone();
+    }
+    SetOption(OPTION_DICTAPHONE, dictaphone && media_ == MEDIA_CLEAN_TAPE);
   }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
@@ -330,6 +333,8 @@ class Processor {
     options_ = enabled ? (options_ | option) : (options_ & ~option);
   }
 
+  // Kept out of processor.cc so that the stock block compiles as before.
+  void InitDictaphone();
   void ProcessWithOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -392,8 +397,6 @@ class Processor {
   float wet_;
   
   WowAndFlutter wow_and_flutter_;
-  WowAndFlutter dictaphone_wow_;
-  bool dictaphone_;
   Reverb reverb_;
   Limiter pre_reverb_limiter_;
   Limiter output_limiter_;

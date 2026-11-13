@@ -68,11 +68,6 @@ void Processor::Init(
   wow_and_flutter_.set_lp(0.6f);
 #endif  // ENABLE_HARDWARE_24K
 
-  dictaphone_wow_.Init(48000.0f);
-  dictaphone_wow_.set_amount(kDictaphoneWow);
-  dictaphone_wow_.set_lp(0.6f);
-  dictaphone_ = false;
-
   Configure(MEDIA_DIGITAL, false);
   
   // Used for the timing of the delay to granular transition.
@@ -91,7 +86,6 @@ void Processor::Configure(Media media, bool mono) {
   feedback_diffuser_.Init();
   media_ = media;
   mono_ = mono;
-  SetOption(OPTION_DICTAPHONE, dictaphone_ && media_ == MEDIA_CLEAN_TAPE);
   
   int max_delay = 0;
 

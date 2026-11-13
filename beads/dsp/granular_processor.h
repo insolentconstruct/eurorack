@@ -81,8 +81,13 @@ class GranularProcessor {
     
     pitch_modulation_.Init(0.2f / sample_rate);
     input_limiter_.Init(1.0f / sample_rate, 0.95f);
-    dictaphone_.Init(sample_rate);
   }
+
+  // The Dictaphone medium's state, set once for the Clean tape processor.
+  static inline void set_dictaphone(Dictaphone* dictaphone) {
+    dictaphone_ = dictaphone;
+  }
+  static inline const Dictaphone* dictaphone() { return dictaphone_; }
   
   inline void SetAttacks(int mode) { attacks_.Configure(mode); }
   inline void SetAttackOnset(bool onset) { attacks_.SetOnset(onset); }
@@ -448,7 +453,7 @@ class GranularProcessor {
       const float feedback = feedback_modulation.Next();
       FloatFrame input = *in;
       if (dictaphone) {
-        dictaphone_.Level(&input);
+        dictaphone_->Level(&input);
       }
       FloatFrame s = input;
       
@@ -468,7 +473,7 @@ class GranularProcessor {
       }
 
       if (dictaphone) {
-        dictaphone_.Record(&s);
+        dictaphone_->Record(&s);
       }
 
       out->l = 0.0f;
@@ -562,10 +567,15 @@ class GranularProcessor {
   Limiter input_limiter_;
 
   AttackDetector attacks_;
-  Dictaphone dictaphone_;
+
+  static Dictaphone* dictaphone_;
 
   DISALLOW_COPY_AND_ASSIGN(GranularProcessor);
 };
+
+template<Resolution resolution, int max_delay, int ratio>
+Dictaphone* GranularProcessor<resolution, max_delay, ratio>::dictaphone_ =
+    NULL;
 
 }  // namespace beads
 

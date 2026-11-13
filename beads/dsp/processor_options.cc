@@ -35,6 +35,18 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
+// One Dictaphone, outside Processor so that its layout stays stock.
+static Dictaphone dictaphone;
+static WowAndFlutter dictaphone_wow;
+
+void Processor::InitDictaphone() {
+  dictaphone.Init(24000.0f);
+  dictaphone_wow.Init(48000.0f);
+  dictaphone_wow.set_amount(kDictaphoneWow);
+  dictaphone_wow.set_lp(0.6f);
+  processor_clean_tape_.set_dictaphone(&dictaphone);
+}
+
 void Processor::ProcessWithOptions(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -125,7 +137,7 @@ void Processor::ProcessWithOptions(
         if (options_ & OPTION_DICTAPHONE) {
           processor_clean_tape_.ProcessDictaphone(grain_triggers, delay_taps,
               freeze, parameters, feedback, mono_, in, out, size);
-          dictaphone_wow_.Process(out, size);
+          dictaphone_wow.Process(out, size);
         } else {
           processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
               parameters, feedback, mono_, in, out, size);
