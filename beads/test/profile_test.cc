@@ -318,7 +318,7 @@ void TestBetaProfileDefinitions() {
   CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
-    255, 255, 255, 255, 14
+    255, 255, 255, 255, 14, 255, 255
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank; older profiles imply it.

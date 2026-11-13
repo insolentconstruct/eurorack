@@ -113,6 +113,8 @@ not-set values use the profile default.
 | 29 | SEED at power-on (#41) | No saved value |
 | 30 | PITCH knob (#43) | No saved value |
 | 31 | Plaits bank (#190) | 14 (byte 20 low) |
+| 32 | Mix law (#21) | No saved value |
+| 33 | Reverb input (#20) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -474,3 +476,25 @@ default Green) and is Adjustable only. Profiles without the entry start on
 green. A blank or stock settings sector, a SEED power-on reset or a saved
 value the firmware doesn't know starts on the profile's bank. More banks,
 such as Plaits Palette models (#194), would add values to this ID.
+
+### Mix law
+
+Hygrostat feature ID 32 chooses Stock / Gentle (#21). Stock DRY/WET brings
+the grains in quickly: at 9 o'clock they are only 2.5 dB under the dry.
+Gentle makes the wet side rise in a straight line, so at 9 o'clock the
+grains are 7.6 dB under the dry (Clouds: 8.8 dB) and at noon 3.5 dB quieter
+than stock. The dry level and both ends of the knob stay stock. DRY/WET CV
+follows the same law. Granular, delay and spectral; both synths keep their
+own DRY/WET. Chosen at power-on, with no panel slot or saved-state nibble.
+
+### Reverb input
+
+Hygrostat feature ID 33 chooses Mix (stock) / Grains (#20). Stock sends the
+whole output, dry and grains, to the reverb, as an end-of-chain effect.
+Grains sends only the grains, before the dry/wet mix, in Clouds' order: the
+dry stays dry and REVERB no longer turns it down. DRY/WET then sets the
+reverb with the grains, so fully dry has no reverb at all and turning
+DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
+and flutter comes after the reverb, so the tail wobbles too. Granular, delay
+and spectral; both synths keep the stock routing. Chosen at power-on, with
+no panel slot or saved-state nibble.

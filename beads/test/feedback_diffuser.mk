@@ -1,6 +1,7 @@
 TARGET = feedback_diffuser_test
 CC_FILES       = 		feedback_diffuser_test.cc \
 		processor.cc \
+		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
 		stft.cc \

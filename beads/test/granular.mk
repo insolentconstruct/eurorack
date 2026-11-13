@@ -1,6 +1,7 @@
 TARGET = granular_test
 CC_FILES       = 		granular_test.cc \
 		processor.cc \
+		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
 		stft.cc \

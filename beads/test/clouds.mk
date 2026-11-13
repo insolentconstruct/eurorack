@@ -3,6 +3,7 @@ CC_FILES       = clouds_test.cc \
 		pitch_quantizer.cc \
 		synth.cc \
 		processor.cc \
+		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
 		stft.cc \

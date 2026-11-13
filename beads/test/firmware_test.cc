@@ -2083,6 +2083,75 @@ void TestPlaitsBankProfile() {
   FlashProfile(factory_profile);
 }
 
+// Output hash over one second, with DRY/WET at 9 o'clock and REVERB up.
+uint64_t MixOptionsHash(Rig* r) {
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 13107;
+  PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 52000;
+  uint64_t hash = 14695981039346656037ull;
+  for (int ms = 0; ms < 1000; ++ms) {
+    r->audio = int32_t(4.0e8f * sinf(float(ms) * 0.7f));
+    r->Tick(1, true);
+    for (size_t i = 0; i < codec.block_size_; ++i) {
+      hash = (hash ^ uint32_t(r->out[i].l)) * 1099511628211ull;
+      hash = (hash ^ uint32_t(r->out[i].r)) * 1099511628211ull;
+    }
+  }
+  return hash;
+}
+
+// Mix law and Reverb input are power-on profile choices (#21, #20); they
+// change the granular mix only, never either synth.
+void TestMixOptionsProfile() {
+  test_checker.Start("TestMixOptionsProfile");
+  const uint8_t both[] = { FEATURE_MIX_LAW, 1, FEATURE_REVERB_INPUT, 1 };
+  uint64_t hashes[3][2];
+  for (int engine = 0; engine < 3; ++engine) {
+    for (int on = 0; on < 2; ++on) {
+      Rig r(false, engine > 0);
+      settings.set_plaits_synth(engine == 2);
+      settings.SaveState();
+      if (on) {
+        BootWithProfile(&r, both, 2);
+        CHECK(processor.options_ == (Processor::OPTION_GENTLE_MIX |
+            Processor::OPTION_REVERB_ON_GRAINS));
+      } else {
+        r.Reboot(false);
+        CHECK(processor.options_ == 0);
+      }
+      Random::Seed(1);
+      if (engine) {
+        r.StartAutomatic();
+        CHECK(synth_mode);
+      } else {
+        r.Settle();
+      }
+      hashes[engine][on] = MixOptionsHash(&r);
+      CHECK(synth_mode == (engine > 0));
+    }
+  }
+  CHECK(hashes[0][0] != hashes[0][1]);
+  CHECK(hashes[1][0] == hashes[1][1]);
+  CHECK(hashes[2][0] == hashes[2][1]);
+  // Each choice sets its own path, and TIME scan from the main loop keeps it.
+  Rig r(false, false);
+  const uint8_t law[] = { FEATURE_MIX_LAW, 1 };
+  BootWithProfile(&r, law, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_GENTLE_MIX);
+  const uint8_t input[] = { FEATURE_REVERB_INPUT, 1 };
+  BootWithProfile(&r, input, 1);
+  settings.SetFeatureValue(FEATURE_TIME_SCAN, 1);
+  r.Settle();
+  CHECK(processor.options_ == (Processor::OPTION_REVERB_ON_GRAINS |
+      Processor::OPTION_TIME_SCAN));
+  settings.SetFeatureValue(FEATURE_TIME_SCAN, 0);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_REVERB_ON_GRAINS);
+  // The factory profile omits both entries.
+  r.Reboot(false);
+  CHECK(processor.options_ == 0);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2123,5 +2192,6 @@ int main() {
   TestSeedStartProfile();
   TestPitchLawProfile();
   TestPlaitsBankProfile();
+  TestMixOptionsProfile();
   return test_checker.failures() ? 1 : 0;
 }

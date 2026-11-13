@@ -990,6 +990,48 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": true
+    },
+    {
+      "id": 32,
+      "issue": 21,
+      "name": "Mix law",
+      "values": [
+        "Stock",
+        "Gentle"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 33,
+      "issue": 20,
+      "name": "Reverb input",
+      "values": [
+        "Mix (stock)",
+        "Grains"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."

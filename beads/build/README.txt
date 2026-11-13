@@ -163,6 +163,13 @@ wins. Attack sensitivity: Normal, Low or High. SEED at power-on:
 Unlatched waits for SEED presses or gates. PITCH knob: Smooth glides
 between the intervals without notches; PITCH CV is unchanged.
 
+Two mix choices keep stock behaviour by default and add no panel gesture
+or options-page slot. Mix law: Gentle brings the grains in more slowly
+on DRY/WET (7.6 dB under the dry at 9 o'clock instead of 2.5 dB); the
+dry and both ends of the knob stay stock. Reverb input: Grains sends
+only the grains to the reverb, before the dry/wet mix as on Clouds, so
+fully dry has no reverb. Both synths are unchanged.
+
 Plaits synth banks: FEEDBACK selects one of the eight models of the
 current bank, as on Plaits: green (its first bank), red (noise and
 drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,

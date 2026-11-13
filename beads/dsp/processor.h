@@ -54,6 +54,9 @@ namespace beads {
 // (512 + 256) * 1000 bytes, 48kHz 16-bit stereo = 4 seconds
 const size_t kDelayBufferSizeBits = 768 * 1000 * 8;
 
+const float kDelayModeTransitionTime = 1.5f;  // seconds
+const float kDelayModeFadeTime = 0.75f;  // seconds
+
 class Processor {
  public:
   Processor() { }
@@ -84,7 +87,17 @@ class Processor {
     processor_dirty_tape_.SetAttacks(mode);
   }
 
-  inline void set_time_scan(bool enabled) { time_scan_enabled_ = enabled; }
+  inline void set_time_scan(bool enabled) {
+    SetOption(OPTION_TIME_SCAN, enabled);
+  }
+  // Wet rises linearly with DRY/WET; dry and both ends stay stock.
+  inline void set_gentle_mix(bool gentle) {
+    SetOption(OPTION_GENTLE_MIX, gentle);
+  }
+  // Reverb on the grains before the dry/wet mix, as in Clouds.
+  inline void set_reverb_on_grains(bool grains) {
+    SetOption(OPTION_REVERB_ON_GRAINS, grains);
+  }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
     delay_controller_.set_timing_fade(enabled);
@@ -301,6 +314,33 @@ class Processor {
 #endif  // DWT_CALIBRATION
 
  private:
+  enum Option {
+    OPTION_TIME_SCAN = 1,
+    OPTION_GENTLE_MIX = 2,
+    OPTION_REVERB_ON_GRAINS = 4
+  };
+
+  inline void SetOption(Option option, bool enabled) {
+    options_ = enabled ? (options_ | option) : (options_ & ~option);
+  }
+
+  void ProcessWithOptions(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
+  void MixDryWet(
+      const FloatFrame* dry_signal,
+      float dry,
+      float wet,
+      FloatFrame* out,
+      size_t size);
+  void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
 
   GranularProcessor<
@@ -339,7 +379,7 @@ class Processor {
   
   float delay_mode_transition_;
   DelayMode delay_mode_;
-  bool time_scan_enabled_;
+  uint8_t options_;
   TimeScan time_scan_;
 
   float dry_;
