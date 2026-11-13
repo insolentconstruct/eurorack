@@ -111,7 +111,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 41;
+const size_t kNumOptionValues = 42;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -155,7 +155,9 @@ class Options {
 
   inline bool manual_start_preview() const { return manual_start_preview_; }
 
-  inline bool intervals_preview() const { return intervals_preview_; }
+  inline RandomIntervals intervals_preview() const {
+    return intervals_preview_;
+  }
 
   inline bool clouds_preview() const { return clouds_preview_; }
 
@@ -227,7 +229,7 @@ class Options {
   OutputLimiterMode limiter_preview_;
   bool spectral_preview_;
   bool manual_start_preview_;
-  bool intervals_preview_;
+  RandomIntervals intervals_preview_;
   bool clouds_preview_;
   bool plaits_preview_;
   DelayMode delay_preview_;

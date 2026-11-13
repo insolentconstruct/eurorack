@@ -43,7 +43,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, 6, true, false, false, false },  // Synth.
   { 3, 7, true, false, false, false },  // Attacks.
   { 2, 8, true, false, true, true },  // Synth start.
-  { 2, 9, true, false, false, false },  // Intervals.
+  { 3, 9, true, false, false, false },  // Intervals.
   { 0, kNoField, false, true, false, false },  // Width.
   { 0, kNoField, false, true, false, false },  // Diffusion.
   { 2, kNoField, false, false, true, false },  // Monophonic.

@@ -26,11 +26,14 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Fixed-root grain pitch quantization.
+// Fixed-root grain pitch quantization, and the notes recently sent to PITCH.
 
 #include "beads/dsp/pitch_quantizer.h"
 
+#include <algorithm>
 #include <cmath>
+
+#include "stmlib/utils/random.h"
 
 namespace beads {
 
@@ -142,6 +145,55 @@ float QuantizePitch(float pitch, PitchScale scale) {
     lower = upper;
   }
   return lower;
+}
+
+const size_t kNumRecentNotes = 8;
+// A note is new once the CV holds within 0.1 semitone for 10 ms, at least
+// half a semitone away from the last note.
+const float kNoteTolerance = 0.1f;
+const float kNoteMinimumStep = 0.5f;
+const uint32_t kNoteSettleTime = 10;
+
+static float recent_notes[kNumRecentNotes];
+static volatile size_t num_recent_notes;
+static volatile size_t newest_note;
+static float note_candidate;
+static uint32_t note_candidate_time;
+
+void RememberNote(float cv, bool patched, uint32_t now) {
+  if (!patched) {
+    num_recent_notes = 0;
+    note_candidate = cv;
+    note_candidate_time = now;
+    return;
+  }
+  if (fabsf(cv - note_candidate) > kNoteTolerance) {
+    note_candidate = cv;
+    note_candidate_time = now;
+    return;
+  }
+  if (now - note_candidate_time < kNoteSettleTime || (num_recent_notes &&
+      fabsf(cv - recent_notes[newest_note]) < kNoteMinimumStep)) {
+    return;
+  }
+  // The slot is written before it is published to the audio interrupt.
+  const size_t slot = (newest_note + 1) % kNumRecentNotes;
+  recent_notes[slot] = cv;
+  newest_note = slot;
+  if (num_recent_notes < kNumRecentNotes) {
+    ++num_recent_notes;
+  }
+}
+
+float RecentNote(float amount, float cv) {
+  size_t count = 1 + size_t(amount * float(kNumRecentNotes - 1) + 0.5f);
+  const size_t stored = num_recent_notes;
+  if (!stored) {
+    return cv;
+  }
+  count = std::min(count, stored);
+  const size_t age = size_t(stmlib::Random::GetFloat() * float(count));
+  return recent_notes[(newest_note + kNumRecentNotes - age) % kNumRecentNotes];
 }
 
 }  // namespace beads

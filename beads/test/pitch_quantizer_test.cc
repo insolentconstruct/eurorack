@@ -111,17 +111,17 @@ void TestRandomizedPitchGrid() {
         const float pitch = p.value(NULL, 0, 24.0f, false);
         const uint32_t next = stmlib::Random::GetWord();
         stmlib::Random::Seed(i);
-        CHECK(p.pitch_value(PITCH_SCALE_PELOG, false) ==
+        CHECK(p.pitch_value(PITCH_SCALE_PELOG, RANDOM_INTERVALS_OFF) ==
             stmlib::SemitonesToRatio(QuantizePitch(pitch, PITCH_SCALE_PELOG)));
         CHECK(stmlib::Random::GetWord() == next);
         stmlib::Random::Seed(i);
         const float stock = p.pitch_value();
         stmlib::Random::Seed(i);
-        CHECK(p.pitch_value(PITCH_SCALE_OFF, false) == stock);
+        CHECK(p.pitch_value(PITCH_SCALE_OFF, RANDOM_INTERVALS_OFF) == stock);
         if (a >= 0) {
           // Random intervals only acts counter-clockwise.
           stmlib::Random::Seed(i);
-          CHECK(p.pitch_value(PITCH_SCALE_OFF, true) == stock);
+          CHECK(p.pitch_value(PITCH_SCALE_OFF, RANDOM_INTERVALS_FIFTHS) == stock);
         }
         // Exactly: the offset snaps, then the scale; same random draws.
         for (int c = 0; c < 3; ++c) {
@@ -133,7 +133,7 @@ void TestRandomizedPitchGrid() {
               ? p.base + QuantizePitch(raw - p.base, PITCH_SCALE_FIFTHS)
               : raw;
           stmlib::Random::Seed(i);
-          CHECK(p.pitch_value(PITCH_SCALE_PELOG, true) ==
+          CHECK(p.pitch_value(PITCH_SCALE_PELOG, RANDOM_INTERVALS_FIFTHS) ==
               stmlib::SemitonesToRatio(
                   QuantizePitch(snapped, PITCH_SCALE_PELOG)));
           CHECK(stmlib::Random::GetWord() == after);
@@ -158,7 +158,7 @@ void TestRandomIntervals() {
     p.attenuverter = side ? 0.8f : -0.8f;
     for (int i = 0; i < 2000; ++i) {
       const float offset = 12.0f * log2f(
-          p.pitch_value(PITCH_SCALE_OFF, true)) - p.base;
+          p.pitch_value(PITCH_SCALE_OFF, RANDOM_INTERVALS_FIFTHS)) - p.base;
       const float snapped = QuantizePitch(offset, PITCH_SCALE_FIFTHS);
       off_grid[side] += fabsf(offset - snapped) > 0.001f;
       moved += !side && fabsf(offset) > 0.5f;
@@ -171,7 +171,7 @@ void TestRandomIntervals() {
   // With a scale, the result is on the scale.
   p.attenuverter = -0.8f;
   for (int i = 0; i < 500; ++i) {
-    const float pitch = 12.0f * log2f(p.pitch_value(PITCH_SCALE_MAJOR, true));
+    const float pitch = 12.0f * log2f(p.pitch_value(PITCH_SCALE_MAJOR, RANDOM_INTERVALS_FIFTHS));
     CHECK(fabsf(pitch - QuantizePitch(pitch, PITCH_SCALE_MAJOR)) < 0.001f);
   }
 }
@@ -197,7 +197,7 @@ void TestCustomIntervalInteractions() {
         float ratio[2];
         for (int intervals = 0; intervals < 2; ++intervals) {
           stmlib::Random::Seed(0x81273849U + uint32_t(i) * 997);
-          ratio[intervals] = p.pitch_value(PitchScale(15), intervals);
+          ratio[intervals] = p.pitch_value(PitchScale(15), RandomIntervals(intervals));
           const float pitch = 12.0f * log2f(ratio[intervals]);
           float phase = fmodf(pitch, custom.period);
           if (phase < 0.0f) {
@@ -267,7 +267,7 @@ void TestCustomPitchGrids() {
   random.attenuverter = -0.8f;
   for (int i = 0; i < 128; ++i) {
     const float offset = 12.0f * log2f(
-        random.pitch_value(PITCH_SCALE_OFF, true)) - random.base;
+        random.pitch_value(PITCH_SCALE_OFF, RANDOM_INTERVALS_FIFTHS)) - random.base;
     CHECK(fabsf(offset - QuantizeFifths(offset)) < 0.001f);
   }
   CHECK(QuantizePitch(2.345f, PITCH_SCALE_OFF) == 2.345f);
@@ -308,7 +308,7 @@ void TestCustomPitchRatioLimits() {
           CHECK(fabsf(raw) <= 108.0f);
           CHECK(fabsf(q) <= 144.0f);
           stmlib::Random::Seed(seed);
-          const float ratio = p.pitch_value(PitchScale(id), false);
+          const float ratio = p.pitch_value(PitchScale(id), RANDOM_INTERVALS_OFF);
           const float reference = powf(2.0f, q / 12.0f);
           CHECK(ratio > 0.0f && ratio <= 4096.0f);
           CHECK(fabsf(ratio / reference - 1.0f) < 0.001f);
@@ -319,7 +319,7 @@ void TestCustomPitchRatioLimits() {
       const float off = stmlib::SemitonesToRatio(p.base);
       p.has_cv = true;
       p.attenuverter = 0.0f;
-      CHECK(p.pitch_value(PITCH_SCALE_OFF, false) == off);
+      CHECK(p.pitch_value(PITCH_SCALE_OFF, RANDOM_INTERVALS_OFF) == off);
     }
   }
   ConfigurePitchScales(NULL, 0, false);
@@ -333,9 +333,118 @@ void TestCustomPitchRatioLimits() {
       p.base = float(i) * 0.01f;
       const float expected = stmlib::SemitonesToRatio(
           QuantizePitch(p.base, PitchScale(scale)));
-      CHECK(p.pitch_value(PitchScale(scale), false) == expected);
+      CHECK(p.pitch_value(PitchScale(scale), RANDOM_INTERVALS_OFF) == expected);
     }
   }
+}
+
+// Recent notes: a note counts once the CV has held for 10 ms; grains pick
+// among the last 1 to 8 of them, more counter-clockwise (#220).
+void TestRecentNotes() {
+  test_checker.Start("TestRecentNotes");
+  uint32_t now = 0;
+  RememberNote(0.0f, false, now);
+  CHECK(RecentNote(1.0f, 4.5f) == 4.5f);
+  // A slewed or noisy CV is not a note until it settles.
+  for (int i = 0; i < 40; ++i) {
+    RememberNote(0.2f * float(i), true, ++now);
+  }
+  CHECK(RecentNote(1.0f, 7.0f) == 7.0f);
+  for (int i = 0; i < 9; ++i) {
+    RememberNote(i & 1 ? 2.03f : 1.97f, true, ++now);
+  }
+  CHECK(RecentNote(1.0f, 7.0f) == 7.0f);
+  RememberNote(2.0f, true, ++now);
+  RememberNote(2.0f, true, ++now);
+  CHECK(RecentNote(1.0f, 7.0f) == 2.0f);
+  // A melody: C E G B D, then a quarter-tone wobble that is not a new note.
+  const float melody[] = { 0.0f, 4.0f, 7.0f, 11.0f, 14.0f, 14.3f };
+  for (int n = 0; n < 6; ++n) {
+    for (int i = 0; i < 20; ++i) {
+      RememberNote(melody[n], true, ++now);
+    }
+  }
+  // Fully clockwise of the counter-clockwise half: only the newest note.
+  for (int i = 0; i < 200; ++i) {
+    CHECK(RecentNote(0.01f, -9.0f) == 14.0f);
+  }
+  // Fully counter-clockwise: every remembered note, and only those.
+  const float stored[6] = { 2.0f, 0.0f, 4.0f, 7.0f, 11.0f, 14.0f };
+  int seen[6] = { 0, 0, 0, 0, 0, 0 };
+  for (int i = 0; i < 3000; ++i) {
+    const float note = RecentNote(1.0f, -9.0f);
+    int found = -1;
+    for (int n = 0; n < 6; ++n) {
+      found = note == stored[n] ? n : found;
+    }
+    CHECK(found >= 0);
+    seen[found >= 0 ? found : 0] += found >= 0;
+  }
+  for (int n = 0; n < 6; ++n) {
+    CHECK(seen[n] > 400 && seen[n] < 600);
+  }
+  // Half way: the newest 1 + round(0.5 x 7) = 5 notes.
+  for (int i = 0; i < 2000; ++i) {
+    CHECK(RecentNote(0.5f, -9.0f) != 2.0f);
+  }
+  // Only the last eight are kept.
+  for (int n = 0; n < 12; ++n) {
+    for (int i = 0; i < 11; ++i) {
+      RememberNote(float(n) * -1.0f - 20.0f, true, ++now);
+    }
+  }
+  for (int i = 0; i < 2000; ++i) {
+    const float note = RecentNote(1.0f, 0.0f);
+    CHECK(note <= -24.0f && note >= -31.0f);
+  }
+  // Unplugging forgets; the clock may wrap.
+  RememberNote(3.0f, false, ++now);
+  CHECK(RecentNote(1.0f, 3.0f) == 3.0f);
+  now = 0xfffffffa;
+  for (int i = 0; i < 12; ++i) {
+    RememberNote(5.0f, true, ++now);
+  }
+  CHECK(RecentNote(1.0f, 0.0f) == 5.0f);
+
+  // Grains: CW and Free stay stock; CCW picks base + a recent note.
+  RandomizedParameter p;
+  p.base = -3.0f;
+  p.cv = 9.0f;
+  p.has_cv = true;
+  for (int a = -1; a <= 1; ++a) {
+    p.attenuverter = 0.6f * float(a);
+    for (int i = 1; i < 200; ++i) {
+      stmlib::Random::Seed(i);
+      const float stock = p.pitch_value(PITCH_SCALE_OFF, RANDOM_INTERVALS_OFF);
+      stmlib::Random::Seed(i);
+      const float recent = p.pitch_value(PITCH_SCALE_OFF,
+          RANDOM_INTERVALS_RECENT_NOTES);
+      if (a >= 0) {
+        CHECK(recent == stock);
+      } else {
+        CHECK(recent == stmlib::SemitonesToRatio(-3.0f + 5.0f));
+      }
+    }
+  }
+  // Unpatched, Recent notes is Free.
+  p.has_cv = false;
+  p.attenuverter = -0.6f;
+  for (int i = 1; i < 200; ++i) {
+    stmlib::Random::Seed(i);
+    const float stock = p.pitch_value(PITCH_SCALE_MAJOR, RANDOM_INTERVALS_OFF);
+    stmlib::Random::Seed(i);
+    CHECK(p.pitch_value(PITCH_SCALE_MAJOR, RANDOM_INTERVALS_RECENT_NOTES)
+        == stock);
+  }
+  // A scale still applies afterwards.
+  p.has_cv = true;
+  RememberNote(0.0f, false, ++now);
+  for (int i = 0; i < 12; ++i) {
+    RememberNote(1.0f, true, ++now);
+  }
+  CHECK(p.pitch_value(PITCH_SCALE_MAJOR, RANDOM_INTERVALS_RECENT_NOTES) ==
+      stmlib::SemitonesToRatio(QuantizePitch(-2.0f, PITCH_SCALE_MAJOR)));
+  RememberNote(0.0f, false, ++now);
 }
 
 int main() {
@@ -345,5 +454,6 @@ int main() {
   TestCustomPitchRatioLimits();
   TestRandomizedPitchGrid();
   TestRandomIntervals();
+  TestRecentNotes();
   return test_checker.failures() ? 1 : 0;
 }

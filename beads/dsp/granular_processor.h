@@ -240,7 +240,7 @@ class GranularProcessor {
     granular_player_.set_pitch_scale(scale);
   }
 
-  inline void set_random_intervals(bool intervals) {
+  inline void set_random_intervals(RandomIntervals intervals) {
     granular_player_.set_random_intervals(intervals);
   }
 

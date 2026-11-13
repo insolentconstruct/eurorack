@@ -1174,14 +1174,17 @@ void TestIntervalsStorage() {
   test_checker.Start("TestIntervalsStorage");
   Rig r(false);
   for (int value = 0; value < 256; ++value) {
+    const RandomIntervals expected = value == 0xa1 ? RANDOM_INTERVALS_FIFTHS
+        : value == 0xa2 ? RANDOM_INTERVALS_RECENT_NOTES : RANDOM_INTERVALS_OFF;
+    const uint8_t canonical = value == 0xa1 || value == 0xa2 ? value : 0;
     r.settings.mutable_state()->random_intervals = value;
-    CHECK(r.settings.random_intervals() == (value == 0xa1));
+    CHECK(r.settings.random_intervals() == expected);
     r.settings.mutable_state()->padding[0] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.random_intervals() == (value == 0xa1));
-    CHECK(loaded.state().random_intervals == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.random_intervals() == expected);
+    CHECK(loaded.state().random_intervals == canonical);
     CHECK(loaded.state().padding[0] == 0);
     loaded.mutable_state()->random_intervals = value;
     loaded.stored_state_ = loaded.state_;
@@ -1193,32 +1196,38 @@ void TestIntervalsStorage() {
   }
 }
 
-// Page 1, DRY/WET: Free / Fifths and octaves, independent of the scale.
+// Page 1, DRY/WET: Free / Fifths and octaves / Recent notes, independent of
+// the scale.
 void TestIntervalsOption() {
   test_checker.Start("TestIntervalsOption");
-  for (int target = 0; target < 2; ++target) {
+  const float positions[3] = { 0.05f, 0.5f, 0.95f };
+  const uint8_t red[3] = { 0, 255, 255 };
+  const uint8_t green[3] = { 255, 255, 0 };
+  const uint8_t tags[3] = { 0, 0xa1, 0xa2 };
+  for (int target = 0; target < 3; ++target) {
+    const RandomIntervals from = RandomIntervals((target + 1) % 3);
     Rig r(false);
     r.settings.set_pitch_scale(PITCH_SCALE_MAJOR);
-    r.settings.set_random_intervals(!target);
+    r.settings.set_random_intervals(from);
     r.ui.LoadOptions();
     r.Enter();
-    CHECK(r.ui.options_.intervals_preview() == !target);
-    r.pot = target ? 0.05f : 0.95f;
+    CHECK(r.ui.options_.intervals_preview() == from);
+    r.pot = positions[from];
     r.Tick(50, true);
-    r.pot = target ? 0.85f : 0.15f;
+    r.pot = positions[target];
     r.Tick(50, true);
-    CHECK(r.ui.options_.intervals_preview() == bool(target));
-    CHECK(r.ui.random_intervals() == bool(target));
+    CHECK(r.ui.options_.intervals_preview() == target);
+    CHECK(r.ui.random_intervals() == target);
     const OptionValue& v = r.ui.options_.indication();
     CHECK(v.setting == OPTION_INTERVALS && v.value == target);
-    CHECK(v.color.r == (target ? 255 : 0) && v.color.g == 255);
+    CHECK(v.color.r == red[target] && v.color.g == green[target]);
     r.Tick(1100, true);
-    CHECK(r.settings.random_intervals() == bool(target));
+    CHECK(r.settings.random_intervals() == target);
     CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.random_intervals() == bool(target));
-    CHECK(loaded.state().random_intervals == (target ? 0xa1 : 0));
+    CHECK(loaded.random_intervals() == target);
+    CHECK(loaded.state().random_intervals == tags[target]);
   }
 }
 
@@ -1955,7 +1964,7 @@ void TestOptionsKnobsAndSettling() {
           ? r.settings.clouds_style() : setting == OPTION_PROCESSOR
           ? r.settings.spectral() : setting == OPTION_SYNTH_START
           ? r.settings.self_play_on_request() : setting == OPTION_INTERVALS
-          ? r.settings.random_intervals() : setting == OPTION_FROZEN
+          ? int(r.settings.random_intervals()) : setting == OPTION_FROZEN
           ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
           ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
           ? int(r.settings.attack_mode()) : setting == OPTION_BRIGHTNESS
@@ -2149,7 +2158,7 @@ void TestOptionsPalette() {
         r.ui.options_.manual_start_preview_ = v.value;
         break;
       case OPTION_INTERVALS:
-        r.ui.options_.intervals_preview_ = v.value;
+        r.ui.options_.intervals_preview_ = RandomIntervals(v.value);
         break;
       case OPTION_SYNTH:
         r.ui.options_.plaits_preview_ = v.value;

@@ -479,7 +479,7 @@ void TestRandomIntervalSynthGrains() {
       h.parameters.pitch.cv = 0.0f;
       h.parameters.pitch.has_cv = false;
       h.parameters.pitch.attenuverter = -1.0f;
-      h.synth.set_random_intervals(intervals);
+      h.synth.set_random_intervals(RandomIntervals(intervals));
       h.Tick(true, false);
       const WavetableGrain& grain =
           h.synth.wavetable_granular_player_.grain_[0];

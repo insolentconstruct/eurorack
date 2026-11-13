@@ -83,6 +83,7 @@ const char* const kValueNames[] = {
   "Manual",
   "Free (Stock)",
   "Fifths and octaves",
+  "Recent notes",
   "100%",
   "66%",
   "33%",

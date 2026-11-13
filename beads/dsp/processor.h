@@ -300,7 +300,7 @@ class Processor {
   }
 
   // Grains only; spectral has no random grain pitch.
-  inline void set_random_intervals(bool intervals) {
+  inline void set_random_intervals(RandomIntervals intervals) {
     processor_digital_.set_random_intervals(intervals);
     processor_vintage_digital_.set_random_intervals(intervals);
     processor_clean_tape_.set_random_intervals(intervals);

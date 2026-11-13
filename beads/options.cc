@@ -74,6 +74,7 @@ const OptionValue kOptionValues[] = {
   { OPTION_SYNTH_START, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_INTERVALS, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_INTERVALS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 2, { 255, 0, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
@@ -119,7 +120,8 @@ void Options::Init() {
   idle_timeout_ = idle_time_ = 0;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
-  spectral_preview_ = manual_start_preview_ = intervals_preview_ = false;
+  spectral_preview_ = manual_start_preview_ = false;
+  intervals_preview_ = RANDOM_INTERVALS_OFF;
   attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
@@ -357,13 +359,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
           }
           break;
         case OPTION_INTERVALS:
-          if (pot < kOptionsHalfLow) {
-            intervals_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            intervals_preview_ = true;
-          }
+          intervals_preview_ = RandomIntervals(zone_[i]);
           break;
         case OPTION_SYNTH_START:
           if (pot < kOptionsHalfLow) {

@@ -1150,7 +1150,7 @@ void TestPackedSettings() {
     s.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
     s.set_evolving_feedback(true);
     s.set_delay_mode(DELAY_MODE_WIDE_DETENT);
-    s.set_random_intervals(true);
+    s.set_random_intervals(RANDOM_INTERVALS_FIFTHS);
     s.set_spectral(true);
     s.SaveState();
     Settings loaded;

@@ -303,7 +303,7 @@ void Settings::SetFeatureValue(ProfileFeature feature, uint8_t value) {
       set_self_play_on_request(value);
       break;
     case FEATURE_INTERVALS:
-      set_random_intervals(value);
+      set_random_intervals(RandomIntervals(value));
       break;
     case FEATURE_WIDTH:
       state_.stereo_width = value;

@@ -153,7 +153,9 @@ class Ui {
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
-  inline bool random_intervals() const { return random_intervals_; }
+  inline RandomIntervals random_intervals() const {
+    return random_intervals_;
+  }
 
   // The saved engine, applied once the options page has closed.
   inline bool spectral() const { return spectral_; }
@@ -256,7 +258,7 @@ class Ui {
   float attack_threshold_;
   volatile bool spectral_;
   volatile PitchScale pitch_scale_;
-  volatile bool random_intervals_;
+  volatile RandomIntervals random_intervals_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;
   uint32_t storage_status_time_;

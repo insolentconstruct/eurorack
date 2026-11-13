@@ -910,7 +910,7 @@ void TestRandomIntervalGrains() {
         parameters.pitch.cv = 0.0f;
         parameters.pitch.has_cv = false;
         parameters.pitch.attenuverter = -1.0f;
-        processor.set_random_intervals(intervals);
+        processor.set_random_intervals(RandomIntervals(intervals));
         ProcessQuantizedBlock(true);
         DelayGranularPlayer* player = quality == 0
             ? &processor.processor_dirty_tape_.granular_player_
@@ -927,6 +927,50 @@ void TestRandomIntervalGrains() {
     }
     CHECK(off_grid[0] > 10 && off_grid[1] == 0);
   }
+}
+
+// Recent notes reaches every quality's grains, at the remembered notes.
+void TestRecentNoteGrains() {
+  test_checker.Start("TestRecentNoteGrains");
+  const float notes[3] = { -5.0f, 0.0f, 7.0f };
+  uint32_t now = 0;
+  RememberNote(0.0f, false, now);
+  for (int n = 0; n < 3; ++n) {
+    for (int i = 0; i < 11; ++i) {
+      RememberNote(notes[n], true, ++now);
+    }
+  }
+  for (int quality = 0; quality < 4; ++quality) {
+    int seen[3] = { 0, 0, 0 };
+    for (int i = 0; i < 30; ++i) {
+      InitProcessor();
+      processor.Configure(Processor::Media(quality), false);
+      parameters.size.base = 0.8f;
+      parameters.pitch.base = 0.0f;
+      parameters.pitch.cv = 3.0f;
+      parameters.pitch.has_cv = true;
+      parameters.pitch.attenuverter = -1.0f;
+      processor.set_random_intervals(RANDOM_INTERVALS_RECENT_NOTES);
+      stmlib::Random::Seed(1 + i * 7919);
+      ProcessQuantizedBlock(true);
+      DelayGranularPlayer* player = quality == 0
+          ? &processor.processor_dirty_tape_.granular_player_
+          : quality == 1 ? &processor.processor_clean_tape_.granular_player_
+          : quality == 2
+              ? &processor.processor_vintage_digital_.granular_player_
+          : &processor.processor_digital_.granular_player_;
+      const float offset = 12.0f * log2f(
+          float(abs(player->grain_[0].speed_)) / 1024.0f);
+      int found = -1;
+      for (int n = 0; n < 3; ++n) {
+        found = fabsf(offset - notes[n]) < 0.03f ? n : found;
+      }
+      CHECK(found >= 0);
+      seen[found >= 0 ? found : 0] += found >= 0;
+    }
+    CHECK(seen[0] && seen[1] && seen[2]);
+  }
+  RememberNote(0.0f, false, ++now);
 }
 
 void TestStereoWidth() {
@@ -1054,6 +1098,7 @@ int main() {
   TestProcessorGrainLatch();
   TestQuantizedGrainPitch();
   TestRandomIntervalGrains();
+  TestRecentNoteGrains();
   TestProcessorEnvelopeCompletion();
   TestProcessorVoiceRelease();
   TestProcessorVoiceSaturation();

@@ -944,9 +944,9 @@ void TestRandomIntervalsChain() {
     Rig r(false, true);
     PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 0;
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
-    settings.set_random_intervals(intervals);
+    settings.set_random_intervals(RandomIntervals(intervals));
     r.Settle();
-    CHECK(ui.random_intervals() == bool(intervals));
+    CHECK(ui.random_intervals() == intervals);
     float previous = 12.0f * log2f(NextGrainSpeed(&r));
     for (int i = 0; i < 20; ++i) {
       const float pitch = 12.0f * log2f(NextGrainSpeed(&r));
@@ -961,6 +961,49 @@ void TestRandomIntervalsChain() {
   printf("Random intervals chain: off the grid %d free, %d intervals\n",
       off_grid[0], off_grid[1]);
   CHECK(off_grid[0] > 10 && off_grid[1] == 0);
+}
+
+// Recent notes reaches the grains from the main loop: held PITCH CV notes
+// become the only offsets counter-clockwise (#220).
+void TestRecentNotesChain() {
+  test_checker.Start("TestRecentNotesChain");
+  const uint16_t held[3] = { 30365, 27000, 34000 };
+  int off_notes[2] = { 0, 0 };
+  for (int mode = 0; mode < 2; ++mode) {
+    Rig r(false, true);
+    r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+    PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 0;
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+    settings.set_random_intervals(
+        mode ? RANDOM_INTERVALS_RECENT_NOTES : RANDOM_INTERVALS_OFF);
+    r.cv[CV_ADC_CHANNEL_PITCH] = held[0];
+    r.Settle();
+    float notes[3];
+    for (int n = 0; n < 3; ++n) {
+      r.cv[CV_ADC_CHANNEL_PITCH] = held[n];
+      r.Tick(30, true);
+      notes[n] = cv_reader.cv(CV_ADC_CHANNEL_PITCH);
+    }
+    const float base = cv_reader.pot(POTS_ADC_CHANNEL_PITCH);
+    int seen[3] = { 0, 0, 0 };
+    for (int i = 0; i < 60; ++i) {
+      const float offset = 12.0f * log2f(NextGrainSpeed(&r)) - base;
+      bool on_note = false;
+      for (int n = 0; n < 3; ++n) {
+        if (fabsf(offset - notes[n]) < 0.03f) {
+          on_note = true;
+          ++seen[n];
+        }
+      }
+      off_notes[mode] += !on_note;
+    }
+    if (mode) {
+      CHECK(seen[0] && seen[1] && seen[2]);
+    }
+  }
+  printf("Recent notes chain: off the notes %d free, %d recent\n",
+      off_notes[0], off_notes[1]);
+  CHECK(off_notes[0] > 30 && off_notes[1] == 0);
 }
 
 void TestSelfPlayFrozenBackup() {
@@ -2178,6 +2221,7 @@ int main() {
   TestPitchChain();
   TestQuantizedPitchChain();
   TestRandomIntervalsChain();
+  TestRecentNotesChain();
   TestSelfPlayFrozenBackup();
   TestPlaitsSynthSelection();
   TestSpectralEngine();

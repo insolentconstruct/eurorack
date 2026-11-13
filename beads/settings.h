@@ -224,12 +224,17 @@ class Settings {
     state_.synth_engine = plaits ? (kOptionTag + 1) : 0;
   }
 
-  inline bool random_intervals() const {
-    return state_.random_intervals == (kOptionTag + 1);
+  inline RandomIntervals random_intervals() const {
+    const uint8_t value = state_.random_intervals;
+    return value == (kOptionTag + 1) ? RANDOM_INTERVALS_FIFTHS
+        : value == (kOptionTag + 2) ? RANDOM_INTERVALS_RECENT_NOTES
+        : RANDOM_INTERVALS_OFF;
   }
 
-  inline void set_random_intervals(bool intervals) {
-    state_.random_intervals = intervals ? (kOptionTag + 1) : 0;
+  inline void set_random_intervals(RandomIntervals intervals) {
+    state_.random_intervals = intervals == RANDOM_INTERVALS_FIFTHS
+        ? (kOptionTag + 1) : intervals == RANDOM_INTERVALS_RECENT_NOTES
+        ? (kOptionTag + 2) : 0;
   }
 
   inline bool width_assigned() const { return state_.width_assigned == 1; }
