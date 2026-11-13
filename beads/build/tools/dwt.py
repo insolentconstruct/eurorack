@@ -121,7 +121,7 @@ def decode_frames(data, generation):
 
 def openocd(action):
     if action == "sai":
-        return "mdw 0x4001581c 1\nmdw 0x4001583c 1\n"
+        return "mdw 0x40015818 1\nmdw 0x40015838 1\n"
     if action == "reset":
         return (
             "# WARNING: writes RAM; calibration firmware must be running.\n"

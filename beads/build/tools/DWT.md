@@ -77,8 +77,9 @@ Offline checks: `python3 -m unittest test_dwt` from this directory.
 `verify_dwt.py RELEASE_BIN CALIBRATION_BIN` checks artifact SHA256 identity;
 it does not emulate firmware or establish hardware timing.
 
-Read SAI1 block A SR (DAC) with `mdw 0x4001581c 1` and block B SR (ADC)
-with `mdw 0x4001583c 1`. Bit 0 is DAC underrun / ADC overrun respectively.
+Read SAI1 block A SR (DAC) with `mdw 0x40015818 1` and block B SR (ADC)
+with `mdw 0x40015838 1`. Bit 0 is DAC underrun / ADC overrun respectively.
+(0x4001581c and 0x4001583c are the write-only clear-flag registers; they read 0.)
 These reads never clear either sticky flag. Read before and after capture;
 a pre-existing flag makes a new occurrence inconclusive. Avoid debug traffic
 during acquisition.
@@ -100,7 +101,7 @@ trim or change controls during capture. Preserve stimulus and capture logs.
 | 6 | Sunny tape | Sunny tape quality; Stock reverb; reconnect both inputs |
 | 7 | Crackle | Bright digital, Clouds-style on, DRY/WET fully CW, FEEDBACK fully CCW, REVERB as left by options exit, DENSITY .98, PITCH +24 semitones, SIZE .92, SHAPE .5 by fixed CV; music into both inputs |
 
-Scenario 7 passes when total callback maximum is strictly below 115800
+Scenario 7 passes when total callback maximum is strictly below 109700
 cycles (the 48 kHz deadline, below) and SAI DAC underrun is not newly set.
 Capture SAI before reset and after the completed capture; record ADC
 overrun too. A pre-existing DAC flag makes the underrun check inconclusive. This settled capture does not prove
@@ -109,11 +110,16 @@ cycles for rows 1/4/5/6 (callback) and Stock fixture (callback minus fixture).
 Report Clouds and combined-option margins separately; no hardware result
 is implied by offline checks.
 
-Deadline: the DAC reads slightly ahead, so a late block is heard before
-the 120000-cycle budget runs out. The first stale sample appears at a
-callback maximum of about 115800 cycles at 48 kHz (q1, q3, synth), 113900
-at 32 kHz (q2) and 111500 at 24 kHz (q0). These were measured on the
-development board (same core, codec driver and clocks), not on the module.
+Deadline: the DAC DMA reads each word from RAM one slot before sending it,
+so a late block is heard before the 120000-cycle budget runs out: the first
+left word of the half goes stale once the DMA has read it. On the development
+board (same core, codec driver and clocks, not the module) the callback
+maximum was clean up to 109700 cycles at 48 kHz (q1, q3, synth), 104900 at
+32 kHz (q2) and 100100 at 24 kHz (q0); every block was late from about
+110600, 105800 and 101000. The callback maximum leaves out interrupt entry
+and the driver's work before `Process`, which also spend the deadline. A
+late first word clicks on the left output only and sets no SAI flag.
+(The earlier 115800 / 113900 / 111500 timed RAM at send time, one slot late.)
 
 Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (FEEDBACK LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri). One [M] tap reaches page 2 (DRY/WET LED), where REVERB selects reverb Stock/Clouds-style (lower/upper half). Page 3 (REVERB LED): REVERB lower half is Synth start: Automatic (Stock). Page 4 (all three LEDs): REVERB bottom third is the Stock limiter. Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 
