@@ -153,7 +153,7 @@ void TestWanderWalk() {
       SetParameter(&p.pitch, 0.0f, -1.0f, false);
       p.monophonic_mode = false;
       Parameters untouched = p;
-      const float spread = wander.Process(true, intervals, &p);
+      const float spread = wander.Process(1, intervals, &p);
       CHECK(spread == 1.5f);
       // Clockwise and patched parameters stay as they were.
       CHECK(!memcmp(&p.size, &untouched.size, sizeof(p.size)));
@@ -187,7 +187,7 @@ void TestWanderWalk() {
       SetParameter(&again.size, 0.4f, 0.4f, false);
       SetParameter(&again.shape, 0.5f, -0.5f, true);
       SetParameter(&again.pitch, 0.0f, -1.0f, false);
-      wander.Process(false, intervals, &again);
+      wander.Process(0, intervals, &again);
       CHECK(again.time.cv == p.time.cv && again.pitch.cv == p.pitch.cv);
     }
     // It roams the whole span, one small step at a time.
@@ -230,7 +230,7 @@ void TestWanderKeepsPanSpread() {
     trigger.phase = 0.0f;
     const float before = processor.processor_digital_.granular_player_.
         ComputeSpread(trigger, p);
-    trigger.regularity -= wander.Process(true, false, &p);
+    trigger.regularity -= wander.Process(1, false, &p);
     const float after = processor.processor_digital_.granular_player_.
         ComputeSpread(trigger, p);
     CHECK(fabsf(before - after) < 1e-6f);

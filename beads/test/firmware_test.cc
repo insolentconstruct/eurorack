@@ -2154,6 +2154,28 @@ void TestMixOptionsProfile() {
 
 void TestRandomnessProfile() {
   test_checker.Start("TestRandomnessProfile");
+  // Both synths are unchanged, as are their random draws.
+  const uint8_t both[] = { FEATURE_WANDER, 1, FEATURE_SHOWERS, 1 };
+  for (int engine = 1; engine < 3; ++engine) {
+    uint64_t hashes[2];
+    for (int on = 0; on < 2; ++on) {
+      Rig synth_rig(false, true);
+      settings.set_plaits_synth(engine == 2);
+      settings.SaveState();
+      if (on) {
+        BootWithProfile(&synth_rig, both, 2);
+      } else {
+        synth_rig.Reboot(false);
+      }
+      Random::Seed(1);
+      synth_rig.StartAutomatic();
+      CHECK(synth_mode);
+      hashes[on] = MixOptionsHash(&synth_rig);
+    }
+    CHECK(hashes[0] == hashes[1]);
+  }
+  settings.set_plaits_synth(false);
+  settings.SaveState();
   Rig r(false, false);
   const uint8_t wander[] = { FEATURE_WANDER, 1 };
   BootWithProfile(&r, wander, 1);

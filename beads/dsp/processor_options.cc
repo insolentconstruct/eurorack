@@ -89,17 +89,20 @@ void Processor::ProcessWithOptions(
     }
   } else {
     // Showers move the rate of the free-running random half only.
+    const float linear_fm = (1.0f - expo_fm_amount) * density.cv;
+    float random_density = density.base + linear_fm;
+    CONSTRAIN(random_density, 0.0f, 1.0f);
     const bool clocked = seed_input &&
         seed_button_state == SEED_BUTTON_STATE_LOCKED;
     const float showers = (options_ & OPTION_SHOWERS) && !spectral_ &&
-        !clocked && density.base > 0.52f
-        ? showers_.Process(density.base, float(size) / sr) * 0.2f
+        !clocked && random_density > 0.52f
+        ? showers_.Process(random_density, float(size) / sr) * 0.2f
         : 0.0f;
     trigger_generator_.Render(
         seed_button_state,
         seed_input,
         density.base,
-        (1.0f - expo_fm_amount) * density.cv,
+        linear_fm,
         expo_fm_amount * density.cv + showers,
         triggers,
         size);
@@ -107,13 +110,14 @@ void Processor::ProcessWithOptions(
       gate_out[i] = triggers[i].gate;
     }
     if ((options_ & OPTION_WANDER) && !spectral_) {
-      bool step = false;
+      // Grains in one block share a value; the walk takes a step for each.
+      int steps = 0;
       for (size_t i = 0; i < size; ++i) {
-        step |= triggers[i].trigger;
+        steps += triggers[i].trigger;
       }
       // The pan keeps the spread the rewritten parameters no longer show.
       const float spread = wander_.Process(
-          step, random_intervals_, &parameters);
+          steps, random_intervals_, &parameters);
       for (size_t i = 0; i < size; ++i) {
         triggers[i].regularity -= spread;
       }

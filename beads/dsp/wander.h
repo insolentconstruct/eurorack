@@ -54,19 +54,19 @@ class Wander {
 
   // Rewrites the unpatched, counter-clockwise parameters as a fixed offset
   // for this block. Returns the spread they had, which the pan keeps.
-  float Process(bool step, bool intervals, Parameters* p) {
+  float Process(int steps, bool intervals, Parameters* p) {
     float spread = 0.0f;
-    spread += Walk(0, step, false, false, &p->time);
-    spread += Walk(1, step, false, false, &p->size);
-    spread += Walk(2, step, false, false, &p->shape);
-    spread += Walk(3, step, true, intervals, &p->pitch);
+    spread += Walk(0, steps, false, false, &p->time);
+    spread += Walk(1, steps, false, false, &p->size);
+    spread += Walk(2, steps, false, false, &p->shape);
+    spread += Walk(3, steps, true, intervals, &p->pitch);
     return spread;
   }
 
  private:
   float Walk(
       int index,
-      bool step,
+      int steps,
       bool pitch,
       bool intervals,
       RandomizedParameter* p) {
@@ -74,15 +74,15 @@ class Wander {
       return 0.0f;
     }
     float position = position_[index];
-    if (step) {
+    for (int i = 0; i < steps; ++i) {
       position += kWanderStep * PseudoGaussian();
       if (position > 1.0f) {
         position = 2.0f - position;
       } else if (position < -1.0f) {
         position = -2.0f - position;
       }
-      position_[index] = position;
     }
+    position_[index] = position;
     const float amount = -p->attenuverter;
     float offset;
     if (pitch) {
