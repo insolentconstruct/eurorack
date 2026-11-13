@@ -28,6 +28,13 @@
 
 #include "beads/dwt_calibration.h"
 
+#ifdef CPU_CEILING
+#include "beads/cpu_ceiling.h"
+#include "beads/drivers/codec.h"
+#include "beads/resources.h"
+#include "stmlib/dsp/dsp.h"
+#endif  // CPU_CEILING
+
 #ifdef DWT_CALIBRATION
 namespace beads {
 namespace dwt_calibration {
@@ -45,6 +52,135 @@ void PhaseVocoder::Buffer() {
     calibration_frame.Stop(i, stft_[i].ready(), stft_[i].done());
   }
 }
+
+
+#ifdef CPU_CEILING
+namespace cpu_ceiling {
+
+volatile Hold hold __attribute__((section(".cpu_ceiling"), aligned(8)));
+
+namespace {
+uint32_t entry;
+uint32_t examined;  // the last command word taken or rejected; firmware only
+float phase;
+}  // namespace
+
+void Init() {
+  hold.magic = kMagic;
+  hold.version = kVersion;
+  hold.command = 0;
+  hold.ack = 0;
+  hold.rejects = 0;
+  hold.armed_blocks = 0;
+  hold.frames = 0;
+  hold.blocks = 0;
+  hold.on_time = 0;
+  hold.ambiguous = 0;
+  hold.late = 0;
+  hold.first_late = 0xffffffff;
+  hold.g2 = 0;
+  hold.pending = 0;
+  hold.max_store = 0;
+  hold.state = STATE_IDLE;
+  examined = 0;
+}
+
+bool Enter(size_t size) {
+  entry = dwt_calibration::Read();
+  hold.frames = size;
+  // The host owns command: read it once, never write it back.
+  const uint32_t command = hold.command;
+  if (command != hold.ack && command != examined) {
+    examined = command;
+    if (Valid(command)) {
+      hold.armed_blocks = 0;
+      hold.blocks = 0;
+      hold.on_time = 0;
+      hold.ambiguous = 0;
+      hold.late = 0;
+      hold.first_late = 0xffffffff;
+      hold.g2 = 0;
+      hold.pending = 0;
+      hold.max_store = 0;
+      hold.state = Holds(command) ? STATE_ARMED : STATE_IDLE;
+      __DMB();
+      hold.ack = command;
+    } else {
+      ++hold.rejects;
+    }
+  }
+  if (hold.state != STATE_ARMED) {
+    return false;
+  }
+  // Observing alone changes nothing audible: only a load, sine or skip expires.
+  if ((hold.ack & (kTargetMask | kSine | kSkipDsp)) &&
+      ++hold.armed_blocks > kDeadmanBlocks) {
+    hold.state = STATE_EXPIRED;
+    return false;
+  }
+  return true;
+}
+
+void Output(FloatFrame* frames, Codec::Frame* out, size_t size) {
+  if (sine()) {
+    // The nominal rate, as the bench's detector expects.
+    const float increment = kSineHz / float(size * 4000);
+    for (size_t i = 0; i < size; ++i) {
+      frames[i].l = frames[i].r =
+          kSineLevel * stmlib::Interpolate(lut_sine, phase, 1024.0f);
+      phase += increment;
+      if (phase >= 1.0f) {
+        phase -= 1.0f;
+      }
+    }
+  }
+  const uint32_t hold_cycles = target();
+  while (dwt_calibration::Read() - entry < hold_cycles) { }
+  const uint32_t stored = dwt_calibration::Read() - entry;
+  if (stored > hold.max_store) {
+    hold.max_store = stored;
+  }
+  const uint32_t words = 4 * size;
+  const bool first_half =
+      out == reinterpret_cast<Codec::Frame*>(DMA1_Stream0->M0AR);
+  const uint32_t base = first_half ? 0 : words / 2;
+  for (size_t i = 0; i < size; ++i) {
+    float l = frames[i].l;
+    float r = frames[i].r;
+    CONSTRAIN(l, -1.0f, 0.999999f);
+    CONSTRAIN(r, -1.0f, 0.999999f);
+    if (i == 0) {
+      const uint32_t before = DMA1_Stream0->NDTR;
+      out[0].l = static_cast<int32_t>(l * 2147483648.0f);
+      __DSB();
+      const uint32_t after = DMA1_Stream0->NDTR;
+      const Store store = Classify(before, after, base, words);
+      if (store == STORE_LATE) {
+        if (!hold.late) {
+          hold.first_late = hold.blocks;
+        }
+        ++hold.late;
+      } else if (store == STORE_AMBIGUOUS) {
+        ++hold.ambiguous;
+      } else {
+        ++hold.on_time;
+      }
+    } else {
+      out[i].l = static_cast<int32_t>(l * 2147483648.0f);
+    }
+    out[i].r = static_cast<int32_t>(r * 2147483648.0f);
+  }
+  if (Reached(DMA1_Stream0->NDTR, base, words)) {
+    ++hold.g2;
+  }
+  if (DMA1->LISR & (first_half ? DMA_LISR_TCIF1 : DMA_LISR_HTIF1)) {
+    ++hold.pending;
+  }
+  ++hold.blocks;
+}
+
+}  // namespace cpu_ceiling
+#endif  // CPU_CEILING
 
 }  // namespace beads
 #endif  // DWT_CALIBRATION

@@ -36,3 +36,11 @@ ifeq ($(DWT_CALIBRATION),1)
 CPPFLAGS += -DDWT_CALIBRATION
 LDFLAGS := -T beads/build/dwt.ld $(LDFLAGS)
 endif
+# Bench-only CPU ceiling hold, on top of the DWT build.
+ifeq ($(CPU_CEILING),1)
+ifneq ($(DWT_CALIBRATION),1)
+$(error CPU_CEILING needs DWT_CALIBRATION=1)
+endif
+CPPFLAGS += -DCPU_CEILING
+LDFLAGS := -T beads/build/cpu_ceiling.ld $(LDFLAGS)
+endif
