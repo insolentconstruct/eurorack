@@ -397,6 +397,14 @@ void TestRecentNotes() {
     const float note = RecentNote(1.0f, 0.0f);
     CHECK(note <= -24.0f && note >= -31.0f);
   }
+  // The draw never reaches past the newest notes asked for (GetFloat could).
+  for (int count = 1; count <= 8; ++count) {
+    for (uint32_t seed = 0x26f5b720; seed < 0x26f5b720 + 64; ++seed) {
+      stmlib::Random::Seed(seed);
+      const float note = RecentNote(float(count - 1) / 7.0f, 0.0f);
+      CHECK(note <= -31.0f + float(count - 1) && note >= -31.0f);
+    }
+  }
   // Unplugging forgets; the clock may wrap.
   RememberNote(3.0f, false, ++now);
   CHECK(RecentNote(1.0f, 3.0f) == 3.0f);

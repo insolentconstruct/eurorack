@@ -154,7 +154,8 @@ const float kNoteTolerance = 0.1f;
 const float kNoteMinimumStep = 0.5f;
 const uint32_t kNoteSettleTime = 10;
 
-static float recent_notes[kNumRecentNotes];
+// Volatile keeps the slot write ahead of its publication to the interrupt.
+static volatile float recent_notes[kNumRecentNotes];
 static volatile size_t num_recent_notes;
 static volatile size_t newest_note;
 static float note_candidate;
@@ -176,7 +177,6 @@ void RememberNote(float cv, bool patched, uint32_t now) {
       fabsf(cv - recent_notes[newest_note]) < kNoteMinimumStep)) {
     return;
   }
-  // The slot is written before it is published to the audio interrupt.
   const size_t slot = (newest_note + 1) % kNumRecentNotes;
   recent_notes[slot] = cv;
   newest_note = slot;
@@ -192,7 +192,7 @@ float RecentNote(float amount, float cv) {
     return cv;
   }
   count = std::min(count, stored);
-  const size_t age = size_t(stmlib::Random::GetFloat() * float(count));
+  const size_t age = ((stmlib::Random::GetWord() >> 16) * count) >> 16;
   return recent_notes[(newest_note + kNumRecentNotes - age) % kNumRecentNotes];
 }
 
