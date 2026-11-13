@@ -153,7 +153,7 @@ struct RandomizedParameter {
     float pitch = value(NULL, 0, 24.0f, false);
     if (intervals && attenuverter < 0.0f) {
       // Counter-clockwise, the random offset lands on fifths and octaves,
-      // or on a recent note (#220).
+      // or on a recent note.
       pitch = base + RandomStep(pitch - base);
     }
     if (scale != PITCH_SCALE_OFF) {
