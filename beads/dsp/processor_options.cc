@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -60,18 +60,18 @@ void Processor::ProcessWithOptions(
   const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
       parameters.size.base > threshold ? 1.0f : -1.0f;
   delay_mode_transition_ += direction * float(size) / sr;
-  
+
   CONSTRAIN(delay_mode_transition_,
             -kDelayModeTransitionTime,
             +kDelayModeTransitionTime);
-  
+
   float expo_fm_amount = 20.0f * (fabsf(density.base - 0.5f) - 0.225f);
   CONSTRAIN(expo_fm_amount, 0.0f, 1.0f);
 
   TriggerGenerator::Output triggers[size];
   DelayController::Output taps[size];
   bool gate_out[size];
-  
+
   if (delay_mode) {
     const bool free_running = seed_button_state >= SEED_BUTTON_STATE_IGNORE;
     delay_controller_.Render(
@@ -103,7 +103,7 @@ void Processor::ProcessWithOptions(
   }
   const TriggerGenerator::Output* grain_triggers = delay_mode ? NULL : triggers;
   const DelayController::Output* delay_taps = delay_mode ? taps : NULL;
-  
+
   FloatFrame dry_signal[size];
   const float feedback = mix_parameters.feedback;
   if (spectral_) {
@@ -142,7 +142,7 @@ void Processor::ProcessWithOptions(
 
   const float wet_fade = SmoothStep(
       std::min(1.0f, fabsf(delay_mode_transition_) / kDelayModeFadeTime));
-  
+
   // Dry/wet balance; the gentle law makes the wet side linear.
   const float post_gain_dry = 0.75f;
   const float post_gain_wet = 1.5f;
@@ -162,9 +162,9 @@ void Processor::ProcessWithOptions(
     pre_reverb_limiter_.Process(out, size);
     ProcessReverb(mix_parameters.reverb_amount, out, size);
   }
-  
+
   output_limiter_.ProcessOutput(out, size, output_limiter_mode_, sr);
-  
+
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {
       out[i].l = (out[i].l + out[i].r) * 0.5f;
