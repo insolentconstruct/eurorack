@@ -33,8 +33,10 @@
 
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
+#include "beads/dsp/showers.h"
 #include "beads/dsp/spectral_processor.h"
 #include "beads/dsp/time_scan.h"
+#include "beads/dsp/wander.h"
 #include "beads/dsp/fx/diffuser.h"
 #include "beads/dsp/fx/feedback_diffuser.h"
 #include "beads/dsp/fx/reverb.h"
@@ -97,6 +99,14 @@ class Processor {
   // Reverb on the grains before the dry/wet mix, as in Clouds.
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_REVERB_ON_GRAINS, grains);
+  }
+  // Unpatched attenurandomizers counter-clockwise walk from grain to grain.
+  inline void set_wander(bool wander) {
+    SetOption(OPTION_WANDER, wander);
+  }
+  // DENSITY clockwise comes in showers and lulls.
+  inline void set_showers(bool showers) {
+    SetOption(OPTION_SHOWERS, showers);
   }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
@@ -301,6 +311,7 @@ class Processor {
 
   // Grains only; spectral has no random grain pitch.
   inline void set_random_intervals(bool intervals) {
+    random_intervals_ = intervals;
     processor_digital_.set_random_intervals(intervals);
     processor_vintage_digital_.set_random_intervals(intervals);
     processor_clean_tape_.set_random_intervals(intervals);
@@ -317,7 +328,9 @@ class Processor {
   enum Option {
     OPTION_TIME_SCAN = 1,
     OPTION_GENTLE_MIX = 2,
-    OPTION_REVERB_ON_GRAINS = 4
+    OPTION_REVERB_ON_GRAINS = 4,
+    OPTION_WANDER = 8,
+    OPTION_SHOWERS = 16
   };
 
   inline void SetOption(Option option, bool enabled) {
@@ -397,6 +410,9 @@ class Processor {
   FeedbackDiffuser feedback_diffuser_;
   bool evolving_feedback_;
   AttackInput attack_input_;
+  Wander wander_;
+  Showers showers_;
+  bool random_intervals_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

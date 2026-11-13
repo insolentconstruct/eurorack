@@ -45,16 +45,15 @@ void Processor::ProcessWithOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  // As Process, with TIME scan and the profile's mix law and reverb input.
+  // As Process, with TIME scan, Wander, Showers and the profile's mix law
+  // and reverb input.
   const float sr = sample_rate();
-  Parameters scanned;
+  Parameters parameters = input_parameters;
   const bool scan = (options_ & OPTION_TIME_SCAN) && !spectral_ &&
       delay_mode_transition_ <= 0.0f && !input_parameters.time.has_cv;
   if (scan) {
-    scanned = input_parameters;
-    time_scan_.Process(float(size) / sr, &scanned.time);
+    time_scan_.Process(float(size) / sr, &parameters.time);
   }
-  const Parameters& parameters = scan ? scanned : input_parameters;
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
   const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
@@ -89,16 +88,35 @@ void Processor::ProcessWithOptions(
       gate_out[i] = taps[i].gate;
     }
   } else {
+    // Showers move the rate of the free-running random half only.
+    const bool clocked = seed_input &&
+        seed_button_state == SEED_BUTTON_STATE_LOCKED;
+    const float showers = (options_ & OPTION_SHOWERS) && !spectral_ &&
+        !clocked && density.base > 0.52f
+        ? showers_.Process(density.base, float(size) / sr) * 0.2f
+        : 0.0f;
     trigger_generator_.Render(
         seed_button_state,
         seed_input,
         density.base,
         (1.0f - expo_fm_amount) * density.cv,
-        expo_fm_amount * density.cv,
+        expo_fm_amount * density.cv + showers,
         triggers,
         size);
     for (size_t i = 0; i < size; ++i) {
       gate_out[i] = triggers[i].gate;
+    }
+    if ((options_ & OPTION_WANDER) && !spectral_) {
+      bool step = false;
+      for (size_t i = 0; i < size; ++i) {
+        step |= triggers[i].trigger;
+      }
+      // The pan keeps the spread the rewritten parameters no longer show.
+      const float spread = wander_.Process(
+          step, random_intervals_, &parameters);
+      for (size_t i = 0; i < size; ++i) {
+        triggers[i].regularity -= spread;
+      }
     }
   }
   const TriggerGenerator::Output* grain_triggers = delay_mode ? NULL : triggers;

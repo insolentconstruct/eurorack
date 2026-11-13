@@ -115,6 +115,8 @@ not-set values use the profile default.
 | 31 | Plaits bank (#190) | 14 (byte 20 low) |
 | 32 | Mix law (#21) | No saved value |
 | 33 | Reverb input (#20) | No saved value |
+| 34 | Wander (#215) | No saved value |
+| 35 | Showers (#215) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -498,3 +500,29 @@ DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
 and flutter comes after the reverb, so the tail wobbles too. Granular, delay
 and spectral; both synths keep the stock routing. Chosen at power-on, with
 no panel slot or saved-state nibble.
+
+### Wander
+
+Hygrostat feature ID 34 chooses Peaky (stock) / Wander (#215). Stock draws
+a fresh random value for every grain. With Wander, an unpatched TIME, SIZE,
+SHAPE or PITCH attenurandomizer turned counter-clockwise lets each grain's
+value step a little from the previous grain's, so the cloud roams the
+buffer and the pitch range instead of scattering. The knob sets how far it
+may roam: TIME, SIZE and SHAPE blend towards a point that wanders over the
+whole range, as the clockwise side blends towards a fresh random point;
+PITCH wanders over the same ±2 octaves as stock, following the pitch scale
+and Random pitch steps. Pan stays random. Clockwise, or with a CV patched,
+the knob is stock. Granular only; delay mode keeps its slow random LFOs,
+and spectral and both synths are unchanged. Chosen at power-on, with no
+panel slot or saved-state nibble.
+
+### Showers
+
+Hygrostat feature ID 35 chooses Even (stock) / Showers (#215). Stock draws
+each interval of the randomly modulated DENSITY (clockwise) on its own, so
+the grains fall evenly at random. Showers groups them into bursts at three
+times the rate, about eight grains long (0.15 to 1 s), and lulls at a
+third of the rate, three times as long, keeping the same average rate.
+Constant DENSITY (counter-clockwise), a clock in SEED and delay mode are
+unchanged. Granular only. Chosen at power-on, with no panel slot or
+saved-state nibble.

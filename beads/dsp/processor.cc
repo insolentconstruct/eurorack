@@ -42,6 +42,9 @@ void Processor::Init(
     uint16_t* reverb_buffer) {
   options_ = 0;
   time_scan_.Init();
+  wander_.Init();
+  showers_.Init();
+  random_intervals_ = false;
   attack_input_.Init();
   clouds_style_ = false;
   evolving_feedback_ = false;

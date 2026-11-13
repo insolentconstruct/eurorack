@@ -2152,6 +2152,28 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+void TestRandomnessProfile() {
+  test_checker.Start("TestRandomnessProfile");
+  Rig r(false, false);
+  const uint8_t wander[] = { FEATURE_WANDER, 1 };
+  BootWithProfile(&r, wander, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_WANDER);
+  const uint8_t showers[] = { FEATURE_SHOWERS, 1 };
+  BootWithProfile(&r, showers, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_SHOWERS);
+  // Random intervals reach the walk as well as the grain players.
+  settings.SetFeatureValue(FEATURE_INTERVALS, 1);
+  r.Settle();
+  CHECK(processor.random_intervals_);
+  settings.SetFeatureValue(FEATURE_INTERVALS, 0);
+  r.Settle();
+  CHECK(!processor.random_intervals_);
+  r.Reboot(false);
+  CHECK(processor.options_ == 0);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2193,5 +2215,6 @@ int main() {
   TestPitchLawProfile();
   TestPlaitsBankProfile();
   TestMixOptionsProfile();
+  TestRandomnessProfile();
   return test_checker.failures() ? 1 : 0;
 }
