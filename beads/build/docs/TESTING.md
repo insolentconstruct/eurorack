@@ -1,6 +1,6 @@
 # Testing
 
-This source contains 20 host programs, 292 named test sections, 2,472
+This source contains 20 host programs, 292 named test sections, 2,473
 assertion sites and 457 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On the release source
 `6729648`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/41755070756)
@@ -52,7 +52,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | `beads/test/delay_mode.mk` | Delay mode through the processor with sanitizers: continuous playback with SIZE fully clockwise, the fade when switching modes, the pitch shifter and its bypass at noon, the delay bandwidth control and SIZE CV |
 | `beads/test/attack.mk` | Attacks: hit detection on the input and its three sensitivities, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
-| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent after a bank change, notes keeping their model), FREEZE sustain, RAM bounds |
+| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent, including at noon, after a bank change, notes keeping their model), FREEZE sustain, RAM bounds |
 | `beads/test/profile.mk` | Profile validation, feature modes/control allocation, page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections |
 | `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step |
 
@@ -71,14 +71,14 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | mix | 7 | 28 |
 | options | 69 | 787 |
 | pitch_quantizer | 6 | 52 |
-| plaits_synth | 4 | 36 |
+| plaits_synth | 4 | 37 |
 | processor | 11 | 45 |
 | profile | 6 | 108 |
 | spectral | 7 | 34 |
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **292** | **2,472** |
+| **Total** | **292** | **2,473** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times. The linked release CI predates the codec sequencing checks.
 
@@ -379,7 +379,11 @@ The factory calibration was restored by debug probe after each saved run. Before
   comparison.
 - Plaits banks: FEEDBACK uses stmlib's hysteresis quantizer over eight equal
   detents. Against the first Beta 3 build's inset range, detent edges move by
-  at most 0.58% of the knob's travel, and a bank change keeps the detent.
+  at most 0.58% of the knob's travel. A bank change now keeps the knob's
+  side of a detent edge; before, hysteresis worked on the model number, so at
+  noon green to red gave red's fourth model and red to yellow yellow's fifth,
+  whichever side the knob came from. Idle voices start on model 0 on every
+  synth entry (before, re-entry started them on the last selected model).
 
 ## Not tested
 

@@ -322,6 +322,24 @@ void TestBankDetents() {
     c.seed = SEED_BUTTON_STATE_OFF;
     CHECK(synth.patch_[synth.active_voice_].model == kBankFirst[bank] + 3);
   }
+  // Noon is the edge between the fourth and fifth models: each bank step
+  // keeps the side the knob came from, with no jump to another model.
+  for (int from_above = 0; from_above < 2; ++from_above) {
+    synth.set_bank(0);
+    c.mix.feedback = from_above ? 0.6f : 0.4f;
+    Block(c, out);
+    c.mix.feedback = 0.5f;
+    for (int step = 0; step <= kNumPlaitsBanks; ++step) {
+      const int bank = step % kNumPlaitsBanks;
+      synth.set_bank(bank);
+      for (int i = 0; i < 4; ++i) {
+        c.seed = i == 0 ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
+        Block(c, out);
+        CHECK(synth.patch_[synth.active_voice_].model ==
+            kBankFirst[bank] + 3 + from_above);
+      }
+    }
+  }
 }
 
 // FREEZE holds a ringing note at its level instead of letting it decay.
