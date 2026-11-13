@@ -110,10 +110,10 @@ void Processor::ProcessWithOptions(
       gate_out[i] = triggers[i].gate;
     }
     if ((options_ & OPTION_WANDER) && !spectral_) {
-      // Grains in one block share a value; the walk takes a step for each.
+      // Grains starting in the same block share a value and one step.
       int steps = 0;
       for (size_t i = 0; i < size; ++i) {
-        steps += triggers[i].trigger;
+        steps |= triggers[i].trigger;
       }
       // The pan keeps the spread the rewritten parameters no longer show.
       const float spread = wander_.Process(
