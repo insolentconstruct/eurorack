@@ -98,7 +98,7 @@ class Processor {
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_REVERB_ON_GRAINS, grains);
   }
-  // The Clean tape position records on a Dictaphone instead (#221).
+  // The Clean tape position records on a Dictaphone instead.
   inline void set_dictaphone(bool dictaphone) {
     dictaphone_ = dictaphone;
     SetOption(OPTION_DICTAPHONE, dictaphone_ && media_ == MEDIA_CLEAN_TAPE);

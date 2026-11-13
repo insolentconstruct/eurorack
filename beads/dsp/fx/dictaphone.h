@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Dictaphone medium (#221): automatic level control on the way in, a narrow
+// Dictaphone medium: automatic level control on the way in, a narrow
 // tape band and hiss on every pass.
 
 #ifndef BEADS_DSP_FX_DICTAPHONE_H_
@@ -77,7 +77,7 @@ class Dictaphone {
     noise_ = noise_ * 1664525U + 1013904223U;
     const float hiss = float(int32_t(noise_)) * (kDictaphoneHiss / 2147483648.0f);
     in->l = (in->l + hiss) * gain;
-    in->r = (in->r - hiss) * gain;
+    in->r = (in->r + hiss) * gain;
   }
 
   // What reaches the tape, including every pass of FEEDBACK.

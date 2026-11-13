@@ -67,8 +67,8 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 3, 14, false, false, false, false },  // Plaits bank.
   { 2, kNoField, false, false, false, false },  // Mix law.
   { 2, kNoField, false, false, false, false },  // Reverb input.
-  { 1, kNoField, false, false, false, false },  // Reserved (#215 lane).
-  { 1, kNoField, false, false, false, false },  // Reserved (#215 lane).
+  { 1, kNoField, false, false, false, false },  // Reserved.
+  { 1, kNoField, false, false, false, false },  // Reserved.
   { 2, kNoField, false, false, false, false },  // Dictaphone.
 };
 

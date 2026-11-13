@@ -603,18 +603,23 @@ void TestOptionsBlockMatchesStock() {
 }
 
 // RMS of the wet output for a tone, after the recording has filled.
-static float DictaphoneRms(bool dictaphone, float frequency, float amplitude) {
+static float DictaphoneRms(bool dictaphone, float frequency, float amplitude,
+    bool mono = false, float feedback = 0.0f, int input_blocks = 8000) {
   memset(banks, 0, sizeof(banks));
-  Init(false);
+  Init(mono);
   processor.set_dictaphone(dictaphone);
-  processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
+  processor.Configure(Processor::MEDIA_CLEAN_TAPE, mono);
+  mix.feedback = feedback;
+  // Grains read what was recorded, also on the twice longer mono tape.
+  parameters.time.base = 0.02f;
   processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
   mix.dry_wet = 1.0f;
   double sum = 0.0;
   for (int block = 0; block < 8000; ++block) {
     for (int i = 0; i < 12; ++i) {
       const float t = float(block * 12 + i) / 48000.0f;
-      input[i].l = input[i].r = amplitude * sinf(6.2831853f * frequency * t);
+      input[i].l = input[i].r = block < input_blocks
+          ? amplitude * sinf(6.2831853f * frequency * t) : 0.0f;
     }
     Process();
     if (block >= 4000) {
@@ -657,6 +662,17 @@ void TestDictaphone() {
   // Hiss on a silent input.
   CHECK(DictaphoneRms(true, 1000.0f, 0.0f) > 0.0005f);
   CHECK(DictaphoneRms(false, 1000.0f, 0.0f) == 0.0f);
+  CHECK(DictaphoneRms(true, 1000.0f, 0.0f, true) > 0.0005f);
+  // FEEDBACK re-records through the band: a 7 kHz echo dies away sooner.
+  float echo[2];
+  for (int high = 0; high < 2; ++high) {
+    const float f = high ? 7000.0f : 1000.0f;
+    echo[high] = DictaphoneRms(true, f, 0.3f, false, 0.7f, 3000) /
+        DictaphoneRms(false, f, 0.3f, false, 0.7f, 3000);
+  }
+  printf("Dictaphone: feedback tails 1 kHz x%.3f, 7 kHz x%.3f\n",
+      echo[0], echo[1]);
+  CHECK(echo[1] < 0.25f * echo[0]);
 }
 
 int main() {

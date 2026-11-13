@@ -182,7 +182,7 @@ class GranularProcessor {
         triggers, taps, freeze, parameters, feedback, mono, in, out, size);
   }
 
-  // The same, recorded on the Dictaphone medium (#221).
+  // The same, recorded on the Dictaphone medium.
   inline void ProcessDictaphone(
       const TriggerGenerator::Output* triggers,
       const DelayController::Output* taps,
