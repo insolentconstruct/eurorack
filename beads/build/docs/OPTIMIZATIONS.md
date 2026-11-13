@@ -48,7 +48,7 @@ in wavetable synth mode. See [TESTING.md](TESTING.md).
 
 ## Build comparison
 
-Budget is 120,000 cycles per block at 480 MHz. The DAC DMA reads each word one slot before sending it, so audio breaks earlier: the callback maximum was clean up to 109,700 cycles at 48 kHz (q1, q3 and the synth), 104,900 at 32 kHz (q2) and 100,100 at 24 kHz (q0), measured on the development board, not on the module. "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
+Budget is 120,000 cycles per block at 480 MHz. The DAC DMA reads each word one slot before sending it, so audio breaks earlier: the callback maximum was clean up to 109,700 cycles at 48 kHz (q1, q3 and the synth), 104,900 at 32 kHz (q2) and 100,100 at 24 kHz (q0), measured on the development board (provisional until measured on the module). "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
 
 | Build | App flash | Stock peak / median | Clouds-style peak | Sound vs GCC 9 | Verdict |
 |---|---:|---|---:|---|---|
