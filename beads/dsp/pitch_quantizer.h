@@ -84,9 +84,16 @@ void ConfigurePitchScales(const PitchScaleDefinition* scales, size_t count,
 float QuantizePitch(float pitch, PitchScale scale);
 float QuantizeFifths(float pitch);
 
-// Notes sent to PITCH, remembered outside the audio interrupt.
-void RememberNote(float cv, bool patched, uint32_t now);
-float RecentNote(float amount, float cv);
+// Main loop: Recent notes remembers the notes sent to PITCH; amount is the
+// counter-clockwise PITCH attenurandomizer.
+void RememberNote(
+    RandomIntervals intervals,
+    bool patched,
+    float cv,
+    float amount,
+    uint32_t now);
+// A counter-clockwise random offset on fifths and octaves, or a recent note.
+float RandomStep(float offset);
 
 }  // namespace beads
 

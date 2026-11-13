@@ -575,10 +575,12 @@ void MonitorStateChange() {
     ui.set_modulation_indication(cv_reader.pitch_on_notch(),
         cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
-  RememberNote(cv_reader.cv(CV_ADC_CHANNEL_PITCH),
-      ui.random_intervals() == RANDOM_INTERVALS_RECENT_NOTES &&
+  // The wavetable synth adds the PITCH CV to the knob: no recent notes there.
+  RememberNote(ui.intervals_mode(), !synth_mode &&
       !normalization_detector.normalized(
           NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV),
+      cv_reader.cv(CV_ADC_CHANNEL_PITCH),
+      -cv_reader.pot(POTS_ADC_CHANNEL_PITCH_AMOUNT),
       system_clock.milliseconds());
   ui.set_no_input(normalization_detector.no_input());
   ui.set_synth_mode(synth_mode);

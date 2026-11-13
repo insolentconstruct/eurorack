@@ -1217,7 +1217,8 @@ void TestIntervalsOption() {
     r.pot = positions[target];
     r.Tick(50, true);
     CHECK(r.ui.options_.intervals_preview() == target);
-    CHECK(r.ui.random_intervals() == target);
+    CHECK(r.ui.intervals_mode() == target);
+    CHECK(r.ui.random_intervals() == (target != 0));
     const OptionValue& v = r.ui.options_.indication();
     CHECK(v.setting == OPTION_INTERVALS && v.value == target);
     CHECK(v.color.r == red[target] && v.color.g == green[target]);

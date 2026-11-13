@@ -910,7 +910,7 @@ void TestRandomIntervalGrains() {
         parameters.pitch.cv = 0.0f;
         parameters.pitch.has_cv = false;
         parameters.pitch.attenuverter = -1.0f;
-        processor.set_random_intervals(RandomIntervals(intervals));
+        processor.set_random_intervals(intervals);
         ProcessQuantizedBlock(true);
         DelayGranularPlayer* player = quality == 0
             ? &processor.processor_dirty_tape_.granular_player_
@@ -934,10 +934,9 @@ void TestRecentNoteGrains() {
   test_checker.Start("TestRecentNoteGrains");
   const float notes[3] = { -5.0f, 0.0f, 7.0f };
   uint32_t now = 0;
-  RememberNote(0.0f, false, now);
   for (int n = 0; n < 3; ++n) {
     for (int i = 0; i < 11; ++i) {
-      RememberNote(notes[n], true, ++now);
+      RememberNote(RANDOM_INTERVALS_RECENT_NOTES, true, notes[n], 1.0f, ++now);
     }
   }
   for (int quality = 0; quality < 4; ++quality) {
@@ -950,7 +949,7 @@ void TestRecentNoteGrains() {
       parameters.pitch.cv = 3.0f;
       parameters.pitch.has_cv = true;
       parameters.pitch.attenuverter = -1.0f;
-      processor.set_random_intervals(RANDOM_INTERVALS_RECENT_NOTES);
+      processor.set_random_intervals(true);
       stmlib::Random::Seed(1 + i * 7919);
       ProcessQuantizedBlock(true);
       DelayGranularPlayer* player = quality == 0
@@ -970,7 +969,7 @@ void TestRecentNoteGrains() {
     }
     CHECK(seen[0] && seen[1] && seen[2]);
   }
-  RememberNote(0.0f, false, ++now);
+  RememberNote(RANDOM_INTERVALS_OFF, false, 0.0f, 0.0f, ++now);
 }
 
 void TestStereoWidth() {

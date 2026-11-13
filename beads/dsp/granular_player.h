@@ -69,7 +69,7 @@ class GranularPlayer {
     simple_scheduler_threshold_ = int(sample_rate * kSimpleSchedulerThreshold);
     
     pitch_scale_ = PITCH_SCALE_OFF;
-    random_intervals_ = RANDOM_INTERVALS_OFF;
+    random_intervals_ = false;
     stereo_width_ = 0.0f;
     width_enabled_ = false;
     grain_interval_ = 1;
@@ -87,7 +87,7 @@ class GranularPlayer {
 
   inline void set_pitch_scale(PitchScale scale) { pitch_scale_ = scale; }
 
-  inline void set_random_intervals(RandomIntervals intervals) {
+  inline void set_random_intervals(bool intervals) {
     random_intervals_ = intervals;
   }
 
@@ -260,7 +260,7 @@ class GranularPlayer {
   int grain_interval_;
   
   PitchScale pitch_scale_;
-  RandomIntervals random_intervals_;
+  bool random_intervals_;
   float stereo_width_;
   bool width_enabled_;
 

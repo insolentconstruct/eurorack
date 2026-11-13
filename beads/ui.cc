@@ -162,7 +162,8 @@ void Ui::LoadOptions() {
       settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
   spectral_ = settings_->spectral();
   pitch_scale_ = settings_->pitch_scale();
-  random_intervals_ = settings_->random_intervals();
+  intervals_mode_ = settings_->random_intervals();
+  random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
   // SEED starts latched, or unlatched when the profile asks.
@@ -295,8 +296,9 @@ void Ui::Poll() {
   stereo_width_ = settings_->stereo_width();
   pitch_scale_ = previewing
       ? options_.pitch_preview() : settings_->pitch_scale();
-  random_intervals_ = previewing
+  intervals_mode_ = previewing
       ? options_.intervals_preview() : settings_->random_intervals();
+  random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   output_limiter_mode_ = previewing
       ? options_.limiter_preview() : settings_->output_limiter_mode();
   if (!previewing) {

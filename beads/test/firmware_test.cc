@@ -946,7 +946,7 @@ void TestRandomIntervalsChain() {
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
     settings.set_random_intervals(RandomIntervals(intervals));
     r.Settle();
-    CHECK(ui.random_intervals() == intervals);
+    CHECK(ui.random_intervals() == bool(intervals));
     float previous = 12.0f * log2f(NextGrainSpeed(&r));
     for (int i = 0; i < 20; ++i) {
       const float pitch = 12.0f * log2f(NextGrainSpeed(&r));
