@@ -28,6 +28,7 @@
 
 #include "beads/background_buffer_backup.h"
 #include "beads/calibrator.h"
+#include "beads/cpu_ceiling.h"
 #include "beads/cv_reader.h"
 #include "beads/drivers/codec.h"
 #include "beads/drivers/debug_pin.h"
@@ -114,6 +115,17 @@ float reverb_style_previous_gain;
 bool synth_mode;
 int synth_mode_start_time;
 
+#ifdef CPU_CEILING
+// A held block that the firmware silences still holds, and plays the sine.
+void CeilingSilence(FloatFrame* frames, Codec::Frame* out, size_t size) {
+  FloatFrame silence;
+  silence.l = 0.0f;
+  silence.r = 0.0f;
+  fill(&frames[0], &frames[size], silence);
+  cpu_ceiling::Output(frames, out, size);
+}
+#endif  // CPU_CEILING
+
 GateFlags previous_seed;
 uint8_t seed_latch_mode;
 bool seed_latch_enabled;
@@ -130,6 +142,9 @@ void Process(
 #ifdef DWT_CALIBRATION
   dwt_calibration::ScopedBlockTimer calibration_callback;
 #endif  // DWT_CALIBRATION
+#ifdef CPU_CEILING
+  const bool ceiling = cpu_ceiling::Enter(size);
+#endif  // CPU_CEILING
   FloatFrame float_in[kMaxCodecBlockSize];
   FloatFrame float_out[kMaxCodecBlockSize];
   bool freeze[kMaxCodecBlockSize];
@@ -229,6 +244,12 @@ void Process(
       size);
   if (codec_transition_frames) {
     --codec_transition_frames;
+#ifdef CPU_CEILING
+    if (ceiling) {
+      CeilingSilence(float_out, out, size);
+      return;
+    }
+#endif  // CPU_CEILING
     Codec::Frame silence;
     silence.l = 0;
     silence.r = 0;
@@ -335,6 +356,12 @@ void Process(
         synth.SetCloudsStyle(clouds_style, false);
         plaits_synth.SetCloudsStyle(clouds_style, false);
       }
+#ifdef CPU_CEILING
+      if (ceiling) {
+        CeilingSilence(float_out, out, size);
+        return;
+      }
+#endif  // CPU_CEILING
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
@@ -356,6 +383,14 @@ void Process(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
+#ifdef CPU_CEILING
+  if (ceiling && cpu_ceiling::skip_dsp()) {
+    FloatFrame silence;
+    silence.l = 0.0f;
+    silence.r = 0.0f;
+    fill(&float_out[0], &float_out[size], silence);
+  } else
+#endif  // CPU_CEILING
   if (synth_mode && ui.plaits_synth()) {
     plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
     plaits_synth.set_pitch_scale(ui.pitch_scale());
@@ -430,6 +465,19 @@ void Process(
     }
   }
 
+#ifdef CPU_CEILING
+  if (ceiling) {
+    // The activity the conversion loop below would have seen.
+    for (size_t i = 0; i < size; ++i) {
+      if (fabsf(float_out[i].l) > 0.01f || fabsf(float_out[i].r) > 0.01f) {
+        synth_mode_start_time = 0;
+      }
+    }
+    cpu_ceiling::Output(float_out, out, size);
+    return;
+  }
+#endif  // CPU_CEILING
+
   // Conversion of output samples into integers.
   for (size_t i = 0; i < size; ++i) {
     float l = float_out[i].l;
@@ -485,6 +533,9 @@ void Init() {
 #ifdef DWT_CALIBRATION
   dwt_calibration::Init();
 #endif  // DWT_CALIBRATION
+#ifdef CPU_CEILING
+  cpu_ceiling::Init();
+#endif  // CPU_CEILING
 
   Watchdog::Start();
   freeze_input.Init();
