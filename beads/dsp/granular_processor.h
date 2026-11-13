@@ -178,38 +178,8 @@ class GranularProcessor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) {
-    ProcessMedium<false>(
-        triggers, taps, freeze, parameters, feedback, mono, in, out, size);
-  }
-
-  // The same, recorded on the Dictaphone medium.
-  inline void ProcessDictaphone(
-      const TriggerGenerator::Output* triggers,
-      const DelayController::Output* taps,
-      const bool* freeze,
-      const Parameters& parameters,
-      const float feedback,
-      const bool mono,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) {
-    ProcessMedium<true>(
-        triggers, taps, freeze, parameters, feedback, mono, in, out, size);
-  }
-
-  template<bool dictaphone>
-  inline void ProcessMedium(
-      const TriggerGenerator::Output* triggers,
-      const DelayController::Output* taps,
-      const bool* freeze,
-      const Parameters& parameters,
-      const float feedback,
-      const bool mono,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) {
     if (ratio == 1) {
-      ProcessInternal<dictaphone>(
+      ProcessInternal(
           triggers, taps, freeze, parameters, feedback, mono, in, out, size);
     } else {
       size_t d_size = size / size_t(ratio);
@@ -241,7 +211,7 @@ class GranularProcessor {
         }
       }
 
-      ProcessInternal<dictaphone>(
+      ProcessInternal(
           triggers ? d_triggers : NULL,
           taps ? d_taps : NULL,
           d_freeze,
@@ -256,6 +226,64 @@ class GranularProcessor {
         for (size_t i = 0; i < size; ++i) {
           *(&(out[i].l) + channel) = upsampled[i];
         }
+      }
+    }
+  }
+
+  // The Clean tape copy of Process, recorded on the Dictaphone medium; kept
+  // apart so that the stock Process compiles as before.
+  inline void ProcessDictaphone(
+      const TriggerGenerator::Output* triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& parameters,
+      const float feedback,
+      const bool mono,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) {
+    size_t d_size = size / size_t(ratio);
+
+    bool d_freeze[d_size];
+    TriggerGenerator::Output d_triggers[d_size];
+    DelayController::Output d_taps[d_size];
+    FloatFrame d_in[d_size];
+    FloatFrame d_out[d_size];
+    float downsampled[d_size];
+    float upsampled[size];
+
+    DownsampleGate(freeze, d_freeze, size);
+    if (triggers) {
+      DownsampleTriggers(triggers, d_triggers, size);
+    }
+    if (taps) {
+      DownsampleTaps(taps, d_taps, size);
+    }
+    for (size_t channel = 0; channel < 2; ++channel) {
+      for (size_t i = 0; i < size; ++i) {
+        upsampled[i] = *(&(in[i].l) + channel);
+      }
+      src_down_[channel].Process(upsampled, downsampled, size);
+      for (size_t i = 0; i < d_size; ++i) {
+        *(&(d_in[i].l) + channel) = downsampled[i];
+      }
+    }
+    if (mono) {
+      ProcessInternal<true, true>(triggers ? d_triggers : NULL,
+          taps ? d_taps : NULL, d_freeze, parameters, feedback,
+          d_in, d_out, d_size);
+    } else {
+      ProcessInternal<false, true>(triggers ? d_triggers : NULL,
+          taps ? d_taps : NULL, d_freeze, parameters, feedback,
+          d_in, d_out, d_size);
+    }
+    for (size_t channel = 0; channel < 2; ++channel) {
+      for (size_t i = 0; i < d_size; ++i) {
+        downsampled[i] = *(&(d_out[i].l) + channel);
+      }
+      src_up_[channel].Process(downsampled, upsampled, d_size);
+      for (size_t i = 0; i < size; ++i) {
+        *(&(out[i].l) + channel) = upsampled[i];
       }
     }
   }
@@ -334,7 +362,6 @@ class GranularProcessor {
     }
   }
 
-  template<bool dictaphone>
   inline void ProcessInternal(
       const TriggerGenerator::Output* triggers,
       const DelayController::Output* taps,
@@ -346,10 +373,10 @@ class GranularProcessor {
       FloatFrame* out,
       size_t size) {
     if (mono) {
-      ProcessInternal<true, dictaphone>(
+      ProcessInternal<true, false>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     } else {
-      ProcessInternal<false, dictaphone>(
+      ProcessInternal<false, false>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     }
   }

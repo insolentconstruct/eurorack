@@ -282,8 +282,8 @@ float FeedbackTransfer(T* granular, float previous) {
   TriggerGenerator::Output trigger;
   memset(&trigger, 0, sizeof(trigger));
   const int position = *granular->mutable_delay_write_ptr(false);
-  granular->template ProcessInternal<false>(&trigger, NULL, &frozen,
-      parameters, 1.0f, false, &zero, &out, 1);
+  granular->ProcessInternal(&trigger, NULL, &frozen, parameters,
+      1.0f, false, &zero, &out, 1);
   return granular->stereo_delay_line_.Load(position).l;
 }
 
