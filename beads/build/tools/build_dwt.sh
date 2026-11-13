@@ -3,6 +3,7 @@
 # Author: Insolent Construct (insolentconstruct@gmail.com)
 
 # Run with a remote Docker context from a clean committed Drizzlet root. No SWD.
+# CPU_CEILING=1 also builds the bench-only ceiling variant (DWT plus the hold).
 set -euo pipefail
 lane=${1:?absolute output directory required}
 context=${BUILD_CONTEXT:-}
@@ -16,23 +17,27 @@ container="dwt-build-$$"
 trap '"${docker_cmd[@]}" rm -f "$container" >/dev/null' EXIT
 "${docker_cmd[@]}" cp "$lane/source.tar" "$container:/tmp/source.tar"
 "${docker_cmd[@]}" cp "$lane/stmlib.tar" "$container:/tmp/stmlib.tar"
-"${docker_cmd[@]}" exec "$container" bash -c '
+variants="release calibration${CPU_CEILING:+ ceiling}"
+[ "${CPU_CEILING:-}" = "" ] || [ "$CPU_CEILING" = 1 ] || { echo 'CPU_CEILING must be 1 or unset' >&2; exit 2; }
+"${docker_cmd[@]}" exec -e VARIANTS="$variants" "$container" bash -c '
 set -eu
 mkdir -p /src
 cd /src
 tar xf /tmp/source.tar
 tar xf /tmp/stmlib.tar -C stmlib
-for variant in release calibration; do
+for variant in $VARIANTS; do
   calibration=0
-  [ "$variant" != calibration ] || calibration=1
+  ceiling=0
+  [ "$variant" = release ] || calibration=1
+  [ "$variant" != ceiling ] || ceiling=1
   nice -n 10 make -o beads/resources.cc -o beads/resources.h \
     -f beads/build/link-order.mk KIT_MAKEFILE=beads/makefile \
     BUILD_ROOT=/$variant/ TOOLCHAIN_PATH="$TOOLCHAIN_PATH" KIT_GCC9=1 \
-    DWT_CALIBRATION=$calibration -j"$(nproc)" bin > /tmp/$variant.log 2>&1
+    DWT_CALIBRATION=$calibration CPU_CEILING=$ceiling -j"$(nproc)" bin > /tmp/$variant.log 2>&1
 done
-sha256sum /release/beads/beads.bin /calibration/beads/beads.bin
+for variant in $VARIANTS; do sha256sum /$variant/beads/beads.bin; done
 '
-for variant in release calibration; do
+for variant in $variants; do
   "${docker_cmd[@]}" cp "$container:/$variant/beads" "$lane/$variant"
   "${docker_cmd[@]}" cp "$container:/tmp/$variant.log" "$lane/$variant.log"
 done
