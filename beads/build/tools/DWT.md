@@ -120,6 +120,7 @@ maximum was clean up to 109700 cycles at 48 kHz (q1, q3, synth), 104900 at
 and the driver's work before `Process`, which also spend the deadline. A
 late first word clicks on the left output only and sets no SAI flag.
 (The earlier 115800 / 113900 / 111500 timed RAM at send time, one slot late.)
+These limits are provisional until measured on the module.
 
 Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (FEEDBACK LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri). One [M] tap reaches page 2 (DRY/WET LED), where REVERB selects reverb Stock/Clouds-style (lower/upper half). Page 3 (REVERB LED): REVERB lower half is Synth start: Automatic (Stock). Page 4 (all three LEDs): REVERB bottom third is the Stock limiter. Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 
