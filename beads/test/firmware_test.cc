@@ -2152,6 +2152,24 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+// Dictaphone is a power-on profile choice for the Clean tape position (#221).
+void TestDictaphoneProfile() {
+  test_checker.Start("TestDictaphoneProfile");
+  const uint8_t dictaphone[] = { FEATURE_DICTAPHONE, 1 };
+  for (int media = 0; media < 4; ++media) {
+    Rig r(false, false);
+    settings.mutable_state()->media = media;
+    settings.SaveState();
+    BootWithProfile(&r, dictaphone, 1);
+    r.Settle();
+    CHECK(processor.media() == media);
+    CHECK(processor.options_ == (media == Processor::MEDIA_CLEAN_TAPE
+        ? Processor::OPTION_DICTAPHONE : 0));
+    r.Reboot(false);
+    CHECK(processor.options_ == 0);
+  }
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2193,5 +2211,6 @@ int main() {
   TestPitchLawProfile();
   TestPlaitsBankProfile();
   TestMixOptionsProfile();
+  TestDictaphoneProfile();
   return test_checker.failures() ? 1 : 0;
 }

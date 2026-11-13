@@ -529,6 +529,7 @@ void Init() {
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
+  processor.set_dictaphone(settings.FeatureValue(FEATURE_DICTAPHONE));
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);

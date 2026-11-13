@@ -98,6 +98,11 @@ class Processor {
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_REVERB_ON_GRAINS, grains);
   }
+  // The Clean tape position records on a Dictaphone instead (#221).
+  inline void set_dictaphone(bool dictaphone) {
+    dictaphone_ = dictaphone;
+    SetOption(OPTION_DICTAPHONE, dictaphone_ && media_ == MEDIA_CLEAN_TAPE);
+  }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
     delay_controller_.set_timing_fade(enabled);
@@ -317,7 +322,8 @@ class Processor {
   enum Option {
     OPTION_TIME_SCAN = 1,
     OPTION_GENTLE_MIX = 2,
-    OPTION_REVERB_ON_GRAINS = 4
+    OPTION_REVERB_ON_GRAINS = 4,
+    OPTION_DICTAPHONE = 8
   };
 
   inline void SetOption(Option option, bool enabled) {
@@ -386,6 +392,8 @@ class Processor {
   float wet_;
   
   WowAndFlutter wow_and_flutter_;
+  WowAndFlutter dictaphone_wow_;
+  bool dictaphone_;
   Reverb reverb_;
   Limiter pre_reverb_limiter_;
   Limiter output_limiter_;

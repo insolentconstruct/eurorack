@@ -37,6 +37,7 @@
 #include "stmlib/dsp/sample_rate_converter.h"
 
 #include "beads/dsp/delay_granular_player.h"
+#include "beads/dsp/fx/dictaphone.h"
 #include "beads/dsp/limiter.h"
 #include "beads/dsp/multitap_delay.h"
 #include "beads/dsp/sample_rate_conversion_filters.h"
@@ -80,6 +81,7 @@ class GranularProcessor {
     
     pitch_modulation_.Init(0.2f / sample_rate);
     input_limiter_.Init(1.0f / sample_rate, 0.95f);
+    dictaphone_.Init(sample_rate);
   }
   
   inline void SetAttacks(int mode) { attacks_.Configure(mode); }
@@ -176,8 +178,38 @@ class GranularProcessor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) {
+    ProcessMedium<false>(
+        triggers, taps, freeze, parameters, feedback, mono, in, out, size);
+  }
+
+  // The same, recorded on the Dictaphone medium (#221).
+  inline void ProcessDictaphone(
+      const TriggerGenerator::Output* triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& parameters,
+      const float feedback,
+      const bool mono,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) {
+    ProcessMedium<true>(
+        triggers, taps, freeze, parameters, feedback, mono, in, out, size);
+  }
+
+  template<bool dictaphone>
+  inline void ProcessMedium(
+      const TriggerGenerator::Output* triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& parameters,
+      const float feedback,
+      const bool mono,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) {
     if (ratio == 1) {
-      ProcessInternal(
+      ProcessInternal<dictaphone>(
           triggers, taps, freeze, parameters, feedback, mono, in, out, size);
     } else {
       size_t d_size = size / size_t(ratio);
@@ -209,7 +241,7 @@ class GranularProcessor {
         }
       }
 
-      ProcessInternal(
+      ProcessInternal<dictaphone>(
           triggers ? d_triggers : NULL,
           taps ? d_taps : NULL,
           d_freeze,
@@ -302,6 +334,7 @@ class GranularProcessor {
     }
   }
 
+  template<bool dictaphone>
   inline void ProcessInternal(
       const TriggerGenerator::Output* triggers,
       const DelayController::Output* taps,
@@ -313,15 +346,15 @@ class GranularProcessor {
       FloatFrame* out,
       size_t size) {
     if (mono) {
-      ProcessInternal<true>(
+      ProcessInternal<true, dictaphone>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     } else {
-      ProcessInternal<false>(
+      ProcessInternal<false, dictaphone>(
           triggers, taps, freeze, parameters, feedback, in, out, size);
     }
   }
 
-  template<bool mono>
+  template<bool mono, bool dictaphone>
   inline void ProcessInternal(
       const TriggerGenerator::Output* triggers,
       const DelayController::Output* taps,
@@ -387,6 +420,9 @@ class GranularProcessor {
     while (size--) {
       const float feedback = feedback_modulation.Next();
       FloatFrame input = *in;
+      if (dictaphone) {
+        dictaphone_.Level(&input);
+      }
       FloatFrame s = input;
       
       if (soft_limit_gain) {
@@ -402,6 +438,10 @@ class GranularProcessor {
         s.l = stmlib::SoftClip(s.l);
         s.r = stmlib::SoftClip(s.r);
         s = input + feedback * (s - input);
+      }
+
+      if (dictaphone) {
+        dictaphone_.Record(&s);
       }
 
       out->l = 0.0f;
@@ -495,6 +535,7 @@ class GranularProcessor {
   Limiter input_limiter_;
 
   AttackDetector attacks_;
+  Dictaphone dictaphone_;
 
   DISALLOW_COPY_AND_ASSIGN(GranularProcessor);
 };

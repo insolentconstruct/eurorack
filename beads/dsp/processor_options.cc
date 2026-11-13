@@ -122,8 +122,14 @@ void Processor::ProcessWithOptions(
             parameters, feedback, mono_, in, out, size);
         break;
       case MEDIA_CLEAN_TAPE:
-        processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, feedback, mono_, in, out, size);
+        if (options_ & OPTION_DICTAPHONE) {
+          processor_clean_tape_.ProcessDictaphone(grain_triggers, delay_taps,
+              freeze, parameters, feedback, mono_, in, out, size);
+          dictaphone_wow_.Process(out, size);
+        } else {
+          processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
+              parameters, feedback, mono_, in, out, size);
+        }
         break;
       case MEDIA_DIRTY_TAPE:
         processor_dirty_tape_.Process(grain_triggers, delay_taps, freeze,
