@@ -147,12 +147,6 @@ float QuantizePitch(float pitch, PitchScale scale) {
   return lower;
 }
 
-enum RandomStepMode {
-  RANDOM_STEP_FIFTHS,
-  RANDOM_STEP_FREE,
-  RANDOM_STEP_RECENT_NOTES
-};
-
 const size_t kNumRecentNotes = 8;
 // A note is new once the CV holds within 0.1 semitone for 10 ms, at least
 // half a semitone away from the last note.
@@ -160,7 +154,7 @@ const float kNoteTolerance = 0.1f;
 const float kNoteMinimumStep = 0.5f;
 const uint32_t kNoteSettleTime = 10;
 
-static volatile uint8_t random_step_mode;
+static volatile bool recent_notes_mode;
 // Volatile keeps the slot write ahead of its publication to the interrupt.
 static volatile float recent_notes[kNumRecentNotes];
 static volatile size_t num_recent_notes;
@@ -178,8 +172,8 @@ void RememberNote(
   const bool recent = intervals == RANDOM_INTERVALS_RECENT_NOTES;
   CONSTRAIN(amount, 0.0f, 1.0f);
   recent_notes_count = 1 + size_t(amount * float(kNumRecentNotes - 1) + 0.5f);
-  random_step_mode = !recent ? RANDOM_STEP_FIFTHS
-      : (patched ? RANDOM_STEP_RECENT_NOTES : RANDOM_STEP_FREE);
+  // Unpatched, or in the synth, no notes are kept and the steps are Free.
+  recent_notes_mode = recent;
   if (!recent || !patched) {
     num_recent_notes = 0;
     note_candidate = cv;
@@ -204,12 +198,11 @@ void RememberNote(
 }
 
 float RandomStep(float offset) {
-  const uint8_t mode = random_step_mode;
-  if (mode == RANDOM_STEP_FIFTHS) {
+  if (!recent_notes_mode) {
     return QuantizeFifths(offset);
   }
   const size_t stored = num_recent_notes;
-  if (mode == RANDOM_STEP_FREE || !stored) {
+  if (!stored) {
     return offset;
   }
   const size_t count = std::min(size_t(recent_notes_count), stored);
