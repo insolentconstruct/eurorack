@@ -521,8 +521,8 @@ panel slot or saved-state nibble.
 Hygrostat feature ID 35 chooses Even (stock) / Showers (#215). Stock draws
 each interval of the randomly modulated DENSITY (clockwise) on its own, so
 the grains fall evenly at random. Showers groups them into bursts at three
-times the rate, about eight grains long (0.15 to 1 s), and lulls at a
-third of the rate, three times as long, keeping the same average rate.
-Constant DENSITY (counter-clockwise), a clock in SEED and delay mode are
-unchanged. Granular only. Chosen at power-on, with no panel slot or
+times the rate, about eight grains long on average, and lulls at a third
+of the rate, three times as long on average, keeping the same average
+rate. Constant DENSITY (counter-clockwise), a clock in SEED and delay mode
+are unchanged. Granular only. Chosen at power-on, with no panel slot or
 saved-state nibble.
