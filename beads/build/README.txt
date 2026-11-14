@@ -157,8 +157,8 @@ panel gesture or options-page slot.
 
 Options page idle timeout is a separate profile choice: Off, the
 default, keeps the pages open until you close them; 5, 10, 20 or 30 s
-closes them after that long without a button press, page change or knob
-turn, keeping your changes.
+closes them after that long without a button press, page change or turn
+of an option knob on the page, keeping your changes.
 
 Four more profile choices keep stock or Beta 2 behaviour by default and
 add no panel gesture or options-page slot. Input gain at power-on:
