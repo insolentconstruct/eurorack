@@ -423,7 +423,8 @@
       "name": "Random pitch steps",
       "values": [
         "Free (Stock)",
-        "Fifths and octaves"
+        "Fifths and octaves",
+        "Recent notes"
       ],
       "states": [
         "Off",

@@ -23,7 +23,7 @@ The quality LED [A] shows the setting value: steady, slow blink, fast blink or t
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Pitch scale | Off / Chromatic / Scale | green; steady / yellow; steady / see scale list |
-| DRY/WET | Random pitch steps | Free (Stock) / Fifths and octaves | green; steady / yellow; steady |
+| DRY/WET | Random pitch steps | Free (Stock) / Fifths and octaves / Recent notes | green; steady / yellow; steady / red; steady |
 | REVERB | Attacks | Off / Snap / Snap and trigger | green; steady / yellow; steady / red; steady |
 
 **Random pitch steps:** Relative to PITCH; scale follows.

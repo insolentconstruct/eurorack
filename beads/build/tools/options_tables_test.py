@@ -182,10 +182,10 @@ for row in rows:
     assert (color, pulse) not in seen, (setting, value)
     seen.add((color, pulse))
 assert len(values["Pitch scale"]) == 10
-for setting in ("Delay mode", "Attacks", "Limiter"):
+for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps"):
     assert len(values[setting]) == 3, setting
 for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
-                "Synth start", "Random pitch steps"):
+                "Synth start"):
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4

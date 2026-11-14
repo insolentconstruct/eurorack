@@ -163,12 +163,8 @@ static volatile size_t recent_notes_count;
 static float note_candidate;
 static uint32_t note_candidate_time;
 
-void RememberNote(
-    RandomIntervals intervals,
-    bool patched,
-    float cv,
-    float amount,
-    uint32_t now) {
+void RememberNote(RandomIntervals intervals, bool patched, float cv,
+    float amount, uint32_t now) {
   const bool recent = intervals == RANDOM_INTERVALS_RECENT_NOTES;
   CONSTRAIN(amount, 0.0f, 1.0f);
   recent_notes_count = 1 + size_t(amount * float(kNumRecentNotes - 1) + 0.5f);

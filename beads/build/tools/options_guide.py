@@ -819,7 +819,7 @@ def svg(pages, mobile=False):
                 heights[2] = d.warning(
                     margin + 660, y + heights[2] + 14, 315, 34
                 ) - y
-            y += max(heights) + 9
+            y += max(heights) + 5
     y -= 16
     for line in textwrap.wrap(
         "Author: Insolent Construct • Control sketch • " + ATTRIBUTION,

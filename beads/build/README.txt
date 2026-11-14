@@ -235,13 +235,17 @@ their pitch. Hygrostat can replace and reorder this bank, including
 each scale definition, colour and flash pattern. Use the guide
 generated for your profile.
 
-Random pitch steps selects Free or Fifths and octaves. The latter
-snaps counter-clockwise PITCH randomness relative to the PITCH
-setting. For a C note, this gives C/G across octaves; G below C is a
-downward fourth. Free and clockwise stay continuous before Pitch
-scale, which applies afterward and can change the interval. This
-affects granular playback and Beads wavetable grains, not the
-continuous oscillator, Plaits or Spectral.
+Random pitch steps selects Free, Fifths and octaves or Recent notes
+in thirds (steady green / yellow / red). Fifths and octaves snaps
+counter-clockwise PITCH randomness relative to the PITCH setting. For
+a C note, this gives C/G across octaves; G below C is a downward
+fourth. Recent notes, with PITCH patched, gives each new grain one of
+the last notes sent to PITCH, above the PITCH setting; turning the
+attenurandomizer further counter-clockwise chooses from more of them
+(up to eight). Unpatched it plays as Free. Free and clockwise stay
+continuous before Pitch scale, which applies afterward and can change
+the interval. This affects granular playback and Beads wavetable
+grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves
 grain starts onto recorded hits; Snap and trigger also triggers a grain
@@ -290,6 +294,7 @@ page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	pink	2 pulses / 2.048 s
 1	FEEDBACK	DRY/WET	Random pitch steps	Free (Stock)	green	steady
 1	FEEDBACK	DRY/WET	Random pitch steps	Fifths and octaves	yellow	steady
+1	FEEDBACK	DRY/WET	Random pitch steps	Recent notes	red	steady
 1	FEEDBACK	REVERB	Attacks	Off	green	steady
 1	FEEDBACK	REVERB	Attacks	Snap	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Snap and trigger	red	steady

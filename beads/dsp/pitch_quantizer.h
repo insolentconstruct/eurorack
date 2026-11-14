@@ -86,12 +86,8 @@ float QuantizeFifths(float pitch);
 
 // Main loop: Recent notes remembers the notes sent to PITCH; amount is the
 // counter-clockwise PITCH attenurandomizer.
-void RememberNote(
-    RandomIntervals intervals,
-    bool patched,
-    float cv,
-    float amount,
-    uint32_t now);
+void RememberNote(RandomIntervals intervals, bool patched, float cv,
+    float amount, uint32_t now);
 // A counter-clockwise random offset on fifths and octaves, or a recent note.
 float RandomStep(float offset);
 
