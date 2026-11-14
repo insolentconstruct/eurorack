@@ -41,7 +41,7 @@
 
 namespace beads {
 
-const uint8_t kReleaseBeta = 2;
+const uint8_t kReleaseBeta = 3;
 
 using namespace std;
 using namespace stmlib;

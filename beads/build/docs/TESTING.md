@@ -10,7 +10,7 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased application `5c87b41b…` and WAV `b8128c05…`.
+This source pins its own unreleased application `54042fcb…` and WAV `9e743c74…`.
 The release documentation and generated guides pass their checker. Module
 results for the release image are under [Beta 2](#beta-2).
 

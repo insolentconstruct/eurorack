@@ -3336,6 +3336,10 @@ void TestBetaOptionsLeds() {
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
   version.Tick(150, true);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  version.Tick(150, true);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  version.Tick(150, true);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
   version.Tick(300, true);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] != 0);
 
