@@ -1583,16 +1583,21 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     shutil.copytree(root / directory, work / directory,
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))
+  # spectral.mk's test also builds and runs its ShyFFT variant.
+  variants = {'spectral': [[], ['SHY=_shy']]}
+
   # Build each program once unmutated; a case rebuilds at most that, so its
-  # limit is twice the build time plus 60 s to run one test.
+  # limit is twice the build time plus 60 s for its tests.
   limits = {}
   for suite in sorted({cases[i - 1][1] for i in selected_indices}):
     begin = time.monotonic()
     log = out / ('clean-%s.log' % suite)
     with log.open('w') as stream:
-      run = subprocess.run(make + ['beads/test/' + suite + '.mk', 'all'],
-          cwd=work, stdout=stream, stderr=subprocess.STDOUT, timeout=1200)
-    assert run.returncode == 0, log.read_text()
+      for variant in variants.get(suite, [[]]):
+        run = subprocess.run(
+            make + ['beads/test/' + suite + '.mk', 'all'] + variant,
+            cwd=work, stdout=stream, stderr=subprocess.STDOUT, timeout=1200)
+        assert run.returncode == 0, log.read_text()
     elapsed = time.monotonic() - begin
     limits[suite] = 60 + 2 * elapsed
     print('Clean %s build: %.1f s; case limit %.0f s' % (
