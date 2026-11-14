@@ -297,7 +297,8 @@ DETAILS = [
     "when the page closes, clearing the recording; a frozen buffer saved "
     "to flash comes back with Granular.",
     "Synth Plaits plays six Plaits voices instead of the wavetable "
-    "synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set "
+    "synth: FEEDBACK picks one of the eight models in the current bank, "
+    "TIME, SIZE and SHAPE set "
     "HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE "
     "sustains. With DENSITY at noon the last voice drones until SEED plays "
     "a note.",

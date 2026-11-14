@@ -107,7 +107,7 @@ Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loo
 
 Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, delay mode or wavetable synth. A new processor takes over when the page closes, clearing the recording; a frozen buffer saved to flash comes back with Granular.
 
-Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains. With DENSITY at noon the last voice drones until SEED plays a note.
+Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains. With DENSITY at noon the last voice drones until SEED plays a note.
 
 Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
 

@@ -92,9 +92,8 @@ Hygrostat
 
 https://hygrostat.insolentconstruct.net/ builds updates and guides
 locally. Choose features, controls and defaults, using templates or
-custom Off, Fixed and Adjustable settings. It warns about CPU load and
-refuses excessive combinations. Per-feature estimates await module
-measurements.
+custom Off, Fixed and Adjustable settings. It shows no CPU estimate;
+not every combination of options has been measured on a module.
 
 Profiles, custom scales, LED indications and tail choices are checked
 by host tests, not yet on a module. Page 4 provides LED brightness and
@@ -132,7 +131,7 @@ Page 4 controls:
   delay free-runs outside Off. Unpatched attack triggers still work.
 
 The factory layout is a starting point. Customize it with Hygrostat
-and share feedback to help shape Beta 3.
+and share feedback to help shape later releases.
 
 Hygrostat can replace the complete scale bank with up to 14 scales, each
 with 1–24 notes including its root and a repeat interval from 0.01 to
@@ -155,6 +154,11 @@ Delay SEED latch fade is a separate profile choice: switching at once is
 the stock default; Fixed Fade briefly dips the delay around a delay-mode
 SEED latch, unlatch or cable change, instead of popping. It adds no
 panel gesture or options-page slot.
+
+Options page idle timeout is a separate profile choice: Off, the
+default, keeps the pages open until you close them; 5, 10, 20 or 30 s
+closes them after that long without a button press, page change or knob
+turn, keeping your changes.
 
 Four more profile choices keep stock or Beta 2 behaviour by default and
 add no panel gesture or options-page slot. Input gain at power-on:
@@ -269,10 +273,11 @@ Closing fades the change and clears recording. The saved frozen buffer
 returns with Granular.
 
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance
-voices, retaining pitch and random settings. FEEDBACK selects 24 models;
-TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH.
-DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At
-DENSITY noon with SEED unpatched, the last voice drones.
+voices, retaining pitch and random settings. FEEDBACK selects one of
+eight models in the current bank; TIME controls HARMONICS, SIZE controls
+TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains.
+Other grain controls remain. At DENSITY noon with SEED unpatched, the
+last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with
 both inputs unpatched, or Manual. With inputs unpatched and FREEZE off,
@@ -326,9 +331,9 @@ End options reference
 Saved data
 ----------
 
-Stock settings and calibration carry over; earlier Drizzlet options,
-width and diffusion reset to profile defaults. Frozen buffers remain
-stock-compatible. Disable monophonic grains before downgrading. Stock
+Stock settings, Beta 2 settings and calibration carry over; options,
+width and diffusion from Beta 1 and earlier reset to profile defaults.
+Frozen buffers remain stock-compatible. Disable monophonic grains before downgrading. Stock
 clears Drizzlet options when saving and loads trimmed buffers
 full-length; earlier Drizzlet reads new settings as stock.
 

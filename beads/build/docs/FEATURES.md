@@ -11,7 +11,7 @@ Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzle
 
 Same-rate mono/stereo changes and synth start/stop at 48 kHz are pop-free. Rate changes still fade, restart the converter, clear the recording and cut reverb tails.
 
-SEED starts latched, as in stock. LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
+SEED starts latched, as in stock, unless a profile chooses [Unlatched](#seed-at-power-on). LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
 
 Delay-mode SEED latching can pop, as in stock. A Hygrostat profile can fade it instead ([Delay SEED latch fade](#delay-seed-latch-fade), #183).
 
@@ -315,10 +315,8 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 A lightweight requested feature may ship Off by default. Its Off state must
 leave the audio unchanged and add no measurable audio-path cost; branches
 belong outside sample loops. Measure each feature and interacting controls.
-Hygrostat's internal threshold follows stock Beads' measured worst case
-(provisionally 92%): it warns from 91% and blocks above 92%, for measured and
-estimated combinations alike. The threshold must stay below the earliest measured DAC deadline at every sample
-rate. New features still require flash, permanent storage fields, controls and
+Hygrostat shows no CPU estimate and blocks no combination for CPU; the
+working limit is in [Design aims](#design-aims). New features still require flash, permanent storage fields, controls and
 maintenance.
 
 ### Small Beta 2 profile options
@@ -400,6 +398,7 @@ last counted, however slowly; jitter, CV and the stored-value preview don't
 count. Closing by timeout is the same as holding [M]: changes are kept and
 saved once if unsaved. Firmware-profile choice, with no panel slot or
 saved-state nibble.
+
 ### Delay SEED latch fade
 
 Hygrostat feature ID 26 chooses Switch at once (stock) / Fade. In delay mode
@@ -409,6 +408,7 @@ for 10 ms, switches timing at silence and fades back in over 10 ms, without
 the short chirp. Patching SEED while latched fades the same way; a clocked
 latch never fades. Firmware-profile choice, with no panel slot or saved-state
 nibble.
+
 ### Input gain at power-on
 
 Hygrostat feature ID 27 chooses Automatic (stock) / Manual (#19). Off or an
