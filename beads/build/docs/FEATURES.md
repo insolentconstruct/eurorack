@@ -7,7 +7,7 @@ The [options guide](OPTIONS.md) explains the controls, zones and LED patterns.
 The `drizzlet` branch, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. Planned uses come from the tentative roadmap in [#32](https://github.com/insolentconstruct/eurorack/issues/32); they can change until built. <!-- source: git trees fc549d7, d8f4739 -->
 Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzlet pins stmlib `d18def8` (stock `e3bd7c9`; the stmlib files cited here are identical in both); “linker script” means `stmlib/linker_scripts/stm32h7xx_flash_application_large.ld`, and `manual.md` is the Beads manual. <!-- source: git ls-tree fc549d7 stmlib; git ls-tree d8f4739 stmlib -->
 
-## Beta 2 behaviour
+## Known behaviour
 
 Same-rate mono/stereo changes and synth start/stop at 48 kHz are pop-free. Rate changes still fade, restart the converter, clear the recording and cut reverb tails.
 
