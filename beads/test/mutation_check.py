@@ -1577,6 +1577,17 @@ started = time.monotonic()
 results = []
 indexed = []
 make = ['nice', '-n', '10', 'make', '-s', '-j4', '-f']
+
+
+def run_make(arguments, stream, deadline):
+  # A case's build and test share its deadline; running out is a timeout.
+  left = deadline - time.monotonic()
+  if left <= 0:
+    raise subprocess.TimeoutExpired(make + arguments, 0)
+  return subprocess.run(make + arguments, cwd=work, stdout=stream,
+      stderr=subprocess.STDOUT, timeout=left)
+
+
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   work = pathlib.Path(tmp).resolve()
   for directory in ('beads', 'plaits', 'stmlib', 'clouds'):
@@ -1640,9 +1651,7 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
       deadline = begin + limits.get(suite, 1200)
       with log.open('w') as stream:
         for variant in variants.get(suite, [[]]):
-          run = subprocess.run(make + [program, 'all'] + variant, cwd=work,
-              stdout=stream, stderr=subprocess.STDOUT,
-              timeout=deadline - time.monotonic())
+          run = run_make([program, 'all'] + variant, stream, deadline)
           if run.returncode:
             break
         else:
@@ -1650,9 +1659,7 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
           if suite not in limits:
             print('Build %s: %.1f s' % (suite, build), flush=True)
           limits[suite] = max(limits.get(suite, 0), 60 + 2 * build)
-          run = subprocess.run(make + [program, 'test'], cwd=work,
-              stdout=stream, stderr=subprocess.STDOUT,
-              timeout=deadline - time.monotonic())
+          run = run_make([program, 'test'], stream, deadline)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestProfileParser' and 'runtime error: index ' in failure:
