@@ -1583,19 +1583,19 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     shutil.copytree(root / directory, work / directory,
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))
-  # Build and test each program once unmutated: it must pass, and its time
-  # sets the case limit, since a case rebuilds at most it and runs one test.
+  # Build each program once unmutated; a case rebuilds at most that, so its
+  # limit is twice the build time plus 60 s to run one test.
   limits = {}
   for suite in sorted({cases[i - 1][1] for i in selected_indices}):
     begin = time.monotonic()
     log = out / ('clean-%s.log' % suite)
     with log.open('w') as stream:
-      run = subprocess.run(make + ['beads/test/' + suite + '.mk', 'test'],
+      run = subprocess.run(make + ['beads/test/' + suite + '.mk', 'all'],
           cwd=work, stdout=stream, stderr=subprocess.STDOUT, timeout=1200)
     assert run.returncode == 0, log.read_text()
     elapsed = time.monotonic() - begin
     limits[suite] = 60 + 2 * elapsed
-    print('Clean %s: %.1f s; case limit %.0f s' % (
+    print('Clean %s build: %.1f s; case limit %.0f s' % (
         suite, elapsed, limits[suite]), flush=True)
   for index, (name, suite, source, before, after) in enumerate(cases, 1):
     if index not in selected_indices:
