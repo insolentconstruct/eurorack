@@ -157,8 +157,10 @@ Options page
 [A] is the quality button; [M] is CV assign. Hold [M] alone for three
 seconds with the mix knobs still, then release. Tap [M] to change pages.
 All three mix LEDs pulse while the entry hold continues; after release,
-the indicated page LED pulses. Reopening remembers the page until
-power-off; startup selects page 1.
+the indicated page LEDs pulse. Reopening remembers the page until
+power-off; startup selects page 1. Custom layouts can add pages 5-7
+(FEEDBACK and REVERB, DRY/WET and REVERB, then all three); taps skip
+empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its
 knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more
@@ -169,7 +171,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
-4 / all three       LED brightness  SEED latch      Limiter
+4 / FEEDBACK and DRY/WET  LED brightness  SEED latch    Limiter
 
 Changes save about a second after turning stops. Wait before power-off.
 Hold [M] for three seconds or press another button to close; mix
@@ -278,16 +280,16 @@ page	LED	knob	setting	value	colour	pulse
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
 3	REVERB	REVERB	Synth start	Automatic (Stock)	green	steady
 3	REVERB	REVERB	Synth start	Manual	yellow	steady
-4	all three	FEEDBACK	LED brightness	100%	green	steady
-4	all three	FEEDBACK	LED brightness	66%	yellow	steady
-4	all three	FEEDBACK	LED brightness	33%	red	steady
-4	all three	DRY/WET	SEED latch	Off	green	steady
-4	all three	DRY/WET	SEED latch	Ignore	yellow	steady
-4	all three	DRY/WET	SEED latch	Sync	red	steady
-4	all three	DRY/WET	SEED latch	Add	green	slow (0.98 Hz)
-4	all three	REVERB	Limiter	Stock	green	steady
-4	all three	REVERB	Limiter	Fast release	yellow	steady
-4	all three	REVERB	Limiter	Off	red	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	100%	green	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	66%	yellow	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	33%	red	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Off	green	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Ignore	yellow	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Sync	red	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Add	green	slow (0.98 Hz)
+4	FEEDBACK and DRY/WET	REVERB	Limiter	Stock	green	steady
+4	FEEDBACK and DRY/WET	REVERB	Limiter	Fast release	yellow	steady
+4	FEEDBACK and DRY/WET	REVERB	Limiter	Off	red	steady
 End options reference
 
 Saved data

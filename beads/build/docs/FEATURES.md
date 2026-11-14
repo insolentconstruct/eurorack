@@ -50,14 +50,14 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 4 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles the populated pages in order, 1 → 2 → 3 → 4 → 1 for the factory layout; custom profiles can use up to seven pages (slots 1–21) and empty pages are skipped; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses: pages 1–3 FEEDBACK, DRY/WET or REVERB; 4 FEEDBACK and DRY/WET; 5 FEEDBACK and REVERB; 6 DRY/WET and REVERB; 7 all three. Beta 2 lit all three for page 4.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
 | 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
 | 2 / DRY/WET | Frozen feedback | Delay mode | Reverb character |
 | 3 / REVERB | Processor | Synth | Synth start |
-| 4 / all three | LED brightness | SEED latch | Limiter |
+| 4 / FEEDBACK and DRY/WET | LED brightness | SEED latch | Limiter |
 
 Custom profiles can leave knobs unused; unused knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green. Other settings follow the green/yellow/red ladder. The factory scale bank uses coral Fifths, amber Major, blue Minor, amber/blue pentatonics with slow blinking, teal Pelog, violet Bhairav and two pink pulses for Shri. Slow is 0.98 Hz, fast is 3.91 Hz, and a two-pulse group repeats every 2.048 s. Hygrostat profiles can replace the scale definitions, order, colours and patterns; [Scale profiles](SCALE-PROFILES.md) specifies their format. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 

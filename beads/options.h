@@ -45,7 +45,7 @@ class Profile;
 class Settings;
 
 enum { MIX_PARAMETER_LAST = 3 };
-const int kNumOptionPages = 4;
+const int kNumOptionPages = 7;
 
 enum OptionSetting {
   OPTION_RESERVED,
@@ -65,9 +65,9 @@ enum OptionSetting {
   OPTION_LAST,
 };
 
-// Pages light the mix LEDs left to right; the last page lights all three.
+// Pages 1-3 light one mix LED, pages 4-7 two or all three of them.
 struct OptionPage {
-  int led_index;  // MIX_PARAMETER_LAST for all three.
+  uint8_t leds;  // Bit 0 FEEDBACK, bit 1 DRY/WET, bit 2 REVERB.
   OptionSetting knobs[MIX_PARAMETER_LAST];  // FEEDBACK, DRY/WET, REVERB.
 };
 
