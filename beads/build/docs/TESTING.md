@@ -392,10 +392,10 @@ The factory calibration was restored by debug probe after each saved run. Before
   granular, delay and spectral scenarios: Off output is identical to the
   previous build and `Process` runs 4-8 fewer instructions per block. The
   test alone moved register allocation by 1-4 more; computing
-  `sample_rate()` once (same output) more than recovers it. Heavy granular (Bright digital,
-  stereo, Clouds-style, diffusion, 52,126 per block Off): Gentle +85,
-  Grains +94, both +91; TIME scan On costs 77 more than before, still the
-  same output. Flash +8.5 KB.
+  `sample_rate()` once (same output) more than recovers it. Heavy
+  granular (Bright digital, stereo, Clouds-style, diffusion, 52,126 per
+  block Off): Gentle +85, Grains +94, both +91; TIME scan On costs 77
+  more than before, still the same output. Flash +8.5 KB.
 - Plaits banks: FEEDBACK uses stmlib's hysteresis quantizer over eight equal
   detents. Against the first Beta 3 build's inset range, detent edges move by
   at most 0.58% of the knob's travel. A bank change now keeps the knob's

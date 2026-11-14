@@ -88,15 +88,15 @@ class Processor {
   }
 
   inline void set_time_scan(bool enabled) {
-    SetOption(OPTION_TIME_SCAN, enabled);
+    SetOption(OPTION_FLAG_TIME_SCAN, enabled);
   }
   // Wet rises linearly with DRY/WET; dry and both ends stay stock.
   inline void set_gentle_mix(bool gentle) {
-    SetOption(OPTION_GENTLE_MIX, gentle);
+    SetOption(OPTION_FLAG_GENTLE_MIX, gentle);
   }
   // Reverb on the grains before the dry/wet mix, as in Clouds.
   inline void set_reverb_on_grains(bool grains) {
-    SetOption(OPTION_REVERB_ON_GRAINS, grains);
+    SetOption(OPTION_FLAG_REVERB_ON_GRAINS, grains);
   }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
@@ -314,14 +314,14 @@ class Processor {
 #endif  // DWT_CALIBRATION
 
  private:
-  enum Option {
-    OPTION_TIME_SCAN = 1,
-    OPTION_GENTLE_MIX = 2,
-    OPTION_REVERB_ON_GRAINS = 4
+  enum OptionFlags {
+    OPTION_FLAG_TIME_SCAN = 1,
+    OPTION_FLAG_GENTLE_MIX = 2,
+    OPTION_FLAG_REVERB_ON_GRAINS = 4
   };
 
-  inline void SetOption(Option option, bool enabled) {
-    options_ = enabled ? (options_ | option) : (options_ & ~option);
+  inline void SetOption(OptionFlags flag, bool enabled) {
+    options_ = enabled ? (options_ | flag) : (options_ & ~flag);
   }
 
   void ProcessWithOptions(

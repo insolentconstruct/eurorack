@@ -30,7 +30,7 @@ Follow upstream Mutable Instruments master: Beads (2021) first, then Plaits, Sta
 
 - Use `PascalCase` for types and methods (`Process`, `Init`). Use `lower_case` for accessors, locals and parameters. Ported helpers keep their names (`fast_p2r` in the phase vocoder). Common accessors are `inline T name() const`, setters `set_name(...)`, and mutable storage access `mutable_name()`; some getters omit `const`.
 - Private members end in `_` (`peak_lp_`); public struct fields usually don't.
-- Named scalar constants use `kPascalCase`, at namespace scope or as class-local `static const`. Local constants, tables and class-static arrays are often `lower_case` (`switch_definitions`, `long_press_duration`); follow the owning file. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`. Anonymous enums for compile-time traits use `lower_case` (`bundle_size` in `dsp/delay_line.h`, `length` in `dsp/fx/fx_engine.h`).
+- Named scalar constants use `kPascalCase`, at namespace scope or as class-local `static const`. Local constants, tables and class-static arrays are often `lower_case` (`switch_definitions`, `long_press_duration`); follow the owning file. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`. Bit-flag enums take power-of-two values and a `_FLAG_` prefix (`GATE_FLAG_RISING` in `stmlib/utils/gate_flags.h`, `ENVELOPE_FLAG_GATE` in `rings/dsp/string_synth_envelope.h`). Anonymous enums for compile-time traits use `lower_case` (`bundle_size` in `dsp/delay_line.h`, `length` in `dsp/fx/fx_engine.h`).
 
 ## Classes
 

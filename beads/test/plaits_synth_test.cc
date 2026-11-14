@@ -243,9 +243,8 @@ void TestVoiceAllocation() {
   CHECK(!synth.drone_);
 }
 
-// FEEDBACK selects one of eight models in the current bank (#190): green
-// 8-15 (the power-on bank), red 16-23, yellow 0-7. Both ends stay in the
-// bank whatever came before; a bank change keeps the knob's detent.
+// FEEDBACK picks one of eight models per bank (#190): green 8-15 at power-on,
+// red 16-23, yellow 0-7; ends stay in the bank and a step keeps the detent.
 void TestBankDetents() {
   test_checker.Start("TestBankDetents");
   Reset();

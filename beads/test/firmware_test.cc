@@ -2079,9 +2079,8 @@ int PlaitsModel(Rig* r, uint16_t feedback) {
   return plaits_synth.patch_[plaits_synth.active_voice_].model;
 }
 
-// Plaits banks (#190): FEEDBACK plays the green bank from a blank sector;
-// [A]+FREEZE steps red, yellow, green, keeps FREEZE and survives power
-// cycles; a profile chooses the starting bank.
+// Plaits banks (#190): a blank sector plays green; [A]+FREEZE steps red,
+// yellow, green, keeps FREEZE, survives power cycles; profiles pick the start.
 void TestPlaitsBankProfile() {
   test_checker.Start("TestPlaitsBankProfile");
   Rig r(false, true);
@@ -2155,8 +2154,8 @@ void TestMixOptionsProfile() {
       settings.SaveState();
       if (on) {
         BootWithProfile(&r, both, 2);
-        CHECK(processor.options_ == (Processor::OPTION_GENTLE_MIX |
-            Processor::OPTION_REVERB_ON_GRAINS));
+        CHECK(processor.options_ == (Processor::OPTION_FLAG_GENTLE_MIX |
+            Processor::OPTION_FLAG_REVERB_ON_GRAINS));
       } else {
         r.Reboot(false);
         CHECK(processor.options_ == 0);
@@ -2180,16 +2179,16 @@ void TestMixOptionsProfile() {
   const uint8_t law[] = { FEATURE_MIX_LAW, 1 };
   BootWithProfile(&r, law, 1);
   r.Settle();
-  CHECK(processor.options_ == Processor::OPTION_GENTLE_MIX);
+  CHECK(processor.options_ == Processor::OPTION_FLAG_GENTLE_MIX);
   const uint8_t input[] = { FEATURE_REVERB_INPUT, 1 };
   BootWithProfile(&r, input, 1);
   settings.SetFeatureValue(FEATURE_TIME_SCAN, 1);
   r.Settle();
-  CHECK(processor.options_ == (Processor::OPTION_REVERB_ON_GRAINS |
-      Processor::OPTION_TIME_SCAN));
+  CHECK(processor.options_ == (Processor::OPTION_FLAG_REVERB_ON_GRAINS |
+      Processor::OPTION_FLAG_TIME_SCAN));
   settings.SetFeatureValue(FEATURE_TIME_SCAN, 0);
   r.Settle();
-  CHECK(processor.options_ == Processor::OPTION_REVERB_ON_GRAINS);
+  CHECK(processor.options_ == Processor::OPTION_FLAG_REVERB_ON_GRAINS);
   // The factory profile omits both entries.
   r.Reboot(false);
   CHECK(processor.options_ == 0);

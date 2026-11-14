@@ -45,10 +45,9 @@ void Processor::ProcessWithOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  // As Process, with TIME scan and the profile's mix law and reverb input.
   const float sr = sample_rate();
   Parameters scanned;
-  const bool scan = (options_ & OPTION_TIME_SCAN) && !spectral_ &&
+  const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&
       delay_mode_transition_ <= 0.0f && !input_parameters.time.has_cv;
   if (scan) {
     scanned = input_parameters;
@@ -148,11 +147,11 @@ void Processor::ProcessWithOptions(
   const float post_gain_wet = 1.5f;
   const float dry_wet = mix_parameters.dry_wet;
   const float dry = (1.0f - dry_wet) * (1.0f + dry_wet) * post_gain_dry;
-  const float wet_law = options_ & OPTION_GENTLE_MIX
+  const float wet_law = options_ & OPTION_FLAG_GENTLE_MIX
       ? dry_wet
       : dry_wet * (2.0f - dry_wet);
   const float wet = wet_law * post_gain_wet * wet_fade;
-  if (options_ & OPTION_REVERB_ON_GRAINS) {
+  if (options_ & OPTION_FLAG_REVERB_ON_GRAINS) {
     // Clouds' order: the reverb returns with the grains.
     pre_reverb_limiter_.Process(out, size);
     ProcessReverb(mix_parameters.reverb_amount, out, size);
