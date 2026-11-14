@@ -87,7 +87,7 @@ class DecoderTest(unittest.TestCase):
         self.assertNotIn("mwb", read)
         self.assertEqual(dwt.openocd("reset").count("mwb "), 1)
         self.assertIn("mwb 0x3004100c 1", dwt.openocd("reset"))
-        self.assertEqual(dwt.openocd("sai"), "mdw 0x4001581c 1\nmdw 0x4001583c 1\n")
+        self.assertEqual(dwt.openocd("sai"), "mdw 0x40015818 1\nmdw 0x40015838 1\n")
 
 
 if __name__ == "__main__":

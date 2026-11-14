@@ -48,7 +48,7 @@ in wavetable synth mode. See [TESTING.md](TESTING.md).
 
 ## Build comparison
 
-Budget is 120,000 cycles per block at 480 MHz. The DAC reads slightly ahead, so audio breaks a little earlier: at a callback maximum of about 115,800 cycles at 48 kHz (q1, q3 and the synth), 113,900 at 32 kHz (q2) and 111,500 at 24 kHz (q0), measured on the development board, not on the module. "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
+Budget is 120,000 cycles per block at 480 MHz. The DAC DMA reads each word one slot before sending it, so audio breaks earlier: the callback maximum was clean up to 109,700 cycles at 48 kHz (q1, q3 and the synth), 104,900 at 32 kHz (q2) and 100,100 at 24 kHz (q0), measured on the development board (provisional until measured on the module). "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
 
 | Build | App flash | Stock peak / median | Clouds-style peak | Sound vs GCC 9 | Verdict |
 |---|---:|---|---:|---|---|
@@ -203,6 +203,19 @@ Audio differs by about -87 dBFS RMS at 16-bit, peaks -35 dBFS at 4-bit.
 - **Timed.** Granular scheduling and rendering, feedback and filtering, wet/dry, reverb, output limiter. Not timed: setup, ADC and CV, UI, codec conversion, interrupts, DMA contention, flash saving, wavetable synth mode. The full callback on the module is higher ([TESTING.md](TESTING.md)).
 - **Module calibration.** A calibration build adds DWT cycle counters around `Process` and the whole callback; it ran the same stress32 fixture and the panel settings in [TESTING.md](TESTING.md) on the module. The 90,000-cycle reserve target applies to the DSP-only Seed3 figures above, not to the whole callback.
 - **Bit-identical checks.** Seed3 output and buffer hashes; 20 short and 13 long emulator scenarios (272,000 blocks in all) compared sample by sample; host tests with sanitizers. Counts are in [TESTING.md](TESTING.md).
+
+## Audio deadline
+
+Measured in November 2026 on a development board with the same chip and clock, and on one 2021 module at 48 kHz.
+
+**TL;DR:** Audio most likely breaks [inferred] when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it. That comes before a full-block underrun, and the SAI flags nothing. The 90% working limit leaves 2 to 3 points at 48 kHz but on the development board is already past the 32 and 24 kHz deadlines.
+
+- **Development board (measured).** With the check made at callback exit (has the DMA already read the first word?), the callback maximum was clean up to about 91.5% of the block at 48 kHz, 87.5% at 32 kHz and 83.5% at 24 kHz; every block failed from 92.1%, 88.1% and 84.1%. The first store comes before exit, so the true deadline sits a little above these bounds. Three repeats per rate, 60 s per step. No SAI underrun or overrun at any load up to 105%.
+- **Module (inferred).** About 92.6 to 93% at 48 kHz, from the click study below; a rough figure from one recipe. The module's 32 kHz and 24 kHz deadlines are not measured yet.
+- **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
+- **The historical left-channel click.** Reproduced on one module with the 2024 source rebuilt with GCC 9 (plus deadline tracing), in the historical crackle recipe: Bright digital (48 kHz), DENSITY 0.98, PITCH +24, SIZE 0.92. Its callback peaked at 93.5 to 94.0% and OUT L clicked. In the same recipe, beads-tuneup with the 2024 grain stealing (81.7 to 82.7%) and current beads-tuneup (78.1 to 78.8%) stayed clean [measured]. The clicks are block-locked and match the output one ring lap earlier, which points to a late first left word [inferred; moderately high confidence, exploratory, not seen on the codec data line].
+- **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
+- **Headroom.** The 90% working limit in [FEATURES.md](FEATURES.md) holds only at 48 kHz. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, set from module measurements at those rates.
 
 ## Rules for future changes
 
