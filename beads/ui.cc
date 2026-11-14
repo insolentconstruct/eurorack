@@ -535,12 +535,14 @@ void Ui::UpdateLeds() {
       leds_.set(LED_VU_METER, gain_control_->vu_meter());
     }
   }
+  uint8_t level = 0;
   if (led_features || options_.active()) {
-    const uint8_t level = options_.active()
+    level = options_.active()
         ? options_.Value(OPTION_BRIGHTNESS)
         : settings_->FeatureValue(FEATURE_BRIGHTNESS);
     leds_.Scale(level);
   }
+  leds_.SlowMediaPwm(level != 0);
   leds_.Write();
 }
 

@@ -149,6 +149,16 @@ bool Leds::InitializeTimers() {
   return true;
 }
 
+// 240 MHz / 8 / 256 = 117 kHz instead of 937.5 kHz.
+const uint32_t kSlowMediaPwmPrescaler = 7;
+
+void Leds::SlowMediaPwm(bool slow) {
+  const uint32_t prescaler = slow ? kSlowMediaPwmPrescaler : 0;
+  if (TIM1->PSC != prescaler) {
+    TIM1->PSC = prescaler;  // Preloaded: takes effect at the next update.
+  }
+}
+
 #define DIM_RGB 0
 #define DIM_WHITE 0
 

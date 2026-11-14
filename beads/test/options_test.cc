@@ -3295,6 +3295,7 @@ void TestDefaultLedIdentity() {
     triangle = triangle >= 256 ? 511 - triangle : triangle;
     r.ui.mode_ = Ui::MODE_FACTORY_TEST;
     r.ui.UpdateLeds();
+    CHECK(!TestSlowMediaPwm());
     for (int i = 0; i < LED_LAST; ++i) {
       CHECK(r.ui.leds_.intensity_[i] == triangle);
     }
@@ -3318,6 +3319,18 @@ void TestDefaultLedIdentity() {
         CHECK(r.ui.leds_.intensity_[i] == release[i]);
       }
     }
+  }
+  // Every quality colour reaches Write() as stock, with TIM1 at PSC 0.
+  r.ui.mode_ = Ui::MODE_NORMAL;
+  r.ui.set_overwrite_reserve(1.0f);
+  for (int media = 0; media < 4; ++media) {
+    r.settings.mutable_state()->media = media;
+    r.Tick(1, true);
+    const Leds::Color color = r.ui.media_palette_[media];
+    CHECK(!TestSlowMediaPwm());
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == color.r);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == color.g);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == color.b);
   }
 }
 
@@ -3415,11 +3428,11 @@ void TestBetaOptionsLeds() {
     full.Tick(1, true);
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    // Bright digital quality is white; balance it only below 100%.
+    // Bright digital quality is white; every channel dims alike.
+    CHECK(TestSlowMediaPwm() == (level != 0));
     for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
       CHECK(full.ui.leds_.intensity_[i] ==
-            ((i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100) /
-                (level ? 2 : 1));
+            (i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100);
     }
     full.ui.mode_ = Ui::MODE_STORAGE_WARNING;
     while (!(stmlib::system_clock.milliseconds() & 64)) {
@@ -3429,7 +3442,12 @@ void TestBetaOptionsLeds() {
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
     CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] ==
-          (255 * percentages[level] / 100) / (level ? 2 : 1));
+          255 * percentages[level] / 100);
+    // Back to 100% outside options: stock PWM on the next frame.
+    full.ui.mode_ = Ui::MODE_NORMAL;
+    full.settings.SetFeatureValue(FEATURE_BRIGHTNESS, 0);
+    full.Tick(1, true);
+    CHECK(!TestSlowMediaPwm());
   }
   Rig gain(false);
   gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
