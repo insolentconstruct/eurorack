@@ -93,7 +93,7 @@ Scale: on page 1, tap SEED [C] to step through the eight scales instead of closi
 
 Hygrostat can replace the factory scale bank, change its order and choose each scale's colour and blink pattern. Use the guide made with that profile; this guide lists the factory bank.
 
-Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
+Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Recent notes, with PITCH patched, gives each new grain one of the last notes sent to PITCH, above the PITCH setting; turn further counter-clockwise to choose from more of them (up to eight). Unpatched it plays as Free. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
 
