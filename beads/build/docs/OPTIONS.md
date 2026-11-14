@@ -82,7 +82,7 @@ When a page opens, the quality LED [A] shows each stored value in turn, left to 
 
 Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
-Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
+Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 
 After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
 

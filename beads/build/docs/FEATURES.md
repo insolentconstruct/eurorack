@@ -106,6 +106,7 @@ not-set values use the profile default.
 | 22 | Pitch notch indication (#7) | No saved value |
 | 23 | TIME modulation (#141) | 12 (byte 19 low) |
 | 24 | Synth reverb tail (#192) | No saved value |
+| 25 | Options page idle timeout (#202) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -377,3 +378,19 @@ patching and processor changes. This is a firmware-profile choice, with no
 panel slot or gesture. It has no saved-state nibble and no per-audio-block work;
 the check and optional clear run only during transitions. Fades and codec
 handling are independent of this choice.
+
+### Options page idle timeout
+
+Hygrostat feature ID 25 chooses Off / 15 s / 30 s / 60 s / 120 s. Off or an
+omitted entry keeps the pages open until you close them, as in earlier
+releases. A Fixed time closes the pages after that long without interaction,
+counted from releasing the opening hold. Pressing a button, tapping [M] to
+change page and turning a page knob restart the count; knob jitter, slow
+drift, CV and the stored-value preview do not. Moving a knob more than 2% of
+its travel within half a second counts as a turn; movement slower than 2% per
+second never does. Unused knobs on a custom page do not count. The timeout
+never closes the pages while a button is held, and holding [M] or pressing
+another button still closes them at any time. Closing by timeout is the same
+as holding [M]: changes are kept, saved once if still unsaved, and nothing is
+written when nothing changed. This is a firmware-profile choice, with no panel
+slot and no saved-state nibble; it runs only while the pages are open.

@@ -92,6 +92,11 @@ const uint32_t kOptionsFastPeriod = 256;
 const uint32_t kOptionsPulsePeriod = 2048;
 const uint32_t kOptionsPreviewTime = 2048;
 const uint32_t kSelfPlayHoldTime = 1500;
+// Larger than pot jitter, so only a deliberate turn keeps a page open.
+const float kOptionsIdleMovement = 0.02f;
+const uint32_t kOptionsIdleWindow = 500;
+const int kNumIdleTimeouts = 5;
+extern const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts];
 extern const OptionPage kOptionPages[kNumOptionPages];
 
 // [A]+DRY/WET: fully CCW is stock; hysteresis keeps it from flickering.
@@ -213,6 +218,11 @@ class Options {
   int preview_knob_;
   uint32_t preview_time_;
   uint32_t indication_time_;
+  uint32_t idle_timeout_;
+  uint32_t idle_time_;
+  uint32_t idle_anchor_time_;
+  int idle_anchor_;
+  float idle_pot_[2][MIX_PARAMETER_LAST];
   float origin_[MIX_PARAMETER_LAST];
   float previous_[MIX_PARAMETER_LAST];
   bool qualified_[MIX_PARAMETER_LAST];
