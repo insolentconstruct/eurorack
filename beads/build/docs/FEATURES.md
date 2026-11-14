@@ -391,9 +391,9 @@ handling are independent of this choice.
 
 Hygrostat feature ID 25 chooses Off / 5 s / 10 s / 20 s / 30 s. Off or an
 omitted entry keeps the pages open until you close them. A Fixed time closes
-the pages after that long without a button press, page change or knob turn,
-counted from releasing the opening hold, and never while a button is held. A
-knob counts as turned once it is more than 2% of its travel from where it was
+the pages after that long without a button press, page change or turn of an
+option knob on the current page, counted from releasing the opening hold, and
+never while a button is held. An option knob counts as turned once it is more than 2% of its travel from where it was
 last counted, however slowly; jitter, CV and the stored-value preview don't
 count. Closing by timeout is the same as holding [M]: changes are kept and
 saved once if unsaved. Firmware-profile choice, with no panel slot or
@@ -437,8 +437,8 @@ slot or saved-state nibble. Host measurements are in
 ### SEED at power-on
 
 Hygrostat feature ID 29 chooses Latched (stock) / Unlatched (#41). Fixed
-Unlatched powers on as after a SEED tap: grains start only from SEED presses
-or gates, and in delay mode SEED taps set the time. Holding SEED for 4 s or
+Unlatched powers on as after a SEED tap: SEED presses, gates and, with Snap
+and trigger, detected attacks start the grains, and in delay mode SEED taps set the time. Holding SEED for 4 s or
 SEED+FREEZE latches as usual; the SEED latch options (#13) apply once
 latched, and with the delay SEED latch fade the delay starts in tapped
 timing without a fade. Power-on only, with no panel slot or saved-state

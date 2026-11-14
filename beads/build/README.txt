@@ -164,8 +164,9 @@ Four more profile choices keep stock or Beta 2 behaviour by default and
 add no panel gesture or options-page slot. Input gain at power-on:
 Manual starts at unity manual gain when no gain is saved; a saved gain
 wins. Attack sensitivity: Normal, Low or High. SEED at power-on:
-Unlatched waits for SEED presses or gates. PITCH knob: Smooth glides
-between the intervals without notches; PITCH CV is unchanged.
+Unlatched waits for SEED presses, gates or, with Snap and trigger,
+detected attacks. PITCH knob: Smooth glides between the intervals
+without notches; PITCH CV is unchanged.
 
 Two mix choices keep stock behaviour by default and add no panel gesture
 or options-page slot. Mix law: Gentle brings the grains in more slowly

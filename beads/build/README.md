@@ -100,7 +100,7 @@ Delay SEED latch fade is a separate profile choice: switching at once is the sto
 
 Options page idle timeout is a separate profile choice: Off, the default, keeps the pages open until you close them; 5, 10, 20 or 30 s closes them after that long without a button press, page change or turn of an option knob on the page, keeping your changes.
 
-Four more profile choices keep stock or Beta 2 behaviour by default and add no panel gesture or options-page slot. Input gain at power-on: Manual starts at unity manual gain when no gain is saved; a saved gain wins. Attack sensitivity: Normal, Low or High. SEED at power-on: Unlatched waits for SEED presses or gates. PITCH knob: Smooth glides between the intervals without notches; PITCH CV is unchanged.
+Four more profile choices keep stock or Beta 2 behaviour by default and add no panel gesture or options-page slot. Input gain at power-on: Manual starts at unity manual gain when no gain is saved; a saved gain wins. Attack sensitivity: Normal, Low or High. SEED at power-on: Unlatched waits for SEED presses, gates or, with Snap and trigger, detected attacks. PITCH knob: Smooth glides between the intervals without notches; PITCH CV is unchanged.
 
 Two mix choices keep stock behaviour by default and add no panel gesture or options-page slot. Mix law: Gentle brings the grains in more slowly on DRY/WET (7.6 dB under the dry at 9 o'clock instead of 2.5 dB); the dry and both ends of the knob stay stock. Reverb input: Grains sends only the grains to the reverb, before the dry/wet mix as on Clouds, so fully dry has no reverb. Both synths are unchanged.
 
