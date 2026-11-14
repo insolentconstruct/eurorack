@@ -93,6 +93,8 @@ enum ProfileFeature {
   FEATURE_PITCH_NOTCH,
   FEATURE_TIME_SCAN,
   FEATURE_SYNTH_TAIL,
+  FEATURE_RESERVED_25,  // Allocated to the idle timeout (#202).
+  FEATURE_SEED_LATCH_FADE,
   FEATURE_LAST
 };
 
