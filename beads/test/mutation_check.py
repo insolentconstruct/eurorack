@@ -1576,12 +1576,27 @@ out.mkdir(parents=True, exist_ok=True)
 started = time.monotonic()
 results = []
 indexed = []
+make = ['nice', '-n', '10', 'make', '-s', '-j4', '-f']
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   work = pathlib.Path(tmp).resolve()
   for directory in ('beads', 'plaits', 'stmlib', 'clouds'):
     shutil.copytree(root / directory, work / directory,
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))
+  # Build and test each program once unmutated: it must pass, and its time
+  # sets the case limit, since a case rebuilds at most it and runs one test.
+  limits = {}
+  for suite in sorted({cases[i - 1][1] for i in selected_indices}):
+    begin = time.monotonic()
+    log = out / ('clean-%s.log' % suite)
+    with log.open('w') as stream:
+      run = subprocess.run(make + ['beads/test/' + suite + '.mk', 'test'],
+          cwd=work, stdout=stream, stderr=subprocess.STDOUT, timeout=1200)
+    assert run.returncode == 0, log.read_text()
+    elapsed = time.monotonic() - begin
+    limits[suite] = 60 + 2 * elapsed
+    print('Clean %s: %.1f s; case limit %.0f s' % (
+        suite, elapsed, limits[suite]), flush=True)
   for index, (name, suite, source, before, after) in enumerate(cases, 1):
     if index not in selected_indices:
       continue
@@ -1630,12 +1645,9 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
     log = out / ('%02d-%s.log' % (index, name))
     try:
       with log.open('w') as stream:
-        run = subprocess.run(
-            ['nice', '-n', '10', 'make', '-s', '-j4', '-f',
-                'beads/test/' + suite + '.mk', 'test'],
+        run = subprocess.run(make + ['beads/test/' + suite + '.mk', 'test'],
             cwd=work, stdout=stream, stderr=subprocess.STDOUT,
-            timeout=240 if suite in ('firmware', 'clouds', 'granular',
-                'plaits_synth', 'spectral') else 60)
+            timeout=limits[suite])
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestProfileParser' and 'runtime error: index ' in failure:
