@@ -100,8 +100,8 @@ by host tests, not yet on a module. Page 4 provides LED brightness and
 SEED latch with stock starting values. Seven additional options are off
 in standard firmware:
 
-- Version at boot flashes light-blue, then twice for Beta 2, without
-  delaying startup.
+- Version at boot flashes light-blue, then three times for Beta 3,
+  without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.
 - Pitch notch indication lights [A] green at unison and octave knob
   plateaus, including both ends, independently of CV and randomness.

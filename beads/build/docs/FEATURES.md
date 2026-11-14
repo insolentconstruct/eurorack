@@ -340,7 +340,7 @@ storage indications, manual meters, boot cue, delay cue, pitch notch, then
 quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
 cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms
 light-blue pulses separated by 150 ms gaps. One release constant sets the pulse
-count (2 for Beta 2); audio startup never waits for this cue. Notch indication
+count (3 for Beta 3); audio startup never waits for this cue. Notch indication
 follows the detune law's unison and octave plateaus and both two-octave knob
 ends before smoothing; it ignores CV, random pitch and quantization. A small
 hysteresis holds the cue at plateau edges. Live assignment LEDs retain stock
