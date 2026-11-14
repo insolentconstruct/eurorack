@@ -38,6 +38,7 @@
 #include "beads/profile.h"
 #include "beads/drivers/leds.h"
 #include "beads/drivers/switches.h"
+#include "beads/dsp/plaits_synth.h"
 
 namespace beads {
 
@@ -148,10 +149,12 @@ class Ui {
   inline bool evolving_feedback() const { return evolving_feedback_; }
   inline bool plaits_synth() const { return plaits_synth_; }
   inline AttackMode attack_mode() const { return attack_mode_; }
+  inline float attack_threshold() const { return attack_threshold_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }
   inline bool random_intervals() const { return random_intervals_; }
+  inline RandomIntervals intervals_mode() const { return intervals_mode_; }
 
   // The saved engine, applied once the options page has closed.
   inline bool spectral() const { return spectral_; }
@@ -170,6 +173,7 @@ class Ui {
   }
   
   inline void set_no_input(bool no_input) { no_input_ = no_input; }
+  inline void set_synth_mode(bool synth_mode) { synth_mode_ = synth_mode; }
   inline bool self_play_requested() const { return self_play_requested_; }
   inline void ClearSelfPlayRequest() { self_play_requested_ = false; }
 
@@ -183,6 +187,7 @@ class Ui {
   
  private:
   void FlashOptionsPage();
+  void StepPlaitsBank();
   // Returns true when the action is handled.
   bool DoAction(uint8_t slot);
 
@@ -213,6 +218,7 @@ class Ui {
   
   bool trim_flag_;
   bool no_input_;
+  bool synth_mode_;
   bool self_play_requested_;
   bool freeze_button_state_;
   bool freeze_led_state_;
@@ -225,6 +231,8 @@ class Ui {
   float assign_modulation_;
   uint32_t delay_cue_time_;
   uint32_t boot_cue_time_;
+  uint32_t bank_cue_time_;
+  uint8_t bank_cue_;
   bool seed_led_state_;
   
   float overwrite_reserve_;
@@ -246,14 +254,22 @@ class Ui {
   volatile bool evolving_feedback_;
   volatile bool plaits_synth_;
   volatile AttackMode attack_mode_;
+  float attack_threshold_;
   volatile bool spectral_;
   volatile PitchScale pitch_scale_;
   volatile bool random_intervals_;
+  volatile RandomIntervals intervals_mode_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
+  // A bank's colour and blink pattern, shown on [A] when the step lands.
+  struct BankCue {
+    Leds::Color color;
+    PulsePattern pulses;
+  };
+  static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

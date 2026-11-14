@@ -30,7 +30,6 @@
 #define BEADS_DSP_PLAITS_SYNTH_H_
 
 #include "stmlib/stmlib.h"
-
 #include "stmlib/dsp/hysteresis_quantizer.h"
 
 #include "beads/dsp/plaits_voice.h"
@@ -48,6 +47,11 @@ const float kPlaitsRootNote = 48.0f - 0.0429f;
 
 // Engine RAM for all voices, lent by the caller while the synth plays.
 const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize;
+
+// FEEDBACK selects one of the eight models of the current bank.
+const int kPlaitsBankSize = 8;
+// Banks in Plaits' order: green, red, yellow.
+const int kNumPlaitsBanks = 3;
 
 class PlaitsSynth {
  public:
@@ -86,6 +90,8 @@ class PlaitsSynth {
     pitch_scale_ = scale;
   }
 
+  void set_bank(int bank);
+
  private:
   void StartNote(const Parameters& p, int model);
 
@@ -109,6 +115,7 @@ class PlaitsSynth {
   RandomWalkModulation morph_modulation_;
 
   stmlib::HysteresisQuantizer2 model_quantizer_;
+  int first_model_;
   float stereo_width_;
   bool width_enabled_;
   PitchScale pitch_scale_;

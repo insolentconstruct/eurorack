@@ -8,11 +8,13 @@
 ## Steps
 
 1. Open: hold the CV-assign button [M] 3 seconds; all three mix LEDs pulse. Release.
-2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then all three.
+2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then FEEDBACK and DRY/WET together.
 3. [A] shows each stored value in turn. Turn a mix knob (not a big knob) to change it.
 4. Close: hold [M] 3 seconds or press another button. On page 1 with Pitch scale on Scale, tap SEED to step the scale. Release the exit button before normal use.
 
 It saves by itself; wait before powering off. Move a knob more than a tenth of its travel before it responds.
+
+Custom layouts can add pages 5-7: FEEDBACK and REVERB, DRY/WET and REVERB, then all three. Taps skip empty pages.
 
 The quality LED [A] shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
@@ -21,7 +23,7 @@ The quality LED [A] shows the setting value: steady, slow blink, fast blink or t
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Pitch scale | Off / Chromatic / Scale | green; steady / yellow; steady / see scale list |
-| DRY/WET | Random pitch steps | Free (Stock) / Fifths and octaves | green; steady / yellow; steady |
+| DRY/WET | Random pitch steps | Free (Stock) / Fifths and octaves / Recent notes | green; steady / yellow; steady / red; steady |
 | REVERB | Attacks | Off / Snap / Snap and trigger | green; steady / yellow; steady / red; steady |
 
 **Random pitch steps:** Relative to PITCH; scale follows.
@@ -55,7 +57,7 @@ Scale (tap SEED to step through):
 
 **Processor:** Switching clears the recording.
 
-## Page 4 — all three LEDs pulsing
+## Page 4 — FEEDBACK and DRY/WET LEDs pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
@@ -67,6 +69,7 @@ Scale (tap SEED to step through):
 
 - **Monophonic grains:** Hold the quality button [A], then press SEED [C] to toggle. Best with the first two SHAPE settings (square and decay). The [A] LED is dimmed while on.
 - **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
+- **Plaits banks:** With the Plaits synth playing, FEEDBACK selects one of eight models and [A]+FREEZE [B] steps the bank instead of trimming: green, red, yellow, then green again. [A] flashes the bank colour; FREEZE stays as it was.
 - **Stereo width:** Hold [A] and turn DRY/WET; fully CCW is Stock. The [A] LED shows the width as a meter; releasing [A] saves it. Once on, [M] can route CV to it (all three mix LEDs pulsing).
 - **Manual gain:** Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] LED shows it as a meter. With an input patched, a long press of [A] returns to automatic gain.
 - **Grain diffusion:** Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can route CV to it (REVERB LED pulsing).
@@ -82,7 +85,7 @@ When a page opens, the quality LED [A] shows each stored value in turn, left to 
 
 Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
-Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no timeout or cancel. The page LED flashes when you open, close, and when a change is saved.
+Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 
 After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
 
@@ -90,7 +93,7 @@ Scale: on page 1, tap SEED [C] to step through the eight scales instead of closi
 
 Hygrostat can replace the factory scale bank, change its order and choose each scale's colour and blink pattern. Use the guide made with that profile; this guide lists the factory bank.
 
-Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
+Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Recent notes, with PITCH patched, gives each new grain one of the last notes sent to PITCH, above the PITCH setting; turn further counter-clockwise to choose from more of them (up to eight). Unpatched it plays as Free. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks: Snap starts grains on the hits in the recording; Snap and trigger also starts a grain on each hit.
 
@@ -98,11 +101,13 @@ Delay mode: Auto (Stock) switches to delay with SIZE fully CW; Disabled stays gr
 
 Clouds-style changes the reverb character and, until a diffusion amount is set with [A]+REVERB, adds grain diffusion. Switching briefly fades the sound and clears the tail.
 
+A Hygrostat profile can make DRY/WET bring the grains in more gently ([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); fully dry then has no reverb.
+
 Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
 Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, delay mode or wavetable synth. A new processor takes over when the page closes, clearing the recording; a frozen buffer saved to flash comes back with Granular.
 
-Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains. With DENSITY at noon the last voice drones until SEED plays a note.
+Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains. With DENSITY at noon the last voice drones until SEED plays a note.
 
 Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
 

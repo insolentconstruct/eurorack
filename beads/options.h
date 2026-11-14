@@ -45,7 +45,7 @@ class Profile;
 class Settings;
 
 enum { MIX_PARAMETER_LAST = 3 };
-const int kNumOptionPages = 4;
+const int kNumOptionPages = 7;
 
 enum OptionSetting {
   OPTION_RESERVED,
@@ -65,9 +65,9 @@ enum OptionSetting {
   OPTION_LAST,
 };
 
-// Pages light the mix LEDs left to right; the last page lights all three.
+// Pages 1-3 light one mix LED, pages 4-7 two or all three of them.
 struct OptionPage {
-  int led_index;  // MIX_PARAMETER_LAST for all three.
+  uint8_t leds;  // Bit 0 FEEDBACK, bit 1 DRY/WET, bit 2 REVERB.
   OptionSetting knobs[MIX_PARAMETER_LAST];  // FEEDBACK, DRY/WET, REVERB.
 };
 
@@ -92,6 +92,10 @@ const uint32_t kOptionsFastPeriod = 256;
 const uint32_t kOptionsPulsePeriod = 2048;
 const uint32_t kOptionsPreviewTime = 2048;
 const uint32_t kSelfPlayHoldTime = 1500;
+// Larger than pot jitter; slow turns count once they add up to it.
+const float kOptionsIdleMovement = 0.02f;
+const int kNumIdleTimeouts = 5;
+extern const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts];
 extern const OptionPage kOptionPages[kNumOptionPages];
 
 // [A]+DRY/WET: fully CCW is stock; hysteresis keeps it from flickering.
@@ -107,7 +111,7 @@ struct OptionValue {
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 41;
+const size_t kNumOptionValues = 42;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
 
@@ -151,7 +155,9 @@ class Options {
 
   inline bool manual_start_preview() const { return manual_start_preview_; }
 
-  inline bool intervals_preview() const { return intervals_preview_; }
+  inline RandomIntervals intervals_preview() const {
+    return intervals_preview_;
+  }
 
   inline bool clouds_preview() const { return clouds_preview_; }
 
@@ -213,6 +219,9 @@ class Options {
   int preview_knob_;
   uint32_t preview_time_;
   uint32_t indication_time_;
+  uint32_t idle_timeout_;
+  uint32_t idle_time_;
+  float idle_pot_[MIX_PARAMETER_LAST];
   float origin_[MIX_PARAMETER_LAST];
   float previous_[MIX_PARAMETER_LAST];
   bool qualified_[MIX_PARAMETER_LAST];
@@ -220,7 +229,7 @@ class Options {
   OutputLimiterMode limiter_preview_;
   bool spectral_preview_;
   bool manual_start_preview_;
-  bool intervals_preview_;
+  RandomIntervals intervals_preview_;
   bool clouds_preview_;
   bool plaits_preview_;
   DelayMode delay_preview_;

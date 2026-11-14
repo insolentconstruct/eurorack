@@ -49,8 +49,8 @@ const uint8_t kSettingsFormat = 0xc1;
 const uint8_t kPitchExtensionField = 13;
 const uint8_t kPitchExtensionScale = 15;
 const uint8_t kPitchExtensionValue = 1;
-// Page slot 0 is none; 1 to 12 are the options pages' knobs, in order.
-const uint8_t kNumPageSlots = 13;
+// Page slot 0 is none; 1 to 21 are the options pages' knobs, in order.
+const uint8_t kNumPageSlots = 22;
 
 enum ActionSlot {
   ACTION_NONE,
@@ -93,6 +93,15 @@ enum ProfileFeature {
   FEATURE_PITCH_NOTCH,
   FEATURE_TIME_SCAN,
   FEATURE_SYNTH_TAIL,
+  FEATURE_IDLE_TIMEOUT,
+  FEATURE_SEED_LATCH_FADE,
+  FEATURE_MANUAL_GAIN,
+  FEATURE_ATTACK_SENSITIVITY,
+  FEATURE_SEED_START,
+  FEATURE_PITCH_LAW,
+  FEATURE_PLAITS_BANK,
+  FEATURE_MIX_LAW,
+  FEATURE_REVERB_INPUT,
   FEATURE_LAST
 };
 

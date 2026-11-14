@@ -41,7 +41,7 @@
 
 namespace beads {
 
-const uint8_t kReleaseBeta = 2;
+const uint8_t kReleaseBeta = 3;
 
 using namespace std;
 using namespace stmlib;
@@ -49,6 +49,20 @@ using namespace stmlib;
 // Keep the width meter below set_meter's wrap at 1.0.
 const float kWidthMeterSpan = 0.749f;
 const uint32_t kStorageStatusTime = 3000;
+const uint32_t kPlaitsBankCueTime = 500;
+
+// Marbles' 4:1 slow/fast blink ratio.
+static bool PulseLit(PulsePattern pulses, uint32_t elapsed) {
+  const uint32_t phase = elapsed % kOptionsPulsePeriod;
+  return pulses == PULSE_STEADY ||
+      (pulses == PULSE_SLOW &&
+          (elapsed % kOptionsSlowPeriod) < kOptionsSlowPeriod / 2) ||
+      (pulses == PULSE_FAST &&
+          (elapsed % kOptionsFastPeriod) < kOptionsFastPeriod / 2) ||
+      (pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
+          (phase >= kOptionsFastPeriod &&
+          phase < kOptionsFastPeriod * 3 / 2)));
+}
 
 /* static */
 const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
@@ -99,12 +113,15 @@ void Ui::Init(
   assign_modulation_ = 0.0f;
   delay_cue_time_ = 0;
   boot_cue_time_ = system_clock.milliseconds();
+  bank_cue_time_ = 0;
+  bank_cue_ = 0;
   
   seed_button_state_ = false;
   seed_button_locked_ = true;
   seed_led_state_ = false;
   trim_flag_ = false;
   no_input_ = self_play_requested_ = false;
+  synth_mode_ = false;
   
   overwrite_reserve_ = 1.0f;
   
@@ -141,11 +158,16 @@ void Ui::LoadOptions() {
   evolving_feedback_ = settings_->evolving_feedback();
   plaits_synth_ = settings_->plaits_synth();
   attack_mode_ = settings_->attack_mode();
+  attack_threshold_ = kAttackThresholds[
+      settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
   spectral_ = settings_->spectral();
   pitch_scale_ = settings_->pitch_scale();
-  random_intervals_ = settings_->random_intervals();
+  intervals_mode_ = settings_->random_intervals();
+  random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
+  // SEED starts latched, or unlatched when the profile asks.
+  seed_button_locked_ = !settings_->FeatureValue(FEATURE_SEED_START);
 }
 
 void Ui::Poll() {
@@ -274,8 +296,9 @@ void Ui::Poll() {
   stereo_width_ = settings_->stereo_width();
   pitch_scale_ = previewing
       ? options_.pitch_preview() : settings_->pitch_scale();
-  random_intervals_ = previewing
+  intervals_mode_ = previewing
       ? options_.intervals_preview() : settings_->random_intervals();
+  random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   output_limiter_mode_ = previewing
       ? options_.limiter_preview() : settings_->output_limiter_mode();
   if (!previewing) {
@@ -290,6 +313,13 @@ const Leds::Color Ui::media_palette_[4] = {
   { 255, 144, 0 },
   { 0, 255, 192 },
   { 192, 192, 208 },
+};
+
+/* static */
+const Ui::BankCue Ui::plaits_bank_cues_[kNumPlaitsBanks] = {
+  { { 0, 255, 0 }, PULSE_STEADY },
+  { { 255, 0, 0 }, PULSE_STEADY },
+  { { 255, 255, 0 }, PULSE_STEADY },
 };
 
 void Ui::UpdateLeds() {
@@ -386,6 +416,13 @@ void Ui::UpdateLeds() {
             };
             leds_.set_media(cue);
           }
+          const uint32_t bank_elapsed =
+              system_clock.milliseconds() - bank_cue_time_;
+          if (bank_cue_time_ && bank_elapsed < kPlaitsBankCueTime) {
+            const BankCue& cue = plaits_bank_cues_[bank_cue_];
+            leds_.set_media(
+                cue.color, PulseLit(cue.pulses, bank_elapsed) ? 1.0f : 0.0f);
+          }
         }
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {
@@ -465,37 +502,27 @@ void Ui::UpdateLeds() {
   
   if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
       options_.stage() == Options::STAGE_EDITING) {
-    const int page_led = kOptionPages[options_.page()].led_index;
+    const uint8_t page_leds = kOptionPages[options_.page()].leds;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       // While a page opens, the knob whose value [A] shows is lit steady.
       const bool page = options_.stage() == Options::STAGE_WAIT_RELEASE ||
-          page_led == MIX_PARAMETER_LAST || i == page_led;
+          (page_leds & (1 << i));
       leds_.set(Led(LED_ASSIGN_1 + i), i == options_.preview_knob() ? 255
           : page ? triangle : 0);
     }
     const OptionValue& indication = options_.indication();
     const Leds::Color color = indication.color;
-    // Marbles' 4:1 slow/fast blink ratio.
     const uint32_t now = system_clock.milliseconds() -
         options_.indication_time();
-    const uint32_t phase = now % kOptionsPulsePeriod;
-    const bool lit = indication.pulses == PULSE_STEADY ||
-        (indication.pulses == PULSE_SLOW &&
-            (now % kOptionsSlowPeriod) < kOptionsSlowPeriod / 2) ||
-        (indication.pulses == PULSE_FAST &&
-            (now % kOptionsFastPeriod) < kOptionsFastPeriod / 2) ||
-        (indication.pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
-            (phase >= kOptionsFastPeriod &&
-            phase < kOptionsFastPeriod * 3 / 2)));
-    leds_.set_media(color, lit ? 1.0f : 0.0f);
+    leds_.set_media(color, PulseLit(indication.pulses, now) ? 1.0f : 0.0f);
   }
 
   if (options_flash_time_ &&
       uint32_t(system_clock.milliseconds() - options_flash_time_) <
           kOptionsFlashTime) {
-    const int page_led = kOptionPages[options_flash_page_].led_index;
+    const uint8_t page_leds = kOptionPages[options_flash_page_].leds;
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      if (page_led == MIX_PARAMETER_LAST || i == page_led) {
+      if (page_leds & (1 << i)) {
         leds_.set(Led(LED_ASSIGN_1 + i), 255);
       }
     }
@@ -755,7 +782,8 @@ void Ui::DoEvents() {
     bool profile_changed = false;
     for (int i = FEATURE_VERSION; i < FEATURE_LAST; ++i) {
       const ProfileFeature f = ProfileFeature(i);
-      if (settings_->profile().adjustable(f) &&
+      // Pages commit their settings; a gesture saves the Plaits bank.
+      if (kFeatureDefinitions[i].page && settings_->profile().adjustable(f) &&
           options_.Value(OptionSetting(i)) != settings_->FeatureValue(f)) {
         settings_->SetFeatureValue(f, options_.Value(OptionSetting(i)));
         profile_changed = true;
@@ -824,8 +852,24 @@ void Ui::DoEvents() {
   }
 }
 
+void Ui::StepPlaitsBank() {
+  const uint8_t bank = uint8_t(
+      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
+  settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
+  settings_->SaveState();
+  bank_cue_ = bank;
+  bank_cue_time_ = system_clock.milliseconds();
+}
+
 bool Ui::DoAction(uint8_t slot) {
   const ProfileFeature feature = settings_->profile().Action(slot);
+  // Plaits plays nothing to trim: [A]+FREEZE steps its bank, keeping FREEZE,
+  // unless a profile puts Synth start there.
+  if (slot == ACTION_FREEZE && synth_mode_ && plaits_synth_ &&
+      feature != FEATURE_SYNTH_START) {
+    StepPlaitsBank();
+    return true;
+  }
   if (feature == FEATURE_MONOPHONIC) {
     State* state = settings_->mutable_state();
     if (settings_->profile().adjustable(feature)) {

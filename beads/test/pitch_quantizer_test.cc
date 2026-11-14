@@ -338,6 +338,116 @@ void TestCustomPitchRatioLimits() {
   }
 }
 
+// Recent notes: a note counts once the CV has held for 10 ms; counter-
+// clockwise steps then land on the newest 1 to 8 notes (#220).
+static uint32_t now;
+
+static void Hold(float cv, int milliseconds, float amount) {
+  while (milliseconds--) {
+    RememberNote(RANDOM_INTERVALS_RECENT_NOTES, true, cv, amount, ++now);
+  }
+}
+
+void TestRecentNotes() {
+  test_checker.Start("TestRecentNotes");
+  RememberNote(RANDOM_INTERVALS_RECENT_NOTES, true, 0.0f, 1.0f, now);
+  CHECK(RandomStep(4.5f) == 4.5f);
+  // A slewed or noisy CV is not a note until it settles.
+  for (int i = 0; i < 40; ++i) {
+    Hold(0.2f * float(i), 1, 1.0f);
+  }
+  CHECK(RandomStep(7.0f) == 7.0f);
+  for (int i = 0; i < 9; ++i) {
+    Hold(i & 1 ? 2.03f : 1.97f, 1, 1.0f);
+  }
+  CHECK(RandomStep(7.0f) == 7.0f);
+  Hold(2.0f, 2, 1.0f);
+  CHECK(RandomStep(7.0f) == 2.0f);
+  // A melody, then a quarter-tone wobble that is not a new note.
+  const float melody[] = { 0.0f, 4.0f, 7.0f, 11.0f, 14.0f, 14.3f };
+  for (int n = 0; n < 6; ++n) {
+    Hold(melody[n], 20, 1.0f);
+  }
+  // Just counter-clockwise of noon: only the newest note.
+  Hold(14.3f, 1, 0.01f);
+  for (int i = 0; i < 200; ++i) {
+    CHECK(RandomStep(-9.0f) == 14.0f);
+  }
+  // Fully counter-clockwise: every remembered note, and only those.
+  Hold(14.3f, 1, 1.0f);
+  const float stored[6] = { 2.0f, 0.0f, 4.0f, 7.0f, 11.0f, 14.0f };
+  int seen[6] = { 0, 0, 0, 0, 0, 0 };
+  for (int i = 0; i < 3000; ++i) {
+    const float note = RandomStep(-9.0f);
+    int found = -1;
+    for (int n = 0; n < 6; ++n) {
+      found = note == stored[n] ? n : found;
+    }
+    CHECK(found >= 0);
+    seen[found >= 0 ? found : 0] += found >= 0;
+  }
+  for (int n = 0; n < 6; ++n) {
+    CHECK(seen[n] > 400 && seen[n] < 600);
+  }
+  // Half way: the newest 1 + round(0.5 x 7) = 5 notes.
+  Hold(14.3f, 1, 0.5f);
+  for (int i = 0; i < 2000; ++i) {
+    CHECK(RandomStep(-9.0f) != 2.0f);
+  }
+  // Only the last eight are kept.
+  for (int n = 0; n < 12; ++n) {
+    Hold(float(n) * -1.0f - 20.0f, 11, 1.0f);
+  }
+  for (int i = 0; i < 2000; ++i) {
+    const float note = RandomStep(0.0f);
+    CHECK(note <= -24.0f && note >= -31.0f);
+  }
+  // The draw never reaches past the newest notes asked for.
+  for (int count = 1; count <= 8; ++count) {
+    Hold(-31.0f, 1, float(count - 1) / 7.0f);
+    for (uint32_t seed = 0x26f5b720; seed < 0x26f5b720 + 64; ++seed) {
+      stmlib::Random::Seed(seed);
+      const float note = RandomStep(0.0f);
+      CHECK(note <= -31.0f + float(count - 1) && note >= -31.0f);
+    }
+  }
+  // Unplugged it is Free; unplugging forgets; the clock may wrap.
+  RememberNote(RANDOM_INTERVALS_RECENT_NOTES, false, 3.0f, 1.0f, ++now);
+  CHECK(RandomStep(3.5f) == 3.5f);
+  now = 0xfffffffa;
+  Hold(5.0f, 12, 1.0f);
+  CHECK(RandomStep(0.0f) == 5.0f);
+
+  // Grains: clockwise stays stock; counter-clockwise lands on base + note.
+  RandomizedParameter p;
+  p.base = -3.0f;
+  p.cv = 9.0f;
+  p.has_cv = true;
+  for (int a = -1; a <= 1; ++a) {
+    p.attenuverter = 0.6f * float(a);
+    for (int i = 1; i < 200; ++i) {
+      stmlib::Random::Seed(i);
+      const float stock = p.pitch_value(PITCH_SCALE_OFF, false);
+      stmlib::Random::Seed(i);
+      const float recent = p.pitch_value(PITCH_SCALE_OFF, true);
+      if (a >= 0) {
+        CHECK(recent == stock);
+      } else {
+        CHECK(recent == stmlib::SemitonesToRatio(-3.0f + 5.0f));
+      }
+    }
+  }
+  // A scale still applies afterwards.
+  p.attenuverter = -0.6f;
+  CHECK(p.pitch_value(PITCH_SCALE_MAJOR, true) ==
+      stmlib::SemitonesToRatio(QuantizePitch(2.0f, PITCH_SCALE_MAJOR)));
+  // Free and Fifths and octaves give the steps back as before.
+  RememberNote(RANDOM_INTERVALS_FIFTHS, true, 0.0f, 1.0f, ++now);
+  CHECK(RandomStep(3.5f) == QuantizeFifths(3.5f));
+  RememberNote(RANDOM_INTERVALS_OFF, true, 0.0f, 1.0f, ++now);
+  CHECK(RandomStep(3.5f) == QuantizeFifths(3.5f));
+}
+
 int main() {
   TestPitchGrids();
   TestCustomIntervalInteractions();
@@ -345,5 +455,6 @@ int main() {
   TestCustomPitchRatioLimits();
   TestRandomizedPitchGrid();
   TestRandomIntervals();
+  TestRecentNotes();
   return test_checker.failures() ? 1 : 0;
 }

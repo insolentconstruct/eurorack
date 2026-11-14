@@ -107,8 +107,17 @@ void Block(const Controls& c, FloatFrame* out) {
       c.p, c.mix, out, kBlockSize);
 }
 
+// Banks in Plaits' order: green, red, yellow.
+const int kBankFirst[kNumPlaitsBanks] = { 8, 16, 0 };
+
+inline int BankOf(int model) {
+  return model >= 16 ? 1 : (model >= 8 ? 0 : 2);
+}
+
+// Selects the model's bank and returns FEEDBACK at the model's centre.
 inline float ModelCentre(int model) {
-  return (float(model) + 0.5f) / float(kNumPlaitsModels);
+  synth.set_bank(BankOf(model));
+  return (float(model - kBankFirst[BankOf(model)]) + 0.5f) / kPlaitsBankSize;
 }
 
 bool GuardIntact() {
@@ -234,38 +243,102 @@ void TestVoiceAllocation() {
   CHECK(!synth.drone_);
 }
 
-// FEEDBACK selects one of 24 models. Moving up, model m + 1 starts at
-// (m + 1.048) / 24; moving down, model m returns at (m + 0.952) / 24.
-void TestModelDetents() {
-  test_checker.Start("TestModelDetents");
+// FEEDBACK picks one of eight models per bank (#190): green 8-15 at power-on,
+// red 16-23, yellow 0-7; ends stay in the bank and a step keeps the detent.
+void TestBankDetents() {
+  test_checker.Start("TestBankDetents");
   Reset();
+  CHECK(synth.first_model_ == 8);
   Controls c;
   FloatFrame out[kBlockSize];
-  const int kSteps = 24000;
-  int model = 0;
-  for (int i = 0; i <= kSteps; ++i) {
-    c.mix.feedback = float(i) / kSteps;
-    Block(c, out);
-    const int selected = synth.model_quantizer_.quantized_value();
-    if (selected != model) {
-      CHECK(selected == model + 1);
-      CHECK(fabsf(c.mix.feedback * 24.0f - (model + 1.048f)) < 0.002f);
-      model = selected;
+  const int kSteps = 8000;
+  for (int pass = 0; pass < 2; ++pass) {
+    for (int bank = 0; bank < kNumPlaitsBanks; ++bank) {
+      const int first = kBankFirst[bank];
+      // Switch at either end of the knob from the previous bank.
+      const int previous = (bank + kNumPlaitsBanks - 1) % kNumPlaitsBanks;
+      for (int end = 0; end < 2; ++end) {
+        synth.set_bank(previous);
+        c.mix.feedback = end ? 1.0f : 0.0f;
+        Block(c, out);
+        synth.set_bank(bank);
+        Block(c, out);
+        CHECK(synth.patch_[synth.active_voice_].model ==
+            first + (end ? kPlaitsBankSize - 1 : 0));
+      }
+      int model = first + kPlaitsBankSize - 1;
+      int steps = 0;
+      for (int i = kSteps; i >= 0; --i) {
+        c.mix.feedback = float(i) / kSteps;
+        Block(c, out);
+        const int selected = first + synth.model_quantizer_.quantized_value();
+        if (selected != model) {
+          CHECK(selected == model - 1);
+          model = selected;
+          ++steps;
+        }
+        CHECK(synth.patch_[synth.active_voice_].model == model);
+      }
+      CHECK(model == first && steps == kPlaitsBankSize - 1);
+      for (int i = 0; i <= kSteps; ++i) {
+        c.mix.feedback = float(i) / kSteps;
+        Block(c, out);
+        const int selected = first + synth.model_quantizer_.quantized_value();
+        if (selected != model) {
+          // Eight equal detents; steps up one hysteresis late.
+          CHECK(selected == model + 1);
+          const float position = (selected - first + 0.048f) / 8.0f;
+          CHECK(fabsf(c.mix.feedback - position) < 0.0005f);
+          model = selected;
+        }
+      }
+      CHECK(model == first + kPlaitsBankSize - 1);
     }
-    CHECK(synth.patch_[synth.active_voice_].model == model);
   }
-  CHECK(model == kNumPlaitsModels - 1);
-  for (int i = kSteps; i >= 0; --i) {
-    c.mix.feedback = float(i) / kSteps;
+  // Notes keep the model they started with when the bank changes.
+  Reset();
+  synth.set_bank(1);
+  c.mix.feedback = 1.0f;
+  c.seed = SEED_BUTTON_STATE_ON;
+  Block(c, out);
+  const int voice = synth.active_voice_;
+  CHECK(synth.patch_[voice].model == 23);
+  c.seed = SEED_BUTTON_STATE_OFF;
+  synth.set_bank(2);
+  Block(c, out);
+  CHECK(synth.patch_[voice].model == 23);
+  // Inside the hysteresis band, a bank change keeps the detent.
+  for (int bank = 0; bank < kNumPlaitsBanks; ++bank) {
+    synth.set_bank(0);
+    c.mix.feedback = 0.4f;
     Block(c, out);
-    const int selected = synth.model_quantizer_.quantized_value();
-    if (selected != model) {
-      CHECK(selected == model - 1);
-      CHECK(fabsf(c.mix.feedback * 24.0f - (selected + 0.952f)) < 0.002f);
-      model = selected;
+    c.mix.feedback = 2.98f / 8.0f;
+    Block(c, out);
+    CHECK(synth.model_quantizer_.quantized_value() == 3);
+    synth.set_bank(bank);
+    c.seed = SEED_BUTTON_STATE_ON;
+    Block(c, out);
+    c.seed = SEED_BUTTON_STATE_OFF;
+    CHECK(synth.patch_[synth.active_voice_].model == kBankFirst[bank] + 3);
+  }
+  // Noon is the edge between the fourth and fifth models: each bank step
+  // keeps the side the knob came from, with no jump to another model.
+  for (int from_above = 0; from_above < 2; ++from_above) {
+    synth.set_bank(0);
+    c.mix.feedback = from_above ? 0.6f : 0.4f;
+    Block(c, out);
+    c.mix.feedback = 0.5f;
+    for (int step = 0; step <= kNumPlaitsBanks; ++step) {
+      const int bank = step % kNumPlaitsBanks;
+      synth.set_bank(bank);
+      for (int i = 0; i < 4; ++i) {
+        c.seed = i == 0 ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
+        Block(c, out);
+        CHECK(synth.patch_[synth.active_voice_].model ==
+            kBankFirst[bank] + 3 + from_above);
+      }
     }
   }
-  CHECK(model == 0);
 }
 
 // FREEZE holds a ringing note at its level instead of letting it decay.
@@ -324,7 +397,7 @@ void TestFreezeSustains() {
 
 int main() {
   TestVoiceAllocation();
-  TestModelDetents();
+  TestBankDetents();
   TestFreezeSustains();
   TestEveryModelRenders();
   return test_checker.failures() ? 1 : 0;

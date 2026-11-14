@@ -34,16 +34,13 @@
 
 namespace beads {
 
-const float kDelayModeTransitionTime = 1.5f;  // seconds
-const float kDelayModeFadeTime = 0.75f;  // seconds
-
 using namespace std;
 using namespace stmlib;
 
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
-  time_scan_enabled_ = false;
+  options_ = 0;
   time_scan_.Init();
   attack_input_.Init();
   clouds_style_ = false;
@@ -132,24 +129,24 @@ void Processor::Process(
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
     const ModulatedParameter& density,
-    const Parameters& input_parameters,
+    const Parameters& parameters,
     const MixParameters& mix_parameters,
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  Parameters scanned;
-  const bool scan = time_scan_enabled_ && !spectral_ &&
-      delay_mode_transition_ <= 0.0f && !input_parameters.time.has_cv;
-  if (scan) {
-    scanned = input_parameters;
-    time_scan_.Process(float(size) / sample_rate(), &scanned.time);
+  // TIME scan and the mix options run in their own copy of the block.
+  if (options_) {
+    ProcessWithOptions(
+        seed_button_state, seed_input, freeze, density, parameters,
+        mix_parameters, in, out, size);
+    return;
   }
-  const Parameters& parameters = scan ? scanned : input_parameters;
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
   const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
       parameters.size.base > threshold ? 1.0f : -1.0f;
-  delay_mode_transition_ += direction * float(size) / sample_rate();
+  const float sr = sample_rate();
+  delay_mode_transition_ += direction * float(size) / sr;
   
   CONSTRAIN(delay_mode_transition_,
             -kDelayModeTransitionTime,
@@ -301,7 +298,7 @@ void Processor::Process(
   
   // Final clipping/limiting
   output_limiter_.ProcessOutput(
-      out, size, output_limiter_mode_, sample_rate());
+      out, size, output_limiter_mode_, sr);
   
   if (mix_parameters.output_gate) {
     for (size_t i = 0; i < size; ++i) {

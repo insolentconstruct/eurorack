@@ -1150,7 +1150,7 @@ void TestPackedSettings() {
     s.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
     s.set_evolving_feedback(true);
     s.set_delay_mode(DELAY_MODE_WIDE_DETENT);
-    s.set_random_intervals(true);
+    s.set_random_intervals(RANDOM_INTERVALS_FIFTHS);
     s.set_spectral(true);
     s.SaveState();
     Settings loaded;
@@ -1270,7 +1270,7 @@ void TestPackedFeaturePairs() {
     entry[0] = id;
     entry[1] = PROFILE_ADJUSTABLE;
   }
-  CHECK(count == 13);
+  CHECK(count == 14);
   block[5] = count;
   const size_t bytes = 6 * count + sizeof(scale);
   block[6] = bytes & 255;
@@ -1346,7 +1346,7 @@ void TestPackedFeaturePairs() {
       }
     }
   }
-  CHECK(pairs == 78);
+  CHECK(pairs == 91);
 }
 
 void TestPitchExtensionSentinel() {
@@ -1590,10 +1590,10 @@ void TestProfileDormantAmounts() {
     CHECK(s.Init(false));
     s.SaveState();
     for (size_t i = 0; i < sizeof(unused); ++i) {
-      // Brightness/latch reject invalid nibbles; field 13 is pitch extension.
-      // All unrelated dormant fields still retain their original bits.
+      // Brightness/latch reject invalid nibbles; field 13 is pitch extension;
+      // field 14 saves the Plaits bank. Other dormant fields keep their bits.
       CHECK(bytes[unused[i]] == (unused[i] == 18 ? 0 :
-          unused[i] == 19 ? 0x0e : 0x8e));
+          unused[i] == 19 ? 0x0e : unused[i] == 20 ? 0x80 : 0x8e));
     }
     CHECK(s.FeatureValue(FEATURE_BRIGHTNESS) == 0);
     CHECK(s.FeatureValue(FEATURE_SEED_LATCH) == 0);

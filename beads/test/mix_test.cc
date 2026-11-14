@@ -372,6 +372,236 @@ void TestFeedbackDelayReturn() {
   CHECK(reference_energy < return_energy * 0.01);
 }
 
+// Gains reached after a settled block: stock, or the gentle wet law.
+void MixGains(bool gentle, float dry_wet, float* dry, float* wet) {
+  Init(false);
+  processor.set_gentle_mix(gentle);
+  mix.dry_wet = dry_wet;
+  for (int i = 0; i < 4; ++i) {
+    Process();
+  }
+  *dry = processor.dry_;
+  *wet = processor.wet_;
+}
+
+// Rendered grain level with no input, the recording frozen.
+double WetEnergy(bool gentle, float dry_wet) {
+  Init(false);
+  FillRecording(false);
+  processor.set_gentle_mix(gentle);
+  processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+  mix.dry_wet = dry_wet;
+  parameters.size.base = 0.8f;
+  density.base = 0.1f;
+  double energy = 0.0;
+  for (int block = 0; block < 500; ++block) {
+    Process();
+    if (block >= 400) {
+      for (int i = 0; i < 12; ++i) {
+        energy += output[i].l * output[i].l + output[i].r * output[i].r;
+      }
+    }
+  }
+  return energy;
+}
+
+void TestMixLaw() {
+  test_checker.Start("TestMixLaw");
+  const float settings[] = { 0.0f, 0.1f, 0.2f, 0.3f, 0.5f, 0.75f, 1.0f };
+  for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); ++i) {
+    const float x = settings[i];
+    float dry[2];
+    float wet[2];
+    MixGains(false, x, &dry[0], &wet[0]);
+    MixGains(true, x, &dry[1], &wet[1]);
+    CHECK(fabsf(dry[0] - (1.0f - x) * (1.0f + x) * 0.75f) < 1e-6f);
+    CHECK(dry[1] == dry[0]);
+    CHECK(fabsf(wet[0] - x * (2.0f - x) * 1.5f) < 1e-6f);
+    CHECK(fabsf(wet[1] - x * 1.5f) < 1e-6f);
+  }
+  // At 9 o'clock (20%) the wet is 7.6 dB under the dry, not 2.5 dB.
+  float dry;
+  float wet;
+  MixGains(true, 0.2f, &dry, &wet);
+  CHECK(fabsf(20.0f * log10f(wet / dry) + 7.604f) < 0.01f);
+  MixGains(false, 0.2f, &dry, &wet);
+  CHECK(fabsf(20.0f * log10f(wet / dry) + 2.499f) < 0.01f);
+  // The rendered grains follow the law; both ends match stock.
+  const double full = WetEnergy(false, 1.0f);
+  CHECK(full > 0.01);
+  CHECK(WetEnergy(true, 1.0f) == full);
+  CHECK(WetEnergy(true, 0.0f) == 0.0);
+  const double stock = WetEnergy(false, 0.2f) / full;
+  const double gentle = WetEnergy(true, 0.2f) / full;
+  CHECK(fabs(stock - 0.36 * 0.36) < 1e-4);
+  CHECK(fabs(gentle - 0.2 * 0.2) < 1e-4);
+}
+
+// Reverb tail energy after an input burst; grains silent unless recorded.
+// With a recording, DRY/WET goes to zero, or new grains stop.
+double GrainsReverbTail(bool grains, float dry_wet, bool record, bool cut) {
+  Init(false);
+  if (record) {
+    FillRecording(false);
+  }
+  processor.set_reverb_on_grains(grains);
+  processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+  mix.dry_wet = dry_wet;
+  mix.reverb_amount = 0.85f;
+  for (int block = 0; block < 400; ++block) {
+    for (int i = 0; i < 12; ++i) {
+      input[i].l = block < 100 ? 0.3f : 0.0f;
+      input[i].r = input[i].l;
+    }
+    Process();
+  }
+  if (record && cut) {
+    mix.dry_wet = 0.0f;
+  } else if (record) {
+    density.base = 0.5f;
+  }
+  // Only the reverb's tail remains once the grains have ended.
+  double tail = 0.0;
+  for (int block = 0; block < 6000; ++block) {
+    Process();
+    if (block >= 4000) {
+      for (int i = 0; i < 12; ++i) {
+        tail += output[i].l * output[i].l + output[i].r * output[i].r;
+      }
+    }
+  }
+  return tail;
+}
+
+void TestReverbOnGrains() {
+  test_checker.Start("TestReverbOnGrains");
+  // Fully dry: stock sends the dry to the reverb, Grains has no reverb.
+  CHECK(GrainsReverbTail(false, 0.0f, false, true) > 0.0001);
+  CHECK(GrainsReverbTail(true, 0.0f, false, true) == 0.0);
+  // Grains reach the reverb; DRY/WET then sets the tail too.
+  CHECK(GrainsReverbTail(false, 1.0f, true, true) > 0.0001);
+  CHECK(GrainsReverbTail(true, 1.0f, true, false) > 0.0001);
+  CHECK(GrainsReverbTail(true, 1.0f, true, true) == 0.0);
+  CHECK(GrainsReverbTail(false, 1.0f, true, false) > 0.0001);
+  // The dry is neither sent nor ducked: with no grains it passes as is.
+  for (int grains = 0; grains < 2; ++grains) {
+    Init(false);
+    density.base = 0.5f;
+    processor.set_reverb_on_grains(grains);
+    processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+    mix.dry_wet = 0.3f;
+    mix.reverb_amount = 0.9f;
+    float error = 0.0f;
+    for (int block = 0; block < 400; ++block) {
+      for (int i = 0; i < 12; ++i) {
+        input[i].l = 0.2f;
+        input[i].r = -0.1f;
+      }
+      Process();
+      if (block >= 300) {
+        error = std::max(error,
+            fabsf(output[0].l - 0.2f * 0.91f * 0.75f));
+      }
+    }
+    CHECK(grains ? error < 1e-6f : error > 0.01f);
+  }
+  // Delay and spectral take the same order: fully dry has no reverb.
+  for (int spectral = 0; spectral < 2; ++spectral) {
+    for (int grains = 0; grains < 2; ++grains) {
+      Init(false);
+      if (spectral) {
+        processor.set_spectral(true);
+        processor.Configure(Processor::MEDIA_DIGITAL, false);
+      } else {
+        processor.delay_mode_transition_ = 1.5f;
+        parameters.size.base = 1.0f;
+      }
+      processor.set_reverb_on_grains(grains);
+      mix.reverb_amount = 0.85f;
+      double tail = 0.0;
+      for (int block = 0; block < 1500; ++block) {
+        for (int i = 0; i < 12; ++i) {
+          input[i].l = block < 100 ? 0.3f : 0.0f;
+          input[i].r = input[i].l;
+        }
+        processor.Buffer();
+        Process();
+        if (block >= 600) {
+          for (int i = 0; i < 12; ++i) {
+            tail += output[i].l * output[i].l + output[i].r * output[i].r;
+          }
+        }
+      }
+      CHECK(grains ? tail == 0.0 : tail > 0.0001);
+    }
+  }
+}
+
+static uint8_t stock_banks[3][262144];
+static FloatFrame stock_output[2000 * 12];
+
+// The options block matches the stock block when no option is on.
+void TestOptionsBlockMatchesStock() {
+  test_checker.Start("TestOptionsBlockMatchesStock");
+  for (int scenario = 0; scenario < 12; ++scenario) {
+    const Processor::Media media = Processor::Media(scenario % 4);
+    for (int path = 0; path < 2; ++path) {
+      memset(banks, 0, sizeof(banks));
+      memset(reverb_buffer, 0, sizeof(reverb_buffer));
+      Init(scenario == 4 || scenario == 7);
+      processor.set_spectral(scenario >= 8);
+      if (scenario >= 4) {
+        processor.SetCloudsStyle(true);
+        processor.set_diffusion(0.5f);
+        processor.set_evolving_feedback(true);
+      }
+      processor.Configure(media, scenario == 4 || scenario == 7);
+      mix.dry_wet = 0.6f;
+      mix.reverb_amount = 0.7f;
+      mix.feedback = 0.4f;
+      mix.output_gate = scenario == 5;
+      const size_t size = size_t(processor.sample_rate()) / 4000;
+      int differences = 0;
+      for (int block = 0; block < 2000; ++block) {
+        for (size_t i = 0; i < size; ++i) {
+          const float t = float(block * size + i);
+          input[i].l = 0.3f * sinf(t * 0.031f) * (block % 300 < 150);
+          input[i].r = 0.2f * sinf(t * 0.017f);
+          freeze[i] = block >= 1200 && block < 1400;
+        }
+        // Delay mode from block 500, fading back towards granular.
+        if (block == 500 && scenario < 8) {
+          processor.delay_mode_transition_ = 0.8f;
+        }
+        parameters.size.base = block >= 500 && block < 900 ? 1.0f : 0.5f;
+        processor.Buffer();
+        if (path) {
+          processor.ProcessWithOptions(SEED_BUTTON_STATE_LOCKED, NULL, freeze,
+              density, parameters, mix, input, output, size);
+        } else {
+          processor.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze, density,
+              parameters, mix, input, output, size);
+        }
+        FloatFrame* reference = stock_output + block * 12;
+        for (size_t i = 0; i < size; ++i) {
+          if (path) {
+            differences += output[i].l != reference[i].l ||
+                output[i].r != reference[i].r;
+          } else {
+            reference[i] = output[i];
+          }
+        }
+      }
+      if (!path) {
+        memcpy(stock_banks, banks, sizeof(banks));
+      } else {
+        CHECK(differences == 0);
+        CHECK(!memcmp(stock_banks, banks, sizeof(banks)));
+      }
+    }
+  }
+}
+
 int main() {
   // Match the firmware FPU setup in drivers/system.cc.
 #if defined(__SSE__)
@@ -389,5 +619,8 @@ int main() {
   TestReverbSendOff();
   TestFeedbackQualityCurves();
   TestFeedbackDelayReturn();
+  TestMixLaw();
+  TestReverbOnGrains();
+  TestOptionsBlockMatchesStock();
   return test_checker.failures() ? 1 : 0;
 }

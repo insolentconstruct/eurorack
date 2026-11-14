@@ -10,7 +10,7 @@ Updating is not a remedy for unexplained module behaviour. Disconnect speakers: 
 
 ## Options page
 
-[A] is the quality button; [M] is CV assign. Hold [M] alone for three seconds with the mix knobs still, then release. Tap [M] to change pages. All three mix LEDs pulse while the entry hold continues; after release, the indicated page LED pulses. Reopening remembers the page until power-off; startup selects page 1.
+[A] is the quality button; [M] is CV assign. Hold [M] alone for three seconds with the mix knobs still, then release. Tap [M] to change pages. All three mix LEDs pulse while the entry hold continues; after release, the indicated page LEDs pulse. Reopening remembers the page until power-off; startup selects page 1. Custom layouts can add pages 5-7 (FEEDBACK and REVERB, DRY/WET and REVERB, then all three); taps skip empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more than a tenth of its travel to take over; [A] shows its setting. Unused knobs do nothing.
 
@@ -18,7 +18,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
-4 / all three       LED brightness  SEED latch      Limiter
+4 / FEEDBACK and DRY/WET  LED brightness  SEED latch    Limiter
 
 Changes save about a second after turning stops. Wait before power-off. Hold [M] for three seconds or press another button to close; mix controls catch up smoothly. On page 1 with Scale selected, SEED taps step the scale instead of closing. The exit press does nothing else until the button is released. The page LED flashes on entry, close and save. First values are steady green; later values use yellow, red and blinking colours. See [OPTIONS.md](docs/OPTIONS.md) for every value.
 
@@ -26,7 +26,7 @@ Output limiter: REVERB on page 4 selects Stock, Fast release or Off in thirds, i
 
 Pitch scale. Three zones: Off, Chromatic and Scale. The factory bank cycles through Fifths (steady coral), Major (steady amber), Minor (steady blue), Major pentatonic (slow amber), Minor pentatonic (slow blue), Pelog (steady teal), Raag Bhairav (steady violet) and Raag Shri (two pink pulses). Tap SEED in Scale to step; holds do nothing, and taps neither trigger nor latch. Pelog and the raags are microtonal. Pitch scale snaps each new grain's final pitch after combining PITCH, CV and randomness, including Beads wavetable grains. Plaits and Spectral also follow Pitch scale. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. Hygrostat can replace and reorder this bank, including each scale definition, colour and flash pattern. Use the guide generated for your profile.
 
-Random pitch steps selects Free or Fifths and octaves. The latter snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
+Random pitch steps selects Free, Fifths and octaves or Recent notes in thirds (steady green / yellow / red). Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Recent notes, with PITCH patched, gives each new grain one of the last notes sent to PITCH, above the PITCH setting; turning the attenurandomizer further counter-clockwise chooses from more of them (up to eight). Unpatched it plays as Free. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves grain starts onto recorded hits; Snap and trigger also triggers a grain per hit. Patched SEED still works; only granular playback uses marks.
 
@@ -36,7 +36,7 @@ Frozen feedback selects Stock or Evolving. Evolving fades in to soften and drift
 
 Processor: Lower half selects Granular (Stock); upper half selects Spectral, using Mutable Instruments Clouds. TIME selects a spectrum, SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls renewal and phase scrambling. SEED glitches; FREEZE holds. Random controls update per spectrum. Mixing, quality, assignable CV and R gate work normally; diffusion, delay and wavetable synth are unavailable. Closing fades the change and clears recording. The saved frozen buffer returns with Granular.
 
-Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects 24 models; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
+Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, holding [A] restarts automatic gain.
 
@@ -64,7 +64,7 @@ Hold [A], then press FREEZE to restart the recording window at zero length and c
 
 Releasing FREEZE resumes recording with a crossfade. Quality changes, input changes between mono and stereo, leaving wavetable synth, and power-up without a saved buffer start an empty recording. Switching without changing sample rate is pop-free, including synth switching at 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the output and stop synth reverb.
 
-SEED starts latched. Latching it in stock delay can pop (#183); this is explicitly deferred beyond Beta 2. The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
+SEED starts latched. Latching it in stock delay can pop (#183); a Hygrostat profile can fade it instead (below). The unresponsive-module report (#112) is unresolved; this release is not a demonstrated cure.
 
 ## Frozen-buffer autosave
 
@@ -72,11 +72,11 @@ FREEZE saves after ten seconds. Interrupting a save doubles the next wait up to 
 
 ## Hygrostat
 
-https://hygrostat.insolentconstruct.net/ builds updates and guides locally. Choose features, controls and defaults, using templates or custom Off, Fixed and Adjustable settings. It warns about CPU load and refuses excessive combinations. Per-feature estimates await module measurements.
+https://hygrostat.insolentconstruct.net/ builds updates and guides locally. Choose features, controls and defaults, using templates or custom Off, Fixed and Adjustable settings. It shows no CPU estimate; not every combination of options has been measured on a module.
 
 Profiles, custom scales, LED indications and tail choices are checked by host tests, not yet on a module. Page 4 provides LED brightness and SEED latch with stock starting values. Seven additional options are off in standard firmware:
 
-- Version at boot flashes light-blue, then twice for Beta 2, without delaying startup.
+- Version at boot flashes light-blue, then three times for Beta 3, without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.
 - Pitch notch indication lights [A] green at unison and octave knob plateaus, including both ends, independently of CV and randomness. These cues yield to warnings and meters.
 - Live assignment LEDs follow CV magnitude, retaining assignment patterns and stock weighting.
@@ -90,15 +90,25 @@ Page 4 controls:
 - SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync restarts grain-clock phase per edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Unpatched attack triggers still work.
 
 The factory layout is a starting point. Customize it with Hygrostat and share
-feedback to help shape Beta 3.
+feedback to help shape later releases.
 
 Hygrostat can replace the complete scale bank with up to 14 scales, each with 1–24 notes including its root and a repeat interval from 0.01 to 128 semitones. Edit notes in semitones or cents, import Scala tuning files within these limits, include or remove scales, reorder them and choose RGB colours with steady, slow, fast or two-pulse indications. Factory reset restores the starting bank. Off and Chromatic remain direct choices. Reordering preserves saved identity; removing the selected scale falls back to Off. Shared links and generated guides include the chosen bank. Custom-bank CPU costs still need final module measurements.
 
 Synth reverb tail is a separate profile choice: Keep is the stock default; Fixed Clear clears the tail when leaving either synth by manual stop, input patching or processor changes. It adds no panel gesture or options-page slot. Sample-rate changes still restart the converter and briefly interrupt audio.
 
+Delay SEED latch fade is a separate profile choice: switching at once is the stock default; Fixed Fade briefly dips the delay around a delay-mode SEED latch, unlatch or cable change, instead of popping. It adds no panel gesture or options-page slot.
+
+Options page idle timeout is a separate profile choice: Off, the default, keeps the pages open until you close them; 5, 10, 20 or 30 s closes them after that long without a button press, page change or turn of an option knob on the page, keeping your changes.
+
+Four more profile choices keep stock or Beta 2 behaviour by default and add no panel gesture or options-page slot. Input gain at power-on: Manual starts at unity manual gain when no gain is saved; a saved gain wins. Attack sensitivity: Normal, Low or High. SEED at power-on: Unlatched waits for SEED presses, gates or, with Snap and trigger, detected attacks. PITCH knob: Smooth glides between the intervals without notches; PITCH CV is unchanged.
+
+Two mix choices keep stock behaviour by default and add no panel gesture or options-page slot. Mix law: Gentle brings the grains in more slowly on DRY/WET (7.6 dB under the dry at 9 o'clock instead of 2.5 dB); the dry and both ends of the knob stay stock. Reverb input: Grains sends only the grains to the reverb, before the dry/wet mix as on Clouds, so fully dry has no reverb. Both synths are unchanged.
+
+Plaits synth banks: FEEDBACK selects one of the eight models of the current bank, as on Plaits: green (its first bank), red (noise and drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays, hold [A] and press FREEZE to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim. A profile can choose the starting bank (green by default).
+
 ## Saved data
 
-Stock settings and calibration carry over; earlier Drizzlet options, width and diffusion reset to profile defaults. Frozen buffers remain stock-compatible. Disable monophonic grains before downgrading. Stock clears Drizzlet options when saving and loads trimmed buffers full-length; earlier Drizzlet reads new settings as stock.
+Stock settings, Beta 2 settings and calibration carry over; options, width and diffusion from Beta 1 and earlier reset to profile defaults. Frozen buffers remain stock-compatible. Disable monophonic grains before downgrading. Stock clears Drizzlet options when saving and loads trimmed buffers full-length; earlier Drizzlet reads new settings as stock.
 
 ## Reset and recovery
 

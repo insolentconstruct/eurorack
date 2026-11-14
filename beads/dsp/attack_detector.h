@@ -44,6 +44,8 @@ enum AttackMode {
 
 // A block is an attack when its peak is this many times the recent level.
 const float kAttackThreshold = 1.5f;
+// Attack sensitivity: Normal, Low and High.
+const float kAttackThresholds[] = { kAttackThreshold, 2.0f, 1.3f };
 const float kAttackFloor = 0.002f;
 const float kAttackRefractoryTime = 0.030f;  // seconds
 const float kAttackReleaseRate = 20.0f;  // Hz

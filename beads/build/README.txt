@@ -74,9 +74,9 @@ without changing sample rate is pop-free, including synth switching at
 48 kHz. Quality changes involving 32 or 24 kHz still briefly silence the
 output and stop synth reverb.
 
-SEED starts latched. Latching it in stock delay can pop (#183); this is
-explicitly deferred beyond Beta 2. The unresponsive-module report (#112)
-is unresolved; this release is not a demonstrated cure.
+SEED starts latched. Latching it in stock delay can pop (#183); a
+Hygrostat profile can fade it instead (below). The unresponsive-module
+report (#112) is unresolved; this release is not a demonstrated cure.
 
 Frozen-buffer autosave
 ----------------------
@@ -92,17 +92,16 @@ Hygrostat
 
 https://hygrostat.insolentconstruct.net/ builds updates and guides
 locally. Choose features, controls and defaults, using templates or
-custom Off, Fixed and Adjustable settings. It warns about CPU load and
-refuses excessive combinations. Per-feature estimates await module
-measurements.
+custom Off, Fixed and Adjustable settings. It shows no CPU estimate;
+not every combination of options has been measured on a module.
 
 Profiles, custom scales, LED indications and tail choices are checked
 by host tests, not yet on a module. Page 4 provides LED brightness and
 SEED latch with stock starting values. Seven additional options are off
 in standard firmware:
 
-- Version at boot flashes light-blue, then twice for Beta 2, without
-  delaying startup.
+- Version at boot flashes light-blue, then three times for Beta 3,
+  without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.
 - Pitch notch indication lights [A] green at unison and octave knob
   plateaus, including both ends, independently of CV and randomness.
@@ -132,7 +131,7 @@ Page 4 controls:
   delay free-runs outside Off. Unpatched attack triggers still work.
 
 The factory layout is a starting point. Customize it with Hygrostat
-and share feedback to help shape Beta 3.
+and share feedback to help shape later releases.
 
 Hygrostat can replace the complete scale bank with up to 14 scales, each
 with 1–24 notes including its root and a repeat interval from 0.01 to
@@ -151,14 +150,48 @@ stop, input patching or processor changes. It adds no panel gesture or
 options-page slot. Sample-rate changes still restart the converter and
 briefly interrupt audio.
 
+Delay SEED latch fade is a separate profile choice: switching at once is
+the stock default; Fixed Fade briefly dips the delay around a delay-mode
+SEED latch, unlatch or cable change, instead of popping. It adds no
+panel gesture or options-page slot.
+
+Options page idle timeout is a separate profile choice: Off, the
+default, keeps the pages open until you close them; 5, 10, 20 or 30 s
+closes them after that long without a button press, page change or turn
+of an option knob on the page, keeping your changes.
+
+Four more profile choices keep stock or Beta 2 behaviour by default and
+add no panel gesture or options-page slot. Input gain at power-on:
+Manual starts at unity manual gain when no gain is saved; a saved gain
+wins. Attack sensitivity: Normal, Low or High. SEED at power-on:
+Unlatched waits for SEED presses, gates or, with Snap and trigger,
+detected attacks. PITCH knob: Smooth glides between the intervals
+without notches; PITCH CV is unchanged.
+
+Two mix choices keep stock behaviour by default and add no panel gesture
+or options-page slot. Mix law: Gentle brings the grains in more slowly
+on DRY/WET (7.6 dB under the dry at 9 o'clock instead of 2.5 dB); the
+dry and both ends of the knob stay stock. Reverb input: Grains sends
+only the grains to the reverb, before the dry/wet mix as on Clouds, so
+fully dry has no reverb. Both synths are unchanged.
+
+Plaits synth banks: FEEDBACK selects one of the eight models of the
+current bank, as on Plaits: green (its first bank), red (noise and
+drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,
+hold [A] and press FREEZE to step to the next bank; [A] flashes the bank
+colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still
+buffer trim. A profile can choose the starting bank (green by default).
+
 Options page
 ------------
 
 [A] is the quality button; [M] is CV assign. Hold [M] alone for three
 seconds with the mix knobs still, then release. Tap [M] to change pages.
 All three mix LEDs pulse while the entry hold continues; after release,
-the indicated page LED pulses. Reopening remembers the page until
-power-off; startup selects page 1.
+the indicated page LEDs pulse. Reopening remembers the page until
+power-off; startup selects page 1. Custom layouts can add pages 5-7
+(FEEDBACK and REVERB, DRY/WET and REVERB, then all three); taps skip
+empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its
 knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more
@@ -169,7 +202,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 1 / FEEDBACK        Pitch scale   Random pitch steps  Attacks
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
-4 / all three       LED brightness  SEED latch      Limiter
+4 / FEEDBACK and DRY/WET  LED brightness  SEED latch    Limiter
 
 Changes save about a second after turning stops. Wait before power-off.
 Hold [M] for three seconds or press another button to close; mix
@@ -207,13 +240,17 @@ their pitch. Hygrostat can replace and reorder this bank, including
 each scale definition, colour and flash pattern. Use the guide
 generated for your profile.
 
-Random pitch steps selects Free or Fifths and octaves. The latter
-snaps counter-clockwise PITCH randomness relative to the PITCH
-setting. For a C note, this gives C/G across octaves; G below C is a
-downward fourth. Free and clockwise stay continuous before Pitch
-scale, which applies afterward and can change the interval. This
-affects granular playback and Beads wavetable grains, not the
-continuous oscillator, Plaits or Spectral.
+Random pitch steps selects Free, Fifths and octaves or Recent notes
+in thirds (steady green / yellow / red). Fifths and octaves snaps
+counter-clockwise PITCH randomness relative to the PITCH setting. For
+a C note, this gives C/G across octaves; G below C is a downward
+fourth. Recent notes, with PITCH patched, gives each new grain one of
+the last notes sent to PITCH, above the PITCH setting; turning the
+attenurandomizer further counter-clockwise chooses from more of them
+(up to eight). Unpatched it plays as Free. Free and clockwise stay
+continuous before Pitch scale, which applies afterward and can change
+the interval. This affects granular playback and Beads wavetable
+grains, not the continuous oscillator, Plaits or Spectral.
 
 Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves
 grain starts onto recorded hits; Snap and trigger also triggers a grain
@@ -237,10 +274,11 @@ Closing fades the change and clears recording. The saved frozen buffer
 returns with Granular.
 
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance
-voices, retaining pitch and random settings. FEEDBACK selects 24 models;
-TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH.
-DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At
-DENSITY noon with SEED unpatched, the last voice drones.
+voices, retaining pitch and random settings. FEEDBACK selects one of
+eight models in the current bank; TIME controls HARMONICS, SIZE controls
+TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains.
+Other grain controls remain. At DENSITY noon with SEED unpatched, the
+last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with
 both inputs unpatched, or Manual. With inputs unpatched and FREEZE off,
@@ -262,6 +300,7 @@ page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	FEEDBACK	Pitch scale	Raag Shri	pink	2 pulses / 2.048 s
 1	FEEDBACK	DRY/WET	Random pitch steps	Free (Stock)	green	steady
 1	FEEDBACK	DRY/WET	Random pitch steps	Fifths and octaves	yellow	steady
+1	FEEDBACK	DRY/WET	Random pitch steps	Recent notes	red	steady
 1	FEEDBACK	REVERB	Attacks	Off	green	steady
 1	FEEDBACK	REVERB	Attacks	Snap	yellow	steady
 1	FEEDBACK	REVERB	Attacks	Snap and trigger	red	steady
@@ -278,26 +317,27 @@ page	LED	knob	setting	value	colour	pulse
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
 3	REVERB	REVERB	Synth start	Automatic (Stock)	green	steady
 3	REVERB	REVERB	Synth start	Manual	yellow	steady
-4	all three	FEEDBACK	LED brightness	100%	green	steady
-4	all three	FEEDBACK	LED brightness	66%	yellow	steady
-4	all three	FEEDBACK	LED brightness	33%	red	steady
-4	all three	DRY/WET	SEED latch	Off	green	steady
-4	all three	DRY/WET	SEED latch	Ignore	yellow	steady
-4	all three	DRY/WET	SEED latch	Sync	red	steady
-4	all three	DRY/WET	SEED latch	Add	green	slow (0.98 Hz)
-4	all three	REVERB	Limiter	Stock	green	steady
-4	all three	REVERB	Limiter	Fast release	yellow	steady
-4	all three	REVERB	Limiter	Off	red	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	100%	green	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	66%	yellow	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	33%	red	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Off	green	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Ignore	yellow	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Sync	red	steady
+4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Add	green	slow (0.98 Hz)
+4	FEEDBACK and DRY/WET	REVERB	Limiter	Stock	green	steady
+4	FEEDBACK and DRY/WET	REVERB	Limiter	Fast release	yellow	steady
+4	FEEDBACK and DRY/WET	REVERB	Limiter	Off	red	steady
 End options reference
 
 Saved data
 ----------
 
-Stock settings and calibration carry over; earlier Drizzlet options,
-width and diffusion reset to profile defaults. Frozen buffers remain
-stock-compatible. Disable monophonic grains before downgrading. Stock
-clears Drizzlet options when saving and loads trimmed buffers
-full-length; earlier Drizzlet reads new settings as stock.
+Stock settings, Beta 2 settings and calibration carry over; options,
+width and diffusion from Beta 1 and earlier reset to profile defaults.
+Frozen buffers remain stock-compatible. Disable monophonic grains
+before downgrading. Stock clears Drizzlet options when saving and loads
+trimmed buffers full-length; earlier Drizzlet reads new settings as
+stock.
 
 Reset and recovery
 ------------------

@@ -30,7 +30,7 @@ Follow upstream Mutable Instruments master: Beads (2021) first, then Plaits, Sta
 
 - Use `PascalCase` for types and methods (`Process`, `Init`). Use `lower_case` for accessors, locals and parameters. Ported helpers keep their names (`fast_p2r` in the phase vocoder). Common accessors are `inline T name() const`, setters `set_name(...)`, and mutable storage access `mutable_name()`; some getters omit `const`.
 - Private members end in `_` (`peak_lp_`); public struct fields usually don't.
-- Named scalar constants use `kPascalCase`, at namespace scope or as class-local `static const`. Local constants, tables and class-static arrays are often `lower_case` (`switch_definitions`, `long_press_duration`); follow the owning file. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`. Anonymous enums for compile-time traits use `lower_case` (`bundle_size` in `dsp/delay_line.h`, `length` in `dsp/fx/fx_engine.h`).
+- Named scalar constants use `kPascalCase`, at namespace scope or as class-local `static const`. Local constants, tables and class-static arrays are often `lower_case` (`switch_definitions`, `long_press_duration`); follow the owning file. Enum values and macros use `ALL_CAPS`; enum values share a prefix (`MEDIA_DIGITAL`), and counted enums commonly end in `*_LAST`. Bit-flag enums take power-of-two values and a `_FLAG_` prefix (`GATE_FLAG_RISING` in `stmlib/utils/gate_flags.h`, `ENVELOPE_FLAG_GATE` in `rings/dsp/string_synth_envelope.h`). Anonymous enums for compile-time traits use `lower_case` (`bundle_size` in `dsp/delay_line.h`, `length` in `dsp/fx/fx_engine.h`).
 
 ## Classes
 
@@ -63,6 +63,7 @@ Observed upstream DSP conventions and design principles:
 - Specialize configuration with template parameters and measure; specialization can be slower.
 - Process audio in blocks, do control work once per block, and keep loop state in locals so it can stay in registers.
 - Keep interrupt `Poll()` work constant-time; put deferred work in `DoEvents()` or the main loop.
+- A member-function pointer may select a per-block mode, as in Stages (`stages/segment_generator.h:115`).
 - Prefer a data-format fix (for example fixed-point delay addresses) over micro-tuning.
 - Spend spare CPU on audio-rate quality; measure the worst-case block cost and leave deadline headroom.
 - Keep DSP portable and test it on the desktop.
@@ -72,6 +73,7 @@ Observed upstream DSP conventions and design principles:
 
 - Brief `//` comments explain intent; trailing comments usually have two spaces before `//`. Short labels and units are fine. Measured-cost comments, honest hack labels, owned `TODO(...)` notes and retained commented profiling switches are useful upstream idioms, not required boilerplate.
 - (Drizzlet) Keep implementation comments to one line, or two when needed. Move longer explanations to documentation; preserve licence headers.
+- Firmware comments don't cite issue numbers, as on Mutable Instruments master; issue links go in FEATURES.md, CHANGELOG.md and pull requests.
 - (Drizzlet) New files use the existing header format (`//` in C/C++, `#` in Python, shell and makefiles) with Insolent Construct attribution: `// Copyright YEAR Insolent Construct.`, `// Author: Insolent Construct`, then the MIT notice. Code copied or adapted from Mutable Instruments files keeps its original header.
 
 ## Project policy

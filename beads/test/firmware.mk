@@ -9,6 +9,7 @@ CC_FILES       = 		firmware_test.cc \
 		factory_test.cc \
 		synth.cc \
 		processor.cc \
+		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
 		stft.cc \

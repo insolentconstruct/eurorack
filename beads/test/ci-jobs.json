@@ -9,7 +9,7 @@
   },
   {
     "name": "delay-playback",
-    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestDelayFilterRamp TestDelayModeSwitchClick TestDelayOptions TestContinuousDelayPlayback TestDelayModeFade TestDelayRotaryPitch TestDelayBandwidthAndCv'"
+    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestDelayFilterRamp TestDelayModeSwitchClick TestDelayOptions TestContinuousDelayPlayback TestDelayModeFade TestDelayRotaryPitch TestDelayBandwidthAndCv TestSeedLatchFade TestSeedLatchFadePolicy TestSeedLatchFadeTransitions TestSeedLatchFadeTaps TestSeedLatchFadeOff'"
   },
   {
     "name": "clouds-stock",

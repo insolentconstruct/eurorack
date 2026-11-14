@@ -33,10 +33,13 @@
 namespace beads {
 
 const OptionPage kOptionPages[kNumOptionPages] = {
-  { 0, { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS } },
-  { 1, { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB } },
-  { 2, { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START } },
-  { MIX_PARAMETER_LAST, { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER } }
+  { 1, { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS } },
+  { 2, { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB } },
+  { 4, { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START } },
+  { 3, { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER } },
+  { 5, { OPTION_RESERVED, OPTION_RESERVED, OPTION_RESERVED } },
+  { 6, { OPTION_RESERVED, OPTION_RESERVED, OPTION_RESERVED } },
+  { 7, { OPTION_RESERVED, OPTION_RESERVED, OPTION_RESERVED } }
 };
 const OptionValue kOptionValues[] = {
   { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },
@@ -71,6 +74,7 @@ const OptionValue kOptionValues[] = {
   { OPTION_SYNTH_START, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_INTERVALS, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_INTERVALS, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { OPTION_INTERVALS, 2, { 255, 0, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
   { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
@@ -80,6 +84,10 @@ const OptionValue kOptionValues[] = {
   { OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
   { OPTION_TIME_SCAN, 0, { 0, 255, 0 }, PULSE_STEADY },
   { OPTION_TIME_SCAN, 1, { 255, 255, 0 }, PULSE_STEADY },
+};
+
+const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts] = {
+  0, 5000, 10000, 20000, 30000
 };
 
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
@@ -109,9 +117,11 @@ void Options::Init() {
   selected_ = OPTION_PITCH;
   preview_knob_ = -1;
   preview_time_ = indication_time_ = 0;
+  idle_timeout_ = idle_time_ = 0;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
   clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
-  spectral_preview_ = manual_start_preview_ = intervals_preview_ = false;
+  spectral_preview_ = manual_start_preview_ = false;
+  intervals_preview_ = RANDOM_INTERVALS_OFF;
   attack_preview_ = ATTACK_MODE_OFF;
   pitch_preview_ = PITCH_SCALE_OFF;
   scale_ = PITCH_SCALE_FIFTHS;
@@ -122,7 +132,7 @@ void Options::Init() {
   seed_taps_ = 0;
   seed_action_time_ = 0;
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    origin_[i] = previous_[i] = 0.0f;
+    idle_pot_[i] = origin_[i] = previous_[i] = 0.0f;
     qualified_[i] = false;
     zone_[i] = 0;
   }
@@ -130,6 +140,9 @@ void Options::Init() {
 
 void Options::Configure(const Profile& profile) {
   profile_ = &profile;
+  const ProfileEntry& idle = profile.entry(FEATURE_IDLE_TIMEOUT);
+  idle_timeout_ = idle.state == PROFILE_FIXED
+      ? kOptionsIdleTimeouts[idle.value] : 0;
   any_page_ = false;
   for (int i = 0; i < OPTION_LAST; ++i) {
     profile_preview_[i] = 0;
@@ -178,9 +191,30 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       if (all_up) {
         stage_ = STAGE_EDITING;
         holding_ = false;
+        idle_time_ = now;
         StartPreview(now, 0);
       }
       return;
+    }
+
+    // Held buttons and knob turns restart the idle timeout.
+    if (idle_timeout_) {
+      if (!all_up) {
+        idle_time_ = now;
+      }
+      for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+        // As Clouds' blend knob: touched once 2% from the last touch.
+        if (pages_[page_].knobs[i] != OPTION_RESERVED &&
+            fabsf(pots[i] - idle_pot_[i]) > kOptionsIdleMovement) {
+          idle_pot_[i] = pots[i];
+          idle_time_ = now;
+        }
+      }
+      if (uint32_t(now - idle_time_) >= idle_timeout_) {
+        Finish();
+        RequestCommit(now);
+        return;
+      }
     }
 
     if (just_pressed) {
@@ -325,13 +359,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
           }
           break;
         case OPTION_INTERVALS:
-          if (pot < kOptionsHalfLow) {
-            intervals_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            intervals_preview_ = true;
-          }
+          intervals_preview_ = RandomIntervals(zone_[i]);
           break;
         case OPTION_SYNTH_START:
           if (pot < kOptionsHalfLow) {
@@ -504,7 +532,7 @@ void Options::RequestCommit(uint32_t now) {
 
 void Options::ResetPots(const float* pots) {
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    origin_[i] = previous_[i] = pots[i];
+    idle_pot_[i] = origin_[i] = previous_[i] = pots[i];
     qualified_[i] = false;
   }
 

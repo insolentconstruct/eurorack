@@ -26,11 +26,14 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Fixed-root grain pitch quantization.
+// Fixed-root grain pitch quantization, and the notes recently sent to PITCH.
 
 #include "beads/dsp/pitch_quantizer.h"
 
+#include <algorithm>
 #include <cmath>
+
+#include "stmlib/utils/random.h"
 
 namespace beads {
 
@@ -142,6 +145,65 @@ float QuantizePitch(float pitch, PitchScale scale) {
     lower = upper;
   }
   return lower;
+}
+
+const size_t kNumRecentNotes = 8;
+// A note is new once the CV holds within 0.1 semitone for 10 ms, at least
+// half a semitone away from the last note.
+const float kNoteTolerance = 0.1f;
+const float kNoteMinimumStep = 0.5f;
+const uint32_t kNoteSettleTime = 10;
+
+static volatile bool recent_notes_mode;
+// Volatile keeps the slot write ahead of its publication to the interrupt.
+static volatile float recent_notes[kNumRecentNotes];
+static volatile size_t num_recent_notes;
+static volatile size_t newest_note;
+static volatile size_t recent_notes_count;
+static float note_candidate;
+static uint32_t note_candidate_time;
+
+void RememberNote(RandomIntervals intervals, bool patched, float cv,
+    float amount, uint32_t now) {
+  const bool recent = intervals == RANDOM_INTERVALS_RECENT_NOTES;
+  CONSTRAIN(amount, 0.0f, 1.0f);
+  recent_notes_count = 1 + size_t(amount * float(kNumRecentNotes - 1) + 0.5f);
+  // Unpatched, or in the synth, no notes are kept and the steps are Free.
+  recent_notes_mode = recent;
+  if (!recent || !patched) {
+    num_recent_notes = 0;
+    note_candidate = cv;
+    note_candidate_time = now;
+    return;
+  }
+  if (fabsf(cv - note_candidate) > kNoteTolerance) {
+    note_candidate = cv;
+    note_candidate_time = now;
+    return;
+  }
+  if (now - note_candidate_time < kNoteSettleTime || (num_recent_notes &&
+      fabsf(cv - recent_notes[newest_note]) < kNoteMinimumStep)) {
+    return;
+  }
+  const size_t slot = (newest_note + 1) % kNumRecentNotes;
+  recent_notes[slot] = cv;
+  newest_note = slot;
+  if (num_recent_notes < kNumRecentNotes) {
+    ++num_recent_notes;
+  }
+}
+
+float RandomStep(float offset) {
+  if (!recent_notes_mode) {
+    return QuantizeFifths(offset);
+  }
+  const size_t stored = num_recent_notes;
+  if (!stored) {
+    return offset;
+  }
+  const size_t count = std::min(size_t(recent_notes_count), stored);
+  const size_t age = ((stmlib::Random::GetWord() >> 16) * count) >> 16;
+  return recent_notes[(newest_note + kNumRecentNotes - age) % kNumRecentNotes];
 }
 
 }  // namespace beads

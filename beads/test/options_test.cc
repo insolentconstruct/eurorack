@@ -943,6 +943,9 @@ void TestSelfPlayStorage() {
 
 void TestAttackStorage() {
   test_checker.Start("TestAttackStorage");
+  // One threshold per Attack sensitivity value.
+  CHECK(kFeatureDefinitions[FEATURE_ATTACK_SENSITIVITY].values ==
+      sizeof(kAttackThresholds) / sizeof(kAttackThresholds[0]));
   Rig r(false);
   for (int value = 0; value < 256; ++value) {
     r.settings.mutable_state()->attacks = value;
@@ -1117,7 +1120,8 @@ void TestEngineStorage() {
   PersistentData calibration = { };
   stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
   CHECK(legacy.Init(&calibration, &legacy_state));
-  CHECK(legacy_state.padding[10] == 0x9f);
+  // Byte 20: the Plaits bank (green) and an unset field 15.
+  CHECK(legacy_state.padding[10] == 0x90);
   memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
   legacy.SaveState();
   CHECK(loaded.Init(false) && !loaded.spectral());
@@ -1170,14 +1174,17 @@ void TestIntervalsStorage() {
   test_checker.Start("TestIntervalsStorage");
   Rig r(false);
   for (int value = 0; value < 256; ++value) {
+    const RandomIntervals expected = value == 0xa1 ? RANDOM_INTERVALS_FIFTHS
+        : value == 0xa2 ? RANDOM_INTERVALS_RECENT_NOTES : RANDOM_INTERVALS_OFF;
+    const uint8_t canonical = value == 0xa1 || value == 0xa2 ? value : 0;
     r.settings.mutable_state()->random_intervals = value;
-    CHECK(r.settings.random_intervals() == (value == 0xa1));
+    CHECK(r.settings.random_intervals() == expected);
     r.settings.mutable_state()->padding[0] = 0xff;
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.random_intervals() == (value == 0xa1));
-    CHECK(loaded.state().random_intervals == (value == 0xa1 ? 0xa1 : 0));
+    CHECK(loaded.random_intervals() == expected);
+    CHECK(loaded.state().random_intervals == canonical);
     CHECK(loaded.state().padding[0] == 0);
     loaded.mutable_state()->random_intervals = value;
     loaded.stored_state_ = loaded.state_;
@@ -1189,32 +1196,39 @@ void TestIntervalsStorage() {
   }
 }
 
-// Page 1, DRY/WET: Free / Fifths and octaves, independent of the scale.
+// Page 1, DRY/WET: Free / Fifths and octaves / Recent notes, independent of
+// the scale.
 void TestIntervalsOption() {
   test_checker.Start("TestIntervalsOption");
-  for (int target = 0; target < 2; ++target) {
+  const float positions[3] = { 0.05f, 0.5f, 0.95f };
+  const uint8_t red[3] = { 0, 255, 255 };
+  const uint8_t green[3] = { 255, 255, 0 };
+  const uint8_t tags[3] = { 0, 0xa1, 0xa2 };
+  for (int target = 0; target < 3; ++target) {
+    const RandomIntervals from = RandomIntervals((target + 1) % 3);
     Rig r(false);
     r.settings.set_pitch_scale(PITCH_SCALE_MAJOR);
-    r.settings.set_random_intervals(!target);
+    r.settings.set_random_intervals(from);
     r.ui.LoadOptions();
     r.Enter();
-    CHECK(r.ui.options_.intervals_preview() == !target);
-    r.pot = target ? 0.05f : 0.95f;
+    CHECK(r.ui.options_.intervals_preview() == from);
+    r.pot = positions[from];
     r.Tick(50, true);
-    r.pot = target ? 0.85f : 0.15f;
+    r.pot = positions[target];
     r.Tick(50, true);
-    CHECK(r.ui.options_.intervals_preview() == bool(target));
-    CHECK(r.ui.random_intervals() == bool(target));
+    CHECK(r.ui.options_.intervals_preview() == target);
+    CHECK(r.ui.intervals_mode() == target);
+    CHECK(r.ui.random_intervals() == (target != 0));
     const OptionValue& v = r.ui.options_.indication();
     CHECK(v.setting == OPTION_INTERVALS && v.value == target);
-    CHECK(v.color.r == (target ? 255 : 0) && v.color.g == 255);
+    CHECK(v.color.r == red[target] && v.color.g == green[target]);
     r.Tick(1100, true);
-    CHECK(r.settings.random_intervals() == bool(target));
+    CHECK(r.settings.random_intervals() == target);
     CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.random_intervals() == bool(target));
-    CHECK(loaded.state().random_intervals == (target ? 0xa1 : 0));
+    CHECK(loaded.random_intervals() == target);
+    CHECK(loaded.state().random_intervals == tags[target]);
   }
 }
 
@@ -1842,7 +1856,7 @@ void TestWidthGestureAndMeter() {
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       CHECK(kOptionPages[page].knobs[knob] != OPTION_RESERVED ||
-          page == 0 || page == 3);
+          page == 0 || page >= 3);
     }
   }
   r.pot = .02f;
@@ -1858,14 +1872,20 @@ void TestOptionsTablesAndLifetime() {
     { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
     { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER }
   };
-  CHECK(kNumOptionPages == 4);
+  CHECK(kNumOptionPages == 7);
+  // Pages 1-3 light one LED, then two together, then all three.
+  const uint8_t masks[7] = { 1, 2, 4, 3, 5, 6, 7 };
+  for (int page = 0; page < kNumOptionPages; ++page) {
+    CHECK(kOptionPages[page].leds == masks[page]);
+    for (int knob = 0; knob < 3; ++knob) {
+      CHECK((kOptionPages[page].knobs[knob] == OPTION_RESERVED) == (page >= 4));
+    }
+  }
   Rig r(false);
   r.Enter();
   r.Tick(100, true);  // Entry confirmation has ended.
-  for (int page = 0; page < kNumOptionPages; ++page) {
+  for (int page = 0; page < 4; ++page) {
     CHECK(r.ui.options_.page() == page);
-    // Left to right; the last page lights all three.
-    CHECK(kOptionPages[page].led_index == page);
     const int preview = 0;
     CHECK(r.ui.options_.preview_knob() == preview);
     for (int knob = 0; knob < 3; ++knob) {
@@ -1873,7 +1893,7 @@ void TestOptionsTablesAndLifetime() {
       const int led = LED_ASSIGN_1 + knob;
       if (knob == preview) {
         CHECK(r.ui.leds_.intensity_[led] == 255);
-      } else if (page != 3 && knob != page) {
+      } else if (!(masks[page] & (1 << knob))) {
         CHECK(r.ui.leds_.intensity_[led] == 0);
       }
     }
@@ -1902,8 +1922,8 @@ void TestOptionsTablesAndLifetime() {
 
 void TestOptionsKnobsAndSettling() {
   test_checker.Start("TestOptionsKnobsAndSettling");
-  // Every physical knob.
-  for (int page = 0; page < kNumOptionPages; ++page) {
+  // Every physical knob of the four factory pages.
+  for (int page = 0; page < 4; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
       Rig r(false);
       r.Enter();
@@ -1945,7 +1965,7 @@ void TestOptionsKnobsAndSettling() {
           ? r.settings.clouds_style() : setting == OPTION_PROCESSOR
           ? r.settings.spectral() : setting == OPTION_SYNTH_START
           ? r.settings.self_play_on_request() : setting == OPTION_INTERVALS
-          ? r.settings.random_intervals() : setting == OPTION_FROZEN
+          ? int(r.settings.random_intervals()) : setting == OPTION_FROZEN
           ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
           ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
           ? int(r.settings.attack_mode()) : setting == OPTION_BRIGHTNESS
@@ -2139,7 +2159,7 @@ void TestOptionsPalette() {
         r.ui.options_.manual_start_preview_ = v.value;
         break;
       case OPTION_INTERVALS:
-        r.ui.options_.intervals_preview_ = v.value;
+        r.ui.options_.intervals_preview_ = RandomIntervals(v.value);
         break;
       case OPTION_SYNTH:
         r.ui.options_.plaits_preview_ = v.value;
@@ -2211,14 +2231,14 @@ void TestOptionsConfirmations() {
   r.Tick(100, true);
   CHECK(stmlib::system_clock.milliseconds() - r.ui.options_flash_time_ >= 100);
   CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] < 255);
-  // The last page flashes all three.
+  // Page four flashes FEEDBACK and DRY/WET.
   Rig last(false);
   last.EnterLimiter();
   last.reverb = .9f;
   last.Tick(1010, true);
-  for (int i = LED_ASSIGN_1; i < LED_ASSIGN_1 + 3; ++i) {
-    CHECK(last.ui.leds_.intensity_[i] == 255);
-  }
+  CHECK(last.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
+  CHECK(last.ui.leds_.intensity_[LED_ASSIGN_2] == 255);
+  CHECK(last.ui.leds_.intensity_[LED_ASSIGN_3] == 0);
   CHECK(last.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
 }
 
@@ -2385,6 +2405,224 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->Tick(40, true);
 }
 
+// Appends an idle timeout entry to a profile without scales.
+void AppendIdleTimeout(uint8_t* b, int state, int value) {
+  CHECK(!b[13]);
+  uint8_t* entry = b + 16 + 6 * b[5];
+  entry[0] = FEATURE_IDLE_TIMEOUT;
+  entry[1] = state;
+  entry[2] = value;
+  entry[3] = entry[4] = entry[5] = 0;
+  ++b[5];
+  const size_t bytes = 6 * b[5];
+  b[6] = bytes & 255;
+  b[7] = bytes >> 8;
+  const uint32_t crc = Profile::Crc32(b, 16 + bytes);
+  for (int i = 0; i < 4; ++i) {
+    b[16 + bytes + i] = crc >> (8 * i);
+  }
+}
+
+void IdleProfile(uint8_t* b, int state, int value) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  AppendIdleTimeout(b, state, value);
+}
+
+bool Idle(Rig* r, int ticks) {
+  r->Tick(ticks, true);
+  return r->ui.options_.stage() == Options::STAGE_EDITING;
+}
+
+void TestOptionsIdleTimeout() {
+  test_checker.Start("TestOptionsIdleTimeout");
+  CHECK(kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].values == kNumIdleTimeouts);
+  CHECK(kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].field == kNoField);
+  CHECK(!kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].page &&
+      !kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].amount &&
+      !kFeatureDefinitions[FEATURE_IDLE_TIMEOUT].action);
+  uint8_t b[kProfileSize];
+  for (int state = PROFILE_OFF; state <= PROFILE_FIXED; ++state) {
+    for (int value = 0; value < kNumIdleTimeouts; ++value) {
+      Rig r(false);
+      IdleProfile(b, state, value);
+      ApplyCustomProfile(&r, b);
+      CHECK(r.ui.options_.idle_timeout_ ==
+          (state == PROFILE_FIXED ? kOptionsIdleTimeouts[value] : 0));
+    }
+  }
+  // Absent, Off and Fixed Off keep the page open indefinitely.
+  for (int kind = 0; kind < 3; ++kind) {
+    Rig r(false);
+    if (kind) {
+      IdleProfile(b, kind == 1 ? PROFILE_OFF : PROFILE_FIXED,
+          kind == 1 ? kNumIdleTimeouts - 1 : 0);
+      ApplyCustomProfile(&r, b);
+    }
+    r.Enter();
+    CHECK(Idle(&r, 200000));
+  }
+  IdleProfile(b, PROFILE_FIXED, 1);
+  CHECK(kOptionsIdleTimeouts[1] == 5000);
+  // Counts from the entry release; previews and unchanged exit write nothing.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    const uint32_t writes = test_writes;
+    r.Enter();
+    CHECK(Idle(&r, 3000));
+    CHECK(r.ui.options_.preview_knob() == 1);
+    CHECK(Idle(&r, 1980));
+    CHECK(!Idle(&r, 20));
+    CHECK(r.ui.options_flash_time_);
+    r.Tick(10, true);
+    CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+    CHECK(test_writes == writes);
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      CHECK(r.ui.assignable_cv_pot_[i].state_ != POT_STATE_LOCKING);
+    }
+    // Reopen restarts the timer; the next button press is a normal event.
+    r.Tick(100, true);
+    r.Enter();
+    CHECK(Idle(&r, 4900));
+    CHECK(!Idle(&r, 120));
+    CHECK(test_writes == writes);
+    const bool freeze = r.ui.freeze_button_state_;
+    r.Down(SWITCH_FREEZE);
+    r.Up(SWITCH_FREEZE);
+    CHECK(r.ui.freeze_button_state_ != freeze);
+  }
+  // Page taps and knob turns before pickup restart the timer.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    CHECK(Idle(&r, 4000));
+    r.Tap();
+    CHECK(r.ui.options_.page() == 1);
+    CHECK(Idle(&r, 4000));
+    r.reverb = 0.55f;
+    CHECK(Idle(&r, 4900));
+    CHECK(!r.ui.options_.qualified_[2]);
+    CHECK(!Idle(&r, 120));
+  }
+  // Pot jitter below 2% never keeps the page open.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int i = 0; i < 4900; ++i) {
+      r.feedback = (i & 1) ? 0.508f : 0.492f;
+      r.pot = (i & 2) ? 0.51f : 0.49f;
+      r.Tick(1, true);
+    }
+    CHECK(r.ui.options_.active());
+    for (int i = 0; i < 120; ++i) {
+      r.feedback = (i & 1) ? 0.508f : 0.492f;
+      r.Tick(1, true);
+    }
+    CHECK(!r.ui.options_.active());
+  }
+  // Reserved knobs do nothing on a page, so they do not keep it open.
+  {
+    Rig r(false);
+    uint8_t custom[kProfileSize];
+    CustomProfile(custom, FEATURE_PITCH, 1, 0, 0);
+    AppendIdleTimeout(custom, PROFILE_FIXED, 1);
+    ApplyCustomProfile(&r, custom);
+    r.Enter();
+    for (int i = 0; i < 4900; ++i) {
+      r.pot = (i / 100) & 1 ? 0.9f : 0.1f;
+      r.Tick(1, true);
+    }
+    CHECK(r.ui.options_.active());
+    CHECK(!Idle(&r, 120));
+  }
+  // A turn slower than 2% per second counts once it adds up to 2%.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int i = 0; i < 4900; ++i) {
+      r.reverb = 0.5f + 0.03f * float(i) / 4900.0f;
+      r.Tick(1, true);
+    }
+    CHECK(Idle(&r, 3200));
+    CHECK(!Idle(&r, 300));
+  }
+  // A slow movement smaller than 2% in total never counts.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int i = 0; i < 4900; ++i) {
+      r.reverb = 0.5f + 0.015f * float(i) / 4900.0f;
+      r.Tick(1, true);
+    }
+    CHECK(r.ui.options_.active());
+    CHECK(!Idle(&r, 120));
+  }
+  // Idle expiry never interrupts a hold and counts from the release, across
+  // clock wrap; holding [M] 3 seconds still closes as before.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    stmlib::system_clock.count_ = 0xffffffff - 10000;
+    r.Enter();
+    CHECK(Idle(&r, 4000));
+    r.Down(SWITCH_ASSIGN);
+    CHECK(Idle(&r, 2500));
+    r.Up(SWITCH_ASSIGN);
+    CHECK(r.ui.options_.page() == 1);
+    CHECK(stmlib::system_clock.milliseconds() > 0xffffffff - 5000);
+    CHECK(Idle(&r, 4900));
+    CHECK(stmlib::system_clock.milliseconds() < 20000);
+    CHECK(!Idle(&r, 120));
+  }
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+    r.Enter();
+    CHECK(r.ui.options_.seed_allowed());
+    r.Down(SWITCH_SEED);
+    CHECK(Idle(&r, 30000));
+    r.Up(SWITCH_SEED);
+    CHECK(Idle(&r, 4900));
+    CHECK(!Idle(&r, 120));
+    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  }
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    CHECK(Idle(&r, 1000));
+    r.Down(SWITCH_ASSIGN);
+    CHECK(!Idle(&r, 3000));
+  }
+  // A pending edit is kept and saved once through the normal drain.
+  {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    const uint32_t writes = test_writes;
+    const AttackMode mode = r.settings.attack_mode();
+    r.Enter();
+    r.reverb = 0.9f;
+    r.Tick(5100, false);
+    CHECK(!r.ui.options_.active());
+    CHECK(r.ui.options_.commit_requested());
+    CHECK(test_writes == writes);
+    r.ui.DoEvents();
+    r.Tick(100, true);
+    CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+    CHECK(r.settings.attack_mode() != mode);
+    CHECK(test_writes == writes + 1);
+    r.Tick(60000, true);
+    CHECK(test_writes == writes + 1);
+  }
+}
+
 void TestPageTwoKnobRoutingAndSavedMeaning() {
   test_checker.Start("TestPageTwoKnobRoutingAndSavedMeaning");
   for (int explicit_old = 0; explicit_old < 2; ++explicit_old) {
@@ -2549,7 +2787,7 @@ void TestProfilePages() {
     if (!kFeatureDefinitions[id].page) {
       continue;
     }
-    for (int slot = 1; slot <= 12; ++slot) {
+    for (int slot = 1; slot < kNumPageSlots; ++slot) {
       Rig r(false);
       CustomProfile(b, id, slot, 0, 0);
       ApplyCustomProfile(&r, b);
@@ -2575,6 +2813,215 @@ void TestProfilePages() {
   CHECK(!memcmp(&before, &empty.settings.state(), sizeof(before)));
   CHECK(empty.ui.options_.stage() == Options::STAGE_INACTIVE);
   CHECK(empty.ui.options_.preview_knob() == -1);
+}
+
+// Features placed on page slots { id, slot }, Adjustable at value 0.
+void PagesProfile(uint8_t* b, const uint8_t (*placed)[2], int count) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  b[5] = count;
+  b[6] = 6 * count;
+  for (int i = 0; i < count; ++i) {
+    uint8_t* entry = b + 16 + 6 * i;
+    entry[0] = placed[i][0];
+    entry[1] = PROFILE_ADJUSTABLE;
+    entry[2] = entry[4] = entry[5] = 0;
+    entry[3] = placed[i][1];
+  }
+  const size_t size = 16 + b[6];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+// The previewed knob is lit steady; once the preview ends, LEDs outside
+// the page's mask stay dark and those inside it pulse.
+void CheckPageLeds(Rig* r, int page) {
+  const uint8_t masks[7] = { 1, 2, 4, 3, 5, 6, 7 };
+  const uint8_t mask = masks[page];
+  r->Tick(100, true);  // The entry flash has ended.
+  const int preview = r->ui.options_.preview_knob();
+  CHECK(preview < 0 || r->ui.leds_.intensity_[LED_ASSIGN_1 + preview] == 255);
+  for (int t = 0; t < 3 * 2048 && r->ui.options_.preview_knob() >= 0; ++t) {
+    r->Tick(1, true);
+  }
+  CHECK(r->ui.options_.preview_knob() == -1);
+  int peak[3] = { 0, 0, 0 };
+  for (int t = 0; t < 1500; ++t) {
+    r->Tick(1, true);
+    for (int i = 0; i < 3; ++i) {
+      const int level = r->ui.leds_.intensity_[LED_ASSIGN_1 + i];
+      CHECK(level == 0 || (mask & (1 << i)));
+      peak[i] = std::max(peak[i], level);
+    }
+  }
+  for (int i = 0; i < 3; ++i) {
+    CHECK((peak[i] > 0) == bool(mask & (1 << i)));
+  }
+}
+
+void TestOptionalPages() {
+  test_checker.Start("TestOptionalPages");
+  uint8_t b[kProfileSize];
+  // Sparse: pages 1, 5 and 7 keep their numbers, LEDs and knob columns.
+  const uint8_t sparse[][2] = {
+    { FEATURE_PITCH, 1 }, { FEATURE_DELAY, 14 }, { FEATURE_LIMITER, 21 }
+  };
+  Rig r(false);
+  PagesProfile(b, sparse, 3);
+  ApplyCustomProfile(&r, b);
+  r.Enter();
+  const int order[] = { 0, 4, 6, 0, 4 };
+  const int knob[] = { 0, 1, 2, 0, 1 };
+  const OptionSetting setting[] = {
+    OPTION_PITCH, OPTION_DELAY, OPTION_LIMITER, OPTION_PITCH, OPTION_DELAY
+  };
+  for (int i = 0; i < 5; ++i) {
+    if (i) {
+      r.Tap();
+    }
+    CHECK(r.ui.options_.page() == order[i]);
+    CHECK(r.ui.options_.preview_knob() == knob[i]);
+    CHECK(r.ui.options_.selected_ == setting[i]);
+    CheckPageLeds(&r, order[i]);
+  }
+  // Close on page 5: its two LEDs flash; reopening returns to page 5.
+  r.Down(SWITCH_ASSIGN);
+  r.Tick(3000, true);
+  CHECK(r.ui.options_.stage() == Options::STAGE_DRAIN);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
+  CHECK(r.ui.leds_.intensity_[LED_ASSIGN_3] == 255);
+  r.Up(SWITCH_ASSIGN);
+  CHECK(!r.ui.options_.active());
+  r.Tick(30, true);
+  r.Enter();
+  CHECK(r.ui.options_.page() == 4);
+  // Seven pages edit and save like the first four.
+  r.Tap();
+  CHECK(r.ui.options_.page() == 6);
+  r.reverb = 0.9f;
+  r.Tick(1100, true);
+  CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+  Settings loaded;
+  CHECK(loaded.Init(false, b));
+  CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+
+  // A single page 6 opens at startup and stays there.
+  const uint8_t single[][2] = { { FEATURE_SEED_LATCH, 17 } };
+  Rig one(false);
+  PagesProfile(b, single, 1);
+  ApplyCustomProfile(&one, b);
+  CHECK(one.ui.options_.page() == 5);
+  one.Enter();
+  CHECK(one.ui.options_.page() == 5);
+  CHECK(one.ui.options_.preview_knob() == 1);
+  CheckPageLeds(&one, 5);
+  one.Tap();
+  CHECK(one.ui.options_.page() == 5);
+  CHECK(one.ui.options_.preview_knob() == 1);
+
+  // Every page-capable feature across all seven pages.
+  const uint8_t full[][2] = {
+    { FEATURE_PITCH, 1 }, { FEATURE_REVERB, 4 }, { FEATURE_DELAY, 8 },
+    { FEATURE_PROCESSOR, 10 }, { FEATURE_LIMITER, 12 },
+    { FEATURE_FROZEN, 13 }, { FEATURE_SYNTH, 15 },
+    { FEATURE_ATTACKS, 17 }, { FEATURE_INTERVALS, 18 },
+    { FEATURE_BRIGHTNESS, 19 }, { FEATURE_SEED_LATCH, 20 },
+    { FEATURE_TIME_SCAN, 21 }, { FEATURE_SYNTH_START, 11 }
+  };
+  const OptionSetting first[] = {
+    OPTION_PITCH, OPTION_REVERB, OPTION_DELAY, OPTION_PROCESSOR,
+    OPTION_FROZEN, OPTION_ATTACKS, OPTION_BRIGHTNESS
+  };
+  Rig all(false);
+  PagesProfile(b, full, 13);
+  ApplyCustomProfile(&all, b);
+  all.Enter();
+  for (int page = 0; page <= kNumOptionPages; ++page) {
+    CHECK(all.ui.options_.page() == page % kNumOptionPages);
+    CHECK(all.ui.options_.selected_ == first[page % kNumOptionPages]);
+    all.Tap();
+  }
+  // TIME scan on page 7, REVERB, saves to its own value.
+  Rig scan(false);
+  ApplyCustomProfile(&scan, b);
+  scan.EnterPage(6);
+  CHECK(scan.ui.options_.page() == 6);
+  CheckPageLeds(&scan, 6);
+  scan.reverb = 0.9f;
+  scan.Tick(1100, true);
+  CHECK(scan.settings.FeatureValue(FEATURE_TIME_SCAN) == 1);
+  CHECK(loaded.Init(false, b));
+  CHECK(loaded.FeatureValue(FEATURE_TIME_SCAN) == 1);
+
+  // Reconfiguring keeps a remembered page 7 only while it has controls;
+  // otherwise the next populated page, wrapping, takes over.
+  scan.Down(SWITCH_ASSIGN);
+  scan.Tick(3000, true);
+  scan.Up(SWITCH_ASSIGN);
+  scan.Tick(30, true);
+  CHECK(!scan.ui.options_.active() && scan.ui.options_.page() == 6);
+  const uint8_t second[][2] = { { FEATURE_DELAY, 5 }, { FEATURE_REVERB, 14 } };
+  PagesProfile(b, second, 2);
+  CHECK(scan.settings.Init(false, b));
+  scan.ui.LoadOptions();
+  CHECK(scan.ui.options_.page() == 1);
+  scan.Tick(30, true);
+  scan.Enter();
+  CHECK(scan.ui.options_.page() == 1);
+  scan.Tap();
+  CHECK(scan.ui.options_.page() == 4);
+  PagesProfile(b, sparse, 3);
+  CHECK(scan.settings.Init(false, b));
+  scan.ui.LoadOptions();
+  CHECK(scan.ui.options_.page() == 4);
+
+  // A slot past page 7 locks the profile: factory pages, no saving.
+  const uint8_t beyond[][2] = { { FEATURE_PITCH, kNumPageSlots } };
+  PagesProfile(b, beyond, 1);
+  Rig locked(false);
+  locked.settings.Init(false, b);
+  CHECK(locked.settings.profile_locked());
+  locked.ui.Init(&locked.settings, &locked.gain, &locked.calibration,
+      &locked.backup);
+  locked.ui.LoadOptions();
+  locked.Tick(40, true);
+  locked.Enter();
+  for (int page = 0; page < 5; ++page) {
+    CHECK(locked.ui.options_.page() == page % 4);
+    locked.Tap();
+  }
+
+  // The idle timeout closes page 7 like the first four; its reserved knobs
+  // do not keep it open, and reopening returns to it.
+  PagesProfile(b, sparse, 3);
+  AppendIdleTimeout(b, PROFILE_FIXED, 1);
+  Rig idle(false);
+  ApplyCustomProfile(&idle, b);
+  idle.Enter();
+  idle.Tick(4000, true);
+  idle.Tap();
+  idle.Tick(4000, true);
+  idle.Tap();
+  CHECK(idle.ui.options_.page() == 6);
+  for (int i = 0; i < 4900; ++i) {
+    idle.feedback = (i / 100) & 1 ? 0.9f : 0.1f;
+    idle.Tick(1, true);
+  }
+  int ticks = 0;
+  while (idle.ui.options_.active() && ticks < 1000) {
+    idle.Tick(1, true);
+    ++ticks;
+  }
+  CHECK(ticks > 0 && ticks <= 120);
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+    CHECK(idle.ui.leds_.intensity_[LED_ASSIGN_1 + i] == 255);
+  }
+  idle.Tick(100, true);
+  idle.Enter();
+  CHECK(idle.ui.options_.page() == 6);
 }
 
 void TestProfileActions() {
@@ -2622,6 +3069,157 @@ void TestProfileActions() {
   off.Up(SWITCH_SEED);
   off.Down(SWITCH_FREEZE);
   CHECK(!off.ui.trim_flag_);
+}
+
+// The factory profile with the Plaits bank starting elsewhere.
+void PlaitsBankProfile(uint8_t* b, int value) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  uint8_t* entry = b + 16 + 6 * (b[5] - 1);
+  CHECK(entry[0] == FEATURE_PLAITS_BANK && entry[1] == PROFILE_ADJUSTABLE);
+  entry[2] = value;
+  const size_t size = 16 + 6 * b[5];
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+// Plays the Plaits (or wavetable) synth with FREEZE latched.
+void PlaySynth(Rig* r, bool synth_mode, bool plaits) {
+  r->settings.set_plaits_synth(plaits);
+  r->ui.set_no_input(synth_mode);
+  r->ui.set_synth_mode(synth_mode);
+  r->Down(SWITCH_FREEZE);
+  r->Up(SWITCH_FREEZE);
+  CHECK(r->ui.freeze_button_state_);
+  CHECK(r->ui.plaits_synth() == plaits);
+}
+
+// [A]+FREEZE steps the Plaits bank in Plaits synth play (#190), keeping
+// FREEZE; granular, spectral and the wavetable synth keep buffer trim.
+void TestPlaitsBankGesture() {
+  test_checker.Start("TestPlaitsBankGesture");
+  CHECK(kFeatureDefinitions[FEATURE_PLAITS_BANK].field == 14);
+  CHECK(kFeatureDefinitions[FEATURE_PLAITS_BANK].values == kNumPlaitsBanks);
+  {
+    Rig r(false);
+    CHECK(r.settings.profile().adjustable(FEATURE_PLAITS_BANK));
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+    PlaySynth(&r, true, true);
+    const uint8_t media = r.settings.state().media;
+    // Red, yellow, then green, red and yellow again; each step is saved.
+    const uint8_t banks[] = { 1, 2, 0, 1, 2 };
+    for (int i = 0; i < 5; ++i) {
+      const uint32_t writes = test_writes;
+      r.Down(SWITCH_MEDIA);
+      r.Down(SWITCH_FREEZE);
+      CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
+      CHECK(test_writes == writes + 1);
+      CHECK(!r.ui.trim_flag_);
+      CHECK(r.ui.freeze_button_state_);
+      const Leds::Color color = r.ui.plaits_bank_cues_[banks[i]].color;
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == color.r);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == color.g);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == color.b);
+      r.Up(SWITCH_FREEZE);
+      r.Up(SWITCH_MEDIA);
+      CHECK(r.settings.state().media == media);
+      CHECK(r.ui.freeze_button_state_);
+      Settings loaded;
+      CHECK(loaded.Init(false));
+      CHECK(loaded.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
+      // Field 14 is byte 20's low nibble; field 15 stays unset.
+      CHECK(loaded.stored_state_.engine == (0x90 | banks[i]));
+    }
+    // Each bank has its own colour; the cue lasts half a second.
+    const Ui::BankCue* cues = r.ui.plaits_bank_cues_;
+    for (int i = 0; i < kNumPlaitsBanks; ++i) {
+      CHECK(cues[i].color.r || cues[i].color.g || cues[i].color.b);
+      for (int j = 0; j < i; ++j) {
+        CHECK(cues[i].color.r != cues[j].color.r ||
+            cues[i].color.g != cues[j].color.g ||
+            cues[i].color.b != cues[j].color.b ||
+            cues[i].pulses != cues[j].pulses);
+      }
+    }
+    r.Tick(400, true);
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 255);
+    r.Tick(200, true);
+    const Leds::Color quality = r.ui.media_palette_[media];
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
+    // FREEZE alone still toggles sustain.
+    r.Down(SWITCH_FREEZE);
+    r.Up(SWITCH_FREEZE);
+    CHECK(!r.ui.freeze_button_state_);
+    // An options page commit keeps the gesture's bank.
+    r.EnterLimiter();
+    r.reverb = 0.9f;
+    r.Tick(1200, true);
+    r.Down(SWITCH_ASSIGN);
+    r.Tick(3100, true);
+    r.Up(SWITCH_ASSIGN);
+    CHECK(r.settings.output_limiter_mode() != OUTPUT_LIMITER_STOCK);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+  }
+  // A profile chooses the bank on a blank sector; a saved bank wins.
+  {
+    uint8_t b[kProfileSize];
+    PlaitsBankProfile(b, 2);
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+    // A blank sector reports a new module, as the factory test expects.
+    memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
+    CHECK(!r.settings.Init(false, b));
+    r.ui.Init(&r.settings, &r.gain, &r.calibration, &r.backup);
+    r.ui.LoadOptions();
+    r.Tick(40, true);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+    PlaySynth(&r, true, true);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+  }
+  // Granular and the wavetable synth: buffer trim.
+  for (int c = 0; c < 2; ++c) {
+    Rig r(false);
+    PlaySynth(&r, c == 1, c == 0);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.trim_flag_);
+    CHECK(!r.ui.freeze_button_state_);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+    r.Up(SWITCH_FREEZE);
+    r.Up(SWITCH_MEDIA);
+  }
+  // Synth start placed on [A]+FREEZE keeps it, to stop the synth.
+  {
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_SYNTH_START, 0, 0, ACTION_FREEZE);
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.settings.set_self_play_on_request(true);
+    PlaySynth(&r, true, true);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.self_play_requested());
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+  }
+  // Monophonic grains on [A]+FREEZE give way in Plaits play only.
+  for (int plaits = 0; plaits < 2; ++plaits) {
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_MONOPHONIC, 0, 0, ACTION_FREEZE);
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.profile().adjustable(FEATURE_PLAITS_BANK));
+    PlaySynth(&r, true, plaits);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(bool(r.settings.state().monophonic_mode) == !plaits);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == plaits);
+  }
 }
 
 void TestProfileAmounts() {
@@ -2733,6 +3331,10 @@ void TestBetaOptionsLeds() {
   version.Tick(100, true);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
   version.Tick(100, true);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
+  version.Tick(150, true);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+  version.Tick(150, true);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
   version.Tick(150, true);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
@@ -2869,7 +3471,7 @@ void TestBetaOptionPages() {
     FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_TIME_SCAN
   };
   for (int f = 0; f < 3; ++f) {
-    for (int slot = 1; slot <= 12; ++slot) {
+    for (int slot = 1; slot < kNumPageSlots; ++slot) {
       Rig r(false);
       uint8_t b[kProfileSize];
       CustomProfile(b, features[f], slot, 0, 0);
@@ -2996,11 +3598,14 @@ int main() {
   TestStorage();
   TestDsp();
   TestProfilePages();
+  TestOptionalPages();
   TestCustomScalePersistenceAndLeds();
   TestDefaultLedIdentity();
   TestBetaOptionsLeds();
   TestBetaOptionPages();
   TestProfileActions();
+  TestPlaitsBankGesture();
   TestProfileAmounts();
+  TestOptionsIdleTimeout();
   return test_checker.failures() ? 1 : 0;
 }

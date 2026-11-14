@@ -229,8 +229,32 @@ void TestAttackProcessor() {
   CHECK(hashes[0] != hashes[1]);
 }
 
+// High catches a 1.4x rise, Normal a 1.8x rise, Low only a 2.5x rise (#58).
+void TestAttackSensitivity() {
+  test_checker.Start("TestAttackSensitivity");
+  CHECK(kAttackThresholds[0] == kAttackThreshold);
+  const float rises[] = { 1.4f, 1.8f, 2.5f };
+  const bool expected[3][3] = {
+    { false, true, true },  // Normal.
+    { false, false, true },  // Low.
+    { true, true, true }  // High.
+  };
+  for (int sensitivity = 0; sensitivity < 3; ++sensitivity) {
+    for (int rise = 0; rise < 3; ++rise) {
+      AttackInput input;
+      input.Init();
+      input.Configure(ATTACK_MODE_SNAP, kAttackThresholds[sensitivity]);
+      for (int b = 0; b < 2000; ++b) {
+        Feed(&input, 0.1f);
+      }
+      CHECK(Feed(&input, 0.1f * rises[rise]) == expected[sensitivity][rise]);
+    }
+  }
+}
+
 int main() {
   setbuf(stdout, NULL);
+  TestAttackSensitivity();
   TestAttackInput();
   TestAttackSnap();
   TestAttackProcessor();

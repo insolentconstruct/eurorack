@@ -7,13 +7,13 @@ The [options guide](OPTIONS.md) explains the controls, zones and LED patterns.
 The `drizzlet` branch, based on the Mutable Instruments source `d8f4739`. TAKEN means existing behaviour; FREE means no dedicated action or allocation, with the limits below. Planned uses come from the tentative roadmap in [#32](https://github.com/insolentconstruct/eurorack/issues/32); they can change until built. <!-- source: git trees fc549d7, d8f4739 -->
 Source comments use repository-relative paths; `stock:` means `d8f4739`; Drizzlet pins stmlib `d18def8` (stock `e3bd7c9`; the stmlib files cited here are identical in both); “linker script” means `stmlib/linker_scripts/stm32h7xx_flash_application_large.ld`, and `manual.md` is the Beads manual. <!-- source: git ls-tree fc549d7 stmlib; git ls-tree d8f4739 stmlib -->
 
-## Beta 2 behaviour
+## Known behaviour
 
 Same-rate mono/stereo changes and synth start/stop at 48 kHz are pop-free. Rate changes still fade, restart the converter, clear the recording and cut reverb tails.
 
-SEED starts latched, as in stock. LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
+SEED starts latched, as in stock, unless a profile chooses [Unlatched](#seed-at-power-on). LED brightness is a profile option, with no power-on gesture. The reset level stays stock; brown-out reset #165 is deferred.
 
-Delay-mode SEED latching can pop, as in stock; its fix (#183) is deferred.
+Delay-mode SEED latching can pop, as in stock. A Hygrostat profile can fade it instead ([Delay SEED latch fade](#delay-seed-latch-fade), #183).
 
 ## Fixes
 
@@ -25,11 +25,11 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 |---|---|---|
 | the quality button [A] tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
 | [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and Synth start on Manual, toggle wavetable synth; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
-| [A] + feedback knob | TAKEN: manual input gain; release saves. Planned: manual gain improvements (#19) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
+| [A] + feedback knob | TAKEN: manual input gain; release saves. A profile can start a blank gain in manual gain ([ID 27](#input-gain-at-power-on)) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
 | [A] + dry/wet knob | TAKEN by Drizzlet: stereo width; release saves | Yes |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state save starts after 10 s (with interruption backoff below) if autosave enabled, outside wavetable synth and spectral modes <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
-| SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot <!-- beads/ui.cc:81-83,406-411,463-469 --> |
+| SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot, or unlatched with [ID 29](#seed-at-power-on) <!-- beads/ui.cc:81-83,406-411,463-469 --> |
 | SEED hold, 4 s | TAKEN: latch generation | No <!-- beads/ui.cc:48-50,463-469; manual.md:59 --> |
 | the CV-assign button [M] tap | TAKEN: cycle feedback / dry/wet / reverb CV destination | Yes <!-- beads/ui.cc:499-515 --> |
 | [M] + mix knobs | TAKEN: set three independent CV amounts; release saves | Yes <!-- beads/ui.cc:178-180,499-515 --> |
@@ -39,7 +39,7 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 | Hold [M], press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | [M] + [A], either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold [A], press SEED | TAKEN: toggle monophonic grains; consumes both releases; [A] first | Yes <!-- beads/ui.cc:358-369 --> |
-| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch | Mutable Instruments' original gesture; saves keep the length; stock loads full length |
+| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch. In Plaits synth play it steps the [Plaits bank](#plaits-bank) instead (ID 31) and leaves FREEZE alone | Mutable Instruments' original gesture; saves keep the length; stock loads full length. The bank is saved |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + [M] | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration. With both copies of the calibration lost: repair with the factory calibration; result shown 3 s | Rewrites settings sector <!-- beads/settings.cc; beads/settings_storage.h --> |
@@ -50,14 +50,14 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles pages 1 → 2 → 3 → 4 → 1; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close. Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles the populated pages in order, 1 → 2 → 3 → 4 → 1 for the factory layout; custom profiles can use up to seven pages (slots 1–21) and empty pages are skipped; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close unless a profile sets an [idle timeout](#options-page-idle-timeout). Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses: pages 1–3 FEEDBACK, DRY/WET or REVERB; 4 FEEDBACK and DRY/WET; 5 FEEDBACK and REVERB; 6 DRY/WET and REVERB; 7 all three. Beta 2 lit all three for page 4.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
 | 1 / FEEDBACK | Pitch scale | Random pitch steps | Attacks |
 | 2 / DRY/WET | Frozen feedback | Delay mode | Reverb character |
 | 3 / REVERB | Processor | Synth | Synth start |
-| 4 / all three | LED brightness | SEED latch | Limiter |
+| 4 / FEEDBACK and DRY/WET | LED brightness | SEED latch | Limiter |
 
 Custom profiles can leave knobs unused; unused knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green. Other settings follow the green/yellow/red ladder. The factory scale bank uses coral Fifths, amber Major, blue Minor, amber/blue pentatonics with slow blinking, teal Pelog, violet Bhairav and two pink pulses for Shri. Slow is 0.98 Hz, fast is 3.91 Hz, and a two-pulse group repeats every 2.048 s. Hygrostat profiles can replace the scale definitions, order, colours and patterns; [Scale profiles](SCALE-PROFILES.md) specifies their format. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 
@@ -106,6 +106,15 @@ not-set values use the profile default.
 | 22 | Pitch notch indication (#7) | No saved value |
 | 23 | TIME modulation (#141) | 12 (byte 19 low) |
 | 24 | Synth reverb tail (#192) | No saved value |
+| 25 | Options page idle timeout (#202) | No saved value |
+| 26 | Delay SEED latch fade (#183) | No saved value |
+| 27 | Input gain at power-on (#19) | No saved value |
+| 28 | Attack sensitivity (#58, #47) | No saved value |
+| 29 | SEED at power-on (#41) | No saved value |
+| 30 | PITCH knob (#43) | No saved value |
+| 31 | Plaits bank (#190) | 14 (byte 20 low) |
+| 32 | Mix law (#21) | No saved value |
+| 33 | Reverb input (#20) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -120,8 +129,8 @@ never-configured pitch field remains unset even when a later profile includes
 ID 15; that profile uses its own starting value. An explicitly saved ID 15
 falls back to Off if that ID is absent from the installed bank.
 
-Fields 14–19 remain unallocated in v1. Fields 10–13 are permanent from this
-release; the marker stays 0xC1 and every existing field keeps its position.
+Field 14 holds the Plaits bank (ID 31, Beta 3); fields 15–19 remain
+unallocated in v1. Fields 10–13 are permanent from this release; the marker stays 0xC1 and every existing field keeps its position.
 The profile table in `beads/profile.cc` owns identities and allowed controls.
 Missing or invalid profiles use the release layout and lock settings writes;
 the boot guard's own recoveries still run from storage state. SEED at boot
@@ -153,7 +162,7 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 19 | `attacks` | Attacks: 0xA1 = Snap, 0xA2 = Snap and trigger; 0 and all unknown values = Off; canonicalized on load/save |
 | 20 | `engine` | Processor: 0xA1 = Spectral; 0 and all unknown values = Granular (Stock); canonicalized on load/save |
 | 21 | `synth_engine` | Synth: 0 Beads (Stock), 0xA1 Plaits; unknown values read Beads (Stock); canonicalized on load/save |
-| 22 | `random_intervals` | Random pitch steps: 0xA1 = Fifths and octaves; 0 and all unknown values = Free (Stock); canonicalized on load/save |
+| 22 | `random_intervals` | Random pitch steps: 0xA1 = Fifths and octaves, 0xA2 = Recent notes; 0 and all unknown values = Free (Stock); canonicalized on load/save |
 | 23 | `padding[0]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
@@ -239,7 +248,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - Patching can't already do it.
 - CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source.
 
-Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (all twelve page slots are taken).
+Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the factory layout's twelve page slots are taken).
 
 ## Planning rules
 
@@ -257,9 +266,9 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 - **Saved fields keep their meaning permanently.** Layout and defaults in
   [Saved data](#saved-data); byte 23 holds the format marker.
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
-- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Factory cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
-- **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
+- **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim, or the Plaits bank step in Plaits synth play; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
 
 Clouds-style reverb retains the existing 64 KiB reverb buffer and Beads knob
 mapping, with Clouds delay lengths and modulation. The grain wet path adds
@@ -282,7 +291,9 @@ Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality
 
 Pitch scale quantizes the total pitch of each new grain (PITCH, CV and random variation), rooted at the unshifted recording; Plaits and Spectral also use the selected scale.
 
-Random pitch steps first quantizes counter-clockwise random offsets relative to PITCH to the fixed octave/fifth family: … −12, −5, 0, +7, +12 … semitones; for C, C/G across octaves includes a downward fourth.
+Random pitch steps selects Free, Fifths and octaves or Recent notes in thirds. Fifths and octaves quantizes counter-clockwise random offsets relative to PITCH to the fixed octave/fifth family: … −12, −5, 0, +7, +12 … semitones; for C, C/G across octaves includes a downward fourth.
+
+Recent notes (#220), with PITCH patched, gives each counter-clockwise grain one of the last notes sent to PITCH, at 1 V/octave above the PITCH setting. A note counts once the CV holds within 0.1 semitone for 10 ms and is at least half a semitone from the previous note; the attenurandomizer chooses from the newest 1 (near 12 o'clock) to 8 (fully counter-clockwise). Unplugging PITCH forgets the notes; unpatched, and in the wavetable synth (which adds its CV to the knob), it plays as Free. Beta 2 reads the saved value as Free.
 
 Free and clockwise remain continuous before Pitch scale; subsequent scale quantization can change an interval. Random pitch steps affects granular playback and Beads wavetable grains, not the continuous wavetable oscillator, Plaits or Spectral; custom scales do not redefine its fixed offset pattern.
 
@@ -290,7 +301,7 @@ Free and clockwise remain continuous before Pitch scale; subsequent scale quanti
 
 The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
 
-- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
 - **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
@@ -304,17 +315,15 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 A lightweight requested feature may ship Off by default. Its Off state must
 leave the audio unchanged and add no measurable audio-path cost; branches
 belong outside sample loops. Measure each feature and interacting controls.
-Hygrostat's internal threshold follows stock Beads' measured worst case
-(provisionally 92%): it warns from 91% and blocks above 92%, for measured and
-estimated combinations alike. The threshold must stay below the earliest measured DAC deadline at every sample
-rate. New features still require flash, permanent storage fields, controls and
+Hygrostat shows no CPU estimate and blocks no combination for CPU; the
+working limit is in [Design aims](#design-aims). New features still require flash, permanent storage fields, controls and
 maintenance.
 
 ### Small Beta 2 profile options
 
 IDs 15–23 default to Off. LED brightness Off means full brightness. Brightness,
 SEED latch and TIME modulation allow Off, Fixed or Adjustable; an Adjustable
-choice can occupy any of the twelve page slots. They have no amount, action,
+choice can occupy any page slot (1–21). They have no amount, action,
 SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
 only, with no control placement. Omitted entries are Off. The default profile
 block is unchanged. The page-facing catalogue is
@@ -331,7 +340,7 @@ storage indications, manual meters, boot cue, delay cue, pitch notch, then
 quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
 cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms
 light-blue pulses separated by 150 ms gaps. One release constant sets the pulse
-count (2 for Beta 2); audio startup never waits for this cue. Notch indication
+count (3 for Beta 3); audio startup never waits for this cue. Notch indication
 follows the detune law's unison and octave plateaus and both two-octave knob
 ends before smoothing; it ignores CV, random pitch and quantization. A small
 hysteresis holds the cue at plateau edges. Live assignment LEDs retain stock
@@ -377,3 +386,117 @@ patching and processor changes. This is a firmware-profile choice, with no
 panel slot or gesture. It has no saved-state nibble and no per-audio-block work;
 the check and optional clear run only during transitions. Fades and codec
 handling are independent of this choice.
+
+### Options page idle timeout
+
+Hygrostat feature ID 25 chooses Off / 5 s / 10 s / 20 s / 30 s. Off or an
+omitted entry keeps the pages open until you close them. A Fixed time closes
+the pages after that long without a button press, page change or turn of an
+option knob on the current page, counted from releasing the opening hold, and
+never while a button is held. An option knob counts as turned once it is more than 2% of its travel from where it was
+last counted, however slowly; jitter, CV and the stored-value preview don't
+count. Closing by timeout is the same as holding [M]: changes are kept and
+saved once if unsaved. Firmware-profile choice, with no panel slot or
+saved-state nibble.
+
+### Delay SEED latch fade
+
+Hygrostat feature ID 26 chooses Switch at once (stock) / Fade. In delay mode
+(SIZE fully clockwise), stock latching or unlatching SEED switches between
+tapped and knob timing in one sample, which can pop. Fade dips the delay taps
+for 10 ms, switches timing at silence and fades back in over 10 ms, without
+the short chirp. Patching SEED while latched fades the same way; a clocked
+latch never fades. Firmware-profile choice, with no panel slot or saved-state
+nibble.
+
+### Input gain at power-on
+
+Hygrostat feature ID 27 chooses Automatic (stock) / Manual (#19). Off or an
+omitted entry starts in automatic gain unless a manual gain is saved, as
+stock. Fixed Manual starts a blank gain at unity manual gain instead: the
+lowest setting on the stock law, or 128 (unity, green) with input
+attenuation. A saved manual gain always wins. [A]+FEEDBACK still sets and
+saves manual gain, and holding [A] still restarts automatic gain until the
+next power-on. The unity value is saved with the next settings save, like any
+manual gain, so it stays after switching back to Automatic until [A] is
+held. This is a firmware-profile choice, with no panel slot or saved-state
+nibble; it runs only at power-on.
+
+### Attack sensitivity
+
+Hygrostat feature ID 28 chooses Normal (default) / Low / High for Attacks
+(#58, #47). A block is an attack when its peak exceeds the threshold times
+the larger of a fast reference (instant attack, 50 ms release) and half the
+input's slow peak (0.5 s release). Normal keeps Beta 2's 1.5 (+3.5 dB). Low
+is 2.0 (+6 dB) and ignores softer notes after a hit. High is 1.3 (+2.3 dB):
+it catches quieter ghost notes, and more false attacks on noisy input. The
+threshold is chosen at power-on; Snap and Snap and trigger share it. No panel
+slot or saved-state nibble. Host measurements are in
+[Testing](TESTING.md#beta-3-host-measurements).
+
+### SEED at power-on
+
+Hygrostat feature ID 29 chooses Latched (stock) / Unlatched (#41). Fixed
+Unlatched powers on as after a SEED tap: SEED presses, gates and, with Snap
+and trigger, detected attacks start the grains, and in delay mode SEED taps set the time. Holding SEED for 4 s or
+SEED+FREEZE latches as usual; the SEED latch options (#13) apply once
+latched, and with the delay SEED latch fade the delay starts in tapped
+timing without a fade. Power-on only, with no panel slot or saved-state
+nibble.
+
+### PITCH knob
+
+Hygrostat feature ID 30 chooses Notches (stock) / Smooth (#43). Smooth keeps
+the knob's intervals at the same positions (unison, semitone, minor and
+major third, fifth, one and two octaves) but moves linearly between them,
+without the flat zone around each. Calibrated PITCH CV and the PITCH
+attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
+Smooth. Grains, delay pitch and both synths follow the knob law. The law is
+chosen at power-on. No panel slot or saved-state nibble.
+
+### Plaits bank
+
+Plaits synth mode always plays one bank of eight models, in Plaits' own
+groups (#190): green is its first bank (virtual analog to speech, models
+9–16), red the second (swarm to hi-hat, 17–24), yellow the eight models
+added in Plaits 1.2 (1–8). FEEDBACK selects one of the eight, about 34
+degrees each; Beta 2's 24 models on one knob are gone. While the Plaits synth
+plays, hold [A] and press FREEZE to step green, red, yellow, then green
+again; [A] shows the new bank's colour for half a second, the bank is saved
+(field 14) and FREEZE stays as it was. FREEZE alone still sustains.
+Granular, delay, spectral and the wavetable synth keep buffer trim on
+[A]+FREEZE.
+
+The step is fixed to [A]+FREEZE in Plaits synth play: it is the only way to
+reach two thirds of the models, so it does not depend on where a profile
+puts Buffer trim. Whatever a custom profile assigns to [A]+FREEZE keeps its
+meaning everywhere else; only Synth start, which can stop the synth, keeps
+[A]+FREEZE in Plaits play too, and then the bank stays at its start.
+
+Hygrostat feature ID 31 chooses the starting bank (Green / Red / Yellow,
+default Green) and is Adjustable only. Profiles without the entry start on
+green. A blank or stock settings sector, a SEED power-on reset or a saved
+value the firmware doesn't know starts on the profile's bank. More banks,
+such as Plaits Palette models (#194), would add values to this ID.
+
+### Mix law
+
+Hygrostat feature ID 32 chooses Stock / Gentle (#21). Stock DRY/WET brings
+the grains in quickly: at 9 o'clock they are only 2.5 dB under the dry.
+Gentle makes the wet side rise in a straight line, so at 9 o'clock the
+grains are 7.6 dB under the dry (Clouds: 8.8 dB) and at noon 3.5 dB quieter
+than stock. The dry level and both ends of the knob stay stock. DRY/WET CV
+follows the same law. Granular, delay and spectral; both synths keep their
+own DRY/WET. Chosen at power-on, with no panel slot or saved-state nibble.
+
+### Reverb input
+
+Hygrostat feature ID 33 chooses Mix (stock) / Grains (#20). Stock sends the
+whole output, dry and grains, to the reverb, as an end-of-chain effect.
+Grains sends only the grains, before the dry/wet mix, in Clouds' order: the
+dry stays dry and REVERB no longer turns it down. DRY/WET then sets the
+reverb with the grains, so fully dry has no reverb at all and turning
+DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
+and flutter comes after the reverb, so the tail wobbles too. Granular, delay
+and spectral; both synths keep the stock routing. Chosen at power-on, with
+no panel slot or saved-state nibble.
