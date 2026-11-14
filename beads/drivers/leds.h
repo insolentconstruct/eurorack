@@ -84,7 +84,7 @@ class Leds {
     }
   }
 
-  // Longer RGB pulses keep green and blue in proportion when dimmed.
+  // Slower RGB PWM when dimmed, aimed at the pink tint of dimmed white.
   void SlowMediaPwm(bool slow);
 
   inline void set(Led led, uint8_t intensity) {
