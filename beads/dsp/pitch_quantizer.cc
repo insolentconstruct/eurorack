@@ -153,6 +153,10 @@ const size_t kNumRecentNotes = 8;
 const float kNoteTolerance = 0.1f;
 const float kNoteMinimumStep = 0.5f;
 const uint32_t kNoteSettleTime = 10;
+// A CV that drifted there (a glide), not jumped a quarter semitone, then holds
+// twice as long as its last drift took, up to 200 ms.
+const float kNoteJump = 0.25f;
+const uint32_t kGlideSettleTime = 200;
 
 static volatile bool recent_notes_mode;
 // Volatile keeps the slot write ahead of its publication to the interrupt.
@@ -162,6 +166,7 @@ static volatile size_t newest_note;
 static volatile size_t recent_notes_count;
 static float note_candidate;
 static uint32_t note_candidate_time;
+static uint32_t note_settle_time = kNoteSettleTime;
 
 void RememberNote(RandomIntervals intervals, bool patched, float cv,
     float amount, uint32_t now) {
@@ -174,14 +179,20 @@ void RememberNote(RandomIntervals intervals, bool patched, float cv,
     num_recent_notes = 0;
     note_candidate = cv;
     note_candidate_time = now;
+    note_settle_time = kNoteSettleTime;
     return;
   }
-  if (fabsf(cv - note_candidate) > kNoteTolerance) {
+  const float distance = fabsf(cv - note_candidate);
+  if (distance > kNoteTolerance) {
+    const uint32_t drift_time = std::min(now - note_candidate_time,
+        kGlideSettleTime / 2);
+    note_settle_time = distance >= kNoteJump
+        ? kNoteSettleTime : std::max(kNoteSettleTime, 2 * drift_time);
     note_candidate = cv;
     note_candidate_time = now;
     return;
   }
-  if (now - note_candidate_time < kNoteSettleTime || (num_recent_notes &&
+  if (now - note_candidate_time < note_settle_time || (num_recent_notes &&
       fabsf(cv - recent_notes[newest_note]) < kNoteMinimumStep)) {
     return;
   }

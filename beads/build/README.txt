@@ -247,8 +247,8 @@ a C note, this gives C/G across octaves; G below C is a downward
 fourth. Recent notes, with PITCH patched, gives each new grain one of
 the last notes sent to PITCH, above the PITCH setting; turning the
 attenurandomizer further counter-clockwise chooses from more of them
-(up to eight); slow glides may add in-between notes. Unpatched it
-plays as Free. Free and clockwise stay continuous before Pitch scale,
+(up to eight); a glide counts where it stops. Unpatched it plays as
+Free. Free and clockwise stay continuous before Pitch scale,
 which applies afterward and can change the interval. This affects
 granular playback and Beads wavetable grains, not the continuous
 oscillator, Plaits or Spectral.
