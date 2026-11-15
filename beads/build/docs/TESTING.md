@@ -281,7 +281,7 @@ at the end of each run. Budget 120,000 cycles per block.
 | Hot granular, rerun | `8da49f7` | Pass: callback peak 98,308 (81.9%), no DAC underrun |
 | Recent notes CPU: the same melody with the attenurandomizer clockwise (follow) and counter-clockwise (Recent notes) | `12180c6` | Peaks 32,816 (follow) and 32,552 (Recent notes); the Recent notes mean 85 cycles higher (0.07 point) |
 | Recent notes, stepped 16-note melody, 1.25 s per note (91 steps judged) | `12180c6` | Pass: 96.7% of steps sounded only pitch classes of the last eight notes |
-| Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail, known limitation (#243): 28.6% of steps met that rule; mid-glide pitches register as notes |
+| Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail (#243): 28.6% of steps met that rule; mid-glide pitches registered as notes. The glide rule now in Beta 3 is not yet rerun on the module |
 | Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7; CCR 129/129/118 as computed |
 | Quality LED registers at 100% and 33%, and quality 0 at all three levels | `8da49f7` | Pending |
 | Noise floor at 66% against 100% LED brightness | `8da49f7` | Pending: the run stopped at its first noise check, a fault in the check itself |
