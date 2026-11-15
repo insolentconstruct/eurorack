@@ -2,9 +2,9 @@
 
 This source contains 20 host programs, 299 named test sections, 2,536
 assertion sites and 484 deliberate fault patterns (Beta 2: 275, 2,199 and
-396). On `4ae18aa`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43669704688)
-passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43669704697)
-detected all 487 faults across eight shards. Named sections and assertion sites
+396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
+passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
+detected all 484 faults across eight shards. Named sections and assertion sites
 are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
