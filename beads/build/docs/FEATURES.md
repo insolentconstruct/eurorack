@@ -477,6 +477,12 @@ puts Buffer trim. Whatever a custom profile assigns to [A]+FREEZE keeps its
 meaning everywhere else; only Synth start, which can stop the synth, keeps
 [A]+FREEZE in Plaits play too, and then the bank stays at its start.
 
+Speech decodes a new word bank over several audio blocks, 32 frames per
+block, instead of all at once (#225): one bank took up to 1.7 blocks. While
+it loads, the voice holds its current sound and a new word waits, 1.75 to
+7 ms depending on the bank, each time a voice changes bank (each voice keeps
+one bank). Once loaded, it plays exactly as Mutable Instruments' code does.
+
 Hygrostat feature ID 31 chooses the starting bank (Green / Red / Yellow,
 default Green) and is Adjustable only. Profiles without the entry start on
 green. A blank or stock settings sector, a SEED power-on reset or a saved

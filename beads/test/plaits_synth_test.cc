@@ -37,7 +37,10 @@
 
 #define private public
 #include "beads/dsp/plaits_synth.h"
+#include "plaits/dsp/speech/lpc_speech_synth_controller.h"
+#include "plaits/dsp/speech/lpc_speech_synth_words.h"
 #undef private
+#include "stmlib/utils/buffer_allocator.h"
 
 using namespace beads;
 
@@ -47,7 +50,7 @@ const uint32_t kNoteHashes[kNumPlaitsModels] = {
   0x2a2d2972, 0x877170b5, 0xc08556f5, 0x8a883e64,
   0x7707b2a5, 0x707f8c2a, 0xbbaf2a21, 0x2c51fa9c,
   0x64f3cb53, 0x2f58cfb9, 0x394b366a, 0xa9f0b3f3,
-  0xc2099a1b, 0x9736e943, 0x0e7b8cbe, 0x885b531a,
+  0xc2099a1b, 0x9736e943, 0x0e7b8cbe, 0x2109bc86,
   0x3a9917f1, 0xbc92403f, 0x9500f71a, 0x71f98e78,
   0x1bc184c0, 0xe38220f5, 0x773a4f5a, 0xd80154f8
 };
@@ -55,7 +58,7 @@ const uint32_t kDroneHashes[kNumPlaitsModels] = {
   0x308767d4, 0xd33bb1f2, 0x73fd3dc2, 0xb39ab94e,
   0x697b7678, 0x3393ec36, 0x81955cfa, 0x04b4df54,
   0xd28d0da8, 0xf25eb15a, 0x7d7d6f57, 0x086d104d,
-  0x21b599bc, 0xcdf47484, 0xda4689e1, 0x5b9c1a8d,
+  0x21b599bc, 0xcdf47484, 0xda4689e1, 0xa0f5c1bf,
   0x1cae6339, 0x6740b0fa, 0x98eeb4e3, 0x093a4c92,
   0xf8ddbb0e, 0xa08d1e70, 0x926e7d00, 0x19ecc742
 };
@@ -395,7 +398,159 @@ void TestFreezeSustains() {
   CHECK(energy < 1e-6);
 }
 
+// Speech word banks as Mutable Instruments' synchronous Load decodes them:
+// frames, words, FNV-1a of the frames and word boundaries; then the blocks
+// the sliced load takes.
+const int kWordBankFrames[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  229, 229, 524, 604, 926
+};
+const int kWordBankWords[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  7, 11, 26, 26, 22
+};
+const uint32_t kWordBankHashes[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  0x4b953df5, 0xe4c9acc0, 0x762895c2, 0x77b80f2c, 0x1a990b17
+};
+const int kWordBankLoadBlocks[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  8, 8, 17, 19, 29
+};
+// The word that follows a bank change from bank (b + 1) % 5 to bank b, as
+// Mutable Instruments' controller plays it with the change and its trigger
+// kWordBankLoadBlocks[b] - 1 blocks later (GCC 12, -ffp-contract=off).
+const uint32_t kWordBankChangeHashes[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  0x11ad03a2, 0xbf169bf8, 0x3a7753d9, 0x3b593c26, 0xf5f71ca8
+};
+
+static uint8_t speech_ram[16384];
+static plaits::LPCSpeechSynthWordBank word_bank;
+static plaits::LPCSpeechSynthController speech;
+
+inline uint32_t Fnv(const void* data, size_t size, uint32_t hash) {
+  const uint8_t* bytes = static_cast<const uint8_t*>(data);
+  while (size--) {
+    hash = (hash ^ *bytes++) * 16777619U;
+  }
+  return hash;
+}
+
+void ResetSpeech() {
+  memset(speech_ram, 0, sizeof(speech_ram));
+  stmlib::Random::Seed(0x12345678);
+  stmlib::BufferAllocator allocator(speech_ram, sizeof(speech_ram));
+  word_bank.Init(plaits::word_banks_, LPC_SPEECH_SYNTH_NUM_WORD_BANKS,
+      &allocator);
+  speech.Init(&word_bank);
+}
+
+// Loads a bank as the controller does, one call per block; returns the calls.
+int LoadWordBank(int bank) {
+  int calls = 0;
+  do {
+    const int before = word_bank.loading_bank_ == bank
+        ? word_bank.num_frames() : 0;
+    const bool was_loading = word_bank.loaded_bank_ != bank;
+    const bool loaded = word_bank.Load(bank);
+    ++calls;
+    CHECK(word_bank.num_frames() - before <=
+        plaits::kLPCSpeechSynthFramesPerLoad);
+    // True once, from the call that completes the bank.
+    CHECK(loaded == (was_loading && !word_bank.loading()));
+  } while (word_bank.loading() && calls < 100);
+  return calls;
+}
+
+bool WordBankIs(int bank) {
+  const uint32_t hash = Fnv(word_bank.frames_,
+      word_bank.num_frames_ * sizeof(plaits::LPCSpeechSynth::Frame),
+      2166136261U);
+  return !word_bank.loading() && word_bank.loaded_bank_ == bank &&
+      word_bank.num_frames_ == kWordBankFrames[bank] &&
+      word_bank.num_words_ == kWordBankWords[bank] &&
+      Fnv(word_bank.word_boundaries_, (word_bank.num_words_ + 1) * sizeof(int),
+          hash) == kWordBankHashes[bank];
+}
+
+void TestWordBankLoads() {
+  test_checker.Start("TestWordBankLoads");
+  for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+    ResetSpeech();
+    CHECK(LoadWordBank(b) == kWordBankLoadBlocks[b]);
+    CHECK(WordBankIs(b));
+    CHECK(!word_bank.Load(b));
+    CHECK(WordBankIs(b));
+  }
+  // A bank change during a load restarts it, even back to the bank that
+  // was loaded before.
+  for (int a = 0; a < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++a) {
+    for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+      for (int calls = 1; calls < 4; ++calls) {
+        ResetSpeech();
+        LoadWordBank(a);
+        for (int i = 0; i < calls; ++i) {
+          word_bank.Load(b);
+        }
+        LoadWordBank(a);
+        CHECK(WordBankIs(a));
+        for (int i = 0; i < calls; ++i) {
+          word_bank.Load(b);
+        }
+        LoadWordBank(b);
+        CHECK(WordBankIs(b));
+      }
+    }
+  }
+}
+
+// A word that ended on bank (b + 1) % 5, then a bank change to b with a
+// trigger: the word plays when the bank is loaded, sample for sample as
+// Mutable Instruments' controller plays it with the change made then.
+void TestWordBankChangeDelaysWord() {
+  test_checker.Start("TestWordBankChangeDelaysWord");
+  for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+    const int a = (b + 1) % LPC_SPEECH_SYNTH_NUM_WORD_BANKS;
+    ResetSpeech();
+    LoadWordBank(a);
+    float excitation[kBlockSize];
+    float out[kBlockSize];
+    const float f0 = 100.0f / 48000.0f;
+    for (int i = 0; i < 12000; ++i) {
+      speech.Render(false, i == 0, a, f0, 0.3f, 0.5f, 0.0f, 0.5f, 0.8f,
+          excitation, out, kBlockSize);
+    }
+    uint32_t hash = 2166136261U;
+    for (int i = 0; i < 8000; ++i) {
+      speech.Render(false, i == 0, b, f0, 0.3f, 0.5f, 0.55f, 0.5f, 0.8f,
+          excitation, out, kBlockSize);
+      hash = Fnv(out, sizeof(out), hash);
+      hash = Fnv(excitation, sizeof(excitation), hash);
+    }
+    CHECK(hash == kWordBankChangeHashes[b]);
+  }
+  // A waiting word is dropped by a Reset, the phonemes, or both.
+  for (int drop = 0; drop < 3; ++drop) {
+    const bool phonemes = drop != 0;
+    ResetSpeech();
+    LoadWordBank(0);
+    float excitation[kBlockSize];
+    float out[kBlockSize];
+    const float f0 = 100.0f / 48000.0f;
+    speech.Render(false, true, 4, f0, 0.3f, 0.5f, 0.55f, 0.5f, 0.8f,
+        excitation, out, kBlockSize);
+    CHECK(word_bank.loading());
+    if (drop != 1) {
+      word_bank.Reset();
+    }
+    for (int i = 0; i < 40; ++i) {
+      speech.Render(false, false, phonemes ? -1 : 4, f0, 0.3f, 0.5f, 0.55f,
+          0.5f, 0.8f, excitation, out, kBlockSize);
+    }
+    CHECK(speech.playback_frame_ == -1);
+    CHECK(speech.remaining_frame_samples_ == 0);
+  }
+}
+
 int main() {
+  TestWordBankLoads();
+  TestWordBankChangeDelaysWord();
   TestVoiceAllocation();
   TestBankDetents();
   TestFreezeSustains();

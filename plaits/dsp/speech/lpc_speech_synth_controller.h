@@ -86,6 +86,8 @@ class BitStream {
 
 const int kLPCSpeechSynthMaxWords = 32;
 const int kLPCSpeechSynthMaxFrames = 1024;
+// A whole bank takes more than a block to decode: decode it over several.
+const int kLPCSpeechSynthFramesPerLoad = 32;
 const int kLPCSpeechSynthNumVowels = 5;
 const int kLPCSpeechSynthNumConsonants = 10;
 const int kLPCSpeechSynthNumPhonemes = \
@@ -110,6 +112,8 @@ class LPCSpeechSynthWordBank {
   bool Load(int index);
   void Reset();
   
+  inline bool loading() const { return loading_bank_ != loaded_bank_; }
+  inline int loading_bank() const { return loading_bank_; }
   inline int num_frames() const { return num_frames_; }
   inline const LPCSpeechSynth::Frame* frames() const { return frames_; }
   
@@ -127,14 +131,20 @@ class LPCSpeechSynthWordBank {
   }
   
  private:
-  size_t LoadNextWord(const uint8_t* data);
+  void StartWord();
+  bool LoadNextFrame();
   
   const LPCSpeechSynthWordBankData* word_banks_;
   
   int num_banks_;
   int loaded_bank_;
+  int loading_bank_;
   int num_frames_;
   int num_words_;
+
+  BitStream bitstream_;
+  const uint8_t* end_;
+  LPCSpeechSynth::Frame frame_;
 
   int* word_boundaries_;
   LPCSpeechSynth::Frame* frames_;
@@ -184,6 +194,7 @@ class LPCSpeechSynthController {
   int playback_frame_;
   int last_playback_frame_;
   size_t remaining_frame_samples_;
+  bool pending_trigger_;
 
   LPCSpeechSynthWordBank* word_bank_;
   
