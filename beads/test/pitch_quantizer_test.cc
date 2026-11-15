@@ -338,8 +338,8 @@ void TestCustomPitchRatioLimits() {
   }
 }
 
-// Recent notes: a note counts once the CV has held for 10 ms; counter-
-// clockwise steps then land on the newest 1 to 8 notes (#220).
+// Recent notes: a note counts once the CV has held for 10 ms, longer after a
+// glide; counter-clockwise steps then land on the newest 1 to 8 notes (#220).
 static uint32_t now;
 
 static void Hold(float cv, int milliseconds, float amount) {
@@ -411,6 +411,31 @@ void TestRecentNotes() {
       CHECK(note <= -31.0f + float(count - 1) && note >= -31.0f);
     }
   }
+  // A glide counts where it stops, not on the way (#243): 0.3 s over two
+  // semitones, then a second over one.
+  for (int i = 1; i <= 300; ++i) {
+    Hold(-31.0f + 2.0f * float(i) / 300.0f, 1, 1.0f);
+  }
+  Hold(-29.0f, 50, 1.0f / 7.0f);
+  for (int i = 0; i < 200; ++i) {
+    const float note = RandomStep(0.0f);
+    CHECK(note == -29.0f || note == -31.0f);
+  }
+  for (int i = 1; i <= 1000; ++i) {
+    Hold(-29.0f + float(i) / 1000.0f, 1, 1.0f);
+  }
+  Hold(-28.0f, 250, 1.0f / 7.0f);
+  for (int i = 0; i < 200; ++i) {
+    const float note = RandomStep(0.0f);
+    CHECK(note == -28.0f || note == -29.0f);
+  }
+  // Switching away and back forgets the glide: a held CV counts in 10 ms.
+  for (int i = 1; i <= 100; ++i) {
+    Hold(-28.0f + 0.005f * float(i), 1, 1.0f);
+  }
+  RememberNote(RANDOM_INTERVALS_FIFTHS, true, -26.0f, 1.0f, ++now);
+  Hold(-26.0f, 10, 0.0f);
+  CHECK(RandomStep(0.0f) == -26.0f);
   // Unplugged it is Free; unplugging forgets; the clock may wrap.
   RememberNote(RANDOM_INTERVALS_RECENT_NOTES, false, 3.0f, 1.0f, ++now);
   CHECK(RandomStep(3.5f) == 3.5f);
