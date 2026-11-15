@@ -237,7 +237,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - It is off by default and hard to reach by accident.
 - One manual paragraph explains it; no hidden state the panel can't show.
 - Patching can't already do it.
-- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source.
+- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit for 48 kHz: on the module the first left output word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz ([Audio deadline](OPTIMIZATIONS.md#audio-deadline)), so Cold digital and Scorched cassette need lower limits.
 
 Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (all twelve page slots are taken).
 
@@ -304,10 +304,8 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 A lightweight requested feature may ship Off by default. Its Off state must
 leave the audio unchanged and add no measurable audio-path cost; branches
 belong outside sample loops. Measure each feature and interacting controls.
-Hygrostat's internal threshold follows stock Beads' measured worst case
-(provisionally 92%): it warns from 91% and blocks above 92%, for measured and
-estimated combinations alike. The threshold must stay below the earliest measured DAC deadline at every sample
-rate. New features still require flash, permanent storage fields, controls and
+Hygrostat shows no CPU estimate and blocks no combination for CPU; the
+working limit is in [Design aims](#design-aims). New features still require flash, permanent storage fields, controls and
 maintenance.
 
 ### Small Beta 2 profile options
