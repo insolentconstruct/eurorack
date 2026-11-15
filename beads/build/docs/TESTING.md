@@ -1,6 +1,6 @@
 # Testing
 
-This source contains 20 host programs, 299 named test sections, 2,529
+This source contains 20 host programs, 299 named test sections, 2,532
 assertion sites and 478 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `131b5ef`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43559332279)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43559332184)
