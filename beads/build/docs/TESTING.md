@@ -1,10 +1,10 @@
 # Testing
 
-This source contains 20 host programs, 299 named test sections, 2,529
-assertion sites and 478 deliberate fault patterns (Beta 2: 275, 2,199 and
-396). On `131b5ef`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43559332279)
-passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43559332184)
-detected all 478 faults across eight shards. Named sections and assertion sites
+This source contains 20 host programs, 299 named test sections, 2,540
+assertion sites and 487 deliberate fault patterns (Beta 2: 275, 2,199 and
+396). On `4ae18aa`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43669704688)
+passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43669704697)
+detected all 487 faults across eight shards. Named sections and assertion sites
 are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
@@ -83,7 +83,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (478 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (487 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
