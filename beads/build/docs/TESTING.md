@@ -267,7 +267,8 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 ### Beta 3
 
 **Images** (2026-11-14). Timing builds (the release code plus DWT cycle
-counters) of `12180c6` and of the LED fix `8da49f7`, each with a
+counters) of `12180c6` and of the first LED fix `8da49f7` (even dimming plus a slower
+quality-LED PWM; Beta 3 keeps only the even dimming, the PWM change moved to Beta 4), each with a
 qualification Hygrostat profile, then the Beta 2
 release image (`2558dd77…`) put back, verified, with the calibration checked
 at the end of each run. Budget 120,000 cycles per block.
@@ -282,7 +283,7 @@ at the end of each run. Budget 120,000 cycles per block.
 | Recent notes CPU: the same melody with the attenurandomizer clockwise (follow) and counter-clockwise (Recent notes) | `12180c6` | Peaks 32,816 (follow) and 32,552 (Recent notes); the Recent notes mean 85 cycles higher (0.07 point) |
 | Recent notes, stepped 16-note melody, 1.25 s per note (91 steps judged) | `12180c6` | Pass: 96.7% of steps sounded only pitch classes of the last eight notes |
 | Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail, known limitation (#243): 28.6% of steps met that rule; mid-glide pitches register as notes |
-| Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7; CCR 129/129/118 as computed |
+| Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7 (not in Beta 3); CCR 129/129/118 as computed, the same in Beta 3 |
 | Quality LED registers at 100% and 33%, and quality 0 at all three levels | `8da49f7` | Pending |
 | Noise floor at 66% against 100% LED brightness | `8da49f7` | Pending: the run stopped at its first noise check, a fault in the check itself |
 | Plaits Speech word-bank change (#225) | `8da49f7` | Pending |

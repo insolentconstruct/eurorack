@@ -12,7 +12,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Random pitch steps gains Recent notes (#220): with PITCH patched, each new counter-clockwise grain plays one of the last one to eight notes sent to PITCH. Page 1 DRY/WET is now in thirds: Free, Fifths and octaves (middle), Recent notes. Beta 2 reads a saved Recent notes as Free.
 - Plaits synth banks (#190): FEEDBACK selects one of eight models in the green, red or yellow bank, as on Plaits, instead of all 24; [A]+FREEZE steps the bank during Plaits synth play and keeps FREEZE. The bank is saved; Hygrostat chooses the starting bank (green by default).
 - With Version at boot on, the light-blue cue flashes once, then three times for Beta 3.
-- At 66% and 33% LED brightness, the quality LED dims every colour alike and runs slower PWM (117 kHz) to reduce the pink tint of dimmed white (#240); 100% is unchanged.
+- At 66% and 33% LED brightness, the quality LED no longer halves white, so every colour dims by the same factor (#240); 100% is unchanged.
 
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 

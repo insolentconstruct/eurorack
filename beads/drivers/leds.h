@@ -84,9 +84,6 @@ class Leds {
     }
   }
 
-  // Slower RGB PWM when dimmed, aimed at the pink tint of dimmed white.
-  void SlowMediaPwm(bool slow);
-
   inline void set(Led led, uint8_t intensity) {
     intensity_[led] = intensity;
   }
