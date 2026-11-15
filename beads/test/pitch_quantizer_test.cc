@@ -413,21 +413,25 @@ void TestRecentNotes() {
   }
   // A glide counts where it stops, not on the way (#243): 0.3 s over two
   // semitones, then a second over one.
-  for (int i = 1; i <= 300; ++i) {
-    Hold(-31.0f + 2.0f * float(i) / 300.0f, 1, 1.0f);
-  }
-  Hold(-29.0f, 50, 1.0f / 7.0f);
-  for (int i = 0; i < 200; ++i) {
-    const float note = RandomStep(0.0f);
-    CHECK(note == -29.0f || note == -31.0f);
-  }
-  for (int i = 1; i <= 1000; ++i) {
-    Hold(-29.0f + float(i) / 1000.0f, 1, 1.0f);
-  }
-  Hold(-28.0f, 250, 1.0f / 7.0f);
-  for (int i = 0; i < 200; ++i) {
-    const float note = RandomStep(0.0f);
-    CHECK(note == -28.0f || note == -29.0f);
+  const float glide_from[2] = { -31.0f, -29.0f };
+  const int glide_time[2] = { 300, 1000 };
+  const int glide_hold[2] = { 50, 250 };
+  for (int g = 0; g < 2; ++g) {
+    const float to = glide_from[g] + float(2 - g);
+    for (int i = 1; i <= glide_time[g]; ++i) {
+      Hold(glide_from[g] + float(2 - g) * float(i) / float(glide_time[g]), 1,
+          1.0f);
+    }
+    Hold(to, glide_hold[g], 0.0f);
+    CHECK(RandomStep(0.0f) == to);
+    Hold(to, 1, 1.0f / 7.0f);
+    int seen_from = 0;
+    for (int i = 0; i < 200; ++i) {
+      const float note = RandomStep(0.0f);
+      CHECK(note == to || note == glide_from[g]);
+      seen_from += note == glide_from[g];
+    }
+    CHECK(seen_from > 50 && seen_from < 150);
   }
   // Switching away and back forgets the glide: a held CV counts in 10 ms.
   for (int i = 1; i <= 100; ++i) {
