@@ -1315,12 +1315,6 @@ cases = [
   ('TestDefaultLedIdentity', 'options', 'beads/drivers/leds.h',
     'if (!level) {',
     'if (false) {'),
-  ('TestDefaultLedIdentity', 'options', 'beads/ui.cc',
-    'leds_.SlowMediaPwm(level != 0);', 'leds_.SlowMediaPwm(true);'),
-  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
-    'leds_.SlowMediaPwm(level != 0);', 'leds_.SlowMediaPwm(false);'),
-  ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
-    'uint8_t level = 0;', 'uint8_t level = 1;'),
   ('TestBetaOptionPages', 'options', 'beads/options.cc',
     'while (value < 2 &&\n'
     '                pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand)',

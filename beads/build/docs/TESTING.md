@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 20 host programs, 299 named test sections, 2,540
-assertion sites and 487 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 20 host programs, 299 named test sections, 2,536
+assertion sites and 484 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `4ae18aa`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43669704688)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43669704697)
 detected all 487 faults across eight shards. Named sections and assertion sites
@@ -83,7 +83,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (487 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (484 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -267,7 +267,8 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 ### Beta 3
 
 **Images** (2026-11-14). Timing builds (the release code plus DWT cycle
-counters) of `12180c6` and of the LED fix `8da49f7`, each with a
+counters) of `12180c6` and of the first LED fix `8da49f7` (even dimming plus a slower
+quality-LED PWM; Beta 3 keeps only the even dimming, the PWM change moved to Beta 4), each with a
 qualification Hygrostat profile, then the Beta 2
 release image (`2558dd77…`) put back, verified, with the calibration checked
 at the end of each run. Budget 120,000 cycles per block.
@@ -282,7 +283,7 @@ at the end of each run. Budget 120,000 cycles per block.
 | Recent notes CPU: the same melody with the attenurandomizer clockwise (follow) and counter-clockwise (Recent notes) | `12180c6` | Peaks 32,816 (follow) and 32,552 (Recent notes); the Recent notes mean 85 cycles higher (0.07 point) |
 | Recent notes, stepped 16-note melody, 1.25 s per note (91 steps judged) | `12180c6` | Pass: 96.7% of steps sounded only pitch classes of the last eight notes |
 | Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail (#243): 28.6% of steps met that rule; mid-glide pitches registered as notes. The glide rule now in Beta 3 is not yet rerun on the module |
-| Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7; CCR 129/129/118 as computed |
+| Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7 (not in Beta 3); CCR 129/129/118 as computed, the same in Beta 3 |
 | Quality LED registers at 100% and 33%, and quality 0 at all three levels | `8da49f7` | Pending |
 | Noise floor at 66% against 100% LED brightness | `8da49f7` | Pending: the run stopped at its first noise check, a fault in the check itself |
 | Plaits Speech word-bank change (#225) | `8da49f7` | Pending |

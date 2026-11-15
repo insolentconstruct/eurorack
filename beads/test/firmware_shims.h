@@ -35,12 +35,6 @@
 
 #include "beads/drivers/leds.h"
 
-// TIM1 prescaler choice: false is stock 937.5 kHz.
-inline bool& TestSlowMediaPwm() {
-  static bool slow = false;
-  return slow;
-}
-
 #ifndef BEADS_TEST_CHANNEL_SHIMS_ONLY
 namespace stmlib {
 SystemClock system_clock;
@@ -53,7 +47,6 @@ bool Leds::Init() {
 }
 void Leds::Clear() { std::fill(intensity_, intensity_ + LED_LAST, 0); }
 void Leds::Write() { }
-void Leds::SlowMediaPwm(bool slow) { TestSlowMediaPwm() = slow; }
 }  // namespace beads
 #endif  // BEADS_TEST_CHANNEL_SHIMS_ONLY
 

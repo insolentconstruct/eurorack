@@ -335,8 +335,7 @@ brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). T
 Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
 frame, including options and warning displays, and previews while turning. Off
 and Fixed 100% preserve every stock LED value. At 66% and 33%, every quality
-colour dims by the same factor, and the quality LED's PWM runs at 117 kHz
-instead of 937.5 kHz to reduce the pink tint of dimmed white (#240). UI priority
+colour dims by the same factor; white is no longer halved (#240). UI priority
 is options and storage indications, manual meters, boot cue, delay cue, pitch notch, then
 quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
 cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms
