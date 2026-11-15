@@ -288,14 +288,31 @@ at the end of each run. Budget 120,000 cycles per block.
 | Noise floor at 66% against 100% LED brightness | `8da49f7` | Pending: the run stopped at its first noise check, a fault in the check itself |
 | Plaits Speech word-bank change (#225): inputs unplugged, TIME stepped through the word banks every second | `c9608d0` | Fail: callback peak 203,724 (169.8%) against 38,428 (32.0%) with the bank held; fixed after `c9608d0` (word banks decode over several blocks), not yet re-measured on a module |
 
-**CPU ceiling at 48 kHz** (2026-11-14, Bright digital). A test build of Beta 3
-(`961bf6e`) replaced the audio processing with a test tone and held the
-callback at a set length, stepped by 600 cycles, 60 s per step. Firmware
-counters flag a block whose first left sample is written after the DAC DMA
-has read it. Clean up to a callback peak of 108,968 cycles (90.8%); the first
-late block came at 109,588 (91.3%, one block in 60 s), and from 112,590
-(93.8%) most blocks were late. No SAI underrun at any step. The 32 kHz
-and 24 kHz qualities were not measured on the module.
+**CPU ceiling** (2026-11-15). Test builds of Beta 3 before the Speech fix
+(`b92c048`, and `f547e2a` with the 2024 grain stealing restored) held the
+callback at set lengths. Firmware counters flag a block whose first left
+sample is written after the DAC DMA has read it. Each edge was found twice;
+a first 48 kHz run (2026-11-14, `961bf6e`) agreed within 100 cycles.
+
+| Codec rate (qualities) | Clean up to | First late block |
+|---|---:|---:|
+| 48 kHz (Bright digital, Sunny tape, synths) | 108,908 (90.8%) | 109,504 (91.3%) |
+| 32 kHz (Cold digital) | 103,935 (86.6%) | 104,520 (87.1%) |
+| 24 kHz (Scorched cassette) | 99,182 (82.7%) | 99,762 (83.1%) |
+
+Heavy granular patch per quality: callback peak, and margin in points to
+that rate's clean edge. The first left sample was on time in every row.
+
+| Quality | Beta 3 | Margin | 2024 grain stealing (#237) | Margin |
+|---|---:|---:|---:|---:|
+| Bright digital | 98,625 (82.2%) | 8.6 | 102,751 (85.6%) | 5.1 |
+| Sunny tape | 75,598 (63.0%) | 27.8 | 79,833 (66.5%) | 24.2 |
+| Cold digital | 77,679 (64.7%) | 21.9 | not measured | – |
+| Scorched cassette | 61,116 (50.9%) | 31.7 | 65,380 (54.5%) | 28.2 |
+
+The 2024 grain stealing costs about 3.5 to 4 points. The granular code is
+unchanged since these builds but the code layout moved, so the heavy rows
+will be rerun on the final build.
 
 Not yet checked on the module for Beta 3: install by audio file, upgrade
 from Beta 2, Off-equals-stock output, Plaits banks, custom scales and the
