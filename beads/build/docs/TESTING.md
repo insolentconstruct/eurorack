@@ -69,8 +69,8 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | gain | 6 | 29 |
 | granular | 26 | 120 |
 | mix | 10 | 49 |
-| options | 69 | 790 |
-| pitch_quantizer | 7 | 69 |
+| options | 69 | 793 |
+| pitch_quantizer | 7 | 73 |
 | plaits_synth | 4 | 37 |
 | processor | 11 | 45 |
 | profile | 6 | 108 |
@@ -78,7 +78,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **299** | **2,529** |
+| **Total** | **299** | **2,536** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
