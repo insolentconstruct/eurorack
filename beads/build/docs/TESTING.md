@@ -9,10 +9,10 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased Beta 3 application `54042fcb…` and WAV
-`9e743c74…`. The release documentation and generated guides pass their
-checker. Beta 3 module results are pending; the module results below are for
-Beta 2 and earlier.
+This source pins its own unreleased Beta 3 application `9b3c0981…` and WAV
+`22b12698…`. The release documentation and generated guides pass their
+checker. Beta 3 module results are under [On a module](#beta-3); some
+checks are still pending.
 
 Tests are separated into desktop/CI checks, STM32H7 development-board checks,
 unattended module measurements and attended module checks. The development
@@ -102,7 +102,7 @@ thresholds, SEED unlatched with the latch options and fade, and the smooth
 PITCH law without the notch cue, plus the Off defaults; and the Mix law
 and Reverb input choices (IDs 32-33) from the profile. Recent notes is checked from the CV input to the grains.
 Factory reference output and finite custom-scale pitch conversion have
-focused checks. Beta 3 module checks are pending.
+focused checks. Beta 3 module results are under [On a module](#beta-3).
 
 ## Coverage of the manual
 
@@ -266,8 +266,39 @@ About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 se
 
 ### Beta 3
 
-Pending: module qualification of the Beta 3 image is in progress. Results
-will be added from measured runs only.
+**Images** (2026-11-14). Timing builds (the release code plus DWT cycle
+counters) of `12180c6` and of the LED fix `8da49f7`, each with a
+qualification Hygrostat profile, then the Beta 2
+release image (`2558dd77…`) put back, verified, with the calibration checked
+at the end of each run. Budget 120,000 cycles per block.
+
+| Check | Image | Result |
+|---|---|---|
+| Options timeout, 5 s: open the pages, hands off | `12180c6` | Pass: the pages closed by themselves 5.0 s after the release (4,951–5,054 ms) |
+| Pages 5–7: four [M] taps about 2 s apart | `12180c6` | Pass: the taps kept the pages open (18.7 s in all), then they closed by themselves. The bench does not read which page is shown |
+| Option cost: Off, IDs 23, 26, 28, 30, 32 and 33 each alone, all On, Off again (granular stress fixture, 4,096 blocks each) | `12180c6` | Callback peaks 84.2–85.1%; each row's mean and peak within about 0.5 point of Off; the two Off means agree within 0.1%. The fade was armed outside delay mode and attacks had a silent input, so delay-mode fade cost and attack-driven grain counts are not measured |
+| Hot granular: pinned music at about 5 V, FEEDBACK 0.9, heavy granular CVs, Snap, all options On (140 s) | `12180c6` | Pass: callback peak 98,450 (82.0%), no DAC underrun; the input limiter engaged. The click scan was not sensitive at this output level |
+| Hot granular, rerun | `8da49f7` | Pass: callback peak 98,308 (81.9%), no DAC underrun |
+| Recent notes CPU: the same melody with the attenurandomizer clockwise (follow) and counter-clockwise (Recent notes) | `12180c6` | Peaks 32,816 (follow) and 32,552 (Recent notes); the Recent notes mean 85 cycles higher (0.07 point) |
+| Recent notes, stepped 16-note melody, 1.25 s per note (91 steps judged) | `12180c6` | Pass: 96.7% of steps sounded only pitch classes of the last eight notes |
+| Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail, known limitation (#243): 28.6% of steps met that rule; mid-glide pitches register as notes |
+| Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7; CCR 129/129/118 as computed |
+| Quality LED registers at 100% and 33%, and quality 0 at all three levels | `8da49f7` | Pending |
+| Noise floor at 66% against 100% LED brightness | `8da49f7` | Pending: the run stopped at its first noise check, a fault in the check itself |
+| Plaits Speech word-bank change (#225) | `8da49f7` | Pending |
+
+**CPU ceiling at 48 kHz** (2026-11-14, Bright digital). A test build of Beta 3
+(`961bf6e`) replaced the audio processing with a test tone and held the
+callback at a set length, stepped by 600 cycles, 60 s per step. Firmware
+counters flag a block whose first left sample is written after the DAC DMA
+has read it. Clean up to a callback peak of 108,968 cycles (90.8%); the first
+late block came at 109,588 (91.3%, one block in 60 s), and from 112,590
+(93.8%) most blocks were late. No SAI underrun at any step. The 32 kHz
+and 24 kHz qualities were not measured on the module.
+
+Not yet checked on the module for Beta 3: install by audio file, upgrade
+from Beta 2, Off-equals-stock output, Plaits banks, custom scales and the
+Gentler dry/wet and grains-only reverb sound.
 
 ### Beta 2
 
