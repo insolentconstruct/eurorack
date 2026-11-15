@@ -334,8 +334,12 @@ when Adjustable or set via Hygrostat when Fixed. There is no power-on
 brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
 Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
 frame, including options and warning displays, and previews while turning. Off
-and Fixed 100% preserve every stock LED value. At 66% and 33%, every quality
-colour dims by the same factor; white is no longer halved (#240). UI priority
+and Fixed 100% preserve every stock LED value. At 66% and 33%, white is no
+longer halved (#240): the quality LED's red scales by level^1.5 (truncated),
+and its lit green and blue by the level plus 12 x (1 - level), i.e. +4 at 66%
+and +8 at 33%; the other LEDs scale by the level. The rule was chosen by eye on
+a module (white 102/130/141 at 66%, 36/71/76 at 33%); a light-sensor check is
+planned for Beta 4. UI priority
 is options and storage indications, manual meters, boot cue, delay cue, pitch notch, then
 quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
 cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms

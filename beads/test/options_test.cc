@@ -55,6 +55,18 @@ uint32_t test_writes = 0;
 
 using namespace beads;
 
+// A dimmed quality LED channel (0 red, 1 green, 2 blue) at percent: red *
+// level^1.5; lit green and blue at the level plus 12 * (1 - level), rounded.
+int DimmedMedia(int channel, uint8_t c, int percent) {
+  const double p = percent / 100.0;
+  if (percent == 100) {
+    return c;
+  } else if (channel == 0) {
+    return int(c * pow(p, 1.5));
+  }
+  return c * percent / 100 + (c ? int(12.0 * (1.0 - p) + 0.5) : 0);
+}
+
 STATIC_ASSERT(sizeof(State) == 24, stat_size);
 STATIC_ASSERT(offsetof(State, media) == 0, media);
 STATIC_ASSERT(offsetof(State, assignable_cv_destination) == 1, assignment);
@@ -2197,11 +2209,11 @@ void TestOptionsPalette() {
       const uint8_t level = r.ui.options_.Value(OPTION_BRIGHTNESS);
       const int percent = level == 0 ? 100 : level == 1 ? 66 : 33;
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-          (lit ? v.color.r * percent / 100 : 0));
+          (lit ? DimmedMedia(0, v.color.r, percent) : 0));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-          (lit ? v.color.g * percent / 100 : 0));
+          (lit ? DimmedMedia(1, v.color.g, percent) : 0));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
-          (lit ? v.color.b * percent / 100 : 0));
+          (lit ? DimmedMedia(2, v.color.b, percent) : 0));
     }
   }
 }
@@ -3426,11 +3438,25 @@ void TestBetaOptionsLeds() {
     full.Tick(1, true);
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    // Bright digital quality is white; every channel dims alike.
+    // Bright digital white {192, 192, 208}, as judged on the module.
+    const uint8_t white[3][3] = {
+      { 192, 192, 208 }, { 102, 130, 141 }, { 36, 71, 76 }
+    };
     for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
-      CHECK(full.ui.leds_.intensity_[i] ==
-            (i == LED_MEDIA_B ? 208 : 192) * percentages[level] / 100);
+      CHECK(full.ui.leds_.intensity_[i] == white[level][i - LED_MEDIA_R]);
     }
+    // Every quality colour; unlit channels stay dark.
+    for (int media = 0; media < 4; ++media) {
+      full.settings.mutable_state()->media = media;
+      full.Tick(1, true);
+      const Leds::Color color = full.ui.media_palette_[media];
+      const uint8_t c[3] = { color.r, color.g, color.b };
+      for (int i = 0; i < 3; ++i) {
+        CHECK(full.ui.leds_.intensity_[LED_MEDIA_R + i] ==
+            DimmedMedia(i, c[i], percentages[level]));
+      }
+    }
+    full.settings.mutable_state()->media = 3;
     full.ui.mode_ = Ui::MODE_STORAGE_WARNING;
     while (!(stmlib::system_clock.milliseconds() & 64)) {
       stmlib::system_clock.Tick();
@@ -3438,8 +3464,19 @@ void TestBetaOptionsLeds() {
     full.ui.UpdateLeds();
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] ==
-          255 * percentages[level] / 100);
+    const uint8_t warning_red[3] = { 255, 136, 48 };
+    CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] == warning_red[level]);
+  }
+  // Red over every intensity at both levels, as the float rule truncates.
+  for (int level = 1; level < 3; ++level) {
+    for (int value = 0; value < 256; ++value) {
+      Leds leds;
+      leds.Clear();
+      leds.intensity_[LED_MEDIA_R] = value;
+      leds.Scale(level);
+      CHECK(leds.intensity_[LED_MEDIA_R] ==
+          DimmedMedia(0, value, percentages[level]));
+    }
   }
   Rig gain(false);
   gain.settings.SetFeatureValue(FEATURE_ATTENUATION, 1);
@@ -3529,9 +3566,9 @@ void TestBetaOptionPages() {
           CHECK(r.ui.options_.Value(OPTION_BRIGHTNESS) == value);
           const int percent[] = { 100, 66, 33 };
           CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-              (value ? 255 * percent[value] / 100 : 0));
+              DimmedMedia(0, value ? 255 : 0, percent[value]));
           CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-              (value < 2 ? 255 * percent[value] / 100 : 0));
+              DimmedMedia(1, value < 2 ? 255 : 0, percent[value]));
         }
         r.Tick(1002, true);
         CHECK(r.settings.FeatureValue(features[f]) == value);
