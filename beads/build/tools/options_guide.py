@@ -247,7 +247,7 @@ DETAILS = [
     "and when a change is saved.",
     "After the stored values, [A] shows the page's first setting, then "
     "the last knob you took over. The first value of every setting is steady green. Other "
-    "values use yellow and red. The factory scale bank uses warm major and "
+    "values use yellow and red. The default scale bank uses warm major and "
     "cool minor colours, with slow blinks for pentatonics. Raag Shri is two "
     "pink pulses and a pause. Unused knobs "
     "leave the LED alone.",
@@ -259,9 +259,9 @@ DETAILS = [
     "wavetable oscillator and delay pitch keep their pitch. The root is "
     "the unshifted pitch, and +1 V is still one octave. Pelog and the "
     "raags are microtonal.",
-    "Hygrostat can replace the factory scale bank, change its order and choose "
+    "Hygrostat can replace the default scale bank, change its order and choose "
     "each scale's colour and blink pattern. Use the guide made with that "
-    "profile; this guide lists the factory bank.",
+    "profile; this guide lists the default bank.",
     "Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH "
     "randomness relative to the PITCH setting. For a C note, this gives C/G "
     "across octaves; G below C is a downward fourth. Recent notes, with "

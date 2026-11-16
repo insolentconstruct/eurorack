@@ -8,7 +8,7 @@ are checked by host tests, not yet on a module.
 
 ## Identity and limits
 
-The bank has up to 14 entries, with stable IDs 2 through 15. Factory scales keep
+The bank has up to 14 entries, with stable IDs 2 through 15. Default scales keep
 IDs 2 through 9. Bank order controls SEED stepping, not saved identity: moving
 an entry does not change the selected scale. An omitted selection falls back
 to Off. Editing a definition deliberately changes what that ID plays.
@@ -34,12 +34,12 @@ separate. Version 1 profiles retain their legacy 512-byte parser bounds.
 | 5 | Feature entry count |
 | 6–7 | Payload bytes: 6 × feature count + 144 × scale count |
 | 8–11 | Profile format, little endian (1) |
-| 12 | Custom bank: 0 factory, 1 explicit bank |
+| 12 | Custom bank: 0 default, 1 explicit bank |
 | 13 | Scale count, 0–14 |
 | 14–15 | Zero |
 
 Six-byte feature entries follow the header, then the scale records, then CRC32
-of the header and payload. Factory mode requires no scale records. An explicit
+of the header and payload. Default mode requires no scale records. An explicit
 empty bank has custom-bank byte 1 and count 0. Payload bounds are checked before
 the checksum or any record reads.
 
@@ -66,4 +66,4 @@ Invalid names, values, IDs, lengths, reserved fields or checksums are rejected.
 The fixed Fifths and octaves random-interval option remains independent of an
 edited scale with ID 2. Generated guides and shared links must carry the same
 bank used by the firmware. Custom banks need their own CPU assessment; historical
-factory-scale costs do not establish the maximum cost of a 24-degree bank.
+default-scale costs do not establish the maximum cost of a 24-degree bank.
