@@ -102,7 +102,7 @@ ATTRIBUTION = (
 STEPS = [
     "Open: hold the CV-assign button [M] {hold}; all three mix LEDs pulse. Release.",
     "Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, "
-    "then all three.",
+    "then FEEDBACK and DRY/WET together.",
     "[A] shows each stored value in turn. Turn a mix knob (not a big "
     "knob) to change it.",
     "Close: hold [M] {hold} or press another button. On page 1 with Pitch "
@@ -113,9 +113,13 @@ NOTES = [
     "It saves by itself; wait before powering off. Move a knob more than "
     "a tenth of its travel before it responds.",
 ]
+CUSTOM_PAGES = (
+    "Custom layouts can add pages 5-7: FEEDBACK and REVERB, DRY/WET and "
+    "REVERB, then all three. Taps skip empty pages."
+)
 PRINT_STEPS = [
     "Open: hold [M] {hold} (all mix LEDs pulse), release.",
-    "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then all three pulse.",
+    "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then FEEDBACK+DRY/WET.",
     "[A] shows values; turn a mix knob to edit.",
     "Close: hold [M] {hold} or press another button; release before normal use. "
     "Page 1 Scale: SEED steps.",
@@ -236,8 +240,11 @@ DETAILS = [
     "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
     "Settings save by themselves about a second after you stop turning. "
-    "Closing keeps your changes, and there is no timeout or cancel. The "
-    "page LED flashes when you open, close, and when a change is saved.",
+    "Closing keeps your changes, and there is no cancel. A Hygrostat "
+    "profile can also close the pages after a chosen time without "
+    "interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); "
+    "by default they stay open. The page LED flashes when you open, close, "
+    "and when a change is saved.",
     "After the stored values, [A] shows the page's first setting, then "
     "the last knob you took over. The first value of every setting is steady green. Other "
     "values use yellow and red. The factory scale bank uses warm major and "
@@ -257,7 +264,11 @@ DETAILS = [
     "profile; this guide lists the factory bank.",
     "Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH "
     "randomness relative to the PITCH setting. For a C note, this gives C/G "
-    "across octaves; G below C is a downward fourth. Free and clockwise "
+    "across octaves; G below C is a downward fourth. Recent notes, with "
+    "PITCH patched, gives each new grain one of the last notes sent to "
+    "PITCH, above the PITCH setting; turn further counter-clockwise to "
+    "choose from more of them (up to eight). Unpatched it plays as Free. "
+    "Free and clockwise "
     "stay continuous before Pitch scale, which applies afterward and can "
     "change the interval. This affects granular playback and Beads wavetable "
     "grains, not the continuous oscillator, Plaits or Spectral.",
@@ -271,6 +282,10 @@ DETAILS = [
     "Clouds-style changes the reverb character and, until a diffusion "
     "amount is set with [A]+REVERB, adds grain diffusion. Switching briefly "
     "fades the sound and clears the tail.",
+    "A Hygrostat profile can make DRY/WET bring the grains in more gently "
+    "([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before "
+    "DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); "
+    "fully dry then has no reverb.",
     "Frozen feedback Evolving runs frozen grains through a slowly moving "
     "all-pass loop; FEEDBACK sets how far they drift.",
     "Processor Spectral: Clouds' spectral processing replaces the grains. "
@@ -282,7 +297,8 @@ DETAILS = [
     "when the page closes, clearing the recording; a frozen buffer saved "
     "to flash comes back with Granular.",
     "Synth Plaits plays six Plaits voices instead of the wavetable "
-    "synth: FEEDBACK picks one of 24 models, TIME, SIZE and SHAPE set "
+    "synth: FEEDBACK picks one of the eight models in the current bank, "
+    "TIME, SIZE and SHAPE set "
     "HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE "
     "sustains. With DENSITY at noon the last voice drones until SEED plays "
     "a note.",
@@ -313,7 +329,15 @@ GESTURES = [
         "Buffer trim",
         "Hold [A], then press FREEZE [B] to start a fresh recording window. "
         "The next freeze keeps only what was recorded since.",
-        "Hold [A], press FREEZE [B]: the next freeze keeps only what follows.",
+        "Hold [A], press FREEZE [B]; Plaits play: next bank, green/red/yellow.",
+    ),
+    (
+        "Plaits banks",
+        "With the Plaits synth playing, FEEDBACK selects one of eight models "
+        "and [A]+FREEZE [B] steps the bank instead of trimming: green, red, "
+        "yellow, then green again. [A] flashes the bank colour; FREEZE "
+        "stays as it was.",
+        "In Plaits play, hold [A], press FREEZE [B]: green, red, yellow.",
     ),
     (
         "Stereo width",
@@ -355,9 +379,14 @@ def instructions(lines):
     return [line.format(hold="3 seconds") for line in lines]
 
 
+def lit_leds(led):
+    """Mix LEDs named by a page's LED column."""
+    return KNOBS if led == "all three" else led.split(" and ")
+
+
 def page_leds(knobs):
     led = next(iter(knobs.values()))[0]["LED"]
-    return led + (" LEDs" if led == "all three" else " LED")
+    return led + (" LEDs" if len(lit_leds(led)) > 1 else " LED")
 
 
 def markdown(rows, pages):
@@ -378,6 +407,8 @@ def markdown(rows, pages):
     out += [
         "",
         *instructions(NOTES),
+        "",
+        CUSTOM_PAGES,
         "",
         "The quality LED [A] shows the setting value: steady, slow blink, "
         "fast blink or two pulses; "
@@ -592,15 +623,16 @@ class Drawing:
 
     def marker(self, x, y, led):
         """Mix LEDs on the title line: filled is pulsing."""
+        single = len(lit_leds(led)) == 1
         for knob, label, width in zip(KNOBS, ("F", "D/W", "R"), (10, 31, 11)):
             self.text(x, y, label, 15)
-            lit = led in (knob, "all three")
+            lit = knob in lit_leds(led)
             self.circle(x + width + 11, y - 5, 7, "#222" if lit else "white")
             x += width + 40
-            if lit and led != "all three":
+            if lit and single:
                 self.text(x - 16, y, "pulsing", 15, colour="#555")
                 x += 56
-        if led == "all three":
+        if not single:
             self.text(x - 16, y, "pulsing", 15, colour="#555")
 
     def panel(self, x, y, scale):
@@ -792,7 +824,7 @@ def svg(pages, mobile=False):
                 heights[2] = d.warning(
                     margin + 660, y + heights[2] + 14, 315, 34
                 ) - y
-            y += max(heights) + 9
+            y += max(heights) + 5
     y -= 16
     for line in textwrap.wrap(
         "Author: Insolent Construct • Control sketch • " + ATTRIBUTION,

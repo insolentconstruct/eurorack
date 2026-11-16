@@ -37,7 +37,10 @@
 
 #define private public
 #include "beads/dsp/plaits_synth.h"
+#include "plaits/dsp/speech/lpc_speech_synth_controller.h"
+#include "plaits/dsp/speech/lpc_speech_synth_words.h"
 #undef private
+#include "stmlib/utils/buffer_allocator.h"
 
 using namespace beads;
 
@@ -47,7 +50,7 @@ const uint32_t kNoteHashes[kNumPlaitsModels] = {
   0x2a2d2972, 0x877170b5, 0xc08556f5, 0x8a883e64,
   0x7707b2a5, 0x707f8c2a, 0xbbaf2a21, 0x2c51fa9c,
   0x64f3cb53, 0x2f58cfb9, 0x394b366a, 0xa9f0b3f3,
-  0xc2099a1b, 0x9736e943, 0x0e7b8cbe, 0x885b531a,
+  0xc2099a1b, 0x9736e943, 0x0e7b8cbe, 0x2109bc86,
   0x3a9917f1, 0xbc92403f, 0x9500f71a, 0x71f98e78,
   0x1bc184c0, 0xe38220f5, 0x773a4f5a, 0xd80154f8
 };
@@ -55,7 +58,7 @@ const uint32_t kDroneHashes[kNumPlaitsModels] = {
   0x308767d4, 0xd33bb1f2, 0x73fd3dc2, 0xb39ab94e,
   0x697b7678, 0x3393ec36, 0x81955cfa, 0x04b4df54,
   0xd28d0da8, 0xf25eb15a, 0x7d7d6f57, 0x086d104d,
-  0x21b599bc, 0xcdf47484, 0xda4689e1, 0x5b9c1a8d,
+  0x21b599bc, 0xcdf47484, 0xda4689e1, 0xa0f5c1bf,
   0x1cae6339, 0x6740b0fa, 0x98eeb4e3, 0x093a4c92,
   0xf8ddbb0e, 0xa08d1e70, 0x926e7d00, 0x19ecc742
 };
@@ -107,8 +110,17 @@ void Block(const Controls& c, FloatFrame* out) {
       c.p, c.mix, out, kBlockSize);
 }
 
+// Banks in Plaits' order: green, red, yellow.
+const int kBankFirst[kNumPlaitsBanks] = { 8, 16, 0 };
+
+inline int BankOf(int model) {
+  return model >= 16 ? 1 : (model >= 8 ? 0 : 2);
+}
+
+// Selects the model's bank and returns FEEDBACK at the model's centre.
 inline float ModelCentre(int model) {
-  return (float(model) + 0.5f) / float(kNumPlaitsModels);
+  synth.set_bank(BankOf(model));
+  return (float(model - kBankFirst[BankOf(model)]) + 0.5f) / kPlaitsBankSize;
 }
 
 bool GuardIntact() {
@@ -234,38 +246,102 @@ void TestVoiceAllocation() {
   CHECK(!synth.drone_);
 }
 
-// FEEDBACK selects one of 24 models. Moving up, model m + 1 starts at
-// (m + 1.048) / 24; moving down, model m returns at (m + 0.952) / 24.
-void TestModelDetents() {
-  test_checker.Start("TestModelDetents");
+// FEEDBACK picks one of eight models per bank (#190): green 8-15 at power-on,
+// red 16-23, yellow 0-7; ends stay in the bank and a step keeps the detent.
+void TestBankDetents() {
+  test_checker.Start("TestBankDetents");
   Reset();
+  CHECK(synth.first_model_ == 8);
   Controls c;
   FloatFrame out[kBlockSize];
-  const int kSteps = 24000;
-  int model = 0;
-  for (int i = 0; i <= kSteps; ++i) {
-    c.mix.feedback = float(i) / kSteps;
-    Block(c, out);
-    const int selected = synth.model_quantizer_.quantized_value();
-    if (selected != model) {
-      CHECK(selected == model + 1);
-      CHECK(fabsf(c.mix.feedback * 24.0f - (model + 1.048f)) < 0.002f);
-      model = selected;
+  const int kSteps = 8000;
+  for (int pass = 0; pass < 2; ++pass) {
+    for (int bank = 0; bank < kNumPlaitsBanks; ++bank) {
+      const int first = kBankFirst[bank];
+      // Switch at either end of the knob from the previous bank.
+      const int previous = (bank + kNumPlaitsBanks - 1) % kNumPlaitsBanks;
+      for (int end = 0; end < 2; ++end) {
+        synth.set_bank(previous);
+        c.mix.feedback = end ? 1.0f : 0.0f;
+        Block(c, out);
+        synth.set_bank(bank);
+        Block(c, out);
+        CHECK(synth.patch_[synth.active_voice_].model ==
+            first + (end ? kPlaitsBankSize - 1 : 0));
+      }
+      int model = first + kPlaitsBankSize - 1;
+      int steps = 0;
+      for (int i = kSteps; i >= 0; --i) {
+        c.mix.feedback = float(i) / kSteps;
+        Block(c, out);
+        const int selected = first + synth.model_quantizer_.quantized_value();
+        if (selected != model) {
+          CHECK(selected == model - 1);
+          model = selected;
+          ++steps;
+        }
+        CHECK(synth.patch_[synth.active_voice_].model == model);
+      }
+      CHECK(model == first && steps == kPlaitsBankSize - 1);
+      for (int i = 0; i <= kSteps; ++i) {
+        c.mix.feedback = float(i) / kSteps;
+        Block(c, out);
+        const int selected = first + synth.model_quantizer_.quantized_value();
+        if (selected != model) {
+          // Eight equal detents; steps up one hysteresis late.
+          CHECK(selected == model + 1);
+          const float position = (selected - first + 0.048f) / 8.0f;
+          CHECK(fabsf(c.mix.feedback - position) < 0.0005f);
+          model = selected;
+        }
+      }
+      CHECK(model == first + kPlaitsBankSize - 1);
     }
-    CHECK(synth.patch_[synth.active_voice_].model == model);
   }
-  CHECK(model == kNumPlaitsModels - 1);
-  for (int i = kSteps; i >= 0; --i) {
-    c.mix.feedback = float(i) / kSteps;
+  // Notes keep the model they started with when the bank changes.
+  Reset();
+  synth.set_bank(1);
+  c.mix.feedback = 1.0f;
+  c.seed = SEED_BUTTON_STATE_ON;
+  Block(c, out);
+  const int voice = synth.active_voice_;
+  CHECK(synth.patch_[voice].model == 23);
+  c.seed = SEED_BUTTON_STATE_OFF;
+  synth.set_bank(2);
+  Block(c, out);
+  CHECK(synth.patch_[voice].model == 23);
+  // Inside the hysteresis band, a bank change keeps the detent.
+  for (int bank = 0; bank < kNumPlaitsBanks; ++bank) {
+    synth.set_bank(0);
+    c.mix.feedback = 0.4f;
     Block(c, out);
-    const int selected = synth.model_quantizer_.quantized_value();
-    if (selected != model) {
-      CHECK(selected == model - 1);
-      CHECK(fabsf(c.mix.feedback * 24.0f - (selected + 0.952f)) < 0.002f);
-      model = selected;
+    c.mix.feedback = 2.98f / 8.0f;
+    Block(c, out);
+    CHECK(synth.model_quantizer_.quantized_value() == 3);
+    synth.set_bank(bank);
+    c.seed = SEED_BUTTON_STATE_ON;
+    Block(c, out);
+    c.seed = SEED_BUTTON_STATE_OFF;
+    CHECK(synth.patch_[synth.active_voice_].model == kBankFirst[bank] + 3);
+  }
+  // Noon is the edge between the fourth and fifth models: each bank step
+  // keeps the side the knob came from, with no jump to another model.
+  for (int from_above = 0; from_above < 2; ++from_above) {
+    synth.set_bank(0);
+    c.mix.feedback = from_above ? 0.6f : 0.4f;
+    Block(c, out);
+    c.mix.feedback = 0.5f;
+    for (int step = 0; step <= kNumPlaitsBanks; ++step) {
+      const int bank = step % kNumPlaitsBanks;
+      synth.set_bank(bank);
+      for (int i = 0; i < 4; ++i) {
+        c.seed = i == 0 ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
+        Block(c, out);
+        CHECK(synth.patch_[synth.active_voice_].model ==
+            kBankFirst[bank] + 3 + from_above);
+      }
     }
   }
-  CHECK(model == 0);
 }
 
 // FREEZE holds a ringing note at its level instead of letting it decay.
@@ -322,9 +398,161 @@ void TestFreezeSustains() {
   CHECK(energy < 1e-6);
 }
 
+// Speech word banks as Mutable Instruments' synchronous Load decodes them:
+// frames, words, FNV-1a of the frames and word boundaries; then the blocks
+// the sliced load takes.
+const int kWordBankFrames[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  229, 229, 524, 604, 926
+};
+const int kWordBankWords[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  7, 11, 26, 26, 22
+};
+const uint32_t kWordBankHashes[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  0x4b953df5, 0xe4c9acc0, 0x762895c2, 0x77b80f2c, 0x1a990b17
+};
+const int kWordBankLoadBlocks[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  8, 8, 17, 19, 29
+};
+// The word that follows a bank change from bank (b + 1) % 5 to bank b, as
+// Mutable Instruments' controller plays it with the change and its trigger
+// kWordBankLoadBlocks[b] - 1 blocks later (GCC 12, -ffp-contract=off).
+const uint32_t kWordBankChangeHashes[LPC_SPEECH_SYNTH_NUM_WORD_BANKS] = {
+  0x11ad03a2, 0xbf169bf8, 0x3a7753d9, 0x3b593c26, 0xf5f71ca8
+};
+
+static uint8_t speech_ram[16384];
+static plaits::LPCSpeechSynthWordBank word_bank;
+static plaits::LPCSpeechSynthController speech;
+
+inline uint32_t Fnv(const void* data, size_t size, uint32_t hash) {
+  const uint8_t* bytes = static_cast<const uint8_t*>(data);
+  while (size--) {
+    hash = (hash ^ *bytes++) * 16777619U;
+  }
+  return hash;
+}
+
+void ResetSpeech() {
+  memset(speech_ram, 0, sizeof(speech_ram));
+  stmlib::Random::Seed(0x12345678);
+  stmlib::BufferAllocator allocator(speech_ram, sizeof(speech_ram));
+  word_bank.Init(plaits::word_banks_, LPC_SPEECH_SYNTH_NUM_WORD_BANKS,
+      &allocator);
+  speech.Init(&word_bank);
+}
+
+// Loads a bank as the controller does, one call per block; returns the calls.
+int LoadWordBank(int bank) {
+  int calls = 0;
+  do {
+    const int before = word_bank.loading_bank_ == bank
+        ? word_bank.num_frames() : 0;
+    const bool was_loading = word_bank.loaded_bank_ != bank;
+    const bool loaded = word_bank.Load(bank);
+    ++calls;
+    CHECK(word_bank.num_frames() - before <=
+        plaits::kLPCSpeechSynthFramesPerLoad);
+    // True once, from the call that completes the bank.
+    CHECK(loaded == (was_loading && !word_bank.loading()));
+  } while (word_bank.loading() && calls < 100);
+  return calls;
+}
+
+bool WordBankIs(int bank) {
+  const uint32_t hash = Fnv(word_bank.frames_,
+      word_bank.num_frames_ * sizeof(plaits::LPCSpeechSynth::Frame),
+      2166136261U);
+  return !word_bank.loading() && word_bank.loaded_bank_ == bank &&
+      word_bank.num_frames_ == kWordBankFrames[bank] &&
+      word_bank.num_words_ == kWordBankWords[bank] &&
+      Fnv(word_bank.word_boundaries_, (word_bank.num_words_ + 1) * sizeof(int),
+          hash) == kWordBankHashes[bank];
+}
+
+void TestWordBankLoads() {
+  test_checker.Start("TestWordBankLoads");
+  for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+    ResetSpeech();
+    CHECK(LoadWordBank(b) == kWordBankLoadBlocks[b]);
+    CHECK(WordBankIs(b));
+    CHECK(!word_bank.Load(b));
+    CHECK(WordBankIs(b));
+  }
+  // A bank change during a load restarts it, even back to the bank that
+  // was loaded before.
+  for (int a = 0; a < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++a) {
+    for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+      for (int calls = 1; calls < 4; ++calls) {
+        ResetSpeech();
+        LoadWordBank(a);
+        for (int i = 0; i < calls; ++i) {
+          word_bank.Load(b);
+        }
+        LoadWordBank(a);
+        CHECK(WordBankIs(a));
+        for (int i = 0; i < calls; ++i) {
+          word_bank.Load(b);
+        }
+        LoadWordBank(b);
+        CHECK(WordBankIs(b));
+      }
+    }
+  }
+}
+
+// A word that ended on bank (b + 1) % 5, then a bank change to b with a
+// trigger: the word plays when the bank is loaded, sample for sample as
+// Mutable Instruments' controller plays it with the change made then.
+void TestWordBankChangeDelaysWord() {
+  test_checker.Start("TestWordBankChangeDelaysWord");
+  for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+    const int a = (b + 1) % LPC_SPEECH_SYNTH_NUM_WORD_BANKS;
+    ResetSpeech();
+    LoadWordBank(a);
+    float excitation[kBlockSize];
+    float out[kBlockSize];
+    const float f0 = 100.0f / 48000.0f;
+    for (int i = 0; i < 12000; ++i) {
+      speech.Render(false, i == 0, a, f0, 0.3f, 0.5f, 0.0f, 0.5f, 0.8f,
+          excitation, out, kBlockSize);
+    }
+    uint32_t hash = 2166136261U;
+    for (int i = 0; i < 8000; ++i) {
+      speech.Render(false, i == 0, b, f0, 0.3f, 0.5f, 0.55f, 0.5f, 0.8f,
+          excitation, out, kBlockSize);
+      hash = Fnv(out, sizeof(out), hash);
+      hash = Fnv(excitation, sizeof(excitation), hash);
+    }
+    CHECK(hash == kWordBankChangeHashes[b]);
+  }
+  // A waiting word is dropped by a Reset, the phonemes, or both.
+  for (int drop = 0; drop < 3; ++drop) {
+    const bool phonemes = drop != 0;
+    ResetSpeech();
+    LoadWordBank(0);
+    float excitation[kBlockSize];
+    float out[kBlockSize];
+    const float f0 = 100.0f / 48000.0f;
+    speech.Render(false, true, 4, f0, 0.3f, 0.5f, 0.55f, 0.5f, 0.8f,
+        excitation, out, kBlockSize);
+    CHECK(word_bank.loading());
+    if (drop != 1) {
+      word_bank.Reset();
+    }
+    for (int i = 0; i < 40; ++i) {
+      speech.Render(false, false, phonemes ? -1 : 4, f0, 0.3f, 0.5f, 0.55f,
+          0.5f, 0.8f, excitation, out, kBlockSize);
+    }
+    CHECK(speech.playback_frame_ == -1);
+    CHECK(speech.remaining_frame_samples_ == 0);
+  }
+}
+
 int main() {
+  TestWordBankLoads();
+  TestWordBankChangeDelaysWord();
   TestVoiceAllocation();
-  TestModelDetents();
+  TestBankDetents();
   TestFreezeSustains();
   TestEveryModelRenders();
   return test_checker.failures() ? 1 : 0;

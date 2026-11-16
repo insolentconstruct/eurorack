@@ -39,7 +39,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -74,7 +83,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -110,7 +128,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -145,7 +172,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -181,7 +217,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -216,7 +261,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -251,7 +305,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -287,7 +350,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -322,7 +394,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [
@@ -342,7 +423,8 @@
       "name": "Random pitch steps",
       "values": [
         "Free (Stock)",
-        "Fifths and octaves"
+        "Fifths and octaves",
+        "Recent notes"
       ],
       "states": [
         "Off",
@@ -361,7 +443,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -560,7 +651,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -639,7 +739,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -695,7 +804,16 @@
         9,
         10,
         11,
-        12
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
       ],
       "amount_slots": [],
       "actions": [],
@@ -722,6 +840,199 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": true
+    },
+    {
+      "id": 25,
+      "issue": 202,
+      "name": "Options page idle timeout",
+      "values": [
+        "Off (stay open)",
+        "5 s",
+        "10 s",
+        "20 s",
+        "30 s"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 26,
+      "issue": 183,
+      "name": "Delay SEED latch fade",
+      "values": [
+        "Switch at once (stock)",
+        "Fade"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 27,
+      "issue": 19,
+      "name": "Input gain at power-on",
+      "values": [
+        "Automatic (stock)",
+        "Manual"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 28,
+      "issue": 58,
+      "name": "Attack sensitivity",
+      "values": [
+        "Normal (default)",
+        "Low",
+        "High"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 29,
+      "issue": 41,
+      "name": "SEED at power-on",
+      "values": [
+        "Latched (stock)",
+        "Unlatched"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 30,
+      "issue": 43,
+      "name": "PITCH knob",
+      "values": [
+        "Notches (stock)",
+        "Smooth"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 31,
+      "issue": 190,
+      "name": "Plaits bank",
+      "values": [
+        "Green",
+        "Red",
+        "Yellow"
+      ],
+      "field": 14,
+      "states": [
+        "Adjustable"
+      ],
+      "default_state": "Adjustable",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
+    },
+    {
+      "id": 32,
+      "issue": 21,
+      "name": "Mix law",
+      "values": [
+        "Stock",
+        "Gentle"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 33,
+      "issue": 20,
+      "name": "Reverb input",
+      "values": [
+        "Mix (stock)",
+        "Grains"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."

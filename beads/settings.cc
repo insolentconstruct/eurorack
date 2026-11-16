@@ -162,6 +162,9 @@ bool Settings::Init(bool recovery_mode,
 
   NormalizeOptions();
   ApplyProfile();
+  if (!state_.gain) {
+    state_.gain = DefaultGain();
+  }
   // A new module runs the factory test, unless SEED is held.
   return status != STORAGE_NEW || recovery_mode;
 }
@@ -300,7 +303,7 @@ void Settings::SetFeatureValue(ProfileFeature feature, uint8_t value) {
       set_self_play_on_request(value);
       break;
     case FEATURE_INTERVALS:
-      set_random_intervals(value);
+      set_random_intervals(RandomIntervals(value));
       break;
     case FEATURE_WIDTH:
       state_.stereo_width = value;
@@ -417,6 +420,14 @@ void Settings::PackOptions() {
     stored_state_.width_assigned = dormant_destination_;
   }
   stored_state_.padding[0] = kSettingsFormat;
+}
+
+// Blank gain starts automatic, or at unity manual gain.
+uint8_t Settings::DefaultGain() const {
+  if (!profile_values_[FEATURE_MANUAL_GAIN]) {
+    return 0;
+  }
+  return profile_values_[FEATURE_ATTENUATION] ? 128 : 1;
 }
 
 }  // namespace beads

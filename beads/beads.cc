@@ -160,7 +160,7 @@ void Process(
   
   const AttackMode attack_mode = ui.attack_mode();
   if (attack_mode != processor.attack_input()->mode()) {
-    processor.SetAttacks(attack_mode, kAttackThreshold);
+    processor.SetAttacks(attack_mode, ui.attack_threshold());
   }
   bool attack_onset = false;
   if (attack_mode && !codec_transition_frames && !freeze_block &&
@@ -526,6 +526,9 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
+  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
+  processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);
@@ -564,13 +567,24 @@ void MonitorStateChange() {
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
   processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
+  processor.set_seed_latch_fade(
+      settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   ui.set_delay_active(processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
       settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
     ui.set_modulation_indication(cv_reader.pitch_on_notch(),
         cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
+  // The wavetable synth adds the PITCH CV to the knob: no recent notes there.
+  RememberNote(ui.intervals_mode(), !synth_mode &&
+      !normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV),
+      cv_reader.cv(CV_ADC_CHANNEL_PITCH),
+      -cv_reader.pot(POTS_ADC_CHANNEL_PITCH_AMOUNT),
+      system_clock.milliseconds());
   ui.set_no_input(normalization_detector.no_input());
+  ui.set_synth_mode(synth_mode);
+  plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();

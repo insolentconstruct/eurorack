@@ -152,8 +152,9 @@ struct RandomizedParameter {
   inline float pitch_value(PitchScale scale, bool intervals) const {
     float pitch = value(NULL, 0, 24.0f, false);
     if (intervals && attenuverter < 0.0f) {
-      // Counter-clockwise, the random offset lands on fifths and octaves.
-      pitch = base + QuantizeFifths(pitch - base);
+      // Counter-clockwise, the random offset lands on fifths and octaves,
+      // or on a recent note.
+      pitch = base + RandomStep(pitch - base);
     }
     if (scale != PITCH_SCALE_OFF) {
       pitch = QuantizePitch(pitch, scale);

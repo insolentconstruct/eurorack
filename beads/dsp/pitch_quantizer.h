@@ -25,6 +25,7 @@
 // -----------------------------------------------------------------------------
 //
 // Fixed-root grain pitch quantization. Scales from Mutable Instruments Marbles.
+// Recent notes: grains pick among the last notes sent to PITCH.
 
 #ifndef BEADS_DSP_PITCH_QUANTIZER_H_
 #define BEADS_DSP_PITCH_QUANTIZER_H_
@@ -45,6 +46,13 @@ enum PitchScale {
   PITCH_SCALE_BHAIRAV,
   PITCH_SCALE_SHRI,
   PITCH_SCALE_LAST
+};
+
+enum RandomIntervals {
+  RANDOM_INTERVALS_OFF,
+  RANDOM_INTERVALS_FIFTHS,
+  RANDOM_INTERVALS_RECENT_NOTES,
+  RANDOM_INTERVALS_LAST
 };
 
 const uint8_t kMaxPitchScaleId = 15;
@@ -75,6 +83,13 @@ void ConfigurePitchScales(const PitchScaleDefinition* scales, size_t count,
     bool custom);
 float QuantizePitch(float pitch, PitchScale scale);
 float QuantizeFifths(float pitch);
+
+// Main loop: Recent notes remembers the notes sent to PITCH; amount is the
+// counter-clockwise PITCH attenurandomizer.
+void RememberNote(RandomIntervals intervals, bool patched, float cv,
+    float amount, uint32_t now);
+// A counter-clockwise random offset on fifths and octaves, or a recent note.
+float RandomStep(float offset);
 
 }  // namespace beads
 

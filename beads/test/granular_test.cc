@@ -351,6 +351,33 @@ void TestPitchNotches() {
   CHECK(fabsf(pot.value() - 24.0f) < 0.001f);
 }
 
+// The smooth law passes through the same intervals with no plateaus (#43).
+void TestSmoothPitchLaw() {
+  test_checker.Start("TestSmoothPitchLaw");
+  PotChannel pot;
+  pot.Init(PotChannel::LAW_DETUNE_SMOOTH, 1.0f, 0.0f);
+  const float intervals[] = { 0.0f, 1.0f, 3.0f, 4.0f, 7.0f, 12.0f, 24.0f };
+  for (int sign = -1; sign <= 1; sign += 2) {
+    for (int i = 0; i < 6; ++i) {
+      // Inside each stock plateau the knob now moves the pitch.
+      pot.Process(uint16_t(32768.0f * (1.0f + sign * (i + 0.2f) / 6.0f)));
+      const float expected = sign * (intervals[i] +
+          0.2f * (intervals[i + 1] - intervals[i]));
+      CHECK(fabsf(pot.value() - expected) < 0.01f);
+    }
+  }
+  float previous = -25.0f;
+  for (int raw = 0; raw < 65536; raw += 64) {
+    pot.Process(uint16_t(raw));
+    CHECK(pot.value() > previous);
+    previous = pot.value();
+  }
+  pot.Process(0);
+  CHECK(pot.value() == -24.0f);
+  pot.Process(65535);
+  CHECK(fabsf(pot.value() - 24.0f) < 0.01f);
+}
+
 void TestPatchedAndNoon() {
   test_checker.Start("TestPatchedAndNoon");
   RandomizedParameter p = { 0.25f, 0.0f, 0.5f, true };
@@ -902,6 +929,49 @@ void TestRandomIntervalGrains() {
   }
 }
 
+// Recent notes reaches every quality's grains, at the remembered notes.
+void TestRecentNoteGrains() {
+  test_checker.Start("TestRecentNoteGrains");
+  const float notes[3] = { -5.0f, 0.0f, 7.0f };
+  uint32_t now = 0;
+  for (int n = 0; n < 3; ++n) {
+    for (int i = 0; i < 11; ++i) {
+      RememberNote(RANDOM_INTERVALS_RECENT_NOTES, true, notes[n], 1.0f, ++now);
+    }
+  }
+  for (int quality = 0; quality < 4; ++quality) {
+    int seen[3] = { 0, 0, 0 };
+    for (int i = 0; i < 30; ++i) {
+      InitProcessor();
+      processor.Configure(Processor::Media(quality), false);
+      parameters.size.base = 0.8f;
+      parameters.pitch.base = 0.0f;
+      parameters.pitch.cv = 3.0f;
+      parameters.pitch.has_cv = true;
+      parameters.pitch.attenuverter = -1.0f;
+      processor.set_random_intervals(true);
+      stmlib::Random::Seed(1 + i * 7919);
+      ProcessQuantizedBlock(true);
+      DelayGranularPlayer* player = quality == 0
+          ? &processor.processor_dirty_tape_.granular_player_
+          : quality == 1 ? &processor.processor_clean_tape_.granular_player_
+          : quality == 2
+              ? &processor.processor_vintage_digital_.granular_player_
+          : &processor.processor_digital_.granular_player_;
+      const float offset = 12.0f * log2f(
+          float(abs(player->grain_[0].speed_)) / 1024.0f);
+      int found = -1;
+      for (int n = 0; n < 3; ++n) {
+        found = fabsf(offset - notes[n]) < 0.03f ? n : found;
+      }
+      CHECK(found >= 0);
+      seen[found >= 0 ? found : 0] += found >= 0;
+    }
+    CHECK(seen[0] && seen[1] && seen[2]);
+  }
+  RememberNote(RANDOM_INTERVALS_OFF, false, 0.0f, 0.0f, ++now);
+}
+
 void TestStereoWidth() {
   test_checker.Start("TestStereoWidth");
   CHECK(ModulatedStereoWidth(0, 1.0f) == 0.0f);
@@ -1027,6 +1097,7 @@ int main() {
   TestProcessorGrainLatch();
   TestQuantizedGrainPitch();
   TestRandomIntervalGrains();
+  TestRecentNoteGrains();
   TestProcessorEnvelopeCompletion();
   TestProcessorVoiceRelease();
   TestProcessorVoiceSaturation();
@@ -1040,6 +1111,7 @@ int main() {
   TestGrainDuration();
   TestGrainShape();
   TestPitchNotches();
+  TestSmoothPitchLaw();
   TestPatchedAndNoon();
   TestPatchedRandomDepth();
   TestInternalDistributions();

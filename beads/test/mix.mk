@@ -1,6 +1,7 @@
 TARGET = mix_test
 CC_FILES       = 		mix_test.cc \
 		processor.cc \
+		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
 		stft.cc \

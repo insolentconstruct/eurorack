@@ -21,6 +21,9 @@ CC_FILES += profile.cc
 ifeq ($(filter pitch_quantizer.cc,$(CC_FILES)),)
 CC_FILES += pitch_quantizer.cc
 endif
+ifeq ($(filter random.cc,$(CC_FILES)),)
+CC_FILES += random.cc
+endif
 endif
 
 OBJ_FILES = $(CC_FILES:.cc=.o)

@@ -1,6 +1,7 @@
 TARGET = processor_test
 CC_FILES       = 		processor_test.cc \
 		processor.cc \
+		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
 		stft.cc \

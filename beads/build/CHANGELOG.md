@@ -2,6 +2,20 @@
 
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
+## Unreleased (beta 3 "Smirr")
+
+- Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.
+- Optional options-page idle timeout in Hygrostat (Off, 5, 10, 20 or 30 s); Off by default.
+- Optional delay-mode SEED latch fade in Hygrostat (Off: stock switch; Fade: 10 ms dip, no pop); Off by default (#183).
+- Optional Hygrostat choices, all stock or unchanged by default: manual gain at unity when no gain is saved (#19); Attacks sensitivity Low or High (#58, #47); SEED unlatched at power-on (#41); a smooth PITCH knob without notches (#43).
+- Optional Hygrostat choices, stock by default: a gentler DRY/WET law whose wet side rises linearly (#21); reverb on the grains only, before the dry/wet mix as on Clouds (#20). Granular, delay and spectral; both synths unchanged.
+- Random pitch steps gains Recent notes (#220): with PITCH patched, each new counter-clockwise grain plays one of the last one to eight notes sent to PITCH. Page 1 DRY/WET is now in thirds: Free, Fifths and octaves (middle), Recent notes. Beta 2 reads a saved Recent notes as Free.
+- Recent notes takes a glided note where the glide stops, not on the way, for glides faster than half a semitone per second (#243); stepped notes still count after 10 ms.
+- Plaits synth banks (#190): FEEDBACK selects one of eight models in the green, red or yellow bank, as on Plaits, instead of all 24; [A]+FREEZE steps the bank during Plaits synth play and keeps FREEZE. The bank is saved; Hygrostat chooses the starting bank (green by default).
+- With Version at boot on, the light-blue cue flashes once, then three times for Beta 3.
+- Plaits synth Speech: changing word bank no longer overruns the audio block (#225). The bank decodes over several blocks; a word started meanwhile plays when it is loaded, 1.75 to 7 ms later, then exactly as before.
+- At 66% and 33% LED brightness, the quality LED no longer halves white (#240): its red dims faster (level^1.5) and lit green and blue keep a small offset (+4 at 66%, +8 at 33%), a rule chosen by eye on a module; to be measured with a light sensor in Beta 4. 100% is unchanged.
+
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 
 - Hold the converter in reset while its clocks change on quality changes; the click is about 25 dB quieter, not gone.

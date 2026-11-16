@@ -182,10 +182,10 @@ for row in rows:
     assert (color, pulse) not in seen, (setting, value)
     seen.add((color, pulse))
 assert len(values["Pitch scale"]) == 10
-for setting in ("Delay mode", "Attacks", "Limiter"):
+for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps"):
     assert len(values[setting]) == 3, setting
 for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
-                "Synth start", "Random pitch steps"):
+                "Synth start"):
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
@@ -284,7 +284,8 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     warning = ("Don't hold SEED while powering on: it resets all settings "
                "to defaults (calibration is kept).")
     assert "## Other gestures" in markdown and warning in markdown
-    for phrase in ("Monophonic grains", "Buffer trim", "Manual gain",
+    for phrase in ("Monophonic grains", "Buffer trim", "Plaits banks",
+                   "Manual gain",
                    "Wavetable synth (Manual)", "FREEZE [B]",
                    "Switching clears the recording."):
         assert phrase in markdown.split("## Details")[0], phrase
@@ -316,6 +317,9 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         for title in ("Monophonic grains", "Buffer trim",
                       "Wavetable synth (Manual)"):
             assert title in " ".join(labels), title
+        # The printable has room only for the bank step inside Buffer trim.
+        assert ("next bank, green/red/yellow" if printable
+                else "Plaits banks") in " ".join(labels)
         assert warning in " ".join(labels), name
         for knob in ("FEEDBACK", "DRY/WET", "REVERB"):
             reserved = sum(1 for row in rows
@@ -499,7 +503,7 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 24
+assert len(catalog["features"]) == len(exported) == 33
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 for feature, row in zip(catalog["features"], exported):
@@ -510,12 +514,15 @@ for feature, row in zip(catalog["features"], exported):
         assert feature["name"] == name
     assert len(feature["values"] or []) == count
     assert feature["field"] == (None if field == 255 else field)
-    assert feature["page_slots"] == (list(range(1, 13)) if page else [])
+    assert feature["page_slots"] == (list(range(1, 22)) if page else [])
     assert bool(feature["amount_slots"]) == bool(amount)
     assert bool(feature["actions"]) == bool(action)
     assert feature.get("stateless", False) == bool(stateless)
-    assert ("Adjustable" in feature["states"]) == bool(page or amount or action)
-    if identity in (18, 21):
+    # The Plaits bank is Adjustable through its saved field, not a page.
+    gesture = identity == 31 and field == 14 and not page
+    assert ("Adjustable" in feature["states"]) == bool(
+        page or amount or action or gesture)
+    if identity in (18, 21, 31):
         assert feature["default_state"] == "Adjustable" and feature["default"] == 0
     elif identity >= 15:
         assert feature["default_state"] == "Off" and feature["default"] == 0

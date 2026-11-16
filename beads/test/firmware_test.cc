@@ -944,7 +944,7 @@ void TestRandomIntervalsChain() {
     Rig r(false, true);
     PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 0;
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
-    settings.set_random_intervals(intervals);
+    settings.set_random_intervals(RandomIntervals(intervals));
     r.Settle();
     CHECK(ui.random_intervals() == bool(intervals));
     float previous = 12.0f * log2f(NextGrainSpeed(&r));
@@ -961,6 +961,49 @@ void TestRandomIntervalsChain() {
   printf("Random intervals chain: off the grid %d free, %d intervals\n",
       off_grid[0], off_grid[1]);
   CHECK(off_grid[0] > 10 && off_grid[1] == 0);
+}
+
+// Recent notes reaches the grains from the main loop: held PITCH CV notes
+// become the only offsets counter-clockwise (#220).
+void TestRecentNotesChain() {
+  test_checker.Start("TestRecentNotesChain");
+  const uint16_t held[3] = { 30365, 27000, 34000 };
+  int off_notes[2] = { 0, 0 };
+  for (int mode = 0; mode < 2; ++mode) {
+    Rig r(false, true);
+    r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+    PotsAdc::values_[POTS_ADC_CHANNEL_PITCH_AMOUNT] = 0;
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+    settings.set_random_intervals(
+        mode ? RANDOM_INTERVALS_RECENT_NOTES : RANDOM_INTERVALS_OFF);
+    r.cv[CV_ADC_CHANNEL_PITCH] = held[0];
+    r.Settle();
+    float notes[3];
+    for (int n = 0; n < 3; ++n) {
+      r.cv[CV_ADC_CHANNEL_PITCH] = held[n];
+      r.Tick(30, true);
+      notes[n] = cv_reader.cv(CV_ADC_CHANNEL_PITCH);
+    }
+    const float base = cv_reader.pot(POTS_ADC_CHANNEL_PITCH);
+    int seen[3] = { 0, 0, 0 };
+    for (int i = 0; i < 60; ++i) {
+      const float offset = 12.0f * log2f(NextGrainSpeed(&r)) - base;
+      bool on_note = false;
+      for (int n = 0; n < 3; ++n) {
+        if (fabsf(offset - notes[n]) < 0.03f) {
+          on_note = true;
+          ++seen[n];
+        }
+      }
+      off_notes[mode] += !on_note;
+    }
+    if (mode) {
+      CHECK(seen[0] && seen[1] && seen[2]);
+    }
+  }
+  printf("Recent notes chain: off the notes %d free, %d recent\n",
+      off_notes[0], off_notes[1]);
+  CHECK(off_notes[0] > 30 && off_notes[1] == 0);
 }
 
 void TestSelfPlayFrozenBackup() {
@@ -1565,30 +1608,79 @@ void TestCodecKeepsClocks() {
   }
 }
 
-// Tail handling is a profile choice; the codec transition remains the same.
-void SynthTailProfile() {
-  uint8_t block[kProfileSize];
-  for (size_t i = 0; i < kProfileSize; ++i) {
-    block[i] = kProfileBlock[i];
+uint8_t factory_profile[kProfileSize];
+bool factory_profile_read;
+
+// The factory profile plus Fixed entries, as feature/value pairs.
+void BuildProfile(uint8_t* block, const uint8_t* pairs, size_t count) {
+  if (!factory_profile_read) {
+    for (size_t i = 0; i < kProfileSize; ++i) {
+      factory_profile[i] = kProfileBlock[i];
+    }
+    factory_profile_read = true;
   }
-  const size_t offset = 16 + 6 * block[5];
-  ++block[5];
+  memcpy(block, factory_profile, kProfileSize);
+  for (size_t i = 0; i < count; ++i) {
+    const uint8_t entry[] = {
+      pairs[2 * i], PROFILE_FIXED, pairs[2 * i + 1], 0, 0, 0
+    };
+    memcpy(block + 16 + 6 * block[5], entry, sizeof(entry));
+    ++block[5];
+  }
   const size_t bytes = 6 * block[5];
   block[6] = bytes & 255;
   block[7] = bytes >> 8;
-  const uint8_t entry[] = {
-    FEATURE_SYNTH_TAIL, PROFILE_FIXED, 1, 0, 0, 0
-  };
-  memcpy(block + offset, entry, sizeof(entry));
   const uint32_t crc = Profile::Crc32(block, 16 + bytes);
   for (size_t i = 0; i < 4; ++i) {
     block[16 + bytes + i] = crc >> (8 * i);
   }
+}
+
+// Writes a profile into the firmware's own block, as a profile update does.
+void FlashProfile(const uint8_t* block) {
+  const uintptr_t start = reinterpret_cast<uintptr_t>(kProfileBlock);
+  const uintptr_t page = start & ~uintptr_t(4095);
+  CHECK(!mprotect(reinterpret_cast<void*>(page), start + kProfileSize - page,
+      PROT_READ | PROT_WRITE));
+  volatile uint8_t* target = const_cast<volatile uint8_t*>(kProfileBlock);
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    target[i] = block[i];
+  }
+}
+
+// Powers on through Init() with Fixed entries, then restores the factory
+// profile block for later tests.
+void BootWithProfile(Rig* r, const uint8_t* pairs, size_t count) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, pairs, count);
+  FlashProfile(block);
+  r->Reboot(false);
+  FlashProfile(factory_profile);
+}
+
+// Loads the factory profile plus Fixed entries, as feature/value pairs.
+void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, pairs, count);
   CHECK(settings.Init(false, block));
   CHECK(!settings.profile_locked());
   ui.Init(&settings, &gain_control, &calibrator, &background_buffer_backup);
   ui.LoadOptions();
-  CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 1);
+  for (size_t i = 0; i < count; ++i) {
+    CHECK(settings.FeatureValue(ProfileFeature(pairs[2 * i])) ==
+        pairs[2 * i + 1]);
+  }
+}
+
+// Loads the factory profile plus one Fixed entry with value 1.
+void FixedFeatureProfile(ProfileFeature feature) {
+  const uint8_t pair[] = { uint8_t(feature), 1 };
+  FixedFeaturesProfile(pair, 1);
+}
+
+// Tail handling is a profile choice; the codec transition remains the same.
+void SynthTailProfile() {
+  FixedFeatureProfile(FEATURE_SYNTH_TAIL);
 }
 
 void TestSynthStopClearsReverb() {
@@ -1756,6 +1848,352 @@ void TestSeedLatchPatched() {
   CHECK(processor.trigger_generator_.elapsed_since_last_pulse_ > before);
 }
 
+// The delay latch fade is a profile choice; Off or omitted keeps stock.
+void TestSeedLatchFadeProfile() {
+  test_checker.Start("TestSeedLatchFadeProfile");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(settings.profile().entry(FEATURE_SEED_LATCH_FADE).state ==
+      PROFILE_OFF);
+  const DelayController& delay = processor.delay_controller_;
+  processor.set_seed_latch_fade(true);
+  MonitorStateChange();
+  CHECK(!delay.test_timing_fade());
+  FixedFeatureProfile(FEATURE_SEED_LATCH_FADE);
+  r.Settle();
+  CHECK(delay.test_timing_fade());
+  // A quality change turns it off until the next main loop pass.
+  processor.Configure(Processor::MEDIA_CLEAN_TAPE, false);
+  CHECK(!delay.test_timing_fade());
+  r.Settle();
+  CHECK(delay.test_timing_fade());
+  // The factory profile omits the entry, so a reboot returns to stock.
+  r.Reboot(false);
+  r.Settle();
+  processor.set_seed_latch_fade(true);
+  MonitorStateChange();
+  CHECK(!delay.test_timing_fade());
+}
+
+void RunBlocks(Rig* r, int blocks) {
+  while (blocks--) {
+    r->Block();
+  }
+}
+
+// Manual gain at power-on is a profile choice (#19); a saved gain wins.
+void TestManualGainProfile() {
+  test_checker.Start("TestManualGainProfile");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(settings.state().gain == 0);
+  CHECK(gain_control.auto_gain_ && gain_control.gain_ > 1.5f);
+  // A blank gain powers on at unity: 1 on the stock law.
+  const uint8_t manual[] = { FEATURE_MANUAL_GAIN, 1 };
+  BootWithProfile(&r, manual, 1);
+  CHECK(settings.state().gain == 1);
+  r.Settle();
+  CHECK(!gain_control.auto_gain_);
+  CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
+  // Holding [A] restarts automatic gain; the next power-on is manual again.
+  r.HoldMedia(true);
+  CHECK(settings.state().gain == 0);
+  RunBlocks(&r, 4);
+  CHECK(gain_control.auto_gain_);
+  BootWithProfile(&r, manual, 1);
+  CHECK(settings.state().gain == 1);
+  // Saved gains win, including a saved unity under the factory profile.
+  settings.mutable_state()->gain = 200;
+  settings.SaveState();
+  BootWithProfile(&r, manual, 1);
+  CHECK(settings.state().gain == 200);
+  settings.mutable_state()->gain = 1;
+  settings.SaveState();
+  r.Reboot(false);
+  CHECK(settings.state().gain == 1);
+  // With input attenuation, unity is the middle of its range.
+  settings.mutable_state()->gain = 0;
+  settings.SaveState();
+  const uint8_t pairs[] = { FEATURE_MANUAL_GAIN, 1, FEATURE_ATTENUATION, 1 };
+  BootWithProfile(&r, pairs, 2);
+  CHECK(settings.state().gain == 128);
+  r.Settle();
+  CHECK(fabsf(gain_control.gain_ - 1.0f) < 0.001f);
+  // The factory profile omits the entry: a blank gain is automatic.
+  settings.mutable_state()->gain = 0;
+  settings.SaveState();
+  r.Reboot(false);
+  CHECK(settings.state().gain == 0);
+}
+
+// Attack sensitivity is a profile choice (#58); Off is the Beta 2 threshold.
+void TestAttackSensitivityProfile() {
+  test_checker.Start("TestAttackSensitivityProfile");
+  Rig r(false, false);
+  r.Settle();
+  settings.set_attack_mode(ATTACK_MODE_SNAP);
+  settings.SaveState();
+  r.Reboot(false);
+  CHECK(ui.attack_threshold() == kAttackThreshold);
+  r.Settle();
+  CHECK(processor.attack_input_.mode() == ATTACK_MODE_SNAP);
+  CHECK(processor.attack_input_.threshold_ == kAttackThreshold);
+  const float thresholds[] = { 1.5f, 2.0f, 1.3f };
+  for (uint8_t value = 0; value < 3; ++value) {
+    const uint8_t pair[] = { FEATURE_ATTACK_SENSITIVITY, value };
+    BootWithProfile(&r, pair, 1);
+    CHECK(settings.attack_mode() == ATTACK_MODE_SNAP);
+    r.Settle();
+    CHECK(processor.attack_input_.threshold_ == thresholds[value]);
+  }
+}
+
+int CountGrainBlocks(Rig* r, int blocks) {
+  DelayGranularPlayer& player = processor.processor_digital_.granular_player_;
+  int count = 0;
+  while (blocks--) {
+    r->Block();
+    count += player.grain_interval_ <= int(codec.block_size_);
+  }
+  return count;
+}
+
+// SEED can start unlatched (#41): grains wait for SEED, the latch modes
+// apply once latched, and a delay latch fade does not fade at power-on.
+void TestSeedStartProfile() {
+  test_checker.Start("TestSeedStartProfile");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(ui.seed_button_locked());
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 65535;
+  r.Tick(50, true);
+  CHECK(CountGrainBlocks(&r, 2000) > 10);
+  const uint8_t unlatched[] = { FEATURE_SEED_START, 1 };
+  BootWithProfile(&r, unlatched, 1);
+  CHECK(!ui.seed_button_locked());
+  r.Settle();
+  CHECK(CountGrainBlocks(&r, 2000) == 0);
+  // A SEED gate still starts grains; Ignore applies only once latched.
+  settings.SetFeatureValue(FEATURE_SEED_LATCH, 1);
+  r.seed_patched = true;
+  r.Tick(600, true);
+  test_seed_input = true;
+  CHECK(CountGrainBlocks(&r, 200) > 0);
+  CHECK(ui.seed_led_state_);
+  test_seed_input = false;
+  ui.seed_button_locked_ = true;
+  MonitorStateChange();
+  r.Tick(50, true);
+  test_seed_input = true;
+  RunBlocks(&r, 30);
+  CHECK(!ui.seed_led_state_);
+  test_seed_input = false;
+  // With the delay fade, delay mode starts in tapped timing at full level,
+  // as after the processor's power-on configuration.
+  const uint8_t pairs[] = {
+    FEATURE_SEED_START, 1, FEATURE_SEED_LATCH_FADE, 1
+  };
+  r.seed_patched = false;
+  FixedFeaturesProfile(pairs, 2);
+  CHECK(!ui.seed_button_locked());
+  PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
+  r.Tick(2000, true);
+  CHECK(processor.delay_active());
+  processor.Configure(Processor::Media(settings.state().media), false);
+  MonitorStateChange();
+  const DelayController& delay = processor.delay_controller_;
+  for (int i = 0; i < 200; ++i) {
+    r.Block();
+    CHECK(delay.test_timing_change_gain() >= 1.0f);
+  }
+  CHECK(delay.test_timing_fade() && delay.test_synchronized());
+  CHECK(delay.test_timing_change_gain() == 1.0f);
+  PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 32768;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+  // The factory profile omits the entry: SEED starts latched.
+  r.Reboot(false);
+  CHECK(ui.seed_button_locked());
+}
+
+// The smooth PITCH law is a profile choice (#43), set before the codec can
+// start; it has no notch cue and leaves the PITCH CV alone.
+void TestPitchLawProfile() {
+  test_checker.Start("TestPitchLawProfile");
+  Rig r(false, false);
+  r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+  r.cv[CV_ADC_CHANNEL_PITCH] = 26214;
+  r.Settle();
+  // Inside the first plateau above noon.
+  PotsAdc::values_[POTS_ADC_CHANNEL_PITCH] = 33300;
+  settings.SetFeatureValue(FEATURE_PITCH_NOTCH, 1);
+  r.Tick(100, true);
+  const float cv = cv_reader.cv(CV_ADC_CHANNEL_PITCH);
+  CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
+  CHECK(ui.pitch_on_notch_);
+  const uint8_t pairs[] = { FEATURE_PITCH_LAW, 1, FEATURE_PITCH_NOTCH, 1 };
+  BootWithProfile(&r, pairs, 2);
+  CHECK(cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law() ==
+      PotChannel::LAW_DETUNE_SMOOTH);
+  r.Settle();
+  r.Tick(100, true);
+  CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) > 0.05f);
+  CHECK(!ui.pitch_on_notch_);
+  CHECK(cv_reader.cv(CV_ADC_CHANNEL_PITCH) == cv);
+  // The factory profile omits the entry: the notches return.
+  r.Reboot(false);
+  CHECK(cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law() ==
+      PotChannel::LAW_DETUNE);
+  r.Settle();
+  r.Tick(100, true);
+  CHECK(cv_reader.pot(POTS_ADC_CHANNEL_PITCH) == 0.0f);
+}
+
+// Installs the factory profile with the Plaits bank starting elsewhere.
+void FlashPlaitsBankProfile(uint8_t bank) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  uint8_t* entry = block + 16 + 6 * (block[5] - 1);
+  CHECK(entry[0] == FEATURE_PLAITS_BANK);
+  entry[2] = bank;
+  const size_t bytes = 6 * block[5];
+  const uint32_t crc = Profile::Crc32(block, 16 + bytes);
+  for (size_t i = 0; i < 4; ++i) {
+    block[16 + bytes + i] = crc >> (8 * i);
+  }
+  FlashProfile(block);
+}
+
+// Powers on and waits for the synth to start.
+void StartPlaits(Rig* r) {
+  r->Reboot(false);
+  r->Settle();
+  r->Advance(10001);
+  r->Settle();
+}
+
+// The model the drone plays with FEEDBACK at this pot value.
+int PlaitsModel(Rig* r, uint16_t feedback) {
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = feedback;
+  r->Tick(50, true);
+  CHECK(synth_mode && plaits_synth.drone_);
+  return plaits_synth.patch_[plaits_synth.active_voice_].model;
+}
+
+// Plaits banks (#190): a blank sector plays green; [A]+FREEZE steps red,
+// yellow, green, keeps FREEZE, survives power cycles; profiles pick the start.
+void TestPlaitsBankProfile() {
+  test_checker.Start("TestPlaitsBankProfile");
+  Rig r(false, true);
+  // ASSIGN CV at 0 V: the host probe would otherwise modulate FEEDBACK.
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  settings.set_plaits_synth(true);
+  settings.SaveState();
+  StartPlaits(&r);
+  CHECK(PlaitsModel(&r, 65535) == 15);
+  CHECK(PlaitsModel(&r, 0) == 8);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(10, true);
+  test_down[SWITCH_FREEZE] = false;
+  r.Tick(10, true);
+  CHECK(ui.freeze_button_state());
+  const int last[] = { 23, 7, 15, 23 };
+  for (int step = 0; step < 4; ++step) {
+    test_down[SWITCH_MEDIA] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = test_down[SWITCH_MEDIA] = false;
+    r.Tick(10, true);
+    CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == (step + 1) % 3);
+    CHECK(ui.freeze_button_state() && !ui.trim_flag());
+    CHECK(PlaitsModel(&r, 65535) == last[step]);
+    CHECK(PlaitsModel(&r, 0) == last[step] - 7);
+  }
+  // Saved: red returns after a power cycle.
+  StartPlaits(&r);
+  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 1);
+  CHECK(PlaitsModel(&r, 65535) == 23);
+  // A profile's starting bank applies to a blank or stock sector.
+  FlashPlaitsBankProfile(2);
+  Rig blank(false, true);
+  blank.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  settings.set_plaits_synth(true);
+  settings.SaveState();
+  StartPlaits(&blank);
+  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+  CHECK(PlaitsModel(&blank, 65535) == 7);
+  FlashProfile(factory_profile);
+}
+
+// Output hash over one second, with DRY/WET at 9 o'clock and REVERB up.
+uint64_t MixOptionsHash(Rig* r) {
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 13107;
+  PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 52000;
+  uint64_t hash = 14695981039346656037ull;
+  for (int ms = 0; ms < 1000; ++ms) {
+    r->audio = int32_t(4.0e8f * sinf(float(ms) * 0.7f));
+    r->Tick(1, true);
+    for (size_t i = 0; i < codec.block_size_; ++i) {
+      hash = (hash ^ uint32_t(r->out[i].l)) * 1099511628211ull;
+      hash = (hash ^ uint32_t(r->out[i].r)) * 1099511628211ull;
+    }
+  }
+  return hash;
+}
+
+// Mix law and Reverb input are power-on profile choices (#21, #20); they
+// change the granular mix only, never either synth.
+void TestMixOptionsProfile() {
+  test_checker.Start("TestMixOptionsProfile");
+  const uint8_t both[] = { FEATURE_MIX_LAW, 1, FEATURE_REVERB_INPUT, 1 };
+  uint64_t hashes[3][2];
+  for (int engine = 0; engine < 3; ++engine) {
+    for (int on = 0; on < 2; ++on) {
+      Rig r(false, engine > 0);
+      settings.set_plaits_synth(engine == 2);
+      settings.SaveState();
+      if (on) {
+        BootWithProfile(&r, both, 2);
+        CHECK(processor.options_ == (Processor::OPTION_FLAG_GENTLE_MIX |
+            Processor::OPTION_FLAG_REVERB_ON_GRAINS));
+      } else {
+        r.Reboot(false);
+        CHECK(processor.options_ == 0);
+      }
+      Random::Seed(1);
+      if (engine) {
+        r.StartAutomatic();
+        CHECK(synth_mode);
+      } else {
+        r.Settle();
+      }
+      hashes[engine][on] = MixOptionsHash(&r);
+      CHECK(synth_mode == (engine > 0));
+    }
+  }
+  CHECK(hashes[0][0] != hashes[0][1]);
+  CHECK(hashes[1][0] == hashes[1][1]);
+  CHECK(hashes[2][0] == hashes[2][1]);
+  // Each choice sets its own path, and TIME scan from the main loop keeps it.
+  Rig r(false, false);
+  const uint8_t law[] = { FEATURE_MIX_LAW, 1 };
+  BootWithProfile(&r, law, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_GENTLE_MIX);
+  const uint8_t input[] = { FEATURE_REVERB_INPUT, 1 };
+  BootWithProfile(&r, input, 1);
+  settings.SetFeatureValue(FEATURE_TIME_SCAN, 1);
+  r.Settle();
+  CHECK(processor.options_ == (Processor::OPTION_FLAG_REVERB_ON_GRAINS |
+      Processor::OPTION_FLAG_TIME_SCAN));
+  settings.SetFeatureValue(FEATURE_TIME_SCAN, 0);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_REVERB_ON_GRAINS);
+  // The factory profile omits both entries.
+  r.Reboot(false);
+  CHECK(processor.options_ == 0);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -1782,6 +2220,7 @@ int main() {
   TestPitchChain();
   TestQuantizedPitchChain();
   TestRandomIntervalsChain();
+  TestRecentNotesChain();
   TestSelfPlayFrozenBackup();
   TestPlaitsSynthSelection();
   TestSpectralEngine();
@@ -1790,5 +2229,12 @@ int main() {
   TestSynthStopClearsReverb();
   TestPitchNotchLaw();
   TestSeedLatchPatched();
+  TestSeedLatchFadeProfile();
+  TestManualGainProfile();
+  TestAttackSensitivityProfile();
+  TestSeedStartProfile();
+  TestPitchLawProfile();
+  TestPlaitsBankProfile();
+  TestMixOptionsProfile();
   return test_checker.failures() ? 1 : 0;
 }

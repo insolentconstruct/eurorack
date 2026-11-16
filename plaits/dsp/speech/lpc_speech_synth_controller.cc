@@ -124,6 +124,7 @@ void LPCSpeechSynthWordBank::Init(
 
 void LPCSpeechSynthWordBank::Reset() {
   loaded_bank_ = -1;
+  loading_bank_ = -1;
   num_frames_ = 0;
   num_words_ = 0;
   fill(
@@ -131,53 +132,49 @@ void LPCSpeechSynthWordBank::Reset() {
       &word_boundaries_[kLPCSpeechSynthMaxWords], 0);
 }
 
-size_t LPCSpeechSynthWordBank::LoadNextWord(const uint8_t* data) {
-  BitStream bitstream;
-  bitstream.Init(data);
+void LPCSpeechSynthWordBank::StartWord() {
+  frame_.energy = 0;
+  frame_.period = 0;
+  frame_.k0 = 0;
+  frame_.k1 = 0;
+  frame_.k2 = 0;
+  frame_.k3 = 0;
+  frame_.k4 = 0;
+  frame_.k5 = 0;
+  frame_.k6 = 0;
+  frame_.k7 = 0;
+  frame_.k8 = 0;
+  frame_.k9 = 0;
+}
 
-  LPCSpeechSynth::Frame frame;
-  frame.energy = 0;
-  frame.period = 0;
-  frame.k0 = 0;
-  frame.k1 = 0;
-  frame.k2 = 0;
-  frame.k3 = 0;
-  frame.k4 = 0;
-  frame.k5 = 0;
-  frame.k6 = 0;
-  frame.k7 = 0;
-  frame.k8 = 0;
-  frame.k9 = 0;
-
-  while (true) {
-    int energy = bitstream.GetBits(4);
-    if (energy == 0) {
-      frame.energy = 0;
-    } else if (energy == 0xf) {
-      bitstream.Flush();
-      break;
-    } else {
-      frame.energy = energy_lut_[energy];
-      bool repeat = bitstream.GetBits(1);
-      frame.period = period_lut_[bitstream.GetBits(6)];
-      if (!repeat) {
-        frame.k0 = k0_lut_[bitstream.GetBits(5)];
-        frame.k1 = k1_lut_[bitstream.GetBits(5)];
-        frame.k2 = k2_lut_[bitstream.GetBits(4)];
-        frame.k3 = k3_lut_[bitstream.GetBits(4)];
-        if (frame.period) {
-          frame.k4 = k4_lut_[bitstream.GetBits(4)];
-          frame.k5 = k5_lut_[bitstream.GetBits(4)];
-          frame.k6 = k6_lut_[bitstream.GetBits(4)];
-          frame.k7 = k7_lut_[bitstream.GetBits(3)];
-          frame.k8 = k8_lut_[bitstream.GetBits(3)];
-          frame.k9 = k9_lut_[bitstream.GetBits(3)];
-        }
+bool LPCSpeechSynthWordBank::LoadNextFrame() {
+  int energy = bitstream_.GetBits(4);
+  if (energy == 0) {
+    frame_.energy = 0;
+  } else if (energy == 0xf) {
+    bitstream_.Flush();
+    return false;
+  } else {
+    frame_.energy = energy_lut_[energy];
+    bool repeat = bitstream_.GetBits(1);
+    frame_.period = period_lut_[bitstream_.GetBits(6)];
+    if (!repeat) {
+      frame_.k0 = k0_lut_[bitstream_.GetBits(5)];
+      frame_.k1 = k1_lut_[bitstream_.GetBits(5)];
+      frame_.k2 = k2_lut_[bitstream_.GetBits(4)];
+      frame_.k3 = k3_lut_[bitstream_.GetBits(4)];
+      if (frame_.period) {
+        frame_.k4 = k4_lut_[bitstream_.GetBits(4)];
+        frame_.k5 = k5_lut_[bitstream_.GetBits(4)];
+        frame_.k6 = k6_lut_[bitstream_.GetBits(4)];
+        frame_.k7 = k7_lut_[bitstream_.GetBits(3)];
+        frame_.k8 = k8_lut_[bitstream_.GetBits(3)];
+        frame_.k9 = k9_lut_[bitstream_.GetBits(3)];
       }
     }
-    frames_[num_frames_++] = frame;
   }
-  return bitstream.ptr() - data;
+  frames_[num_frames_++] = frame_;
+  return true;
 }
 
 bool LPCSpeechSynthWordBank::Load(int bank) {
@@ -185,23 +182,31 @@ bool LPCSpeechSynthWordBank::Load(int bank) {
     return false;
   }
 
-  num_frames_ = 0;
-  num_words_ = 0;
-  
-  const uint8_t* data = word_banks_[bank].data;
-  size_t size = word_banks_[bank].size;
-  
-  while (size) {
-    word_boundaries_[num_words_] = num_frames_;
-    size_t consumed = LoadNextWord(data);
-
-    data += consumed;
-    size -= consumed;
-    ++num_words_;
+  if (bank != loading_bank_) {
+    loaded_bank_ = -1;
+    loading_bank_ = bank;
+    num_frames_ = 0;
+    num_words_ = 0;
+    word_boundaries_[0] = 0;
+    bitstream_.Init(word_banks_[bank].data);
+    end_ = word_banks_[bank].data + word_banks_[bank].size;
+    StartWord();
   }
-  word_boundaries_[num_words_] = num_frames_;
-  loaded_bank_ = bank;
-  return true;
+  
+  int budget = kLPCSpeechSynthFramesPerLoad;
+  while (budget) {
+    if (LoadNextFrame()) {
+      --budget;
+    } else {
+      word_boundaries_[++num_words_] = num_frames_;
+      if (bitstream_.ptr() >= end_) {
+        loaded_bank_ = bank;
+        return true;
+      }
+      StartWord();
+    }
+  }
+  return false;
 }
 
 void LPCSpeechSynthController::Init(LPCSpeechSynthWordBank* word_bank) {
@@ -211,6 +216,7 @@ void LPCSpeechSynthController::Init(LPCSpeechSynthWordBank* word_bank) {
   playback_frame_ = -1;
   last_playback_frame_ = -1;
   remaining_frame_samples_ = 0;
+  pending_trigger_ = false;
 
   fill(&sample_[0], &sample_[2], 0.0f);
   fill(&next_sample_[0], &next_sample_[2], 0.0f);
@@ -243,6 +249,11 @@ void LPCSpeechSynthController::Render(
         (formant_shift < 0.4f ? (formant_shift - 0.4f) * -45.0f
             : (formant_shift > 0.6f ? (formant_shift - 0.6f) * -45.0f : 0.0f)));
   
+  // A trigger waits only for the bank it came with.
+  if (bank == -1 || bank != word_bank_->loading_bank()) {
+    pending_trigger_ = false;
+  }
+
   if (bank != -1) {
     bool reset_everything = word_bank_->Load(bank);
     if (reset_everything) {
@@ -251,6 +262,16 @@ void LPCSpeechSynthController::Render(
     }
   }
   
+  // While a word bank loads, hold the current frame and delay any trigger.
+  const bool loading = bank != -1 && word_bank_->loading();
+  if (loading) {
+    pending_trigger_ = pending_trigger_ || trigger;
+    trigger = false;
+  } else {
+    trigger = trigger || pending_trigger_;
+    pending_trigger_ = false;
+  }
+
   const int num_frames = bank == -1
       ? kLPCSpeechSynthNumVowels
       : word_bank_->num_frames();
@@ -276,7 +297,9 @@ void LPCSpeechSynthController::Render(
     remaining_frame_samples_ = 0;
   }
   
-  if (playback_frame_ == -1 && remaining_frame_samples_ == 0) {
+  if (loading) {
+    // Keep playing the current frame.
+  } else if (playback_frame_ == -1 && remaining_frame_samples_ == 0) {
     synth_.PlayFrame(
         frames,
         address * (static_cast<float>(num_frames) - 1.0001f),
