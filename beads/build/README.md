@@ -36,7 +36,7 @@ Frozen feedback selects Stock or Evolving. Evolving fades in to soften and drift
 
 Processor: Lower half selects Granular (Stock); upper half selects Spectral, using Mutable Instruments Clouds. TIME selects a spectrum, SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls renewal and phase scrambling. SEED glitches; FREEZE holds. Random controls update per spectrum. Mixing, quality, assignable CV and R gate work normally; diffusion, delay and wavetable synth are unavailable. Closing fades the change and clears recording. The saved frozen buffer returns with Granular.
 
-Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
+Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the oscillator/grain balance it sets in the stock synth; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, holding [A] restarts automatic gain.
 
