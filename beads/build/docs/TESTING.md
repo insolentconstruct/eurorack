@@ -13,8 +13,8 @@ The Beta 2 release build reproduces application `2558dd77…`, timing image
 The Beta 3 “Smirr” release build reproduces application `e0546edb…`,
 combined image `e8f171f7…` and WAV `664acbf4…`, and decodes the WAV back to
 the application. The release documentation and generated guides pass their
-checker. Beta 3 module results are under [On a module](#beta-3); the
-audio install and the upgrade from Beta 2 are still pending.
+checker. Beta 3 module results are under [On a module](#beta-3), including the
+audio install and the upgrade from Beta 2.
 
 Tests are separated into desktop/CI checks, STM32H7 development-board checks,
 unattended module measurements and attended module checks. The development
@@ -324,10 +324,15 @@ The release code was rerun (2026-11-16) on the same test build rebuilt on
 
 The 2024 grain stealing costs about 3.5 to 4 points.
 
-Not yet checked on the module for Beta 3: install by audio file, upgrade
-from Beta 2, whether the delay-mode latch fade removes the pop (above),
-Off-equals-stock output, custom scales and the Gentler dry/wet and
-grains-only reverb sound.
+**Install and upgrade** (2026-11-16). The release WAV installed over Beta 2
+by audio; Beta 2 settings and calibration carried over, the SEED-held repair
+passed, and stock-format and Recent notes settings read back as written.
+Beta 2 reading a Recent notes setting plays it as Free (checked on the host
+and on the module's sector).
+
+Not yet checked on the module for Beta 3: whether the delay-mode latch
+fade removes the pop (above), Off-equals-stock output, custom scales and
+the Gentler dry/wet and grains-only reverb sound.
 
 ### Beta 2
 
