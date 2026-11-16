@@ -118,28 +118,41 @@ class Reverb {
       
       // Smear AP1 inside the loop.
       c.Interpolate(ap1, 10.0f, LFO_1, 80.0f, 1.0f);
+      
+      // The other reads don't alias this sample's writes: load them first.
+      const float ap1_tail = c.Tail(ap1);
+      const float ap2_tail = c.Tail(ap2);
+      const float ap3_tail = c.Tail(ap3);
+      const float ap4_tail = c.Tail(ap4);
+      const float del2_tap = c.Tap(del2, 6261.0f, LFO_2, 50.0f);
+      const float dap1a_tail = c.Tail(dap1a);
+      const float dap1b_tail = c.Tail(dap1b);
+      const float del1_tap = c.Tap(del1, 4460.0f, LFO_1, 40.0f);
+      const float dap2a_tail = c.Tail(dap2a);
+      const float dap2b_tail = c.Tail(dap2b);
+      
       c.Write(ap1, 100, 0.0f);
       
       c.Read(in_out->l + in_out->r, send_amount);
       
       // Diffuse through 4 allpasses.
-      c.Read(ap1 TAIL, kap);
+      c.ReadTail(ap1_tail, kap);
       c.WriteAllPass(ap1, -kap);
-      c.Read(ap2 TAIL, kap);
+      c.ReadTail(ap2_tail, kap);
       c.WriteAllPass(ap2, -kap);
-      c.Read(ap3 TAIL, kap);
+      c.ReadTail(ap3_tail, kap);
       c.WriteAllPass(ap3, -kap);
-      c.Read(ap4 TAIL, kap);
+      c.ReadTail(ap4_tail, kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
       
       // Main reverb loop.
       c.Load(apout);
-      c.Interpolate(del2, 6261.0f, LFO_2, 50.0f, krt);
+      c.Read(del2_tap, krt);
       c.Lp(lp_1_, klp);
-      c.Read(dap1a TAIL, -kap);
+      c.ReadTail(dap1a_tail, -kap);
       c.WriteAllPass(dap1a, kap);
-      c.Read(dap1b TAIL, kap);
+      c.ReadTail(dap1b_tail, kap);
       c.WriteAllPass(dap1b, -kap);
       c.Write(del1, 1.0f);
       c.Write(wet);
@@ -147,11 +160,11 @@ class Reverb {
       in_out->l = in_out->l * dry_amount + wet * wet_amount;
 
       c.Load(apout);
-      c.Interpolate(del1, 4460.0f, LFO_1, 40.0f, krt);
+      c.Read(del1_tap, krt);
       c.Lp(lp_2_, klp);
-      c.Read(dap2a TAIL, kap);
+      c.ReadTail(dap2a_tail, kap);
       c.WriteAllPass(dap2a, -kap);
-      c.Read(dap2b TAIL, -kap);
+      c.ReadTail(dap2b_tail, -kap);
       c.WriteAllPass(dap2b, kap);
       c.Write(del2, 1.0f);
       c.Write(wet);

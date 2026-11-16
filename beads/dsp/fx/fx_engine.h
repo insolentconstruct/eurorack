@@ -241,6 +241,22 @@ class FxEngine {
     template<typename D>
     inline void Interpolate(
         D& d, float offset, LFOIndex index, float amplitude, float scale) {
+      float x = Tap(d, offset, index, amplitude);
+      previous_read_ = x;
+      accumulator_ += x * scale;
+    }
+    
+    // Loads ahead of writes they don't alias, for ReadTail and Read(value).
+    template<typename D>
+    inline float Tail(D& d) const {
+      STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
+      return DataType<format>::Decompress(
+          buffer_[(write_ptr_ + D::base + D::length - 1) & MASK]);
+    }
+    
+    template<typename D>
+    inline float Tap(
+        D& d, float offset, LFOIndex index, float amplitude) const {
       STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
       offset += amplitude * lfo_value_[index];
       MAKE_INTEGRAL_FRACTIONAL(offset);
@@ -248,9 +264,12 @@ class FxEngine {
           buffer_[(write_ptr_ + offset_integral + D::base) & MASK]);
       float b = DataType<format>::Decompress(
           buffer_[(write_ptr_ + offset_integral + D::base + 1) & MASK]);
-      float x = a + (b - a) * offset_fractional;
-      previous_read_ = x;
-      accumulator_ += x * scale;
+      return a + (b - a) * offset_fractional;
+    }
+    
+    inline void ReadTail(float tail, float scale) {
+      previous_read_ = tail;
+      accumulator_ += tail * scale;
     }
     
     inline float peak() const { return peak_; }
