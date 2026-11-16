@@ -278,7 +278,8 @@ returns with Granular.
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance
 voices, retaining pitch and random settings. FEEDBACK selects one of
 eight models in the current bank; TIME controls HARMONICS, SIZE controls
-TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains.
+TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the
+oscillator/grain balance it sets in the stock synth; FREEZE sustains.
 Other grain controls remain. At DENSITY noon with SEED unpatched, the
 last voice drones.
 
