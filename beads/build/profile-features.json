@@ -1033,6 +1033,27 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": false
+    },
+    {
+      "id": 34,
+      "issue": 237,
+      "name": "Grain stealing",
+      "values": [
+        "2026 (stock)",
+        "2024"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": true
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."

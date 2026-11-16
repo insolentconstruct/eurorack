@@ -67,6 +67,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 3, 14, false, false, false, false },  // Plaits bank.
   { 2, kNoField, false, false, false, false },  // Mix law.
   { 2, kNoField, false, false, false, false },  // Reverb input.
+  { 2, kNoField, false, false, false, false },  // Grain stealing.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

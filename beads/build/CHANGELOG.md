@@ -15,6 +15,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - With Version at boot on, the light-blue cue flashes once, then three times for Beta 3.
 - Plaits synth Speech: changing word bank no longer overruns the audio block (#225). The bank decodes over several blocks; a word started meanwhile plays when it is loaded, 1.75 to 7 ms later, then exactly as before.
 - At 66% and 33% LED brightness, the quality LED no longer halves white (#240): its red dims faster (level^1.5) and lit green and blue keep a small offset (+4 at 66%, +8 at 33%), a rule chosen by eye on a module; to be measured with a light sensor in Beta 4. 100% is unchanged.
+- Optional Hygrostat choice, 2026 by default: the 2024 firmware's grain stealing (#237), which re-sorts the grains when they arrive 5 to 25 ms apart. Granular and wavetable synth; about 3.5 to 4 CPU points more at peak.
 
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 

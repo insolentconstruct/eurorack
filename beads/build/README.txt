@@ -175,6 +175,11 @@ dry and both ends of the knob stay stock. Reverb input: Grains sends
 only the grains to the reverb, before the dry/wet mix as on Clouds, so
 fully dry has no reverb. Both synths are unchanged.
 
+Grain stealing: 2024 restores how the 2024 firmware chose which playing
+grain a new one replaces. It changes dense, irregular textures slightly
+and costs about 3.5 to 4 CPU points at peak. 2026, the stock choice, is
+the default.
+
 Plaits synth banks: FEEDBACK selects one of the eight models of the
 current bank, as on Plaits: green (its first bank), red (noise and
 drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,

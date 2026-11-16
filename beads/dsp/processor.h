@@ -307,6 +307,14 @@ class Processor {
     processor_dirty_tape_.set_random_intervals(intervals);
   }
 
+  // Chosen at power-on: the grain stealing of the 2024 firmware.
+  inline void set_legacy_stealing(bool legacy) {
+    processor_digital_.set_legacy_stealing(legacy);
+    processor_vintage_digital_.set_legacy_stealing(legacy);
+    processor_clean_tape_.set_legacy_stealing(legacy);
+    processor_dirty_tape_.set_legacy_stealing(legacy);
+  }
+
 #ifdef DWT_CALIBRATION
   void PrepareCalibration(uint32_t block) {
     processor_digital_.PrepareCalibration(block);
