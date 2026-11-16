@@ -2,10 +2,10 @@ Drizzlet
 ========
 
 Drizzlet is alternative firmware for Mutable Instruments Beads, adding
-Plaits, spectral processing and grain controls. Beta 2 “Fog” was
-tested on one module; see docs/TESTING.md. Install at your own risk.
-This is not a Mutable Instruments product. All settings save; standard
-defaults retain stock behaviour.
+Plaits, spectral processing and grain controls. Beta 3 “Smirr” was
+tested on one module, with some checks pending; see docs/TESTING.md.
+Install at your own risk. This is not a Mutable Instruments product.
+All settings save; standard defaults retain stock behaviour.
 
 Downloads and installation
 --------------------------

@@ -2,15 +2,17 @@
 
 This source contains 20 host programs, 301 named test sections, 2,550
 assertion sites and 496 deliberate fault patterns (Beta 2: 275, 2,199 and
-396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
-passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
-detected all 484 faults across eight shards. Named sections and assertion sites
+396). On `9f8be78`, whose firmware and tests the Beta 3 release build shares,
+[host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43691245063)
+passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43691245037)
+detected all 496 faults across eight shards. Named sections and assertion sites
 are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased Beta 3 application `e0546edb…` and WAV
-`664acbf4…`. The release documentation and generated guides pass their
+The Beta 3 “Smirr” release build reproduces application `e0546edb…`,
+combined image `e8f171f7…` and WAV `664acbf4…`, and decodes the WAV back to
+the application. The release documentation and generated guides pass their
 checker. Beta 3 module results are under [On a module](#beta-3); some
 checks are still pending.
 
@@ -271,7 +273,8 @@ counters) of `12180c6` and of the first LED fix `8da49f7` (even dimming plus a s
 quality-LED PWM; Beta 3 keeps only the even dimming, the PWM change moved to Beta 4), each with a
 qualification Hygrostat profile, then the Beta 2
 release image (`2558dd77…`) put back, verified, with the calibration checked
-at the end of each run. Budget 120,000 cycles per block.
+at the end of each run. Re-checks (2026-11-15) used timing builds of `c9608d0`
+and of `9f8be78`, whose code the release build shares. Budget 120,000 cycles per block.
 
 | Check | Image | Result |
 |---|---|---|
@@ -280,13 +283,16 @@ at the end of each run. Budget 120,000 cycles per block.
 | Option cost: Off, IDs 23, 26, 28, 30, 32 and 33 each alone, all On, Off again (granular stress fixture, 4,096 blocks each) | `12180c6` | Callback peaks 84.2–85.1%; each row's mean and peak within about 0.5 point of Off; the two Off means agree within 0.1%. The fade was armed outside delay mode and attacks had a silent input, so delay-mode fade cost and attack-driven grain counts are not measured |
 | Hot granular: pinned music at about 5 V, FEEDBACK 0.9, heavy granular CVs, Snap, all options On (140 s) | `12180c6` | Pass: callback peak 98,450 (82.0%), no DAC underrun; the input limiter engaged. The click scan was not sensitive at this output level |
 | Hot granular, rerun | `8da49f7` | Pass: callback peak 98,308 (81.9%), no DAC underrun |
+| Hot granular, release code | `9f8be78` | Pass: callback peak 98,481 (82.1%), no DAC underrun |
 | Recent notes CPU: the same melody with the attenurandomizer clockwise (follow) and counter-clockwise (Recent notes) | `12180c6` | Peaks 32,816 (follow) and 32,552 (Recent notes); the Recent notes mean 85 cycles higher (0.07 point) |
 | Recent notes, stepped 16-note melody, 1.25 s per note (91 steps judged) | `12180c6` | Pass: 96.7% of steps sounded only pitch classes of the last eight notes |
-| Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail (#243): 28.6% of steps met that rule; mid-glide pitches registered as notes. The glide rule now in Beta 3 is not yet rerun on the module |
+| Recent notes, the same melody with 0.3 s glides | `12180c6` | Fail (#243): 28.6% of steps met that rule; mid-glide pitches registered as notes |
+| Recent notes with the glide rule, stepped and 0.3 s glides (91 steps each); this code is unchanged in the release | `c9608d0` | Pass: 93.4% stepped, 94.5% glided |
 | Quality LED registers at 66%, white | `8da49f7` | Pass: TIM1 prescaler 7 (not in Beta 3); CCR 129/129/118 as computed. Beta 3 now uses the rule chosen by eye on the module (CCR 153/125/114 at 66%, 219/184/179 at 33%) |
-| Quality LED registers at 100% and 33%, and quality 0 at all three levels | `8da49f7` | Pending |
-| Noise floor at 66% against 100% LED brightness | `8da49f7` | Pending: the run stopped at its first noise check, a fault in the check itself |
-| Plaits Speech word-bank change (#225): inputs unplugged, TIME stepped through the word banks every second | `c9608d0` | Fail: callback peak 203,724 (169.8%) against 38,428 (32.0%) with the bank held; fixed after `c9608d0` (word banks decode over several blocks), not yet re-measured on a module |
+| Quality LED registers, release rule: white at 66% and 33%, quality 0 at 100%, 66% and 33% | `9f8be78` | Pass: every CCR as computed (white 153/125/114 at 66%, 219/184/179 at 33%). By eye, white looked white at 33% |
+| Noise floor at 66% against 100% LED brightness | `8da49f7` | Dropped: Beta 3 has no LED PWM change |
+| Plaits Speech word-bank change (#225): inputs unplugged, TIME stepped through the word banks every second | `c9608d0` | Fail: callback peak 203,724 (169.8%) against 38,428 (32.0%) with the bank held; fixed after `c9608d0` (word banks decode over several blocks) |
+| Plaits Speech word-bank change, release code | `9f8be78` | Pass: callback peak 52,680 (43.9%) against 38,166 (31.8%) with the bank held, no DAC underrun |
 
 **CPU ceiling** (2026-11-15). Test builds of Beta 3 before the Speech fix
 (`b92c048`, and `f547e2a` with the 2024 grain stealing restored) held the
