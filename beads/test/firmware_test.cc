@@ -2194,6 +2194,32 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+// Grain stealing is a power-on profile choice (#237): 2024 resorts the
+// grains from 5 ms in every quality and in the wavetable synth.
+void TestGrainStealingProfile() {
+  test_checker.Start("TestGrainStealingProfile");
+  for (int legacy = 1; legacy >= 0; --legacy) {
+    Rig r(false, false);
+    if (legacy) {
+      const uint8_t stealing[] = { FEATURE_GRAIN_STEALING, 1 };
+      BootWithProfile(&r, stealing, 1);
+    } else {
+      r.Reboot(false);
+    }
+    const int scale = legacy ? 1 : 5;
+    CHECK(processor.processor_digital_.granular_player_.
+        simple_scheduler_threshold_ == 240 * scale);
+    CHECK(processor.processor_vintage_digital_.granular_player_.
+        simple_scheduler_threshold_ == 160 * scale);
+    CHECK(processor.processor_clean_tape_.granular_player_.
+        simple_scheduler_threshold_ == 120 * scale);
+    CHECK(processor.processor_dirty_tape_.granular_player_.
+        simple_scheduler_threshold_ == 120 * scale);
+    CHECK(synth.wavetable_granular_player_.
+        simple_scheduler_threshold_ == 240 * scale);
+  }
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2236,5 +2262,6 @@ int main() {
   TestPitchLawProfile();
   TestPlaitsBankProfile();
   TestMixOptionsProfile();
+  TestGrainStealingProfile();
   return test_checker.failures() ? 1 : 0;
 }

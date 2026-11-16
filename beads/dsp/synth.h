@@ -90,6 +90,10 @@ class Synth {
     wavetable_granular_player_.set_random_intervals(intervals);
   }
 
+  inline void set_legacy_stealing(bool legacy) {
+    wavetable_granular_player_.set_legacy_stealing(legacy);
+  }
+
  private:
   TriggerGenerator trigger_generator_;
   

@@ -91,6 +91,13 @@ class GranularPlayer {
     random_intervals_ = intervals;
   }
 
+  // 2024 stealing: resort the grains from 5 ms, so the fade swap never runs.
+  inline void set_legacy_stealing(bool legacy) {
+    simple_scheduler_threshold_ = legacy
+        ? instant_crossfade_time_
+        : int(sample_rate_ * kSimpleSchedulerThreshold);
+  }
+
   inline void Reset() {
     for (int i = 0; i < num_grains; ++i) {
       grain_[i].Init(sample_rate_);

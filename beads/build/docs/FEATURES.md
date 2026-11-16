@@ -115,6 +115,7 @@ not-set values use the profile default.
 | 31 | Plaits bank (#190) | 14 (byte 20 low) |
 | 32 | Mix law (#21) | No saved value |
 | 33 | Reverb input (#20) | No saved value |
+| 34 | Grain stealing (#237, ID proposed) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -510,3 +511,18 @@ DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
 and flutter comes after the reverb, so the tail wobbles too. Granular, delay
 and spectral; both synths keep the stock routing. Chosen at power-on, with
 no panel slot or saved-state nibble.
+
+### Grain stealing
+
+Hygrostat feature ID 34 (proposed) chooses 2026 (stock) / 2024 (#237). When
+all 32 grains are playing, a new grain takes over an old one. Mutable
+Instruments' 2026 source just takes the next one in turn when grains arrive
+less than 25 ms apart. The 2024 firmware did that only below 5 ms; from 5 ms
+on it re-sorted the grains and took the ones closest to their end, as the
+2026 source still does from 25 ms. With grains 5 to 25 ms apart and varying
+lengths, 2024 gives a different take of the same texture, about 0.6 dB
+louder in desktop renders of dense random DENSITY. It costs about 3.5 to 4
+CPU points at peak on the module, so heavy patches have less headroom.
+Granular and the wavetable synth; delay, spectral and the Plaits synth have
+no grain stealing. Chosen at power-on, with no panel slot or saved-state
+nibble.
