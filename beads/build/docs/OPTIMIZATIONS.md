@@ -208,7 +208,7 @@ Audio differs by about -87 dBFS RMS at 16-bit, peaks -35 dBFS at 4-bit.
 
 Measured in November 2026 on one 2021 module, and on a development board with the same chip and clock.
 
-**TL;DR:** Audio breaks when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it [mechanism inferred]. That comes before a full-block underrun, and the SAI flags nothing. On the module, the first left word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz. The 90% working limit leaves 0.8 points at 48 kHz and is past the 32 and 24 kHz edges.
+**TL;DR:** Audio breaks when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it [mechanism inferred]. That comes before a full-block underrun, and the SAI flags nothing. On the module, the first left word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz. The working limits in [FEATURES.md](FEATURES.md) (90%, 86% and 82%) sit about a point under these edges.
 
 - **Module (measured).** A test build held the audio callback at set lengths; firmware counters flag a block whose first left word is stored after the DMA has read it. Each edge was found twice. Callback peak cycles, budget 120,000:
 
@@ -224,7 +224,7 @@ Just above each clean edge, the step search found isolated late points with exac
 - **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
 - **The historical left-channel click.** Reproduced on one module with the 2024 source rebuilt with GCC 9 (plus deadline tracing), in the historical crackle recipe: Bright digital (48 kHz), DENSITY 0.98, PITCH +24, SIZE 0.92. Its callback peaked at 93.5 to 94.0%, above the module's 48 kHz edge, and OUT L clicked. In the same recipe, beads-tuneup with the 2024 grain stealing (81.7 to 82.7%) and current beads-tuneup (78.1 to 78.8%) stayed clean [measured]. The clicks are block-locked and match the output one ring lap earlier, which points to a late first left word [inferred; moderately high confidence, exploratory, not seen on the codec data line].
 - **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
-- **Headroom.** The 90% working limit in [FEATURES.md](FEATURES.md) holds only at 48 kHz. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, under 86.6% and 82.7%.
+- **Headroom.** [FEATURES.md](FEATURES.md) sets a working limit per rate: 90% at 48 kHz, 86% at 32 kHz (Cold digital) and 82% at 24 kHz (Scorched cassette).
 
 ## Rules for future changes
 
