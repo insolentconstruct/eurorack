@@ -485,16 +485,21 @@ The factory calibration was restored by debug probe after each saved run. Before
   Cold digital qualities and dies out on Bright digital, where stock grows
   into the limiter. Granular playback is identical with the choice on.
 - Delay time, Crossfade (750 Hz sine, DENSITY 0.258 to 0.3): a step bends
-  the pitch 4,553 to 5,950 cents with the glide and 3 to 14 cents with the
-  crossfade; a one-second sweep 316 to 1,907 cents against 9 to 17 (cycles
-  12 dB down skipped). The level dips up to 9.7 dB on a step and 5 to 32 dB
-  during the sweep. Clocked timing and TIME are identical with it on.
+  the pitch 4,553 to 5,950 cents with the glide and 2 to 12 cents with the
+  crossfade; a one-second sweep 316 to 1,907 cents against 2 to 13 (cycles
+  12 dB down skipped). Holding the delay time until DENSITY has been still
+  for 50 ms makes the sweep one equal-power fade: the level changes by
+  -6.7 to +3.5 dB on a step or a sweep, where a linear fade on every
+  filter step dipped up to 9.7 dB on a step and 32 dB on a sweep. Gliding
+  while DENSITY moves instead bent the pitch up to 5,950 cents; settling
+  after one block, or 10 ms, still chained fades on a sweep (dips of 14
+  and 31 dB). Clocked timing and TIME are identical with it on.
 - Both choices Off, release ELF in an emulator (instructions, not cycles),
   19 granular, delay and spectral scenarios: output and executed
   instructions per block identical to the previous build. Knob-timing delay
   renders hash as before in all four qualities, mono and stereo. On, per
-  block: Unity notch +148 to +220; Crossfade +331 to +905; both +425 to
-  +994. Flash +6.2 KB.
+  block: Unity notch +148 to +220; Crossfade +235 to +367 (+331 to +905
+  before the block-rate decision); both +324 to +462. Flash +6.7 KB.
 - Unity notch with DENSITY jumping across noon every two blocks for 4 s:
   the loop does not grow, and the feedback at each block's end holds unity
   for the taps at both of its ends.

@@ -12,7 +12,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Random pitch steps gains Recent notes (#220): with PITCH patched, each new counter-clockwise grain plays one of the last one to eight notes sent to PITCH. Page 1 DRY/WET is now in thirds: Free, Fifths and octaves (middle), Recent notes. Beta 2 reads a saved Recent notes as Free.
 - Recent notes takes a glided note where the glide stops, not on the way, for glides faster than half a semitone per second (#243); stepped notes still count after 10 ms.
 - Recent notes now waits up to 1 s after a glide, so glides down to a tenth of a semitone per second count only where they stop (#243); stepped notes still count after 10 ms.
-- Optional Hygrostat delay choices, stock by default: a unity notch on FEEDBACK for sound on sound, with a 10 Hz bass filter in the loop (#10); DENSITY crossfades to a new delay time instead of bending the pitch (#30).
+- Optional Hygrostat delay choices, stock by default: a unity notch on FEEDBACK for sound on sound, with a 10 Hz bass filter in the loop (#10); DENSITY crossfades to a new delay time, once it stops moving, instead of bending the pitch (#30).
 - Plaits synth banks (#190): FEEDBACK selects one of eight models in the green, red or yellow bank, as on Plaits, instead of all 24; [A]+FREEZE steps the bank during Plaits synth play and keeps FREEZE. The bank is saved; Hygrostat chooses the starting bank (green by default).
 - With Version at boot on, the light-blue cue flashes once, then three times for Beta 3.
 - Plaits synth Speech: changing word bank no longer overruns the audio block (#225). The bank decodes over several blocks; a word started meanwhile plays when it is loaded, 1.75 to 7 ms later, then exactly as before.

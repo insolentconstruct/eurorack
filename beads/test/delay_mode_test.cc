@@ -1067,6 +1067,8 @@ void TestDelayCrossfade() {
       CHECK(w[1].cycles > 1500);
       CHECK(w[1].last > 0.5f * 0.1f / sqrtf(2.0f));
       CHECK(w[1].cents < 0.4f * w[0].cents);
+      // One equal-power fade: no chain of dips on a sweep.
+      CHECK(w[1].dip > -8.0f);
       CHECK(w[1].cents < (ramp ? 300.0f : 100.0f));
     }
   }
@@ -1085,9 +1087,17 @@ void TestDelayCrossfadeClock() {
   r.density.base = 0.2585f;
   r.Run(400);
   CHECK(KnobInterval(r) == from);
-  // A step fades over half the new interval; the old one fades out.
+  // A step waits 50 ms for DENSITY to settle, holding the old delay time.
   r.density.base = 0.3f;
-  r.Run(40);
+  int blocks = 0;
+  while (KnobInterval(r) == from && blocks < 10000) {
+    r.Block(NULL);
+    ++blocks;
+  }
+  // The first block records the new time, then 50 ms of stillness.
+  CHECK(blocks == kCrossfadeSettleBlocks + 1);
+  // Then fades over half the new interval; the old one fades out with
+  // equal power.
   const float to = KnobInterval(r);
   printf("Crossfade from %.1f to %.1f samples\n", from, to);
   CHECK(to > 1.2f * from);
@@ -1095,16 +1105,61 @@ void TestDelayCrossfadeClock() {
   CHECK(c.interval(1 - c.new_interval_index()) == from);
   const int expected = int(std::min(0.25f * 48000.0f,
       std::max(0.02f * 48000.0f, to * 0.5f)) / 12.0f);
-  // A change during the fade waits for its end, then fades from there.
+  r.Run(expected / 2);
+  float power[2];
+  float step[2];
+  c.PowerGains(12, power, step);
+  CHECK(power[0] > 0.5f && power[1] > 0.5f);
+  CHECK(fabsf(power[0] * power[0] + power[1] * power[1] - 1.0f) < 0.001f);
+  CHECK(step[0] * step[1] < 0.0f);
+  // A change during the fade waits for its end and then settles.
   r.density.base = 0.32f;
-  int blocks = 40;
+  blocks = expected / 2;
+  int faded = 0;
   while (KnobInterval(r) == to && blocks < 10000) {
     r.Block(NULL);
     ++blocks;
+    faded = !faded && c.fade() == 1.0f ? blocks : faded;
   }
-  CHECK(abs(blocks - expected) <= 1);
+  CHECK(abs(faded - expected) <= 1);
+  CHECK(abs(blocks - faded - kCrossfadeSettleBlocks) <= 1);
   CHECK(KnobInterval(r) > to);
   CHECK(c.interval(1 - c.new_interval_index()) == to);
+  // A quick turn fades once, after it stops.
+  const float before = KnobInterval(r);
+  r.Run(4000);
+  const float settled = KnobInterval(r);
+  int fades = 0;
+  for (int i = 0; i < 800; ++i) {
+    r.density.base = 0.32f - 0.04f * std::min(1.0f, float(i) / 400.0f);
+    const float previous = KnobInterval(r);
+    r.Block(NULL);
+    fades += KnobInterval(r) != previous;
+    if (i < 400) {
+      CHECK(KnobInterval(r) == settled);
+    }
+  }
+  CHECK(fades == 1);
+  CHECK(before == settled && KnobInterval(r) != settled);
+  // Within a fading block every tap's gain moves sample by sample.
+  r.Run(4000);
+  r.density.base = 0.258f;
+  r.Run(kCrossfadeSettleBlocks + 1);
+  CHECK(c.fade() < 0.5f);
+  DelayController::Output taps[12];
+  bool still[12] = { };
+  r.processor.delay_controller_.RenderCrossfade(SEED_BUTTON_STATE_LOCKED,
+      NULL, still, r.density.base, 0.0f, 0.0f, r.parameters.time,
+      r.parameters.shape, taps, 12);
+  int moving = 0;
+  int audible = 0;
+  for (int t = 0; t < DelayController::NUM_TAPS; ++t) {
+    if (taps[0].tap[t].gain > 0.0f) {
+      ++audible;
+      moving += taps[11].tap[t].gain != taps[0].tap[t].gain;
+    }
+  }
+  CHECK(audible == 2 && moving == audible);
   // Under 10 ms the delay glides, as stock, for flanging.
   Rig flange;
   PrepareKnobDelay(&flange, Processor::MEDIA_DIGITAL, false, 0.0f);
@@ -1151,14 +1206,14 @@ void TestDelayCrossfadeLatchFade() {
   const DelayClock& c = d.test_clock();
   const float from = KnobInterval(r);
   r.density.base = 0.35f;
-  r.Run(20);
+  r.Run(kCrossfadeSettleBlocks + 20);
   CHECK(c.fade() < 1.0f);
   CHECK(c.interval(1 - c.new_interval_index()) == from);
   // Frozen slices follow the crossfade too.
   r.frozen = true;
   r.Run(4000);
   r.density.base = 0.3f;
-  r.Run(20);
+  r.Run(kCrossfadeSettleBlocks + 20);
   CHECK(c.fade() < 1.0f);
 }
 

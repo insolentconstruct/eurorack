@@ -296,12 +296,15 @@ void DelayController::RenderInternal(
   seed_button_state_ = seed_button_state;
 
   // A crossfade goes straight to the delay time at the end of the block.
-  float target_interval = 0.0f;
+  bool glide = true;
+  float power[NUM_INTERVALS];
+  float power_step[NUM_INTERVALS];
   if (crossfade) {
-    target_interval = max(
+    glide = clock_.Crossfade(max(
         float(kMinDelay),
         SemitonesToRatio(-fm_filter_.value() * 60.0f) * float(max_delay_) * \
-            SemitonesToRatio(-fabsf(density_filter_.value() - 0.5f) * 216.0f));
+            SemitonesToRatio(-fabsf(density_filter_.value() - 0.5f) * 216.0f)));
+    clock_.PowerGains(size, power, power_step);
   }
   
   while (size--) {
@@ -335,17 +338,21 @@ void DelayController::RenderInternal(
       tap_ratio[0] *= fm;
       tap_ratio[1] *= fm;
     } else {
-      const float new_interval = max(
-          float(kMinDelay),
-          fm * float(max_delay_) * \
-              SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
-      float lp_coefficient = 10.0f / new_interval;
-      CONSTRAIN(lp_coefficient, 0.005f, 0.7f);
-      
       if (crossfade) {
-        clock_.Jump(new_interval, target_interval, lp_coefficient);
-      } else {
-        clock_.Update(new_interval, lp_coefficient);
+        clock_.Fade();
+      }
+      if (glide) {
+        const float new_interval = max(
+            float(kMinDelay),
+            fm * float(max_delay_) * \
+                SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
+        float lp_coefficient = 10.0f / new_interval;
+        CONSTRAIN(lp_coefficient, 0.005f, 0.7f);
+        if (crossfade) {
+          clock_.Glide(new_interval, lp_coefficient);
+        } else {
+          clock_.Update(new_interval, lp_coefficient);
+        }
       }
 
       tap_ratio[0] = 1.00f;
@@ -410,7 +417,9 @@ void DelayController::RenderInternal(
           new_head->Start(
               slice_duration * slice_index + kMinDelay,
               slice_duration,
-              tap_gain[ratio] * clock_.gain(interval));
+              tap_gain[ratio] * (crossfade
+                  ? power[interval]
+                  : clock_.gain(interval)));
         }
         play_head_[i].Render(&out->tap[2 * i], shape, false);
         slave_play_head_[i].Render(&out->tap[2 * i + 1], shape, true);
@@ -464,7 +473,7 @@ void DelayController::RenderInternal(
             ? multiplier_fractional
             : 1.0f - multiplier_fractional;
         const float base_gain = tap_gain[ratio] * ratio_fade * \
-            clock_.gain(interval);
+            (crossfade ? power[interval] : clock_.gain(interval));
         out->tap[i].gain = base_gain * tap_envelope_[i].Render(shape);
         if (base_gain > loudest) {
           loudest = base_gain;
@@ -475,6 +484,10 @@ void DelayController::RenderInternal(
     }
 
     freeze_ = *freeze;
+    if (crossfade) {
+      power[0] += power_step[0];
+      power[1] += power_step[1];
+    }
     
     if (external_input) {
       ++external_input;
