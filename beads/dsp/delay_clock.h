@@ -34,7 +34,12 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/dsp.h"
 
+#include "beads/resources.h"
+
 namespace beads {
+
+// DENSITY's filter moves in steps, so a sweep settles only after 50 ms.
+const uint8_t kCrossfadeSettleBlocks = 200;
 
 class DelayClock {
  public:
@@ -52,28 +57,69 @@ class DelayClock {
     rotate_ = 0;
   }
 
-  // Knob timing that crossfades to the target instead of gliding.
-  void Jump(float interval, float target, float lp_coefficient) {
-    // A running crossfade finishes first.
-    fade_ += fade_increment_;
+  // Knob timing, once per block: holds the delay time while DENSITY moves,
+  // then crossfades to it. Returns true when it glides instead.
+  bool Crossfade(float target) {
     if (fade_ < 1.0f) {
-      return;
+      return false;
     }
-    fade_ = 1.0f;
     const float current = interval_[1];
     // Under 10 ms, half the shortest fade, keep the glide for flanging.
     if (std::max(target, current) * max_fade_increment_ < 0.5f) {
-      ONE_POLE(interval_[1], interval, lp_coefficient);
-      interval_[0] = interval_[1];
-    } else if (fabsf(target - current) > 0.02f * current) {
-      // As for a clock change: the new interval fades in over half of it.
-      ++rotate_;
       interval_[0] = current;
-      interval_[1] = target;
-      fade_ = 0.0f;
-      fade_increment_ = 2.0f / target;
-      CONSTRAIN(fade_increment_, min_fade_increment_, max_fade_increment_);
-      next_interval_ = 0;
+      return true;
+    }
+    if (fabsf(target - current) <= 0.02f * current) {
+      interval_[0] = current;
+      settle_ = 0;
+      return false;
+    }
+    // While no fade runs, the silent old interval holds the pending target.
+    if (fabsf(target - interval_[0]) > 0.02f * interval_[0]) {
+      interval_[0] = target;
+      settle_ = 0;
+      return false;
+    }
+    if (++settle_ < kCrossfadeSettleBlocks) {
+      return false;
+    }
+    // As for a clock change: the new interval fades in over half of it.
+    ++rotate_;
+    interval_[0] = current;
+    interval_[1] = target;
+    fade_increment_ = 2.0f / target;
+    CONSTRAIN(fade_increment_, min_fade_increment_, max_fade_increment_);
+    fade_ = -fade_increment_;  // The block's first sample starts the fade.
+    next_interval_ = 0;
+    settle_ = 0;
+    return false;
+  }
+
+  // Knob timing, every sample.
+  inline void Fade() {
+    fade_ += fade_increment_;
+    if (fade_ >= 1.0f) {
+      fade_ = 1.0f;
+    }
+  }
+
+  inline void Glide(float interval, float lp_coefficient) {
+    ONE_POLE(interval_[1], interval, lp_coefficient);
+  }
+
+  // Equal-power gains for knob-timing crossfades, at the block's first
+  // sample, and their steps across the block.
+  inline void PowerGains(size_t size, float* gain, float* step) const {
+    const float first = std::min(fade_ + fade_increment_, 1.0f);
+    const float last = std::min(fade_ + fade_increment_ * float(size), 1.0f);
+    const float scale = size > 1 ? 1.0f / float(size - 1) : 0.0f;
+    for (int i = 0; i < 2; ++i) {
+      const bool fading_in = (i + rotate_) % 2;
+      const float a = fading_in ? first : 1.0f - first;
+      const float b = fading_in ? last : 1.0f - last;
+      gain[i] = stmlib::Interpolate(lut_sine, a * 0.25f, 1024.0f);
+      const float end = stmlib::Interpolate(lut_sine, b * 0.25f, 1024.0f);
+      step[i] = (end - gain[i]) * scale;
     }
   }
   
@@ -117,6 +163,7 @@ class DelayClock {
   float jitter_sensitivity_;
 
   bool schedule_change_;
+  uint8_t settle_;  // Blocks DENSITY has held still, in the padding.
 
   int next_interval_;
   int max_interval_;

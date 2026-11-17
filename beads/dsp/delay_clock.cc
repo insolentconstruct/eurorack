@@ -49,6 +49,7 @@ void DelayClock::Init(float sample_rate) {
   jitter_sensitivity_ = 1.0f;
 
   schedule_change_ = false;
+  settle_ = 0;
 
   next_interval_ = 0;
   max_interval_ = int(sample_rate * 4.0f);

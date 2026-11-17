@@ -538,11 +538,12 @@ power-on, with no panel slot or saved-state nibble.
 Hygrostat feature ID 36 chooses Glide (stock) / Crossfade (#30). In delay
 mode with knob timing (SEED latched, nothing patched), stock glides the
 delay time when DENSITY moves, bending the pitch like tape. Crossfade
-fades from the old delay time to the new one instead, as Beads already does
-with a clock: over half the new time, between 20 and 250 ms. A fade runs to
-its end before the next one starts, and changes under 2% are ignored, so a
-slow turn or a slow DENSITY CV moves in steps rather than as a chorus or
-vibrato. A tone can dip in level mid-fade, deeply on a sweep. Delays under
-10 ms still glide, for flanging. Clocked and tapped timing, TIME and FREEZE
-slices are unchanged. Chosen at power-on, with no panel slot or saved-state
-nibble.
+keeps the old delay time while DENSITY moves; 50 ms after it stops, an
+equal-power crossfade (a clock's is linear) moves to the new time over
+half of it, between 20 and 250 ms. A turn of the knob
+gives one fade, after the turn. A fade runs to its end before the next one
+starts, and changes under 2% are ignored, so a slow DENSITY CV moves in
+steps rather than as a chorus or vibrato. A tone can still dip mid-fade
+when its two copies are out of phase. Delays under 10 ms still glide, for
+flanging. Clocked and tapped timing, TIME and FREEZE slices are unchanged.
+Chosen at power-on, with no panel slot or saved-state nibble.
