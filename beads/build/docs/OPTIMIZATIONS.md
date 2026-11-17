@@ -212,11 +212,13 @@ Measured in November 2026 on one 2021 module, and on a development board with th
 
 - **Module (measured).** A test build held the audio callback at set lengths; firmware counters flag a block whose first left word is stored after the DMA has read it. Each edge was found twice. Callback peak cycles, budget 120,000:
 
-| Codec rate (qualities) | Clean up to | First late block |
-|---|---:|---:|
-| 48 kHz (Bright digital, Sunny tape, synths) | 108,908 (90.8%) | 109,504 (91.3%) |
-| 32 kHz (Cold digital) | 103,935 (86.6%) | 104,520 (87.1%) |
-| 24 kHz (Scorched cassette) | 99,182 (82.7%) | 99,762 (83.1%) |
+| Codec rate (qualities) | Clean up to |
+|---|---:|
+| 48 kHz (Bright digital, Sunny tape, synths) | 108,908 (90.8%) |
+| 32 kHz (Cold digital) | 103,935 (86.6%) |
+| 24 kHz (Scorched cassette) | 99,182 (82.7%) |
+
+Just above each clean edge, the step search found isolated late points with exactly one late block, always among the window's first eight: probably a start-up effect of the test build, not yet explained, so it is not used as an edge. Repeated late blocks with stale OUT L began at 92.3% at 48 kHz and by 89.2% at 32 kHz and 85.0% at 24 kHz (the gaps above the 32 and 24 kHz edges were not tested step by step).
 
 - **Development board (measured).** With the check made at callback exit (has the DMA already read the first word?), the callback maximum was clean up to about 91.5% of the block at 48 kHz, 87.5% at 32 kHz and 83.5% at 24 kHz; every block failed from 92.1%, 88.1% and 84.1%. The first store comes before exit, so the true deadline sits a little above these bounds. Three repeats per rate, 60 s per step. No SAI underrun or overrun at any load up to 105%. The module's edges are 0.7 to 0.9 points lower.
 - **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
