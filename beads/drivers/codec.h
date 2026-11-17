@@ -99,8 +99,10 @@ class Codec {
   size_t block_size_;
   
   Event event_buffer_[kMaxCodecBlockSize];
+#ifdef APPLICATION
   // [0] is the frame carried from the last block; [1..] the callback's block.
   Frame out_buffer_[kMaxCodecBlockSize + 1];
+#endif  // APPLICATION
 
   FillBufferCallback callback_;
     
