@@ -225,7 +225,9 @@ bool Codec::Start(
   }
   
   callback_ = callback;
+#ifdef APPLICATION
   memset(out_buffer_, 0, sizeof(out_buffer_));
+#endif  // APPLICATION
 
   // Enable the codec.
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;  
@@ -349,7 +351,9 @@ void Codec::Stop() {
 void Codec::Pause() {
   callback_ = NULL;
   memset(tx_dma_buffer_, 0, sizeof(tx_dma_buffer_));
+#ifdef APPLICATION
   memset(out_buffer_, 0, sizeof(out_buffer_));
+#endif  // APPLICATION
 }
 
 void Codec::Fill(size_t offset) {
@@ -359,8 +363,10 @@ void Codec::Fill(size_t offset) {
     const Frame* in = &rx_dma_buffer_[offset];
     Frame* out = &tx_dma_buffer_[offset];
     
+#ifdef APPLICATION
     // The DMA reads the carried frame first, so store it before the callback.
     out[0] = out_buffer_[0];
+#endif  // APPLICATION
     
     for (size_t i = 0; i < block_size_; ++i) {
       uint32_t pins = idr_buffer_[offset + i].event;
@@ -369,6 +375,7 @@ void Codec::Fill(size_t offset) {
       event_buffer_[i] = static_cast<Event>(e);
     }
 
+#ifdef APPLICATION
     (*callback_)(event_buffer_, in, &out_buffer_[1], block_size_);
     
     for (size_t i = 1; i < block_size_; ++i) {
@@ -376,6 +383,9 @@ void Codec::Fill(size_t offset) {
     }
     // Carry this block's last frame to the start of the next half.
     out_buffer_[0] = out_buffer_[block_size_];
+#else
+    (*callback_)(event_buffer_, in, out, block_size_);
+#endif  // APPLICATION
   }
 }
 
