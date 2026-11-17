@@ -205,6 +205,34 @@ class DelayController {
       const RandomizedParameter& shape,
       Output* out,
       size_t size);
+
+  // As Render, but knob timing crossfades between delay times.
+  void RenderCrossfade(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* external_input,
+      const bool* freeze,
+      float density,
+      float linear_fm,
+      float exponential_fm,
+      const RandomizedParameter& position,
+      const RandomizedParameter& shape,
+      Output* out,
+      size_t size);
+
+  // Sum of the tap gains around the feedback loop, as last rendered.
+  inline float tap_gain(bool synchronized) const {
+    if (timing_gain_ != TIMING_FADE_OFF) {
+      synchronized = synchronized && synchronized_;
+    }
+    if (synchronized) {
+      return 1.0f;
+    }
+    float fade_to_odd = (density_ - 0.5f) * 25.0f;
+    CONSTRAIN(fade_to_odd, 0.0f, 1.0f);
+    const float modulation = 0.5f + 0.5f * stmlib::Interpolate(
+        lut_sine, tap_modulation_.phase(), 1024.0f);
+    return 1.0f + 0.6f * fade_to_odd * (0.25f + 0.75f * modulation);
+  }
   
   // Off, the Init state, switches timing at once, as stock.
   inline void set_timing_fade(bool enabled) {
@@ -243,6 +271,7 @@ class DelayController {
       Output* out,
       size_t size);
 
+  template<bool crossfade>
   void RenderWithTimingFade(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* external_input,
@@ -255,7 +284,7 @@ class DelayController {
       Output* out,
       size_t size);
 
-  template<bool synchronized>
+  template<bool synchronized, bool crossfade>
   void RenderInternal(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* external_input,

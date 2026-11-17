@@ -533,6 +533,9 @@ void Init() {
   const bool legacy_stealing = !settings.FeatureValue(FEATURE_GRAIN_STEALING);
   processor.set_legacy_stealing(legacy_stealing);
   synth.set_legacy_stealing(legacy_stealing);
+  processor.set_unity_feedback(settings.FeatureValue(FEATURE_UNITY_FEEDBACK));
+  processor.set_delay_crossfade(
+      settings.FeatureValue(FEATURE_DELAY_CROSSFADE));
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);

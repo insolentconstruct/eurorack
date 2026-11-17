@@ -1054,6 +1054,48 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": true
+    },
+    {
+      "id": 35,
+      "issue": 10,
+      "name": "Delay feedback",
+      "values": [
+        "Stock",
+        "Unity notch"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 36,
+      "issue": 30,
+      "name": "Delay time",
+      "values": [
+        "Glide (stock)",
+        "Crossfade"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."
