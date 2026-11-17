@@ -2,6 +2,10 @@
 
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
+## Unreleased
+
+- Audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz), so the audio callback can run to about the full block instead of stopping a frame short (#1). In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. Pending module qualification; working limits are unchanged.
+
 ## 2026.11.16 (tag `drizzlet-2026.11.16`, beta 3 "Smirr")
 
 - Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.

@@ -13,7 +13,7 @@ The Beta 2 release build reproduces application `2558dd77…`, timing image
 The Beta 3 “Smirr” release build reproduces application `e0546edb…`,
 combined image `e8f171f7…` and WAV `664acbf4…`, and decodes the WAV back to
 the application. This source pins its own unreleased Beta 4 application
-`17287aae…` and WAV `13731253…`. The release documentation and generated
+`93db5cba…` and WAV `8cb84606…`. The release documentation and generated
 guides pass their checker. Beta 3 module results are under
 [On a module](#beta-3), including the audio install and the upgrade from Beta 2.
 
