@@ -79,8 +79,8 @@ class Leds {
       return;
     }
     const uint8_t percent = level == 1 ? 66 : 33;
-    // Quality LED, chosen by eye: red dims as level^1.5, and lit green and
-    // blue keep 12 * (1 - level) more.
+    // Quality LED, chosen by eye: red scales as b^1.5 at brightness b, and
+    // lit green and blue get 12 * (1 - b) more.
     const uint8_t red = uint8_t(float(intensity_[LED_MEDIA_R]) *
         (level == 1 ? 0.5361865f : 0.1895706f));
     const uint8_t offset = level == 1 ? 4 : 8;

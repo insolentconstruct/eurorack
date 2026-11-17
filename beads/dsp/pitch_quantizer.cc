@@ -153,8 +153,8 @@ const size_t kNumRecentNotes = 8;
 const float kNoteTolerance = 0.1f;
 const float kNoteMinimumStep = 0.5f;
 const uint32_t kNoteSettleTime = 10;
-// A CV that drifted there (a glide), not jumped a quarter semitone, then holds
-// twice as long as its last drift took, up to 200 ms.
+// After a glide (steps under a quarter semitone), the CV must hold for twice
+// its last step's duration, up to 200 ms.
 const float kNoteJump = 0.25f;
 const uint32_t kGlideSettleTime = 200;
 
