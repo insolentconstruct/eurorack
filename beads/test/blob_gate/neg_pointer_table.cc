@@ -27,6 +27,8 @@
 //
 // A table of pointers: absolute addresses in .data.rel.ro.
 
+// Expect: GATE: .*section \.data\.rel\.ro
+
 #include "beads/test/blob_gate/common.h"
 
 static const float* const tables[2] = {

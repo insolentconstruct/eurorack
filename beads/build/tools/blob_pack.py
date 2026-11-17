@@ -85,9 +85,9 @@ def indirect(line):
   mnemonic = fields[2].strip()
   operands = fields[3].strip()
   if BRANCH.match(mnemonic):
-    return operands != 'lr'
+    return not (mnemonic.startswith('bx') and operands == 'lr')
   if 'pc}' in operands:
-    return not operands.startswith('sp!')
+    return not (mnemonic.startswith('pop') or operands.startswith('sp!'))
   return operands.split(',')[0] == 'pc' and not RETURN.match(operands)
 
 

@@ -27,6 +27,8 @@
 //
 // A conditional branch through a register.
 
+// Expect: GATE: .*indirect branch: .*bxne
+
 #include "beads/test/blob_gate/common.h"
 
 RENDER {

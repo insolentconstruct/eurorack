@@ -27,6 +27,8 @@
 //
 // A constructed polymorphic object: a vtable of absolute addresses.
 
+// Expect: GATE: .*section \.data\.rel\.ro
+
 #include "beads/test/blob_gate/common.h"
 
 #include <new>

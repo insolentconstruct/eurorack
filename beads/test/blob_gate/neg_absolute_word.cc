@@ -27,6 +27,8 @@
 //
 // An absolute address in the code: R_ARM_ABS32.
 
+// Expect: GATE: .*relocation type 2 at
+
 #include "beads/test/blob_gate/common.h"
 
 RENDER {

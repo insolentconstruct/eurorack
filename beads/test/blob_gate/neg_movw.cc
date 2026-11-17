@@ -27,6 +27,8 @@
 //
 // An address built with MOVW/MOVT: absolute relocations.
 
+// Expect: GATE: .*relocation type 4[78] at
+
 #include "beads/test/blob_gate/common.h"
 
 RENDER {

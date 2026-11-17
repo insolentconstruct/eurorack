@@ -23,7 +23,8 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # The blob gate's negative controls, in the build image from the Drizzlet
-# root: every beads/test/blob_gate/neg_*.cc must fail to link or be refused.
+# root: every beads/test/blob_gate/neg_*.cc must fail to link or be refused,
+# with the diagnostic named on its "// Expect:" line.
 #   beads/build/tools/blob_gate_test.sh OUT
 set -euo pipefail
 out=${1:?usage: blob_gate_test.sh OUT}
@@ -31,12 +32,16 @@ mkdir -p "$out"
 failures=0
 for source in beads/test/blob_gate/neg_*.cc; do
   name=$(basename "$source" .cc)
+  expect=$(sed -n 's|^// Expect: ||p' "$source")
   if bash beads/build/tools/build_blob.sh "$out" "$name" "$source" \
       > "$out/$name.log" 2>&1; then
     echo "ERROR: $name: the gate accepted it"
     failures=$((failures + 1))
+  elif [ -z "$expect" ] || ! grep -qE "$expect" "$out/$name.log"; then
+    echo "ERROR: $name: refused, but not for the expected reason"
+    failures=$((failures + 1))
   else
-    echo "$name: refused: $(grep -m1 -E 'GATE|undefined' "$out/$name.log")"
+    echo "$name: refused: $(grep -m1 -E "$expect" "$out/$name.log")"
   fi
 done
 exit $((failures > 0))

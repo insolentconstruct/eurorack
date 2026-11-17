@@ -27,6 +27,8 @@
 //
 // A firmware symbol that is not an export (the link fails).
 
+// Expect: undefined reference to .stmlib::Random
+
 #include "beads/test/blob_gate/common.h"
 
 #include "stmlib/utils/random.h"

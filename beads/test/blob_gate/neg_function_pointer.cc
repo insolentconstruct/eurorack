@@ -27,6 +27,8 @@
 //
 // A call through a function pointer: an indirect branch.
 
+// Expect: GATE: .*indirect branch
+
 #include "beads/test/blob_gate/common.h"
 
 typedef void (*Function)(float*, size_t);

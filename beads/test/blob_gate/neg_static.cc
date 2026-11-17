@@ -27,6 +27,8 @@
 //
 // A mutable static: a .bss section.
 
+// Expect: GATE: .*section \.bss
+
 #include "beads/test/blob_gate/common.h"
 
 static float level;

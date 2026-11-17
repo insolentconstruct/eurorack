@@ -27,6 +27,8 @@
 //
 // A library call: memcpy is not an export (the link fails).
 
+// Expect: undefined reference to .memcpy
+
 #include "beads/test/blob_gate/common.h"
 
 RENDER {
