@@ -72,11 +72,12 @@ const size_t kNumCompiled = 2;
 const size_t kArenaSize = 1024;
 
 // Engines are placed by harness_setup: no static constructors run here.
-static uint64_t phase_weave_storage[
-    (sizeof(PhaseWeaveEngine) + 7) / 8];
-static uint64_t sine_storage[(sizeof(TestSineEngine) + 7) / 8];
-static uint64_t blob_storage[kMaxPlaitsBlobs][
-    (sizeof(PlaitsBlobEngine) + 7) / 8];
+static uint8_t phase_weave_storage[sizeof(PhaseWeaveEngine)]
+    __attribute__((aligned(8)));
+static uint8_t sine_storage[sizeof(TestSineEngine)]
+    __attribute__((aligned(8)));
+static uint8_t blob_storage[kMaxPlaitsBlobs][sizeof(PlaitsBlobEngine)]
+    __attribute__((aligned(8)));
 static Engine* engines[kNumCompiled + kMaxPlaitsBlobs];
 static uint8_t arena[kArenaSize];
 

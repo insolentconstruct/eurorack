@@ -69,6 +69,17 @@ done
 compile stmlib/dsp/units.cc "$out/obj/units.o"
 link "$out/harness.elf" "${objects[@]}" "$out/obj/units.o"
 "${TOOLCHAIN}arm-none-eabi-nm" "$out/harness.elf" > "$out/harness.nm"
+# The exports' own symbols, not only their sections: address and size.
+"${TOOLCHAIN}arm-none-eabi-nm" -S "$out/harness.elf" | awk '
+  $4 == "_ZN6plaits8lut_sineE" { s = s $1 ":" $2 " " }
+  $4 == "_ZN6stmlib20lut_pitch_ratio_highE" { h = $1 ":" $2 }
+  $4 == "_ZN6stmlib19lut_pitch_ratio_lowE" { l = $1 ":" $2 }
+  END {
+    got = s h " " l
+    want = "08021440:00000a04 08021e44:00000404 08022248:00000404"
+    if (got != want) { print "ERROR: export symbols " got; exit 1 }
+    print "export symbols: " got
+  }'
 "${TOOLCHAIN}arm-none-eabi-objdump" -h "$out/harness.elf" \
   | grep -E 'blob_(services|lut)' | tee "$out/services.txt"
 

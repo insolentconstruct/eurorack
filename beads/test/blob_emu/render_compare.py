@@ -55,6 +55,7 @@ STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
           'TABLE', 'MODEL']
 SINE = 0x08021440
+POISON = struct.pack('<I', 0x7fa5a5a5)  # a NaN no engine writes
 
 
 def symbols(path):
@@ -138,9 +139,15 @@ class Machine(object):
     # plaits::EngineParameters' order.
     self.uc.mem_write(self.sym['harness_parameters'], struct.pack(
         '<i5f', trigger, note, timbre, morph, harmonics, accent))
+    for name in ('harness_out', 'harness_aux'):
+      self.uc.mem_write(self.sym[name], POISON * size)
     self.call('harness_render', engine, size)
-    return (bytes(self.uc.mem_read(self.sym['harness_out'], 4 * size)),
-            bytes(self.uc.mem_read(self.sym['harness_aux'], 4 * size)))
+    out = bytes(self.uc.mem_read(self.sym['harness_out'], 4 * size))
+    aux = bytes(self.uc.mem_read(self.sym['harness_aux'], 4 * size))
+    for x in (out, aux):
+      if any(x[i:i + 4] == POISON for i in range(0, len(x), 4)):
+        raise RuntimeError('engine %d left a sample unwritten' % engine)
+    return out, aux
 
 
 def drive(seed):
@@ -215,13 +222,18 @@ def main(argv):
           failures.append('model %d differs at 0x%08x' % (blob['model'], base))
       results['identity'] = identity
 
-  # The comparison must see a difference: the note nudged by 0.01.
+  # Each comparison must see a difference: the note nudged by 0.01.
   m = Machine(elf, sym, region, PLACEMENTS[0], 0)
   m.setup(PLACEMENTS[0], crc, digests)
-  differ, samples, _ = compare(m, NUM_COMPILED, 0, steps[:200], nudge=0.01)
-  results['controls'].append({'case': 'note nudged', 'differ': differ})
-  if not differ:
-    failures.append('a nudged note compared equal')
+  for blob_engine, compiled in ((NUM_COMPILED, 0), (NUM_COMPILED + 1, 1)):
+    differ, samples, _ = compare(
+        m, blob_engine, compiled, steps[:200], nudge=0.01)
+    results['controls'].append({'case': 'note nudged, engine %d' % compiled,
+                                'differ': differ, 'samples': samples})
+    print('control: note nudged, engine %d: %d of %d differ' % (
+        compiled, differ, samples))
+    if not differ:
+      failures.append('engine %d: a nudged note compared equal' % compiled)
 
   # The blob engines execute the region's bytes; the compiled ones do not.
   base = PLACEMENTS[1]

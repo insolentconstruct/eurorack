@@ -89,7 +89,8 @@ class PlaitsBlobEngine : public plaits::Engine {
   const PlaitsBlobServices* services_;
   size_t arena_size_;
   void* object_;
-  uint64_t state_[kPlaitsBlobMaxStateSize / sizeof(uint64_t)];
+  // Bytes, so that the blob's object is nested in this one.
+  uint8_t state_[kPlaitsBlobMaxStateSize] __attribute__((aligned(8)));
 
   DISALLOW_COPY_AND_ASSIGN(PlaitsBlobEngine);
 };
