@@ -70,10 +70,25 @@ ALLOWED_INFO = re.compile(
     r'^(|\.symtab|\.strtab|\.shstrtab|\.ARM\.attributes|\.rel\.blob|'
     r'(\.rel)?\.debug\w*)$')
 
-# Branches through a register other than a return: virtual calls and
-# function pointers, which version 1 has no use for.
-INDIRECT = re.compile(
-    r'\t(blx|bx)\s+(r\d+|ip|sl|fp)\b|\t(ldr|mov)(\.w)?\s+pc\b')
+# Branches through a register other than a return (virtual calls, function
+# pointers), with any condition. TBB and TBH stay: their tables are relative.
+BRANCH = re.compile(
+    r'^(bx|blx)(eq|ne|cs|hs|cc|lo|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?'
+    r'(\.n|\.w)?$')
+RETURN = re.compile(r'^pc, \[sp\], #4')
+
+
+def indirect(line):
+  fields = line.split('\t')
+  if len(fields) < 4 or not fields[0].strip().endswith(':'):
+    return False
+  mnemonic = fields[2].strip()
+  operands = fields[3].strip()
+  if BRANCH.match(mnemonic):
+    return operands != 'lr'
+  if 'pc}' in operands:
+    return not operands.startswith('sp!')
+  return operands.split(',')[0] == 'pc' and not RETURN.match(operands)
 
 
 class Elf(object):
@@ -148,6 +163,9 @@ def gate(elf, base, exports, objdump, path):
         failures.append('absolute symbol %s = 0x%08x' % (name, value))
 
   kinds = {}
+  # --emit-relocs keeps every relocation; a blob may need none of its own.
+  if not any(s[1] == SHT_REL for s in elf.sections):
+    failures.append('no relocation sections: link with --emit-relocs')
   for name, s in zip(elf.names, elf.sections):
     if s[1] != SHT_REL or name != '.rel.blob':
       continue
@@ -176,7 +194,7 @@ def gate(elf, base, exports, objdump, path):
   listing = subprocess.check_output(
       [objdump, '-d', '-j', '.blob', path]).decode()
   for line in listing.splitlines():
-    if INDIRECT.search(line):
+    if indirect(line):
       failures.append('indirect branch: ' + line.strip())
   return failures, kinds, imports
 
@@ -220,7 +238,7 @@ def main(argv):
     failures += ['%s: %s' % (path, x) for x in f]
     data = pack(elf, base)
     packed[base] = data
-    # A literal equal to an address inside the blob would not move with it.
+    # A secondary check: a word equal to an address inside the blob.
     inside = [o for o in range(0, len(data) - 3, 2)
         if base <= struct.unpack_from('<I', data, o)[0] < base + len(data)]
     if inside:
@@ -232,8 +250,8 @@ def main(argv):
         'imports': ['0x%08x' % v for v in imports]})
   if len(set(packed.values())) != 1:
     failures.append('the packed bytes differ between bases')
-  if len(packed) < 2:
-    failures.append('link at two bases at least')
+  if len(packed) < 3:
+    failures.append('link at three bases at least')
   for f in failures:
     print('GATE: ' + f, file=sys.stderr)
   if failures:

@@ -64,6 +64,12 @@ jobs:
         run: bash beads/build/build.sh "$PWD/artifacts" --wav
       - name: Build the unchanged 4.9.3 golden app
         run: bash beads/build/golden.sh "$PWD/golden"
+      - name: Gate the proof model blob and the gate's negative controls
+        run: |
+          mkdir -p blob-out
+          docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
+            --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/blob-out,dst=/out" drizzlet \
+            bash -c 'bash beads/build/tools/build_blob.sh /out/blob phase_weave beads/blob/phase_weave.cc beads/blob/phase_weave_engine.cc && bash beads/build/tools/blob_gate_test.sh /out/negative'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: drizzlet-release-assets

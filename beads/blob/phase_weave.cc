@@ -25,8 +25,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Phase Weave as a blob. The engine is never constructed and has no vtable:
-// the entry points call it non-virtually on the voice's state.
+// Phase Weave as a blob. The engine is never constructed (no vtable): entry
+// points call it non-virtually on the voice's state, as GCC 9 lays it out.
 
 #include "stmlib/utils/buffer_allocator.h"
 

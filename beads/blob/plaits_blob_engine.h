@@ -55,9 +55,11 @@ class PlaitsBlobEngine : public plaits::Engine {
     services_ = services;
   }
 
+  // Check keeps arena_size within the freed shared buffer; float-aligned.
   virtual void Init(stmlib::BufferAllocator* allocator) {
     uint8_t* arena = arena_size_
-        ? allocator->Allocate<uint8_t>(arena_size_)
+        ? reinterpret_cast<uint8_t*>(
+            allocator->Allocate<float>((arena_size_ + 3) / 4))
         : NULL;
     (*init_)(state_, services_, arena, arena_size_);
   }
