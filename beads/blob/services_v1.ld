@@ -22,8 +22,10 @@
 	THE SOFTWARE.
 	See http://creativecommons.org/licenses/MIT/ for more information.
 
-	Blob services, version 1: the services block (after the profile) and the
-	fixed addresses of its exports. Never move an export of a released version.
+	Blob services, version 1: the services block (after the profile) and its
+	exports. Frozen: an export's address, size, alignment and contents never
+	change (link asserts in services_section.ld; PlaitsBlob::CheckServices
+	compares the contents' SHA-256 at boot). New exports need a new version.
 */
 
 PLAITS_BLOB_SERVICES = 0x08021400;
@@ -31,3 +33,7 @@ PLAITS_BLOB_LUT_SINE = 0x08021440;
 PLAITS_BLOB_LUT_PITCH_RATIO_HIGH = 0x08021e44;
 PLAITS_BLOB_LUT_PITCH_RATIO_LOW = 0x08022248;
 PLAITS_BLOB_SERVICES_END = 0x0802264c;
+PLAITS_BLOB_LUT_SINE_SIZE = 2564;
+PLAITS_BLOB_LUT_PITCH_RATIO_HIGH_SIZE = 1028;
+PLAITS_BLOB_LUT_PITCH_RATIO_LOW_SIZE = 1028;
+PLAITS_BLOB_EXPORT_ALIGNMENT = 4;

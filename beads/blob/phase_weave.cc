@@ -25,8 +25,9 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Phase Weave as a blob. The engine is never constructed (no vtable): entry
-// points call it non-virtually on the voice's state, as GCC 9 lays it out.
+// Phase Weave as a blob: init constructs its DSP object in the voice's state.
+
+#include <new>
 
 #include "stmlib/utils/buffer_allocator.h"
 
@@ -36,7 +37,7 @@
 using beads::PlaitsBlobHeader;
 using beads::PlaitsBlobServices;
 using plaits::EngineParameters;
-using plaits::PhaseWeaveEngine;
+using plaits::PhaseWeave;
 
 // Provisional catalogue ID; Palette's output gain.
 const uint32_t kModel = 36;
@@ -50,7 +51,7 @@ extern "C" const PlaitsBlobHeader plaits_blob_header
   beads::kPlaitsBlobServicesVersion,
   kModel,
   0,  // The packer fills the size, entry and GOT fields.
-  sizeof(PhaseWeaveEngine),
+  sizeof(PhaseWeave),
   0,
   0,
   0,
@@ -62,29 +63,35 @@ extern "C" const PlaitsBlobHeader plaits_blob_header
   kGain
 };
 
-extern "C" void plaits_blob_init(
+STATIC_ASSERT(sizeof(PhaseWeave) <= beads::kPlaitsBlobMaxStateSize, state);
+STATIC_ASSERT(__alignof__(PhaseWeave) <= beads::kPlaitsBlobStateAlignment,
+    state_alignment);
+
+extern "C" void* plaits_blob_init(
     void* state,
     const PlaitsBlobServices* services,
     uint8_t* arena,
     size_t arena_size) {
   stmlib::BufferAllocator allocator(arena, arena_size);
-  static_cast<PhaseWeaveEngine*>(state)->PhaseWeaveEngine::Init(&allocator);
+  PhaseWeave* phase_weave = new(state) PhaseWeave;
+  phase_weave->Init(&allocator);
+  return phase_weave;
 }
 
 extern "C" void plaits_blob_reset(
-    void* state,
+    void* object,
     const PlaitsBlobServices* services) {
-  static_cast<PhaseWeaveEngine*>(state)->PhaseWeaveEngine::Reset();
+  static_cast<PhaseWeave*>(object)->Reset();
 }
 
 extern "C" void plaits_blob_render(
-    void* state,
+    void* object,
     const PlaitsBlobServices* services,
     const EngineParameters* parameters,
     float* out,
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  static_cast<PhaseWeaveEngine*>(state)->PhaseWeaveEngine::Render(
+  static_cast<PhaseWeave*>(object)->Render(
       *parameters, out, aux, size, already_enveloped);
 }

@@ -22,14 +22,25 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
-# The blob gate's negative controls, in the build image from the Drizzlet
-# root: every beads/test/blob_gate/neg_*.cc must fail to link or be refused,
-# with the diagnostic named on its "// Expect:" line.
+# The blob gate's controls, in the build image from the Drizzlet root: every
+# beads/test/blob_gate/pos_*.cc must pass; every neg_*.cc must fail to link or
+# be refused, with the diagnostic named on its "// Expect:" line.
 #   beads/build/tools/blob_gate_test.sh OUT
 set -euo pipefail
 out=${1:?usage: blob_gate_test.sh OUT}
 mkdir -p "$out"
 failures=0
+for source in beads/test/blob_gate/pos_*.cc; do
+  name=$(basename "$source" .cc)
+  if bash beads/build/tools/build_blob.sh "$out" "$name" "$source" \
+      > "$out/$name.log" 2>&1; then
+    echo "$name: accepted: $(tail -n1 "$out/$name.log")"
+  else
+    echo "ERROR: $name: the gate refused it"
+    cat "$out/$name.log"
+    failures=$((failures + 1))
+  fi
+done
 for source in beads/test/blob_gate/neg_*.cc; do
   name=$(basename "$source" .cc)
   expect=$(sed -n 's|^// Expect: ||p' "$source")

@@ -13,15 +13,15 @@
 
 namespace plaits {
 
-class PhaseWeaveEngine : public Engine {
+// The DSP, not polymorphic, so that a blob can construct it in place.
+class PhaseWeave {
  public:
-  PhaseWeaveEngine() { }
-  ~PhaseWeaveEngine() { }
+  PhaseWeave() { }
+  ~PhaseWeave() { }
 
-  virtual void Init(stmlib::BufferAllocator* allocator);
-  virtual void Reset();
-  virtual void LoadUserData(const uint8_t* user_data) { }
-  virtual void Render(const EngineParameters& parameters,
+  void Init(stmlib::BufferAllocator* allocator);
+  void Reset();
+  void Render(const EngineParameters& parameters,
       float* out,
       float* aux,
       size_t size,
@@ -33,6 +33,35 @@ class PhaseWeaveEngine : public Engine {
   float spread_;
   float cancellation_;
   float rotation_;
+
+  DISALLOW_COPY_AND_ASSIGN(PhaseWeave);
+};
+
+class PhaseWeaveEngine : public Engine {
+ public:
+  PhaseWeaveEngine() { }
+  ~PhaseWeaveEngine() { }
+
+  virtual void Init(stmlib::BufferAllocator* allocator) {
+    phase_weave_.Init(allocator);
+  }
+
+  virtual void Reset() {
+    phase_weave_.Reset();
+  }
+
+  virtual void LoadUserData(const uint8_t* user_data) { }
+
+  virtual void Render(const EngineParameters& parameters,
+      float* out,
+      float* aux,
+      size_t size,
+      bool* already_enveloped) {
+    phase_weave_.Render(parameters, out, aux, size, already_enveloped);
+  }
+
+ private:
+  PhaseWeave phase_weave_;
 
   DISALLOW_COPY_AND_ASSIGN(PhaseWeaveEngine);
 };

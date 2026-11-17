@@ -34,6 +34,6 @@
 typedef void (*Function)(float*, size_t);
 
 RENDER {
-  Function f = *static_cast<Function*>(state);
+  Function f = *static_cast<Function*>(object);
   f(out, size);
 }

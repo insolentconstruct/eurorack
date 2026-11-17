@@ -62,12 +62,11 @@ inline float HarmonicWave(
 
 }  // namespace
 
-void PhaseWeaveEngine::Init(BufferAllocator* allocator) {
-  // Not a virtual call: the blob build has no vtable.
-  PhaseWeaveEngine::Reset();
+void PhaseWeave::Init(BufferAllocator* allocator) {
+  Reset();
 }
 
-void PhaseWeaveEngine::Reset() {
+void PhaseWeave::Reset() {
   phase_ = 0.0f;
   constellation_ = 0.5f;
   spread_ = 0.0f;
@@ -75,7 +74,7 @@ void PhaseWeaveEngine::Reset() {
   rotation_ = 0.0f;
 }
 
-void PhaseWeaveEngine::Render(
+void PhaseWeave::Render(
     const EngineParameters& parameters,
     float* out,
     float* aux,

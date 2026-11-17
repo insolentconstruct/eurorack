@@ -43,7 +43,7 @@ class PlaitsBlobEngine : public plaits::Engine {
   PlaitsBlobEngine() { }
   ~PlaitsBlobEngine() { }
 
-  // Only for a blob that passed PlaitsBlob::Check, before Init.
+  // Only for a blob that passed PlaitsBlob::Check; Init must follow.
   void Bind(const uint8_t* blob, const PlaitsBlobServices* services) {
     const PlaitsBlobHeader* h = reinterpret_cast<const PlaitsBlobHeader*>(
         blob);
@@ -53,19 +53,21 @@ class PlaitsBlobEngine : public plaits::Engine {
     render_ = reinterpret_cast<PlaitsBlobRenderFn>(base + h->render_offset);
     arena_size_ = h->arena_size;
     services_ = services;
+    object_ = NULL;
   }
 
   // Check keeps arena_size within the freed shared buffer; float-aligned.
+  // The blob constructs its object in state_ and returns a pointer to it.
   virtual void Init(stmlib::BufferAllocator* allocator) {
     uint8_t* arena = arena_size_
         ? reinterpret_cast<uint8_t*>(
             allocator->Allocate<float>((arena_size_ + 3) / 4))
         : NULL;
-    (*init_)(state_, services_, arena, arena_size_);
+    object_ = (*init_)(state_, services_, arena, arena_size_);
   }
 
   virtual void Reset() {
-    (*reset_)(state_, services_);
+    (*reset_)(object_, services_);
   }
 
   virtual void LoadUserData(const uint8_t* user_data) { }
@@ -77,7 +79,7 @@ class PlaitsBlobEngine : public plaits::Engine {
       size_t size,
       bool* already_enveloped) {
     (*render_)(
-        state_, services_, &parameters, out, aux, size, already_enveloped);
+        object_, services_, &parameters, out, aux, size, already_enveloped);
   }
 
  private:
@@ -86,6 +88,7 @@ class PlaitsBlobEngine : public plaits::Engine {
   PlaitsBlobRenderFn render_;
   const PlaitsBlobServices* services_;
   size_t arena_size_;
+  void* object_;
   uint64_t state_[kPlaitsBlobMaxStateSize / sizeof(uint64_t)];
 
   DISALLOW_COPY_AND_ASSIGN(PlaitsBlobEngine);

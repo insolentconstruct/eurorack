@@ -48,18 +48,20 @@ extern "C" const PlaitsBlobHeader plaits_blob_header
   0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 1.0f, 1.0f
 };
 
-extern "C" void plaits_blob_init(
+extern "C" void* plaits_blob_init(
     void* state,
     const PlaitsBlobServices* services,
     uint8_t* arena,
-    size_t arena_size) { }
+    size_t arena_size) {
+  return state;
+}
 
 extern "C" void plaits_blob_reset(
-    void* state,
+    void* object,
     const PlaitsBlobServices* services) { }
 
 #define RENDER extern "C" void plaits_blob_render( \
-    void* state, const PlaitsBlobServices* services, \
+    void* object, const PlaitsBlobServices* services, \
     const EngineParameters* p, float* out, float* aux, size_t size, \
     bool* already_enveloped)
 

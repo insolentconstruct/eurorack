@@ -48,6 +48,6 @@ class Impl : public Base {
 };
 
 RENDER {
-  Base* b = new(state) Impl;
+  Base* b = new(object) Impl;
   b->Run(out, size);
 }

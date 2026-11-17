@@ -32,6 +32,7 @@
 
 #include "beads/blob/plaits_blob.h"
 #include "beads/profile.h"
+#include "plaits/resources.h"
 #include "beads/test/test_checker.h"
 
 using namespace beads;
@@ -88,7 +89,8 @@ void Seal(uint8_t* b, bool list) {
 PlaitsBlobStatus Check(uint8_t* b) {
   return PlaitsBlob::Check(
       b, region, region + sizeof(region), &services,
-      reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest), 1);
+      reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest), 1,
+      NULL);
 }
 
 void Services() {
@@ -132,7 +134,7 @@ void TestAccepts() {
   CHECK(Check(b) == PLAITS_BLOB_OK);
   CHECK(PlaitsBlob::Check(b, region, region + sizeof(region), &services,
       reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest),
-      0) == PLAITS_BLOB_ERROR_DIGEST);
+      0, NULL) == PLAITS_BLOB_ERROR_DIGEST);
 }
 
 void TestPlacement() {
@@ -143,20 +145,20 @@ void TestPlacement() {
   Seal(b, true);
   CHECK(PlaitsBlob::Check(b + 4, region, region + sizeof(region), &services,
       reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest),
-      1) == PLAITS_BLOB_ERROR_PLACEMENT);
+      1, NULL) == PLAITS_BLOB_ERROR_PLACEMENT);
   CHECK(PlaitsBlob::Check(b, region + 96, region + sizeof(region), &services,
       reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest),
-      1) == PLAITS_BLOB_ERROR_PLACEMENT);
+      1, NULL) == PLAITS_BLOB_ERROR_PLACEMENT);
   CHECK(PlaitsBlob::Check(b, region, b + 32, &services,
       reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest),
-      1) == PLAITS_BLOB_ERROR_PLACEMENT);
+      1, NULL) == PLAITS_BLOB_ERROR_PLACEMENT);
   CHECK(PlaitsBlob::Check(b, region + sizeof(region), region, &services,
       reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest),
-      1) == PLAITS_BLOB_ERROR_PLACEMENT);
+      1, NULL) == PLAITS_BLOB_ERROR_PLACEMENT);
   // The blob ends past the region.
   CHECK(PlaitsBlob::Check(b, region, b + kBlobSize - 4, &services,
       reinterpret_cast<const uint8_t (*)[kPlaitsBlobDigestSize]>(digest),
-      1) == PLAITS_BLOB_ERROR_HEADER);
+      1, NULL) == PLAITS_BLOB_ERROR_HEADER);
 }
 
 // Each fault, with the CRC recomputed so that the targeted check fires.
@@ -238,6 +240,233 @@ void TestRefusals() {
   CHECK(Check(b) == PLAITS_BLOB_ERROR_IMPORTS);
 }
 
+// The frozen exports: header fields, then one bit of one export's contents.
+void TestServicesFrozen() {
+  test_checker.Start("TestServicesFrozen");
+  CHECK(PlaitsBlob::CheckServices(&plaits_blob_services) == PLAITS_BLOB_OK);
+  static float sine[641];
+  memcpy(sine, plaits::lut_sine, sizeof(sine));
+  PlaitsBlobServices copy = plaits_blob_services;
+  copy.exports[PLAITS_BLOB_EXPORT_LUT_SINE] = sine;
+  CHECK(PlaitsBlob::CheckServices(&copy) == PLAITS_BLOB_OK);
+  reinterpret_cast<uint8_t*>(sine)[1000] ^= 1;
+  CHECK(PlaitsBlob::CheckServices(&copy) == PLAITS_BLOB_ERROR_SERVICES);
+  copy = plaits_blob_services;
+  copy.version += 1;
+  CHECK(PlaitsBlob::CheckServices(&copy) == PLAITS_BLOB_ERROR_SERVICES);
+  copy = plaits_blob_services;
+  copy.num_exports -= 1;
+  CHECK(PlaitsBlob::CheckServices(&copy) == PLAITS_BLOB_ERROR_SERVICES);
+}
+
+// A region of two synthetic blobs (no imports), each 256 bytes, then 32 bytes
+// of padding before the CRC.
+const uint32_t kRelease = 20261117;
+const uint32_t kFirstOffset = 64;
+const uint32_t kSecondOffset = 320;
+const uint32_t kRegionSize = 612;
+uint8_t flash[2048] __attribute__((aligned(32)));
+uint8_t digests[2][kPlaitsBlobDigestSize];
+
+void MakeBlob(uint8_t* b, uint32_t model, uint8_t* digest) {
+  PlaitsBlobHeader h;
+  memset(&h, 0, sizeof(h));
+  h.magic = kPlaitsBlobMagic;
+  h.header_size = sizeof(PlaitsBlobHeader);
+  h.abi = kPlaitsBlobAbi;
+  h.services_version = kPlaitsBlobServicesVersion;
+  h.model = model;
+  h.size = kBlobSize;
+  h.state_size = 36;
+  h.init_offset = 0x41;
+  h.reset_offset = 0x59;
+  h.render_offset = 0x5d;
+  h.got_offset = kGotOffset;
+  h.got_size = 0;
+  memcpy(b, &h, sizeof(h));
+  for (uint32_t i = sizeof(h); i < kBlobSize - 4; ++i) {
+    b[i] = i * model;
+  }
+  Write32(b + kBlobSize - 4, Profile::Crc32(b, kBlobSize - 4));
+  PlaitsBlob::Sha256(b, kBlobSize, digest);
+}
+
+uint32_t Read32(const uint8_t* p) {
+  return p[0] | p[1] << 8 | p[2] << 16 | uint32_t(p[3]) << 24;
+}
+
+uint32_t SealRegion() {
+  const uint32_t size = Read32(flash + 16);
+  const uint32_t crc = Profile::Crc32(flash, size - 4);
+  Write32(flash + size - 4, crc);
+  return crc;
+}
+
+// Entry word w of entry i.
+void SetEntry(int i, int w, uint32_t value) {
+  Write32(flash + sizeof(PlaitsBlobRegionHeader) + 16 * i + 4 * w, value);
+}
+
+uint32_t BuildRegion() {
+  memset(flash, 0xff, sizeof(flash));
+  const uint32_t words[6] = {
+    kPlaitsBlobRegionMagic, kPlaitsBlobRegionVersion, kRelease,
+    kPlaitsBlobServicesVersion, kRegionSize, 2
+  };
+  for (int i = 0; i < 6; ++i) {
+    Write32(flash + 4 * i, words[i]);
+  }
+  MakeBlob(flash + kFirstOffset, 36, digests[0]);
+  MakeBlob(flash + kSecondOffset, 37, digests[1]);
+  const uint32_t offsets[2] = { kFirstOffset, kSecondOffset };
+  for (int i = 0; i < 2; ++i) {
+    SetEntry(i, 0, 36 + i);
+    SetEntry(i, 1, offsets[i]);
+    SetEntry(i, 2, kBlobSize);
+    SetEntry(i, 3, Read32(flash + offsets[i] + kBlobSize - 4));
+  }
+  return SealRegion();
+}
+
+PlaitsBlobIdentity identity;
+
+PlaitsBlobStatus Read(uint32_t expected_crc, size_t num_digests) {
+  return PlaitsBlob::ReadRegion(
+      flash, flash + sizeof(flash), kRelease, expected_crc,
+      &plaits_blob_services, digests, num_digests, &identity);
+}
+
+void TestRegion() {
+  test_checker.Start("TestRegion");
+  uint32_t crc = BuildRegion();
+  CHECK(Read(crc, 2) == PLAITS_BLOB_OK);
+  CHECK(identity.release == kRelease);
+  CHECK(identity.services_status == PLAITS_BLOB_OK);
+  CHECK(identity.region_crc == crc);
+  CHECK(identity.num_blobs == 2);
+  CHECK(identity.blobs[0].model == 36 && identity.blobs[1].model == 37);
+  CHECK(identity.blobs[1].address ==
+      static_cast<uint32_t>(reinterpret_cast<uintptr_t>(
+          flash + kSecondOffset)));
+  CHECK(identity.blobs[1].status == PLAITS_BLOB_OK);
+  CHECK(!memcmp(identity.blobs[1].digest, digests[1], kPlaitsBlobDigestSize));
+
+  // A stale tail from a longer, older region is never read.
+  memset(flash + kRegionSize, 0x5a, sizeof(flash) - kRegionSize);
+  CHECK(Read(crc, 2) == PLAITS_BLOB_OK);
+
+  CHECK(PlaitsBlob::ReadRegion(
+      flash + 4, flash + sizeof(flash), kRelease, crc, &plaits_blob_services,
+      digests, 2, &identity) == PLAITS_BLOB_ERROR_PLACEMENT);
+  CHECK(Read(0, 2) == PLAITS_BLOB_ERROR_NO_REGION);
+  CHECK(Read(crc ^ 1, 2) == PLAITS_BLOB_ERROR_SELECTION);
+  CHECK(identity.num_blobs == 0);
+  CHECK(PlaitsBlob::ReadRegion(
+      flash, flash + sizeof(flash), kRelease + 1, crc, &plaits_blob_services,
+      digests, 2, &identity) == PLAITS_BLOB_ERROR_RELEASE);
+
+  // An interrupted update: the second blob was never written.
+  BuildRegion();
+  memset(flash + kSecondOffset + 16, 0xff, sizeof(flash) - kSecondOffset - 16);
+  CHECK(Read(crc, 2) == PLAITS_BLOB_ERROR_CRC);
+  memset(flash, 0xff, sizeof(flash));
+  CHECK(Read(crc, 2) == PLAITS_BLOB_ERROR_NO_REGION);
+
+  // The second blob is not on this firmware's list: the region is refused.
+  crc = BuildRegion();
+  CHECK(Read(crc, 1) == PLAITS_BLOB_ERROR_DIGEST);
+  CHECK(identity.blobs[0].status == PLAITS_BLOB_OK);
+  CHECK(identity.blobs[1].status == PLAITS_BLOB_ERROR_DIGEST);
+
+  // The services' contents changed: nothing is read.
+  static float sine[641];
+  memcpy(sine, plaits::lut_sine, sizeof(sine));
+  sine[3] += 1.0f;
+  PlaitsBlobServices copy = plaits_blob_services;
+  copy.exports[PLAITS_BLOB_EXPORT_LUT_SINE] = sine;
+  CHECK(PlaitsBlob::ReadRegion(
+      flash, flash + sizeof(flash), kRelease, crc, &copy, digests, 2,
+      &identity) == PLAITS_BLOB_ERROR_SERVICES);
+  CHECK(identity.services_status == PLAITS_BLOB_ERROR_SERVICES);
+  CHECK(identity.num_blobs == 0);
+}
+
+// Table faults, each with the region CRC recomputed and selected; the
+// last three are found per blob.
+void TestRegionTable() {
+  test_checker.Start("TestRegionTable");
+  struct {
+    int entry;
+    int word;
+    uint32_t value;
+    PlaitsBlobStatus expected;
+    uint32_t blobs_read;
+  } faults[] = {
+    { -1, 1, kPlaitsBlobRegionVersion + 1, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { -1, 3, kPlaitsBlobServicesVersion + 1, PLAITS_BLOB_ERROR_SERVICES, 0 },
+    { -1, 5, kMaxPlaitsBlobs + 1, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { -1, 5, 3, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { -1, 4, kRegionSize + 2, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { -1, 4, sizeof(flash) + 4, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { -1, 4, 0xfffffffc, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { -1, 4, 40, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 0, 1, kFirstOffset + 4, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 0, 1, 32, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 1, kSecondOffset + 4, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 1, kFirstOffset, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 2, 0xffffffe0, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 2, kRegionSize, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 1, 0xffffffe0, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 0, 36, PLAITS_BLOB_ERROR_TABLE, 0 },
+    { 1, 0, 38, PLAITS_BLOB_ERROR_MODEL, 2 },
+    { 1, 3, 0, PLAITS_BLOB_ERROR_TABLE, 2 },
+    { 1, 2, kBlobSize - 32, PLAITS_BLOB_ERROR_HEADER, 2 },
+  };
+  for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
+    BuildRegion();
+    if (faults[i].entry < 0) {
+      Write32(flash + 4 * faults[i].word, faults[i].value);
+    } else {
+      SetEntry(faults[i].entry, faults[i].word, faults[i].value);
+    }
+    const uint32_t size = Read32(flash + 16);
+    const uint32_t crc = size % 4 == 0 && size >= 8 && size <= sizeof(flash)
+        ? SealRegion() : 1;
+    const PlaitsBlobStatus status = Read(crc, 2);
+    if (status != faults[i].expected) {
+      printf("ERROR: TestRegionTable: case %d gave %d\n",
+          static_cast<int>(i), status);
+    }
+    CHECK(status == faults[i].expected);
+    // Table faults are found before any blob is read.
+    CHECK(identity.num_blobs == faults[i].blobs_read);
+  }
+}
+
+// An entry longer than its blob, its CRC field naming the padding; nine
+// entries, one past the identity record.
+void TestRegionLimits() {
+  test_checker.Start("TestRegionLimits");
+  BuildRegion();
+  SetEntry(1, 2, kBlobSize + 32);
+  SetEntry(1, 3, 0xffffffff);
+  CHECK(Read(SealRegion(), 2) == PLAITS_BLOB_ERROR_TABLE);
+
+  BuildRegion();
+  const uint32_t count = kMaxPlaitsBlobs + 1;
+  const uint32_t first = 192;
+  Write32(flash + 16, first + 32 * count + 4);
+  Write32(flash + 20, count);
+  for (uint32_t i = 0; i < count; ++i) {
+    SetEntry(i, 0, 100 + i);
+    SetEntry(i, 1, first + 32 * i);
+    SetEntry(i, 2, 0);
+    SetEntry(i, 3, 0);
+  }
+  CHECK(Read(SealRegion(), 2) == PLAITS_BLOB_ERROR_TABLE);
+  CHECK(identity.num_blobs == 0);
+}
+
 void TestServicesTable() {
   test_checker.Start("TestServicesTable");
   CHECK(plaits_blob_services.magic == kPlaitsBlobServicesMagic);
@@ -252,6 +481,10 @@ int main() {
   TestPlacement();
   TestRefusals();
   TestServicesTable();
+  TestServicesFrozen();
+  TestRegion();
+  TestRegionTable();
+  TestRegionLimits();
   puts("Plaits blob checks: PASS");
   return test_checker.failures() ? 1 : 0;
 }

@@ -33,5 +33,5 @@
 
 RENDER {
   __asm__ volatile("cmp %0, #0\n\tit ne\n\tbxne %1" : :
-      "r"(p->trigger), "r"(state) : "cc");
+      "r"(p->trigger), "r"(object) : "cc");
 }
