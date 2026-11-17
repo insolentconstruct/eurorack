@@ -250,21 +250,22 @@ audio remains identical. Module checks:
 | Dropouts, clipping | None |
 | Click candidates | None in Clouds-style, PITCH, DENSITY or CPU recordings; dry path, delay and wavetable synth at the counts seen before |
 
-**Test module totals** (2026-10-11 to 2026-10-18). Firmware installs:
+**Test module totals** (2026-10-11 to 2026-11-17). Firmware installs:
 
 | Firmware | Debug probe | Audio file |
 |---|---:|---:|
-| 2021 forum release | 2 | 4 |
-| 2024 recovery firmware | 2 | 2 |
-| Vanilla source | 9 | 2 |
-| Drizzlet (all builds) | 22 | 4 |
+| 2021 forum release (and rebuilds) | 3 | 4 |
+| 2024 recovery firmware (and rebuilds) | 9 | 2 |
+| Vanilla source (and timing builds) | 30 | 2 |
+| Drizzlet (all builds) | 185 | 8 |
+| Beads tuneup | 17 | 2 |
+| Storage recovery tool | 0 | 2 |
 | Reverse-engineered port | 0 | 1 |
-| **Total** | **35** | **13** |
+| **Total** | **244** | **21** |
 
-All probe installs verified; every install booted. One quiet audio update
-stopped partway; replaying at full volume worked and the bootloader was intact.
+Every probe install verified, as did 107 settings sector writes and 13 calibration copy erases; six probe attempts stopped at a check before writing. Every audio install booted; one quiet audio update stopped partway, and replaying it at full volume worked.
 
-About 13 hours of automated runs on the module (roughly 9.5 before the Beta 1 sessions), counted from run logs, excluding waits for a control to be moved; a run recorded by several instruments counts once.
+About 58 hours of automated runs on the module (about 9.5 before the Beta 1 sessions, 34 more to the Beta 2 release and 14.5 to the Beta 3 release), counted from run logs, excluding waits for owner actions; a run recorded by several instruments counts once.
 
 ### Beta 3
 
@@ -408,24 +409,6 @@ No audio underruns.
 | Heavy wavetable synth case, CPU | 87.2%; 84.0–84.2% with synth grains computed in pairs (#168); vanilla source 86.0%. Some repeat rows were rejected by the rig's audio check |
 
 Not yet checked on the module: a damaged calibration restored from its copy (host tests only), a stale flash error flag before a settings save (shown on a development board with the same flash controller, and in host tests), attacks with Snap alone. Hygrostat profiles, custom scale selection/pitch/LEDs, the nine additional options and both synth-tail choices were not checked on the module.
-
-**Historical test module totals** (2026-10-18 to 2026-10-28; excludes later sessions). Firmware and settings installs:
-
-Installs and automated hours after 2026-10-28 were not counted.
-
-| Firmware | Debug probe | Audio file |
-|---|---:|---:|
-| Drizzlet (Beta 1 release candidate 5, CPU and Beta 2 builds) | 52 | 2 |
-| Vanilla source (timing build) | 2 | 0 |
-| Settings sector restore (factory calibration and settings) | 7 | – |
-| Settings sector test images (Beta 1 settings, [M] assignments, synth settings, storage tests) | 10 | – |
-| Storage recovery tool | 0 | 2 |
-| **Total** | **71** | **4** |
-
-Since 2026-10-11: 123 installs (106 probe, 17 audio). Probe writes verified
-the expected start address; all audio installs booted. Two probe writes needed
-repeating after failed checks; one audio install needed replay after a
-bootloader error. About 18 additional automated hours, 31 total, counted as above.
 
 **CV calibration** ([M]+[A]):
 
