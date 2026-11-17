@@ -55,7 +55,6 @@ void DelayClock::Init(float sample_rate) {
   max_interval_ = int(sample_rate * 4.0f);
   
   rotate_ = 0;
-  power_sum_ = 1.0f;
 }
 
 void DelayClock::Process(bool tick, bool tap) {

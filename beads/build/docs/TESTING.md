@@ -498,8 +498,15 @@ The factory calibration was restored by debug probe after each saved run. Before
   19 granular, delay and spectral scenarios: output and executed
   instructions per block identical to the previous build. Knob-timing delay
   renders hash as before in all four qualities, mono and stereo. On, per
-  block: Unity notch +154 to +224; Crossfade +243 to +378 (+331 to +905
-  before the block-rate decision); both +338 to +479. Flash +6.7 KB.
+  block: Unity notch +170 to +242; Crossfade +237 to +372 (+331 to +905
+  before the block-rate decision); both +363 to +518. Flash +7.0 KB.
+- Off code is the previous build's, instruction for instruction: Crossfade
+  has its own copy of the knob-timing render, because edits inside the
+  shared one changed GCC's register allocation for Off. On the Seed3
+  (seven code layouts) the Off worst delay block still moves by -0.14 to
+  +0.31 points; the previous build with an unused block of the same size
+  in the same place moves by -0.10 to +0.40, so this is code placement,
+  not code.
 - Unity notch with DENSITY jumping across noon every two blocks for 4 s:
   the loop does not grow, and the feedback at each block's end holds unity
   for the taps at both of its ends.
@@ -507,10 +514,8 @@ The factory calibration was restored by debug probe after each saved run. Before
   new delay times: the fade's taps add to 1.41, the loop gain stays at
   1.00001 at most (it reached 1.414 before the notch allowed for the
   fade) and the passage that faded comes round within -0.13 to +0.06 dB
-  (it was up to +2.3 dB). Allowing for the fade costs +4 to +6
-  instructions per block with Unity notch, +7 to +13 with Crossfade and
-  +14 to +19 with both; Off is unchanged. FREEZE slices glide with
-  Crossfade on, identical to stock.
+  (it was up to +2.3 dB). FREEZE slices glide with Crossfade on,
+  identical to stock.
 
 ## Not tested
 
