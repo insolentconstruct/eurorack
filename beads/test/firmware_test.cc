@@ -2198,10 +2198,10 @@ void TestMixOptionsProfile() {
 // grains from 5 ms in every quality and in the wavetable synth.
 void TestGrainStealingProfile() {
   test_checker.Start("TestGrainStealingProfile");
+  const uint8_t stealing[] = { FEATURE_GRAIN_STEALING, 1 };
   for (int legacy = 1; legacy >= 0; --legacy) {
     Rig r(false, false);
     if (legacy) {
-      const uint8_t stealing[] = { FEATURE_GRAIN_STEALING, 1 };
       BootWithProfile(&r, stealing, 1);
     } else {
       r.Reboot(false);
@@ -2217,7 +2217,20 @@ void TestGrainStealingProfile() {
         simple_scheduler_threshold_ == 120 * scale);
     CHECK(synth.wavetable_granular_player_.
         simple_scheduler_threshold_ == 240 * scale);
+    CHECK(settings.FeatureValue(FEATURE_GRAIN_STEALING) == legacy);
   }
+  // Nothing is saved: after play and a save, the factory profile is 2026.
+  Rig r(false, false);
+  BootWithProfile(&r, stealing, 1);
+  r.Settle();
+  CHECK(processor.processor_digital_.granular_player_.
+      simple_scheduler_threshold_ == 240);
+  settings.SavePersistentData();
+  settings.SaveState();
+  r.Reboot(false);
+  CHECK(settings.FeatureValue(FEATURE_GRAIN_STEALING) == 0);
+  CHECK(processor.processor_digital_.granular_player_.
+      simple_scheduler_threshold_ == 1200);
 }
 
 int main() {
