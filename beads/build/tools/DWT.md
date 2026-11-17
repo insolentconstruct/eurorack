@@ -115,13 +115,15 @@ so a late block is heard before the 120000-cycle budget runs out: the first
 left word of the half goes stale once the DMA has read it. Measured on one
 2021 module with a test build that held the callback at set lengths, the
 callback maximum was clean up to 108908 cycles at 48 kHz (q1, q3, synth),
-103935 at 32 kHz (q2) and 99182 at 24 kHz (q0); the first late block came
-at 109504, 104520 and 99762. The development board (same core, codec driver
-and clocks) was clean up to 109700, 104900 and 100100. The callback maximum
-leaves out interrupt entry and the driver's work before `Process`, which also
-spend the deadline. A late first word sets no SAI flag; that it causes the
-left-only click is inferred (see OPTIMIZATIONS.md, Audio deadline). (The earlier 115800 / 113900 / 111500 timed RAM at send time,
-one slot late.)
+103935 at 32 kHz (q2) and 99182 at 24 kHz (q0). Just above that, isolated
+late points had a single late block among the window's first eight (probably
+start-up, unexplained); repeated late blocks began at 92.3%, and by 89.2%
+and 85.0%, of the budget. The development board (same core, codec driver and
+clocks) was clean up to 109700, 104900 and 100100. The callback maximum
+leaves out interrupt entry and the driver's work before `Process`, which
+also spend the deadline. A late first word sets no SAI flag; that it causes
+the left-only click is inferred (see OPTIMIZATIONS.md, Audio deadline). (The
+earlier 115800 / 113900 / 111500 timed RAM at send time, one slot late.)
 
 Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (FEEDBACK LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri). One [M] tap reaches page 2 (DRY/WET LED), where REVERB selects reverb Stock/Clouds-style (lower/upper half). Page 3 (REVERB LED): REVERB lower half is Synth start: Automatic (Stock). Page 4 (all three LEDs): REVERB bottom third is the Stock limiter. Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 

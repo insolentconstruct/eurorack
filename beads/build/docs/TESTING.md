@@ -305,11 +305,18 @@ callback at set lengths. Firmware counters flag a block whose first left
 sample is written after the DAC DMA has read it. Each edge was found twice;
 a first 48 kHz run (2026-11-14, `961bf6e`) agreed within 100 cycles.
 
-| Codec rate (qualities) | Clean up to | First late block |
-|---|---:|---:|
-| 48 kHz (Bright digital, Sunny tape, synths) | 108,908 (90.8%) | 109,504 (91.3%) |
-| 32 kHz (Cold digital) | 103,935 (86.6%) | 104,520 (87.1%) |
-| 24 kHz (Scorched cassette) | 99,182 (82.7%) | 99,762 (83.1%) |
+| Codec rate (qualities) | Clean up to |
+|---|---:|
+| 48 kHz (Bright digital, Sunny tape, synths) | 108,908 (90.8%) |
+| 32 kHz (Cold digital) | 103,935 (86.6%) |
+| 24 kHz (Scorched cassette) | 99,182 (82.7%) |
+
+Just above each clean edge, the step search found isolated late points with
+exactly one late block, always among the window's first eight: probably a
+start-up effect of the test build, not yet explained, so it is not used as
+an edge. Repeated late blocks with stale OUT L began at 92.3% at 48 kHz and
+by 89.2% at 32 kHz and 85.0% at 24 kHz (the gaps above the 32 and 24 kHz
+edges were not tested step by step).
 
 Heavy granular patch per quality: callback peak, and margin in points to
 that rate's clean edge. The first left sample was on time in every row.
