@@ -225,6 +225,25 @@ Measured in November 2026 on a development board with the same chip and clock, a
 - **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
 - **Headroom.** The 90% working limit in [FEATURES.md](FEATURES.md) holds only at 48 kHz. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, set from module measurements at those rates.
 
+### One-frame output delay (pending module qualification)
+
+Drizzlet writes each block's output one frame late: the codec driver stores the last block's last frame at the start of the half before the callback runs, then copies the callback's first N−1 frames after it. The first word the callback must reach in time is then the third word of the half, one frame later, and the deadline moves to about the next codec interrupt.
+
+- **Development board (measured, 3 repeats, 60 s per step, 0.1% steps).** Callback maximum, budget 120,000:
+
+| Codec rate | Before: no late word | With the delay: no late word | With the delay: next interrupt not yet pending |
+|---|---:|---:|---:|
+| 48 kHz | 109,765 (91.5%) | 119,483 (99.6%) | 118,995 (99.2%) |
+| 32 kHz | 104,963 (87.5%) | 119,835 (99.9%) | 119,115 (99.3%) |
+| 24 kHz | 100,179 (83.5%) | 119,967 (100.0%) | 119,247 (99.4%) |
+
+  The limit is now the block itself at every rate: the interrupt must return before the next one is due. Above that, interrupts overlap and the callback falls behind. Without the store checks, the overlap started about 220–260 cycles later (one repeat).
+- **Sound (measured).** Bit-identical to the driver without the delay, shifted by exactly one frame, at all three rates (development board, 1,000 played halves each).
+- **Cost (measured).** `Codec::Fill` with Beads' conversion loop: +144, +93 and +86 cycles per block at 48, 32 and 24 kHz (0.12% of the block or less). The callback writes cached RAM and the driver copies to the DMA buffer. Flash +384 bytes, RAM +200 bytes. The bootloader links the same driver; the delay is compiled for the application only, so the bootloader is unchanged.
+- **Behaviour.** Latency rises by one frame. Patches that feed OUT back to IN, or line audio up with gates or triggers, shift by one frame. A pause or restart (quality changes) drops the one pending frame, inside the existing fade.
+- **Why Beads differs.** Mutable Instruments' other STM32 modules share one codec pattern (callback output written in place), but the Beads H7 DMA reads ahead of its sends, and Mutable Instruments noted that every project has something unique in hardware that makes reusable layers above the GPIO level of limited use ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/)).
+- **Pending on the module.** Clean edges at 48, 32 and 24 kHz and a click scan; deliberate overruns above 100% (how output fails is not yet measured); start-up and sample-rate changes. Until then the working limits above stay as they are.
+
 ## Rules for future changes
 
 ### From Mutable Instruments
