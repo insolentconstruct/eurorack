@@ -35,6 +35,33 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
+// 1.5 x feedback squared is the delay loop gain of one tap.
+const float kUnityFeedback = 0.8164966f;
+const float kUnityNotchWidth = 0.03f;
+
+/* static */
+float Processor::UnityFeedback(float feedback, float tap_gain) {
+  const float unity = kUnityFeedback / Sqrt(tap_gain);
+  const float low = kUnityFeedback - kUnityNotchWidth;
+  const float high = kUnityFeedback + kUnityNotchWidth;
+  if (feedback < low) {
+    return feedback * (unity / low);
+  } else if (feedback > high) {
+    return unity + (feedback - high) * ((1.0f - unity) / (1.0f - high));
+  } else {
+    return unity;
+  }
+}
+
+void Processor::SetFeedbackCutoff(bool low) {
+  const float cutoff = low ? 10.0f : 40.0f;
+  processor_digital_.set_feedback_cutoff(cutoff / 48000.0f);
+  processor_vintage_digital_.set_feedback_cutoff(cutoff / 32000.0f);
+  processor_clean_tape_.set_feedback_cutoff(cutoff / 24000.0f);
+  processor_dirty_tape_.set_feedback_cutoff(cutoff / 24000.0f);
+  SetOption(OPTION_FLAG_LOW_CUTOFF, low);
+}
+
 void Processor::ProcessWithOptions(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -71,19 +98,40 @@ void Processor::ProcessWithOptions(
   DelayController::Output taps[size];
   bool gate_out[size];
 
+  // Tap gains at the start of the block, for the unity notch.
+  const bool unity = (options_ & OPTION_FLAG_UNITY_FEEDBACK) && delay_mode;
+  const bool synchronized = seed_button_state < SEED_BUTTON_STATE_IGNORE &&
+      (seed_button_state != SEED_BUTTON_STATE_LOCKED || seed_input);
+  const float tap_gain = unity
+      ? delay_controller_.tap_gain(synchronized)
+      : 1.0f;
   if (delay_mode) {
     const bool free_running = seed_button_state >= SEED_BUTTON_STATE_IGNORE;
-    delay_controller_.Render(
-        free_running ? SEED_BUTTON_STATE_LOCKED : seed_button_state,
-        free_running ? NULL : seed_input,
-        freeze,
-        density.base,
-        (1.0f - expo_fm_amount) * density.cv,
-        expo_fm_amount * density.cv,
-        parameters.time,
-        parameters.shape,
-        taps,
-        size);
+    if (options_ & OPTION_FLAG_DELAY_CROSSFADE) {
+      delay_controller_.RenderCrossfade(
+          free_running ? SEED_BUTTON_STATE_LOCKED : seed_button_state,
+          free_running ? NULL : seed_input,
+          freeze,
+          density.base,
+          (1.0f - expo_fm_amount) * density.cv,
+          expo_fm_amount * density.cv,
+          parameters.time,
+          parameters.shape,
+          taps,
+          size);
+    } else {
+      delay_controller_.Render(
+          free_running ? SEED_BUTTON_STATE_LOCKED : seed_button_state,
+          free_running ? NULL : seed_input,
+          freeze,
+          density.base,
+          (1.0f - expo_fm_amount) * density.cv,
+          expo_fm_amount * density.cv,
+          parameters.time,
+          parameters.shape,
+          taps,
+          size);
+    }
     for (size_t i = 0; i < size; ++i) {
       gate_out[i] = taps[i].gate;
     }
@@ -105,6 +153,15 @@ void Processor::ProcessWithOptions(
 
   FloatFrame dry_signal[size];
   const float feedback = mix_parameters.feedback;
+  float loop_feedback = feedback;
+  if (unity) {
+    // The larger of the block's start and end, as feedback lags a block.
+    loop_feedback = UnityFeedback(feedback, std::max(
+        tap_gain, delay_controller_.tap_gain(synchronized)));
+  }
+  if (unity != bool(options_ & OPTION_FLAG_LOW_CUTOFF)) {
+    SetFeedbackCutoff(unity);
+  }
   if (spectral_) {
     QuantizeDrySignal(in, dry_signal, size);
     spectral_processor_.Process(
@@ -114,19 +171,19 @@ void Processor::ProcessWithOptions(
     switch (media_) {
       case MEDIA_DIGITAL:
         processor_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
       case MEDIA_VINTAGE_DIGITAL:
         processor_vintage_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
       case MEDIA_CLEAN_TAPE:
         processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
       case MEDIA_DIRTY_TAPE:
         processor_dirty_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
     }
     QuantizeDrySignal(in, dry_signal, size);

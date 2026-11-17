@@ -68,6 +68,8 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Mix law.
   { 2, kNoField, false, false, false, false },  // Reverb input.
   { 2, kNoField, false, false, false, false },  // Grain stealing.
+  { 2, kNoField, false, false, false, false },  // Unity feedback.
+  { 2, kNoField, false, false, false, false },  // Delay crossfade.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

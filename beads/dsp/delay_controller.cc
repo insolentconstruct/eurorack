@@ -120,7 +120,7 @@ void DelayController::Render(
     Output* out,
     size_t size) {
   // One tail call through a pointer, so the fade test adds no work.
-  RenderFn fn = &DelayController::RenderWithTimingFade;
+  RenderFn fn = &DelayController::RenderWithTimingFade<false>;
   if (timing_gain_ == TIMING_FADE_OFF) {
     if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
       fn = &DelayController::RenderInternal<false>;
@@ -139,6 +139,37 @@ void DelayController::Render(
       shape, out, size);
 }
 
+void DelayController::RenderCrossfade(
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* external_input,
+    const bool* freeze,
+    float density,
+    float linear_fm,
+    float exponential_fm,
+    const RandomizedParameter& position,
+    const RandomizedParameter& shape,
+    Output* out,
+    size_t size) {
+  RenderFn fn = &DelayController::RenderWithTimingFade<true>;
+  if (timing_gain_ == TIMING_FADE_OFF) {
+    if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
+      fn = &DelayController::RenderKnobCrossfade;
+    } else {
+      fn = &DelayController::RenderInternal<true>;
+    }
+  }
+  (this->*fn)(
+      seed_button_state,
+      external_input,
+      freeze,
+      density,
+      linear_fm,
+      exponential_fm,
+      position,
+      shape, out, size);
+}
+
+template<bool crossfade>
 void DelayController::RenderWithTimingFade(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* external_input,
@@ -181,6 +212,16 @@ void DelayController::RenderWithTimingFade(
 
   if (synchronized_) {
     RenderInternal<true>(
+        seed_button_state,
+        external_input,
+        freeze,
+        density,
+        linear_fm,
+        exponential_fm,
+        position,
+        shape, out, size);
+  } else if (crossfade) {
+    RenderKnobCrossfade(
         seed_button_state,
         external_input,
         freeze,
@@ -435,6 +476,202 @@ void DelayController::RenderInternal(
     if (external_input) {
       ++external_input;
     }
+    ++freeze;
+    ++out;
+  }
+}
+
+// RenderInternal<false> with crossfades, copied so that one stays unchanged.
+void DelayController::RenderKnobCrossfade(
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* external_input,
+    const bool* freeze,
+    float density,
+    float linear_fm,
+    float exponential_fm,
+    const RandomizedParameter& position,
+    const RandomizedParameter& shape,
+    Output* out,
+    size_t size) {
+  // Add more filtering to the CV. Because.
+  ONE_POLE(linear_fm_, linear_fm, 0.05f);
+
+  density += linear_fm_;
+  CONSTRAIN(density, 0.0f, 1.0f);
+
+  const float slice_modulation = 1.005f * position.value(
+      &position_modulation_,
+      size,
+      1.0f,
+      true);
+  // volatile stops GCC 9 fusing this into an fmaf, which rounds
+  // differently; -ffp-contract=off would change its other choices.
+  const volatile float shape_target =
+      shape.value(&shape_modulation_, size, 1.0f, true) * 0.995f;
+  ParameterInterpolator modulated_shape(&shape_, shape_target, size);
+  ParameterInterpolator modulated_fm(
+      &fm_,
+      SemitonesToRatio(-fm_filter_.Process(exponential_fm) * 60.0f),
+      size);
+  ParameterInterpolator modulated_density(
+      &density_,
+      density_filter_.Process(density),
+      size);
+
+  seed_button_state_ = seed_button_state;
+
+  // A crossfade goes straight to the delay time at the end of the block.
+  const bool glide = clock_.Crossfade(max(
+      float(kMinDelay),
+      SemitonesToRatio(-fm_filter_.value() * 60.0f) * float(max_delay_) * \
+          SemitonesToRatio(-fabsf(density_filter_.value() - 0.5f) * 216.0f)),
+      *freeze);
+  float power[NUM_INTERVALS];
+  float power_step[NUM_INTERVALS];
+  clock_.PowerGains(size, power, power_step);
+
+  while (size--) {
+    float tap_ratio[NUM_RATIOS];
+    float tap_gain[NUM_RATIOS];
+
+    const float density = modulated_density.Next();
+    const float fm = modulated_fm.Next();
+
+    clock_.Fade();
+    if (glide) {
+      const float new_interval = max(
+          float(kMinDelay),
+          fm * float(max_delay_) * \
+              SemitonesToRatio(-fabsf(density - 0.5f) * 216.0f));
+      float lp_coefficient = 10.0f / new_interval;
+      CONSTRAIN(lp_coefficient, 0.005f, 0.7f);
+      clock_.Glide(new_interval, lp_coefficient);
+    }
+
+    tap_ratio[0] = 1.00f;
+    tap_ratio[1] = 0.77f;
+
+    float fade_to_odd = (density - 0.5f) * 25.0f;
+    CONSTRAIN(fade_to_odd, 0.0f, 1.0f);
+    fade_to_odd = fade_to_odd * (0.25f + 0.75f * tap_modulation_.Render());
+    tap_gain[0] = 1.0f - fade_to_odd * 0.2f;
+    tap_gain[1] = fade_to_odd * 0.8f;
+
+    const float shape = modulated_shape.Next();
+
+    if (*freeze) {
+      // Reset all play heads when freezing.
+      if (!freeze_) {
+        for (int i = 0; i < NUM_HEADS; ++i) {
+          play_head_[i].Init();
+          slave_play_head_[i].Init();
+        }
+      }
+
+      // Reset and resync the play heads that will be faded in.
+      if (clock_.retrig()) {
+        int start = clock_.new_interval_index() * NUM_RATIOS;
+        for (int i = start; i < start + NUM_RATIOS; ++i) {
+          play_head_[i].Init();
+          slave_play_head_[i].Init();
+        }
+      }
+
+      float slice_index_smooth = slice_index_filter_.Process(slice_modulation);
+
+      for (int i = 0; i < NUM_HEADS; ++i) {
+        PlayHead* new_head = play_head_[i].done() ? &play_head_[i] : NULL;
+        if (!new_head && play_head_[i].half_way()) {
+          new_head = &slave_play_head_[i];
+        }
+
+        const int interval = i / NUM_RATIOS;
+        const int ratio = i % NUM_RATIOS;
+
+        if (new_head) {
+          int slice_duration = int(
+              clock_.interval(interval) * tap_ratio[ratio]);
+          CONSTRAIN(slice_duration, 1, max_delay_);
+          const int num_slices = max_delay_ / slice_duration;
+          if (numerator_quantizer_[i].num_steps() != num_slices) {
+            numerator_quantizer_[i].Init(
+                num_slices,
+                0.05f / 5.0f * float(num_slices),
+                false);
+          }
+
+          const int slice_index = numerator_quantizer_[i].Process(
+              slice_index_smooth);
+
+          new_head->Start(
+              slice_duration * slice_index + kMinDelay,
+              slice_duration,
+              tap_gain[ratio] * power[interval]);
+        }
+        play_head_[i].Render(&out->tap[2 * i], shape, false);
+        slave_play_head_[i].Render(&out->tap[2 * i + 1], shape, true);
+      }
+      out->gate = \
+          play_head_[clock_.new_interval_index() * NUM_RATIOS].phase() < 0.5f;
+    } else {
+      // Reset all envelopes when unfreezing.
+      if (freeze_) {
+        for (int i = 0; i < NUM_TAPS; ++i) {
+          tap_envelope_[i].Init();
+        }
+      }
+
+      // Reset and resync the envelopes that will be faded-in.
+      if (clock_.retrig()) {
+        int start = clock_.new_interval_index() * NUM_HEADS;
+        for (int i = start; i < start + NUM_HEADS; ++i) {
+          tap_envelope_[i].Init();
+        }
+      }
+
+      ONE_POLE(multiplier_lp_, slice_modulation, 0.01f);
+      float multiplier = 1.0f + multiplier_lp_ * 15.0f;
+      CONSTRAIN(multiplier, 1.0f, 16.0f);
+
+      MAKE_INTEGRAL_FRACTIONAL(multiplier);
+      multiplier_fractional = 0.5f + 8.0f * (multiplier_fractional - 0.5f);
+      CONSTRAIN(multiplier_fractional, 0.0f, 1.0f);
+
+      float loudest = 0.0f;
+      int loudest_index = 0;
+
+      for (int t = 0; t < NUM_TAPS; ++t) {
+        const int interval = t / NUM_HEADS;
+        const int ratio = (t / NUM_INTERVALS) % NUM_RATIOS;
+        const int tap = t & 1;
+        const int i = (2 * ratio + ((multiplier_integral & 1)
+            ? tap
+            : (1 - tap))) + interval * NUM_HEADS;
+
+        float delay_time = clock_.interval(interval) * tap_ratio[ratio] * float(
+              multiplier_integral + tap);
+
+        CONSTRAIN(delay_time, kMinDelay, max_delay_);
+
+        tap_envelope_[i].set_phase_increment(1.0f / delay_time);
+        out->tap[i].delay = int32_t(delay_time * 1024.0f);
+
+        const float ratio_fade = tap
+            ? multiplier_fractional
+            : 1.0f - multiplier_fractional;
+        const float base_gain = tap_gain[ratio] * ratio_fade * power[interval];
+        out->tap[i].gain = base_gain * tap_envelope_[i].Render(shape);
+        if (base_gain > loudest) {
+          loudest = base_gain;
+          loudest_index = i;
+        }
+      }
+      out->gate = tap_envelope_[loudest_index].phase() < 0.5f;
+    }
+
+    freeze_ = *freeze;
+    power[0] += power_step[0];
+    power[1] += power_step[1];
     ++freeze;
     ++out;
   }

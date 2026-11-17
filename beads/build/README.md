@@ -125,6 +125,8 @@ Two mix choices keep stock behaviour by default and add no panel gesture or opti
 
 Grain stealing: by default Drizzlet chooses which playing grain a new one replaces as the 2021 and 2024 firmware did; Betas 1 to 3 used the 2026 source's way. A profile can choose 2026, which changes dense, irregular textures slightly, is a little quieter and uses about 3.5 points less CPU at peak.
 
+Two delay choices keep stock behaviour by default and add no panel gesture or options-page slot. Delay feedback: Unity notch gives FEEDBACK a notch near 3 o'clock where repeats neither fade nor grow, for sound on sound, and keeps the bass in the loop; both ends of the knob stay stock. Delay time: Crossfade keeps the delay time while DENSITY turns, then fades to the new one instead of bending the pitch; very short delays still glide, for flanging. Granular and both synths are unchanged.
+
 Plaits synth banks: FEEDBACK selects one of the eight models of the current bank, as on Plaits: green (its first bank), red (noise and drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays, hold [A] and press FREEZE to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim. A profile can choose the starting bank (green by default).
 
 ## Saved data

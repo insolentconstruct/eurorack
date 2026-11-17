@@ -116,6 +116,8 @@ not-set values use the profile default.
 | 32 | Mix law (#21) | No saved value |
 | 33 | Reverb input (#20) | No saved value |
 | 34 | Grain stealing (#237) | No saved value |
+| 35 | Delay feedback (#10) | No saved value |
+| 36 | Delay time (#30) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -534,3 +536,41 @@ Cold digital is not measured. Granular and the wavetable synth; delay,
 spectral and the Plaits synth have no grain stealing. Chosen at power-on, with
 no panel slot or saved-state nibble. Value 0 always means 2021/2024, so
 profiles without ID 34, including all Beta 3 profiles, get it.
+
+### Delay feedback
+
+Hygrostat feature ID 35 chooses Stock / Unity notch (#10), for sound on
+sound in delay mode. Unity notch gives FEEDBACK a flat notch, 6% of its
+travel wide, near 3 o'clock where stock feedback reaches unity: there each
+repeat comes back at the level it went in, and new sound layers on top, as
+on a looper. Below the notch the repeats fade; above it they grow into the
+limiter, as in stock; both ends of the knob stay stock. FEEDBACK CV follows
+the same law. The loop's bass filter drops from 40 Hz to 10 Hz, so at
+100 Hz a repeat loses about 0.1 dB instead of 1.3 dB. Tape qualities still
+darken and saturate a little on each pass. Past noon on DENSITY the second
+tap joins: the notch then keeps the sum of both taps at unity, so the
+pattern does not grow but slowly fades, faster on Bright digital; a jump
+across noon can lift the loop above unity for part of one 0.25 ms block,
+once. During a Delay time crossfade the notch allows for the old and new
+delay times adding in phase, so the loop never rises above unity; other
+material loses up to 3 dB on the passage that fades. Mutable
+Instruments noted that grain levels vary too much for a fixed unity, so
+granular, spectral and both synths keep the stock feedback. Chosen at
+power-on, with no panel slot or saved-state nibble.
+
+### Delay time
+
+Hygrostat feature ID 36 chooses Glide (stock) / Crossfade (#30). In delay
+mode with knob timing (SEED latched, nothing patched), stock glides the
+delay time when DENSITY moves, bending the pitch like tape. Crossfade
+keeps the old delay time while DENSITY moves; 50 ms after it stops, an
+equal-power crossfade (a clock's is linear) moves to the new time over
+half of it, between 20 and 250 ms. A turn of the knob
+gives one fade, after the turn. A fade runs to its end before the next one
+starts, and changes under 2% are ignored, so a slow DENSITY CV moves in
+steps rather than as a chorus or vibrato. A tone can still dip mid-fade
+when its two copies are out of phase. Delays under 10 ms still glide, for
+flanging. FREEZE slices keep stock's glide too: they replay at their own
+speed, so they never bend the pitch. A fade already running when FREEZE
+engages finishes first. Clocked and tapped timing and TIME are unchanged.
+Chosen at power-on, with no panel slot or saved-state nibble.

@@ -13,7 +13,7 @@ The Beta 2 release build reproduces application `2558dd77…`, timing image
 The Beta 3 “Smirr” release build reproduces application `e0546edb…`,
 combined image `e8f171f7…` and WAV `664acbf4…`, and decodes the WAV back to
 the application. This source pins its own unreleased Beta 4 application
-`54f8e607…` and WAV `705826c9…`. The release documentation and generated
+`17287aae…` and WAV `13731253…`. The release documentation and generated
 guides pass their checker. Beta 3 module results are under
 [On a module](#beta-3), including the audio install and the upgrade from Beta 2.
 
@@ -482,6 +482,49 @@ The factory calibration was restored by debug probe after each saved run. Before
   221,951 and 64,875, against six steady String voices at 65,290. Module
   estimate (69.8% with String, plus the Seed3 difference x 1.044): about 70%
   at worst; the stock sweep estimates 169%, as measured.
+
+## Beta 4 host measurements
+
+- Delay feedback, Unity notch (desktop renders, knob timing, one tap):
+  a repeat at 1 kHz loses 0.003 dB (Bright digital) to 0.10 dB (Scorched
+  cassette) per pass; at 100 Hz 0.09 to 0.12 dB, against 1.27 to 1.30 dB
+  with stock's 40 Hz filter at stock unity. Fully clockwise still grows
+  2.6 to 3.3 dB per pass, as stock. Past noon on DENSITY (two taps) the loop
+  never grows; a short burst fades 5 to 10 dB over 4 s on the tape and
+  Cold digital qualities and dies out on Bright digital, where stock grows
+  into the limiter. Granular playback is identical with the choice on.
+- Delay time, Crossfade (750 Hz sine, DENSITY 0.258 to 0.3): a step bends
+  the pitch 4,553 to 5,950 cents with the glide and 2 to 12 cents with the
+  crossfade; a one-second sweep 316 to 1,907 cents against 2 to 13 (cycles
+  12 dB down skipped). Holding the delay time until DENSITY has been still
+  for 50 ms makes the sweep one equal-power fade: the level changes by
+  -6.7 to +3.5 dB on a step or a sweep, where a linear fade on every
+  filter step dipped up to 9.7 dB on a step and 32 dB on a sweep. Gliding
+  while DENSITY moves instead bent the pitch up to 5,950 cents; settling
+  after one block, or 10 ms, still chained fades on a sweep (dips of 14
+  and 31 dB). Clocked timing and TIME are identical with it on.
+- Both choices Off, release ELF in an emulator (instructions, not cycles),
+  19 granular, delay and spectral scenarios: output and executed
+  instructions per block identical to the previous build. Knob-timing delay
+  renders hash as before in all four qualities, mono and stereo. On, per
+  block: Unity notch +170 to +242; Crossfade +237 to +372 (+331 to +905
+  before the block-rate decision); both +363 to +518. Flash +7.0 KB.
+- Off code is the previous build's, instruction for instruction: Crossfade
+  has its own copy of the knob-timing render, because edits inside the
+  shared one changed GCC's register allocation for Off. On the Seed3
+  (seven code layouts) the Off worst delay block still moves by -0.14 to
+  +0.31 points; the previous build with an unused block of the same size
+  in the same place moves by -0.10 to +0.40, so this is code placement,
+  not code.
+- Unity notch with DENSITY jumping across noon every two blocks for 4 s:
+  the loop does not grow, and the feedback at each block's end holds unity
+  for the taps at both of its ends.
+- Both choices on, FEEDBACK at the notch, a tone in phase at the old and
+  new delay times: the fade's taps add to 1.41, the loop gain stays at
+  1.00001 at most (it reached 1.414 before the notch allowed for the
+  fade) and the passage that faded comes round within -0.13 to +0.06 dB
+  (it was up to +2.3 dB). FREEZE slices glide with Crossfade on,
+  identical to stock.
 
 ## Not tested
 
