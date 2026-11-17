@@ -528,7 +528,9 @@ darken and saturate a little on each pass. Past noon on DENSITY the second
 tap joins: the notch then keeps the sum of both taps at unity, so the
 pattern does not grow but slowly fades, faster on Bright digital; a jump
 across noon can lift the loop above unity for part of one 0.25 ms block,
-once. Mutable
+once. During a Delay time crossfade the notch allows for the old and new
+delay times adding in phase, so the loop never rises above unity; other
+material loses up to 3 dB on the passage that fades. Mutable
 Instruments noted that grain levels vary too much for a fixed unity, so
 granular, spectral and both synths keep the stock feedback. Chosen at
 power-on, with no panel slot or saved-state nibble.
@@ -545,5 +547,7 @@ gives one fade, after the turn. A fade runs to its end before the next one
 starts, and changes under 2% are ignored, so a slow DENSITY CV moves in
 steps rather than as a chorus or vibrato. A tone can still dip mid-fade
 when its two copies are out of phase. Delays under 10 ms still glide, for
-flanging. Clocked and tapped timing, TIME and FREEZE slices are unchanged.
+flanging. FREEZE slices keep stock's glide too: they replay at their own
+speed, so they never bend the pitch. A fade already running when FREEZE
+engages finishes first. Clocked and tapped timing and TIME are unchanged.
 Chosen at power-on, with no panel slot or saved-state nibble.

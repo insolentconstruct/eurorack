@@ -9,8 +9,8 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased Beta 4 application `4e6dbca1…` and WAV
-`436df234…`. The release documentation and generated guides pass their
+This source pins its own unreleased Beta 4 application `36acbd51…` and WAV
+`38bbb125…`. The release documentation and generated guides pass their
 checker. Beta 3 module results are under [On a module](#beta-3); some
 checks are still pending.
 
@@ -498,11 +498,19 @@ The factory calibration was restored by debug probe after each saved run. Before
   19 granular, delay and spectral scenarios: output and executed
   instructions per block identical to the previous build. Knob-timing delay
   renders hash as before in all four qualities, mono and stereo. On, per
-  block: Unity notch +148 to +220; Crossfade +235 to +367 (+331 to +905
-  before the block-rate decision); both +324 to +462. Flash +6.7 KB.
+  block: Unity notch +154 to +224; Crossfade +243 to +378 (+331 to +905
+  before the block-rate decision); both +338 to +479. Flash +6.7 KB.
 - Unity notch with DENSITY jumping across noon every two blocks for 4 s:
   the loop does not grow, and the feedback at each block's end holds unity
   for the taps at both of its ends.
+- Both choices on, FEEDBACK at the notch, a tone in phase at the old and
+  new delay times: the fade's taps add to 1.41, the loop gain stays at
+  1.00001 at most (it reached 1.414 before the notch allowed for the
+  fade) and the passage that faded comes round within -0.13 to +0.06 dB
+  (it was up to +2.3 dB). Allowing for the fade costs +4 to +6
+  instructions per block with Unity notch, +7 to +13 with Crossfade and
+  +14 to +19 with both; Off is unchanged. FREEZE slices glide with
+  Crossfade on, identical to stock.
 
 ## Not tested
 

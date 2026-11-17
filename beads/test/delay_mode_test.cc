@@ -943,6 +943,88 @@ void TestUnityFeedbackDensitySteps() {
   }
 }
 
+// Equal-power gains of a knob-timing crossfade sum to 1.41 at its middle.
+float PowerSum(const DelayClock& c) {
+  const float x = 1.5707963f * c.fade();
+  return sinf(x) + cosf(x);
+}
+
+// Both choices: a tone whose period divides the step between the delay times
+// adds in phase at both taps mid-fade; the loop must hold unity.
+void TestUnityFeedbackCrossfade() {
+  test_checker.Start("TestUnityFeedbackCrossfade");
+  for (int media = 0; media < 4; ++media) {
+    // The two delay times depend only on DENSITY.
+    float from;
+    float to;
+    {
+      Rig r;
+      PrepareKnobDelay(&r, media, true, 0.1f);
+      r.processor.set_delay_crossfade(true);
+      r.Run(100);
+      from = KnobInterval(r);
+      r.density.base = 0.13f;
+      r.Run(kCrossfadeSettleBlocks + 2);
+      to = KnobInterval(r);
+    }
+    Rig r;
+    PrepareKnobDelay(&r, media, true, 0.1f);
+    r.processor.set_delay_crossfade(true);
+    const float sr = r.processor.sample_rate();
+    const int step = int(to - from + 0.5f);
+    r.frequency = sr * floorf(float(step) * 600.0f / sr) / (to - from);
+    r.Run(int(from * 2.0f * 4000.0f / sr));
+    // Then silent input, and the loop at the notch.
+    r.amplitude = 0.0f;
+    r.mix.feedback = 0.82f;
+    std::vector<float> audio;
+    const int block_size = int(sr / 4000.0f);
+    const int settle = int(from * 3.0f) / block_size;
+    for (int i = 0; i < settle; ++i) {
+      r.Block(&audio);
+    }
+    const size_t change = audio.size();
+    r.density.base = 0.13f;
+    const DelayClock& c = r.processor.delay_controller_.test_clock();
+    const float* feedbacks[] = {
+      &r.processor.processor_dirty_tape_.feedback_,
+      &r.processor.processor_clean_tape_.feedback_,
+      &r.processor.processor_vintage_digital_.feedback_,
+      &r.processor.processor_digital_.feedback_
+    };
+    const float* feedback = feedbacks[media];
+    float worst = 0.0f;
+    float peak_sum = 0.0f;
+    size_t faded = 0;
+    while (!faded || audio.size() < faded + size_t(to * 1.5f)) {
+      r.Block(&audio);
+      // One tap: the fade's gains are the whole tap sum.
+      worst = std::max(worst, 1.5f * *feedback * *feedback * PowerSum(c));
+      peak_sum = std::max(peak_sum, PowerSum(c));
+      if (!faded && KnobInterval(r) != from && c.fade() == 1.0f) {
+        faded = audio.size();
+      }
+    }
+    // Level in windows of whole periods, before the change and after the
+    // faded passage comes round again.
+    std::vector<float> before(&audio[change - step], &audio[change]);
+    const float reference = Rms(before);
+    float highest = 0.0f;
+    for (size_t n = faded; n + step <= audio.size(); n += step / 4) {
+      std::vector<float> window(&audio[n], &audio[n + step]);
+      highest = std::max(highest, Rms(window));
+    }
+    printf("Quality %d crossfade %.0f to %.0f samples at the notch: "
+        "taps add to %.3f, loop gain %.5f, level %+.2f dB\n",
+        media, from, to, peak_sum, worst,
+        20.0f * log10f(highest / reference));
+    CHECK(reference > 0.02f);
+    CHECK(peak_sum > 1.41f);
+    CHECK(worst < 1.0001f);
+    CHECK(highest < 1.03f * reference && highest > 0.8f * reference);
+  }
+}
+
 void TestUnityFeedbackScope() {
   test_checker.Start("TestUnityFeedbackScope");
   // Granular playback is unchanged, and leaving delay restores 40 Hz.
@@ -1108,7 +1190,7 @@ void TestDelayCrossfadeClock() {
   r.Run(expected / 2);
   float power[2];
   float step[2];
-  c.PowerGains(12, power, step);
+  r.processor.delay_controller_.clock_.PowerGains(12, power, step);
   CHECK(power[0] > 0.5f && power[1] > 0.5f);
   CHECK(fabsf(power[0] * power[0] + power[1] * power[1] - 1.0f) < 0.001f);
   CHECK(step[0] * step[1] < 0.0f);
@@ -1209,12 +1291,42 @@ void TestDelayCrossfadeLatchFade() {
   r.Run(kCrossfadeSettleBlocks + 20);
   CHECK(c.fade() < 1.0f);
   CHECK(c.interval(1 - c.new_interval_index()) == from);
-  // Frozen slices follow the crossfade too.
+  // A fade running when FREEZE engages finishes; then frozen slices glide.
   r.frozen = true;
   r.Run(4000);
+  CHECK(c.fade() == 1.0f);
+  const float held = KnobInterval(r);
   r.density.base = 0.3f;
-  r.Run(kCrossfadeSettleBlocks + 20);
-  CHECK(c.fade() < 1.0f);
+  bool between = false;
+  for (int i = 0; i < kCrossfadeSettleBlocks + 20; ++i) {
+    r.Block(NULL);
+    CHECK(c.fade() == 1.0f);
+    const float now = KnobInterval(r);
+    between = between || (now < 0.98f * held && now > 0.8f * held);
+  }
+  CHECK(between && KnobInterval(r) < 0.8f * held);
+}
+
+void TestDelayCrossfadeFrozen() {
+  test_checker.Start("TestDelayCrossfadeFrozen");
+  // Frozen slices play as stock while DENSITY moves.
+  for (int media = 0; media < 4; media += 3) {
+    std::vector<float> audio[2];
+    for (int crossfade = 0; crossfade < 2; ++crossfade) {
+      Rig r;
+      PrepareKnobDelay(&r, media, false, 0.258f);
+      r.processor.set_delay_crossfade(crossfade);
+      r.frozen = true;
+      for (int i = 0; i < 8000; ++i) {
+        r.density.base = 0.258f + 0.1f * std::min(1.0f, float(i) / 4000.0f);
+        r.parameters.time.base = i < 6000 ? 0.0f : 0.5f;
+        r.Block(&audio[crossfade]);
+      }
+      CHECK(r.processor.delay_controller_.test_clock().fade() == 1.0f);
+    }
+    CHECK(Rms(audio[0]) > 0.01f);
+    CHECK(audio[0] == audio[1]);
+  }
 }
 
 // Knob-timing renders with FEEDBACK, DENSITY and FREEZE moves, captured from
@@ -1283,10 +1395,12 @@ int main(int argc, char** argv) {
     { "TestUnityFeedbackLoop", TestUnityFeedbackLoop },
     { "TestUnityFeedbackTwoTaps", TestUnityFeedbackTwoTaps },
     { "TestUnityFeedbackDensitySteps", TestUnityFeedbackDensitySteps },
+    { "TestUnityFeedbackCrossfade", TestUnityFeedbackCrossfade },
     { "TestUnityFeedbackScope", TestUnityFeedbackScope },
     { "TestDelayCrossfade", TestDelayCrossfade },
     { "TestDelayCrossfadeClock", TestDelayCrossfadeClock },
     { "TestDelayCrossfadeLatchFade", TestDelayCrossfadeLatchFade },
+    { "TestDelayCrossfadeFrozen", TestDelayCrossfadeFrozen },
     { "TestKnobDelayHashes", TestKnobDelayHashes },
   };
   const int result = RunHostTests(argc, argv, tests,
