@@ -100,9 +100,8 @@ struct PlaitsBlobServices {
   const void* exports[kNumPlaitsBlobExports];
 };
 
-// The region after the app: this table, the blobs at 32-byte aligned offsets,
-// then a CRC-32 of everything before it. size counts all of it; bytes past
-// size (a longer, older region) are never read.
+// After the app: this table, 32-byte aligned blobs, then a CRC-32 of it all;
+// size counts everything, and bytes past it are never read.
 struct PlaitsBlobRegionHeader {
   uint32_t magic;
   uint32_t version;
@@ -119,9 +118,8 @@ struct PlaitsBlobRegionEntry {
   uint32_t crc;
 };
 
-// What a support report or qualification run reads back (over SWD, or from a
-// diagnostic): with the release's app.bin SHA-256 and the profile, this names
-// the executable configuration.
+// Read back over SWD or a diagnostic: with app.bin's SHA-256 and the profile,
+// it names the configuration that runs.
 struct PlaitsBlobIdentity {
   uint32_t release;
   uint32_t services_version;

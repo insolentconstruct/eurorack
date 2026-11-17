@@ -40,12 +40,13 @@ SECTIONS
 	. = blob_base;
 	.blob :
 	{
-		KEEP(*(.blob_header))
-		KEEP(*(.text.plaits_blob_init))
-		KEEP(*(.text.plaits_blob_reset))
-		KEEP(*(.text.plaits_blob_render))
-		*(.text .text.*)
-		*(.rodata .rodata.*)
+		/* Writable input stays out, in its own section, which the gate refuses. */
+		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.blob_header))
+		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_init))
+		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_reset))
+		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_render))
+		INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text .text.*)
+		INPUT_SECTION_FLAGS(!SHF_WRITE) *(.rodata .rodata.*)
 		. = ALIGN(4);
 		plaits_blob_got_plt = .;
 		*(.got.plt)

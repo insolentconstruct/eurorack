@@ -40,9 +40,8 @@ inline float WrapPhase(float phase) {
   return phase;
 }
 
-// Evaluate a compact, explicitly band-limited harmonic wave. Chebyshev
-// recurrence makes each four-voice sample require one sine lookup per voice,
-// rather than one lookup per partial.
+// A band-limited harmonic wave: the Chebyshev recurrence needs one sine
+// lookup per voice, not one per partial.
 inline float HarmonicWave(
     float phase,
     const float* partial_amplitude) {
@@ -86,9 +85,7 @@ void PhaseWeave::Render(
 
   const float frequency = min(0.24f, NoteToFrequency(parameters.note));
 
-  // HARMONICS changes both the geometry and the even/odd balance of the
-  // source wave. The latter keeps this control audible when phase spread is
-  // at its minimum.
+  // HARMONICS also tilts the even/odd balance, audible at minimum spread.
   float partial_amplitude[kPhaseWeavePartials];
   float partial_sum = 0.0f;
   for (int i = 0; i < kPhaseWeavePartials; ++i) {
@@ -134,9 +131,8 @@ void PhaseWeave::Render(
       phase_ += 1.0f;
     }
 
-    // This intentionally is not an evenly spaced saw bank. The asymmetric
-    // constellation avoids a single dominant PWM null and gives HARMONICS a
-    // continuous path between clustered, skewed, and near-quadrature layouts.
+    // Uneven offsets avoid one dominant PWM null; HARMONICS moves them from
+    // clustered through skewed to near quadrature.
     float offset[4];
     offset[0] = 0.0f;
     offset[1] = spread * (0.28f + 0.28f * constellation) + rotation;
@@ -150,9 +146,8 @@ void PhaseWeave::Render(
       voice[j] = HarmonicWave(phase_ + offset[j], partial_amplitude);
     }
 
-    // MORPH turns two lanes through zero into opposite-polarity cancellation.
-    // The other two retain unequal weights, leaving useful sound at the
-    // deepest nulls instead of collapsing to numerical silence.
+    // MORPH flips two lanes through zero to cancel; the unequal other two
+    // keep sound at the deepest nulls.
     const float bipolar = 1.0f - 2.0f * cancellation;
     const float weight[4] = {
       1.0f,
@@ -163,9 +158,7 @@ void PhaseWeave::Render(
     const float weight_sum = fabsf(weight[0]) + fabsf(weight[1]) + \
         fabsf(weight[2]) + fabsf(weight[3]);
 
-    // Moving away from the macro midpoint both rotates the constellation and
-    // gently saturates the cancellation peaks. SoftClip provides a final hard
-    // bound even when controls jump between blocks.
+    // Off the macro midpoint: rotation and drive; SoftClip bounds the peaks.
     const float drive = 1.0f + 11.111111f * fabsf(rotation);
 
     float main = 0.0f;
@@ -174,9 +167,7 @@ void PhaseWeave::Render(
     }
     main *= 0.92f / weight_sum;
 
-    // AUX is the orthogonal pair-difference field. It emphasizes the
-    // partials rejected by OUT and remains distinct throughout the MORPH
-    // sweep.
+    // AUX, the pair differences, carries what OUT cancels at any MORPH.
     const float difference = \
         0.58f * (voice[0] - voice[2]) + \
         0.42f * (voice[1] - voice[3]);
