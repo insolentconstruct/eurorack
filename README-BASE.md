@@ -56,7 +56,7 @@ Changes from master, one line per change:
 - Select mono/stereo processing once per block with a template, sum grains locally and use unsigned read-index modulo; audio stays bit-identical.
 - Interpolate grain reads on the stored integers and scale once, as Clouds' `ReadHermite` does; audio stays bit-identical.
 - Compute the synth's playing grains in pairs, mixed in index order: 5.7 points of headroom in its busiest case; audio stays bit-identical.
-- Load the reverb's delay-line reads before its writes: 1.0 point of headroom in the synth's busiest case, 0.06 point slower in the stock granular peak; audio stays bit-identical.
+- Load the reverb's delay-line reads before its writes: 1.0 point of headroom in the synth's busiest case and in the stock granular peak; audio stays bit-identical.
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 
