@@ -99,6 +99,8 @@ class Codec {
   size_t block_size_;
   
   Event event_buffer_[kMaxCodecBlockSize];
+  // The frame held back from the previous block, then the callback's block.
+  Frame out_buffer_[kMaxCodecBlockSize + 1];
 
   FillBufferCallback callback_;
     
