@@ -5,7 +5,7 @@ A proof, not linked into the firmware. `plaits_blob.h` is the source of truth; t
 ## Blob
 
 - 64-byte header (`PlaitsBlobHeader`), code and constants, the imports (GOT), then a CRC-32. ABI 1 fixes the entry signatures and `plaits::EngineParameters` (24 bytes).
-- Position independent: no absolute relocations, no mutable data, no branch through a register except returns. `build_blob.sh` and `blob_pack.py` gate this. `.blob` is flagged writable only because the linker's GOT is; `blob.ld` leaves writable input out of `.blob` (the gate then refuses its section), `build_blob.sh` refuses objects that supply GOT data, and `blob_pack.py` checks that every GOT word the linker resolved is an export.
+- Position independent: no absolute relocations, no mutable data, no branch through a register except returns. `build_blob.sh` and `blob_pack.py` gate this. `.blob` is flagged writable only because the linker's GOT is; `blob.ld` leaves writable input out of `.blob` (the gate then refuses its section), `build_blob.sh` refuses objects with their own `.got`, `.got.plt` or `.blob` section, and `blob_pack.py` checks that every GOT word the linker resolved is an export.
 - `init(state, services, arena, arena_size)` constructs the blob's state object in `state` with placement new and returns a pointer to it. `reset` and `render` take that pointer. The object is not polymorphic (a vtable holds absolute addresses), at most 256 bytes, aligned to at most 8. A port keeps its DSP in a plain class; the compiled-in engine wraps the same class.
 
 ## Services: frozen exports

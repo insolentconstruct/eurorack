@@ -27,7 +27,7 @@
 //
 // A mutable word in the object's own .got, posing as an import.
 
-// Expect: GATE: .*supplies GOT data
+// Expect: GATE: .*supplies GOT or \.blob data
 
 #include "beads/test/blob_gate/common.h"
 

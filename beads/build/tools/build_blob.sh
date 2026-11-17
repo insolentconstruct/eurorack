@@ -55,11 +55,11 @@ for source in "$@"; do
     "$source" -o "$object"
   objects+=("$object")
 done
-# The linker makes the GOT, so object-supplied GOT data (writable) is refused.
+# The linker makes the GOT and .blob; an object's own, writable, is refused.
 for object in "${objects[@]}"; do
-  if "${TOOLCHAIN}arm-none-eabi-objdump" -h "$object" | \
-      grep -qE '^ *[0-9]+ \.got'; then
-    echo "GATE: $object supplies GOT data" >&2
+  sections=$("${TOOLCHAIN}arm-none-eabi-objdump" -h "$object")
+  if grep -qE '^ *[0-9]+ (\.got[^ ]*|\.blob) ' <<< "$sections"; then
+    echo "GATE: $object supplies GOT or .blob data" >&2
     exit 1
   fi
 done
