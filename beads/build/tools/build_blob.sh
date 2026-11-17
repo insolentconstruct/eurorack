@@ -55,6 +55,14 @@ for source in "$@"; do
     "$source" -o "$object"
   objects+=("$object")
 done
+# The linker makes the GOT, so object-supplied GOT data (writable) is refused.
+for object in "${objects[@]}"; do
+  if "${TOOLCHAIN}arm-none-eabi-objdump" -h "$object" | \
+      grep -qE '^ *[0-9]+ \.got'; then
+    echo "GATE: $object supplies GOT data" >&2
+    exit 1
+  fi
+done
 links=()
 for base in 0x080c0000 0x080d0fe0 0x080e0020; do
   elf="$out/$name/$name-$base.elf"
