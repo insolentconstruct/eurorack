@@ -244,6 +244,10 @@ class GranularProcessor {
     granular_player_.set_random_intervals(intervals);
   }
 
+  inline void set_legacy_stealing(bool legacy) {
+    granular_player_.set_legacy_stealing(legacy);
+  }
+
 #ifdef DWT_CALIBRATION
   void PrepareCalibration(uint32_t block) {
     granular_player_.PrepareCalibration(&stereo_delay_line_, block);

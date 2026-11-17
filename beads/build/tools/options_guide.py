@@ -286,6 +286,9 @@ DETAILS = [
     "([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before "
     "DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); "
     "fully dry then has no reverb.",
+    "Grain stealing follows the 2021 and 2024 firmware by default; a "
+    "Hygrostat profile can choose the 2026 source's instead "
+    "([Grain stealing](FEATURES.md#grain-stealing)).",
     "Frozen feedback Evolving runs frozen grains through a slowly moving "
     "all-pass loop; FEEDBACK sets how far they drift.",
     "Processor Spectral: Clouds' spectral processing replaces the grains. "

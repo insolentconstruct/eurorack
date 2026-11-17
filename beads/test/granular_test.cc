@@ -1090,7 +1090,102 @@ void TestRenderedWidthLatch() {
   CHECK(audible);
 }
 
+// 2026 rotates the list below 25 ms; 2024 resorts it from 5 ms (#237).
+void TestGrainStealing() {
+  test_checker.Start("TestGrainStealing");
+  const int rates[] = { 24000, 32000, 48000 };
+  for (int legacy = 0; legacy < 2; ++legacy) {
+    for (int rate = 0; rate < 3; ++rate) {
+      const int instant = rates[rate] / 200;
+      const int simple = rates[rate] / 40;
+      const int preemptive = rates[rate] / 10;
+      const int intervals[] = {
+        instant - 1, instant, instant + 1,
+        simple - 1, simple, simple + 1, preemptive + 1
+      };
+      for (int test = 0; test < 7; ++test) {
+        DelayGranularPlayer player;
+        player.Init(float(rates[rate]));
+        player.set_legacy_stealing(true);
+        player.set_legacy_stealing(legacy);
+        const int threshold = legacy ? instant : simple;
+        CHECK(player.simple_scheduler_threshold_ == threshold);
+        for (int i = 0; i < 32; ++i) {
+          player.grain_[i].remaining_samples_ = 100000 + 31 - i;
+        }
+        const int interval = intervals[test];
+        const bool rotate = interval < threshold;
+        int fade[] = { instant, instant, interval, preemptive };
+        if (rotate) {
+          fade[0] = interval + 1;
+          fade[2] = instant;
+          if (interval > instant) {
+            std::swap(fade[0], fade[2]);
+          }
+        } else if (interval > preemptive) {
+          std::swap(fade[2], fade[3]);
+        }
+        player.grain_interval_ = interval;
+        player.SortGrainList(false);
+        for (int i = 0; i < 4; ++i) {
+          const int index = rotate ? i + 1 : 31 - i;
+          CHECK(player.grain_priority_list_[i] == &player.grain_[index]);
+          CHECK(player.grain_priority_list_[i]->remaining_samples() == fade[i]);
+        }
+        CHECK(player.grain_interval_ == 0);
+      }
+    }
+  }
+}
+
+// Rendered grains: the choices differ only between 5 and 25 ms intervals.
+int CountStealingDifferences(int min_interval, int max_interval) {
+  DelayGranularPlayer stock, legacy;
+  stock.Init(48000.0f);
+  legacy.Init(48000.0f);
+  legacy.set_legacy_stealing(true);
+  TaggedLine line;
+  Parameters p = { };
+  p.time.base = 0.5f;
+  p.size.base = 0.85f;
+  TriggerGenerator::Output trigger = { };
+  trigger.regularity = 1.0f;
+  uint32_t lcg = 1;
+  int next = 0;
+  int differences = 0;
+  float peak = 0.0f;
+  for (int i = 0; i < 48000; ++i) {
+    trigger.trigger = i == next;
+    if (trigger.trigger) {
+      lcg = lcg * 1664525 + 1013904223;
+      next += min_interval +
+          int((lcg >> 8) % uint32_t(max_interval - min_interval + 1));
+    }
+    FloatFrame a;
+    a.l = 0.0f;
+    a.r = 0.0f;
+    FloatFrame b = a;
+    stmlib::Random::Seed(i);
+    stock.Render(&line, trigger, p, &a);
+    stmlib::Random::Seed(i);
+    legacy.Render(&line, trigger, p, &b);
+    differences += a.l != b.l || a.r != b.r;
+    peak = std::max(peak, fabsf(a.l));
+  }
+  CHECK(peak > 0.01f);
+  return differences;
+}
+
+void TestRenderedGrainStealing() {
+  test_checker.Start("TestRenderedGrainStealing");
+  CHECK(CountStealingDifferences(48, 230) == 0);
+  CHECK(CountStealingDifferences(1210, 2400) == 0);
+  CHECK(CountStealingDifferences(250, 1190) > 0);
+}
+
 int main() {
+  TestGrainStealing();
+  TestRenderedGrainStealing();
   TestRenderedWidthLatch();
   TestStereoWidth();
   TestMonophonicGrains();

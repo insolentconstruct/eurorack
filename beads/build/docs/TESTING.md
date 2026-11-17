@@ -12,9 +12,10 @@ The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
 The Beta 3 “Smirr” release build reproduces application `e0546edb…`,
 combined image `e8f171f7…` and WAV `664acbf4…`, and decodes the WAV back to
-the application. The release documentation and generated guides pass their
-checker. Beta 3 module results are under [On a module](#beta-3), including the
-audio install and the upgrade from Beta 2.
+the application. This source pins its own unreleased Beta 4 application
+`54f8e607…` and WAV `705826c9…`. The release documentation and generated
+guides pass their checker. Beta 3 module results are under
+[On a module](#beta-3), including the audio install and the upgrade from Beta 2.
 
 Tests are separated into desktop/CI checks, STM32H7 development-board checks,
 unattended module measurements and attended module checks. The development
@@ -330,7 +331,9 @@ The release code was rerun (2026-11-16) on the same test build rebuilt on
 | Cold digital | 77,577 (64.6%) | 22.0 | 77,679 (64.7%) | not measured | – |
 | Scorched cassette | 61,110 (50.9%) | 31.7 | 61,116 (50.9%) | 65,380 (54.5%) | 28.2 |
 
-The 2024 grain stealing costs about 3.5 to 4 points.
+The 2024 grain stealing costs about 3.5 to 4 points. The granular code is
+unchanged since these builds but the code layout moved, so the heavy rows
+will be rerun on the final build.
 
 **Install and upgrade** (2026-11-16). The release WAV installed over Beta 2
 by audio; Beta 2 settings and calibration carried over, the SEED-held repair
