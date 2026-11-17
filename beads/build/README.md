@@ -36,9 +36,28 @@ Frozen feedback selects Stock or Evolving. Evolving fades in to soften and drift
 
 Processor: Lower half selects Granular (Stock); upper half selects Spectral, using Mutable Instruments Clouds. TIME selects a spectrum, SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls renewal and phase scrambling. SEED glitches; FREEZE holds. Random controls update per spectrum. Mixing, quality, assignable CV and R gate work normally; diffusion, delay and wavetable synth are unavailable. Closing fades the change and clears recording. The saved frozen buffer returns with Granular.
 
-Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
+Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the oscillator/grain balance it sets in the stock synth; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, holding [A] restarts automatic gain.
+
+## Plaits synth
+
+Drizzlet can play six Mutable Instruments Plaits voices in place of the wavetable synth. Open the options page, tap [M] until the REVERB LED pulses (page 3), turn DRY/WET into its upper half ([A] steady yellow) and close the page. It plays when the wavetable synth would: with Synth start on Automatic (Stock), ten seconds after both audio inputs are unpatched; on Manual, with both audio inputs unpatched and FREEZE off, hold [A] about a second and a half to start or stop it. Patching an audio input stops it once FREEZE is off.
+
+- FEEDBACK selects one of eight models in the current bank.
+- TIME, SIZE and SHAPE are Plaits' HARMONICS, TIMBRE and MORPH.
+- DRY/WET sets decay and FREEZE sustains, through Plaits' low-pass gate. As on Plaits, models with their own envelope bypass it: string, modal, drums, six-operator FM, square-wave chords and speech words.
+- SEED, SEED gates and DENSITY play notes as they play grains; each note takes the next of six voices. At DENSITY noon with SEED unpatched, the last voice drones until SEED plays a note.
+- PITCH, its CV and its attenurandomizer set each note's pitch. Pitch scale applies; Random pitch steps does not.
+- REVERB, quality and stereo width work as usual.
+
+While the Plaits synth plays, hold [A] and press FREEZE to step the bank: green, red, yellow, then green again. [A] flashes the new bank's colour, FREEZE stays as it was and the bank is saved. Models from FEEDBACK fully counter-clockwise to fully clockwise:
+
+- Green: virtual analog, waveshaping, FM, granular formant, additive, wavetable, chords, speech.
+- Red: swarm, filtered noise, particle noise, inharmonic string, modal resonator, bass drum, snare drum, hi-hat.
+- Yellow: filtered waveforms, phase distortion, three six-operator FM preset banks, wave terrain, string machine, square-wave chords and arpeggios.
+
+Green and red are Plaits' two original banks, described in the [Plaits manual](https://pichenettes.github.io/mutable-instruments-documentation/modules/plaits/manual/); yellow holds the eight models added in [Plaits 1.2](https://pichenettes.github.io/mutable-instruments-documentation/modules/plaits/firmware/).
 
 ## Delay mode
 

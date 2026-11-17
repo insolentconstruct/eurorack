@@ -300,8 +300,10 @@ DETAILS = [
     "synth: FEEDBACK picks one of the eight models in the current bank, "
     "TIME, SIZE and SHAPE set "
     "HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE "
-    "sustains. With DENSITY at noon the last voice drones until SEED plays "
-    "a note.",
+    "sustains, except for models with their own envelope. With DENSITY at "
+    "noon and SEED unpatched the last voice drones until SEED plays a "
+    "note. The models in each bank are listed in the README's \"Plaits "
+    "synth\" section.",
     "Synth start Manual: the synth never starts by itself. It needs both "
     "audio inputs unpatched and FREEZE off: hold the quality button [A] for "
     "about a second and a half to start or stop it. Patching an input "
