@@ -225,6 +225,7 @@ bool Codec::Start(
   }
   
   callback_ = callback;
+  memset(out_buffer_, 0, sizeof(out_buffer_));
 
   // Enable the codec.
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;  
@@ -348,6 +349,7 @@ void Codec::Stop() {
 void Codec::Pause() {
   callback_ = NULL;
   memset(tx_dma_buffer_, 0, sizeof(tx_dma_buffer_));
+  memset(out_buffer_, 0, sizeof(out_buffer_));
 }
 
 void Codec::Fill(size_t offset) {
@@ -357,6 +359,9 @@ void Codec::Fill(size_t offset) {
     const Frame* in = &rx_dma_buffer_[offset];
     Frame* out = &tx_dma_buffer_[offset];
     
+    // Output is one frame late, so the word the DMA reads first is ready now.
+    out[0] = out_buffer_[0];
+    
     for (size_t i = 0; i < block_size_; ++i) {
       uint32_t pins = idr_buffer_[offset + i].event;
       int e = pins & SEED_GPIO_PIN ? 0 : EVENT_SEED;
@@ -364,7 +369,12 @@ void Codec::Fill(size_t offset) {
       event_buffer_[i] = static_cast<Event>(e);
     }
 
-    (*callback_)(event_buffer_, in, out, block_size_);
+    (*callback_)(event_buffer_, in, &out_buffer_[1], block_size_);
+    
+    for (size_t i = 1; i < block_size_; ++i) {
+      out[i] = out_buffer_[i];
+    }
+    out_buffer_[0] = out_buffer_[block_size_];
   }
 }
 
