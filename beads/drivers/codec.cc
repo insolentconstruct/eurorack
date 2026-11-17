@@ -367,7 +367,7 @@ void Codec::Fill(size_t offset) {
     // The DMA reads the carried frame first, so store it before the callback.
     out[0] = out_buffer_[0];
 #endif  // APPLICATION
-    
+
     for (size_t i = 0; i < block_size_; ++i) {
       uint32_t pins = idr_buffer_[offset + i].event;
       int e = pins & SEED_GPIO_PIN ? 0 : EVENT_SEED;
@@ -377,7 +377,7 @@ void Codec::Fill(size_t offset) {
 
 #ifdef APPLICATION
     (*callback_)(event_buffer_, in, &out_buffer_[1], block_size_);
-    
+
     for (size_t i = 1; i < block_size_; ++i) {
       out[i] = out_buffer_[i];
     }
