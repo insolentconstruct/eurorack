@@ -4,7 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
-- Audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz) and otherwise identical, so the audio callback can run to about the full block instead of stopping a frame short (#1). Patches that feed OUT back to IN, or line audio up with gates or triggers, shift by one frame. Pending module qualification; working limits are unchanged.
+- Audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz), so the audio callback can run to about the full block instead of stopping a frame short (#1). In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. Pending module qualification; working limits are unchanged.
 
 ## 2026.11.16 (tag `drizzlet-2026.11.16`, beta 3 "Smirr")
 
