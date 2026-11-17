@@ -356,8 +356,14 @@ void TestRestartInitFailure() {
   }
 }
 
+static const Codec::Frame* ramp_half;
+
 void Ramp(const Codec::Event*, const Codec::Frame*, Codec::Frame* out,
     size_t size) {
+  // The held frame (the last ramp value) is stored before the callback runs.
+  if (ramp_half) {
+    CHECK(ramp_half[0].l == callback_calls);
+  }
   for (size_t i = 0; i < size; ++i) {
     ++callback_calls;
     out[i].l = callback_calls;
@@ -376,8 +382,9 @@ void TestOneFrameDelay() {
     // Played order: half 0, half 1, half 0. Frame k of the ramp is k + 1.
     int32_t expected = 0;
     for (int block = 0; block < 3; ++block) {
-      codec.Fill(block & 1);
       const Codec::Frame* half = tx_buffer + (block & 1) * size;
+      ramp_half = half;
+      codec.Fill(block & 1);
       for (size_t i = 0; i < size; ++i) {
         CHECK(half[i].l == expected && half[i].r == -expected);
         ++expected;
@@ -386,10 +393,12 @@ void TestOneFrameDelay() {
     // A pause drops the held frame.
     codec.Pause();
     callback_calls = 0;
+    ramp_half = tx_buffer;
     codec.Resume(&Ramp);
     codec.Fill(0);
     CHECK(tx_buffer[0].l == 0 && tx_buffer[0].r == 0);
     CHECK(tx_buffer[1].l == 1 && tx_buffer[1].r == -1);
+    ramp_half = NULL;
   }
 }
 
