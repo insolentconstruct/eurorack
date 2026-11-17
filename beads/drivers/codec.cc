@@ -359,7 +359,7 @@ void Codec::Fill(size_t offset) {
     const Frame* in = &rx_dma_buffer_[offset];
     Frame* out = &tx_dma_buffer_[offset];
     
-    // Output is one frame late, so the word the DMA reads first is ready now.
+    // The DMA reads the carried frame first, so store it before the callback.
     out[0] = out_buffer_[0];
     
     for (size_t i = 0; i < block_size_; ++i) {
@@ -374,6 +374,7 @@ void Codec::Fill(size_t offset) {
     for (size_t i = 1; i < block_size_; ++i) {
       out[i] = out_buffer_[i];
     }
+    // Carry this block's last frame to the start of the next half.
     out_buffer_[0] = out_buffer_[block_size_];
   }
 }
