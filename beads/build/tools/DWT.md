@@ -101,8 +101,8 @@ trim or change controls during capture. Preserve stimulus and capture logs.
 | 6 | Sunny tape | Sunny tape quality; Stock reverb; reconnect both inputs |
 | 7 | Crackle | Bright digital, Clouds-style on, DRY/WET fully CW, FEEDBACK fully CCW, REVERB as left by options exit, DENSITY .98, PITCH +24 semitones, SIZE .92, SHAPE .5 by fixed CV; music into both inputs |
 
-Scenario 7 passes when total callback maximum is strictly below 109700
-cycles (the 48 kHz deadline, below) and SAI DAC underrun is not newly set.
+Scenario 7 passes when total callback maximum is at or below 108908
+cycles (the module's 48 kHz clean edge, below) and SAI DAC underrun is not newly set.
 Capture SAI before reset and after the completed capture; record ADC
 overrun too. A pre-existing DAC flag makes the underrun check inconclusive. This settled capture does not prove
 transition safety. Existing Stock reserve criterion remains maximum <=90000
@@ -112,15 +112,18 @@ is implied by offline checks.
 
 Deadline: the DAC DMA reads each word from RAM one slot before sending it,
 so a late block is heard before the 120000-cycle budget runs out: the first
-left word of the half goes stale once the DMA has read it. On the development
-board (same core, codec driver and clocks, not the module) the callback
-maximum was clean up to 109700 cycles at 48 kHz (q1, q3, synth), 104900 at
-32 kHz (q2) and 100100 at 24 kHz (q0); every block was late from about
-110600, 105800 and 101000. The callback maximum leaves out interrupt entry
-and the driver's work before `Process`, which also spend the deadline. A
-late first word clicks on the left output only and sets no SAI flag.
-(The earlier 115800 / 113900 / 111500 timed RAM at send time, one slot late.)
-These limits are provisional until measured on the module.
+left word of the half goes stale once the DMA has read it. Measured on one
+2021 module with a test build that held the callback at set lengths, the
+callback maximum was clean up to 108908 cycles at 48 kHz (q1, q3, synth),
+103935 at 32 kHz (q2) and 99182 at 24 kHz (q0). Just above that, isolated
+late points had a single late block among the window's first eight (probably
+start-up, unexplained); repeated late blocks began at 92.3%, and by 89.2%
+and 85.0%, of the budget. The development board (same core, codec driver and
+clocks) was clean up to 109700, 104900 and 100100. The callback maximum
+leaves out interrupt entry and the driver's work before `Process`, which
+also spend the deadline. A late first word sets no SAI flag; that it causes
+the left-only click is inferred (see OPTIMIZATIONS.md, Audio deadline). (The
+earlier 115800 / 113900 / 111500 timed RAM at send time, one slot late.)
 
 Options: hold the CV-assign button [M] alone for 3 s, then release. On page 1 (FEEDBACK LED), FEEDBACK selects pitch Off/Chromatic/Scale by thirds (in Scale, short SEED taps cycle the scales through Shri). One [M] tap reaches page 2 (DRY/WET LED), where REVERB selects reverb Stock/Clouds-style (lower/upper half). Page 3 (REVERB LED): REVERB lower half is Synth start: Automatic (Stock). Page 4 (all three LEDs): REVERB bottom third is the Stock limiter. Move the pot by more than 10% to qualify a change; it saves after one second at rest. Close by holding [M] for 3 s or pressing another button. Restore the scenario mix controls and settle before capture.
 

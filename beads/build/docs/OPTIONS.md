@@ -87,11 +87,11 @@ Move a knob more than a tenth of its travel to take it over; smaller bumps are i
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 
-After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
+After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The default scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. Pitch scale snaps each new grain's final pitch after combining PITCH, CV and randomness, including Beads wavetable grains. Plaits and Spectral also follow Pitch scale. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
-Hygrostat can replace the factory scale bank, change its order and choose each scale's colour and blink pattern. Use the guide made with that profile; this guide lists the factory bank.
+Hygrostat can replace the default scale bank, change its order and choose each scale's colour and blink pattern. Use the guide made with that profile; this guide lists the default bank.
 
 Random pitch steps: Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Recent notes, with PITCH patched, gives each new grain one of the last notes sent to PITCH, above the PITCH setting; turn further counter-clockwise to choose from more of them (up to eight). Unpatched it plays as Free. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
