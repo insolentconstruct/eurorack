@@ -1023,6 +1023,18 @@ void TestUnityFeedbackCrossfade() {
     CHECK(worst < 1.0001f);
     CHECK(highest < 1.03f * reference && highest > 0.8f * reference);
   }
+  // A block that crossed the middle of a fade counts the full 1.41.
+  DelayClock clock;
+  clock.Init(48000.0f);
+  clock.fade_increment_ = 1.0f / 960.0f;
+  for (int i = 0; i < 12; ++i) {
+    clock.fade_ = 0.5f + float(i) / 960.0f;
+    CHECK(clock.power_sum() >= 1.4142135f);
+  }
+  clock.fade_ = 0.5f + 12.5f / 960.0f;
+  CHECK(clock.power_sum() < 1.4142135f && clock.power_sum() > 1.41f);
+  clock.fade_ = 1.0f;
+  CHECK(clock.power_sum() == 1.0f);
 }
 
 void TestUnityFeedbackScope() {
@@ -1190,7 +1202,7 @@ void TestDelayCrossfadeClock() {
   r.Run(expected / 2);
   float power[2];
   float step[2];
-  r.processor.delay_controller_.clock_.PowerGains(12, power, step);
+  c.PowerGains(12, power, step);
   CHECK(power[0] > 0.5f && power[1] > 0.5f);
   CHECK(fabsf(power[0] * power[0] + power[1] * power[1] - 1.0f) < 0.001f);
   CHECK(step[0] * step[1] < 0.0f);

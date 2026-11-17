@@ -219,8 +219,8 @@ class DelayController {
       Output* out,
       size_t size);
 
-  // Sum of the tap gains around the feedback loop, as last rendered, with
-  // a knob-timing crossfade's taps in phase.
+  // Sum of the tap gains around the feedback loop, as last rendered; a
+  // knob-timing crossfade's taps count in phase, so take the larger of two.
   inline float tap_gain(bool synchronized) const {
     if (timing_gain_ != TIMING_FADE_OFF) {
       synchronized = synchronized && synchronized_;
@@ -286,8 +286,20 @@ class DelayController {
       Output* out,
       size_t size);
 
-  template<bool synchronized, bool crossfade>
+  template<bool synchronized>
   void RenderInternal(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* external_input,
+      const bool* freeze,
+      float density,
+      float linear_fm,
+      float exponential_fm,
+      const RandomizedParameter& position,
+      const RandomizedParameter& shape,
+      Output* out,
+      size_t size);
+
+  void RenderKnobCrossfade(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* external_input,
       const bool* freeze,
