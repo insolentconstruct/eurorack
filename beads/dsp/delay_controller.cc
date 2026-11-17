@@ -495,10 +495,10 @@ void DelayController::RenderKnobCrossfade(
     size_t size) {
   // Add more filtering to the CV. Because.
   ONE_POLE(linear_fm_, linear_fm, 0.05f);
-  
+
   density += linear_fm_;
   CONSTRAIN(density, 0.0f, 1.0f);
-  
+
   const float slice_modulation = 1.005f * position.value(
       &position_modulation_,
       size,
@@ -517,7 +517,7 @@ void DelayController::RenderKnobCrossfade(
       &density_,
       density_filter_.Process(density),
       size);
-  
+
   seed_button_state_ = seed_button_state;
 
   // A crossfade goes straight to the delay time at the end of the block.
@@ -529,14 +529,14 @@ void DelayController::RenderKnobCrossfade(
   float power[NUM_INTERVALS];
   float power_step[NUM_INTERVALS];
   clock_.PowerGains(size, power, power_step);
-  
+
   while (size--) {
     float tap_ratio[NUM_RATIOS];
     float tap_gain[NUM_RATIOS];
 
     const float density = modulated_density.Next();
     const float fm = modulated_fm.Next();
-    
+
     clock_.Fade();
     if (glide) {
       const float new_interval = max(
@@ -558,7 +558,7 @@ void DelayController::RenderKnobCrossfade(
     tap_gain[1] = fade_to_odd * 0.8f;
 
     const float shape = modulated_shape.Next();
-    
+
     if (*freeze) {
       // Reset all play heads when freezing.
       if (!freeze_) {
@@ -567,7 +567,7 @@ void DelayController::RenderKnobCrossfade(
           slave_play_head_[i].Init();
         }
       }
-      
+
       // Reset and resync the play heads that will be faded in.
       if (clock_.retrig()) {
         int start = clock_.new_interval_index() * NUM_RATIOS;
@@ -576,15 +576,15 @@ void DelayController::RenderKnobCrossfade(
           slave_play_head_[i].Init();
         }
       }
-      
+
       float slice_index_smooth = slice_index_filter_.Process(slice_modulation);
-      
+
       for (int i = 0; i < NUM_HEADS; ++i) {
         PlayHead* new_head = play_head_[i].done() ? &play_head_[i] : NULL;
         if (!new_head && play_head_[i].half_way()) {
           new_head = &slave_play_head_[i];
         }
-        
+
         const int interval = i / NUM_RATIOS;
         const int ratio = i % NUM_RATIOS;
 
@@ -599,10 +599,10 @@ void DelayController::RenderKnobCrossfade(
                 0.05f / 5.0f * float(num_slices),
                 false);
           }
-          
+
           const int slice_index = numerator_quantizer_[i].Process(
               slice_index_smooth);
-          
+
           new_head->Start(
               slice_duration * slice_index + kMinDelay,
               slice_duration,
@@ -628,18 +628,18 @@ void DelayController::RenderKnobCrossfade(
           tap_envelope_[i].Init();
         }
       }
-      
+
       ONE_POLE(multiplier_lp_, slice_modulation, 0.01f);
       float multiplier = 1.0f + multiplier_lp_ * 15.0f;
       CONSTRAIN(multiplier, 1.0f, 16.0f);
-      
+
       MAKE_INTEGRAL_FRACTIONAL(multiplier);
       multiplier_fractional = 0.5f + 8.0f * (multiplier_fractional - 0.5f);
       CONSTRAIN(multiplier_fractional, 0.0f, 1.0f);
-      
+
       float loudest = 0.0f;
       int loudest_index = 0;
-      
+
       for (int t = 0; t < NUM_TAPS; ++t) {
         const int interval = t / NUM_HEADS;
         const int ratio = (t / NUM_INTERVALS) % NUM_RATIOS;
@@ -647,7 +647,7 @@ void DelayController::RenderKnobCrossfade(
         const int i = (2 * ratio + ((multiplier_integral & 1)
             ? tap
             : (1 - tap))) + interval * NUM_HEADS;
-          
+
         float delay_time = clock_.interval(interval) * tap_ratio[ratio] * float(
               multiplier_integral + tap);
 
@@ -655,7 +655,7 @@ void DelayController::RenderKnobCrossfade(
 
         tap_envelope_[i].set_phase_increment(1.0f / delay_time);
         out->tap[i].delay = int32_t(delay_time * 1024.0f);
-        
+
         const float ratio_fade = tap
             ? multiplier_fractional
             : 1.0f - multiplier_fractional;
