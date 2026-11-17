@@ -2,7 +2,7 @@
 
 This branch starts at the vanilla source in `origin/master` (`f4cfa76`).
 It carries bug fixes, flash and start-up protections, short output fades,
-a reproducible compiler kit and five audio-preserving CPU optimizations.
+a reproducible compiler kit and six audio-preserving CPU optimizations.
 Controls, gestures, settings layout and default sound follow that source; a
 copy of the calibration is also kept in bank 2 sector 6, which stock firmware
 leaves unused. Options that master compiles out stay compiled out.
@@ -56,6 +56,7 @@ Changes from master, one line per change:
 - Select mono/stereo processing once per block with a template, sum grains locally and use unsigned read-index modulo; audio stays bit-identical.
 - Interpolate grain reads on the stored integers and scale once, as Clouds' `ReadHermite` does; audio stays bit-identical.
 - Compute the synth's playing grains in pairs, mixed in index order: 5.7 points of headroom in its busiest case; audio stays bit-identical.
+- Load the reverb's delay-line reads before its writes: 1.0 point of headroom in the synth's busiest case and in the stock granular peak; audio stays bit-identical.
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 

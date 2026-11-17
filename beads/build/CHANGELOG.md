@@ -5,6 +5,9 @@ change, one line each, is in [README-BASE.md](../../README-BASE.md). Changes
 from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
+## Unreleased
+- The reverb uses less CPU, with the same sound: about 1,200 fewer cycles per audio block in the wavetable synth and in the busiest granular case on a development board.
+
 ## beads-tuneup-2026.11.09
 - A module whose settings flash is damaged no longer crashes at every start. The calibration is kept in a second sector and restored from it when needed, so a save interrupted by a power cut keeps the calibration; at worst the settings return to their defaults. If both copies of the calibration are lost, the module plays on the factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing to flash; hold SEED at power-up to repair it, then recalibrate. A damaged frozen buffer is skipped instead of crashing (#148).
 - A damaged calibration record no longer resets the calibration and starts the factory test; a record with no saved settings after it keeps the calibration and resets only the settings (#148).
