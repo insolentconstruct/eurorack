@@ -232,6 +232,13 @@ class GranularProcessor {
     filter_mode_.wide_detent = mode == DELAY_MODE_WIDE_DETENT;
   }
 
+  // Cutoff of the feedback path's bass filter, relative to the sample rate.
+  inline void set_feedback_cutoff(float frequency) {
+    for (size_t i = 0; i < 2; ++i) {
+      dc_blocker_[i].template set_f_q<stmlib::FREQUENCY_FAST>(frequency, 0.5f);
+    }
+  }
+
   inline void set_stereo_width(float width, bool enabled) {
     granular_player_.set_stereo_width(width, enabled);
   }

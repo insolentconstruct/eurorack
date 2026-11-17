@@ -2194,6 +2194,52 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+// Delay feedback and Delay time are power-on profile choices (#10, #30);
+// granular playback and both synths are unchanged.
+void TestDelayOptionsProfile() {
+  test_checker.Start("TestDelayOptionsProfile");
+  const uint8_t both[] = {
+    FEATURE_UNITY_FEEDBACK, 1, FEATURE_DELAY_CROSSFADE, 1
+  };
+  for (int engine = 0; engine < 3; ++engine) {
+    uint64_t hashes[2];
+    for (int on = 0; on < 2; ++on) {
+      Rig r(false, engine > 0);
+      settings.set_plaits_synth(engine == 2);
+      settings.SaveState();
+      if (on) {
+        BootWithProfile(&r, both, 2);
+        CHECK(processor.options_ == (Processor::OPTION_FLAG_UNITY_FEEDBACK |
+            Processor::OPTION_FLAG_DELAY_CROSSFADE));
+      } else {
+        r.Reboot(false);
+        CHECK(processor.options_ == 0);
+      }
+      Random::Seed(1);
+      if (engine) {
+        r.StartAutomatic();
+        CHECK(synth_mode);
+      } else {
+        r.Settle();
+      }
+      hashes[on] = MixOptionsHash(&r);
+    }
+    CHECK(hashes[0] == hashes[1]);
+  }
+  Rig r(false, false);
+  const uint8_t unity[] = { FEATURE_UNITY_FEEDBACK, 1 };
+  BootWithProfile(&r, unity, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_UNITY_FEEDBACK);
+  const uint8_t crossfade[] = { FEATURE_DELAY_CROSSFADE, 1 };
+  BootWithProfile(&r, crossfade, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_DELAY_CROSSFADE);
+  // The factory profile omits both entries.
+  r.Reboot(false);
+  CHECK(processor.options_ == 0);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2236,5 +2282,6 @@ int main() {
   TestPitchLawProfile();
   TestPlaitsBankProfile();
   TestMixOptionsProfile();
+  TestDelayOptionsProfile();
   return test_checker.failures() ? 1 : 0;
 }

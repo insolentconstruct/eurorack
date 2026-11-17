@@ -286,6 +286,10 @@ DETAILS = [
     "([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before "
     "DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); "
     "fully dry then has no reverb.",
+    "In delay, a Hygrostat profile can give FEEDBACK a unity notch for "
+    "sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make "
+    "DENSITY crossfade to a new delay time instead of bending the pitch "
+    "([Delay time](FEATURES.md#delay-time)).",
     "Frozen feedback Evolving runs frozen grains through a slowly moving "
     "all-pass loop; FEEDBACK sets how far they drift.",
     "Processor Spectral: Clouds' spectral processing replaces the grains. "

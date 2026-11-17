@@ -175,6 +175,14 @@ dry and both ends of the knob stay stock. Reverb input: Grains sends
 only the grains to the reverb, before the dry/wet mix as on Clouds, so
 fully dry has no reverb. Both synths are unchanged.
 
+Two delay choices keep stock behaviour by default and add no panel
+gesture or options-page slot. Delay feedback: Unity notch gives FEEDBACK
+a notch near 3 o'clock where repeats neither fade nor grow, for sound on
+sound, and keeps the bass in the loop; both ends of the knob stay stock.
+Delay time: Crossfade makes a DENSITY change fade to the new delay time
+instead of bending the pitch; very short delays still glide, for
+flanging. Granular and both synths are unchanged.
+
 Plaits synth banks: FEEDBACK selects one of the eight models of the
 current bank, as on Plaits: green (its first bank), red (noise and
 drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,

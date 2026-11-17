@@ -29,6 +29,8 @@
 #ifndef BEADS_DSP_DELAY_CLOCK_H_
 #define BEADS_DSP_DELAY_CLOCK_H_
 
+#include <algorithm>
+
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/dsp.h"
 
@@ -48,6 +50,31 @@ class DelayClock {
     interval_[1] = interval_[0];
     fade_ = 1.0f;
     rotate_ = 0;
+  }
+
+  // Knob timing that crossfades to the target instead of gliding.
+  void Jump(float interval, float target, float lp_coefficient) {
+    // A running crossfade finishes first.
+    fade_ += fade_increment_;
+    if (fade_ < 1.0f) {
+      return;
+    }
+    fade_ = 1.0f;
+    const float current = interval_[1];
+    // Under 10 ms, half the shortest fade, keep the glide for flanging.
+    if (std::max(target, current) * max_fade_increment_ < 0.5f) {
+      ONE_POLE(interval_[1], interval, lp_coefficient);
+      interval_[0] = interval_[1];
+    } else if (fabsf(target - current) > 0.02f * current) {
+      // As for a clock change: the new interval fades in over half of it.
+      ++rotate_;
+      interval_[0] = current;
+      interval_[1] = target;
+      fade_ = 0.0f;
+      fade_increment_ = 2.0f / target;
+      CONSTRAIN(fade_increment_, min_fade_increment_, max_fade_increment_);
+      next_interval_ = 0;
+    }
   }
   
   inline float fade() const {

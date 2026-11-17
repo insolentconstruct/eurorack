@@ -103,6 +103,8 @@ Clouds-style changes the reverb character and, until a diffusion amount is set w
 
 A Hygrostat profile can make DRY/WET bring the grains in more gently ([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); fully dry then has no reverb.
 
+In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make DENSITY crossfade to a new delay time instead of bending the pitch ([Delay time](FEATURES.md#delay-time)).
+
 Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
 Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, delay mode or wavetable synth. A new processor takes over when the page closes, clearing the recording; a frozen buffer saved to flash comes back with Granular.

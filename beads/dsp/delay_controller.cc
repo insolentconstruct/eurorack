@@ -120,12 +120,12 @@ void DelayController::Render(
     Output* out,
     size_t size) {
   // One tail call through a pointer, so the fade test adds no work.
-  RenderFn fn = &DelayController::RenderWithTimingFade;
+  RenderFn fn = &DelayController::RenderWithTimingFade<false>;
   if (timing_gain_ == TIMING_FADE_OFF) {
     if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
-      fn = &DelayController::RenderInternal<false>;
+      fn = &DelayController::RenderInternal<false, false>;
     } else {
-      fn = &DelayController::RenderInternal<true>;
+      fn = &DelayController::RenderInternal<true, false>;
     }
   }
   (this->*fn)(
@@ -139,6 +139,37 @@ void DelayController::Render(
       shape, out, size);
 }
 
+void DelayController::RenderCrossfade(
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* external_input,
+    const bool* freeze,
+    float density,
+    float linear_fm,
+    float exponential_fm,
+    const RandomizedParameter& position,
+    const RandomizedParameter& shape,
+    Output* out,
+    size_t size) {
+  RenderFn fn = &DelayController::RenderWithTimingFade<true>;
+  if (timing_gain_ == TIMING_FADE_OFF) {
+    if (seed_button_state == SEED_BUTTON_STATE_LOCKED && !external_input) {
+      fn = &DelayController::RenderInternal<false, true>;
+    } else {
+      fn = &DelayController::RenderInternal<true, false>;
+    }
+  }
+  (this->*fn)(
+      seed_button_state,
+      external_input,
+      freeze,
+      density,
+      linear_fm,
+      exponential_fm,
+      position,
+      shape, out, size);
+}
+
+template<bool crossfade>
 void DelayController::RenderWithTimingFade(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* external_input,
@@ -180,7 +211,7 @@ void DelayController::RenderWithTimingFade(
   }
 
   if (synchronized_) {
-    RenderInternal<true>(
+    RenderInternal<true, false>(
         seed_button_state,
         external_input,
         freeze,
@@ -190,7 +221,7 @@ void DelayController::RenderWithTimingFade(
         position,
         shape, out, size);
   } else {
-    RenderInternal<false>(
+    RenderInternal<false, crossfade>(
         seed_button_state,
         external_input,
         freeze,
@@ -215,7 +246,7 @@ void DelayController::RenderWithTimingFade(
   }
 }
 
-template<bool synchronized>
+template<bool synchronized, bool crossfade>
 void DelayController::RenderInternal(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* external_input,
@@ -263,6 +294,15 @@ void DelayController::RenderInternal(
   bool tap = (seed_button_state == SEED_BUTTON_STATE_ON) && \
       (seed_button_state_ == SEED_BUTTON_STATE_OFF);
   seed_button_state_ = seed_button_state;
+
+  // A crossfade goes straight to the delay time at the end of the block.
+  float target_interval = 0.0f;
+  if (crossfade) {
+    target_interval = max(
+        float(kMinDelay),
+        SemitonesToRatio(-fm_filter_.value() * 60.0f) * float(max_delay_) * \
+            SemitonesToRatio(-fabsf(density_filter_.value() - 0.5f) * 216.0f));
+  }
   
   while (size--) {
     float tap_ratio[NUM_RATIOS];
@@ -302,7 +342,11 @@ void DelayController::RenderInternal(
       float lp_coefficient = 10.0f / new_interval;
       CONSTRAIN(lp_coefficient, 0.005f, 0.7f);
       
-      clock_.Update(new_interval, lp_coefficient);
+      if (crossfade) {
+        clock_.Jump(new_interval, target_interval, lp_coefficient);
+      } else {
+        clock_.Update(new_interval, lp_coefficient);
+      }
 
       tap_ratio[0] = 1.00f;
       tap_ratio[1] = 0.77f;

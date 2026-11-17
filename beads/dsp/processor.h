@@ -98,6 +98,15 @@ class Processor {
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_FLAG_REVERB_ON_GRAINS, grains);
   }
+  // Delay mode: FEEDBACK has a unity notch and the loop keeps its bass.
+  inline void set_unity_feedback(bool unity) {
+    SetOption(OPTION_FLAG_UNITY_FEEDBACK, unity);
+    SetFeedbackCutoff(false);
+  }
+  // Delay mode: knob timing crossfades between delay times, as when clocked.
+  inline void set_delay_crossfade(bool crossfade) {
+    SetOption(OPTION_FLAG_DELAY_CROSSFADE, crossfade);
+  }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
     delay_controller_.set_timing_fade(enabled);
@@ -317,7 +326,11 @@ class Processor {
   enum OptionFlags {
     OPTION_FLAG_TIME_SCAN = 1,
     OPTION_FLAG_GENTLE_MIX = 2,
-    OPTION_FLAG_REVERB_ON_GRAINS = 4
+    OPTION_FLAG_REVERB_ON_GRAINS = 4,
+    OPTION_FLAG_UNITY_FEEDBACK = 8,
+    OPTION_FLAG_DELAY_CROSSFADE = 16,
+    // State, not a choice: the unity loop's 10 Hz cutoff is in place.
+    OPTION_FLAG_LOW_CUTOFF = 32
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
@@ -334,6 +347,10 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
+  // A flat notch at unity loop gain; both ends of the knob stay stock.
+  static float UnityFeedback(float feedback, float tap_gain);
+  // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.
+  void SetFeedbackCutoff(bool low);
   void MixDryWet(
       const FloatFrame* dry_signal,
       float dry,

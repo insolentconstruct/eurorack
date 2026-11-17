@@ -115,6 +115,9 @@ not-set values use the profile default.
 | 31 | Plaits bank (#190) | 14 (byte 20 low) |
 | 32 | Mix law (#21) | No saved value |
 | 33 | Reverb input (#20) | No saved value |
+| 34 | Grain stealing (#237) | No saved value |
+| 35 | Delay feedback (#10) | No saved value |
+| 36 | Delay time (#30) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -510,3 +513,36 @@ DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
 and flutter comes after the reverb, so the tail wobbles too. Granular, delay
 and spectral; both synths keep the stock routing. Chosen at power-on, with
 no panel slot or saved-state nibble.
+
+### Delay feedback
+
+Hygrostat feature ID 35 chooses Stock / Unity notch (#10), for sound on
+sound in delay mode. Unity notch gives FEEDBACK a flat notch, 6% of its
+travel wide, near 3 o'clock where stock feedback reaches unity: there each
+repeat comes back at the level it went in, and new sound layers on top, as
+on a looper. Below the notch the repeats fade; above it they grow into the
+limiter, as in stock; both ends of the knob stay stock. FEEDBACK CV follows
+the same law. The loop's bass filter drops from 40 Hz to 10 Hz, so at
+100 Hz a repeat loses about 0.1 dB instead of 1.3 dB. Tape qualities still
+darken and saturate a little on each pass. Past noon on DENSITY the second
+tap joins: the notch then keeps the sum of both taps at unity, so the
+pattern does not grow but slowly fades, faster on Bright digital; a jump
+across noon can lift the loop above unity for part of one 0.25 ms block,
+once. Mutable
+Instruments noted that grain levels vary too much for a fixed unity, so
+granular, spectral and both synths keep the stock feedback. Chosen at
+power-on, with no panel slot or saved-state nibble.
+
+### Delay time
+
+Hygrostat feature ID 36 chooses Glide (stock) / Crossfade (#30). In delay
+mode with knob timing (SEED latched, nothing patched), stock glides the
+delay time when DENSITY moves, bending the pitch like tape. Crossfade
+fades from the old delay time to the new one instead, as Beads already does
+with a clock: over half the new time, between 20 and 250 ms. A fade runs to
+its end before the next one starts, and changes under 2% are ignored, so a
+slow turn or a slow DENSITY CV moves in steps rather than as a chorus or
+vibrato. A tone can dip in level mid-fade, deeply on a sweep. Delays under
+10 ms still glide, for flanging. Clocked and tapped timing, TIME and FREEZE
+slices are unchanged. Chosen at power-on, with no panel slot or saved-state
+nibble.
