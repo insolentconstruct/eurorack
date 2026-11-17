@@ -2194,19 +2194,24 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
-// Grain stealing is a power-on profile choice (#237): 2024 resorts the
-// grains from 5 ms in every quality and in the wavetable synth.
+// Grain stealing is a power-on profile choice (#237): 0, the default, resorts
+// the grains from 5 ms as in 2021/2024; 1 keeps the 2026 source's 25 ms.
 void TestGrainStealingProfile() {
   test_checker.Start("TestGrainStealingProfile");
-  const uint8_t stealing[] = { FEATURE_GRAIN_STEALING, 1 };
-  for (int legacy = 1; legacy >= 0; --legacy) {
+  const uint8_t stealing_2026[] = { FEATURE_GRAIN_STEALING, 1 };
+  const uint8_t stealing_2024[] = { FEATURE_GRAIN_STEALING, 0 };
+  const uint8_t beta3[] = { FEATURE_REVERB_INPUT, 1 };
+  // Factory profile, explicit 2021/2024, a profile without ID 34, then 2026.
+  for (int boot = 0; boot < 4; ++boot) {
     Rig r(false, false);
-    if (legacy) {
-      BootWithProfile(&r, stealing, 1);
-    } else {
+    if (boot == 0) {
       r.Reboot(false);
+    } else {
+      BootWithProfile(&r, boot == 1 ? stealing_2024 :
+          (boot == 2 ? beta3 : stealing_2026), 1);
     }
-    const int scale = legacy ? 1 : 5;
+    const int value = boot == 3;
+    const int scale = value ? 5 : 1;
     CHECK(processor.processor_digital_.granular_player_.
         simple_scheduler_threshold_ == 240 * scale);
     CHECK(processor.processor_vintage_digital_.granular_player_.
@@ -2217,20 +2222,20 @@ void TestGrainStealingProfile() {
         simple_scheduler_threshold_ == 120 * scale);
     CHECK(synth.wavetable_granular_player_.
         simple_scheduler_threshold_ == 240 * scale);
-    CHECK(settings.FeatureValue(FEATURE_GRAIN_STEALING) == legacy);
+    CHECK(settings.FeatureValue(FEATURE_GRAIN_STEALING) == value);
   }
-  // Nothing is saved: after play and a save, the factory profile is 2026.
+  // Nothing is saved: after play and a save, the factory profile is 2021/2024.
   Rig r(false, false);
-  BootWithProfile(&r, stealing, 1);
+  BootWithProfile(&r, stealing_2026, 1);
   r.Settle();
   CHECK(processor.processor_digital_.granular_player_.
-      simple_scheduler_threshold_ == 240);
+      simple_scheduler_threshold_ == 1200);
   settings.SavePersistentData();
   settings.SaveState();
   r.Reboot(false);
   CHECK(settings.FeatureValue(FEATURE_GRAIN_STEALING) == 0);
   CHECK(processor.processor_digital_.granular_player_.
-      simple_scheduler_threshold_ == 1200);
+      simple_scheduler_threshold_ == 240);
 }
 
 int main() {

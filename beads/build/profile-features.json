@@ -1039,8 +1039,8 @@
       "issue": 237,
       "name": "Grain stealing",
       "values": [
-        "2026 (stock)",
-        "2024"
+        "2021/2024 (default)",
+        "2026"
       ],
       "field": null,
       "states": [
