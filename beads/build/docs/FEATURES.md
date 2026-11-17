@@ -115,7 +115,7 @@ not-set values use the profile default.
 | 31 | Plaits bank (#190) | 14 (byte 20 low) |
 | 32 | Mix law (#21) | No saved value |
 | 33 | Reverb input (#20) | No saved value |
-| 34 | Grain stealing (#237, ID proposed) | No saved value |
+| 34 | Grain stealing (#237) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -514,7 +514,7 @@ no panel slot or saved-state nibble.
 
 ### Grain stealing
 
-Hygrostat feature ID 34 (proposed) chooses 2026 (stock) / 2024 (#237). When
+Hygrostat feature ID 34 chooses 2026 (stock) / 2024 (#237). When
 all 32 grains are playing, a new grain takes over an old one. Mutable
 Instruments' 2026 source just takes the next one in turn when grains arrive
 less than 25 ms apart. The 2024 firmware did that only below 5 ms; from 5 ms
