@@ -310,7 +310,7 @@ that rate's clean edge. The first left sample was on time in every row.
 | Cold digital | 77,679 (64.7%) | 21.9 | not measured | – |
 | Scorched cassette | 61,116 (50.9%) | 31.7 | 65,380 (54.5%) | 28.2 |
 
-The 2024 grain stealing costs about 3.5 to 4 points. The granular code is
+The 2024 grain stealing costs 3.4 to 3.6 points. The granular code is
 unchanged since these builds but the code layout moved, so the heavy rows
 will be rerun on the final build.
 
