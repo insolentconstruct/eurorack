@@ -219,7 +219,8 @@ class DelayController {
       Output* out,
       size_t size);
 
-  // Sum of the tap gains around the feedback loop, as last rendered.
+  // Sum of the tap gains around the feedback loop, as last rendered, with
+  // a knob-timing crossfade's taps in phase.
   inline float tap_gain(bool synchronized) const {
     if (timing_gain_ != TIMING_FADE_OFF) {
       synchronized = synchronized && synchronized_;
@@ -231,7 +232,8 @@ class DelayController {
     CONSTRAIN(fade_to_odd, 0.0f, 1.0f);
     const float modulation = 0.5f + 0.5f * stmlib::Interpolate(
         lut_sine, tap_modulation_.phase(), 1024.0f);
-    return 1.0f + 0.6f * fade_to_odd * (0.25f + 0.75f * modulation);
+    return clock_.power_sum() * \
+        (1.0f + 0.6f * fade_to_odd * (0.25f + 0.75f * modulation));
   }
   
   // Off, the Init state, switches timing at once, as stock.

@@ -303,7 +303,8 @@ void DelayController::RenderInternal(
     glide = clock_.Crossfade(max(
         float(kMinDelay),
         SemitonesToRatio(-fm_filter_.value() * 60.0f) * float(max_delay_) * \
-            SemitonesToRatio(-fabsf(density_filter_.value() - 0.5f) * 216.0f)));
+            SemitonesToRatio(-fabsf(density_filter_.value() - 0.5f) * 216.0f)),
+        *freeze);
     clock_.PowerGains(size, power, power_step);
   }
   

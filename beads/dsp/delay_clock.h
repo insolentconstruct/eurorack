@@ -59,13 +59,13 @@ class DelayClock {
 
   // Knob timing, once per block: holds the delay time while DENSITY moves,
   // then crossfades to it. Returns true when it glides instead.
-  bool Crossfade(float target) {
+  bool Crossfade(float target, bool frozen) {
     if (fade_ < 1.0f) {
       return false;
     }
     const float current = interval_[1];
-    // Under 10 ms, half the shortest fade, keep the glide for flanging.
-    if (std::max(target, current) * max_fade_increment_ < 0.5f) {
+    // Frozen slices, and delays under 10 ms (flanging), glide as stock.
+    if (frozen || std::max(target, current) * max_fade_increment_ < 0.5f) {
       interval_[0] = current;
       return true;
     }
@@ -109,10 +109,11 @@ class DelayClock {
 
   // Equal-power gains for knob-timing crossfades, at the block's first
   // sample, and their steps across the block.
-  inline void PowerGains(size_t size, float* gain, float* step) const {
+  inline void PowerGains(size_t size, float* gain, float* step) {
     const float first = std::min(fade_ + fade_increment_, 1.0f);
     const float last = std::min(fade_ + fade_increment_ * float(size), 1.0f);
     const float scale = size > 1 ? 1.0f / float(size - 1) : 0.0f;
+    float last_sum = 0.0f;
     for (int i = 0; i < 2; ++i) {
       const bool fading_in = (i + rotate_) % 2;
       const float a = fading_in ? first : 1.0f - first;
@@ -120,7 +121,15 @@ class DelayClock {
       gain[i] = stmlib::Interpolate(lut_sine, a * 0.25f, 1024.0f);
       const float end = stmlib::Interpolate(lut_sine, b * 0.25f, 1024.0f);
       step[i] = (end - gain[i]) * scale;
+      last_sum += end;
     }
+    // The gains move linearly, so their sum peaks at an end of the block.
+    power_sum_ = std::max(gain[0] + gain[1], last_sum);
+  }
+
+  // Largest sum of the gains over the last block: 1.41 mid-fade.
+  inline float power_sum() const {
+    return power_sum_;
   }
   
   inline float fade() const {
@@ -169,6 +178,7 @@ class DelayClock {
   int max_interval_;
   
   int rotate_;
+  float power_sum_;
 
   DISALLOW_COPY_AND_ASSIGN(DelayClock);
 };

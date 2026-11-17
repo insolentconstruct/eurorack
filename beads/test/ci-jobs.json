@@ -13,7 +13,7 @@
   },
   {
     "name": "delay-options",
-    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestUnityFeedbackLaw TestUnityFeedbackLoop TestUnityFeedbackTwoTaps TestUnityFeedbackDensitySteps TestUnityFeedbackScope TestDelayCrossfade TestDelayCrossfadeClock TestDelayCrossfadeLatchFade TestKnobDelayHashes'"
+    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestUnityFeedbackLaw TestUnityFeedbackLoop TestUnityFeedbackTwoTaps TestUnityFeedbackDensitySteps TestUnityFeedbackCrossfade TestUnityFeedbackScope TestDelayCrossfade TestDelayCrossfadeClock TestDelayCrossfadeLatchFade TestDelayCrossfadeFrozen TestKnobDelayHashes'"
   },
   {
     "name": "clouds-stock",
