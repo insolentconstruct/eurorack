@@ -2,6 +2,10 @@
 
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
+## Unreleased
+
+- Audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz) and otherwise identical. The output DMA reads the first word of each half before the block ends; the delay lets that word be stored before the audio callback runs, which moves the audio deadline from about one frame before the end of the block to about the block itself (#1). Patches that feed OUT back to IN, or line audio up with gates or triggers, shift by one frame. Pending module qualification; working limits are unchanged.
+
 ## 2026.11.16 (tag `drizzlet-2026.11.16`, beta 3 "Smirr")
 
 - Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.
