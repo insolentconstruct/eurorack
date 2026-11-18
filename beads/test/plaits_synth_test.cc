@@ -24,8 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits synth: models, shared 6-op banks, voice allocation, model detents and
-// RAM bounds.
+// Plaits synth: skipped AUX, models, shared 6-op banks, voice allocation,
+// model detents and RAM bounds.
 
 #include <algorithm>
 #include <cmath>
@@ -43,6 +43,7 @@
 #undef private
 #include "stmlib/utils/buffer_allocator.h"
 
+#include "beads/test/plaits_aux.h"
 #include "beads/test/plaits_fm_banks.h"
 
 using namespace beads;
@@ -232,6 +233,18 @@ void TestFmBankSwitches() {
   CHECK(GuardIntact());
   printf("FM bank switches %08x\n", hash);
   CHECK(hash == kFmBankSwitchHash);
+}
+
+// Beads never plays AUX: with PLAITS_NO_AUX these engines skip its work.
+void TestAuxSkipped() {
+  test_checker.Start("TestAuxSkipped");
+  for (int e = 0; e < kNumAuxSkippingEngines; ++e) {
+#ifdef PLAITS_NO_AUX
+    CHECK(AuxUntouched(e));
+#else
+    CHECK(!AuxUntouched(e));
+#endif  // PLAITS_NO_AUX
+  }
 }
 
 // Each trigger starts the next voice, which keeps the settings it started
@@ -670,6 +683,7 @@ void TestWordBankChangeDelaysWord() {
 }
 
 int main() {
+  TestAuxSkipped();
   TestBitReversal();
   TestFmBanksShared();
   TestFmBankSwitches();

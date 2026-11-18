@@ -74,7 +74,9 @@ void WaveshapingEngine::Render(
   
   // Start from bandlimited slope signal.
   slope_.Render<OSCILLATOR_SHAPE_SLOPE>(f0, pw, out, size);
+#ifndef PLAITS_NO_AUX
   triangle_.Render<OSCILLATOR_SHAPE_SLOPE>(f0, 0.5f, aux, size);
+#endif  // PLAITS_NO_AUX
 
   // Try to estimate how rich the spectrum is, and reduce the range of the
   // waveshaping control accordingly.
@@ -96,11 +98,13 @@ void WaveshapingEngine::Render(
       &previous_wavefolder_gain_,
       0.03f + 0.46f * wavefolder_gain * wavefolder_gain_attenuation,
       size);
+#ifndef PLAITS_NO_AUX
   const float overtone_gain = parameters.timbre * (2.0f - parameters.timbre);
   ParameterInterpolator overtone_gain_modulation(
       &previous_overtone_gain_,
       overtone_gain * (2.0f - overtone_gain),
       size);
+#endif  // PLAITS_NO_AUX
   
   for (size_t i = 0; i < size; ++i) {
     float shape = shape_modulation.Next() * 3.9999f;
@@ -125,12 +129,13 @@ void WaveshapingEngine::Render(
     float index = mix * wf_gain_modulation.Next() + 0.5f;
     float fold = InterpolateHermite(
         lut_fold + 1, index, 512.0f);
+    out[i] = fold;
+#ifndef PLAITS_NO_AUX
     float fold_2 = -InterpolateHermite(
         lut_fold_2 + 1, index, 512.0f);
-    
     float sine = Sine(aux[i] * 0.25f + 0.5f);
-    out[i] = fold;
     aux[i] = sine + (fold_2 - sine) * overtone_gain_modulation.Next();
+#endif  // PLAITS_NO_AUX
   }
 }
 
