@@ -1002,6 +1002,10 @@ cases = [
   ('TestEveryModelRenders', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
     '? fm_patches_table[patch.model - 2]',
     '? fm_patches_table[0]'),
+  ('TestBitReversal', 'plaits_synth',
+    'plaits/dsp/speech/lpc_speech_synth_controller.cc',
+    '  0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,',
+    '  0x1c, 0x9c, 0x5c, 0xdc, 0xbc, 0x3c, 0x7c, 0xfc,'),
   ('TestSynthStereoWidth', 'wavetable', 'beads/dsp/wavetable_granular_player.h',
     '          pan,\n'
     '          trigger.fractional_sample);',

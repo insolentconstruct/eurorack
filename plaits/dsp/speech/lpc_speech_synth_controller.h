@@ -71,15 +71,14 @@ class BitStream {
 
  private:
   inline uint8_t Reverse(uint8_t b) const {
-    b = (b >> 4) | (b << 4);
-  	b = ((b & 0xcc) >> 2) | ((b & 0x33) << 2);
-  	b = ((b & 0xaa) >> 1) | ((b & 0x55) << 1);
-    return b;
+    return reverse_lut_[b];
   }
 
   const uint8_t* p_;
   int available_;
   uint16_t bits_;
+
+  static const uint8_t reverse_lut_[256];
 
   DISALLOW_COPY_AND_ASSIGN(BitStream);
 };
