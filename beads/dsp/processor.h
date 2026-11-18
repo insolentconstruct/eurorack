@@ -98,6 +98,11 @@ class Processor {
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_FLAG_REVERB_ON_GRAINS, grains);
   }
+  // An octave-up tail fed back into the stock reverb; zero is off.
+  inline void set_shimmer(float shimmer) {
+    SetOption(OPTION_FLAG_SHIMMER, shimmer > 0.0f);
+    reverb_.set_shimmer(shimmer);
+  }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
     delay_controller_.set_timing_fade(enabled);
@@ -317,7 +322,8 @@ class Processor {
   enum OptionFlags {
     OPTION_FLAG_TIME_SCAN = 1,
     OPTION_FLAG_GENTLE_MIX = 2,
-    OPTION_FLAG_REVERB_ON_GRAINS = 4
+    OPTION_FLAG_REVERB_ON_GRAINS = 4,
+    OPTION_FLAG_SHIMMER = 8
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {

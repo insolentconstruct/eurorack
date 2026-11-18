@@ -44,6 +44,7 @@ class Reverb {
   
   void Init(uint16_t* buffer, float sample_rate) {
     engine_.Init(buffer);
+    shimmer_ = 0.0f;
     Reset(sample_rate);
   }
   
@@ -57,6 +58,8 @@ class Reverb {
     dry_ = 0.0f;
     wet_ = 0.0f;
     send_ = 0.0f;
+    shimmer_phase_ = 0.0f;
+    shimmer_feedback_ = 0.0f;
   }
   
   void Process(FloatFrame* in_out, size_t size) {
@@ -163,6 +166,7 @@ class Reverb {
   }
   
   void ProcessClouds(FloatFrame* in_out, size_t size);
+  void ProcessShimmer(FloatFrame* in_out, size_t size);
 
   void Reset(float sample_rate, bool clear) {
     if (clear) {
@@ -182,6 +186,11 @@ class Reverb {
   inline void set_lp(float lp) {
     lp_ = lp;
   }
+
+  // Share of the octave-up tail fed back to the input.
+  inline void set_shimmer(float shimmer) {
+    shimmer_ = shimmer;
+  }
   
   inline void Clear() {
     engine_.Clear();
@@ -200,6 +209,10 @@ class Reverb {
   
   float lp_1_;
   float lp_2_;
+
+  float shimmer_;
+  float shimmer_phase_;
+  float shimmer_feedback_;
   
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };

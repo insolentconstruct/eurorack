@@ -33,6 +33,7 @@
 namespace beads {
 
 const float kAllPassCoefficient = 0.625f;
+const float kShimmerWindow = 2047.0f;
 
 void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
   // Dattorro/Griesinger: four input APs, then two 2AP+delay blocks in a loop.
@@ -129,6 +130,132 @@ void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
     in_out->r = in_out->r * dry_amount + wet * wet_amount;
     ++in_out;
   }
+}
+
+void Reverb::ProcessShimmer(FloatFrame* in_out, size_t size) {
+  // Process()'s Griesinger loop, its wet output shifted an octave up by
+  // Clouds' pitch shifter and fed back to the input.
+  typedef E::Reserve<150,
+    E::Reserve<214,
+    E::Reserve<319,
+    E::Reserve<527,
+    E::Reserve<2182,
+    E::Reserve<2690,
+    E::Reserve<4501,
+    E::Reserve<2525,
+    E::Reserve<2197,
+    E::Reserve<6312,
+    E::Reserve<2047> > > > > > > > > > > Memory;
+  E::DelayLine<Memory, 0> ap1;
+  E::DelayLine<Memory, 1> ap2;
+  E::DelayLine<Memory, 2> ap3;
+  E::DelayLine<Memory, 3> ap4;
+  E::DelayLine<Memory, 4> dap1a;
+  E::DelayLine<Memory, 5> dap1b;
+  E::DelayLine<Memory, 6> del1;
+  E::DelayLine<Memory, 7> dap2a;
+  E::DelayLine<Memory, 8> dap2b;
+  E::DelayLine<Memory, 9> del2;
+  E::DelayLine<Memory, 10> shift;
+  E::Context c;
+
+  const float kap = 0.625f;
+  const float klp = lp_;
+  const float krt = reverb_time_;
+
+  const float input_gain = 0.2f * (1.0f - 0.333f * reverb_time_);
+  const float output_gain = 0.4f / input_gain;
+
+  const float send_amount_sqrt = mix_ * (2.0f - mix_);
+  const float send_amount = send_amount_sqrt * (2.0f - send_amount_sqrt);
+  const float wet = output_gain;
+  const float dry = (1.0f - mix_) * (1.0f + mix_);
+  const float shimmer = shimmer_ * input_gain * send_amount;
+
+  stmlib::ParameterInterpolator wet_modulation(&wet_, wet, size);
+  stmlib::ParameterInterpolator dry_modulation(&dry_, dry, size);
+  stmlib::ParameterInterpolator send_modulation(
+      &send_,
+      send_amount * input_gain,
+      size);
+
+  float phase = shimmer_phase_;
+  float feedback = shimmer_feedback_;
+  while (size--) {
+    const float dry_amount = dry_modulation.Next();
+    const float wet_amount = wet_modulation.Next();
+    const float send_amount = send_modulation.Next();
+
+    float wet;
+    float apout = 0.0f;
+    float shifted;
+    engine_.Start(&c);
+
+    // Pitch ratio 2: the read heads move one window per window.
+    phase -= 1.0f / kShimmerWindow;
+    if (phase <= 0.0f) {
+      phase += 1.0f;
+    }
+    const float tri = 2.0f * (phase >= 0.5f ? 1.0f - phase : phase);
+    const float head = phase * kShimmerWindow;
+    float half = head + kShimmerWindow * 0.5f;
+    if (half >= kShimmerWindow) {
+      half -= kShimmerWindow;
+    }
+    c.Load(feedback);
+    c.Write(shift, 0.0f);
+    c.Interpolate(shift, head, tri);
+    c.Interpolate(shift, half, 1.0f - tri);
+    c.Write(shifted, 0.0f);
+
+    // Smear AP1 inside the loop.
+    c.Interpolate(ap1, 10.0f, LFO_1, 80.0f, 1.0f);
+    c.Write(ap1, 100, 0.0f);
+
+    c.Read(in_out->l + in_out->r, send_amount);
+    c.Read(shifted, shimmer);
+
+    // Diffuse through 4 allpasses.
+    c.Read(ap1 TAIL, kap);
+    c.WriteAllPass(ap1, -kap);
+    c.Read(ap2 TAIL, kap);
+    c.WriteAllPass(ap2, -kap);
+    c.Read(ap3 TAIL, kap);
+    c.WriteAllPass(ap3, -kap);
+    c.Read(ap4 TAIL, kap);
+    c.WriteAllPass(ap4, -kap);
+    c.Write(apout);
+
+    // Main reverb loop.
+    c.Load(apout);
+    c.Interpolate(del2, 6261.0f, LFO_2, 50.0f, krt);
+    c.Lp(lp_1_, klp);
+    c.Read(dap1a TAIL, -kap);
+    c.WriteAllPass(dap1a, kap);
+    c.Read(dap1b TAIL, kap);
+    c.WriteAllPass(dap1b, -kap);
+    c.Write(del1, 1.0f);
+    c.Write(wet);
+
+    in_out->l = in_out->l * dry_amount + wet * wet_amount;
+    feedback = wet;
+
+    c.Load(apout);
+    c.Interpolate(del1, 4460.0f, LFO_1, 40.0f, krt);
+    c.Lp(lp_2_, klp);
+    c.Read(dap2a TAIL, kap);
+    c.WriteAllPass(dap2a, -kap);
+    c.Read(dap2b TAIL, -kap);
+    c.WriteAllPass(dap2b, kap);
+    c.Write(del2, 1.0f);
+    c.Write(wet);
+
+    in_out->r = in_out->r * dry_amount + wet * wet_amount;
+    feedback += wet;
+    ++in_out;
+  }
+  shimmer_phase_ = phase;
+  shimmer_feedback_ = feedback;
 }
 
 }  // namespace beads
