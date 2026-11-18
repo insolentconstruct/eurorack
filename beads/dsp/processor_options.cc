@@ -99,6 +99,13 @@ void Processor::ProcessWithOptions(
     for (size_t i = 0; i < size; ++i) {
       gate_out[i] = triggers[i].gate;
     }
+    if (options_ & OPTION_FLAG_BEAT_TIME) {
+      const bool clocked = seed_input &&
+          seed_button_state == SEED_BUTTON_STATE_LOCKED;
+      SetBeat(clocked
+          ? trigger_generator_.clock_period() / float(ratio())
+          : 0.0f);
+    }
   }
   const TriggerGenerator::Output* grain_triggers = delay_mode ? NULL : triggers;
   const DelayController::Output* delay_taps = delay_mode ? taps : NULL;

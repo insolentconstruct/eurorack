@@ -98,6 +98,17 @@ class Processor {
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_FLAG_REVERB_ON_GRAINS, grains);
   }
+  // Clocked rhythms: Euclidean grain patterns and TIME in whole beats.
+  inline void set_euclidean_length(int length) {
+    euclidean_length_ = length;
+    trigger_generator_.set_euclidean_length(length);
+  }
+  inline void set_beat_time(bool enabled) {
+    SetOption(OPTION_FLAG_BEAT_TIME, enabled);
+    if (!enabled) {
+      SetBeat(0.0f);
+    }
+  }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
     delay_controller_.set_timing_fade(enabled);
@@ -317,7 +328,8 @@ class Processor {
   enum OptionFlags {
     OPTION_FLAG_TIME_SCAN = 1,
     OPTION_FLAG_GENTLE_MIX = 2,
-    OPTION_FLAG_REVERB_ON_GRAINS = 4
+    OPTION_FLAG_REVERB_ON_GRAINS = 4,
+    OPTION_FLAG_BEAT_TIME = 8
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
@@ -341,6 +353,13 @@ class Processor {
       FloatFrame* out,
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
+
+  inline void SetBeat(float beat) {
+    processor_digital_.set_beat(beat);
+    processor_vintage_digital_.set_beat(beat);
+    processor_clean_tape_.set_beat(beat);
+    processor_dirty_tape_.set_beat(beat);
+  }
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
 
   GranularProcessor<
@@ -397,6 +416,7 @@ class Processor {
   FeedbackDiffuser feedback_diffuser_;
   bool evolving_feedback_;
   AttackInput attack_input_;
+  int euclidean_length_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

@@ -59,6 +59,13 @@ class TriggerGenerator {
   };
 
   void Init(float sample_rate);
+
+  // Clocked: a Euclidean pattern of this many steps replaces the pulse
+  // probability, its fill set by DENSITY. Zero is stock.
+  inline void set_euclidean_length(int length) { euclidean_length_ = length; }
+
+  // Samples between the last two clock pulses.
+  inline float clock_period() const { return clock_period_; }
   
   void Render(
       SeedButtonState seed_button_state,
@@ -105,6 +112,10 @@ class TriggerGenerator {
   int default_reset_interval_;
   
   stmlib::GateFlags previous_flags_;
+
+  int euclidean_length_;
+  int euclidean_step_;
+  float clock_period_;
 
   DISALLOW_COPY_AND_ASSIGN(TriggerGenerator);
 };

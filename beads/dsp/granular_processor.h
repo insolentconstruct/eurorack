@@ -84,6 +84,7 @@ class GranularProcessor {
   
   inline void SetAttacks(int mode) { attacks_.Configure(mode); }
   inline void SetAttackOnset(bool onset) { attacks_.SetOnset(onset); }
+  inline void set_beat(float beat) { granular_player_.set_beat(beat); }
 
   inline void Reset() {
     attacks_.Reset();

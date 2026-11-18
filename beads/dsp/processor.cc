@@ -45,6 +45,7 @@ void Processor::Init(
   attack_input_.Init();
   clouds_style_ = false;
   evolving_feedback_ = false;
+  euclidean_length_ = 0;
   diffusion_ = 0.0f;
   diffuser_.Init(diffuser_buffer_);
   diffuser_.set_amount(diffusion_);
@@ -120,6 +121,7 @@ void Processor::Configure(Media media, bool mono) {
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
+  trigger_generator_.set_euclidean_length(euclidean_length_);
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
   reverb_.Reset(sr);
 }

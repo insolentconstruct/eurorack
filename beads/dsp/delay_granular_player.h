@@ -37,6 +37,17 @@
 
 namespace beads {
 
+// Whole beats back from the write head; a beat longer than the recording
+// leaves TIME as it is.
+inline float SnapToBeat(float delay, float beat, float max_delay) {
+  const float max_beats = floorf(max_delay / beat);
+  if (max_beats < 1.0f) {
+    return delay;
+  }
+  const float beats = floorf(delay / beat + 0.5f);
+  return std::max(1.0f, std::min(beats, max_beats)) * beat;
+}
+
 class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
  public:
   DelayGranularPlayer() { }
@@ -45,9 +56,13 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   inline void Init(float sample_rate) {
     GranularPlayer<DelayGrain, 32>::Init(sample_rate);
     attacks_ = NULL;
+    beat_ = 0.0f;
   }
 
   inline void SetAttacks(const AttackDetector* attacks) { attacks_ = attacks; }
+
+  // Clock period in samples, or zero for a free TIME.
+  inline void set_beat(float beat) { beat_ = beat; }
 
   template<typename DelayLineType>
   inline void Render(
@@ -70,7 +85,10 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
           attacks_ ? attacks_->Snap(
               p.time.value() * float(max_delay) + float(safety),
               float(max_delay + safety), delay_line->write_ptr())
-              : p.time.value() * float(max_delay) + float(safety),
+              : beat_ > 0.0f
+                  ? SnapToBeat(p.time.value() * float(max_delay), beat_,
+                      float(max_delay)) + float(safety)
+                  : p.time.value() * float(max_delay) + float(safety),
           (reverse ? -1.0f : 1.0f) * \
               p.pitch.pitch_value(pitch_scale_, random_intervals_),
           ComputeGrainDuration(duration),
@@ -95,6 +113,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
  private:
   const AttackDetector* attacks_;
+  float beat_;
 
   DISALLOW_COPY_AND_ASSIGN(DelayGranularPlayer);
 };

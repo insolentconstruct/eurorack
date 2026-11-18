@@ -68,6 +68,9 @@ void TriggerGenerator::Init(float sample_rate) {
   ratio_ = 1.0f;
 
   previous_flags_ = GATE_FLAG_LOW;
+  euclidean_length_ = 0;
+  euclidean_step_ = 0;
+  clock_period_ = 0.0f;
 }
 
 inline float LogOneMinusX(float x) {
@@ -165,8 +168,18 @@ void TriggerGenerator::RenderDivider(
       audio_rate_ = (elapsed_since_last_pulse_ < threshold) && \
           (probability >= 1.0f);
 
-      accept_pulse_ = Random::GetFloat() < probability
-          && (pulse_count_ % division) == 0;
+      clock_period_ = float(elapsed_since_last_pulse_);
+      bool hit;
+      if (euclidean_length_) {
+        const int fill = min(
+            int(probability_sqrt * float(euclidean_length_ + 1)),
+            euclidean_length_);
+        hit = (euclidean_step_ * fill) % euclidean_length_ < fill;
+        euclidean_step_ = (euclidean_step_ + 1) % euclidean_length_;
+      } else {
+        hit = Random::GetFloat() < probability;
+      }
+      accept_pulse_ = hit && (pulse_count_ % division) == 0;
       
       if (accept_pulse_) {
         const float period = float(elapsed_since_last_pulse_);
