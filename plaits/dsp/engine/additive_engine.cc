@@ -137,6 +137,7 @@ void AdditiveEngine::Render(
   harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
   harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
 
+#ifndef PLAITS_NO_AUX
   UpdateAmplitudes(
       centroid,
       slope,
@@ -146,6 +147,7 @@ void AdditiveEngine::Render(
       8);
 
   harmonic_oscillator_[2].Render<1>(f0, &amplitudes_[24], aux, size);
+#endif  // PLAITS_NO_AUX
 }
 
 }  // namespace plaits

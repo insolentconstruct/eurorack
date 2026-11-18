@@ -19,6 +19,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Plaits synth Speech: the word decoder reverses bits through a 256-byte table (#270). Same sound; Speech's worst six-voice block is 6.1 CPU points lighter on a development board.
 - Plaits synth Speech: the five word banks are decoded once when the synth starts and shared by all six voices (#270). Same sound; Speech's worst block (a bank change or a switch to Speech) is 14.4 CPU points lighter on a development board. The decoded banks use 36 KB more of the delay memory the synth already borrows.
 - Plaits synth 6-op FM: two of Plaits' six-operator chain renderers are on (#270). Same sound; on a development board most 6-op FM blocks are 1.4 to 2.0 CPU points lighter, but switch-in blocks and FM B's worst steady block are unchanged.
+- Plaits synth: Virtual analog, Phase distortion, Granular formant, Harmonic and Waveshaping skip Plaits' AUX output, which Beads never plays (#270). Same sound; their worst six-voice block is 8.7 to 23.5 CPU points lighter on a development board.
 
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 

@@ -170,14 +170,9 @@ void VirtualAnalogEngine::Render(
   // OUT = 1 + 2.
   // AUX = dual variable waveshape controlled by MORPH, self sync by TIMBRE.
   
-  const float sync_amount = parameters.timbre * parameters.timbre;
   const float auxiliary_detune = ComputeDetuning(parameters.harmonics);
   const float primary_f = NoteToFrequency(parameters.note);
   const float auxiliary_f = NoteToFrequency(parameters.note + auxiliary_detune);
-  const float primary_sync_f = NoteToFrequency(
-      parameters.note + sync_amount * 48.0f);
-  const float auxiliary_sync_f = NoteToFrequency(
-      parameters.note + auxiliary_detune + sync_amount * 48.0f);
 
   float shape = parameters.morph * 1.5f;
   CONSTRAIN(shape, 0.0f, 1.0f);
@@ -185,12 +180,19 @@ void VirtualAnalogEngine::Render(
   float pw = 0.5f + (parameters.morph - 0.66f) * 1.46f;
   CONSTRAIN(pw, 0.5f, 0.995f);
   
+#ifndef PLAITS_NO_AUX
   // Render monster sync to AUX.
+  const float sync_amount = parameters.timbre * parameters.timbre;
+  const float primary_sync_f = NoteToFrequency(
+      parameters.note + sync_amount * 48.0f);
+  const float auxiliary_sync_f = NoteToFrequency(
+      parameters.note + auxiliary_detune + sync_amount * 48.0f);
   primary_.Render(primary_f, primary_sync_f, pw, shape, out, size);
   auxiliary_.Render(auxiliary_f, auxiliary_sync_f, pw, shape, aux, size);
   for (size_t i = 0; i < size; ++i) {
     aux[i] = (aux[i] - out[i]) * 0.5f;
   }
+#endif  // PLAITS_NO_AUX
   
   // Render double varishape to OUT.
   float square_pw = 1.3f * parameters.timbre - 0.15f;
