@@ -33,6 +33,12 @@
 #include "beads/dsp/pvoc/frame_transformation.h"
 #include "stmlib/dsp/dsp.h"
 
+#ifdef USE_ARM_FFT
+extern "C" {
+#include <arm_const_structs.h>
+}
+#endif  // USE_ARM_FFT
+
 namespace beads {
 
 using namespace std;
@@ -57,7 +63,10 @@ void STFT::Init(
 
   fft_ = fft;
 #ifdef USE_ARM_FFT
-  arm_rfft_fast_init_f32(fft_, fft_size);
+  // arm_rfft_fast_init_f32 for 4096 points, without linking other sizes' tables.
+  fft_->Sint = arm_cfft_sR_f32_len2048;
+  fft_->fftLenRFFT = kMaxFftSize;
+  fft_->pTwiddleRFFT = const_cast<float32_t*>(twiddleCoef_rfft_4096);
 #else
   fft_->Init();
 #endif  // USE_ARM_FFT

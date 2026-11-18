@@ -951,6 +951,12 @@ cases = [
   ('TestCloudsReference', 'spectral', 'beads/dsp/pvoc/stft.cc',
     'fft_out_[i + fft_size_ / 2] = i ? -fft_in_[2 * i + 1] : fft_in_[1];',
     'fft_out_[i + fft_size_ / 2] = fft_in_[2 * i + 1];'),
+  ('TestFftInit', 'spectral', 'beads/dsp/pvoc/stft.cc',
+    'fft_->Sint = arm_cfft_sR_f32_len2048;',
+    'fft_->Sint = arm_cfft_sR_f32_len1024;'),
+  ('TestFftInit', 'spectral', 'beads/dsp/pvoc/stft.cc',
+    'const_cast<float32_t*>(twiddleCoef_rfft_4096);',
+    'const_cast<float32_t*>(twiddleCoef_rfft_2048);'),
   ('TestCloudsReference', 'spectral', 'beads/dsp/pvoc/frame_transformation.cc',
     'float warped = 4.0f * x * (1.0f - x) * (1.0f - x) * (1.0f - x);',
     'float warped = 4.0f * x * (1.0f - x) * (1.0f - x);'),
@@ -1685,6 +1691,8 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
             '__pycache__', 'core*'))
   # spectral.mk's test also builds and runs its ShyFFT variant.
   variants = {'spectral': [[], ['SHY=_shy']]}
+  # Tests of the CMSIS build alone skip the ShyFFT variant.
+  cmsis_only = ('TestFftInit',)
   # A program's first case builds it from scratch; later cases rebuild at
   # most that, so they get twice its build time plus 60 s for their tests.
   limits = {}
@@ -1739,7 +1747,8 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
       begin = time.monotonic()
       deadline = begin + limits.get(suite, 1200)
       with log.open('w') as stream:
-        for variant in variants.get(suite, [[]]):
+        builds = [[]] if name in cmsis_only else variants.get(suite, [[]])
+        for variant in builds:
           run = run_make([program, 'all'] + variant, stream, deadline)
           if run.returncode:
             break
@@ -1748,7 +1757,8 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
           if suite not in limits:
             print('Build %s: %.1f s' % (suite, build), flush=True)
           limits[suite] = max(limits.get(suite, 0), 60 + 2 * build)
-          run = run_make([program, 'test'], stream, deadline)
+          target = 'run-test' if name in cmsis_only else 'test'
+          run = run_make([program, target], stream, deadline)
       failure = log.read_text()
       assert run.returncode != 0, name + ' survived mutation'
       if name == 'TestProfileParser' and 'runtime error: index ' in failure:

@@ -350,6 +350,26 @@ uint32_t RenderSpectral(int quality, bool mono, double* rms,
   return hash;
 }
 
+#ifdef USE_ARM_FFT
+void TestFftInit() {
+  test_checker.Start("TestFftInit");
+  InitProcessor(3, false, true);
+  arm_rfft_fast_instance_f32 generic;
+  CHECK(arm_rfft_fast_init_f32(&generic, kFftSize) == ARM_MATH_SUCCESS);
+  for (size_t i = 0; i < 2; ++i) {
+    const STFT& stft = processor.spectral_processor_.phase_vocoder_.stft_[i];
+    const arm_rfft_fast_instance_f32& fft = *stft.fft_;
+    CHECK(stft.fft_size_ == kFftSize);
+    CHECK(fft.fftLenRFFT == generic.fftLenRFFT);
+    CHECK(fft.pTwiddleRFFT == generic.pTwiddleRFFT);
+    CHECK(fft.Sint.fftLen == generic.Sint.fftLen);
+    CHECK(fft.Sint.pTwiddle == generic.Sint.pTwiddle);
+    CHECK(fft.Sint.pBitRevTable == generic.Sint.pBitRevTable);
+    CHECK(fft.Sint.bitRevLength == generic.Sint.bitRevLength);
+  }
+}
+#endif  // USE_ARM_FFT
+
 void TestSpectralRender() {
   test_checker.Start("TestSpectralRender");
   for (int q = 0; q < 5; ++q) {
@@ -532,6 +552,7 @@ int main(int argc, char** argv) {
   const HostTest tests[] = {
 #ifdef USE_ARM_FFT
     { "TestFftConventions", TestFftConventions },
+    { "TestFftInit", TestFftInit },
     { "TestCloudsReference", TestCloudsReference },
     { "TestSpectralRender", TestSpectralRender },
     { "TestSpectralBypasses", TestSpectralBypasses },
