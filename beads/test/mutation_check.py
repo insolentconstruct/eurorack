@@ -1035,6 +1035,50 @@ cases = [
     'plaits/dsp/speech/lpc_speech_synth_controller.cc',
     'const int end = num_frames_ + kLPCSpeechSynthFramesPerLoad;',
     'const int end = num_frames_ + 2 * kLPCSpeechSynthFramesPerLoad;'),
+  ('TestAuxSkipped', 'plaits_synth',
+    'plaits/dsp/engine/virtual_analog_engine.cc',
+    '#ifndef PLAITS_NO_AUX\n  // Render monster sync to AUX.',
+    '#if 1\n  // Render monster sync to AUX.'),
+  ('TestAuxSkipped', 'plaits_synth',
+    'plaits/dsp/engine2/phase_distortion_engine.cc',
+    '#ifndef PLAITS_NO_AUX\n  float* free_running = &temp_buffer_[2 * size];\n'
+    '  modulator_.Render<false, true>(\n'
+    '      f0, modulator_f, pw, 0.0f, amount, free_running, 2 * size);\n'
+    '#endif  // PLAITS_NO_AUX\n  \n'
+    '  for (size_t i = 0; i < size; ++i) {\n'
+    '    // Naive 0.5x downsampling.\n'
+    '    out[i] = 0.5f * Sine(*synced++ + 0.25f);\n'
+    '    out[i] += 0.5f * Sine(*synced++ + 0.25f);\n'
+    '    \n#ifndef PLAITS_NO_AUX\n',
+    '  float* free_running = &temp_buffer_[2 * size];\n'
+    '  modulator_.Render<false, true>(\n'
+    '      f0, modulator_f, pw, 0.0f, amount, free_running, 2 * size);\n'
+    '  \n'
+    '  for (size_t i = 0; i < size; ++i) {\n'
+    '    // Naive 0.5x downsampling.\n'
+    '    out[i] = 0.5f * Sine(*synced++ + 0.25f);\n'
+    '    out[i] += 0.5f * Sine(*synced++ + 0.25f);\n'
+    '    \n#if 1\n'),
+  ('TestAuxSkipped', 'plaits_synth', 'plaits/dsp/engine/grain_engine.cc',
+    '#ifndef PLAITS_NO_AUX\n  const float cutoff',
+    '#if 1\n  const float cutoff'),
+  ('TestAuxSkipped', 'plaits_synth', 'plaits/dsp/engine/additive_engine.cc',
+    '#ifndef PLAITS_NO_AUX\n  UpdateAmplitudes(',
+    '#if 1\n  UpdateAmplitudes('),
+  ('TestAuxSkipped', 'plaits_synth',
+    'plaits/dsp/engine/waveshaping_engine.cc',
+    '#ifndef PLAITS_NO_AUX\n  triangle_.Render',
+    '#if 1\n  triangle_.Render'),
+  ('TestEveryModelRenders', 'plaits_synth', 'plaits/dsp/engine/grain_engine.cc',
+    '  dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);\n',
+    '#ifndef PLAITS_NO_AUX\n'
+    '  dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);\n#endif\n'),
+  ('TestEveryModelRenders', 'plaits_synth',
+    'plaits/dsp/engine/additive_engine.cc',
+    '  harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);\n'
+    '\n#ifndef PLAITS_NO_AUX\n',
+    '\n#ifndef PLAITS_NO_AUX\n'
+    '  harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);\n'),
   ('TestSynthStereoWidth', 'wavetable', 'beads/dsp/wavetable_granular_player.h',
     '          pan,\n'
     '          trigger.fractional_sample);',

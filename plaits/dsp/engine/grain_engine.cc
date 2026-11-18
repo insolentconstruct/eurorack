@@ -73,6 +73,7 @@ void GrainEngine::Render(
     out[i] = dc_blocker_[0].Process<FILTER_MODE_HIGH_PASS>(out[i] + aux[i]);
   }
 
+#ifndef PLAITS_NO_AUX
   const float cutoff = NoteToFrequency(root + 96.0f * parameters.timbre);
   z_oscillator_.Render(
       f0,
@@ -84,6 +85,7 @@ void GrainEngine::Render(
   
   dc_blocker_[1].set_f<FREQUENCY_DIRTY>(0.3f * f0);
   dc_blocker_[1].Process<FILTER_MODE_HIGH_PASS>(aux, size);
+#endif  // PLAITS_NO_AUX
 }
 
 }  // namespace plaits
