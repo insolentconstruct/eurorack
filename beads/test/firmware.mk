@@ -33,7 +33,7 @@ CC_FILES       = 		firmware_test.cc \
 		$(PLAITS_CC_FILES)
 
 STUBS = beads/test/firmware_stubs beads/test/common_stubs
-HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast
+HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast $(PLAITS_FLAGS)
 include beads/test/host.mk
 
 $(BUILD_DIR)beads.o: EXTRA_FLAGS = -Dmain=BeadsMain

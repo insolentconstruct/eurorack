@@ -24,7 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits synth: models, voice allocation, model detents and RAM bounds.
+// Plaits synth: skipped AUX, models, voice allocation, model detents and RAM
+// bounds.
 
 #include <algorithm>
 #include <cmath>
@@ -41,6 +42,8 @@
 #include "plaits/dsp/speech/lpc_speech_synth_words.h"
 #undef private
 #include "stmlib/utils/buffer_allocator.h"
+
+#include "beads/test/plaits_aux.h"
 
 using namespace beads;
 
@@ -181,6 +184,18 @@ void TestEveryModelRenders() {
       CHECK(rms > 0.001);
       CHECK(hash == (drone ? kDroneHashes[model] : kNoteHashes[model]));
     }
+  }
+}
+
+// Beads never plays AUX: with PLAITS_NO_AUX these engines skip its work.
+void TestAuxSkipped() {
+  test_checker.Start("TestAuxSkipped");
+  for (int e = 0; e < kNumAuxSkippingEngines; ++e) {
+#ifdef PLAITS_NO_AUX
+    CHECK(AuxUntouched(e));
+#else
+    CHECK(!AuxUntouched(e));
+#endif  // PLAITS_NO_AUX
   }
 }
 
@@ -549,6 +564,7 @@ void TestWordBankChangeDelaysWord() {
 }
 
 int main() {
+  TestAuxSkipped();
   TestWordBankLoads();
   TestWordBankChangeDelaysWord();
   TestVoiceAllocation();
