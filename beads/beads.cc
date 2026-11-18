@@ -32,6 +32,7 @@
 
 #include "beads/background_buffer_backup.h"
 #include "beads/calibrator.h"
+#include "beads/cpu_ceiling.h"
 #include "beads/cv_reader.h"
 #include "beads/drivers/codec.h"
 #include "beads/drivers/debug_pin.h"
@@ -100,6 +101,114 @@ void SysTick_Handler() {
 // the AGC while the normalization detection system is still catching up with
 // a codec restart.
 int codec_transition_frames;
+
+#ifdef CPU_CEILING
+namespace beads {
+namespace cpu_ceiling {
+
+volatile Hold hold __attribute__((section(".cpu_ceiling"), aligned(8)));
+Block block;
+
+void Init() {
+  hold.magic = kMagic;
+  hold.version = kVersion;
+  hold.command = 0;
+  hold.ack = 0;
+  hold.rejects = 0;
+  hold.armed_blocks = 0;
+  hold.frames = 0;
+  hold.blocks = 0;
+  hold.on_time = 0;
+  hold.ambiguous = 0;
+  hold.late = 0;
+  hold.first_late = 0xffffffff;
+  hold.g2 = 0;
+  hold.pending = 0;
+  hold.max_store = 0;
+  hold.state = STATE_IDLE;
+  block.examined = 0;
+  block.held = false;
+  block.store = STORE_ON_TIME;
+}
+
+bool Enter(size_t size) {
+  block.entry = dwt_calibration::Read();
+  hold.frames = size;
+  // The host owns command: read it once, never write it back.
+  const uint32_t command = hold.command;
+  if (command != hold.ack && command != block.examined) {
+    block.examined = command;
+    if (Valid(command)) {
+      hold.armed_blocks = 0;
+      hold.blocks = 0;
+      hold.on_time = 0;
+      hold.ambiguous = 0;
+      hold.late = 0;
+      hold.first_late = 0xffffffff;
+      hold.g2 = 0;
+      hold.pending = 0;
+      hold.max_store = 0;
+      hold.state = Holds(command) ? STATE_ARMED : STATE_IDLE;
+      __DMB();
+      hold.ack = command;
+    } else {
+      ++hold.rejects;
+    }
+  }
+  if (hold.state != STATE_ARMED) {
+    return false;
+  }
+  // Observing alone changes nothing audible: only a load, sine or skip expires.
+  if ((hold.ack & (kTargetMask | kSine | kSkipDsp)) &&
+      ++hold.armed_blocks > kDeadmanBlocks) {
+    hold.state = STATE_EXPIRED;
+    return false;
+  }
+  return true;
+}
+
+void Output(FloatFrame* frames, Codec::Frame* out, size_t size) {
+  if (sine()) {
+    // The nominal rate, as the bench's detector expects.
+    const float increment = kSineHz / float(size * 4000);
+    for (size_t i = 0; i < size; ++i) {
+      frames[i].l = frames[i].r =
+          kSineLevel * stmlib::Interpolate(lut_sine, block.phase, 1024.0f);
+      block.phase += increment;
+      if (block.phase >= 1.0f) {
+        block.phase -= 1.0f;
+      }
+    }
+  }
+  const uint32_t hold_cycles = target();
+  while (dwt_calibration::Read() - block.entry < hold_cycles) { }
+  const uint32_t stored = dwt_calibration::Read() - block.entry;
+  if (stored > hold.max_store) {
+    hold.max_store = stored;
+  }
+  for (size_t i = 0; i < size; ++i) {
+    float l = frames[i].l;
+    float r = frames[i].r;
+    CONSTRAIN(l, -1.0f, 0.999999f);
+    CONSTRAIN(r, -1.0f, 0.999999f);
+    out[i].l = static_cast<int32_t>(l * 2147483648.0f);
+    out[i].r = static_cast<int32_t>(r * 2147483648.0f);
+  }
+  block.held = true;
+}
+
+}  // namespace cpu_ceiling
+}  // namespace beads
+
+// A held block that the firmware silences still holds, and plays the sine.
+void CeilingSilence(FloatFrame* frames, Codec::Frame* out, size_t size) {
+  FloatFrame silence;
+  silence.l = 0.0f;
+  silence.r = 0.0f;
+  fill(&frames[0], &frames[size], silence);
+  cpu_ceiling::Output(frames, out, size);
+}
+#endif  // CPU_CEILING
 // The rate the converter runs at; 0 before its first start.
 int codec_sample_rate;
 // Set by main before it restarts the codec: the output fades out first.
@@ -120,6 +229,9 @@ void Process(
 #ifdef DWT_CALIBRATION
   dwt_calibration::Callback calibration_callback;
 #endif  // DWT_CALIBRATION
+#ifdef CPU_CEILING
+  const bool ceiling = cpu_ceiling::Enter(size);
+#endif  // CPU_CEILING
 #ifdef PROFILE_INTERRUPT
   ScopedDebugPinToggler toggler;
 #endif  // PROFILE_INTERRUPT
@@ -182,6 +294,12 @@ void Process(
       size);
   if (codec_transition_frames) {
     --codec_transition_frames;
+#ifdef CPU_CEILING
+    if (ceiling) {
+      CeilingSilence(float_out, out, size);
+      return;
+    }
+#endif  // CPU_CEILING
     Codec::Frame silence;
     silence.l = 0;
     silence.r = 0;
@@ -269,6 +387,12 @@ void Process(
   if (codec_fade) {
     codec_fade_gain = max(0.0f, codec_fade_gain - kCodecFadeStep);
     if (codec_fade_previous_gain == 0.0f) {
+#ifdef CPU_CEILING
+      if (ceiling) {
+        CeilingSilence(float_out, out, size);
+        return;
+      }
+#endif  // CPU_CEILING
       Codec::Frame silence;
       silence.l = 0;
       silence.r = 0;
@@ -278,6 +402,14 @@ void Process(
   } else if (codec_fade_gain < 1.0f) {
     codec_fade_gain = min(1.0f, codec_fade_gain + kCodecFadeStep);
   }
+#ifdef CPU_CEILING
+  if (ceiling && cpu_ceiling::skip_dsp()) {
+    FloatFrame silence;
+    silence.l = 0.0f;
+    silence.r = 0.0f;
+    fill(&float_out[0], &float_out[size], silence);
+  } else
+#endif  // CPU_CEILING
   if (synth_mode) {
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
@@ -315,6 +447,19 @@ void Process(
       float_out[i] = float_out[i] * gain.Next();
     }
   }
+
+#ifdef CPU_CEILING
+  if (ceiling) {
+    // The activity the conversion loop below would have seen.
+    for (size_t i = 0; i < size; ++i) {
+      if (fabsf(float_out[i].l) > 0.01f || fabsf(float_out[i].r) > 0.01f) {
+        synth_mode_start_time = 0;
+      }
+    }
+    cpu_ceiling::Output(float_out, out, size);
+    return;
+  }
+#endif  // CPU_CEILING
 
   // Conversion of output samples into integers.
   for (size_t i = 0; i < size; ++i) {
@@ -373,6 +518,9 @@ void Init() {
 #ifdef DWT_CALIBRATION
   dwt_calibration::Init();
 #endif  // DWT_CALIBRATION
+#ifdef CPU_CEILING
+  cpu_ceiling::Init();
+#endif  // CPU_CEILING
   codec_sample_rate = 0;
   codec_fade = false;
   codec_fade_gain = 1.0f;

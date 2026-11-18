@@ -3,6 +3,7 @@
 # Author: Insolent Construct (insolentconstruct@gmail.com)
 # MIT; see beads/build/LICENSE.
 # Run from the repository root, using the working tree and an installed toolchain.
+# CPU_CEILING=1 also builds the bench-only ceiling variant (DWT plus the hold).
 set -euo pipefail
 export LC_ALL=C
 unset MAKEFLAGS MFLAGS MAKELEVEL
@@ -17,19 +18,26 @@ out=${1:?usage: build_dwt.sh ABSOLUTE_OUTPUT_DIR}
   echo "Initialize the pinned stmlib submodule first" >&2
   exit 1
 }
+[[ -z "${CPU_CEILING:-}" || "$CPU_CEILING" == 1 ]] || {
+  echo "CPU_CEILING must be 1 or unset" >&2
+  exit 2
+}
+modes="release calibration${CPU_CEILING:+ ceiling}"
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
 "$TOOLCHAIN_PATH/bin/arm-none-eabi-gcc" --version > "$out/compiler-version.txt"
 git rev-parse HEAD > "$out/source-head.txt"
-for mode in release calibration; do
+for mode in $modes; do
   flag=0
-  [[ "$mode" != calibration ]] || flag=1
+  ceiling=0
+  [[ "$mode" == release ]] || flag=1
+  [[ "$mode" != ceiling ]] || ceiling=1
   root="$out/$mode/"
   mkdir -p "$root"
   make --no-print-directory -o beads/resources.cc -o beads/resources.h \
     -f beads/build/link-order.mk KIT_MAKEFILE=beads/makefile \
     "BUILD_ROOT=$root" "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" KIT_GCC9=1 \
-    "DWT_CALIBRATION=$flag" -j"${JOBS:-8}" bin kit-info \
+    "DWT_CALIBRATION=$flag" "CPU_CEILING=$ceiling" -j"${JOBS:-8}" bin kit-info \
     > "$out/$mode.log" 2>&1 || {
       tail -60 "$out/$mode.log" >&2
       exit 1
@@ -42,20 +50,23 @@ for mode in release calibration; do
     (cd "$out" && sha256sum -c release-pin.sha256)
   fi
 done
-# Bind a copy of the ABI-v1 decoder to this calibration application.
-python3 - "$out" <<'PYCODE'
+# Bind a copy of the ABI-v1 decoder to each DWT application.
+python3 - "$out" $modes <<'PYCODE'
 import hashlib
 from pathlib import Path
 import re
 import sys
 
 out = Path(sys.argv[1])
-sha = hashlib.sha256((out / 'calibration/beads/beads.bin').read_bytes()).hexdigest()
-source = Path('beads/build/tools/dwt.py').read_text()
-source, count = re.subn(r'^BUILD_SHA = .*$', 'BUILD_SHA = "' + sha + '"',
-    source, flags=re.MULTILINE)
-assert count == 1
-(out / 'dwt.py').write_text(source)
+for mode in sys.argv[3:]:
+    sha = hashlib.sha256((out / mode / 'beads/beads.bin').read_bytes()).hexdigest()
+    source = Path('beads/build/tools/dwt.py').read_text()
+    source, count = re.subn(r'^BUILD_SHA = .*$', 'BUILD_SHA = "' + sha + '"',
+        source, flags=re.MULTILINE)
+    assert count == 1
+    name = 'dwt.py' if mode == 'calibration' else mode + '-dwt.py'
+    (out / name).write_text(source)
 PYCODE
-(cd "$out" && sha256sum release/beads/beads.{elf,bin} \
-  calibration/beads/beads.{elf,bin} dwt.py > SHA256SUMS)
+sums=(release/beads/beads.{elf,bin} calibration/beads/beads.{elf,bin} dwt.py)
+[[ -z "${CPU_CEILING:-}" ]] || sums+=(ceiling/beads/beads.{elf,bin} ceiling-dwt.py)
+(cd "$out" && sha256sum "${sums[@]}" > SHA256SUMS)
