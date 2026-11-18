@@ -84,6 +84,14 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
   active_voice_ = 0;
   noon_ = false;
   drone_ = false;
+  set_aux_voices(0);
+}
+
+void PlaitsSynth::set_aux_voices(int count) {
+  num_aux_voices_ = count;
+  for (int i = 0; i < kNumPlaitsVoices; ++i) {
+    aux_[i] = (i + 1) * count / kNumPlaitsVoices > i * count / kNumPlaitsVoices;
+  }
 }
 
 void PlaitsSynth::set_bank(int bank) {
@@ -105,9 +113,12 @@ void PlaitsSynth::StartNote(const Parameters& p, int model) {
   patch.timbre = p.size.value();
   patch.morph = p.shape.value();
 
-  const float pan = width_enabled_
+  float pan = width_enabled_
       ? 0.5f + stereo_width_ * (Random::GetFloat() - 0.5f)
       : 0.5f;
+  if (num_aux_voices_) {
+    pan = aux_[active_voice_] ? 1.0f : 0.0f;
+  }
   gain_l_[active_voice_] = kPlaitsVoiceGain * (1.0f - pan) * (1.0f + pan);
   gain_r_[active_voice_] = kPlaitsVoiceGain * pan * (2.0f - pan);
 }
@@ -195,6 +206,8 @@ void PlaitsSynth::Render(
         sustain,
         mix_parameters.dry_wet,
         bit_shift[resolution],
+        aux_[v] ? plaits::ENGINE_OUTPUT_AUX : plaits::ENGINE_OUTPUT_OUT,
+        aux_[v],
         voice_out,
         size);
     const float gain_l = gain_l_[v];

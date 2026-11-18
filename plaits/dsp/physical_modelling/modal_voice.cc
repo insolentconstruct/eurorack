@@ -94,7 +94,9 @@ void ModalVoice::Render(
     aux[i] += temp[i];
   }
   
-  resonator_.Process(f0, structure, brightness, damping, temp, out, size);
+  if (out) {
+    resonator_.Process(f0, structure, brightness, damping, temp, out, size);
+  }
 }
 
 }  // namespace plaits

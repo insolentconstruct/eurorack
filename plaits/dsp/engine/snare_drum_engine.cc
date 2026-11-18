@@ -52,17 +52,20 @@ void SnareDrumEngine::Render(
     bool* already_enveloped) {
   const float f0 = NoteToFrequency(parameters.note);
   
-  analog_snare_drum_.Render(
-      parameters.trigger & TRIGGER_UNPATCHED,
-      parameters.trigger & TRIGGER_RISING_EDGE,
-      parameters.accent,
-      f0,
-      parameters.timbre,
-      parameters.morph,
-      parameters.harmonics,
-      out,
-      size);
-  
+  if (RenderOut(parameters)) {
+    analog_snare_drum_.Render(
+        parameters.trigger & TRIGGER_UNPATCHED,
+        parameters.trigger & TRIGGER_RISING_EDGE,
+        parameters.accent,
+        f0,
+        parameters.timbre,
+        parameters.morph,
+        parameters.harmonics,
+        out,
+        size);
+  }
+
+  // AUX draws random numbers: rendered for OUT too, as in Plaits.
   synthetic_snare_drum_.Render(
       parameters.trigger & TRIGGER_UNPATCHED,
       parameters.trigger & TRIGGER_RISING_EDGE,

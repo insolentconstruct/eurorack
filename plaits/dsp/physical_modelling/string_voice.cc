@@ -104,6 +104,9 @@ void StringVoice::Render(
     aux[i] += temp[i];
   }
   
+  if (!out) {
+    return;
+  }
   float non_linearity = structure < 0.24f
       ? (structure - 0.24f) * 4.166f
       : (structure > 0.26f ? (structure - 0.26f) * 1.35135f : 0.0f);

@@ -39,7 +39,10 @@
 
 namespace beads {
 
-const int kNumPlaitsVoices = 6;
+#ifndef PLAITS_SYNTH_VOICES
+#define PLAITS_SYNTH_VOICES 6
+#endif  // PLAITS_SYNTH_VOICES
+const int kNumPlaitsVoices = PLAITS_SYNTH_VOICES;
 
 // C3, as the wavetable synth. Plaits tunes for 47872 Hz; Beads plays at
 // 47991 Hz, 4.3 cents higher.
@@ -92,6 +95,10 @@ class PlaitsSynth {
     pitch_scale_ = scale;
   }
 
+  // Voices that play Plaits' AUX, on the right; the others play OUT, on the
+  // left. Spread over the note rotation, as Rings' odd and even voices.
+  void set_aux_voices(int count);
+
   void set_bank(int bank);
 
  private:
@@ -108,6 +115,8 @@ class PlaitsSynth {
   PlaitsPatch patch_[kNumPlaitsVoices];
   float gain_l_[kNumPlaitsVoices];
   float gain_r_[kNumPlaitsVoices];
+  bool aux_[kNumPlaitsVoices];
+  int num_aux_voices_;
   int active_voice_;
   bool noon_;
   bool drone_;

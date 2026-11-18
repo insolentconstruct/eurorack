@@ -180,19 +180,22 @@ void VirtualAnalogEngine::Render(
   float pw = 0.5f + (parameters.morph - 0.66f) * 1.46f;
   CONSTRAIN(pw, 0.5f, 0.995f);
   
-#ifndef PLAITS_NO_AUX
-  // Render monster sync to AUX.
-  const float sync_amount = parameters.timbre * parameters.timbre;
-  const float primary_sync_f = NoteToFrequency(
-      parameters.note + sync_amount * 48.0f);
-  const float auxiliary_sync_f = NoteToFrequency(
-      parameters.note + auxiliary_detune + sync_amount * 48.0f);
-  primary_.Render(primary_f, primary_sync_f, pw, shape, out, size);
-  auxiliary_.Render(auxiliary_f, auxiliary_sync_f, pw, shape, aux, size);
-  for (size_t i = 0; i < size; ++i) {
-    aux[i] = (aux[i] - out[i]) * 0.5f;
+  if (RenderAux(parameters)) {
+    // Render monster sync to AUX.
+    const float sync_amount = parameters.timbre * parameters.timbre;
+    const float primary_sync_f = NoteToFrequency(
+        parameters.note + sync_amount * 48.0f);
+    const float auxiliary_sync_f = NoteToFrequency(
+        parameters.note + auxiliary_detune + sync_amount * 48.0f);
+    primary_.Render(primary_f, primary_sync_f, pw, shape, out, size);
+    auxiliary_.Render(auxiliary_f, auxiliary_sync_f, pw, shape, aux, size);
+    for (size_t i = 0; i < size; ++i) {
+      aux[i] = (aux[i] - out[i]) * 0.5f;
+    }
   }
-#endif  // PLAITS_NO_AUX
+  if (!RenderOut(parameters)) {
+    return;
+  }
   
   // Render double varishape to OUT.
   float square_pw = 1.3f * parameters.timbre - 0.15f;

@@ -49,4 +49,4 @@ PLAITS_OBJS = $(patsubst %.cc,$(or $(BUILD_ROOT),build/)$(TARGET)/%.o, \
 	$(filter-out plaits_synth.cc plaits_voice.cc,$(PLAITS_CC_FILES)))
 $(PLAITS_OBJS): EXTRA_FLAGS = -fno-sanitize=shift-base
 # As the firmware; PLAITS_AUX=1 renders AUX, as Plaits does.
-PLAITS_FLAGS = $(if $(PLAITS_AUX),,-DPLAITS_NO_AUX)
+PLAITS_FLAGS = $(if $(PLAITS_AUX),,-DPLAITS_SELECT_OUTPUTS)

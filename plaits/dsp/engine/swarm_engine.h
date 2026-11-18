@@ -219,7 +219,9 @@ class SwarmVoice {
     const float linear_amount = rank_ * (rank_ + 0.01f) * spread * 0.25f;
     f0 *= 1.0f + linear_amount;
 
-    saw_.Render(f0, amplitude, saw, size);
+    if (saw) {
+      saw_.Render(f0, amplitude, saw, size);
+    }
     sine_.Render(f0, amplitude, sine, size);
   };
   

@@ -66,26 +66,28 @@ void GrainEngine::Render(
   const float carrier_shape = 0.33f + (parameters.morph - 0.33f) * \
       max(1.0f - f0 * 24.0f, 0.0f);
   
-  grainlet_[0].Render(f0, f1, carrier_shape, carrier_bleed_fixed, out, size);
-  grainlet_[1].Render(f0, f1 * ratio, carrier_shape, carrier_bleed_fixed, aux, size);
-  dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);
-  for (size_t i = 0; i < size; ++i) {
-    out[i] = dc_blocker_[0].Process<FILTER_MODE_HIGH_PASS>(out[i] + aux[i]);
+  if (RenderOut(parameters)) {
+    grainlet_[0].Render(f0, f1, carrier_shape, carrier_bleed_fixed, out, size);
+    grainlet_[1].Render(f0, f1 * ratio, carrier_shape, carrier_bleed_fixed, aux, size);
+    dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);
+    for (size_t i = 0; i < size; ++i) {
+      out[i] = dc_blocker_[0].Process<FILTER_MODE_HIGH_PASS>(out[i] + aux[i]);
+    }
   }
 
-#ifndef PLAITS_NO_AUX
-  const float cutoff = NoteToFrequency(root + 96.0f * parameters.timbre);
-  z_oscillator_.Render(
-      f0,
-      cutoff,
-      parameters.morph,
-      parameters.harmonics,
-      aux,
-      size);
-  
-  dc_blocker_[1].set_f<FREQUENCY_DIRTY>(0.3f * f0);
-  dc_blocker_[1].Process<FILTER_MODE_HIGH_PASS>(aux, size);
-#endif  // PLAITS_NO_AUX
+  if (RenderAux(parameters)) {
+    const float cutoff = NoteToFrequency(root + 96.0f * parameters.timbre);
+    z_oscillator_.Render(
+        f0,
+        cutoff,
+        parameters.morph,
+        parameters.harmonics,
+        aux,
+        size);
+    
+    dc_blocker_[1].set_f<FREQUENCY_DIRTY>(0.3f * f0);
+    dc_blocker_[1].Process<FILTER_MODE_HIGH_PASS>(aux, size);
+  }
 }
 
 }  // namespace plaits

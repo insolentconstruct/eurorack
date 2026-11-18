@@ -127,27 +127,29 @@ void AdditiveEngine::Render(
   const float raw_slope = (1.0f - 0.6f * raw_bumps) * parameters.morph;
   const float slope = 0.01f + 1.99f * raw_slope * raw_slope * raw_slope;
   const float bumps = 16.0f * raw_bumps * raw_bumps;
-  UpdateAmplitudes(
-      centroid,
-      slope,
-      bumps,
-      &amplitudes_[0],
-      integer_harmonics,
-      24);
-  harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
-  harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
+  if (RenderOut(parameters)) {
+    UpdateAmplitudes(
+        centroid,
+        slope,
+        bumps,
+        &amplitudes_[0],
+        integer_harmonics,
+        24);
+    harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
+    harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
+  }
 
-#ifndef PLAITS_NO_AUX
-  UpdateAmplitudes(
-      centroid,
-      slope,
-      bumps,
-      &amplitudes_[24],
-      organ_harmonics,
-      8);
+  if (RenderAux(parameters)) {
+    UpdateAmplitudes(
+        centroid,
+        slope,
+        bumps,
+        &amplitudes_[24],
+        organ_harmonics,
+        8);
 
-  harmonic_oscillator_[2].Render<1>(f0, &amplitudes_[24], aux, size);
-#endif  // PLAITS_NO_AUX
+    harmonic_oscillator_[2].Render<1>(f0, &amplitudes_[24], aux, size);
+  }
 }
 
 }  // namespace plaits

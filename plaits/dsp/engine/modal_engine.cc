@@ -65,7 +65,7 @@ void ModalEngine::Render(
       parameters.timbre,
       parameters.morph,
       temp_buffer_,
-      out,
+      RenderOut(parameters) ? out : NULL,
       aux,
       size);
 }

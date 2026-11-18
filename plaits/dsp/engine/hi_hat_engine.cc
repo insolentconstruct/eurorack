@@ -51,19 +51,22 @@ void HiHatEngine::Render(
     bool* already_enveloped) {
   const float f0 = NoteToFrequency(parameters.note);
   
-  hi_hat_1_.Render(
-      parameters.trigger & TRIGGER_UNPATCHED,
-      parameters.trigger & TRIGGER_RISING_EDGE,
-      parameters.accent,
-      f0,
-      parameters.timbre,
-      parameters.morph,
-      parameters.harmonics,
-      temp_buffer_,
-      temp_buffer_ + size,
-      out,
-      size);
-  
+  if (RenderOut(parameters)) {
+    hi_hat_1_.Render(
+        parameters.trigger & TRIGGER_UNPATCHED,
+        parameters.trigger & TRIGGER_RISING_EDGE,
+        parameters.accent,
+        f0,
+        parameters.timbre,
+        parameters.morph,
+        parameters.harmonics,
+        temp_buffer_,
+        temp_buffer_ + size,
+        out,
+        size);
+  }
+
+  // AUX draws random numbers: rendered for OUT too, as in Plaits.
   hi_hat_2_.Render(
       parameters.trigger & TRIGGER_UNPATCHED,
       parameters.trigger & TRIGGER_RISING_EDGE,

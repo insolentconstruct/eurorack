@@ -82,7 +82,7 @@ void StringEngine::Render(
         parameters.timbre * parameters.timbre,
         parameters.morph,
         temp_buffer_,
-        out,
+        RenderOut(parameters) ? out : NULL,
         aux,
         size);
   }

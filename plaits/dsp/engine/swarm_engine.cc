@@ -76,7 +76,7 @@ void SwarmEngine::Render(
         start_burst,
         spread,
         size_ratio,
-        out,
+        RenderOut(parameters) ? out : NULL,
         aux,
         size);
     size_ratio *= 0.97f;

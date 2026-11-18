@@ -89,6 +89,9 @@ bool AuxUntouched(int engine) {
   p.note = 48.0f;
   p.timbre = p.morph = p.harmonics = 0.5f;
   p.accent = 0.8f;
+#ifdef PLAITS_SELECT_OUTPUTS
+  p.outputs = ENGINE_OUTPUT_OUT;
+#endif  // PLAITS_SELECT_OUTPUTS
   float out[kAuxBlockSize];
   float aux[kAuxBlockSize];
   for (int block = 0; block < 4; ++block) {

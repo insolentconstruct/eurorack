@@ -136,6 +136,9 @@ void ChordEngine::Render(
     CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
 
     float divide_down_amount = 1.0f - wavetable_amount;
+    if (!RenderOut(parameters) && !((1 << note) & aux_note_mask)) {
+      continue;
+    }
     float* destination = (1 << note) & aux_note_mask ? aux : out;
     
     const float note_f0 = f0 * ratios[note];

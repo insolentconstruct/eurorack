@@ -86,6 +86,9 @@ void ParticleEngine::Render(
         size);
   }
   
+  if (!RenderOut(parameters)) {
+    return;
+  }
   post_filter_.set_f_q<FREQUENCY_DIRTY>(min(f0, 0.49f), 0.5f);
   post_filter_.Process<FILTER_MODE_LOW_PASS>(out, out, size);
   

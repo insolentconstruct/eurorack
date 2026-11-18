@@ -83,12 +83,16 @@ class PlaitsVoice {
   void Init(uint8_t* ram, const plaits::fm::Patch* fm_banks);
 
   // trigger takes plaits::TriggerState flags; size is at most 24 samples.
+  // The engine renders outputs (plaits::EngineOutputs); the voice plays AUX
+  // if aux is set, else OUT.
   void Render(
       const PlaitsPatch& patch,
       int trigger,
       bool sustain,
       float decay,
       int bit_shift,
+      int outputs,
+      bool aux,
       float* out,
       size_t size);
 

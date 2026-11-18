@@ -67,24 +67,24 @@ void PhaseDistortionEngine::Render(
       (1.0f - modulator_f * 3.8f);
   
   // Upsample by 2x
-  float* synced = &temp_buffer_[0];
-  shaper_.Render<true, true>(
-      f0, modulator_f, pw, 0.0f, amount, synced, 2 * size);
-#ifndef PLAITS_NO_AUX
-  float* free_running = &temp_buffer_[2 * size];
-  modulator_.Render<false, true>(
-      f0, modulator_f, pw, 0.0f, amount, free_running, 2 * size);
-#endif  // PLAITS_NO_AUX
-  
-  for (size_t i = 0; i < size; ++i) {
-    // Naive 0.5x downsampling.
-    out[i] = 0.5f * Sine(*synced++ + 0.25f);
-    out[i] += 0.5f * Sine(*synced++ + 0.25f);
-    
-#ifndef PLAITS_NO_AUX
-    aux[i] = 0.5f * Sine(*free_running++ + 0.25f);
-    aux[i] += 0.5f * Sine(*free_running++ + 0.25f);
-#endif  // PLAITS_NO_AUX
+  if (RenderOut(parameters)) {
+    float* synced = &temp_buffer_[0];
+    shaper_.Render<true, true>(
+        f0, modulator_f, pw, 0.0f, amount, synced, 2 * size);
+    for (size_t i = 0; i < size; ++i) {
+      // Naive 0.5x downsampling.
+      out[i] = 0.5f * Sine(*synced++ + 0.25f);
+      out[i] += 0.5f * Sine(*synced++ + 0.25f);
+    }
+  }
+  if (RenderAux(parameters)) {
+    float* free_running = &temp_buffer_[2 * size];
+    modulator_.Render<false, true>(
+        f0, modulator_f, pw, 0.0f, amount, free_running, 2 * size);
+    for (size_t i = 0; i < size; ++i) {
+      aux[i] = 0.5f * Sine(*free_running++ + 0.25f);
+      aux[i] += 0.5f * Sine(*free_running++ + 0.25f);
+    }
   }
 }
 

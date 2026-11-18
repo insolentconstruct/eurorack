@@ -59,7 +59,7 @@ RESOURCES      = beads/resources
 
 # The spectral engine uses CMSIS' FFT, faster than ShyFFT on the H7.
 # Beads never plays Plaits' AUX output, so its engines skip it.
-PROJECT_CONFIGURATION = -DUSE_ARM_FFT -DPLAITS_NO_AUX
+PROJECT_CONFIGURATION = -DUSE_ARM_FFT -DPLAITS_SELECT_OUTPUTS
 
 # Also tested with latest gcc version (8.3.1). Improvement of code size, no
 # improvement of CPU use, much longer compile time.

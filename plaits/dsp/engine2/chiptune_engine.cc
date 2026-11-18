@@ -84,8 +84,10 @@ void ChiptuneEngine::Render(
     const float note_f0 = f0 * chords_.sorted_ratio(
         arpeggiator_.note()) * octave;
     root_transposition = octave;
-    voice_[0].Render(note_f0, shape, out, size);
-  } else {
+    if (RenderOut(parameters)) {
+      voice_[0].Render(note_f0, shape, out, size);
+    }
+  } else if (RenderOut(parameters)) {
     float ratios[kChordNumVoices];
     float amplitudes[kChordNumVoices];
 

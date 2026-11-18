@@ -218,10 +218,17 @@ void PlaitsVoice::Render(
   p.timbre = patch.timbre;
   p.morph = patch.morph;
   p.accent = 0.8f;
+#ifdef PLAITS_SELECT_OUTPUTS
+  p.outputs = outputs;
+#endif  // PLAITS_SELECT_OUTPUTS
 
   const PostProcessingSettings& pp_s = e->post_processing_settings;
   bool already_enveloped = pp_s.already_enveloped;
-  e->Render(p, out, engines_->aux, size, &already_enveloped);
+  if (aux) {
+    e->Render(p, engines_->aux, out, size, &already_enveloped);
+  } else {
+    e->Render(p, out, engines_->aux, size, &already_enveloped);
+  }
 
   // Resolution, as for the wavetable synth grains.
   const float scale_up = float(1 << bit_shift);
@@ -252,7 +259,7 @@ void PlaitsVoice::Render(
   // The gate level last heard: a voice that never played holds silence.
   level_ = lpg_bypass ? (unpatched ? 1.0f : 0.0f) : lpg_envelope_.gain();
 
-  float gain = pp_s.out_gain;
+  float gain = aux ? pp_s.aux_gain : pp_s.out_gain;
   if (gain < 0.0f) {
     limiter_.Process(-gain, out, size);
     gain = 1.0f;

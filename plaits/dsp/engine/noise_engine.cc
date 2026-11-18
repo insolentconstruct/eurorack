@@ -81,6 +81,23 @@ void NoiseEngine::Render(
   
   const float* in_1 = aux;
   const float* in_2 = temp_buffer_;
+  if (!RenderOut(parameters)) {
+    while (size--) {
+      const float f0 = f0_modulation.Next();
+      const float f1 = f1_modulation.Next();
+      const float q = q_modulation.Next();
+      const float gain = 1.0f / Sqrt((0.5f + q) * 40.0f * f0);
+      bp_filter_[0].set_f_q<FREQUENCY_ACCURATE>(f0, q);
+      bp_filter_[1].set_f_q<FREQUENCY_ACCURATE>(f1, q);
+      
+      float input_1 = *in_1++ * gain;
+      float input_2 = *in_2++ * gain;
+      *aux++ = bp_filter_[0].Process<FILTER_MODE_BAND_PASS>(input_1) + \
+          bp_filter_[1].Process<FILTER_MODE_BAND_PASS>(input_2);
+    }
+    return;
+  }
+  
   while (size--) {
     const float f0 = f0_modulation.Next();
     const float f1 = f1_modulation.Next();

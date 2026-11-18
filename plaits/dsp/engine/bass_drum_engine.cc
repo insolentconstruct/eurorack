@@ -60,23 +60,26 @@ void BassDrumEngine::Render(
   
   const bool sustain = parameters.trigger & TRIGGER_UNPATCHED;
   
-  analog_bass_drum_.Render(
-      sustain,
-      parameters.trigger & TRIGGER_RISING_EDGE,
-      parameters.accent,
-      f0,
-      parameters.timbre,
-      parameters.morph,
-      attack_fm_amount,
-      self_fm_amount,
-      out,
-      size);
+  if (RenderOut(parameters)) {
+    analog_bass_drum_.Render(
+        sustain,
+        parameters.trigger & TRIGGER_RISING_EDGE,
+        parameters.accent,
+        f0,
+        parameters.timbre,
+        parameters.morph,
+        attack_fm_amount,
+        self_fm_amount,
+        out,
+        size);
 
-  overdrive_.Process(
-      0.5f + 0.5f * drive,
-      out,
-      size);
+    overdrive_.Process(
+        0.5f + 0.5f * drive,
+        out,
+        size);
+  }
 
+  // AUX draws random numbers: rendered for OUT too, as in Plaits.
   synthetic_bass_drum_.Render(
       sustain,
       parameters.trigger & TRIGGER_RISING_EDGE,

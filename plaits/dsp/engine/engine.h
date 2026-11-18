@@ -49,6 +49,13 @@ enum TriggerState {
   TRIGGER_HIGH = 4,
 };
 
+// With PLAITS_SELECT_OUTPUTS, engines skip the work of outputs not asked for.
+enum EngineOutputs {
+  ENGINE_OUTPUT_OUT = 1,
+  ENGINE_OUTPUT_AUX = 2,
+  ENGINE_OUTPUT_BOTH = 3
+};
+
 struct EngineParameters {
   int trigger;
   float note;
@@ -56,7 +63,26 @@ struct EngineParameters {
   float morph;
   float harmonics;
   float accent;
+#ifdef PLAITS_SELECT_OUTPUTS
+  int outputs;
+#endif  // PLAITS_SELECT_OUTPUTS
 };
+
+inline bool RenderOut(const EngineParameters& parameters) {
+#ifdef PLAITS_SELECT_OUTPUTS
+  return parameters.outputs & ENGINE_OUTPUT_OUT;
+#else
+  return true;
+#endif  // PLAITS_SELECT_OUTPUTS
+}
+
+inline bool RenderAux(const EngineParameters& parameters) {
+#ifdef PLAITS_SELECT_OUTPUTS
+  return parameters.outputs & ENGINE_OUTPUT_AUX;
+#else
+  return true;
+#endif  // PLAITS_SELECT_OUTPUTS
+}
 
 struct PostProcessingSettings {
   // A negative value indicates that a limiter must be used.

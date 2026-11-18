@@ -233,15 +233,17 @@ void TestFmBankSwitches() {
   CHECK(GuardIntact());
   printf("FM bank switches %08x\n", hash);
   CHECK(hash == kFmBankSwitchHash);
-// Beads never plays AUX: with PLAITS_NO_AUX these engines skip its work.
+}
+
+// Beads plays OUT only by default: these engines then skip AUX's work.
 void TestAuxSkipped() {
   test_checker.Start("TestAuxSkipped");
   for (int e = 0; e < kNumAuxSkippingEngines; ++e) {
-#ifdef PLAITS_NO_AUX
+#ifdef PLAITS_SELECT_OUTPUTS
     CHECK(AuxUntouched(e));
 #else
     CHECK(!AuxUntouched(e));
-#endif  // PLAITS_NO_AUX
+#endif  // PLAITS_SELECT_OUTPUTS
   }
 }
 
