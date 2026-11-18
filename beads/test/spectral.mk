@@ -39,6 +39,8 @@ HOST_FLAGS = -ffp-contract=off $(if $(SHY),,-DUSE_ARM_FFT) $(EXTRA)
 C_OBJS = $(patsubst %.c,$(BUILD_ROOT)$(TARGET)/%.o,$(C_FILES))
 HOST_LDFLAGS = $(C_OBJS)
 include beads/test/host.mk
+# After the stubs, so the host arm_math.h wins.
+HOST_FLAGS += -I$(CMSIS_DIR)/CM3_h7xx
 VPATH += $(CMSIS_DIR)/DSP_Lib/TransformFunctions \
 		$(CMSIS_DIR)/DSP_Lib/CommonTables beads/test/cmsis_stubs
 
