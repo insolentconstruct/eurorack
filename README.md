@@ -1,20 +1,27 @@
-# Drizzlet
+# Insolent Construct's eurorack
 
-Community firmware for Mutable Instruments Beads; not a Mutable Instruments product.
-Start with [installation and controls](beads/build/README.md).
+Firmware built on Mutable Instruments' open source; not a Mutable Instruments product.
 
-## Options page
+| Branch | What it is |
+|---|---|
+| `drizzlet` (default) | Drizzlet: community firmware for Beads with new features ([install and controls](beads/build/README.md), [releases](https://github.com/insolentconstruct/eurorack/releases)) |
+| [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup) | Beads as Mutable Instruments made it, plus bug fixes and CPU optimizations; no new features |
+| [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) | The vanilla Beads source, unmodified, with a build kit for its original GCC 4.9 compiler |
+| `peaks-tuneup`, `plaits-tuneup`, `rings-tuneup`, `yarns-tuneup` | Work in progress: the tuneup treatment for other modules |
+| [`master`](https://github.com/insolentconstruct/eurorack/tree/master) | Mutable Instruments' upstream, unchanged |
 
-Pitch scale snaps final grain pitch; Random pitch steps snaps relative pitch variation before the scale.
+## Drizzlet
 
-See the [options guide](beads/build/docs/OPTIONS.md) or
-[printable guide](beads/build/docs/options-guide.svg).
+- [Install and controls](beads/build/README.md)
+- [Options guide](beads/build/docs/OPTIONS.md) ([printable](beads/build/docs/options-guide.svg))
 
-![Options page phone guide](beads/build/docs/options-guide-mobile.svg)
+## Credits and licence
 
-## For firmware modders
+Drizzlet and the tuneups are built on Mutable Instruments' source. Mutable Instruments
+isn't involved in these forks; please report problems here, not to them.
+Their original licence and guidelines follow, unchanged.
 
-To build the vanilla Mutable Instruments Beads source, unmodified, use the [`beads-build-kit`](https://github.com/insolentconstruct/eurorack/tree/beads-build-kit) branch. For that source plus the bug fixes, the GCC 9 build kit and the CPU optimizations, without Drizzlet's features, use [`beads-tuneup`](https://github.com/insolentconstruct/eurorack/tree/beads-tuneup).
+---
 
 License
 =======
