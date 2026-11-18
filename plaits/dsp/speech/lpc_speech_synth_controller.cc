@@ -78,6 +78,9 @@ const uint8_t BitStream::reverse_lut_[256] = {
 };
 
 /* static */
+const LPCSpeechSynthWordBank* LPCSpeechSynthWordBank::decoded_banks_ = NULL;
+
+/* static */
 const uint8_t LPCSpeechSynthWordBank::energy_lut_[16] = {
   0x00, 0x02, 0x03, 0x04, 0x05, 0x07, 0x0a, 0x0f,
   0x14, 0x20, 0x29, 0x39, 0x51, 0x72, 0xa1, 0xff
@@ -230,6 +233,28 @@ bool LPCSpeechSynthWordBank::Load(int bank) {
     StartWord();
   }
   
+  if (decoded_banks_) {
+    // As many calls as decoding takes: words ending within the next frames.
+    const LPCSpeechSynthWordBank& decoded = decoded_banks_[bank];
+    const int end = num_frames_ + kLPCSpeechSynthFramesPerLoad;
+    while (num_words_ < decoded.num_words_ &&
+           decoded.word_boundaries_[num_words_ + 1] < end) {
+      ++num_words_;
+      word_boundaries_[num_words_] = decoded.word_boundaries_[num_words_];
+    }
+    const int num_frames = min(end, decoded.num_frames_);
+    copy(
+        &decoded.frames_[num_frames_],
+        &decoded.frames_[num_frames],
+        &frames_[num_frames_]);
+    num_frames_ = num_frames;
+    if (num_words_ == decoded.num_words_) {
+      loaded_bank_ = bank;
+      return true;
+    }
+    return false;
+  }
+
   int budget = kLPCSpeechSynthFramesPerLoad;
   while (budget) {
     if (LoadNextFrame()) {
@@ -244,6 +269,22 @@ bool LPCSpeechSynthWordBank::Load(int bank) {
     }
   }
   return false;
+}
+
+void LPCSpeechSynthWordBank::Decode(int bank, BufferAllocator* allocator) {
+  Reset();
+  while (!Load(bank)) { }
+  // An even number of 14-byte frames keeps the word boundaries aligned.
+  LPCSpeechSynth::Frame* frames = \
+      allocator->Allocate<LPCSpeechSynth::Frame>((num_frames_ + 1) & ~1);
+  int* word_boundaries = allocator->Allocate<int>(num_words_ + 1);
+  copy(&frames_[0], &frames_[num_frames_], &frames[0]);
+  copy(
+      &word_boundaries_[0],
+      &word_boundaries_[num_words_ + 1],
+      &word_boundaries[0]);
+  frames_ = frames;
+  word_boundaries_ = word_boundaries;
 }
 
 void LPCSpeechSynthController::Init(LPCSpeechSynthWordBank* word_bank) {

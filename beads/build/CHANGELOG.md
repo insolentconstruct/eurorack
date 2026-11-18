@@ -16,6 +16,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Plaits synth Speech: changing word bank no longer overruns the audio block (#225). The bank decodes over several blocks; a word started meanwhile plays when it is loaded, 1.75 to 7 ms later, then exactly as before.
 - At 66% and 33% LED brightness, the quality LED no longer halves white (#240): its red dims faster (level^1.5) and lit green and blue keep a small offset (+4 at 66%, +8 at 33%), a rule chosen by eye on a module; to be measured with a light sensor in Beta 4. 100% is unchanged.
 - Plaits synth Speech: the word decoder reverses bits through a 256-byte table (#270). Same sound; Speech's worst six-voice block is 6.1 CPU points lighter on a development board.
+- Plaits synth Speech: the five word banks are decoded once when the synth starts and shared by all six voices (#270). Same sound; Speech's worst block (a bank change or a switch to Speech) is 14.4 CPU points lighter on a development board. The decoded banks use 36 KB more of the delay memory the synth already borrows.
 
 ## 2026.11.09 (tag `drizzlet-2026.11.09`, beta 2 "Fog")
 
