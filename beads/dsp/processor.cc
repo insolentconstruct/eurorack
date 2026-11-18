@@ -55,6 +55,8 @@ void Processor::Init(
   processor_dirty_tape_.Init(24000.0f, buffers);
   spectral_processor_.Init(buffers);
   spectral_ = false;
+  resonator_ = false;
+  resonator_buffer_ = buffers[0];
   
   dry_ = 0.0f;
   wet_ = 0.0f;
@@ -117,6 +119,10 @@ void Processor::Configure(Media media, bool mono) {
         sr / float(ratio()), ratio(), resolution[media_], mono);
     delay_mode_transition_ = -kDelayModeTransitionTime;
   }
+  if (resonator_) {
+    resonestor_.Init(reinterpret_cast<float*>(resonator_buffer_), sr);
+    delay_mode_transition_ = -kDelayModeTransitionTime;
+  }
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
@@ -143,7 +149,8 @@ void Processor::Process(
   }
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
-  const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
+  const float direction = !spectral_ && !resonator_ &&
+      delay_mode_ != DELAY_MODE_NEVER &&
       parameters.size.base > threshold ? 1.0f : -1.0f;
   const float sr = sample_rate();
   delay_mode_transition_ += direction * float(size) / sr;
@@ -203,6 +210,9 @@ void Processor::Process(
     QuantizeDrySignal(in, dry_signal, size);
     spectral_processor_.Process(
         seed_button_state, seed_input, freeze, density, parameters, feedback,
+        dry_signal, out, size);
+  } else if (resonator_) {
+    ProcessResonator(triggers, freeze, density, parameters, feedback, in,
         dry_signal, out, size);
   } else {
     switch (media_) {

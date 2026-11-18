@@ -33,6 +33,7 @@
 
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
+#include "beads/dsp/resonestor.h"
 #include "beads/dsp/spectral_processor.h"
 #include "beads/dsp/time_scan.h"
 #include "beads/dsp/fx/diffuser.h"
@@ -104,14 +105,14 @@ class Processor {
   }
 
   inline bool delay_active() const {
-    return delay_mode_transition_ > 0.0f && !spectral_;
+    return delay_mode_transition_ > 0.0f && !spectral_ && !resonator_;
   }
 
   inline AttackInput* attack_input() { return &attack_input_; }
 
   // Attacks are marked only while granular playback records.
   inline bool attack_recording() const {
-    return delay_mode_transition_ <= 0.0f && !spectral_;
+    return delay_mode_transition_ <= 0.0f && !spectral_ && !resonator_;
   }
 
   void SetAttackOnset(bool onset) {
@@ -138,6 +139,10 @@ class Processor {
   // Takes effect at the next Configure, which clears the recording.
   inline void set_spectral(bool spectral) { spectral_ = spectral; }
   inline bool spectral() const { return spectral_; }
+
+  // The Resonestor replaces the grains, in the first recording bank.
+  inline void set_resonator(bool resonator) { resonator_ = resonator; }
+  inline bool resonator() const { return resonator_; }
 
   // Main loop: the spectral engine's frames.
   inline void Buffer() {
@@ -342,6 +347,16 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  void ProcessResonator(
+      const TriggerGenerator::Output* triggers,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      float feedback,
+      const FloatFrame* in,
+      FloatFrame* dry_signal,
+      FloatFrame* out,
+      size_t size);
 
   GranularProcessor<
       RESOLUTION_16_BIT,
@@ -369,6 +384,9 @@ class Processor {
 
   SpectralProcessor spectral_processor_;
   bool spectral_;
+  Resonestor resonestor_;
+  bool resonator_;
+  uint8_t* resonator_buffer_;
 
   TriggerGenerator trigger_generator_;
   DelayController delay_controller_;

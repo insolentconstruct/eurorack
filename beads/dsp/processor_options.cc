@@ -56,7 +56,8 @@ void Processor::ProcessWithOptions(
   const Parameters& parameters = scan ? scanned : input_parameters;
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
-  const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
+  const float direction = !spectral_ && !resonator_ &&
+      delay_mode_ != DELAY_MODE_NEVER &&
       parameters.size.base > threshold ? 1.0f : -1.0f;
   delay_mode_transition_ += direction * float(size) / sr;
 
@@ -109,6 +110,9 @@ void Processor::ProcessWithOptions(
     QuantizeDrySignal(in, dry_signal, size);
     spectral_processor_.Process(
         seed_button_state, seed_input, freeze, density, parameters, feedback,
+        dry_signal, out, size);
+  } else if (resonator_) {
+    ProcessResonator(triggers, freeze, density, parameters, feedback, in,
         dry_signal, out, size);
   } else {
     switch (media_) {
@@ -170,6 +174,65 @@ void Processor::ProcessWithOptions(
       out[i].r = gate_out[i] ? -0.8f : 0.0f;
     }
   }
+}
+
+void Processor::ProcessResonator(
+    const TriggerGenerator::Output* triggers,
+    const bool* freeze,
+    const ModulatedParameter& density,
+    const Parameters& parameters,
+    float feedback,
+    const FloatFrame* in,
+    FloatFrame* dry_signal,
+    FloatFrame* out,
+    size_t size) {
+  QuantizeDrySignal(in, dry_signal, size);
+  copy(&dry_signal[0], &dry_signal[size], &out[0]);
+  bool trigger = false;
+  for (size_t i = 0; i < size; ++i) {
+    trigger |= triggers[i].trigger;
+  }
+
+  // Parasites' mapping, on Beads' knobs: PITCH, SIZE chord, TIME burst,
+  // SHAPE damping, DENSITY decay, FEEDBACK harmonicity.
+  const RandomizedParameter& pitch = parameters.pitch;
+  resonestor_.set_pitch(pitch.base +
+      (pitch.has_cv ? std::max(pitch.attenuverter, 0.0f) * pitch.cv : 0.0f));
+  resonestor_.set_chord(parameters.size.base);
+  resonestor_.set_trigger(trigger);
+  const float position = parameters.time.base;
+  resonestor_.set_burst_damp(position);
+  resonestor_.set_burst_comb(1.0f - position);
+  resonestor_.set_burst_duration(1.0f - position);
+  resonestor_.set_spread_amount(0.5f);
+  resonestor_.set_stereo(0.5f);
+  resonestor_.set_separation(0.0f);
+  resonestor_.set_freeze(freeze[size - 1]);
+  resonestor_.set_harmonicity(1.0f - feedback * 0.5f);
+  resonestor_.set_distortion(0.0f);
+
+  const float t = parameters.shape.base;
+  if (t < 0.5f) {
+    resonestor_.set_narrow(0.001f);
+    float l = 1.0f - (0.5f - t) / 0.5f;
+    l = l * (1.0f - 0.08f) + 0.08f;
+    resonestor_.set_damp(l * l);
+  } else {
+    resonestor_.set_damp(1.0f);
+    float n = (t - 0.5f) / 0.5f * 1.35f;
+    n *= n * n * n;
+    resonestor_.set_narrow(0.001f + n * n * 0.6f);
+  }
+
+  float d = (density.value() - 0.05f) / 0.9f;
+  if (d < 0.0f) {
+    d = 0.0f;
+  }
+  d *= d * d;
+  d *= d * d;
+  d *= d * d;
+  resonestor_.set_feedback(d * 20.0f);
+  resonestor_.Process(out, size);
 }
 
 void Processor::MixDryWet(
