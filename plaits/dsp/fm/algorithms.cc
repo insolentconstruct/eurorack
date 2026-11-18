@@ -445,9 +445,10 @@ const Algorithms<6>::RendererSpecs Algorithms<6>::renderers_[] = {
   INSTANTIATE_RENDERER(3,  0, true),
   INSTANTIATE_RENDERER(2, -2, true),
   INSTANTIATE_RENDERER(2, -1, false),
-  INSTANTIATE_RENDERER(2, -1, true),
+  INSTANTIATE_RENDERER(2, -1, true),*/
+  // The two below keep the output identical; the others fuse multiply-adds.
   INSTANTIATE_RENDERER(2,  0, false),
-  INSTANTIATE_RENDERER(2,  0, true),*/
+  INSTANTIATE_RENDERER(2,  0, true),
 
   { 0, 0, 0, NULL}
 };
