@@ -154,9 +154,9 @@ const float kNoteTolerance = 0.1f;
 const float kNoteMinimumStep = 0.5f;
 const uint32_t kNoteSettleTime = 10;
 // A CV that drifted there (a glide), not jumped a quarter semitone, then holds
-// twice as long as its last drift took, up to 200 ms.
+// twice as long as its last drift took, up to a second.
 const float kNoteJump = 0.25f;
-const uint32_t kGlideSettleTime = 200;
+const uint32_t kGlideSettleTime = 1000;
 
 static volatile bool recent_notes_mode;
 // Volatile keeps the slot write ahead of its publication to the interrupt.
