@@ -176,6 +176,8 @@ void PlaitsVoice::Render(
     bool sustain,
     float decay,
     int bit_shift,
+    int outputs,
+    bool aux,
     float* out,
     size_t size) {
   Engine* e = engines_->registry.get(patch.model);
