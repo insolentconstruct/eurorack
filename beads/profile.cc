@@ -70,6 +70,8 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Grain stealing.
   { 2, kNoField, false, false, false, false },  // Unity feedback.
   { 2, kNoField, false, false, false, false },  // Delay crossfade.
+  { 2, kNoField, false, false, false, false },  // Page preview.
+  { 2, kNoField, false, false, false, false },  // First page.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

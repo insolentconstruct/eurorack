@@ -217,6 +217,8 @@ class Options {
   int page_;
   OptionSetting selected_;
   int preview_knob_;
+  int first_preview_knob_;
+  bool first_page_;
   uint32_t preview_time_;
   uint32_t indication_time_;
   uint32_t idle_timeout_;

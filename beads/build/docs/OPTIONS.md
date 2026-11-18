@@ -83,6 +83,8 @@ Hold the CV-assign button [M] for three seconds, with the mix knobs still, then 
 
 When a page opens, the quality LED [A] shows each stored value in turn, left to right, for about two seconds each, with that knob's mix LED lit. Turning a knob, or tapping SEED to step the scale, ends this.
 
+A Hygrostat profile can skip the stored values, so [A] shows the page's first setting at once ([preview](FEATURES.md#options-page-preview)), and always open on the first page instead of the last one used ([opening page](FEATURES.md#options-page-on-opening)).
+
 Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.

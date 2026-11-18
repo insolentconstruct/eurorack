@@ -2417,11 +2417,11 @@ void ApplyCustomProfile(Rig* r, const uint8_t* b) {
   r->Tick(40, true);
 }
 
-// Appends an idle timeout entry to a profile without scales.
-void AppendIdleTimeout(uint8_t* b, int state, int value) {
+// Appends an entry with no slots to a profile without scales.
+void AppendEntry(uint8_t* b, ProfileFeature feature, int state, int value) {
   CHECK(!b[13]);
   uint8_t* entry = b + 16 + 6 * b[5];
-  entry[0] = FEATURE_IDLE_TIMEOUT;
+  entry[0] = feature;
   entry[1] = state;
   entry[2] = value;
   entry[3] = entry[4] = entry[5] = 0;
@@ -2433,6 +2433,10 @@ void AppendIdleTimeout(uint8_t* b, int state, int value) {
   for (int i = 0; i < 4; ++i) {
     b[16 + bytes + i] = crc >> (8 * i);
   }
+}
+
+void AppendIdleTimeout(uint8_t* b, int state, int value) {
+  AppendEntry(b, FEATURE_IDLE_TIMEOUT, state, value);
 }
 
 void IdleProfile(uint8_t* b, int state, int value) {
@@ -3579,6 +3583,199 @@ void TestBetaOptionPages() {
   }
 }
 
+// Factory layout with the page preview and first page choices.
+void EntryProfile(uint8_t* b, int preview, int first_page) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  AppendEntry(b, FEATURE_PAGE_PREVIEW, PROFILE_FIXED, preview);
+  AppendEntry(b, FEATURE_FIRST_PAGE, PROFILE_FIXED, first_page);
+}
+
+void Close(Rig* r) {
+  r->Down(SWITCH_ASSIGN);
+  r->Tick(3000, true);
+  r->Up(SWITCH_ASSIGN);
+  r->Tick(100, true);
+  CHECK(r->ui.options_.stage() == Options::STAGE_INACTIVE);
+}
+
+void TestOptionsEntryChoices() {
+  test_checker.Start("TestOptionsEntryChoices");
+  const ProfileFeature features[] = { FEATURE_PAGE_PREVIEW, FEATURE_FIRST_PAGE };
+  uint8_t b[kProfileSize];
+  CHECK(FEATURE_PAGE_PREVIEW == 37 && FEATURE_FIRST_PAGE == 38);
+  for (int i = 0; i < 2; ++i) {
+    const FeatureDefinition& d = kFeatureDefinitions[features[i]];
+    CHECK(d.values == 2 && d.field == kNoField);
+    CHECK(!d.page && !d.amount && !d.action && !d.stateless);
+    // Power-on only: nothing on the panel can change them.
+    for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
+      for (int value = 0; value < 3; ++value) {
+        IdleProfile(b, PROFILE_OFF, 0);
+        AppendEntry(b, features[i], state, value);
+        Profile profile;
+        CHECK(profile.Init(b) == (state != PROFILE_ADJUSTABLE && value < 2));
+      }
+    }
+  }
+  for (int state = PROFILE_OFF; state <= PROFILE_FIXED; ++state) {
+    for (int value = 0; value < 2; ++value) {
+      Rig r(false);
+      for (size_t i = 0; i < kProfileSize; ++i) {
+        b[i] = kProfileBlock[i];
+      }
+      AppendEntry(b, FEATURE_PAGE_PREVIEW, state, value);
+      AppendEntry(b, FEATURE_FIRST_PAGE, state, 1 - value);
+      ApplyCustomProfile(&r, b);
+      const bool fixed = state == PROFILE_FIXED;
+      CHECK(r.ui.options_.first_preview_knob_ ==
+          (fixed && value ? MIX_PARAMETER_LAST : 0));
+      CHECK(r.ui.options_.first_page_ == (fixed && !value));
+    }
+  }
+
+  // Absent and Fixed 0 keep the walk and the last page.
+  for (int kind = 0; kind < 2; ++kind) {
+    Rig r(false);
+    if (kind) {
+      EntryProfile(b, 0, 0);
+      ApplyCustomProfile(&r, b);
+    }
+    r.EnterPage(2);
+    CHECK(r.ui.options_.preview_knob() == 0);
+    r.Tick(2048, true);
+    CHECK(r.ui.options_.preview_knob() == 1);
+    Close(&r);
+    r.Enter();
+    CHECK(r.ui.options_.page() == 2);
+    CHECK(r.ui.options_flash_page_ == 2);
+    CHECK(r.ui.options_.preview_knob() == 0);
+  }
+
+  // First setting only: the state the walk ends in, at once, on every page.
+  {
+    Rig r(false);
+    EntryProfile(b, 1, 0);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    for (int page = 0; page < 5; ++page) {
+      if (page) {
+        r.Tap();
+      }
+      CHECK(r.ui.options_.page() == page % 4);
+      CHECK(r.ui.options_.preview_knob() == -1);
+      CHECK(r.ui.options_.indication().setting ==
+          kOptionPages[page % 4].knobs[0]);
+      CHECK(stmlib::system_clock.milliseconds() -
+          r.ui.options_.indication_time() <= 8);
+      CheckPageLeds(&r, page % 4);
+    }
+    // Knobs still take over and save.
+    const uint32_t writes = test_writes;
+    const AttackMode mode = r.settings.attack_mode();
+    r.reverb = 0.9f;
+    r.Tick(1, true);
+    CHECK(r.ui.options_.indication().setting == OPTION_ATTACKS);
+    r.Tick(1100, true);
+    CHECK(test_writes == writes + 1);
+    CHECK(r.settings.attack_mode() != mode);
+    Close(&r);
+    r.Enter();
+    CHECK(r.ui.options_.page() == 0);
+    CHECK(r.ui.options_.preview_knob() == -1);
+  }
+  {
+    // Page two's FEEDBACK LED is dark at once, not lit for its stored value.
+    Rig walk(false);
+    Rig quiet(false);
+    EntryProfile(b, 1, 0);
+    ApplyCustomProfile(&quiet, b);
+    walk.EnterPage(1);
+    walk.Tick(150, true);
+    CHECK(walk.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
+    quiet.EnterPage(1);
+    quiet.Tick(150, true);
+    CHECK(quiet.ui.leds_.intensity_[LED_ASSIGN_1] == 0);
+  }
+
+  // First page: reopens on page 1 from any page, already while held.
+  {
+    Rig r(false);
+    EntryProfile(b, 0, 1);
+    ApplyCustomProfile(&r, b);
+    r.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+    r.EnterPage(3);
+    CHECK(r.ui.options_.page() == 3);
+    Close(&r);
+    r.Down(SWITCH_ASSIGN);
+    r.Tick(2999, true);
+    CHECK(r.ui.options_.stage() == Options::STAGE_WAIT_RELEASE);
+    CHECK(r.ui.options_.page() == 0);
+    CHECK(r.ui.options_flash_page_ == 0);
+    CHECK(r.ui.options_.indication().setting == OPTION_PITCH);
+    r.Up(SWITCH_ASSIGN);
+    CHECK(r.ui.options_.page() == 0);
+    CHECK(r.ui.options_.preview_knob() == 0);
+    CHECK(r.ui.options_.seed_allowed());
+    r.Tap();
+    CHECK(r.ui.options_.page() == 1);
+  }
+
+  // Both on, after the idle timeout; without First page it keeps page 2.
+  for (int first = 0; first < 2; ++first) {
+    Rig r(false);
+    EntryProfile(b, 1, first);
+    AppendIdleTimeout(b, PROFILE_FIXED, 1);
+    ApplyCustomProfile(&r, b);
+    r.EnterPage(1);
+    r.Tick(kOptionsIdleTimeouts[1] + 100, true);
+    CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+    r.Enter();
+    CHECK(r.ui.options_.page() == (first ? 0 : 1));
+    CHECK(r.ui.options_.preview_knob() == -1);
+  }
+
+  // Custom layout with page 1 empty: the first page used, its first used knob.
+  {
+    const uint8_t sparse[][2] = {
+      { FEATURE_DELAY, 14 }, { FEATURE_LIMITER, 21 }
+    };
+    Rig r(false);
+    PagesProfile(b, sparse, 2);
+    AppendEntry(b, FEATURE_PAGE_PREVIEW, PROFILE_FIXED, 1);
+    AppendEntry(b, FEATURE_FIRST_PAGE, PROFILE_FIXED, 1);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    CHECK(r.ui.options_.page() == 4);
+    CHECK(r.ui.options_.preview_knob() == -1);
+    CHECK(r.ui.options_.indication().setting == OPTION_DELAY);
+    CheckPageLeds(&r, 4);
+    r.Tap();
+    CHECK(r.ui.options_.page() == 6);
+    CHECK(r.ui.options_.indication().setting == OPTION_LIMITER);
+    Close(&r);
+    r.Enter();
+    CHECK(r.ui.options_.page() == 4);
+  }
+
+  // The same edit saves the same bytes with the choices on or off.
+  {
+    Rig off(false);
+    Rig on(false);
+    EntryProfile(b, 1, 1);
+    ApplyCustomProfile(&on, b);
+    Rig* rigs[] = { &off, &on };
+    for (int i = 0; i < 2; ++i) {
+      rigs[i]->Enter();
+      rigs[i]->reverb = 0.9f;
+      rigs[i]->Tick(1100, true);
+      Close(rigs[i]);
+    }
+    CHECK(!memcmp(&off.settings.state(), &on.settings.state(), sizeof(State)));
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -3654,5 +3851,6 @@ int main() {
   TestPlaitsBankGesture();
   TestProfileAmounts();
   TestOptionsIdleTimeout();
+  TestOptionsEntryChoices();
   return test_checker.failures() ? 1 : 0;
 }

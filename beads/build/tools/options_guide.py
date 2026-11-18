@@ -234,6 +234,10 @@ DETAILS = [
     "When a page opens, the quality LED [A] shows each stored value in "
     "turn, left to right, for about two seconds each, with that knob's mix "
     "LED lit. Turning a knob, or tapping SEED to step the scale, ends this.",
+    "A Hygrostat profile can skip the stored values, so [A] shows the "
+    "page's first setting at once ([preview](FEATURES.md#options-page-preview)), "
+    "and always open on the first page instead of the last one used "
+    "([opening page](FEATURES.md#options-page-on-opening)).",
     "Move a knob more than a tenth of its travel to take it over; smaller "
     "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
     "brightness use the knob's three thirds; SEED latch uses four quarters; "
