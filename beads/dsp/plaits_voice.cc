@@ -106,7 +106,19 @@ STATIC_ASSERT(
 // Plaits' default LPG colour.
 const float kLpgColour = 0.5f;
 
-void PlaitsVoice::Init(uint8_t* ram) {
+/* static */
+const fm::Patch* PlaitsVoice::UnpackFmBanks(uint8_t* ram) {
+  fm::Patch* patches = reinterpret_cast<fm::Patch*>(ram);
+  for (int i = 0; i < kNumPlaitsFmBanks; ++i) {
+    for (int j = 0; j < kPlaitsFmBankSize; ++j) {
+      patches[i * kPlaitsFmBankSize + j].Unpack(
+          fm_patches_table[i] + j * fm::Patch::SYX_SIZE);
+    }
+  }
+  return patches;
+}
+
+void PlaitsVoice::Init(uint8_t* ram, const fm::Patch* fm_banks) {
   // Plaits' engines leave some state to its zeroed .bss.
   fill(&ram[0], &ram[kPlaitsVoiceRamSize], 0);
   engines_ = new(ram) PlaitsEngines;
@@ -148,6 +160,7 @@ void PlaitsVoice::Init(uint8_t* ram) {
     r.get(i)->Init(&allocator);
   }
 
+  fm_banks_ = fm_banks;
   model_ = -1;
   sustain_ = false;
   sustain_level_ = 0.0f;
@@ -167,9 +180,12 @@ void PlaitsVoice::Render(
     size_t size) {
   Engine* e = engines_->registry.get(patch.model);
   if (patch.model != model_) {
-    e->LoadUserData(patch.model >= 2 && patch.model <= 4
-        ? fm_patches_table[patch.model - 2]
-        : NULL);
+    if (patch.model >= 2 && patch.model <= 4) {
+      engines_->six_op_engine.LoadUnpackedBank(
+          &fm_banks_[(patch.model - 2) * kPlaitsFmBankSize]);
+    } else {
+      e->LoadUserData(NULL);
+    }
     e->Reset();
     limiter_.Init();
     model_ = patch.model;

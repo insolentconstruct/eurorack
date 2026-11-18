@@ -45,9 +45,10 @@ const int kNumPlaitsVoices = 6;
 // 47991 Hz, 4.3 cents higher.
 const float kPlaitsRootNote = 48.0f - 0.0429f;
 
-// Engine RAM for all voices, lent by the caller while the synth plays.
-const size_t kPlaitsSynthRamSize = \
-    kNumPlaitsVoices * kPlaitsVoiceRamSize + kPlaitsSpeechRamSize;
+// Engine RAM for all voices and the banks they share, lent by the caller
+// while the synth plays.
+const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize +
+    kPlaitsSpeechRamSize + kPlaitsFmBanksRamSize;
 
 // FEEDBACK selects one of the eight models of the current bank.
 const int kPlaitsBankSize = 8;

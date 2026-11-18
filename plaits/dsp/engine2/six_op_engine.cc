@@ -82,6 +82,7 @@ void SixOpEngine::Init(BufferAllocator* allocator) {
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
   acc_buffer_ = allocator->Allocate<float>(kMaxBlockSize * kNumSixOpVoices);
   patches_ = allocator->Allocate<fm::Patch>(kNumPatchesPerBank);
+  bank_ = patches_;
   
   active_voice_ = kNumSixOpVoices - 1;
   rendered_voice_ = 0;
@@ -95,6 +96,11 @@ void SixOpEngine::LoadUserData(const uint8_t* user_data) {
   for (int i = 0; i < kNumPatchesPerBank; ++i) {
     patches_[i].Unpack(user_data + i * fm::Patch::SYX_SIZE);
   }
+  LoadUnpackedBank(patches_);
+}
+
+void SixOpEngine::LoadUnpackedBank(const fm::Patch* patches) {
+  bank_ = patches;
   for (int i = 0; i < kNumSixOpVoices; ++i) {
     voice_[i].UnloadPatch();
   }
@@ -114,7 +120,7 @@ void SixOpEngine::Render(
     voice_[0].mutable_lfo()->Scrub(2.0f * kCorrectedSampleRate * t);
 
     for (int i = 0; i < kNumSixOpVoices; ++i) {
-      voice_[i].LoadPatch(&patches_[patch_index]);
+      voice_[i].LoadPatch(&bank_[patch_index]);
       Voice<6>::Parameters* p = voice_[i].mutable_parameters();
       p->sustain = i == 0 ? true : false;
       p->gate = false;
@@ -127,7 +133,7 @@ void SixOpEngine::Render(
   } else {
     if (parameters.trigger & TRIGGER_RISING_EDGE) {
       active_voice_ = (active_voice_ + 1) % kNumSixOpVoices;
-      voice_[active_voice_].LoadPatch(&patches_[patch_index]);
+      voice_[active_voice_].LoadPatch(&bank_[patch_index]);
       voice_[active_voice_].mutable_lfo()->Reset();
     }
     Voice<6>::Parameters* p = voice_[active_voice_].mutable_parameters();

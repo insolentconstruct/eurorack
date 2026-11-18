@@ -37,6 +37,7 @@
 
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/envelope.h"
+#include "plaits/dsp/fm/patch.h"
 #include "plaits/dsp/fx/low_pass_gate.h"
 
 namespace beads {
@@ -48,6 +49,12 @@ const int kNumPlaitsModels = 24;
 const size_t kPlaitsVoiceRamSize = 28 * 1024;
 // Speech's five word banks, decoded once for all voices.
 const size_t kPlaitsSpeechRamSize = 36 * 1024;
+
+// Plaits' three 6-op banks, unpacked once and shared by all voices.
+const int kNumPlaitsFmBanks = 3;
+const int kPlaitsFmBankSize = 32;
+const size_t kPlaitsFmBanksRamSize =
+    kNumPlaitsFmBanks * kPlaitsFmBankSize * sizeof(plaits::fm::Patch);
 
 struct PlaitsEngines;
 
@@ -68,8 +75,12 @@ class PlaitsVoice {
   // all voices, with kPlaitsVoiceRamSize bytes of scratch.
   static void DecodeSpeechBanks(uint8_t* ram, uint8_t* scratch);
 
-  // Builds the engines in kPlaitsVoiceRamSize bytes of ram.
-  void Init(uint8_t* ram);
+  // Unpacks the 6-op banks into kPlaitsFmBanksRamSize bytes of ram.
+  static const plaits::fm::Patch* UnpackFmBanks(uint8_t* ram);
+
+  // Builds the engines in kPlaitsVoiceRamSize bytes of ram; the 6-op models
+  // play the shared fm_banks.
+  void Init(uint8_t* ram, const plaits::fm::Patch* fm_banks);
 
   // trigger takes plaits::TriggerState flags; size is at most 24 samples.
   void Render(
@@ -85,6 +96,7 @@ class PlaitsVoice {
 
  private:
   PlaitsEngines* engines_;
+  const plaits::fm::Patch* fm_banks_;
   int model_;
 
   bool sustain_;

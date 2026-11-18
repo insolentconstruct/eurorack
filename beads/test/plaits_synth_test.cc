@@ -24,7 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits synth: models, voice allocation, model detents and RAM bounds.
+// Plaits synth: models, shared 6-op banks, voice allocation, model detents and
+// RAM bounds.
 
 #include <algorithm>
 #include <cmath>
@@ -41,6 +42,8 @@
 #include "plaits/dsp/speech/lpc_speech_synth_words.h"
 #undef private
 #include "stmlib/utils/buffer_allocator.h"
+
+#include "beads/test/plaits_fm_banks.h"
 
 using namespace beads;
 
@@ -182,6 +185,53 @@ void TestEveryModelRenders() {
       CHECK(hash == (drone ? kDroneHashes[model] : kNoteHashes[model]));
     }
   }
+}
+
+// The 6-op banks follow the voices and Speech's banks, unpacked once and
+// shared by all voices.
+void TestFmBanksShared() {
+  test_checker.Start("TestFmBanksShared");
+  Reset();
+  const plaits::fm::Patch* banks = reinterpret_cast<const plaits::fm::Patch*>(
+      Ram() + kNumPlaitsVoices * kPlaitsVoiceRamSize + kPlaitsSpeechRamSize);
+  for (int v = 0; v < kNumPlaitsVoices; ++v) {
+    CHECK(synth.voice_[v].fm_banks_ == banks);
+  }
+  CHECK(FmBanksUnpacked(banks));
+}
+
+// Every 6-op patch and bank on all six voices, and another model every fourth
+// note; pinned from the tree where each voice unpacked its own bank.
+const uint32_t kFmBankSwitchHash = 0x22fe3f1d;
+
+void TestFmBankSwitches() {
+  test_checker.Start("TestFmBankSwitches");
+  Reset();
+  Controls c;
+  c.mix.reverb_amount = 0.0f;
+  uint32_t hash = 2166136261U;
+  // 96 6-op notes, 32 per bank, and 32 others.
+  for (int i = 0; i < 128; ++i) {
+    const int fm_note = i - i / 4;
+    const int model = i % 4 == 3 ? 9 : 2 + fm_note % kNumPlaitsFmBanks;
+    const int patch = (fm_note / kNumPlaitsFmBanks * 13) % kPlaitsFmBankSize;
+    c.mix.feedback = ModelCentre(model);
+    c.p.time.base = float(patch) / (kPlaitsFmBankSize * 1.02f);
+    c.p.pitch.base = float(i % 12);
+    for (int block = 0; block < 40; ++block) {
+      c.seed = block == 0 ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
+      FloatFrame out[kBlockSize];
+      Block(c, out);
+      const uint8_t* bytes = reinterpret_cast<const uint8_t*>(out);
+      for (size_t j = 0; j < sizeof(out); ++j) {
+        hash = (hash ^ bytes[j]) * 16777619U;
+      }
+    }
+    CHECK(synth.voice_[synth.active_voice_].model() == model);
+  }
+  CHECK(GuardIntact());
+  printf("FM bank switches %08x\n", hash);
+  CHECK(hash == kFmBankSwitchHash);
 }
 
 // Each trigger starts the next voice, which keeps the settings it started
@@ -621,6 +671,8 @@ void TestWordBankChangeDelaysWord() {
 
 int main() {
   TestBitReversal();
+  TestFmBanksShared();
+  TestFmBankSwitches();
   TestWordBankLoads();
   TestWordBankChangeDelaysWord();
   TestSharedWordBanks();
