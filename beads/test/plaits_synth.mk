@@ -1,6 +1,7 @@
 TARGET = plaits_synth_test
 include beads/test/plaits_sources.mk
 CC_FILES       = 		plaits_synth_test.cc \
+		plaits_fm_banks.cc \
 		reverb.cc \
 		trigger_generator.cc \
 		resources.cc \

@@ -69,8 +69,10 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
   // The first voice's RAM is scratch until the voice is built.
   PlaitsVoice::DecodeSpeechBanks(
       ram + kNumPlaitsVoices * kPlaitsVoiceRamSize, ram);
+  const plaits::fm::Patch* fm_banks = PlaitsVoice::UnpackFmBanks(
+      ram + kNumPlaitsVoices * kPlaitsVoiceRamSize + kPlaitsSpeechRamSize);
   for (int i = 0; i < kNumPlaitsVoices; ++i) {
-    voice_[i].Init(ram + i * kPlaitsVoiceRamSize);
+    voice_[i].Init(ram + i * kPlaitsVoiceRamSize, fm_banks);
 
     PlaitsPatch& patch = patch_[i];
     // Voices idle on model 0 until they play, as at power-on.

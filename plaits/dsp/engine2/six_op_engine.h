@@ -99,11 +99,15 @@ class SixOpEngine : public Engine {
       bool* already_enveloped);
       
   void LoadBank(int bank);
+
+  // Plays a bank unpacked elsewhere, which several engines can share.
+  void LoadUnpackedBank(const fm::Patch* patches);
   
  private:
   stmlib::HysteresisQuantizer2 patch_index_quantizer_;
   fm::Algorithms<6> algorithms_;
   fm::Patch* patches_;
+  const fm::Patch* bank_;
   FMVoice voice_[kNumSixOpVoices];
   float* temp_buffer_;
   float* acc_buffer_;
