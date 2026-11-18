@@ -1,6 +1,6 @@
 # Testing
 
-This source contains 20 host programs, 323 named test sections, 2,727
+This source contains 20 host programs, 323 named test sections, 2,729
 assertion sites and 572 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
@@ -69,7 +69,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | gain | 6 | 29 |
 | granular | 28 | 128 |
 | mix | 10 | 49 |
-| options | 70 | 837 |
+| options | 70 | 839 |
 | pitch_quantizer | 7 | 83 |
 | plaits_synth | 11 | 62 |
 | processor | 11 | 45 |
@@ -78,7 +78,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **323** | **2,727** |
+| **Total** | **323** | **2,729** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 

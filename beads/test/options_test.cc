@@ -3759,21 +3759,25 @@ void TestOptionsEntryChoices() {
     CHECK(r.ui.options_.page() == 4);
   }
 
-  // The same edit saves the same bytes with the choices on or off.
-  {
-    Rig off(false);
-    Rig on(false);
-    EntryProfile(b, 1, 1);
-    ApplyCustomProfile(&on, b);
-    Rig* rigs[] = { &off, &on };
-    for (int i = 0; i < 2; ++i) {
-      rigs[i]->Enter();
-      rigs[i]->reverb = 0.9f;
-      rigs[i]->Tick(1100, true);
-      Close(rigs[i]);
+  // The same edit writes the same settings sector with the choices on or off.
+  static uint8_t sector[2][0x40000];
+  for (int on = 0; on < 2; ++on) {
+    Rig r(false);
+    if (on) {
+      EntryProfile(b, 1, 1);
+      ApplyCustomProfile(&r, b);
     }
-    CHECK(!memcmp(&off.settings.state(), &on.settings.state(), sizeof(State)));
+    const uint32_t writes = test_writes;
+    const AttackMode mode = r.settings.attack_mode();
+    r.Enter();
+    r.reverb = 0.9f;
+    r.Tick(1100, true);
+    Close(&r);
+    CHECK(test_writes == writes + 1);
+    CHECK(r.settings.attack_mode() != mode);
+    memcpy(sector[on], reinterpret_cast<void*>(0x081c0000), 0x40000);
   }
+  CHECK(!memcmp(sector[0], sector[1], 0x40000));
 }
 
 int main() {
