@@ -87,6 +87,9 @@ class Processor {
     processor_dirty_tape_.SetAttacks(mode);
   }
 
+  // Grain and interval randomness replay from loops, as Marbles' deja vu.
+  void SetDejaVu(bool enabled, float deja_vu, int length);
+
   inline void set_time_scan(bool enabled) {
     SetOption(OPTION_FLAG_TIME_SCAN, enabled);
   }
@@ -397,6 +400,9 @@ class Processor {
   FeedbackDiffuser feedback_diffuser_;
   bool evolving_feedback_;
   AttackInput attack_input_;
+  DejaVu grain_deja_vu_;
+  DejaVu clock_deja_vu_;
+  bool deja_vu_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

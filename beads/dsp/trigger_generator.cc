@@ -68,6 +68,7 @@ void TriggerGenerator::Init(float sample_rate) {
   ratio_ = 1.0f;
 
   previous_flags_ = GATE_FLAG_LOW;
+  deja_vu_ = NULL;
 }
 
 inline float LogOneMinusX(float x) {
@@ -107,7 +108,13 @@ void TriggerGenerator::RenderPulseTrain(
     
     if (reset) {
       if (randomize) {
+        if (deja_vu_) {
+          deja_vu_->Begin();
+        }
         ratio_ = -1.0f / LogOneMinusX(0.1f + 0.9f * Random::GetFloat());
+        if (deja_vu_) {
+          deja_vu_->End();
+        }
       }
     }
     
@@ -165,8 +172,14 @@ void TriggerGenerator::RenderDivider(
       audio_rate_ = (elapsed_since_last_pulse_ < threshold) && \
           (probability >= 1.0f);
 
+      if (deja_vu_) {
+        deja_vu_->Begin();
+      }
       accept_pulse_ = Random::GetFloat() < probability
           && (pulse_count_ % division) == 0;
+      if (deja_vu_) {
+        deja_vu_->End();
+      }
       
       if (accept_pulse_) {
         const float period = float(elapsed_since_last_pulse_);

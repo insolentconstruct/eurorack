@@ -34,6 +34,8 @@
 
 #include <algorithm>
 
+#include "beads/dsp/deja_vu.h"
+
 namespace beads {
 
 enum SeedButtonState {
@@ -59,6 +61,9 @@ class TriggerGenerator {
   };
 
   void Init(float sample_rate);
+
+  // Random intervals and clock probabilities replay from this loop.
+  inline void set_deja_vu(DejaVu* deja_vu) { deja_vu_ = deja_vu; }
   
   void Render(
       SeedButtonState seed_button_state,
@@ -105,6 +110,8 @@ class TriggerGenerator {
   int default_reset_interval_;
   
   stmlib::GateFlags previous_flags_;
+
+  DejaVu* deja_vu_;
 
   DISALLOW_COPY_AND_ASSIGN(TriggerGenerator);
 };

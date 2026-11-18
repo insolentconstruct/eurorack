@@ -34,6 +34,7 @@
 #include "beads/dsp/delay_grain.h"
 #include "beads/dsp/granular_player.h"
 #include "beads/dsp/attack_detector.h"
+#include "beads/dsp/deja_vu.h"
 
 namespace beads {
 
@@ -45,9 +46,11 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
   inline void Init(float sample_rate) {
     GranularPlayer<DelayGrain, 32>::Init(sample_rate);
     attacks_ = NULL;
+    deja_vu_ = NULL;
   }
 
   inline void SetAttacks(const AttackDetector* attacks) { attacks_ = attacks; }
+  inline void SetDejaVu(DejaVu* deja_vu) { deja_vu_ = deja_vu; }
 
   template<typename DelayLineType>
   inline void Render(
@@ -56,6 +59,9 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       const Parameters& p,
       FloatFrame* out) {
     if (trigger.trigger) {
+      if (deja_vu_) {
+        deja_vu_->Begin();
+      }
       const float duration = p.size.value();
       const bool reverse = duration < 0.3333333f;
 
@@ -77,6 +83,9 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
           p.shape.value(),
           amplitude, pan,
           trigger.fractional_sample);
+      if (deja_vu_) {
+        deja_vu_->End();
+      }
       SortGrainList(p.monophonic_mode);
     }
 
@@ -95,6 +104,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
  private:
   const AttackDetector* attacks_;
+  DejaVu* deja_vu_;
 
   DISALLOW_COPY_AND_ASSIGN(DelayGranularPlayer);
 };

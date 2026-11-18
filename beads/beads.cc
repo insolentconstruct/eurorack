@@ -562,11 +562,15 @@ bool FadedOut() {
   return !codec_running || reverb_style_gain == 0.0f;
 }
 
+// Beta 4 prototype: no profile feature yet, so nothing turns these on.
+uint8_t prototype_features;
+
 void MonitorStateChange() {
   seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
   processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
+  processor.SetDejaVu(prototype_features & 1, 0.5f, 8);
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   ui.set_delay_active(processor.delay_active());

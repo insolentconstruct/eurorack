@@ -45,6 +45,7 @@ void Processor::Init(
   attack_input_.Init();
   clouds_style_ = false;
   evolving_feedback_ = false;
+  deja_vu_ = false;
   diffusion_ = 0.0f;
   diffuser_.Init(diffuser_buffer_);
   diffuser_.set_amount(diffusion_);
@@ -120,8 +121,30 @@ void Processor::Configure(Media media, bool mono) {
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
+  trigger_generator_.set_deja_vu(deja_vu_ ? &clock_deja_vu_ : NULL);
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
   reverb_.Reset(sr);
+}
+
+void Processor::SetDejaVu(bool enabled, float deja_vu, int length) {
+  if (enabled && !deja_vu_) {
+    // Filled when first used, so stock playback keeps its random sequence.
+    grain_deja_vu_.Init();
+    clock_deja_vu_.Init();
+  }
+  grain_deja_vu_.set_deja_vu(deja_vu);
+  grain_deja_vu_.set_length(length);
+  clock_deja_vu_.set_deja_vu(deja_vu);
+  clock_deja_vu_.set_length(length);
+  if (enabled != deja_vu_) {
+    deja_vu_ = enabled;
+    DejaVu* grains = enabled ? &grain_deja_vu_ : NULL;
+    processor_digital_.SetDejaVu(grains);
+    processor_vintage_digital_.SetDejaVu(grains);
+    processor_clean_tape_.SetDejaVu(grains);
+    processor_dirty_tape_.SetDejaVu(grains);
+    trigger_generator_.set_deja_vu(enabled ? &clock_deja_vu_ : NULL);
+  }
 }
 
 void Processor::Process(

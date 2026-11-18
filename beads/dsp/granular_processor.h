@@ -84,6 +84,9 @@ class GranularProcessor {
   
   inline void SetAttacks(int mode) { attacks_.Configure(mode); }
   inline void SetAttackOnset(bool onset) { attacks_.SetOnset(onset); }
+  inline void SetDejaVu(DejaVu* deja_vu) {
+    granular_player_.SetDejaVu(deja_vu);
+  }
 
   inline void Reset() {
     attacks_.Reset();
