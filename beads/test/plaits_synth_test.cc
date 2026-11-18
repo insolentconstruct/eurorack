@@ -512,6 +512,65 @@ void TestBitReversal() {
   }
 }
 
+static uint8_t shared_speech_ram[16384];
+static plaits::LPCSpeechSynthWordBank shared_word_bank;
+
+// Loads both word banks one call each, the first decoding as Mutable
+// Instruments' Load does, the second copying the synth's decoded banks.
+bool LoadSharedStep(int bank) {
+  const plaits::LPCSpeechSynthWordBank* decoded =
+      plaits::LPCSpeechSynthWordBank::decoded_banks_;
+  plaits::LPCSpeechSynthWordBank::set_decoded_banks(NULL);
+  const bool loaded = word_bank.Load(bank);
+  plaits::LPCSpeechSynthWordBank::set_decoded_banks(decoded);
+  const bool shared_loaded = shared_word_bank.Load(bank);
+  return loaded == shared_loaded &&
+      word_bank.num_frames_ == shared_word_bank.num_frames_ &&
+      word_bank.num_words_ == shared_word_bank.num_words_ &&
+      word_bank.loaded_bank_ == shared_word_bank.loaded_bank_ &&
+      word_bank.loading_bank_ == shared_word_bank.loading_bank_ &&
+      !memcmp(speech_ram, shared_speech_ram, sizeof(speech_ram));
+}
+
+// Per call, the shared decode leaves each voice's RAM as decoding does.
+void TestSharedWordBanks() {
+  test_checker.Start("TestSharedWordBanks");
+  Reset();
+  CHECK(plaits::LPCSpeechSynthWordBank::decoded_banks_ != NULL);
+  CHECK(GuardIntact());
+  for (int a = 0; a < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++a) {
+    for (int b = 0; b < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++b) {
+      for (int calls = 1; calls <= kWordBankLoadBlocks[a]; ++calls) {
+        for (int reset = 0; reset < 2; ++reset) {
+          ResetSpeech();
+          memset(shared_speech_ram, 0, sizeof(shared_speech_ram));
+          stmlib::BufferAllocator allocator(
+              shared_speech_ram, sizeof(shared_speech_ram));
+          shared_word_bank.Init(plaits::word_banks_,
+              LPC_SPEECH_SYNTH_NUM_WORD_BANKS, &allocator);
+          bool same = true;
+          for (int i = 0; i < calls; ++i) {
+            same = same && LoadSharedStep(a);
+          }
+          if (reset) {
+            word_bank.Reset();
+            shared_word_bank.Reset();
+          }
+          for (int i = 0; i < 100 && word_bank.loaded_bank_ != b; ++i) {
+            same = same && LoadSharedStep(b);
+          }
+          for (int i = 0; i < 100 && word_bank.loaded_bank_ != a; ++i) {
+            same = same && LoadSharedStep(a);
+          }
+          CHECK(same);
+          CHECK(WordBankIs(a));
+        }
+      }
+    }
+  }
+  CHECK(GuardIntact());
+}
+
 // A word that ended on bank (b + 1) % 5, then a bank change to b with a
 // trigger: the word plays when the bank is loaded, sample for sample as
 // Mutable Instruments' controller plays it with the change made then.
@@ -564,6 +623,7 @@ int main() {
   TestBitReversal();
   TestWordBankLoads();
   TestWordBankChangeDelaysWord();
+  TestSharedWordBanks();
   TestVoiceAllocation();
   TestBankDetents();
   TestFreezeSustains();

@@ -66,6 +66,9 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
 }
 
 void PlaitsSynth::InitVoices(uint8_t* ram) {
+  // The first voice's RAM is scratch until the voice is built.
+  PlaitsVoice::DecodeSpeechBanks(
+      ram + kNumPlaitsVoices * kPlaitsVoiceRamSize, ram);
   for (int i = 0; i < kNumPlaitsVoices; ++i) {
     voice_[i].Init(ram + i * kPlaitsVoiceRamSize);
 

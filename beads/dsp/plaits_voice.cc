@@ -55,6 +55,7 @@
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
+#include "plaits/dsp/speech/lpc_speech_synth_words.h"
 #include "plaits/resources.h"
 
 namespace beads {
@@ -252,6 +253,23 @@ void PlaitsVoice::Render(
       out[i] *= gain;
     }
   }
+}
+
+/* static */
+void PlaitsVoice::DecodeSpeechBanks(uint8_t* ram, uint8_t* scratch) {
+  BufferAllocator allocator(ram, kPlaitsSpeechRamSize);
+  LPCSpeechSynthWordBank* banks = allocator.Allocate<LPCSpeechSynthWordBank>(
+      LPC_SPEECH_SYNTH_NUM_WORD_BANKS);
+  LPCSpeechSynthWordBank::set_decoded_banks(NULL);
+  for (int i = 0; i < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++i) {
+    BufferAllocator scratch_allocator(scratch, kPlaitsVoiceRamSize);
+    banks[i].Init(
+        word_banks_,
+        LPC_SPEECH_SYNTH_NUM_WORD_BANKS,
+        &scratch_allocator);
+    banks[i].Decode(i, &allocator);
+  }
+  LPCSpeechSynthWordBank::set_decoded_banks(banks);
 }
 
 }  // namespace beads

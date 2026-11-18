@@ -46,6 +46,8 @@ const int kNumPlaitsModels = 24;
 // A voice's engines and the RAM they take turns in. The engines stay out of
 // this header: Plaits' and Beads' resources.h define clashing macros.
 const size_t kPlaitsVoiceRamSize = 28 * 1024;
+// Speech's five word banks, decoded once for all voices.
+const size_t kPlaitsSpeechRamSize = 36 * 1024;
 
 struct PlaitsEngines;
 
@@ -61,6 +63,10 @@ class PlaitsVoice {
  public:
   PlaitsVoice() { }
   ~PlaitsVoice() { }
+
+  // Decodes Speech's word banks into kPlaitsSpeechRamSize bytes of ram for
+  // all voices, with kPlaitsVoiceRamSize bytes of scratch.
+  static void DecodeSpeechBanks(uint8_t* ram, uint8_t* scratch);
 
   // Builds the engines in kPlaitsVoiceRamSize bytes of ram.
   void Init(uint8_t* ram);
