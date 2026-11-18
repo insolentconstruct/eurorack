@@ -500,6 +500,18 @@ void TestWordBankLoads() {
   }
 }
 
+// The bit stream's table reverses every byte.
+void TestBitReversal() {
+  test_checker.Start("TestBitReversal");
+  for (int b = 0; b < 256; ++b) {
+    int reversed = 0;
+    for (int bit = 0; bit < 8; ++bit) {
+      reversed |= ((b >> bit) & 1) << (7 - bit);
+    }
+    CHECK(plaits::BitStream::reverse_lut_[b] == reversed);
+  }
+}
+
 // A word that ended on bank (b + 1) % 5, then a bank change to b with a
 // trigger: the word plays when the bank is loaded, sample for sample as
 // Mutable Instruments' controller plays it with the change made then.
@@ -549,6 +561,7 @@ void TestWordBankChangeDelaysWord() {
 }
 
 int main() {
+  TestBitReversal();
   TestWordBankLoads();
   TestWordBankChangeDelaysWord();
   TestVoiceAllocation();
