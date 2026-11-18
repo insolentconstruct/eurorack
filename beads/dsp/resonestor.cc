@@ -29,6 +29,7 @@
 #include "beads/dsp/resonestor.h"
 
 #include <cmath>
+#include <cstring>
 
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
@@ -68,6 +69,17 @@ inline float InterpolatePlateau(const float* table, float index, float size) {
   } else {
     return b;
   }
+}
+
+// Mantissa by a quadratic, within 0.005: enough for a comb's decay.
+inline float Log2(float x) {
+  int32_t bits;
+  memcpy(&bits, &x, sizeof(bits));
+  const float exponent = float(((bits >> 23) & 255) - 128);
+  bits = (bits & 0x807fffff) | 0x3f800000;
+  float m;
+  memcpy(&m, &bits, sizeof(m));
+  return exponent + (-0.34484843f * m + 2.02466578f) * m + 0.32512241f;
 }
 
 void Resonestor::Init(float* buffer, float sample_rate) {
@@ -156,15 +168,17 @@ void Resonestor::Process(FloatFrame* in_out, size_t size) {
     CONSTRAIN(comb_period_[p][voice_], 0, max_comb);
   }
 
-  // LP/BP filter frequencies and feedback.
+  // LP/BP filter frequencies and feedback; libm's powf would need errno.
+  const float log2_feedback = Log2(feedback_[voice_]);
   for (int p = 0; p < 4; p++) {
     float freq = 1.0f / comb_period_[p][voice_];
     bp_[p][voice_].set_f_q<FREQUENCY_FAST>(freq, narrow_[voice_]);
     float lp_freq = (2.0f * freq + 1.0f) * damp_[voice_];
     CONSTRAIN(lp_freq, 0.0f, 1.0f);
     lp_[p][voice_].set_f_q<FREQUENCY_FAST>(lp_freq, 0.4f);
-    comb_feedback_[p][voice_] = powf(
-        feedback_[voice_], comb_period_[p][voice_] / sample_rate_);
+    comb_feedback_[p][voice_] = feedback_[voice_] > 0.0f
+        ? Exp2Safe(log2_feedback * comb_period_[p][voice_] / sample_rate_)
+        : 0.0f;
   }
 
   // A trigger starts a burst.
