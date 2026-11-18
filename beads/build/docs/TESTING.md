@@ -254,18 +254,18 @@ audio remains identical. Module checks:
 
 | Firmware | Debug probe | Audio file |
 |---|---:|---:|
-| 2021 forum release (and rebuilds) | 3 | 4 |
-| 2024 recovery firmware (and rebuilds) | 9 | 2 |
+| 2021 forum release (and rebuilds) | 8 | 4 |
+| 2024 recovery firmware (and rebuilds) | 14 | 2 |
 | Vanilla source (and timing builds) | 30 | 2 |
-| Drizzlet (all builds) | 185 | 8 |
+| Drizzlet (all builds) | 192 | 8 |
 | Beads tuneup | 17 | 2 |
 | Storage recovery tool | 0 | 2 |
 | Reverse-engineered port | 0 | 1 |
-| **Total** | **244** | **21** |
+| **Total** | **261** | **21** |
 
-Every probe install verified, as did 107 settings sector writes and 13 calibration copy erases; six probe attempts stopped at a check before writing. Every audio install booted; one quiet audio update stopped partway, and replaying it at full volume worked.
+Every probe install verified, as did 112 settings sector writes and 13 calibration copy erases; six probe attempts stopped at a check before writing. Every audio install booted; one quiet audio update stopped partway, and replaying it at full volume worked. No bench write targeted the bootloader sector, and the module is back on the Beta 3 release. The most-written flash sector has used under 3% of its rated 10,000 erases (estimated; erases before 2026-10-30 are partly reconstructed).
 
-About 58 hours of automated runs on the module (about 9.5 before the Beta 1 sessions, 34 more to the Beta 2 release and 14.5 to the Beta 3 release), counted from run logs, excluding waits for owner actions; a run recorded by several instruments counts once.
+About 63 hours of automated runs on the module (about 9.5 before the Beta 1 sessions, 34 more to the Beta 2 release, 14.5 to the Beta 3 release and 5.4 since), counted from run logs, excluding waits for owner actions; a run recorded by several instruments counts once.
 
 ### Beta 3
 
