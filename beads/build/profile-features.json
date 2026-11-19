@@ -1096,6 +1096,48 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": false
+    },
+    {
+      "id": 37,
+      "issue": 285,
+      "name": "Options page preview",
+      "values": [
+        "Each knob in turn",
+        "First setting only"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 38,
+      "issue": 285,
+      "name": "Options page on opening",
+      "values": [
+        "Last used",
+        "First page"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."

@@ -160,6 +160,12 @@ default, keeps the pages open until you close them; 5, 10, 20 or 30 s
 closes them after that long without a button press, page change or turn
 of an option knob on the page, keeping your changes.
 
+Two options-page choices keep today's behaviour by default and add no
+panel gesture or options-page slot. Options page preview: First setting
+only skips the walk through the stored values when a page opens, so [A]
+shows the page's first setting at once. Options page on opening: First
+page always opens on the first page in use instead of the last one used.
+
 Four more profile choices keep stock or Beta 2 behaviour by default and
 add no panel gesture or options-page slot. Input gain at power-on:
 Manual starts at unity manual gain when no gain is saved; a saved gain

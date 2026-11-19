@@ -116,6 +116,8 @@ void Options::Init() {
   }
   selected_ = OPTION_PITCH;
   preview_knob_ = -1;
+  first_preview_knob_ = 0;
+  first_page_ = false;
   preview_time_ = indication_time_ = 0;
   idle_timeout_ = idle_time_ = 0;
   limiter_preview_ = OUTPUT_LIMITER_STOCK;
@@ -143,6 +145,12 @@ void Options::Configure(const Profile& profile) {
   const ProfileEntry& idle = profile.entry(FEATURE_IDLE_TIMEOUT);
   idle_timeout_ = idle.state == PROFILE_FIXED
       ? kOptionsIdleTimeouts[idle.value] : 0;
+  // Starting past the last knob skips the walk through the stored values.
+  const ProfileEntry& preview = profile.entry(FEATURE_PAGE_PREVIEW);
+  first_preview_knob_ = preview.state == PROFILE_FIXED && preview.value
+      ? MIX_PARAMETER_LAST : 0;
+  const ProfileEntry& first_page = profile.entry(FEATURE_FIRST_PAGE);
+  first_page_ = first_page.state == PROFILE_FIXED && first_page.value;
   any_page_ = false;
   for (int i = 0; i < OPTION_LAST; ++i) {
     profile_preview_[i] = 0;
@@ -192,7 +200,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         stage_ = STAGE_EDITING;
         holding_ = false;
         idle_time_ = now;
-        StartPreview(now, 0);
+        StartPreview(now, first_preview_knob_);
       }
       return;
     }
@@ -235,7 +243,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
         page_ = (page_ + 1) % kNumOptionPages;
       } while (PageEmpty(page_));
       ResetPots(pots);
-      StartPreview(now, 0);
+      StartPreview(now, first_preview_knob_);
     }
 
     // Show each stored value in turn until a knob takes over.
@@ -445,6 +453,12 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
     delay_preview_ = settings.delay_mode();
     evolving_preview_ = settings.evolving_feedback();
     attack_preview_ = settings.attack_mode();
+    if (first_page_) {
+      page_ = 0;
+      while (PageEmpty(page_)) {
+        ++page_;
+      }
+    }
     ResetPots(pots);
     eligible_ = false;
     stage_ = STAGE_WAIT_RELEASE;

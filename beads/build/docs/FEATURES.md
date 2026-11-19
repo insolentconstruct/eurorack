@@ -118,6 +118,8 @@ not-set values use the profile default.
 | 34 | Grain stealing (#237) | No saved value |
 | 35 | Delay feedback (#10) | No saved value |
 | 36 | Delay time (#30) | No saved value |
+| 37 | Options page preview (#285) | No saved value |
+| 38 | Options page on opening (#285) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -574,3 +576,26 @@ flanging. FREEZE slices keep stock's glide too: they replay at their own
 speed, so they never bend the pitch. A fade already running when FREEZE
 engages finishes first. Clocked and tapped timing and TIME are unchanged.
 Chosen at power-on, with no panel slot or saved-state nibble.
+
+### Options page preview
+
+Hygrostat feature ID 37 chooses Each knob in turn / First setting only
+(#285). By default, whenever a page opens (releasing the opening hold, or
+tapping [M] to the next page), [A] shows each used knob's stored value in
+turn for 2048 ms, with that knob's mix LED steady, then the page's first
+setting. First setting only goes straight to that end state: the page's mix
+LEDs pulse at once and [A] shows the first used setting, its blink restarted.
+The 100 ms open flash, knob pickup, SEED scale taps, saving and the idle
+timeout are unchanged. Chosen at power-on, with no panel slot or saved-state
+nibble; it runs only while the pages are open.
+
+### Options page on opening
+
+Hygrostat feature ID 38 chooses Last used / First page (#285). By default the
+pages reopen on the page last used, until power-off; the page is never saved.
+First page opens on the lowest page in use every time, including after the
+idle timeout closes the pages; on a custom layout whose page 1 is empty that
+is the first page with a setting. While the opening hold continues, [A]
+already shows that page's first setting and the open flash lights its LEDs.
+Tapping [M] still steps through the pages. Chosen at power-on, with no panel
+slot or saved-state nibble; it runs only when the pages open.

@@ -48,7 +48,8 @@ const char* const kOptionNames[] = {
   "Synth reverb tail", "Options page idle timeout", "Delay SEED latch fade",
   "Input gain at power-on", "Attack sensitivity", "SEED at power-on",
   "PITCH knob", "Plaits bank", "Mix law", "Reverb input", "Grain stealing",
-  "Delay feedback", "Delay time"
+  "Delay feedback", "Delay time", "Options page preview",
+  "Options page on opening"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 const char* const kValueNames[] = {
