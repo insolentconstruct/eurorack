@@ -121,6 +121,8 @@ Options page idle timeout is a separate profile choice: Off, the default, keeps 
 
 Two options-page choices keep today's behaviour by default and add no panel gesture or options-page slot. Options page preview: First setting only skips the walk through the stored values when a page opens, so [A] shows the page's first setting at once. Options page on opening: First page always opens on the first page in use instead of the last one used.
 
+Start in quality is a separate profile choice: Keep current, the default, never changes the saved quality. Any other quality is where the module starts after you install the profile, and after a settings reset. Until something is saved, every start-up begins in that quality; once anything is saved, such as a new quality on [A], your choice wins.
+
 Four more profile choices keep stock or Beta 2 behaviour by default and add no panel gesture or options-page slot. Input gain at power-on: Manual starts at unity manual gain when no gain is saved; a saved gain wins. Attack sensitivity: Normal, Low or High. SEED at power-on: Unlatched waits for SEED presses, gates or, with Snap and trigger, detected attacks. PITCH knob: Smooth glides between the intervals without notches; PITCH CV is unchanged.
 
 Two mix choices keep stock behaviour by default and add no panel gesture or options-page slot. Mix law: Gentle brings the grains in more slowly on DRY/WET (7.6 dB under the dry at 9 o'clock instead of 2.5 dB); the dry and both ends of the knob stay stock. Reverb input: Grains sends only the grains to the reverb, before the dry/wet mix as on Clouds, so fully dry has no reverb. Both synths are unchanged.

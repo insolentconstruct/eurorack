@@ -335,7 +335,8 @@ class Settings {
 
  private:
   void NormalizeOptions();
-  void LoadOptions();
+  // True when the saved settings come from another profile, or none.
+  bool LoadOptions();
   void PackOptions();
   void ApplyProfile();
   uint8_t DefaultGain() const;

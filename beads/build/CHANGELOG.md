@@ -13,6 +13,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.
 - Optional options-page idle timeout in Hygrostat (Off, 5, 10, 20 or 30 s); Off by default.
 - Optional Hygrostat options-page choices, today's behaviour by default (#285): skip the walk through the stored values when a page opens; always open on the first page instead of the last one used.
+- Optional Hygrostat Start in quality (#287): a profile can choose the quality Beads starts in after the profile is installed and after a settings reset, until something is saved; Keep current by default. Saved settings now record which profile saved them (fields 16 and 18).
 - Optional delay-mode SEED latch fade in Hygrostat (Off: stock switch; Fade: 10 ms dip, no pop); Off by default (#183).
 - Optional Hygrostat choices, all stock or unchanged by default: manual gain at unity when no gain is saved (#19); Attacks sensitivity Low or High (#58, #47); SEED unlatched at power-on (#41); a smooth PITCH knob without notches (#43).
 - Optional Hygrostat choices, stock by default: a gentler DRY/WET law whose wet side rises linearly (#21); reverb on the grains only, before the dry/wet mix as on Clouds (#20). Granular, delay and spectral; both synths unchanged.

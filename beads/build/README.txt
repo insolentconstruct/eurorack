@@ -166,6 +166,12 @@ only skips the walk through the stored values when a page opens, so [A]
 shows the page's first setting at once. Options page on opening: First
 page always opens on the first page in use instead of the last one used.
 
+Start in quality is a separate profile choice: Keep current, the
+default, never changes the saved quality. Any other quality is where the
+module starts after you install the profile, and after a settings reset.
+Until something is saved, every start-up begins in that quality; once
+anything is saved, such as a new quality on [A], your choice wins.
+
 Four more profile choices keep stock or Beta 2 behaviour by default and
 add no panel gesture or options-page slot. Input gain at power-on:
 Manual starts at unity manual gain when no gain is saved; a saved gain
