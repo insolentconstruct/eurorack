@@ -295,6 +295,7 @@ void LPCSpeechSynthController::Init(LPCSpeechSynthWordBank* word_bank) {
   last_playback_frame_ = -1;
   remaining_frame_samples_ = 0;
   pending_trigger_ = false;
+  playback_bank_ = -1;
 
   fill(&sample_[0], &sample_[2], 0.0f);
   fill(&next_sample_[0], &next_sample_[2], 0.0f);
@@ -372,7 +373,13 @@ void LPCSpeechSynthController::Render(
           &playback_frame_,
           &last_playback_frame_);
     }
+    playback_bank_ = bank;
     remaining_frame_samples_ = 0;
+  }
+  
+  // A word's frame numbers do not index the phonemes: scan them instead.
+  if (bank == -1 && playback_bank_ != -1 && remaining_frame_samples_ == 0) {
+    playback_frame_ = -1;
   }
   
   if (loading) {

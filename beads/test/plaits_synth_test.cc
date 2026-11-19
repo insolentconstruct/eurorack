@@ -682,6 +682,54 @@ void TestWordBankChangeDelaysWord() {
   }
 }
 
+// HARMONICS from the last word bank down to the phonemes (#280), mid-word
+// and after the word: the word's frame numbers never index the phonemes.
+void TestPhonemesAfterWord() {
+  test_checker.Start("TestPhonemesAfterWord");
+  const int last = LPC_SPEECH_SYNTH_NUM_WORD_BANKS - 1;
+  for (int ended = 0; ended < 2; ++ended) {
+    ResetSpeech();
+    LoadWordBank(last);
+    float excitation[kBlockSize];
+    float out[kBlockSize];
+    const float f0 = 100.0f / 48000.0f;
+    const int word_blocks = ended ? 4000 : 100;
+    for (int i = 0; i < word_blocks; ++i) {
+      speech.Render(false, i == 0, last, f0, 0.3f, 0.5f, 0.99f, 0.5f, 0.8f,
+          excitation, out, kBlockSize);
+    }
+    CHECK(speech.playback_frame_ >= plaits::kLPCSpeechSynthNumPhonemes);
+    for (int i = 0; i < 4000; ++i) {
+      speech.Render(false, false, -1, f0, 0.3f, 0.5f, 0.99f, 0.5f, 0.8f,
+          excitation, out, kBlockSize);
+    }
+    CHECK(speech.playback_frame_ == -1);
+  }
+  // A dip to the phonemes that ends within a frame leaves the word playing.
+  ResetSpeech();
+  LoadWordBank(last);
+  float excitation[kBlockSize];
+  float out[kBlockSize];
+  const float f0 = 100.0f / 48000.0f;
+  for (int i = 0; i < 100; ++i) {
+    speech.Render(false, i == 0, last, f0, 0.3f, 0.5f, 0.99f, 0.5f, 0.8f,
+        excitation, out, kBlockSize);
+  }
+  while (speech.remaining_frame_samples_ < 2 * kBlockSize) {
+    speech.Render(false, false, last, f0, 0.3f, 0.5f, 0.99f, 0.5f, 0.8f,
+        excitation, out, kBlockSize);
+  }
+  const int frame = speech.playback_frame_;
+  speech.Render(false, false, -1, f0, 0.3f, 0.5f, 0.99f, 0.5f, 0.8f,
+      excitation, out, kBlockSize);
+  CHECK(speech.playback_frame_ == frame);
+  for (int i = 0; i < 100; ++i) {
+    speech.Render(false, false, last, f0, 0.3f, 0.5f, 0.99f, 0.5f, 0.8f,
+        excitation, out, kBlockSize);
+  }
+  CHECK(speech.playback_frame_ > frame);
+}
+
 int main() {
   TestAuxSkipped();
   TestBitReversal();
@@ -689,6 +737,7 @@ int main() {
   TestFmBankSwitches();
   TestWordBankLoads();
   TestWordBankChangeDelaysWord();
+  TestPhonemesAfterWord();
   TestSharedWordBanks();
   TestVoiceAllocation();
   TestBankDetents();
