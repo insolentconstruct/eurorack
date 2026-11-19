@@ -8,8 +8,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Snap and trigger starts grains from hits while FREEZE is on, too (#294); marks are still taken only while recording.
 - SEED latch Sync is a hard sync (#293): each edge starts a grain as well as restarting the grain clock, so a clock faster than DENSITY's rate, or DENSITY at noon, plays a grain per edge instead of none. Both synths follow.
 - Changing Processor while FREEZE is on no longer silences the module (#288): the current engine plays on, and the change happens when FREEZE is released.
-- The [A] hold acts when [A] is released, and not at all if a knob was turned or a button pressed meanwhile (#289), so slow width, diffusion or Plaits bank gestures no longer clear a saved manual gain or toggle the synth first. Stock acts at 1.5 s while held; [A]+FEEDBACK ends as in stock.
-- Custom profiles: Monophonic grains or Buffer trim on the [A] hold, and Synth start on Manual or Adjustable without a gesture, are refused by the firmware and by Hygrostat (#291, #292).
+- The [A] hold acts when [A] is released, and not at all if a knob was turned or a button pressed meanwhile (#289), so slow width, diffusion or Plaits bank gestures no longer clear a saved manual gain or toggle the synth first. Stock acts at 1.5 s while held; a long [A] press during calibration also steps on release; [A]+FEEDBACK ends as in stock.
+- Custom profiles: Monophonic grains or Buffer trim on the [A] hold, and Synth start on Manual or Adjustable without a gesture, are refused by the firmware and by Hygrostat (#291, #292). A refused layout plays with the standard controls and saves nothing until it is re-exported from Hygrostat; no saved data is erased.
 - Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.
 - Optional options-page idle timeout in Hygrostat (Off, 5, 10, 20 or 30 s); Off by default.
 - Optional Hygrostat options-page choices, today's behaviour by default (#285): skip the walk through the stored values when a page opens; always open on the first page instead of the last one used.
