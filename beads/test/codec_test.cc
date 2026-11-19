@@ -356,11 +356,58 @@ void TestRestartInitFailure() {
   }
 }
 
+static const Codec::Frame* ramp_half;
+
+void Ramp(const Codec::Event*, const Codec::Frame*, Codec::Frame* out,
+    size_t size) {
+  // The held frame (the last ramp value) is stored before the callback runs.
+  if (ramp_half) {
+    CHECK(ramp_half[0].l == callback_calls);
+  }
+  for (size_t i = 0; i < size; ++i) {
+    ++callback_calls;
+    out[i].l = callback_calls;
+    out[i].r = -callback_calls;
+  }
+}
+
+void TestOneFrameDelay() {
+  test_checker.Start("TestOneFrameDelay");
+  const int32_t rates[] = { 48000, 32000, 24000 };
+  for (size_t r = 0; r < sizeof(rates) / sizeof(rates[0]); ++r) {
+    const size_t size = rates[r] / 4000;
+    ResetHarness();
+    probe_callback = false;
+    CHECK(codec.Start(rates[r], size, &Ramp));
+    // Played order: half 0, half 1, half 0. Frame k of the ramp is k + 1.
+    int32_t expected = 0;
+    for (int block = 0; block < 3; ++block) {
+      const Codec::Frame* half = tx_buffer + (block & 1) * size;
+      ramp_half = half;
+      codec.Fill(block & 1);
+      for (size_t i = 0; i < size; ++i) {
+        CHECK(half[i].l == expected && half[i].r == -expected);
+        ++expected;
+      }
+    }
+    // A pause drops the held frame.
+    codec.Pause();
+    callback_calls = 0;
+    ramp_half = tx_buffer;
+    codec.Resume(&Ramp);
+    codec.Fill(0);
+    CHECK(tx_buffer[0].l == 0 && tx_buffer[0].r == 0);
+    CHECK(tx_buffer[1].l == 1 && tx_buffer[1].r == -1);
+    ramp_half = NULL;
+  }
+}
+
 int main() {
   TestRestartOrder();
   TestStartUnchanged();
   TestRestartNullCallback();
   TestRestartInitFailure();
-  printf("Codec: 4 tests, %d failures\n", test_checker.failures());
+  TestOneFrameDelay();
+  printf("Codec: 5 tests, %d failures\n", test_checker.failures());
   return test_checker.failures() ? 1 : 0;
 }

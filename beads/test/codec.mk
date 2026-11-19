@@ -27,7 +27,7 @@
 TARGET = codec_test
 CC_FILES = codec_test.cc codec.cc
 STUBS = beads/test/codec_stubs
-HOST_FLAGS = -std=c++98 -fno-pie
+HOST_FLAGS = -std=c++98 -fno-pie -DAPPLICATION
 HOST_LDFLAGS = -no-pie
 include beads/test/host.mk
 
