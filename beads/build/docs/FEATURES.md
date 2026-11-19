@@ -298,9 +298,9 @@ Pitch scale quantizes the total pitch of each new grain (PITCH, CV and random va
 
 Random pitch steps selects Free, Fifths and octaves or Recent notes in thirds. Fifths and octaves quantizes counter-clockwise random offsets relative to PITCH to the fixed octave/fifth family: … −12, −5, 0, +7, +12 … semitones; for C, C/G across octaves includes a downward fourth.
 
-Recent notes (#220), with PITCH patched, gives each counter-clockwise grain one of the last notes sent to PITCH, at 1 V/octave above the PITCH setting. A note counts once the CV holds within 0.1 semitone for 10 ms and is at least half a semitone from the previous note; after a glide it must hold twice as long as the glide took to move its last tenth of a semitone (at most 1 s), so a glide faster than a tenth of a semitone per second counts where it stops (#243); the attenurandomizer chooses from the newest 1 (near 12 o'clock) to 8 (fully counter-clockwise). Unplugging PITCH forgets the notes; unpatched, and in the wavetable synth (which adds its CV to the knob), it plays as Free. Beta 2 reads the saved value as Free.
+Recent notes (#220), with PITCH patched, gives each counter-clockwise grain one of the last notes sent to PITCH, at 1 V/octave relative to the PITCH setting (a negative CV plays below it). A note counts once the CV holds within 0.1 semitone for 10 ms and is at least half a semitone from the previous note; after a glide it must hold twice as long as the glide took to move its last tenth of a semitone (at most 1 s), so a glide faster than a tenth of a semitone per second counts where it stops (#243); the attenurandomizer chooses from the newest 1 (near 12 o'clock) to 8 (fully counter-clockwise). Unplugging PITCH forgets the notes; unpatched, and in the wavetable synth (which adds its CV to the knob), it plays as Free. Beta 2 reads the saved value as Free.
 
-Free and clockwise remain continuous before Pitch scale; subsequent scale quantization can change an interval. Random pitch steps affects granular playback and Beads wavetable grains, not the continuous wavetable oscillator, Plaits or Spectral; custom scales do not redefine its fixed offset pattern.
+Free and clockwise remain continuous before Pitch scale; subsequent scale quantization can change an interval. Random pitch steps affects granular playback and Beads wavetable grains, not the delay pitch, the continuous wavetable oscillator, Plaits or Spectral; custom scales do not redefine its fixed offset pattern.
 
 ## Exact option values
 
@@ -522,8 +522,10 @@ Grains sends only the grains, before the dry/wet mix, in Clouds' order: the
 dry stays dry and REVERB no longer turns it down. DRY/WET then sets the
 reverb with the grains, so fully dry has no reverb at all and turning
 DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
-and flutter comes after the reverb, so the tail wobbles too. Granular, delay
-and spectral; both synths keep the stock routing. Chosen at power-on, with
+and flutter comes after the reverb, so the tail wobbles too. The reverb
+returns with the grains, so the granular/delay switch fades its tail out and
+back in with them. Granular, delay and spectral; both synths keep the stock
+routing. Chosen at power-on, with
 no panel slot or saved-state nibble.
 
 ### Grain stealing
