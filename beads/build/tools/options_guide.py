@@ -270,12 +270,14 @@ DETAILS = [
     "randomness relative to the PITCH setting. For a C note, this gives C/G "
     "across octaves; G below C is a downward fourth. Recent notes, with "
     "PITCH patched, gives each new grain one of the last notes sent to "
-    "PITCH, above the PITCH setting; turn further counter-clockwise to "
+    "PITCH, relative to the PITCH setting (a negative CV plays below it); "
+    "turn further counter-clockwise to "
     "choose from more of them (up to eight). Unpatched it plays as Free. "
     "Free and clockwise "
     "stay continuous before Pitch scale, which applies afterward and can "
     "change the interval. This affects granular playback and Beads wavetable "
-    "grains, not the continuous oscillator, Plaits or Spectral.",
+    "grains, not the delay pitch, the continuous oscillator, Plaits or "
+    "Spectral; in the wavetable synth Recent notes plays as Free.",
     "Attacks: Snap starts grains on the hits in the recording; Snap and "
     "trigger also starts a grain on each hit, on top of DENSITY's grains, "
     "frozen or not. Granular playback only.",
@@ -298,8 +300,9 @@ DETAILS = [
     "sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make "
     "DENSITY crossfade to a new delay time instead of bending the pitch "
     "([Delay time](FEATURES.md#delay-time)).",
-    "Frozen feedback Evolving runs frozen grains through a slowly moving "
-    "all-pass loop; FEEDBACK sets how far they drift.",
+    "Frozen feedback Evolving runs frozen grains, or frozen delay slices in "
+    "delay mode, through a slowly moving all-pass loop; FEEDBACK sets how "
+    "far they drift.",
     "Processor Spectral: Clouds' spectral processing replaces the grains. "
     "TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and "
     "PITCH shifts it (following the pitch scale). DENSITY sets how quickly "

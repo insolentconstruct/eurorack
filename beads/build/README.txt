@@ -267,14 +267,16 @@ in thirds (steady green / yellow / red). Fifths and octaves snaps
 counter-clockwise PITCH randomness relative to the PITCH setting. For
 a C note, this gives C/G across octaves; G below C is a downward
 fourth. Recent notes, with PITCH patched, gives each new grain one of
-the last notes sent to PITCH, above the PITCH setting; turning the
+the last notes sent to PITCH, relative to the PITCH setting (a negative
+CV plays below it); turning the
 attenurandomizer further counter-clockwise chooses from more of them
 (up to eight); a glide faster than a tenth of a semitone per
 second counts where it stops. Unpatched it plays as Free. Free and
 clockwise stay continuous before Pitch scale, which applies
 afterward and can change the interval. This affects granular
-playback and Beads wavetable grains, not the continuous oscillator,
-Plaits or Spectral.
+playback and Beads wavetable grains, not the delay pitch, the continuous
+oscillator, Plaits or Spectral; in the wavetable synth Recent notes
+plays as Free.
 
 Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves
 grain starts onto recorded hits; Snap and trigger also starts a grain
@@ -287,8 +289,8 @@ until manually set. In delay and wavetable synth, only reverb changes.
 Switching fades sound and clears the tail.
 
 Frozen feedback selects Stock or Evolving. Evolving fades in to soften
-and drift frozen grains, controlled by FEEDBACK; it stops with FREEZE
-off.
+and drift frozen grains, or frozen delay slices in delay mode,
+controlled by FEEDBACK; it stops with FREEZE off.
 
 Processor: Lower half selects Granular (Stock); upper half selects
 Spectral, using Mutable Instruments Clouds. TIME selects a spectrum,
