@@ -348,6 +348,20 @@ static void Hold(float cv, int milliseconds, float amount) {
   }
 }
 
+// Repeatable CV noise, uniform within +/- amplitude.
+static uint32_t noise_state = 1;
+
+static float Noise(float amplitude) {
+  noise_state = noise_state * 1664525 + 1013904223;
+  return amplitude * (float(noise_state >> 8) / 8388608.0f - 1.0f);
+}
+
+// One reading per millisecond, newest note only; true while it stays the note.
+static bool Keeps(float cv, float note) {
+  Hold(cv, 1, 0.0f);
+  return RandomStep(0.0f) == note;
+}
+
 void TestRecentNotes() {
   test_checker.Start("TestRecentNotes");
   RememberNote(RANDOM_INTERVALS_RECENT_NOTES, true, 0.0f, 1.0f, now);
@@ -440,6 +454,61 @@ void TestRecentNotes() {
   RememberNote(RANDOM_INTERVALS_FIFTHS, true, -26.0f, 1.0f, ++now);
   Hold(-26.0f, 10, 0.0f);
   CHECK(RandomStep(0.0f) == -26.0f);
+  // Slower glides, up with noise and then down, also count where they stop,
+  // within 1.1 s; the next step still counts after 10 ms.
+  const float slow_rates[5] = { 0.5f, 0.3f, 0.2f, 0.15f, 0.12f };
+  float from = -26.0f;
+  for (int r = 0; r < 5; ++r) {
+    for (int down = 0; down < 2; ++down) {
+      const float to = from + (down ? -1.0f : 1.0f);
+      const float noise = down ? 0.0f : 0.015f;
+      const float stored = RandomStep(0.0f);
+      const int duration = int(1000.0f / slow_rates[r] + 0.5f);
+      bool kept = true;
+      for (int i = 1; i <= duration; ++i) {
+        const float cv = from + (to - from) * float(i) / float(duration);
+        kept = Keeps(cv + Noise(noise), stored) && kept;
+      }
+      CHECK(kept);
+      for (int i = 0; i < 1100; ++i) {
+        Hold(to + Noise(noise), 1, 0.0f);
+      }
+      CHECK(fabsf(RandomStep(0.0f) - to) <= noise);
+      from = to;
+    }
+  }
+  Hold(-23.0f, 10, 0.0f);
+  CHECK(RandomStep(0.0f) == -26.0f);
+  Hold(-23.0f, 1, 0.0f);
+  CHECK(RandomStep(0.0f) == -23.0f);
+  // An RC glide (0.5 s time constant) counts near its end, nowhere between.
+  bool kept = true;
+  for (int i = 1; i <= 4000; ++i) {
+    const float cv = -21.0f - 2.0f * expf(-float(i) / 500.0f);
+    Hold(cv, 1, 0.0f);
+    const float note = RandomStep(0.0f);
+    kept = (note == -23.0f || fabsf(note + 21.0f) < 0.1f) && kept;
+  }
+  CHECK(kept);
+  CHECK(fabsf(RandomStep(0.0f) + 21.0f) < 0.1f);
+  // Noise and a 5 Hz vibrato of a fifth of a semitone on a held note add no
+  // notes, and the next step still counts after 10 ms.
+  Hold(-18.0f, 11, 0.0f);
+  kept = true;
+  for (int i = 0; i < 3000; ++i) {
+    const float vibrato = 0.2f * sinf(float(i) * 2.0f * float(M_PI) / 200.0f);
+    kept = Keeps(-18.0f + vibrato + Noise(0.03f), -18.0f) && kept;
+  }
+  CHECK(kept);
+  Hold(-18.0f, 1, 1.0f / 7.0f);
+  for (int i = 0; i < 200; ++i) {
+    const float note = RandomStep(0.0f);
+    CHECK(note == -18.0f || fabsf(note + 21.0f) < 0.1f);
+  }
+  Hold(-17.5f, 10, 0.0f);
+  CHECK(RandomStep(0.0f) == -18.0f);
+  Hold(-17.5f, 1, 0.0f);
+  CHECK(RandomStep(0.0f) == -17.5f);
   // Unplugged it is Free; unplugging forgets; the clock may wrap.
   RememberNote(RANDOM_INTERVALS_RECENT_NOTES, false, 3.0f, 1.0f, ++now);
   CHECK(RandomStep(3.5f) == 3.5f);
