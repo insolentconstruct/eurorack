@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 20 host programs, 307 named test sections, 2,581
-assertion sites and 518 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 20 host programs, 310 named test sections, 2,598
+assertion sites and 526 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
 detected all 484 faults across eight shards. Named sections and assertion sites
@@ -9,8 +9,8 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased application `931cbb88…` and WAV
-`d6153b67…`. The release documentation and generated guides pass their
+This source pins its own unreleased application `02a0b227…` and WAV
+`cba8fee2…`. The release documentation and generated guides pass their
 checker. Beta 3 module results are under [On a module](#beta-3); some
 checks are still pending.
 
@@ -65,9 +65,9 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | delay | 11 | 46 |
 | delay_mode | 14 | 89 |
 | feedback_diffuser | 4 | 23 |
-| firmware | 35 | 342 |
+| firmware | 36 | 351 |
 | gain | 6 | 29 |
-| granular | 26 | 120 |
+| granular | 28 | 128 |
 | mix | 10 | 49 |
 | options | 69 | 795 |
 | pitch_quantizer | 7 | 83 |
@@ -78,12 +78,12 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | storage | 26 | 389 |
 | trigger | 11 | 31 |
 | wavetable | 14 | 68 |
-| **Total** | **307** | **2,581** |
+| **Total** | **310** | **2,598** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (518 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (526 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
