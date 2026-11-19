@@ -49,6 +49,10 @@ const uint8_t kSettingsFormat = 0xc1;
 const uint8_t kPitchExtensionField = 13;
 const uint8_t kPitchExtensionScale = 15;
 const uint8_t kPitchExtensionValue = 1;
+// Fields 16 and 18 (low nibbles 0-14 each) keep the identity of the profile
+// that last saved; 15 is not set.
+const uint8_t kIdentityField = 16;
+const uint8_t kNumIdentities = 225;
 // Page slot 0 is none; 1 to 21 are the options pages' knobs, in order.
 const uint8_t kNumPageSlots = 22;
 
@@ -107,6 +111,7 @@ enum ProfileFeature {
   FEATURE_DELAY_CROSSFADE,
   FEATURE_PAGE_PREVIEW,
   FEATURE_FIRST_PAGE,
+  FEATURE_START_QUALITY,
   FEATURE_LAST
 };
 
@@ -157,6 +162,7 @@ class Profile {
   }
 
   inline bool custom_bank() const { return custom_bank_; }
+  inline uint8_t identity() const { return identity_; }
   inline uint8_t scale_count() const { return scale_count_; }
   inline const PitchScaleDefinition& scale(size_t index) const {
     return scales_[index];
@@ -176,6 +182,7 @@ class Profile {
   bool ParseScales(const volatile uint8_t* block, uint8_t count);
   ProfileEntry entries_[FEATURE_LAST];
   bool custom_bank_;
+  uint8_t identity_;
   uint8_t scale_count_;
   PitchScaleDefinition scales_[kMaxCustomScales];
 

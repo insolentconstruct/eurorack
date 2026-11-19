@@ -120,6 +120,12 @@ not-set values use the profile default.
 | 36 | Delay time (#30) | No saved value |
 | 37 | Options page preview (#285) | No saved value |
 | 38 | Options page on opening (#285) | No saved value |
+| 39 | Start in quality (#287) | No saved value |
+
+Fields 16 (byte 21 low) and 18 (byte 22 low) hold the identity of the
+profile that last saved, 0–224 from its checksum: field 18 × 15 + field 16.
+It tells a newly installed profile from a reinstall of the same one
+([Start in quality](#start-in-quality)); 15 in either field means none.
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -134,8 +140,8 @@ never-configured pitch field remains unset even when a later profile includes
 ID 15; that profile uses its own starting value. An explicitly saved ID 15
 falls back to Off if that ID is absent from the installed bank.
 
-Field 14 holds the Plaits bank (ID 31, Beta 3); fields 15–19 remain
-unallocated in v1. Fields 10–13 are permanent from this release; the marker stays 0xC1 and every existing field keeps its position.
+Field 14 holds the Plaits bank (ID 31, Beta 3); fields 16 and 18 the profile
+identity (Beta 4); fields 15, 17 and 19 remain unallocated in v1. Fields 10–13 are permanent from this release; the marker stays 0xC1 and every existing field keeps its position.
 The profile table in `beads/profile.cc` owns identities and allowed controls.
 Missing or invalid profiles use the release layout and lock settings writes;
 the boot guard's own recoveries still run from storage state. SEED at boot
@@ -610,3 +616,17 @@ is the first page with a setting. While the opening hold continues, [A]
 already shows that page's first setting and the open flash lights its LEDs.
 Tapping [M] still steps through the pages. Chosen at power-on, with no panel
 slot or saved-state nibble; it runs only when the pages open.
+
+### Start in quality
+
+Hygrostat feature ID 39 chooses Keep current / Bright digital / Cold digital /
+Sunny tape / Scorched cassette (#287). Keep current, the default, never
+changes the saved quality. Any other value is the quality on the first
+start-up after the profile is installed, over stock, an older release or
+another profile; it is also the quality after a settings reset (SEED held at
+power-up). Reinstalling the same profile changes nothing. The saved settings
+record which profile last saved them (fields 16 and 18), so once you save
+anything, such as a new quality on [A], your choice wins. Until then each
+start-up begins in the profile's quality. A frozen granular recording that
+returns from flash keeps the quality it was made in. Chosen at power-on, with no panel slot or
+saved choice; the audio path is unchanged.

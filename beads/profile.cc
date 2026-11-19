@@ -72,6 +72,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Delay crossfade.
   { 2, kNoField, false, false, false, false },  // Page preview.
   { 2, kNoField, false, false, false, false },  // First page.
+  { 5, kNoField, false, false, false, false },  // Start quality.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
@@ -763,6 +764,7 @@ PitchScale Profile::NextScale(PitchScale current) const {
 
 void Profile::Defaults() {
   custom_bank_ = false;
+  identity_ = 0;
   FactoryScales();
   memset(entries_, 0, sizeof(entries_));
   const ProfileEntry defaults[] = {
@@ -835,6 +837,7 @@ bool Profile::Parse(const volatile uint8_t* b) {
     return false;
   }
   custom_bank_ = version == 2 && b[12];
+  identity_ = Read32(b + 16 + bytes) % kNumIdentities;
   scale_count_ = 0;
   if (!ParseScales(b + 16 + 6 * count, scale_count)) {
     return false;

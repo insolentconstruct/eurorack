@@ -3780,8 +3780,9 @@ void TestOptionsEntryChoices() {
     CHECK(r.ui.options_.page() == 4);
   }
 
-  // The same edit writes the same settings sector with the choices on or off.
-  static uint8_t sector[2][0x40000];
+  // The same edit writes the same settings with the choices on or off; only
+  // the profile identity (fields 16 and 18) names the other profile.
+  State saved[2];
   for (int on = 0; on < 2; ++on) {
     Rig r(false);
     if (on) {
@@ -3796,9 +3797,11 @@ void TestOptionsEntryChoices() {
     Close(&r);
     CHECK(test_writes == writes + 1);
     CHECK(r.settings.attack_mode() != mode);
-    memcpy(sector[on], reinterpret_cast<void*>(0x081c0000), 0x40000);
+    saved[on] = r.settings.stored_state_;
+    saved[on].synth_engine &= 0xf0;
+    saved[on].random_intervals &= 0xf0;
   }
-  CHECK(!memcmp(sector[0], sector[1], 0x40000));
+  CHECK(!memcmp(&saved[0], &saved[1], sizeof(State)));
 }
 
 int main() {

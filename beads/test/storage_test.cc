@@ -1229,7 +1229,9 @@ void TestPackedSettings() {
   restored.chunk_storage_.SaveState();
   CHECK(restored.Init(false));
   restored.SaveState();
-  CHECK(restored.stored_state_.random_intervals == 0x95);
+  // The high nibble is clamped; the low one is now the profile identity.
+  CHECK(restored.stored_state_.random_intervals ==
+      (0x90 | restored.profile().identity() / 15));
 }
 
 void Pitch15Profile(uint8_t* block, uint8_t value) {
@@ -1594,9 +1596,12 @@ void TestProfileDormantAmounts() {
     s.SaveState();
     for (size_t i = 0; i < sizeof(unused); ++i) {
       // Brightness/latch reject invalid nibbles; field 13 is pitch extension;
-      // field 14 saves the Plaits bank. Other dormant fields keep their bits.
+      // field 14 saves the Plaits bank; fields 16 and 18 the profile identity.
+      // Other dormant fields keep their bits.
+      const uint8_t identity = s.profile().identity();
       CHECK(bytes[unused[i]] == (unused[i] == 18 ? 0 :
-          unused[i] == 19 ? 0x0e : unused[i] == 20 ? 0x80 : 0x8e));
+          unused[i] == 19 ? 0x0e : unused[i] == 20 ? 0x80 :
+          unused[i] == 21 ? 0x80 | identity % 15 : 0x80 | identity / 15));
     }
     CHECK(s.FeatureValue(FEATURE_BRIGHTNESS) == 0);
     CHECK(s.FeatureValue(FEATURE_SEED_LATCH) == 0);
@@ -1627,6 +1632,134 @@ void OnUnmaskedRead(int) {
       test_checker.test());
   fflush(stdout);
   _exit(1);
+}
+
+// The factory profile with one more entry, before its scale records.
+void ProfileWithEntry(uint8_t* b, uint8_t feature, uint8_t state,
+    uint8_t value) {
+  ProfileTemplate(b);
+  const size_t bytes = b[6] | b[7] << 8;
+  uint8_t* entry = b + 16 + 6 * b[5];
+  memmove(entry + 6, entry, bytes - 6 * b[5]);
+  entry[0] = feature;
+  entry[1] = state;
+  entry[2] = value;
+  entry[3] = entry[4] = entry[5] = 0;
+  ++b[5];
+  b[6] = (bytes + 6) & 255;
+  b[7] = (bytes + 6) >> 8;
+  ProfileChecksum(b);
+}
+
+// Start in quality (#287): a newly installed profile starts in its quality
+// once; the saved identity keeps the user's later choice.
+void TestStartQuality() {
+  test_checker.Start("TestStartQuality");
+  CHECK(FEATURE_START_QUALITY == 39);
+  CHECK(kFeatureDefinitions[FEATURE_START_QUALITY].values == 5);
+  uint8_t factory[kProfileSize];
+  uint8_t scorched[kProfileSize];
+  uint8_t sunny[kProfileSize];
+  uint8_t keep[kProfileSize];
+  uint8_t off[kProfileSize];
+  ProfileTemplate(factory);
+  ProfileWithEntry(scorched, FEATURE_START_QUALITY, PROFILE_FIXED, 4);
+  ProfileWithEntry(sunny, FEATURE_START_QUALITY, PROFILE_FIXED, 3);
+  ProfileWithEntry(keep, FEATURE_START_QUALITY, PROFILE_FIXED, 0);
+  ProfileWithEntry(off, FEATURE_START_QUALITY, PROFILE_OFF, 4);
+  Profile p;
+  CHECK(p.Init(scorched) && p.Init(sunny) && p.Init(keep) && p.Init(off));
+  Profile a, b;
+  a.Init(scorched);
+  b.Init(sunny);
+  CHECK(a.identity() < kNumIdentities && b.identity() < kNumIdentities);
+  CHECK(a.identity() != b.identity());
+  // Adjustable has no page or saved field to change it.
+  uint8_t adjustable[kProfileSize];
+  ProfileWithEntry(adjustable, FEATURE_START_QUALITY, PROFILE_ADJUSTABLE, 1);
+  CHECK(!p.Init(adjustable));
+
+  // A module in use on the standard profile, in Cold digital.
+  Wipe();
+  Settings s;
+  s.Init(false, factory);
+  CHECK(s.state().media == 3);
+  s.mutable_state()->media = 2;
+  s.SaveState();
+  // Keep current, or an Off entry, never changes it.
+  CHECK(s.Init(false, keep) && s.state().media == 2);
+  CHECK(s.Init(false, off) && s.state().media == 2);
+  // A new profile starts in its quality, at every start until a save.
+  CHECK(s.Init(false, scorched) && s.state().media == 0);
+  CHECK(s.Init(false, scorched) && s.state().media == 0);
+  // The user's quality, once saved, wins on the same profile.
+  s.mutable_state()->media = 1;
+  s.SaveState();
+  const State& wire = s.stored_state_;
+  CHECK((wire.synth_engine & 15) == a.identity() % 15);
+  CHECK((wire.random_intervals & 15) == a.identity() / 15);
+  CHECK((wire.synth_engine >> 4) == 9 && (wire.random_intervals >> 4) == 9);
+  CHECK(s.Init(false, scorched) && s.state().media == 1);
+  // Another profile applies its own quality once more.
+  CHECK(s.Init(false, sunny) && s.state().media == 1);
+  s.mutable_state()->media = 3;
+  s.SaveState();
+  CHECK(s.Init(false, sunny) && s.state().media == 3);
+  CHECK(s.Init(false, scorched) && s.state().media == 0);
+
+  // An unset identity nibble, as older releases save, is a new profile.
+  for (int nibble = 0; nibble < 2; ++nibble) {
+    s.Init(false, scorched);
+    s.mutable_state()->media = 2;
+    s.SaveState();
+    s.stored_state_.padding[0] = kSettingsFormat;
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.stored_state_);
+    bytes[21 + nibble] |= 15;
+    s.chunk_storage_.SaveState();
+    CHECK(s.Init(false, scorched) && s.state().media == 0);
+  }
+  // Low 15 is not set, even where high x 15 + 15 would name the profile.
+  s.Init(false, scorched);
+  s.SaveState();
+  s.profile_.identity_ = 15;
+  s.stored_state_.synth_engine = 0x9f;
+  s.stored_state_.random_intervals = 0x90;
+  CHECK(s.LoadOptions());
+  s.stored_state_.synth_engine = 0x90;
+  s.stored_state_.random_intervals = 0x91;
+  CHECK(!s.LoadOptions());
+  // Over stock settings, without the format marker.
+  s.Init(false, scorched);
+  s.mutable_state()->media = 2;
+  s.SaveState();
+  s.stored_state_.padding[0] = 0;
+  s.chunk_storage_.SaveState();
+  CHECK(s.Init(false, scorched) && s.state().media == 0);
+
+  // A settings reset starts in the profile's quality.
+  s.mutable_state()->media = 2;
+  s.SaveState();
+  CHECK(s.Init(true, scorched) && s.state().media == 0);
+  CHECK(s.Init(true, keep) && s.state().media == 3);
+
+  // A frozen granular recording that returns from flash keeps its quality;
+  // without autosave or in spectral nothing returns.
+  for (int variant = 0; variant < 3; ++variant) {
+    s.Init(false, factory);
+    s.mutable_state()->media = 2;
+    s.mutable_state()->frozen = 1;
+    s.mutable_state()->disable_autosave = variant == 1;
+    s.set_spectral(variant == 2);
+    s.SaveState();
+    CHECK(s.Init(false, scorched));
+    CHECK(s.state().media == (variant ? 0 : 2));
+  }
+
+  // A new module starts in it too.
+  Wipe();
+  Settings fresh;
+  fresh.Init(false, sunny);
+  CHECK(fresh.state().media == 1);
 }
 
 int main() {
@@ -1662,6 +1795,7 @@ int main() {
   TestProfileDormantAmounts();
   TestProfileNewAssignment();
   TestProfileDiffusionOff();
+  TestStartQuality();
   test_checker.Start("main");
   CHECK(TestFlash().violations == 0);
   CHECK(TestFlash().wide_sectors == 0);

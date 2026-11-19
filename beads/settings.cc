@@ -103,6 +103,11 @@ bool Settings::Init(bool recovery_mode,
     const ProfileEntry& e = profile_.entry(ProfileFeature(i));
     SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : e.value);
   }
+  // 1 Bright digital to 4 Scorched cassette; 0 keeps the saved quality.
+  const uint8_t start_quality = profile_values_[FEATURE_START_QUALITY];
+  if (start_quality) {
+    state_.media = 4 - start_quality;
+  }
   stored_state_ = state_;
   if (!profile_locked_) {
     PackOptions();
@@ -155,13 +160,20 @@ bool Settings::Init(bool recovery_mode,
   }
   // Sanitize settings read from flash.
   state_ = stored_state_;
-  LoadOptions();
+  const bool new_profile = LoadOptions();
   state_.padding[0] = 0;
   CONSTRAIN(state_.media, 0, 3);
   CONSTRAIN(state_.assignable_cv_destination, 0, 3);
 
   NormalizeOptions();
   ApplyProfile();
+  // A newly installed profile starts in its quality once; a frozen recording
+  // returning from flash keeps the quality it was made in.
+  const bool restores = state_.frozen && !state_.disable_autosave && \
+      !spectral();
+  if (new_profile && start_quality && !restores) {
+    state_.media = 4 - start_quality;
+  }
   if (!state_.gain) {
     state_.gain = DefaultGain();
   }
@@ -331,7 +343,7 @@ void Settings::ApplyProfile() {
   }
 }
 
-void Settings::LoadOptions() {
+bool Settings::LoadOptions() {
   dormant_destination_ = stored_state_.width_assigned;
   const uint8_t marker = stored_state_.padding[0];
   if (marker != kSettingsFormat) {
@@ -376,6 +388,11 @@ void Settings::LoadOptions() {
     }
     SetFeatureValue(feature, value);
   }
+  const uint8_t low = packed_[kIdentityField / 2] & 15;
+  const uint8_t high = packed_[kIdentityField / 2 + 1] & 15;
+  // High 15 never matches; low 15 must not alias the next row.
+  return marker != kSettingsFormat || low == 15 ||
+      high * 15 + low != profile_.identity();
 }
 
 void Settings::PackOptions() {
@@ -407,6 +424,9 @@ void Settings::PackOptions() {
       }
     }
   }
+  uint8_t* identity = &packed_[kIdentityField / 2];
+  identity[0] = (identity[0] & 0xf0) | (profile_.identity() % 15);
+  identity[1] = (identity[1] & 0xf0) | (profile_.identity() / 15);
   uint8_t* bytes = reinterpret_cast<uint8_t*>(&stored_state_);
   for (int i = 0; i < kNumPackedBytes; ++i) {
     bytes[kFieldBytes[i]] = packed_[i];
