@@ -200,7 +200,9 @@ current bank, as on Plaits: green (its first bank), red (noise and
 drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,
 hold [A] and press FREEZE to step to the next bank; [A] flashes the bank
 colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still
-buffer trim. A profile can choose the starting bank (green by default).
+buffer trim; in spectral and the wavetable synth it only releases a
+latched FREEZE. A profile can choose the starting bank (green by
+default).
 
 Options page
 ------------
@@ -292,10 +294,14 @@ Processor: Lower half selects Granular (Stock); upper half selects
 Spectral, using Mutable Instruments Clouds. TIME selects a spectrum,
 SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls
 renewal and phase scrambling. SEED glitches; FREEZE holds. Random
-controls update per spectrum. Mixing, quality, assignable CV and R gate
-work normally; diffusion, delay and wavetable synth are unavailable.
-Closing fades the change and clears recording. The saved frozen buffer
-returns with Granular.
+controls update per spectrum. Mixing, quality and assignable CV work
+normally; the R gate follows the grain clock that DENSITY would set, not
+the spectrum renewal. Unavailable: diffusion, stereo width, monophonic
+grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay, buffer
+trim, FREEZE autosave and the wavetable synth.
+Closing fades the change and clears recording; while FREEZE is on, the
+current engine plays on and the change waits for FREEZE to be released.
+The saved frozen buffer returns with Granular.
 
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance
 voices, retaining pitch and random settings. FEEDBACK selects one of
@@ -307,9 +313,10 @@ last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with
 both inputs unpatched, or Manual. With inputs unpatched and FREEZE off,
-hold [A] about a second and a half to start; repeat to stop. Patching an
-input stops it once FREEZE is off. With an input patched, holding [A]
-restarts automatic gain.
+hold [A] about a second and a half and release to start; repeat to stop.
+Patching an input stops it once FREEZE is off. With an input patched,
+the same hold restarts automatic gain. The hold acts on release, and not
+at all if a knob or button was used while [A] was down.
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
@@ -363,8 +370,8 @@ pulses (page 3), turn DRY/WET into its upper half ([A] steady yellow)
 and close the page. It plays when the wavetable synth would: with Synth
 start on Automatic (Stock), ten seconds after both audio inputs are
 unpatched; on Manual, with both audio inputs unpatched and FREEZE off,
-hold [A] about a second and a half to start or stop it. Patching an
-audio input stops it once FREEZE is off.
+hold [A] about a second and a half and release to start or stop it.
+Patching an audio input stops it once FREEZE is off.
 
 - FEEDBACK selects one of eight models in the current bank.
 - TIME, SIZE and SHAPE are Plaits' HARMONICS, TIMBRE and MORPH.

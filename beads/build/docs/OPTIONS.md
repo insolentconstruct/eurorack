@@ -71,9 +71,9 @@ Scale (tap SEED to step through):
 - **Buffer trim:** Hold [A], then press FREEZE [B] to start a fresh recording window. The next freeze keeps only what was recorded since.
 - **Plaits banks:** With the Plaits synth playing, FEEDBACK selects one of eight models and [A]+FREEZE [B] steps the bank instead of trimming: green, red, yellow, then green again. [A] flashes the bank colour; FREEZE stays as it was.
 - **Stereo width:** Hold [A] and turn DRY/WET; fully CCW is Stock. The [A] LED shows the width as a meter; releasing [A] saves it. Once on, [M] can route CV to it (all three mix LEDs pulsing).
-- **Manual gain:** Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] LED shows it as a meter. With an input patched, a long press of [A] returns to automatic gain.
+- **Manual gain:** Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] LED shows it as a meter. With an input patched, holding [A] for 1.5 s and releasing it returns to automatic gain.
 - **Grain diffusion:** Hold [A] and turn REVERB; fully CCW is none. Once set, [M] can route CV to it (REVERB LED pulsing).
-- **Wavetable synth (Manual):** With Synth start on Manual, both inputs unplugged and FREEZE off, hold [A] for about a second and a half to start or stop it.
+- **Wavetable synth (Manual):** With Synth start on Manual, both inputs unplugged and FREEZE off, hold [A] for about a second and a half and release it to start or stop it.
 
 **Warning:** Don't hold SEED while powering on: it resets all settings to defaults (calibration is kept).
 
@@ -111,11 +111,11 @@ In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound
 
 Frozen feedback Evolving runs frozen grains through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
-Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, delay mode or wavetable synth. A new processor takes over when the page closes, clearing the recording; a frozen buffer saved to flash comes back with Granular.
+Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, stereo width, monophonic grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or wavetable synth; the R gate follows the grain clock DENSITY would set. A new processor takes over when the page closes and FREEZE is off, clearing the recording; until then the current one plays on. A frozen buffer saved to flash comes back with Granular.
 
 Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains, except for models with their own envelope. With DENSITY at noon and SEED unpatched the last voice drones until SEED plays a note. The models in each bank are listed in the README's "Plaits synth" section.
 
-Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half to start or stop it. Patching an input stops it once FREEZE is off.
+Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half and release it to start or stop it. Patching an input stops it once FREEZE is off.
 
 Limiter Off lets loud peaks clip.
 

@@ -310,9 +310,10 @@ void Process(
     ui.ClearTrimFlag();
   }
   // Fade to silence before changing delay topology in the shared buffer,
-  // and before main swaps the engine.
+  // and before main swaps the engine, which waits for FREEZE to be released.
   const bool requested_style = ui.clouds_style();
-  const bool engine_change = ui.spectral() != processor.spectral();
+  const bool engine_change = ui.spectral() != processor.spectral() &&
+      !ui.should_ignore_state_change();
   reverb_style_previous_gain = reverb_style_gain;
   if (requested_style != clouds_style || engine_change || codec_fade) {
     reverb_style_gain = max(0.0f, reverb_style_gain - kReverbStyleFadeStep);

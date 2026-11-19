@@ -569,16 +569,26 @@ void TestGainHoldThresholdAndReload() {
   r.settings.SaveState();
   uint32_t writes = test_writes;
   media = r.settings.state().media;
+  // The hold acts on release (#289): a release before 1.5 s is a tap.
   r.Down(SWITCH_MEDIA);
   uint32_t start = r.ui.press_time_[SWITCH_MEDIA];
-  while (stmlib::system_clock.milliseconds() - start < 1499) {
+  while (stmlib::system_clock.milliseconds() - start < 1480) {
+    r.Tick(1, true);
+  }
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.settings.state().gain == 123 && test_writes == writes + 1);
+  CHECK(r.settings.state().media == (media + 3) % 4);
+  media = r.settings.state().media;
+  writes = test_writes;
+  r.Down(SWITCH_MEDIA);
+  start = r.ui.press_time_[SWITCH_MEDIA];
+  while (stmlib::system_clock.milliseconds() - start < 1495) {
     r.Tick(1, true);
   }
   CHECK(r.settings.state().gain == 123 && test_writes == writes);
-  r.Tick(1, true);
-  CHECK(r.settings.state().gain == 0 && test_writes == writes + 1);
   r.Up(SWITCH_MEDIA);
-  CHECK(r.settings.state().media == media && test_writes == writes + 1);
+  CHECK(r.settings.state().gain == 0 && test_writes == writes + 1);
+  CHECK(r.settings.state().media == media);
   Settings loaded;
   CHECK(loaded.Init(false));
   CHECK(loaded.state().gain == 0 && loaded.state().media == media);
@@ -1287,21 +1297,21 @@ void TestSelfPlayHold() {
         // While frozen, the hold restarts automatic gain as in stock.
         const bool request = mode && no_input && !frozen;
         for (int hold = 0; hold < 2; ++hold) {
+          // The hold acts on release (#289), however long it lasts.
           r.Down(SWITCH_MEDIA);
           uint32_t start = r.ui.press_time_[SWITCH_MEDIA];
-          while (stmlib::system_clock.milliseconds() - start < 1499) {
+          while (stmlib::system_clock.milliseconds() - start < 1600) {
             r.Tick(1, true);
           }
           CHECK(!r.ui.self_play_requested());
-          r.Tick(1, true);
+          CHECK(r.gain.restarts == (request ? 0 : hold));
+          r.Up(SWITCH_MEDIA);
           CHECK(r.ui.self_play_requested() == request);
           CHECK(r.gain.restarts == (request ? 0 : hold + 1));
           if (request) {
             CHECK(r.settings.state().gain == 123 && test_writes == writes);
           }
           r.ui.ClearSelfPlayRequest();
-          CHECK(!r.ui.self_play_requested());
-          r.Up(SWITCH_MEDIA);
           CHECK(!r.ui.self_play_requested());
           CHECK(r.settings.state().media == media);
         }
@@ -2805,7 +2815,9 @@ void TestProfilePages() {
     }
     for (int slot = 1; slot < kNumPageSlots; ++slot) {
       Rig r(false);
-      CustomProfile(b, id, slot, 0, 0);
+      // Synth start needs its gesture (#292).
+      CustomProfile(b, id, slot, 0,
+          id == FEATURE_SYNTH_START ? ACTION_HOLD : ACTION_NONE);
       ApplyCustomProfile(&r, b);
       r.Enter();
       CHECK(r.ui.options_.page() == (slot - 1) / 3);
@@ -2842,8 +2854,10 @@ void PagesProfile(uint8_t* b, const uint8_t (*placed)[2], int count) {
     uint8_t* entry = b + 16 + 6 * i;
     entry[0] = placed[i][0];
     entry[1] = PROFILE_ADJUSTABLE;
-    entry[2] = entry[4] = entry[5] = 0;
+    entry[2] = entry[4] = 0;
     entry[3] = placed[i][1];
+    // Synth start needs its gesture (#292).
+    entry[5] = entry[0] == FEATURE_SYNTH_START ? ACTION_HOLD : ACTION_NONE;
   }
   const size_t size = 16 + b[6];
   const uint32_t crc = Profile::Crc32(b, size);
@@ -3051,6 +3065,12 @@ void TestProfileActions() {
       for (int patched = 0; patched < 2; ++patched) {
         Rig r(false);
         CustomProfile(b, features[i], 0, 0, slot);
+        // Only Synth start takes the [A] hold (#291).
+        if (slot == ACTION_HOLD && features[i] != FEATURE_SYNTH_START) {
+          r.settings.Init(false, b);
+          CHECK(r.settings.profile_locked());
+          continue;
+        }
         ApplyCustomProfile(&r, b);
         r.settings.set_self_play_on_request(true);
         r.ui.set_no_input(!patched);
@@ -3058,6 +3078,7 @@ void TestProfileActions() {
         r.Down(SWITCH_MEDIA);
         if (slot == 3) {
           r.Tick(1510, true);
+          r.Up(SWITCH_MEDIA);
         } else {
           r.Down(slot == 1 ? SWITCH_SEED : SWITCH_FREEZE);
         }

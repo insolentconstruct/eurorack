@@ -2441,6 +2441,221 @@ void TestDelayOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+// The factory profile with one feature's action slot moved, as a Hygrostat
+// layout can place it.
+void MoveAction(uint8_t* block, uint8_t feature, uint8_t action) {
+  for (int i = 0; i < block[5]; ++i) {
+    uint8_t* entry = block + 16 + 6 * i;
+    if (entry[0] == feature) {
+      entry[5] = action;
+    }
+  }
+  const size_t bytes = 6 * block[5];
+  const uint32_t crc = Profile::Crc32(block, 16 + bytes);
+  for (size_t i = 0; i < 4; ++i) {
+    block[16 + bytes + i] = crc >> (8 * i);
+  }
+}
+
+// Monophonic or Buffer trim on the [A] hold would leave a saved manual gain
+// no way back to automatic gain (#291): such a profile is refused, and the
+// standard controls' hold restarts automatic gain.
+void TestHoldActionRestartsAutoGain() {
+  test_checker.Start("TestHoldActionRestartsAutoGain");
+  const uint8_t features[] = { FEATURE_MONOPHONIC, FEATURE_TRIM };
+  const uint8_t synth_start[] = { ACTION_SEED, ACTION_FREEZE };
+  for (int i = 0; i < 2; ++i) {
+    Rig r(false, false);
+    uint8_t block[kProfileSize];
+    BuildProfile(block, NULL, 0);
+    MoveAction(block, FEATURE_SYNTH_START, synth_start[i]);
+    MoveAction(block, features[i], ACTION_HOLD);
+    FlashProfile(block);
+    r.Reboot(false);
+    CHECK(settings.profile_locked());
+    CHECK(settings.profile().Action(ACTION_HOLD) == FEATURE_SYNTH_START);
+    settings.mutable_state()->gain = 200;
+    r.audio = 0x10000000;
+    r.Settle();
+    r.HoldMedia(true);
+    CHECK(settings.state().gain == 0);
+    FlashProfile(factory_profile);
+  }
+  // Monophonic and Buffer trim may still swap their own gestures.
+  Rig r(false, false);
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  MoveAction(block, FEATURE_MONOPHONIC, ACTION_FREEZE);
+  MoveAction(block, FEATURE_TRIM, ACTION_SEED);
+  FlashProfile(block);
+  r.Reboot(false);
+  CHECK(!settings.profile_locked());
+  CHECK(settings.profile().Action(ACTION_SEED) == FEATURE_TRIM);
+  FlashProfile(factory_profile);
+}
+
+// Synth start on an options page with no gesture is refused (#292): Manual
+// would leave nothing to start the synth. The standard controls' hold does.
+void TestManualSynthStartNeedsGesture() {
+  test_checker.Start("TestManualSynthStartNeedsGesture");
+  Rig r(true, true);
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  MoveAction(block, FEATURE_SYNTH_START, ACTION_NONE);
+  FlashProfile(block);
+  r.Reboot(false);
+  CHECK(settings.profile_locked());
+  CHECK(settings.self_play_on_request());
+  CHECK(settings.profile().Action(ACTION_HOLD) == FEATURE_SYNTH_START);
+  r.Settle();
+  r.Advance(11000);
+  RunMainLoop();
+  CHECK(!synth_mode);
+  r.HoldMedia(true);
+  r.Settle();
+  CHECK(synth_mode);
+  FlashProfile(factory_profile);
+}
+
+// A slow [A] gesture is not pre-empted by the hold (#289): the hold acts on
+// release, and only when nothing else was done while [A] was down.
+void TestSlowMediaGestures() {
+  test_checker.Start("TestSlowMediaGestures");
+  Rig r(false, false);
+  r.Settle();
+  settings.mutable_state()->gain = 200;
+  settings.SaveState();
+  // Width, then diffusion, two seconds into the hold: the gain stays.
+  const PotsAdcChannel knobs[] = {
+    POTS_ADC_CHANNEL_DRY_WET, POTS_ADC_CHANNEL_REVERB
+  };
+  for (int k = 0; k < 2; ++k) {
+    test_down[SWITCH_MEDIA] = true;
+    r.Tick(2000, true);
+    CHECK(settings.state().gain == 200);
+    PotsAdc::values_[knobs[k]] = 40000;
+    r.Tick(100, true);
+    test_down[SWITCH_MEDIA] = false;
+    r.Tick(50, true);
+    CHECK(settings.state().gain == 200);
+    PotsAdc::values_[knobs[k]] = 0;
+    r.Tick(50, true);
+  }
+  CHECK(settings.stereo_width() != 0 && settings.diffusion_set());
+  // FREEZE two seconds in trims, clearing the FREEZE latch, and keeps the
+  // gain.
+  ui.set_freeze_button_state(true);
+  test_down[SWITCH_MEDIA] = true;
+  r.Tick(2000, true);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  test_down[SWITCH_FREEZE] = test_down[SWITCH_MEDIA] = false;
+  r.Tick(50, true);
+  CHECK(!ui.freeze_button_state() && !ui.trim_flag());
+  CHECK(settings.state().gain == 200);
+  // A hold alone acts on release, however long.
+  const uint8_t media = settings.state().media;
+  test_down[SWITCH_MEDIA] = true;
+  r.Tick(3000, true);
+  CHECK(settings.state().gain == 200);
+  test_down[SWITCH_MEDIA] = false;
+  r.Tick(50, true);
+  CHECK(settings.state().gain == 0 && settings.state().media == media);
+  // In Plaits synth play with Manual start, a slow [A]+FREEZE steps the
+  // bank and keeps the synth.
+  Rig s(true, true);
+  settings.set_plaits_synth(true);
+  settings.SaveState();
+  s.Reboot(false);
+  StartSelfPlay(&s, true);
+  const uint8_t bank = settings.FeatureValue(FEATURE_PLAITS_BANK);
+  test_down[SWITCH_MEDIA] = true;
+  s.Tick(2000, true);
+  test_down[SWITCH_FREEZE] = true;
+  s.Tick(20, true);
+  test_down[SWITCH_FREEZE] = test_down[SWITCH_MEDIA] = false;
+  s.Tick(50, true);
+  s.Settle();
+  CHECK(synth_mode);
+  CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == (bank + 1) % 3);
+}
+
+// A Processor change while frozen keeps the current engine playing until
+// FREEZE is released, then fades and switches (#288).
+void TestEngineChangeWhileFrozen() {
+  test_checker.Start("TestEngineChangeWhileFrozen");
+  extern float reverb_style_gain;
+  Rig r(false, false);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 8000;
+  // Grains from the last moment recorded.
+  PotsAdc::values_[POTS_ADC_CHANNEL_TIME] = 0;
+  const double live = RunSquare(&r, 2400);
+  ui.set_freeze_button_state(true);
+  const double frozen = RunSquare(&r, 400);
+  settings.set_spectral(true);
+  SysTick_Handler();
+  CHECK(ui.spectral() && !processor.spectral());
+  double pending = 1e9;
+  for (int i = 0; i < 8; ++i) {
+    pending = std::min(pending, RunSquare(&r, 400));
+    CHECK(reverb_style_gain == 1.0f && !processor.spectral());
+  }
+  printf("Engine change while frozen: live %.1f, frozen %.1f, pending %.1f\n",
+      live, frozen, pending);
+  CHECK(frozen > 1.0 && pending > frozen * 0.25);
+  ui.set_freeze_button_state(false);
+  for (int i = 0; i < 400 && !processor.spectral(); ++i) {
+    RunSquare(&r, 1);
+  }
+  CHECK(processor.spectral());
+  // Back to granular with a FREEZE gate high: spectral plays on, then fades.
+  RunSquare(&r, 2000);
+  test_freeze_input = true;
+  RunSquare(&r, 400);
+  settings.set_spectral(false);
+  SysTick_Handler();
+  pending = 1e9;
+  for (int i = 0; i < 8; ++i) {
+    pending = std::min(pending, RunSquare(&r, 400));
+    CHECK(reverb_style_gain == 1.0f && processor.spectral());
+  }
+  CHECK(pending > 1.0);
+  test_freeze_input = false;
+  bool faded = false;
+  for (int i = 0; i < 400 && processor.spectral(); ++i) {
+    RunSquare(&r, 1);
+    faded |= reverb_style_gain == 0.0f;
+  }
+  CHECK(faded && !processor.spectral());
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+  PotsAdc::values_[POTS_ADC_CHANNEL_TIME] = 32768;
+}
+
+// In calibration, holding [A] confirms a step only on release, once. The
+// stopped normalization probe counts down from INT_MIN, so no audio runs.
+void TestCalibrationStepOnRelease() {
+  test_checker.Start("TestCalibrationStepOnRelease");
+  Rig r(false, false);
+  r.Settle();
+  test_down[SWITCH_ASSIGN] = true;
+  r.Advance(20);
+  test_down[SWITCH_MEDIA] = true;
+  r.Advance(20);
+  test_down[SWITCH_ASSIGN] = test_down[SWITCH_MEDIA] = false;
+  r.Advance(20);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+  test_down[SWITCH_MEDIA] = true;
+  r.Advance(2000);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+  test_down[SWITCH_MEDIA] = false;
+  r.Advance(20);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
+  r.Advance(2000);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2487,5 +2702,10 @@ int main() {
   TestMixOptionsProfile();
   TestGrainStealingProfile();
   TestDelayOptionsProfile();
+  TestHoldActionRestartsAutoGain();
+  TestManualSynthStartNeedsGesture();
+  TestSlowMediaGestures();
+  TestEngineChangeWhileFrozen();
+  TestCalibrationStepOnRelease();
   return test_checker.failures() ? 1 : 0;
 }

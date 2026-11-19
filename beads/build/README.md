@@ -34,15 +34,15 @@ Reverb character selects Stock or Clouds-style, which adds diffusion until manua
 
 Frozen feedback selects Stock or Evolving. Evolving fades in to soften and drift frozen grains, controlled by FEEDBACK; it stops with FREEZE off.
 
-Processor: Lower half selects Granular (Stock); upper half selects Spectral, using Mutable Instruments Clouds. TIME selects a spectrum, SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls renewal and phase scrambling. SEED glitches; FREEZE holds. Random controls update per spectrum. Mixing, quality, assignable CV and R gate work normally; diffusion, delay and wavetable synth are unavailable. Closing fades the change and clears recording. The saved frozen buffer returns with Granular.
+Processor: Lower half selects Granular (Stock); upper half selects Spectral, using Mutable Instruments Clouds. TIME selects a spectrum, SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls renewal and phase scrambling. SEED glitches; FREEZE holds. Random controls update per spectrum. Mixing, quality and assignable CV work normally; the R gate follows the grain clock that DENSITY would set, not the spectrum renewal. Unavailable: diffusion, stereo width, monophonic grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay, buffer trim, FREEZE autosave and the wavetable synth. Closing fades the change and clears recording; while FREEZE is on, the current engine plays on and the change waits for FREEZE to be released. The saved frozen buffer returns with Granular.
 
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the oscillator/grain balance it sets in the stock synth; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
 
-Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, holding [A] restarts automatic gain.
+Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half and release to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, the same hold restarts automatic gain. The hold acts on release, and not at all if a knob or button was used while [A] was down.
 
 ## Plaits synth
 
-Drizzlet can play six Mutable Instruments Plaits voices in place of the wavetable synth. Open the options page, tap [M] until the REVERB LED pulses (page 3), turn DRY/WET into its upper half ([A] steady yellow) and close the page. It plays when the wavetable synth would: with Synth start on Automatic (Stock), ten seconds after both audio inputs are unpatched; on Manual, with both audio inputs unpatched and FREEZE off, hold [A] about a second and a half to start or stop it. Patching an audio input stops it once FREEZE is off.
+Drizzlet can play six Mutable Instruments Plaits voices in place of the wavetable synth. Open the options page, tap [M] until the REVERB LED pulses (page 3), turn DRY/WET into its upper half ([A] steady yellow) and close the page. It plays when the wavetable synth would: with Synth start on Automatic (Stock), ten seconds after both audio inputs are unpatched; on Manual, with both audio inputs unpatched and FREEZE off, hold [A] about a second and a half and release to start or stop it. Patching an audio input stops it once FREEZE is off.
 
 - FEEDBACK selects one of eight models in the current bank.
 - TIME, SIZE and SHAPE are Plaits' HARMONICS, TIMBRE and MORPH.
@@ -129,7 +129,7 @@ Grain stealing: by default Drizzlet chooses which playing grain a new one replac
 
 Two delay choices keep stock behaviour by default and add no panel gesture or options-page slot. Delay feedback: Unity notch gives FEEDBACK a notch near 3 o'clock where repeats neither fade nor grow, for sound on sound, and keeps the bass in the loop; both ends of the knob stay stock. Delay time: Crossfade keeps the delay time while DENSITY turns, then fades to the new one instead of bending the pitch; very short delays still glide, for flanging. Granular and both synths are unchanged.
 
-Plaits synth banks: FEEDBACK selects one of the eight models of the current bank, as on Plaits: green (its first bank), red (noise and drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays, hold [A] and press FREEZE to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim. A profile can choose the starting bank (green by default).
+Plaits synth banks: FEEDBACK selects one of the eight models of the current bank, as on Plaits: green (its first bank), red (noise and drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays, hold [A] and press FREEZE to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim; in spectral and the wavetable synth it only releases a latched FREEZE. A profile can choose the starting bank (green by default).
 
 ## Saved data
 

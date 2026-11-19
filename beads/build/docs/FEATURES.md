@@ -24,7 +24,7 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 | Gesture | Allocation / action | Saved? |
 |---|---|---|
 | the quality button [A] tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
-| [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and Synth start on Manual, toggle wavetable synth; otherwise restart automatic gain and clear manual gain | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
+| [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and Synth start on Manual, toggle wavetable synth; otherwise restart automatic gain and clear manual gain. Drizzlet acts on release, and not after a knob turn or button press while [A] was down (#289); stock acts at 1.5 s | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
 | [A] + feedback knob | TAKEN: manual input gain; release saves. A profile can start a blank gain in manual gain ([ID 27](#input-gain-at-power-on)) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
 | [A] + dry/wet knob | TAKEN by Drizzlet: stereo width; release saves | Yes |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state save starts after 10 s (with interruption backoff below) if autosave enabled, outside wavetable synth and spectral modes <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
@@ -310,8 +310,8 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 - **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
-- **Synth start, Manual:** hold [A] 1.5 s to start or stop (the manual says 1 s).
-- **Processor, Spectral:** takes effect once the page has closed: a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
+- **Synth start, Manual:** hold [A] 1.5 s and release to start or stop (the manual says 1 s).
+- **Processor, Spectral:** takes effect once the page has closed and FREEZE is off (until then the current engine plays on): a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
 
@@ -476,14 +476,21 @@ degrees each; Beta 2's 24 models on one knob are gone. While the Plaits synth
 plays, hold [A] and press FREEZE to step green, red, yellow, then green
 again; [A] shows the new bank's colour for half a second, the bank is saved
 (field 14) and FREEZE stays as it was. FREEZE alone still sustains.
-Granular, delay, spectral and the wavetable synth keep buffer trim on
-[A]+FREEZE.
+Elsewhere [A]+FREEZE stays buffer trim; spectral and the wavetable synth
+have no recording to trim there, so it only releases a latched FREEZE.
 
 The step is fixed to [A]+FREEZE in Plaits synth play: it is the only way to
 reach two thirds of the models, so it does not depend on where a profile
 puts Buffer trim. Whatever a custom profile assigns to [A]+FREEZE keeps its
 meaning everywhere else; only Synth start, which can stop the synth, keeps
 [A]+FREEZE in Plaits play too, and then the bank stays at its start.
+
+Two placements are refused, by the firmware's profile check and by
+Hygrostat: Monophonic grains or Buffer trim on the [A] hold, which would
+leave a saved manual gain no way back to automatic gain (#291), and Synth
+start on Manual or Adjustable with no gesture, which would leave Manual
+nothing to start the synth (#292). The firmware treats such a profile as
+invalid: standard controls, no saving.
 
 Speech decodes a new word bank over several audio blocks, 32 frames per
 block, instead of all at once (#225): one bank took up to 1.7 blocks. While
