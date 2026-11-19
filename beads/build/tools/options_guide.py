@@ -305,9 +305,12 @@ DETAILS = [
     "PITCH shifts it (following the pitch scale). DENSITY sets how quickly "
     "the spectrum is renewed, and scrambles its phases towards either end. "
     "Holding SEED glitches it; FREEZE holds it. There is no grain "
-    "diffusion, delay mode or wavetable synth. A new processor takes over "
-    "when the page closes, clearing the recording; a frozen buffer saved "
-    "to flash comes back with Granular.",
+    "diffusion, stereo width, monophonic grains, Evolving, Attacks, Random "
+    "pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or "
+    "wavetable synth; the R gate follows the grain clock DENSITY would set. "
+    "A new processor takes over when the page closes and FREEZE is off, "
+    "clearing the recording; until then the current one plays on. A frozen "
+    "buffer saved to flash comes back with Granular.",
     "Synth Plaits plays six Plaits voices instead of the wavetable "
     "synth: FEEDBACK picks one of the eight models in the current bank, "
     "TIME, SIZE and SHAPE set "
@@ -318,8 +321,8 @@ DETAILS = [
     "synth\" section.",
     "Synth start Manual: the synth never starts by itself. It needs both "
     "audio inputs unpatched and FREEZE off: hold the quality button [A] for "
-    "about a second and a half to start or stop it. Patching an input "
-    "stops it once FREEZE is off.",
+    "about a second and a half and release it to start or stop it. Patching "
+    "an input stops it once FREEZE is off.",
     "Limiter Off lets loud peaks clip.",
     "Stereo width is not on the pages: hold [A] and turn DRY/WET, then "
     "release [A] to save. Fully CCW is Stock; turn clockwise to spread the "
@@ -363,8 +366,8 @@ GESTURES = [
     (
         "Manual gain",
         "Hold [A] and turn FEEDBACK to set the input gain by hand; the [A] "
-        "LED shows it as a meter. With an input patched, a long press of [A] "
-        "returns to automatic gain.",
+        "LED shows it as a meter. With an input patched, holding [A] for "
+        "1.5 s and releasing it returns to automatic gain.",
         "Hold [A], turn FEEDBACK. With an input patched, a long [A] press "
         "returns to automatic.",
     ),
@@ -377,8 +380,9 @@ GESTURES = [
     (
         "Wavetable synth (Manual)",
         "With Synth start on Manual, both inputs unplugged and FREEZE off, "
-        "hold [A] for about a second and a half to start or stop it.",
-        "Synth start Manual, no inputs, FREEZE off: hold [A] 1.5 s.",
+        "hold [A] for about a second and a half and release it to start or "
+        "stop it.",
+        "Synth start Manual, no inputs, FREEZE off: hold [A] 1.5 s, release.",
     ),
 ]
 WARNING = (

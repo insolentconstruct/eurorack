@@ -384,7 +384,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="35" y="1388" font-size="15" font-weight="normal" fill="#222" text-anchor="start">fully CCW is none. [M] can route CV to it.</text>
 <text x="365" y="1364" font-size="15" font-weight="bold" fill="#222" text-anchor="start">Wavetable synth (Manual)</text>
 <text x="365" y="1385" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Synth start Manual, no inputs, FREEZE off:</text>
-<text x="365" y="1406" font-size="15" font-weight="normal" fill="#222" text-anchor="start">hold [A] 1.5 s.</text>
+<text x="365" y="1406" font-size="15" font-weight="normal" fill="#222" text-anchor="start">hold [A] 1.5 s, release.</text>
 <rect x="687" y="1341" width="331" height="75" rx="6" fill="#fdf0f0" stroke="#bd3030" stroke-width="3"/>
 <text x="695" y="1363" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">Don&#x27;t hold SEED while powering on:</text>
 <text x="695" y="1384" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">it resets all settings to defaults</text>

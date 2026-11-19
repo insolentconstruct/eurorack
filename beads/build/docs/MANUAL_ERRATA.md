@@ -8,7 +8,7 @@ and vanilla firmware. Drizzlet keeps these unless noted; its additions are in
 ## Corrections
 
 - **Sunny tape buffer:** holds about 10.67 s in stereo or 21.33 s in mono, rather than 10 or 20 s.
-- **Restarting automatic gain** (Recording quality): hold [A] for about **1.5 s**, not one second; releasing earlier changes the recording quality. With Drizzlet's wavetable synth Manual setting, both inputs unpatched and FREEZE off, this hold starts or stops wavetable synth instead.
+- **Restarting automatic gain** (Recording quality): hold [A] for about **1.5 s**, not one second; releasing earlier changes the recording quality. Drizzlet acts when [A] is released, and not at all if a knob or button was used meanwhile, so a slow [A] gesture never clears a saved manual gain. With Drizzlet's wavetable synth Manual setting, both inputs unpatched and FREEZE off, this hold starts or stops wavetable synth instead.
 - **Synth quality table** (Beads as a granular wavetable synth): the amber setting is **16-bit dry, 6-bit grains**, not 4-bit.
 - **Update error** (Firmware update procedure): the [A] and input-level LEDs keep showing the input level; the other LEDs blink.
 
@@ -33,7 +33,7 @@ and vanilla firmware. Drizzlet keeps these unless noted; its additions are in
 - **Calibration:** pressing [A] and [M] together starts CV calibration, which needs precise reference voltages and overwrites the stored calibration. Avoid it unless recalibrating; see [CALIBRATION.md](CALIBRATION.md).
 - **Saved choices:** recording quality, [M] routing and amounts, the R trigger-output mode and autosave are remembered across power cycles, not just input gain.
 - **Buffer save takes time:** 10 s of FREEZE starts the save, and the FREEZE LED dims while it runs. Keep FREEZE on until it finishes, or the buffer is not restored. In Drizzlet, a save cut short makes the next wait longer, up to 320 s (see README.md).
-- **Quality changes while frozen** are remembered and shown, and take effect when you unfreeze.
+- **Quality changes while frozen** are remembered and shown, and take effect when you unfreeze. In Drizzlet, a Processor change waits for FREEZE the same way, and the current engine keeps playing meanwhile.
 - **Knobs after hidden edits:** after setting gain or an [M] amount, the knob catches up gradually with its normal parameter instead of jumping.
 - **Synth controls:** in wavetable synth mode TIME scans the bank's 16 waveforms, SIZE fully clockwise gives long grains (not delay), and counterclockwise SIZE reverses nothing.
 - **Slow clocks in delay mode:** clock or tap intervals of 4 s or more are ignored; the last accepted tempo (initially 0.25 s) stays.

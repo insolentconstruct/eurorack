@@ -1269,6 +1269,8 @@ void TestPackedFeaturePairs() {
     memset(entry, 0, 6);
     entry[0] = id;
     entry[1] = PROFILE_ADJUSTABLE;
+    // Synth start needs its gesture.
+    entry[5] = id == FEATURE_SYNTH_START ? ACTION_HOLD : ACTION_NONE;
   }
   CHECK(count == 14);
   block[5] = count;
@@ -1332,6 +1334,7 @@ void TestPackedFeaturePairs() {
         uint8_t dormant[kProfileSize];
         memcpy(dormant, block, sizeof(dormant));
         dormant[16 + 6 * a + 1] = state;
+        dormant[16 + 6 * a + 5] = ACTION_NONE;
         ProfileChecksum(dormant);
         CHECK(loaded.Init(false, dormant));
         CHECK(loaded.FeatureValue(features[a]) == 0);

@@ -64,9 +64,10 @@ static bool PulseLit(PulsePattern pulses, uint32_t elapsed) {
           phase < kOptionsFastPeriod * 3 / 2)));
 }
 
+// The [A] hold acts on release, so a knob or button can still follow it.
 /* static */
 const uint32_t Ui::long_press_duration[SWITCH_LAST] = {
-  4000, 4000, kSelfPlayHoldTime, 0x7fffffff
+  4000, 4000, 0x7fffffff, 0x7fffffff
 };
 
 void Ui::FlashOptionsPage() {
@@ -702,7 +703,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           if (mode_ >= MODE_CALIBRATION_1 && mode_ <= MODE_CALIBRATION_4) {
             NextCalibrationStep();
           } else {
-            if (uint32_t(e.data) >= long_press_duration[SWITCH_MEDIA]) {
+            if (uint32_t(e.data) >= kSelfPlayHoldTime) {
               if (!DoAction(ACTION_HOLD)) {
                 State* state = settings_->mutable_state();
                 if (state->gain != 0) {

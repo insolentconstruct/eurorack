@@ -239,6 +239,18 @@ void TestProfileParser() {
   b[19] = b[20] = b[21] = 0;
   Checksum(b);
   CHECK(!p.Init(b));
+  // Adjustable on a page needs the gesture too (#292); Automatic does not.
+  b[17] = PROFILE_ADJUSTABLE;
+  b[19] = 9;
+  Checksum(b);
+  CHECK(!p.Init(b));
+  b[21] = ACTION_HOLD;
+  Checksum(b);
+  CHECK(p.Init(b));
+  b[17] = PROFILE_FIXED;
+  b[18] = b[19] = b[21] = 0;
+  Checksum(b);
+  CHECK(p.Init(b));
   for (int kind = 0; kind < 3; ++kind) {
     Template(b);
     b[5] = 1;
@@ -302,9 +314,14 @@ void TestProfileKinds() {
         b[19 + kind] = slot;
         Checksum(b);
         Profile p;
-        CHECK(p.Init(b) == (slot <= max_slot &&
-              (kind == 0 ? d.page : kind == 1 ? d.amount : d.action)));
-        if (kind == 0 && d.page && slot <= max_slot) {
+        // Only Synth start takes the [A] hold, and it needs a gesture.
+        const bool hold = kind == 2 && slot == ACTION_HOLD;
+        const bool synth_start = id == FEATURE_SYNTH_START;
+        const bool valid = slot <= max_slot &&
+            (kind == 0 ? d.page : kind == 1 ? d.amount : d.action) &&
+            (!hold || synth_start) && (!synth_start || kind == 2);
+        CHECK(p.Init(b) == valid);
+        if (kind == 0 && valid) {
           CHECK(p.Page(slot) == ProfileFeature(id));
         }
       }

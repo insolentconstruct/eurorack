@@ -878,8 +878,12 @@ bool Profile::Parse(const volatile uint8_t* b) {
         (e.action && actions[e.action])) {
       return false;
     }
-    if (id == FEATURE_SYNTH_START && e.state == PROFILE_FIXED &&
-        e.value && !e.action) {
+    // Manual synth start needs its gesture, and the [A] hold restarts
+    // automatic gain unless it starts the synth.
+    if ((id == FEATURE_SYNTH_START && !e.action &&
+            (e.state == PROFILE_ADJUSTABLE ||
+                (e.state == PROFILE_FIXED && e.value))) ||
+        (e.action == ACTION_HOLD && id != FEATURE_SYNTH_START)) {
       return false;
     }
     pages[e.page_slot] = amounts[e.amount_slot] = actions[e.action] = true;
