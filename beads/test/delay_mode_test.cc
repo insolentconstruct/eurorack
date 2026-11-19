@@ -55,10 +55,13 @@ struct Rig {
   const stmlib::GateFlags* seed_input;
   bool frozen;
   bool latch_fade;
+  // A Hann-windowed tone burst when the length is positive.
+  int burst_start;
+  int burst_length;
 
   Rig() : sample(0), frequency(750.0f), amplitude(0.05f),
       seed(SEED_BUTTON_STATE_LOCKED), seed_input(NULL), frozen(false),
-      latch_fade(true) {
+      latch_fade(true), burst_start(0), burst_length(0) {
     memset(banks, 0, sizeof(banks));
     memset(reverb, 0, sizeof(reverb));
     memset(&parameters, 0, sizeof(parameters));
@@ -79,9 +82,16 @@ struct Rig {
     bool freeze[12];
     std::fill(&freeze[0], &freeze[12], frozen);
     for (int i = 0; i < size; ++i) {
-      const float x = amplitude * sin(
+      float x = amplitude * sin(
           6.283185307179586 * frequency *
-          (sample++ % int(processor.sample_rate())) / processor.sample_rate());
+          (sample % int(processor.sample_rate())) / processor.sample_rate());
+      if (burst_length > 0) {
+        const int n = sample - burst_start;
+        x = n >= 0 && n < burst_length
+            ? x * (0.5f - 0.5f * cosf(6.2831853f * n / burst_length))
+            : 0.0f;
+      }
+      ++sample;
       in[i].l = x;
       in[i].r = x;
     }
@@ -744,6 +754,638 @@ void TestSeedLatchFadeTaps() {
   CHECK(fabsf(b.interval(b.new_interval_index()) - 19200.0f) < 20.0f);
 }
 
+// Knob-timing delay with FEEDBACK at the unity notch and the delay time
+// set by DENSITY; SHAPE fully counter-clockwise keeps the taps flat.
+void PrepareKnobDelay(Rig* r, int media, bool unity, float density) {
+  r->processor.Configure(Processor::Media(media), false);
+  r->processor.set_unity_feedback(unity);
+  r->parameters.shape.base = 0.0f;
+  r->density.base = density;
+  r->mix.feedback = 0.0f;
+  r->amplitude = 0.1f;
+  r->processor.delay_mode_transition_ = 1.5f;
+  r->Run(2000);
+}
+
+float KnobInterval(const Rig& r) {
+  const DelayClock& c = r.processor.delay_controller_.test_clock();
+  return c.interval(c.new_interval_index());
+}
+
+// Silent input for one delay time and a bit, so no earlier tone recirculates.
+void Flush(Rig* r) {
+  r->amplitude = 0.0f;
+  r->Run(int(KnobInterval(*r) * 4000.0f / r->processor.sample_rate()) + 100);
+}
+
+// Average gain per pass, in dB, of a tone burst echoing round the loop.
+float PassGain(int media, bool unity, float feedback, float frequency,
+    float density, int passes) {
+  Rig r;
+  PrepareKnobDelay(&r, media, unity, density);
+  const float period = KnobInterval(r);
+  Flush(&r);
+  r.mix.feedback = feedback;
+  r.amplitude = 0.1f;
+  r.frequency = frequency;
+  r.burst_start = r.sample;
+  r.burst_length = int(period / 4.0f);
+  std::vector<float> audio;
+  const float block_size = r.processor.sample_rate() / 4000.0f;
+  const int blocks = int((passes + 2) * period / block_size) + 10;
+  for (int i = 0; i < blocks; ++i) {
+    r.Block(&audio);
+  }
+  double energy[2] = { 0.0, 0.0 };
+  for (int k = 0; k < 2; ++k) {
+    const int centre = int((k ? passes : 1) * period + period / 8.0f);
+    for (int n = centre - int(period / 2.0f); n < centre + int(period / 2.0f);
+         ++n) {
+      energy[k] += double(audio[n]) * audio[n];
+    }
+  }
+  CHECK(energy[0] > 1e-6);
+  return float(10.0 * log10(energy[1] / energy[0]) / (passes - 1));
+}
+
+void TestUnityFeedbackLaw() {
+  test_checker.Start("TestUnityFeedbackLaw");
+  for (int taps = 0; taps < 3; ++taps) {
+    const float sum = 1.0f + 0.3f * float(taps);
+    const float unity = Processor::UnityFeedback(0.8165f, sum);
+    // The loop gain of the notch is one, for one tap or two.
+    CHECK(fabsf(1.5f * unity * unity * sum - 1.0f) < 1e-5f);
+    CHECK(Processor::UnityFeedback(0.0f, sum) == 0.0f);
+    CHECK(fabsf(Processor::UnityFeedback(1.0f, sum) - 1.0f) < 1e-6f);
+    // A notch 6% of the travel wide, at stock unity.
+    CHECK(Processor::UnityFeedback(0.7875f, sum) == unity);
+    CHECK(Processor::UnityFeedback(0.8455f, sum) == unity);
+    CHECK(Processor::UnityFeedback(0.7855f, sum) < unity);
+    CHECK(Processor::UnityFeedback(0.8475f, sum) > unity);
+    float previous = 0.0f;
+    float largest_step = 0.0f;
+    for (int i = 0; i <= 1000; ++i) {
+      const float f = Processor::UnityFeedback(float(i) / 1000.0f, sum);
+      CHECK(f >= previous);
+      largest_step = std::max(largest_step, f - previous);
+      previous = f;
+    }
+    // Continuous: no step larger than the steepest slope allows.
+    CHECK(largest_step < 0.0035f);
+  }
+}
+
+void TestUnityFeedbackLoop() {
+  test_checker.Start("TestUnityFeedbackLoop");
+  // One tap: DENSITY 0.15 gives about 50 ms on the digital qualities, 0.258
+  // about 0.2 s, long enough for a 100 Hz burst.
+  for (int media = 0; media < 4; ++media) {
+    const float notch = PassGain(media, true, 0.82f, 1000.0f, 0.15f, 12);
+    const float bass = PassGain(media, true, 0.82f, 100.0f, 0.258f, 8);
+    const float stock_bass = PassGain(media, false, 0.8165f, 100.0f, 0.258f, 8);
+    const float top = PassGain(media, true, 1.0f, 1000.0f, 0.15f, 6);
+    printf("Quality %d per pass: 1 kHz %+.3f dB, 100 Hz %+.3f dB "
+        "(stock %+.3f dB), full CW %+.3f dB\n",
+        media, notch, bass, stock_bass, top);
+    CHECK(notch < 0.01f && notch > -0.3f);
+    CHECK(bass < 0.01f && bass > -0.3f);
+    CHECK(stock_bass < -0.8f);
+    // Fully clockwise keeps stock's runaway.
+    CHECK(top > 0.5f);
+  }
+}
+
+// Loop level after a burst, with silent input: the first second and the
+// fifth.
+void LoopLevels(bool unity, float density, int media, float* levels) {
+  Rig r;
+  PrepareKnobDelay(&r, media, unity, density);
+  Flush(&r);
+  r.mix.feedback = 0.82f;
+  r.amplitude = 0.05f;
+  r.frequency = 300.0f;
+  r.burst_start = r.sample;
+  r.burst_length = int(r.processor.sample_rate() * 0.01f);
+  std::vector<float> first;
+  std::vector<float> last;
+  for (int i = 0; i < 4000; ++i) {
+    r.Block(&first);
+  }
+  r.Run(12000);
+  for (int i = 0; i < 4000; ++i) {
+    r.Block(&last);
+  }
+  levels[0] = Rms(first);
+  levels[1] = Rms(last);
+}
+
+void TestUnityFeedbackTwoTaps() {
+  test_checker.Start("TestUnityFeedbackTwoTaps");
+  // DENSITY 0.9 adds the odd tap; the notch scales down to hold unity.
+  for (int media = 0; media < 4; ++media) {
+    float two[2];
+    float stock[2];
+    float one[2];
+    LoopLevels(true, 0.9f, media, two);
+    LoopLevels(false, 0.9f, media, stock);
+    LoopLevels(true, 0.1f, media, one);
+    const float two_db = 20.0f * log10f(std::max(two[1], 1e-9f) / two[0]);
+    const float one_db = 20.0f * log10f(one[1] / one[0]);
+    printf("Quality %d over 4 s: two taps %+.2f dB, one tap %+.2f dB; "
+        "fifth second RMS %.4f, stock %.4f\n",
+        media, two_db, one_db, two[1], stock[1]);
+    CHECK(two[0] > 0.001f && one[0] > 0.001f);
+    // Two taps at different delays fall below unity between their peaks.
+    CHECK(two_db < 0.5f);
+    CHECK(one_db < 0.5f && one_db > -6.0f);
+    // At the same knob position stock grows into the limiter.
+    CHECK(stock[1] > 10.0f * two[1]);
+  }
+}
+
+// DENSITY jumping across noon every two blocks adds and drops the odd tap
+// faster than the feedback follows.
+void TestUnityFeedbackDensitySteps() {
+  test_checker.Start("TestUnityFeedbackDensitySteps");
+  for (int media = 0; media < 4; media += 3) {
+    Rig r;
+    PrepareKnobDelay(&r, media, true, 0.1f);
+    Flush(&r);
+    r.mix.feedback = 0.82f;
+    r.amplitude = 0.05f;
+    r.frequency = 300.0f;
+    r.burst_start = r.sample;
+    r.burst_length = int(r.processor.sample_rate() * 0.01f);
+    const DelayController& d = r.processor.delay_controller_;
+    const float* feedback = media
+        ? &r.processor.processor_digital_.feedback_
+        : &r.processor.processor_dirty_tape_.feedback_;
+    float peak[2] = { 0.0f, 0.0f };
+    float worst = 0.0f;
+    for (int i = 0; i < 16000; ++i) {
+      r.density.base = (i / 2) % 2 ? 0.9f : 0.1f;
+      const float start = d.tap_gain(false);
+      std::vector<float> audio;
+      r.Block(&audio);
+      // The block's feedback target holds unity for the taps at both ends.
+      const float taps = std::max(start, d.tap_gain(false));
+      worst = std::max(worst, 1.5f * *feedback * *feedback * taps);
+      for (size_t n = 0; n < audio.size(); ++n) {
+        peak[i >= 8000] = std::max(peak[i >= 8000], fabsf(audio[n]));
+      }
+    }
+    printf("Quality %d DENSITY steps: peak %.4f, then %.4f; "
+        "largest end-of-block loop gain %.5f\n",
+        media, peak[0], peak[1], worst);
+    CHECK(peak[0] > 0.01f);
+    CHECK(peak[1] <= peak[0]);
+    CHECK(worst < 1.0001f);
+  }
+}
+
+// Equal-power gains of a knob-timing crossfade sum to 1.41 at its middle.
+float PowerSum(const DelayClock& c) {
+  const float x = 1.5707963f * c.fade();
+  return sinf(x) + cosf(x);
+}
+
+// Both choices: a tone whose period divides the step between the delay times
+// adds in phase at both taps mid-fade; the loop must hold unity.
+void TestUnityFeedbackCrossfade() {
+  test_checker.Start("TestUnityFeedbackCrossfade");
+  for (int media = 0; media < 4; ++media) {
+    // The two delay times depend only on DENSITY.
+    float from;
+    float to;
+    {
+      Rig r;
+      PrepareKnobDelay(&r, media, true, 0.1f);
+      r.processor.set_delay_crossfade(true);
+      r.Run(100);
+      from = KnobInterval(r);
+      r.density.base = 0.13f;
+      r.Run(kCrossfadeSettleBlocks + 2);
+      to = KnobInterval(r);
+    }
+    Rig r;
+    PrepareKnobDelay(&r, media, true, 0.1f);
+    r.processor.set_delay_crossfade(true);
+    const float sr = r.processor.sample_rate();
+    const int step = int(to - from + 0.5f);
+    r.frequency = sr * floorf(float(step) * 600.0f / sr) / (to - from);
+    r.Run(int(from * 2.0f * 4000.0f / sr));
+    // Then silent input, and the loop at the notch.
+    r.amplitude = 0.0f;
+    r.mix.feedback = 0.82f;
+    std::vector<float> audio;
+    const int block_size = int(sr / 4000.0f);
+    const int settle = int(from * 3.0f) / block_size;
+    for (int i = 0; i < settle; ++i) {
+      r.Block(&audio);
+    }
+    const size_t change = audio.size();
+    r.density.base = 0.13f;
+    const DelayClock& c = r.processor.delay_controller_.test_clock();
+    const float* feedbacks[] = {
+      &r.processor.processor_dirty_tape_.feedback_,
+      &r.processor.processor_clean_tape_.feedback_,
+      &r.processor.processor_vintage_digital_.feedback_,
+      &r.processor.processor_digital_.feedback_
+    };
+    const float* feedback = feedbacks[media];
+    float worst = 0.0f;
+    float peak_sum = 0.0f;
+    size_t faded = 0;
+    while (!faded || audio.size() < faded + size_t(to * 1.5f)) {
+      r.Block(&audio);
+      // One tap: the fade's gains are the whole tap sum.
+      worst = std::max(worst, 1.5f * *feedback * *feedback * PowerSum(c));
+      peak_sum = std::max(peak_sum, PowerSum(c));
+      if (!faded && KnobInterval(r) != from && c.fade() == 1.0f) {
+        faded = audio.size();
+      }
+    }
+    // Level in windows of whole periods, before the change and after the
+    // faded passage comes round again.
+    std::vector<float> before(&audio[change - step], &audio[change]);
+    const float reference = Rms(before);
+    float highest = 0.0f;
+    for (size_t n = faded; n + step <= audio.size(); n += step / 4) {
+      std::vector<float> window(&audio[n], &audio[n + step]);
+      highest = std::max(highest, Rms(window));
+    }
+    printf("Quality %d crossfade %.0f to %.0f samples at the notch: "
+        "taps add to %.3f, loop gain %.5f, level %+.2f dB\n",
+        media, from, to, peak_sum, worst,
+        20.0f * log10f(highest / reference));
+    CHECK(reference > 0.02f);
+    CHECK(peak_sum > 1.41f);
+    CHECK(worst < 1.0001f);
+    CHECK(highest < 1.03f * reference && highest > 0.8f * reference);
+  }
+  // A block that crossed the middle of a fade counts the full 1.41.
+  DelayClock clock;
+  clock.Init(48000.0f);
+  clock.fade_increment_ = 1.0f / 960.0f;
+  for (int i = 0; i < 12; ++i) {
+    clock.fade_ = 0.5f + float(i) / 960.0f;
+    CHECK(clock.power_sum() >= 1.4142135f);
+  }
+  clock.fade_ = 0.5f + 12.5f / 960.0f;
+  CHECK(clock.power_sum() < 1.4142135f && clock.power_sum() > 1.41f);
+  clock.fade_ = 1.0f;
+  CHECK(clock.power_sum() == 1.0f);
+}
+
+void TestUnityFeedbackScope() {
+  test_checker.Start("TestUnityFeedbackScope");
+  // Granular playback is unchanged, and leaving delay restores 40 Hz.
+  for (int media = 0; media < 4; ++media) {
+    std::vector<float> audio[2];
+    float g[2];
+    for (int unity = 0; unity < 2; ++unity) {
+      Rig r;
+      r.processor.Configure(Processor::Media(media), false);
+      r.processor.set_unity_feedback(unity);
+      r.parameters.size.base = 0.5f;
+      r.mix.feedback = 0.82f;
+      stmlib::Random::Seed(7);
+      for (int i = 0; i < 3000; ++i) {
+        r.Block(&audio[unity]);
+      }
+      CHECK(!(r.processor.options_ & Processor::OPTION_FLAG_LOW_CUTOFF));
+      g[unity] = r.processor.processor_clean_tape_.dc_blocker_[1].g_;
+    }
+    CHECK(audio[0] == audio[1]);
+    CHECK(g[0] == g[1]);
+  }
+  Rig r;
+  const float stock = r.processor.processor_clean_tape_.dc_blocker_[0].g_;
+  PrepareKnobDelay(&r, Processor::MEDIA_CLEAN_TAPE, true, 0.3f);
+  CHECK((r.processor.options_ & Processor::OPTION_FLAG_LOW_CUTOFF));
+  CHECK(r.processor.processor_clean_tape_.dc_blocker_[0].g_ < 0.3f * stock);
+  r.parameters.size.base = 0.5f;
+  r.Run(6100);
+  CHECK(!(r.processor.options_ & Processor::OPTION_FLAG_LOW_CUTOFF));
+  CHECK(r.processor.processor_clean_tape_.dc_blocker_[0].g_ == stock);
+  r.parameters.size.base = 65535.0f / 65536.0f;
+  r.Run(6100);
+  CHECK((r.processor.options_ & Processor::OPTION_FLAG_LOW_CUTOFF));
+  r.processor.set_unity_feedback(false);
+  CHECK(!(r.processor.options_ & Processor::OPTION_FLAG_LOW_CUTOFF));
+  CHECK(r.processor.processor_clean_tape_.dc_blocker_[0].g_ == stock);
+  // Clocked timing has one tap's gain in all; the notch is not scaled.
+  const DelayController& d = r.processor.delay_controller_;
+  CHECK(d.tap_gain(true) == 1.0f && d.tap_gain(false) == 1.0f);
+  r.density.base = 0.6f;
+  // The odd tap's gain swings slowly between a quarter and full.
+  float lowest = 2.0f;
+  float highest = 0.0f;
+  for (int i = 0; i < 24000; ++i) {
+    r.Block(NULL);
+    lowest = std::min(lowest, d.tap_gain(false));
+    highest = std::max(highest, d.tap_gain(false));
+  }
+  CHECK(fabsf(lowest - 1.15f) < 0.01f && fabsf(highest - 1.6f) < 0.01f);
+  CHECK(d.tap_gain(true) == 1.0f);
+}
+
+// Pitch deviation, in cents, of a delayed 750 Hz sine, and the level dip.
+struct Warble {
+  float cents;
+  float dip;
+  int cycles;
+  float last;
+};
+
+Warble MeasureWarble(Rig* r, float to, int ramp_blocks) {
+  r->amplitude = 0.1f;
+  r->frequency = 750.0f;
+  r->Run(4000);
+  const float from = r->density.base;
+  std::vector<float> audio;
+  for (int i = 0; i < 12000; ++i) {
+    const float x = std::min(1.0f, float(i) / float(ramp_blocks + 1));
+    r->density.base = from + (to - from) * x;
+    r->Block(&audio);
+  }
+  Warble w = { 0.0f, 0.0f, 0, 0.0f };
+  const double sr = r->processor.sample_rate();
+  double previous = -1.0;
+  float peak = 0.0f;
+  for (size_t n = 1; n < audio.size(); ++n) {
+    peak = std::max(peak, fabsf(audio[n]));
+    if (audio[n - 1] < 0.0f && audio[n] >= 0.0f) {
+      const double t = n - 1 + audio[n - 1] / (audio[n - 1] - audio[n]);
+      // Phase slips at a crossfade's dip are not pitch: skip cycles 12 dB down.
+      if (previous >= 0.0 && peak > 0.025f) {
+        const double cents = 1200.0 * log2(sr / (t - previous) / 750.0);
+        w.cents = std::max(w.cents, float(fabs(cents)));
+        ++w.cycles;
+      }
+      previous = t;
+      peak = 0.0f;
+    }
+  }
+  // Level in 4 ms windows.
+  const size_t length = size_t(sr * 0.004);
+  float lowest = 1.0f;
+  for (size_t n = 0; n + length <= audio.size(); n += length) {
+    std::vector<float> window(&audio[n], &audio[n + length]);
+    lowest = std::min(lowest, Rms(window));
+    w.last = Rms(window);
+  }
+  w.dip = 20.0f * log10f(std::max(lowest, 1e-6f) / (0.1f / sqrtf(2.0f)));
+  return w;
+}
+
+void TestDelayCrossfade() {
+  test_checker.Start("TestDelayCrossfade");
+  // DENSITY steps and a one second sweep, digital and tape.
+  const int ramps[] = { 0, 4000 };
+  for (int media = 0; media < 4; media += 1) {
+    for (int ramp = 0; ramp < 2; ++ramp) {
+      Warble w[2];
+      for (int crossfade = 0; crossfade < 2; ++crossfade) {
+        Rig r;
+        PrepareKnobDelay(&r, media, false, 0.258f);
+        r.processor.set_delay_crossfade(crossfade);
+        r.mix.feedback = 0.0f;
+        w[crossfade] = MeasureWarble(&r, 0.3f, ramps[ramp]);
+      }
+      printf("Quality %d %s: glide %.0f c (%+.1f dB), "
+          "crossfade %.0f c (%+.1f dB)\n", media, ramp ? "sweep" : "step",
+          w[0].cents, w[0].dip, w[1].cents, w[1].dip);
+      CHECK(w[0].cents > 200.0f);
+      // Most of the 2,250 cycles are measured and the level comes back.
+      CHECK(w[1].cycles > 1500);
+      CHECK(w[1].last > 0.5f * 0.1f / sqrtf(2.0f));
+      CHECK(w[1].cents < 0.4f * w[0].cents);
+      // One equal-power fade: no chain of dips on a sweep.
+      CHECK(w[1].dip > -8.0f);
+      CHECK(w[1].cents < (ramp ? 300.0f : 100.0f));
+    }
+  }
+}
+
+void TestDelayCrossfadeClock() {
+  test_checker.Start("TestDelayCrossfadeClock");
+  Rig r;
+  PrepareKnobDelay(&r, Processor::MEDIA_DIGITAL, false, 0.258f);
+  r.processor.set_delay_crossfade(true);
+  r.Run(4000);
+  const DelayClock& c = r.processor.delay_controller_.test_clock();
+  const float from = KnobInterval(r);
+  CHECK(c.fade() == 1.0f);
+  // A 1% change is ignored.
+  r.density.base = 0.2585f;
+  r.Run(400);
+  CHECK(KnobInterval(r) == from);
+  // A step waits 50 ms for DENSITY to settle, holding the old delay time.
+  r.density.base = 0.3f;
+  int blocks = 0;
+  while (KnobInterval(r) == from && blocks < 10000) {
+    r.Block(NULL);
+    ++blocks;
+  }
+  // The first block records the new time, then 50 ms of stillness.
+  CHECK(blocks == kCrossfadeSettleBlocks + 1);
+  // Then fades over half the new interval; the old one fades out with
+  // equal power.
+  const float to = KnobInterval(r);
+  printf("Crossfade from %.1f to %.1f samples\n", from, to);
+  CHECK(to > 1.2f * from);
+  CHECK(c.fade() > 0.0f && c.fade() < 1.0f);
+  CHECK(c.interval(1 - c.new_interval_index()) == from);
+  const int expected = int(std::min(0.25f * 48000.0f,
+      std::max(0.02f * 48000.0f, to * 0.5f)) / 12.0f);
+  r.Run(expected / 2);
+  float power[2];
+  float step[2];
+  c.PowerGains(12, power, step);
+  CHECK(power[0] > 0.5f && power[1] > 0.5f);
+  CHECK(fabsf(power[0] * power[0] + power[1] * power[1] - 1.0f) < 0.001f);
+  CHECK(step[0] * step[1] < 0.0f);
+  // A change during the fade waits for its end and then settles.
+  r.density.base = 0.32f;
+  blocks = expected / 2;
+  int faded = 0;
+  while (KnobInterval(r) == to && blocks < 10000) {
+    r.Block(NULL);
+    ++blocks;
+    faded = !faded && c.fade() == 1.0f ? blocks : faded;
+  }
+  CHECK(abs(faded - expected) <= 1);
+  CHECK(abs(blocks - faded - kCrossfadeSettleBlocks) <= 1);
+  CHECK(KnobInterval(r) > to);
+  CHECK(c.interval(1 - c.new_interval_index()) == to);
+  // A quick turn fades once, after it stops.
+  const float before = KnobInterval(r);
+  r.Run(4000);
+  const float settled = KnobInterval(r);
+  int fades = 0;
+  for (int i = 0; i < 800; ++i) {
+    r.density.base = 0.32f - 0.04f * std::min(1.0f, float(i) / 400.0f);
+    const float previous = KnobInterval(r);
+    r.Block(NULL);
+    fades += KnobInterval(r) != previous;
+    if (i < 400) {
+      CHECK(KnobInterval(r) == settled);
+    }
+  }
+  CHECK(fades == 1);
+  CHECK(before == settled && KnobInterval(r) != settled);
+  // Within a fading block every tap's gain moves sample by sample.
+  r.Run(4000);
+  r.density.base = 0.258f;
+  r.Run(kCrossfadeSettleBlocks + 1);
+  CHECK(c.fade() < 0.5f);
+  DelayController::Output taps[12];
+  bool still[12] = { };
+  r.processor.delay_controller_.RenderCrossfade(SEED_BUTTON_STATE_LOCKED,
+      NULL, still, r.density.base, 0.0f, 0.0f, r.parameters.time,
+      r.parameters.shape, taps, 12);
+  int moving = 0;
+  int audible = 0;
+  for (int t = 0; t < DelayController::NUM_TAPS; ++t) {
+    if (taps[0].tap[t].gain > 0.0f) {
+      ++audible;
+      moving += taps[11].tap[t].gain != taps[0].tap[t].gain;
+    }
+  }
+  CHECK(audible == 2 && moving == audible);
+  // Under 10 ms the delay glides, as stock, for flanging.
+  Rig flange;
+  PrepareKnobDelay(&flange, Processor::MEDIA_DIGITAL, false, 0.0f);
+  flange.processor.set_delay_crossfade(true);
+  flange.Run(4000);
+  const DelayClock& f = flange.processor.delay_controller_.test_clock();
+  const float short_delay = KnobInterval(flange);
+  CHECK(short_delay < 480.0f);
+  flange.density.base = 0.01f;
+  bool between = false;
+  for (int i = 0; i < 200; ++i) {
+    flange.Block(NULL);
+    const float now = KnobInterval(flange);
+    between = between || (now > short_delay + 1.0f && now < 420.0f);
+    CHECK(f.fade() == 1.0f);
+  }
+  CHECK(between);
+  CHECK(KnobInterval(flange) > short_delay + 10.0f);
+  // Clocked timing is untouched.
+  std::vector<float> audio[2];
+  for (int crossfade = 0; crossfade < 2; ++crossfade) {
+    Rig clocked;
+    PrepareTappedDelay(&clocked, Processor::MEDIA_DIGITAL, 0);
+    clocked.processor.set_delay_crossfade(crossfade);
+    for (int i = 0; i < 4000; ++i) {
+      clocked.density.base = i < 2000 ? 0.3f : 0.45f;
+      clocked.parameters.time.base = i < 3000 ? 0.0f : 0.4f;
+      clocked.Block(&audio[crossfade]);
+    }
+  }
+  CHECK(audio[0] == audio[1]);
+}
+
+void TestDelayCrossfadeLatchFade() {
+  test_checker.Start("TestDelayCrossfadeLatchFade");
+  // Knob timing behind the SEED latch fade crossfades too.
+  Rig r;
+  PrepareTappedDelay(&r, Processor::MEDIA_DIGITAL, 0);
+  r.processor.set_delay_crossfade(true);
+  r.seed = SEED_BUTTON_STATE_LOCKED;
+  r.Run(4000);
+  const DelayController& d = r.processor.delay_controller_;
+  CHECK(d.test_timing_fade() && !d.test_synchronized());
+  const DelayClock& c = d.test_clock();
+  const float from = KnobInterval(r);
+  r.density.base = 0.35f;
+  r.Run(kCrossfadeSettleBlocks + 20);
+  CHECK(c.fade() < 1.0f);
+  CHECK(c.interval(1 - c.new_interval_index()) == from);
+  // A fade running when FREEZE engages finishes; then frozen slices glide.
+  r.frozen = true;
+  r.Run(4000);
+  CHECK(c.fade() == 1.0f);
+  const float held = KnobInterval(r);
+  r.density.base = 0.3f;
+  bool between = false;
+  for (int i = 0; i < kCrossfadeSettleBlocks + 20; ++i) {
+    r.Block(NULL);
+    CHECK(c.fade() == 1.0f);
+    const float now = KnobInterval(r);
+    between = between || (now < 0.98f * held && now > 0.8f * held);
+  }
+  CHECK(between && KnobInterval(r) < 0.8f * held);
+}
+
+void TestDelayCrossfadeFrozen() {
+  test_checker.Start("TestDelayCrossfadeFrozen");
+  // Frozen slices play as stock while DENSITY moves.
+  for (int media = 0; media < 4; media += 3) {
+    std::vector<float> audio[2];
+    for (int crossfade = 0; crossfade < 2; ++crossfade) {
+      Rig r;
+      PrepareKnobDelay(&r, media, false, 0.258f);
+      r.processor.set_delay_crossfade(crossfade);
+      r.frozen = true;
+      for (int i = 0; i < 8000; ++i) {
+        r.density.base = 0.258f + 0.1f * std::min(1.0f, float(i) / 4000.0f);
+        r.parameters.time.base = i < 6000 ? 0.0f : 0.5f;
+        r.Block(&audio[crossfade]);
+      }
+      CHECK(r.processor.delay_controller_.test_clock().fade() == 1.0f);
+    }
+    CHECK(Rms(audio[0]) > 0.01f);
+    CHECK(audio[0] == audio[1]);
+  }
+}
+
+// Knob-timing renders with FEEDBACK, DENSITY and FREEZE moves, captured from
+// the build before these options; Off must stay bit-identical.
+uint32_t KnobDelayHash(int media, bool mono) {
+  Rig r;
+  r.processor.Configure(Processor::Media(media), mono);
+  r.processor.delay_mode_transition_ = 1.5f;
+  r.mix.feedback = 0.82f;
+  r.mix.dry_wet = 0.7f;
+  r.mix.reverb_amount = 0.3f;
+  r.amplitude = 0.3f;
+  r.frequency = 330.0f;
+  stmlib::Random::Seed(11);
+  uint32_t hash = 2166136261U;
+  std::vector<float> audio;
+  for (int i = 0; i < 12000; ++i) {
+    r.density.base = i < 4000 ? 0.258f : (i < 6000 ? 0.3f : 0.6f);
+    r.density.base += i >= 8000 ? 0.00001f * float(i - 8000) : 0.0f;
+    r.mix.feedback = i < 9000 ? 0.82f : 0.95f;
+    r.frozen = i >= 10000 && i < 11000;
+    r.Block(&audio);
+  }
+  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&audio[0]);
+  for (size_t i = 0; i < audio.size() * sizeof(float); ++i) {
+    hash = (hash ^ bytes[i]) * 16777619U;
+  }
+  return hash;
+}
+
+void TestKnobDelayHashes() {
+  test_checker.Start("TestKnobDelayHashes");
+  const uint32_t expected[4][2] = {
+    { 0x10ec0c35, 0x20590c8a },
+    { 0x5a58aee5, 0x4ee86ad8 },
+    { 0x251fdc07, 0x0ea9104d },
+    { 0x1716b800, 0xe0f81bf3 }
+  };
+  for (int media = 0; media < 4; ++media) {
+    for (int mono = 0; mono < 2; ++mono) {
+      const uint32_t hash = KnobDelayHash(media, mono);
+      printf("Knob delay q%d mono%d %08x\n", media, mono, hash);
+      CHECK(hash == expected[media][mono]);
+    }
+  }
+}
+
 int main(int argc, char** argv) {
   setbuf(stdout, NULL);
   const HostTest tests[] = {
@@ -761,6 +1403,17 @@ int main(int argc, char** argv) {
     { "TestSeedLatchFadeTransitions", TestSeedLatchFadeTransitions },
     { "TestSeedLatchFadeTaps", TestSeedLatchFadeTaps },
     { "TestSeedLatchFadeOff", TestSeedLatchFadeOff },
+    { "TestUnityFeedbackLaw", TestUnityFeedbackLaw },
+    { "TestUnityFeedbackLoop", TestUnityFeedbackLoop },
+    { "TestUnityFeedbackTwoTaps", TestUnityFeedbackTwoTaps },
+    { "TestUnityFeedbackDensitySteps", TestUnityFeedbackDensitySteps },
+    { "TestUnityFeedbackCrossfade", TestUnityFeedbackCrossfade },
+    { "TestUnityFeedbackScope", TestUnityFeedbackScope },
+    { "TestDelayCrossfade", TestDelayCrossfade },
+    { "TestDelayCrossfadeClock", TestDelayCrossfadeClock },
+    { "TestDelayCrossfadeLatchFade", TestDelayCrossfadeLatchFade },
+    { "TestDelayCrossfadeFrozen", TestDelayCrossfadeFrozen },
+    { "TestKnobDelayHashes", TestKnobDelayHashes },
   };
   const int result = RunHostTests(argc, argv, tests,
       sizeof(tests) / sizeof(tests[0]));

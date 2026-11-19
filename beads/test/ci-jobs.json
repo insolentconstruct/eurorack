@@ -12,6 +12,10 @@
     "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestDelayFilterRamp TestDelayModeSwitchClick TestDelayOptions TestContinuousDelayPlayback TestDelayModeFade TestDelayRotaryPitch TestDelayBandwidthAndCv TestSeedLatchFade TestSeedLatchFadePolicy TestSeedLatchFadeTransitions TestSeedLatchFadeTaps TestSeedLatchFadeOff'"
   },
   {
+    "name": "delay-options",
+    "run": "make -j\"$(nproc)\" -f beads/test/delay_mode.mk test TEST_ARGS='TestUnityFeedbackLaw TestUnityFeedbackLoop TestUnityFeedbackTwoTaps TestUnityFeedbackDensitySteps TestUnityFeedbackCrossfade TestUnityFeedbackScope TestDelayCrossfade TestDelayCrossfadeClock TestDelayCrossfadeLatchFade TestDelayCrossfadeFrozen TestKnobDelayHashes'"
+  },
+  {
     "name": "clouds-stock",
     "run": "make -j\"$(nproc)\" -f beads/test/clouds.mk test TEST_ARGS='TestStockHashes TestReverbRates TestDiffuserImpulse'\nmake -j\"$(nproc)\" -f beads/test/feedback_diffuser.mk test\nmake -j\"$(nproc)\" -f beads/test/attack.mk test"
   },
