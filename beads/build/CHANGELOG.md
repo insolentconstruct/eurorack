@@ -4,6 +4,9 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Snap and trigger with SEED unpatched no longer stops the synths or replaces the delay's knob timing (#290). Each hit adds a grain on top of DENSITY's own grains, at noon too, in granular playback only; synths, delay and spectral ignore hits. With SEED patched, hits add grains instead of joining the SEED clock, so latch Off no longer counts them in its divider and Ignore no longer drops them.
+- Snap and trigger starts grains from hits while FREEZE is on, too (#294); marks are still taken only while recording.
+- SEED latch Sync is a hard sync (#293): each edge starts a grain as well as restarting the grain clock, so a clock faster than DENSITY's rate, or DENSITY at noon, plays a grain per edge instead of none. Both synths follow.
 - Custom profiles can use options pages 5-7; page LEDs: 4 FEEDBACK+DRY/WET, 5 FEEDBACK+REVERB, 6 DRY/WET+REVERB, 7 all three.
 - Optional options-page idle timeout in Hygrostat (Off, 5, 10, 20 or 30 s); Off by default.
 - Optional Hygrostat options-page choices, today's behaviour by default (#285): skip the walk through the stored values when a page opens; always open on the first page instead of the last one used.

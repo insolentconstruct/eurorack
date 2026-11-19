@@ -162,8 +162,11 @@ void Process(
   if (attack_mode != processor.attack_input()->mode()) {
     processor.SetAttacks(attack_mode, ui.attack_threshold());
   }
+  // Snap and trigger keeps listening while frozen, only to start grains.
+  const bool attack_trigger_mode = attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER;
   bool attack_onset = false;
-  if (attack_mode && !codec_transition_frames && !freeze_block &&
+  if (attack_mode && !codec_transition_frames &&
+      (!freeze_block || attack_trigger_mode) &&
       !synth_mode && processor.attack_recording()) {
     attack_onset = processor.attack_input()->Process(
         in,
@@ -175,12 +178,14 @@ void Process(
             NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
         normalization_detector.normalized(
             NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT));
-    processor.SetAttackOnset(attack_onset);
+    if (!freeze_block) {
+      processor.SetAttackOnset(attack_onset);
+    }
   }
-  const bool attack_gate = attack_onset &&
-      attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER;
-  const GateFlags seed_at_block_start = previous_seed;
-  bool seed_block = false;
+  // Hits add grains apart from SEED, in granular playback only.
+  const bool attack_trigger = attack_onset && attack_trigger_mode;
+  processor.set_attack_trigger(attack_trigger);
+  bool seed_block = attack_trigger;
   GateFlags* seed_input = NULL;
   if (!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED)) {
     for (size_t i = 0; i < size; ++i) {
@@ -192,25 +197,8 @@ void Process(
       seed_block |= has_seed;
     }
     seed_input = seed;
-  } else if (attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER) {
-    // Attacks trigger grains as SEED would.
-    for (size_t i = 0; i < size; ++i) {
-      previous_seed = seed[i] = ExtractGateFlags(
-          previous_seed, attack_gate && i == 0);
-    }
-    seed_input = seed;
   } else {
     previous_seed = GATE_FLAG_LOW;
-  }
-  if (attack_gate && seed_input) {
-    // An attack adds a one-sample gate to SEED: only its first two edges can
-    // change, and the SEED input loop above stays as it was.
-    seed[0] = ExtractGateFlags(seed_at_block_start, true);
-    if (size > 1) {
-      seed[1] = ExtractGateFlags(seed[0], seed[1] & GATE_FLAG_HIGH);
-    }
-    previous_seed = seed[size - 1];
-    seed_block = true;
   }
   ui.set_seed_led_state(seed_block && !codec_transition_frames);
   ui.set_overwrite_reserve(synth_mode || processor.spectral()
@@ -303,12 +291,12 @@ void Process(
       ? SEED_BUTTON_STATE_LOCKED
       : (ui.seed_button_state() ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF);
   
+  // Only a patched cable gives a SEED input.
   if (seed_latch_enabled && seed_input &&
-      !normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED) &&
       seed_button_state == SEED_BUTTON_STATE_LOCKED) {
     if (seed_latch_mode == 1) {
       seed_input = NULL;
-      ui.set_seed_led_state(false);
+      ui.set_seed_led_state(attack_trigger);
     } else {
       seed_button_state = SeedButtonState(
           SEED_BUTTON_STATE_IGNORE + seed_latch_mode - 1);

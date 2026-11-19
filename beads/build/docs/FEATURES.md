@@ -370,11 +370,13 @@ There are no new sample-loop tests or branches.
 
 SEED latch defaults to Off: stock uses the patched cable as a clock divider
 while latched. Ignore free-runs and ignores cable triggers, including their LED
-flashes. Sync free-runs and restarts the internal grain-clock phase on each
-SEED edge (meaningful on the periodic side of DENSITY). Add free-runs and fires
-an extra grain per edge. The divider is unavailable in every non-Off value.
-These choices act only while latched with a cable patched; unpatched
-attack-triggered grains keep working. Synth grain clocks use the same choices;
+flashes. Sync is a hard sync: each SEED edge starts a grain and restarts the
+internal grain clock, so a clock faster than DENSITY's rate plays a grain per
+edge and noon plays only the edges (#293). Add free-runs and fires an extra
+grain per edge. The divider is unavailable in every non-Off value. These
+choices act only while latched with a cable patched. Snap and trigger hits
+never join the SEED stream: each adds a grain to the granular triggers in every
+SEED state (#290). Synth grain clocks use the same choices;
 delay has no grain clock and free-runs for non-Off values. In spectral mode,
 Sync and Add behave like stock: cable gates pass through. Choose any options
 page slot or a Fixed Hygrostat value. TIME Scan applies only to granular

@@ -123,6 +123,11 @@ class Processor {
     return delay_mode_transition_ <= 0.0f && !spectral_;
   }
 
+  // Snap and trigger: a hit this block adds a grain, as SEED latch Add does.
+  inline void set_attack_trigger(bool trigger) {
+    attack_trigger_ = trigger;
+  }
+
   void SetAttackOnset(bool onset) {
     switch (media_) {
       case MEDIA_DIRTY_TAPE:
@@ -367,6 +372,13 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  inline void AddAttackTrigger(TriggerGenerator::Output* triggers) {
+    if (attack_trigger_) {
+      triggers[0].trigger = true;
+      triggers[0].gate = true;
+      triggers[0].fractional_sample = 0.0f;
+    }
+  }
 
   GranularProcessor<
       RESOLUTION_16_BIT,
@@ -422,6 +434,7 @@ class Processor {
   FeedbackDiffuser feedback_diffuser_;
   bool evolving_feedback_;
   AttackInput attack_input_;
+  bool attack_trigger_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };
