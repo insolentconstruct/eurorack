@@ -115,6 +115,7 @@ not-set values use the profile default.
 | 31 | Plaits bank (#190) | 14 (byte 20 low) |
 | 32 | Mix law (#21) | No saved value |
 | 33 | Reverb input (#20) | No saved value |
+| 34 | Grain stealing (#237) | No saved value |
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -314,7 +315,8 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 
 A lightweight requested feature may ship Off by default. Its Off state must
 leave the audio unchanged and add no measurable audio-path cost; branches
-belong outside sample loops. Measure each feature and interacting controls.
+belong outside sample loops. Grain stealing (ID 34) is the exception: its
+default is the 2021/2024 shipped behaviour and 2026 is the choice. Measure each feature and interacting controls.
 Hygrostat shows no CPU estimate and blocks no combination for CPU; the
 working limit is in [Design aims](#design-aims). New features still require flash, permanent storage fields, controls and
 maintenance.
@@ -510,3 +512,25 @@ DRY/WET down cuts the tail too, as on Clouds. In Scorched cassette the wow
 and flutter comes after the reverb, so the tail wobbles too. Granular, delay
 and spectral; both synths keep the stock routing. Chosen at power-on, with
 no panel slot or saved-state nibble.
+
+### Grain stealing
+
+Hygrostat feature ID 34 chooses 2021/2024 (value 0, the default) or 2026
+(value 1) (#237). When all 32 grains are playing, a new grain takes over an
+old one. The 2021 and 2024 firmware Mutable Instruments shipped takes the next
+one in turn when grains arrive less than 5 ms apart; from 5 ms on it re-sorts
+the grains and takes the ones closest to their end. The published 2026 source
+takes the next one in turn up to 25 ms. With grains 5 to 25 ms apart and
+varying lengths, 2021/2024 gives a different take of the same texture, 0.3 to
+1.1 dB louder in desktop renders of dense random patches.
+
+Betas 1 to 3 used the 2026 stealing; Beta 4 returns to the shipped one. In our
+crackle test the 2026 source clicks less often than the 2021 and 2024
+firmware, but still clicks; Drizzlet's one-frame output delay (#1) addresses
+the click's cause. This is a scheduler change, not an optimization: on one
+module the 2021/2024 stealing added 3.4 to 3.6 points of peak load in Bright
+digital, Sunny tape and Scorched cassette ([CPU ceiling](TESTING.md#beta-3));
+Cold digital is not measured. Granular and the wavetable synth; delay,
+spectral and the Plaits synth have no grain stealing. Chosen at power-on, with
+no panel slot or saved-state nibble. Value 0 always means 2021/2024, so
+profiles without ID 34, including all Beta 3 profiles, get it.
