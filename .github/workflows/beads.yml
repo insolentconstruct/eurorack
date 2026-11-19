@@ -64,6 +64,17 @@ jobs:
         run: bash beads/build/build.sh "$PWD/artifacts" --wav
       - name: Build the unchanged 4.9.3 golden app
         run: bash beads/build/golden.sh "$PWD/golden"
+      - name: Gate the proof model blobs, the services link and their negative controls
+        run: |
+          mkdir -p blob-out
+          docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
+            --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/blob-out,dst=/out" drizzlet \
+            bash -c 'bash beads/test/blob_emu/build.sh /out/emu && bash beads/build/tools/blob_gate_test.sh /out/negative'
+      - name: Compare blob and compiled-in renders under the Cortex-M7 emulator
+        run: |
+          python3 -m venv "$RUNNER_TEMP/emu"
+          "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
+          "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/render_compare.py blob-out/emu
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: drizzlet-release-assets
