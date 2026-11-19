@@ -258,13 +258,14 @@ void TriggerGenerator::Render(
     } else {
       Render(SEED_BUTTON_STATE_LOCKED, NULL, density, linear_fm,
           exponential_fm, out, size);
-      if (seed_button_state == SEED_BUTTON_STATE_ADD) {
-        for (size_t i = 0; i < size; ++i) {
-          if (external_input[i] & GATE_FLAG_RISING) {
-            out[i].trigger = true;
-            out[i].gate = true;
-            out[i].fractional_sample = 0.0f;
-          }
+    }
+    // Sync and Add also start a grain at each edge.
+    if (seed_button_state != SEED_BUTTON_STATE_IGNORE) {
+      for (size_t i = 0; i < size; ++i) {
+        if (external_input[i] & GATE_FLAG_RISING) {
+          out[i].trigger = true;
+          out[i].gate = true;
+          out[i].fractional_sample = 0.0f;
         }
       }
     }

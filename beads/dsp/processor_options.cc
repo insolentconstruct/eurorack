@@ -144,6 +144,7 @@ void Processor::ProcessWithOptions(
         expo_fm_amount * density.cv,
         triggers,
         size);
+    AddAttackTrigger(triggers);
     for (size_t i = 0; i < size; ++i) {
       gate_out[i] = triggers[i].gate;
     }

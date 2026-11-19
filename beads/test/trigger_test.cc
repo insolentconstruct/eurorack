@@ -26,6 +26,7 @@
 // Grain trigger modes and timing.
 
 #include <cmath>
+#include <cstdio>
 
 #include "stmlib/utils/random.h"
 
@@ -254,6 +255,8 @@ void TestExponentialTriggerFm() {
   CHECK(std::abs(octave - base * 2) <= 2);
 }
 
+// Sync is a hard sync (#293): each edge starts a grain and restarts the
+// phase, even at the start of a block or on two edges in a row.
 void TestSyncBoundaryEdges() {
   test_checker.Start("TestSyncBoundaryEdges");
   for (int consecutive = 0; consecutive < 2; ++consecutive) {
@@ -269,7 +272,8 @@ void TestSyncBoundaryEdges() {
     for (int i = 0; i < 12; ++i) {
       CHECK(std::isfinite(out[i].phase));
       CHECK(out[i].phase > 0.0f);
-      CHECK(!out[i].trigger);
+      CHECK(out[i].trigger == (i == 0 || (consecutive && i == 1)));
+      CHECK(out[i].fractional_sample == 0.0f);
       if (i) {
         CHECK(consecutive && i == 1
             ? out[i].phase == out[0].phase
@@ -279,8 +283,51 @@ void TestSyncBoundaryEdges() {
   }
 }
 
+// Grains in 4 s from a SEED clock with the given period, in 12-sample blocks.
+int CountClocked(SeedButtonState state, float density, int period) {
+  TriggerGenerator generator;
+  generator.Init(kSampleRate);
+  Random::Seed(1234567);
+  GateFlags previous = GATE_FLAG_LOW;
+  int count = 0;
+  for (int t = 0; t < kSampleRate * 4; t += 12) {
+    GateFlags flags[12];
+    for (int i = 0; i < 12; ++i) {
+      previous = flags[i] = ExtractGateFlags(previous,
+          period && (t + i) % period < period / 2);
+    }
+    TriggerGenerator::Output out[12];
+    generator.Render(state, period ? flags : NULL, density, 0, 0, out, 12);
+    for (int i = 0; i < 12; ++i) {
+      count += out[i].trigger;
+    }
+  }
+  return count;
+}
+
+// A clock faster than DENSITY's rate still plays a grain per edge under Sync
+// (#293), noon plays only the edges, and Add keeps its own rate on top.
+void TestSyncFasterClock() {
+  test_checker.Start("TestSyncFasterClock");
+  // About 1.5 Hz free-running against a 4 Hz clock: 16 edges in 4 s.
+  const int free = CountClocked(SEED_BUTTON_STATE_LOCKED, 0.40f, 0);
+  const int sync = CountClocked(SEED_BUTTON_STATE_SYNC, 0.40f, 12000);
+  const int add = CountClocked(SEED_BUTTON_STATE_ADD, 0.40f, 12000);
+  const int noon = CountClocked(SEED_BUTTON_STATE_SYNC, 0.5f, 12000);
+  printf("4 Hz clock, 4 s: free %d, Sync %d, Add %d, Sync at noon %d\n",
+      free, sync, add, noon);
+  CHECK(free > 0);
+  CHECK(sync == 16);
+  CHECK(noon == 16);
+  CHECK(add >= 16 + free - 1);
+  // A slower clock keeps the free-running grains between its edges.
+  CHECK(CountClocked(SEED_BUTTON_STATE_SYNC, 0.30f, 48000) >
+      CountClocked(SEED_BUTTON_STATE_SYNC, 0.5f, 48000));
+}
+
 int main() {
   TestSyncBoundaryEdges();
+  TestSyncFasterClock();
   TestDensityModulation();
   TestLatchedNoonSilence();
   TestRegularDensityRate();

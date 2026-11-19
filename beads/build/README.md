@@ -28,7 +28,7 @@ Pitch scale. Three zones: Off, Chromatic and Scale. The factory bank cycles thro
 
 Random pitch steps selects Free, Fifths and octaves or Recent notes in thirds (steady green / yellow / red). Fifths and octaves snaps counter-clockwise PITCH randomness relative to the PITCH setting. For a C note, this gives C/G across octaves; G below C is a downward fourth. Recent notes, with PITCH patched, gives each new grain one of the last notes sent to PITCH, above the PITCH setting; turning the attenurandomizer further counter-clockwise chooses from more of them (up to eight); a glide faster than a tenth of a semitone per second counts where it stops. Unpatched it plays as Free. Free and clockwise stay continuous before Pitch scale, which applies afterward and can change the interval. This affects granular playback and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.
 
-Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves grain starts onto recorded hits; Snap and trigger also triggers a grain per hit. Patched SEED still works; only granular playback uses marks.
+Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves grain starts onto recorded hits; Snap and trigger also starts a grain on each hit, on top of DENSITY's grains, at noon and while frozen too. Only granular playback uses hits: not delay, Spectral or the synths. SEED and its cable work as usual.
 
 Reverb character selects Stock or Clouds-style, which adds diffusion until manually set. In delay and wavetable synth, only reverb changes. Switching fades sound and clears the tail.
 
@@ -106,7 +106,7 @@ Profiles, custom scales, LED indications and tail choices are checked by host te
 Page 4 controls:
 
 - LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds with preview; warnings dim too. The default is 100%; select it with FEEDBACK on page 4. There is no power-on gesture.
-- SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync restarts grain-clock phase per edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Unpatched attack triggers still work.
+- SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync starts a grain and restarts the grain clock at each edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Snap and trigger hits add grains in every mode.
 
 The factory layout is a starting point. Customize it with Hygrostat and share
 feedback to help shape later releases.

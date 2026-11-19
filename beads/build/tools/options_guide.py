@@ -277,7 +277,8 @@ DETAILS = [
     "change the interval. This affects granular playback and Beads wavetable "
     "grains, not the continuous oscillator, Plaits or Spectral.",
     "Attacks: Snap starts grains on the hits in the recording; Snap and "
-    "trigger also starts a grain on each hit.",
+    "trigger also starts a grain on each hit, on top of DENSITY's grains, "
+    "frozen or not. Granular playback only.",
     "Delay mode: Auto (Stock) switches to delay with SIZE fully CW; "
     "Disabled stays granular. Wide/smooth filter keeps the switch and adds a "
     "neutral, unfiltered zone around the middle of the delay filter "

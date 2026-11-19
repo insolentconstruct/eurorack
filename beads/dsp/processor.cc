@@ -43,6 +43,7 @@ void Processor::Init(
   options_ = 0;
   time_scan_.Init();
   attack_input_.Init();
+  attack_trigger_ = false;
   clouds_style_ = false;
   evolving_feedback_ = false;
   diffusion_ = 0.0f;
@@ -190,6 +191,7 @@ void Processor::Process(
         expo_fm_amount * density.cv,
         triggers,
         size);
+    AddAttackTrigger(triggers);
     for (size_t i = 0; i < size; ++i) {
       gate_out[i] = triggers[i].gate;
     }

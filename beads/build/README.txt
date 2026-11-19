@@ -125,10 +125,10 @@ Page 4 controls:
   page 4. There is no power-on gesture.
 - SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with
   DRY/WET on page 4. With a cable patched and SEED latched, Off retains
-  the divider; Ignore free-runs
-  without cable triggers or flashes; Sync restarts grain-clock phase per
-  edge; Add adds a grain per edge. Synth clocks follow these modes;
-  delay free-runs outside Off. Unpatched attack triggers still work.
+  the divider; Ignore free-runs without cable triggers or flashes; Sync
+  starts a grain and restarts the grain clock at each edge; Add adds a
+  grain per edge. Synth clocks follow these modes; delay free-runs
+  outside Off. Snap and trigger hits add grains in every mode.
 
 The factory layout is a starting point. Customize it with Hygrostat
 and share feedback to help shape later releases.
@@ -275,8 +275,10 @@ playback and Beads wavetable grains, not the continuous oscillator,
 Plaits or Spectral.
 
 Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves
-grain starts onto recorded hits; Snap and trigger also triggers a grain
-per hit. Patched SEED still works; only granular playback uses marks.
+grain starts onto recorded hits; Snap and trigger also starts a grain
+on each hit, on top of DENSITY's grains, at noon and while frozen too.
+Only granular playback uses hits: not delay, Spectral or the synths.
+SEED and its cable work as usual.
 
 Reverb character selects Stock or Clouds-style, which adds diffusion
 until manually set. In delay and wavetable synth, only reverb changes.

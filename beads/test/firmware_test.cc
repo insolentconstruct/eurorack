@@ -1823,19 +1823,19 @@ void TestSeedLatchPatched() {
       CHECK(!out[64].trigger);
     }
     if (mode == 2) {
-      CHECK(out[64].phase < 0.01f && !out[64].trigger);
+      CHECK(out[64].phase < 0.01f && out[64].trigger);
     }
     if (mode == 3) {
       CHECK(out[64].trigger && out[64].phase > 0.1f);
     }
-    // At noon only Add inserts a grain. Ignore and Sync keep the clock still.
+    // At noon Sync and Add insert a grain; Ignore keeps the clock still.
     generator.Init(48000.0f);
     generator.Render(state, edges, 0.5f, 0.0f, 0.0f, out, 256);
     if (mode) {
-      CHECK(out[64].trigger == (mode == 3));
+      CHECK(out[64].trigger == (mode != 1));
     }
   }
-  // With no cable, attack-triggered grains retain the stock path.
+  // With no cable, attacks never reach the SEED path.
   r.seed_patched = false;
   r.Settle();
   settings.SetFeatureValue(FEATURE_SEED_LATCH, 3);
@@ -1845,7 +1845,7 @@ void TestSeedLatchPatched() {
   ui.LoadOptions();
   const int before = processor.trigger_generator_.elapsed_since_last_pulse_;
   r.Block();
-  CHECK(processor.trigger_generator_.elapsed_since_last_pulse_ > before);
+  CHECK(processor.trigger_generator_.elapsed_since_last_pulse_ == before);
 }
 
 // The delay latch fade is a profile choice; Off or omitted keeps stock.
@@ -1956,6 +1956,163 @@ int CountGrainBlocks(Rig* r, int blocks) {
     count += player.grain_interval_ <= int(codec.block_size_);
   }
   return count;
+}
+
+// A hit of four loud blocks, then 300 ms back at the quiet level: the
+// blocks where grains start, and whether the hit lit the SEED LED.
+int Hit(Rig* r, int* first, bool* led) {
+  r->audio = 0x10000000;
+  *first = CountGrainBlocks(r, 1);
+  *led = ui.seed_led_state_;
+  int count = *first + CountGrainBlocks(r, 3);
+  r->audio = 0x1000000;
+  return count + CountGrainBlocks(r, 1200);
+}
+
+// Snap and trigger with SEED unpatched (#290, #294): a hit adds a grain to
+// DENSITY's own rate, in granular playback only, frozen or not; it never
+// clocks the synths or the delay.
+void TestAttackTriggers() {
+  test_checker.Start("TestAttackTriggers");
+  Rig r(false, false);
+  settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
+  settings.SaveState();
+  // The delay SEED latch fade makes the delay report which timing it uses.
+  const uint8_t fade[] = { FEATURE_SEED_LATCH_FADE, 1 };
+  BootWithProfile(&r, fade, 1);
+  r.audio = 0x1000000;
+  r.Settle();
+  CHECK(ui.seed_button_locked());
+  CHECK(processor.attack_input_.mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
+  const AttackDetector& detector = processor.processor_digital_.attacks_;
+  for (int frozen = 0; frozen < 2; ++frozen) {
+    ui.set_freeze_button_state(frozen);
+    const uint32_t marks = detector.count_;
+    // DENSITY at noon plays nothing but the hits.
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+    r.Tick(300, true);
+    CHECK(CountGrainBlocks(&r, 800) == 0);
+    for (int hit = 0; hit < 3; ++hit) {
+      int first;
+      bool led;
+      CHECK(Hit(&r, &first, &led) == 1);
+      CHECK(first == 1 && led);
+    }
+    // On the periodic side the clock runs on, and each hit adds a grain.
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 8000;
+    r.Tick(300, true);
+    CHECK(CountGrainBlocks(&r, 1200) > 3);
+    for (int hit = 0; hit < 3; ++hit) {
+      int first;
+      bool led;
+      CHECK(Hit(&r, &first, &led) > 3);
+      CHECK(first == 1);
+    }
+    // Frozen hits start grains but leave no marks.
+    CHECK(frozen ? detector.count_ == marks : detector.count_ > marks);
+  }
+  // The options path adds them too.
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+  processor.set_gentle_mix(true);
+  r.Tick(300, true);
+  for (int hit = 0; hit < 3; ++hit) {
+    int first;
+    bool led;
+    CHECK(Hit(&r, &first, &led) == 1);
+    CHECK(first == 1);
+  }
+  processor.set_gentle_mix(false);
+  // A hit while frozen starts one grain; releasing FREEZE on the louder
+  // input starts none, and freezing again none either.
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+  r.Tick(300, true);
+  CHECK(CountGrainBlocks(&r, 1200) == 0);
+  r.audio = 0x10000000;
+  CHECK(CountGrainBlocks(&r, 1200) == 1);
+  ui.set_freeze_button_state(false);
+  CHECK(CountGrainBlocks(&r, 1200) == 0);
+  ui.set_freeze_button_state(true);
+  CHECK(CountGrainBlocks(&r, 1200) == 0);
+  ui.set_freeze_button_state(false);
+  r.audio = 0x1000000;
+  r.Tick(300, true);
+  // Delay mode keeps its knob timing, and plays no hits.
+  PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
+  r.Tick(2000, true);
+  CHECK(processor.delay_active());
+  for (int hit = 0; hit < 3; ++hit) {
+    int first;
+    bool led;
+    Hit(&r, &first, &led);
+    CHECK(!led);
+    CHECK(!processor.delay_controller_.test_synchronized());
+  }
+  PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 32768;
+  // The wavetable synth plays its grains, and Plaits drones at noon.
+  for (int plaits = 0; plaits < 2; ++plaits) {
+    Rig s(false, true);
+    settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
+    settings.set_plaits_synth(plaits);
+    settings.SaveState();
+    s.Reboot(false);
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = plaits ? 32768 : 16000;
+    s.StartAutomatic();
+    CHECK(synth_mode);
+    if (plaits) {
+      RunBlocks(&s, 100);
+      CHECK(plaits_synth.drone_);
+      // Hits on an input patched while FREEZE keeps the synth playing.
+      ui.set_freeze_button_state(true);
+      s.left = s.right = true;
+      s.audio = 0x1000000;
+      s.Tick(300, true);
+      for (int hit = 0; hit < 3; ++hit) {
+        s.audio = 0x10000000;
+        RunBlocks(&s, 4);
+        s.audio = 0x1000000;
+        RunBlocks(&s, 1200);
+        CHECK(synth_mode && plaits_synth.drone_);
+      }
+      ui.set_freeze_button_state(false);
+    } else {
+      WavetableGranularPlayer& player = synth.wavetable_granular_player_;
+      int grains = 0;
+      for (int i = 0; i < 4000; ++i) {
+        s.Block();
+        grains += player.grain_interval_ <= int(codec.block_size_);
+      }
+      CHECK(grains > 3);
+    }
+  }
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+}
+
+// With SEED patched, a hit adds a grain whatever the latch does with the
+// cable, and never reaches the cable's divider or Ignore.
+void TestAttackTriggersPatched() {
+  test_checker.Start("TestAttackTriggersPatched");
+  Rig r(false, false);
+  settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
+  settings.SaveState();
+  r.Reboot(false);
+  r.seed_patched = true;
+  r.audio = 0x1000000;
+  r.Settle();
+  ui.seed_button_locked_ = true;
+  for (int mode = 0; mode < 4; ++mode) {
+    settings.SetFeatureValue(FEATURE_SEED_LATCH, mode);
+    r.Tick(300, true);
+    CHECK(seed_latch_mode == mode);
+    const int pulses = processor.trigger_generator_.pulse_count_;
+    for (int hit = 0; hit < 3; ++hit) {
+      int first;
+      bool led;
+      CHECK(Hit(&r, &first, &led) == 1);
+      CHECK(first == 1 && led);
+    }
+    CHECK(processor.trigger_generator_.pulse_count_ == pulses);
+  }
+  settings.SetFeatureValue(FEATURE_SEED_LATCH, 0);
 }
 
 // SEED can start unlatched (#41): grains wait for SEED, the latch modes
@@ -2319,6 +2476,8 @@ int main() {
   TestSynthStopClearsReverb();
   TestPitchNotchLaw();
   TestSeedLatchPatched();
+  TestAttackTriggers();
+  TestAttackTriggersPatched();
   TestSeedLatchFadeProfile();
   TestManualGainProfile();
   TestAttackSensitivityProfile();
