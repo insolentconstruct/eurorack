@@ -124,8 +124,13 @@ not-set values use the profile default.
 
 Fields 16 (byte 21 low) and 18 (byte 22 low) hold the identity of the
 profile that last saved, 0–224 from its checksum: field 18 × 15 + field 16.
-It tells a newly installed profile from a reinstall of the same one
+It tells a newly installed profile from the one that last saved
 ([Start in quality](#start-in-quality)); 15 in either field means none.
+The identity is approximate: about 1 in 225 different profiles share one, and
+then the quality is not applied; editing a profile can change it, and then the
+quality applies again. Stock treats bytes 10–23 as padding and ignores it.
+Beta 3 may clear it when it saves; if so, after upgrading again the
+profile's quality applies until something is saved.
 
 Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
 pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
@@ -621,12 +626,13 @@ slot or saved-state nibble; it runs only when the pages open.
 
 Hygrostat feature ID 39 chooses Keep current / Bright digital / Cold digital /
 Sunny tape / Scorched cassette (#287). Keep current, the default, never
-changes the saved quality. Any other value is the quality on the first
-start-up after the profile is installed, over stock, an older release or
-another profile; it is also the quality after a settings reset (SEED held at
-power-up). Reinstalling the same profile changes nothing. The saved settings
-record which profile last saved them (fields 16 and 18), so once you save
-anything, such as a new quality on [A], your choice wins. Until then each
-start-up begins in the profile's quality. A frozen granular recording that
-returns from flash keeps the quality it was made in. Chosen at power-on, with no panel slot or
-saved choice; the audio path is unchanged.
+changes the saved quality. Any other value is the quality at start-up after
+the profile is installed, over stock, an older release or another profile, and
+after a settings reset (SEED held at power-up). Until something is saved, every
+start-up applies it again. The saved settings record which profile last saved
+them (fields 16 and 18), so any save, even an unrelated one, accepts the
+profile; from then on a quality chosen on [A] wins. When a frozen granular
+recording is to be restored from flash, the module keeps that recording's
+quality instead; the check is that a restore is intended, so with an unreadable
+flash copy the old quality also stays. Chosen at power-on, with no panel slot
+or saved choice; the audio path is unchanged.

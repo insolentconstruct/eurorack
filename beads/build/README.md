@@ -121,7 +121,7 @@ Options page idle timeout is a separate profile choice: Off, the default, keeps 
 
 Two options-page choices keep today's behaviour by default and add no panel gesture or options-page slot. Options page preview: First setting only skips the walk through the stored values when a page opens, so [A] shows the page's first setting at once. Options page on opening: First page always opens on the first page in use instead of the last one used.
 
-Start in quality is a separate profile choice: Keep current, the default, never changes the saved quality. Any other quality is where the module starts the first time after you install the profile, and after a settings reset; reinstalling the same profile changes nothing, and once you save a change, such as a new quality on [A], your choice wins.
+Start in quality is a separate profile choice: Keep current, the default, never changes the saved quality. Any other quality is where the module starts after you install the profile, and after a settings reset. Until something is saved, every start-up begins in that quality; once anything is saved, such as a new quality on [A], your choice wins.
 
 Four more profile choices keep stock or Beta 2 behaviour by default and add no panel gesture or options-page slot. Input gain at power-on: Manual starts at unity manual gain when no gain is saved; a saved gain wins. Attack sensitivity: Normal, Low or High. SEED at power-on: Unlatched waits for SEED presses, gates or, with Snap and trigger, detected attacks. PITCH knob: Smooth glides between the intervals without notches; PITCH CV is unchanged.
 
