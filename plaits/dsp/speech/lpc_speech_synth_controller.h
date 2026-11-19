@@ -205,6 +205,7 @@ class LPCSpeechSynthController {
   int last_playback_frame_;
   size_t remaining_frame_samples_;
   bool pending_trigger_;
+  int playback_bank_;
 
   LPCSpeechSynthWordBank* word_bank_;
   
