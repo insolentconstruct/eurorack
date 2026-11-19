@@ -6,6 +6,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
 ## Unreleased
+- Audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz). This addresses the likely cause of the historical left-channel click (#1): the audio callback can now run to about the full block instead of stopping a frame short. About 0.1% of the CPU. In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. Pending module qualification.
 - The reverb uses less CPU, with the same sound: about 1,200 fewer cycles per audio block in the wavetable synth and in the busiest granular case on a development board.
 
 ## beads-tuneup-2026.11.09

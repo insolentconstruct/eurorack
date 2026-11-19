@@ -142,6 +142,25 @@ Measured in November 2026 on one 2021 module, and on a development board with th
 - **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
 - **Headroom.** At 48 kHz the module is clean only up to 90.8%, not 99%. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, under 86.6% and 82.7%.
 
+### One-frame output delay (pending module qualification)
+
+This branch writes each block's output one frame late: the codec driver stores the last block's last frame at the start of the half before the callback runs, then copies the callback's first N−1 frames after it. The first word the callback must reach in time is then the third word of the half, one frame later, and the deadline moves to about the next codec interrupt. The same driver change is measured in Drizzlet; the development-board figures below are for that driver.
+
+- **Development board (measured, 3 repeats, 60 s per step, 0.1% steps).** Callback maximum, budget 120,000:
+
+| Codec rate | Before: no late word | With the delay: no late word | With the delay: next interrupt not yet pending |
+|---|---:|---:|---:|
+| 48 kHz | 109,765 (91.5%) | 119,483 (99.6%) | 118,995 (99.2%) |
+| 32 kHz | 104,963 (87.5%) | 119,835 (99.9%) | 119,115 (99.3%) |
+| 24 kHz | 100,179 (83.5%) | 119,967 (100.0%) | 119,247 (99.4%) |
+
+  From about the block itself the next interrupt is already due when the driver finishes. In these steps that overlap alone did not corrupt output; late words followed 0.3 to 0.6 points higher.
+- **Sound (measured).** Bit-identical to the driver without the delay, shifted by exactly one frame, at all three rates (development board, 1,000 halves each, words read from RAM as the DMA sends them).
+- **Cost (measured).** `Codec::Fill` with Beads' conversion loop, codec stopped, mean: +144, +93 and +86 cycles per block at 48, 32 and 24 kHz (about 0.12% of the block or less). The copy runs after the callback, so the DWT load figures do not include it. The bootloader links the same driver; the delay is compiled for the application only, so the bootloader is unchanged.
+- **Behaviour.** Latency rises by one frame. Patches that feed OUT back to IN, or line audio up with gates or triggers, shift by one frame. A pause or restart (quality changes) drops the one pending frame, inside the existing fade.
+- **Why Beads differs.** Mutable Instruments' other STM32 modules share one codec pattern (callback output written in place), but the Beads H7 DMA reads ahead of its sends, and Mutable Instruments noted that every project has something unique in hardware that makes reusable layers above the GPIO level of limited use ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/)).
+- **Pending on the module.** Clean edges at 48, 32 and 24 kHz and a click scan; deliberate overruns above 100% (how output fails is not yet measured); start-up and sample-rate changes. Until then the headroom limits above stay as they are.
+
 ## Rules for future changes
 
 ### From Mutable Instruments

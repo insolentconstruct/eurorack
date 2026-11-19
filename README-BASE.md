@@ -57,6 +57,7 @@ Changes from master, one line per change:
 - Interpolate grain reads on the stored integers and scale once, as Clouds' `ReadHermite` does; audio stays bit-identical.
 - Compute the synth's playing grains in pairs, mixed in index order: 5.7 points of headroom in its busiest case; audio stays bit-identical.
 - Load the reverb's delay-line reads before its writes: 1.0 point of headroom in the synth's busiest case and in the stock granular peak; audio stays bit-identical.
+- **Behaviour fix:** audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz) than in the vanilla source. It addresses the likely cause of the historical left-channel click, a first left word stored after the output DMA has read it ([#1](https://github.com/insolentconstruct/eurorack/issues/1)): the audio callback can now run to about the full block instead of stopping a frame short. About 0.1% of the CPU. In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. The bootloader is unchanged. Pending module qualification.
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 

@@ -445,6 +445,12 @@ cases = [
   ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
     '  const int32_t kResetFrames = 2048;',
     '  const int32_t kResetFrames = 1024;'),
+  ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
+    '    out[0] = out_buffer_[0];\n', ''),
+  ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
+    '      out[i] = out_buffer_[i];', '      out[i] = out_buffer_[i + 1];'),
+  ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
+    '    out_buffer_[0] = out_buffer_[block_size_];', ''),
   ('TestCodecKeepsClocks', 'firmware', 'beads/beads.cc',
     '    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);',
     '    codec.Stop();\n'

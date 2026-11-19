@@ -28,7 +28,7 @@ TARGET = codec_test
 CC_FILES = codec_test.cc codec.cc
 # Use real pin definitions before the shared test stubs.
 STUBS = beads/test/codec_stubs .
-SUITE_FLAGS = -std=c++98
+SUITE_FLAGS = -std=c++98 -DAPPLICATION
 include beads/test/suite.mk
 
 # Keep 32-bit DMA address casts on a 64-bit, non-PIE host.
