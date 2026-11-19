@@ -251,7 +251,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - It is off by default and hard to reach by accident.
 - One manual paragraph explains it; no hidden state the panel can't show.
 - Patching can't already do it.
-- CPU: the worst measured block stays at or under the working limit for its rate: 90% of the budget at 48 kHz (Bright digital, Sunny tape, synths), 86% at 32 kHz (Cold digital) and 82% at 24 kHz (Scorched cassette). Each is about a point under the module's clean edge, where the first left output word stays on time: 90.8%, 86.6% and 82.7% ([Audio deadline](OPTIMIZATIONS.md#audio-deadline)). A one-frame output delay moves these edges to about the full block on the development board; the limits stay until it is qualified on the module ([One-frame output delay](OPTIMIZATIONS.md#one-frame-output-delay-pending-module-qualification)).
+- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source. A one-frame output delay moves the deadline to about the full block: on the module, through the beads-tuneup build with the same codec driver, late samples start at 97.7%, 97.3% and 96.9% of the block at 48, 32 and 24 kHz ([One-frame output delay](OPTIMIZATIONS.md#one-frame-output-delay)). This Drizzlet build is not yet measured on the module, so the limit stays.
 
 Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the factory layout's twelve page slots are taken).
 

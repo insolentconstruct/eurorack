@@ -48,7 +48,7 @@ in wavetable synth mode. See [TESTING.md](TESTING.md).
 
 ## Build comparison
 
-Budget is 120,000 cycles per block at 480 MHz. The DAC DMA reads each word one slot before sending it, so audio breaks earlier: the callback maximum was clean up to 109,700 cycles at 48 kHz (q1, q3 and the synth), 104,900 at 32 kHz (q2) and 100,100 at 24 kHz (q0), measured on the development board (provisional until measured on the module). "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
+Budget is 120,000 cycles per block at 480 MHz. The DAC DMA reads each word one slot before sending it, so without the [one-frame output delay](#one-frame-output-delay) audio breaks earlier: the callback maximum was clean up to 109,700 cycles at 48 kHz (q1, q3 and the synth), 104,900 at 32 kHz (q2) and 100,100 at 24 kHz (q0), measured on the development board. "Stock" is the worst stock case: q3 (48 kHz digital), stereo, 32 grains held active (stress32). "Clouds-style" is the same case with the Clouds-style reverb. Same probe and 28 scenarios on every row; flash is the whole application binary.
 
 | Build | App flash | Stock peak / median | Clouds-style peak | Sound vs GCC 9 | Verdict |
 |---|---:|---|---:|---|---|
@@ -216,16 +216,16 @@ Audio differs by about -87 dBFS RMS at 16-bit, peaks -35 dBFS at 4-bit.
 
 Measured in November 2026 on a development board with the same chip and clock, and on one 2021 module at 48 kHz.
 
-**TL;DR:** Audio most likely breaks [inferred] when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it. That comes before a full-block underrun, and the SAI flags nothing. The 90% working limit leaves 2 to 3 points at 48 kHz but on the development board is already past the 32 and 24 kHz deadlines.
+**TL;DR:** Audio most likely breaks [inferred] when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it. That comes before a full-block underrun, and the SAI flags nothing. Without the [one-frame output delay](#one-frame-output-delay), the 90% working limit leaves 2 to 3 points at 48 kHz but on the development board is already past the 32 and 24 kHz deadlines; with it, the deadline is about the full block.
 
 - **Development board (measured).** With the check made at callback exit (has the DMA already read the first word?), the callback maximum was clean up to about 91.5% of the block at 48 kHz, 87.5% at 32 kHz and 83.5% at 24 kHz; every block failed from 92.1%, 88.1% and 84.1%. The first store comes before exit, so the true deadline sits a little above these bounds. Three repeats per rate, 60 s per step. No SAI underrun or overrun at any load up to 105%.
-- **Module (inferred).** About 92.6 to 93% at 48 kHz, from the click study below; a rough figure from one recipe. The module's 32 kHz and 24 kHz deadlines are not measured yet.
+- **Module (inferred).** About 92.6 to 93% at 48 kHz, from the click study below; a rough figure from one recipe. Without the output delay, a later module run measured clean edges of 90.8%, 86.6% and 82.7% at 48, 32 and 24 kHz; with it, see [One-frame output delay](#one-frame-output-delay).
 - **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
 - **The historical left-channel click.** Reproduced on one module with the 2024 source rebuilt with GCC 9 (plus deadline tracing), in the historical crackle recipe: Bright digital (48 kHz), DENSITY 0.98, PITCH +24, SIZE 0.92. Its callback peaked at 93.5 to 94.0% and OUT L clicked. In the same recipe, beads-tuneup with the 2024 grain stealing (81.7 to 82.7%) and current beads-tuneup (78.1 to 78.8%) stayed clean [measured]. The clicks are block-locked and match the output one ring lap earlier, which points to a late first left word [inferred; moderately high confidence, exploratory, not seen on the codec data line].
 - **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
 - **Headroom.** The 90% working limit in [FEATURES.md](FEATURES.md) holds only at 48 kHz. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, set from module measurements at those rates.
 
-### One-frame output delay (pending module qualification)
+### One-frame output delay
 
 Drizzlet writes each block's output one frame late: the codec driver stores the last block's last frame at the start of the half before the callback runs, then copies the callback's first N−1 frames after it. The first word the callback must reach in time is then the third word of the half, one frame later, and the deadline moves to about the next codec interrupt.
 
@@ -242,7 +242,8 @@ Drizzlet writes each block's output one frame late: the codec driver stores the 
 - **Cost (measured).** `Codec::Fill` with Beads' conversion loop, codec stopped, mean: +144, +93 and +86 cycles per block at 48, 32 and 24 kHz (about 0.12% of the block or less). The copy runs after the callback, so the DWT load figures do not include it. The callback writes cached RAM and the driver copies to the DMA buffer. Flash +384 bytes, RAM +200 bytes. The bootloader links the same driver; the delay is compiled for the application only, so the bootloader is unchanged.
 - **Behaviour.** Latency rises by one frame. Patches that feed OUT back to IN, or line audio up with gates or triggers, shift by one frame. A pause or restart (quality changes) drops the one pending frame, inside the existing fade.
 - **Why Beads differs.** Mutable Instruments' other STM32 modules share one codec pattern (callback output written in place), but the Beads H7 DMA reads ahead of its sends, and Mutable Instruments noted that every project has something unique in hardware that makes reusable layers above the GPIO level of limited use ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/)).
-- **Pending on the module.** Clean edges at 48, 32 and 24 kHz and a click scan; deliberate overruns above 100% (how output fails is not yet measured); start-up and sample-rate changes. Until then the working limits above stay as they are.
+- **Module (measured, beads-tuneup build).** The beads-tuneup build has the same codec driver change. On one module, late samples start at 97.7%, 97.3% and 96.9% of the block at 48, 32 and 24 kHz, up from 90.8%, 86.6% and 82.7% without the delay; just above those points the firmware flagged occasional late blocks while the output was still clean. Its release build played the crackle recipe with no clicks in about 6 minutes.
+- **Not yet measured.** This Drizzlet build on the module; deliberate overruns above 100% (how output fails); start-up and sample-rate changes. Until then the working limits above stay as they are.
 
 ## Rules for future changes
 
