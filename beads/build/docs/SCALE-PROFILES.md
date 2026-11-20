@@ -67,3 +67,28 @@ The fixed Fifths and octaves random-interval option remains independent of an
 edited scale with ID 2. Generated guides and shared links must carry the same
 bank used by the firmware. Custom banks need their own CPU assessment; historical
 factory-scale costs do not establish the maximum cost of a 24-degree bank.
+
+## [A] gestures (Beta 4)
+
+Each feature entry is: ID, state, value, page slot, amount slot, action.
+Amount slots are 1 [A]+DRY/WET, 2 [A]+REVERB and, from Beta 4, 3
+[A]+FEEDBACK. Actions are 1 [A]+SEED, 2 [A]+FREEZE and 3 the [A] hold.
+Each slot holds one setting.
+
+- Manual gain is feature 40, Manual gain knob. Off, or no entry, keeps it on
+  [A]+FEEDBACK, as stock. Adjustable with amount slot 1–3 puts it on that
+  knob. Fixed (value 0) puts it on no knob. Adjustable without a slot is
+  refused. Feature 27 (Input gain at power-on) is not reused: its value is a
+  power-on mode, and its Off must stay stock, so it can't also place the knob.
+- Stereo width and Diffusion can also take slot 3. While feature 40 is Off,
+  slot 3 belongs to manual gain, so another setting there is refused.
+- Reverb character, Processor, Frozen feedback, Synth and TIME modulation
+  can take action 1 or 2 when Adjustable; Synth takes action 1 only, since
+  Plaits play keeps [A]+FREEZE for its bank. They have permanent packed
+  fields; the gesture flips and saves the value. The [A] hold stays Synth
+  start only.
+
+Firmware before Beta 4 refuses amount slot 3, feature 40 and these actions,
+so it plays the factory layout and saves nothing with such a profile.
+Hygrostat marks them as needing Beta 4. Every other profile parses exactly as
+before, so the profile format stays 1.

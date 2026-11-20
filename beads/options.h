@@ -114,6 +114,8 @@ struct OptionValue {
 const size_t kNumOptionValues = 42;
 // Shared by the MEDIA renderer, host export and documentation check.
 extern const OptionValue kOptionValues[kNumOptionValues];
+// A value's colour and pattern on its options page.
+const OptionValue& FindOptionValue(OptionSetting setting, int value);
 
 class Options {
  public:

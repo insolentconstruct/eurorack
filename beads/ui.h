@@ -201,10 +201,9 @@ class Ui {
     return mode_ >= MODE_STORAGE_WARNING;
   }
 
-  // [A] turns FEEDBACK into the gain, as in Beads; the other knobs only when
-  // the profile gives them an amount.
+  // [A] turns a knob into its profile amount; FEEDBACK is the gain by default.
   inline bool media_amount(int i) const {
-    return i == MIX_PARAMETER_FEEDBACK || amount_feature_[i] != FEATURE_NONE;
+    return amount_feature_[i] != FEATURE_NONE;
   }
 
   stmlib::EventQueue<16> queue_;
@@ -231,8 +230,7 @@ class Ui {
   float assign_modulation_;
   uint32_t delay_cue_time_;
   uint32_t boot_cue_time_;
-  uint32_t bank_cue_time_;
-  uint8_t bank_cue_;
+  uint32_t cue_time_;
   bool seed_led_state_;
   
   float overwrite_reserve_;
@@ -264,12 +262,13 @@ class Ui {
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
-  // A bank's colour and blink pattern, shown on [A] when the step lands.
+  // A bank's or a toggled setting's colour and blink pattern, shown on [A].
   struct BankCue {
     Leds::Color color;
     PulsePattern pulses;
   };
   static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
+  BankCue cue_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

@@ -49,7 +49,7 @@ using namespace stmlib;
 // Keep the width meter below set_meter's wrap at 1.0.
 const float kWidthMeterSpan = 0.749f;
 const uint32_t kStorageStatusTime = 3000;
-const uint32_t kPlaitsBankCueTime = 500;
+const uint32_t kGestureCueTime = 500;
 
 // Marbles' 4:1 slow/fast blink ratio.
 static bool PulseLit(PulsePattern pulses, uint32_t elapsed) {
@@ -114,8 +114,8 @@ void Ui::Init(
   assign_modulation_ = 0.0f;
   delay_cue_time_ = 0;
   boot_cue_time_ = system_clock.milliseconds();
-  bank_cue_time_ = 0;
-  bank_cue_ = 0;
+  cue_time_ = 0;
+  cue_ = plaits_bank_cues_[0];
   
   seed_button_state_ = false;
   seed_button_locked_ = true;
@@ -151,8 +151,11 @@ void Ui::ShowStorageStatus() {
 
 void Ui::LoadOptions() {
   options_.Configure(settings_->profile());
+  const uint8_t amount_slots[MIX_PARAMETER_LAST] = {
+    AMOUNT_FEEDBACK, AMOUNT_DRY_WET, AMOUNT_REVERB
+  };
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    amount_feature_[i] = settings_->profile().Amount(i);
+    amount_feature_[i] = settings_->profile().Amount(amount_slots[i]);
   }
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
@@ -264,16 +267,14 @@ void Ui::Poll() {
       if (switches_.pressed(SWITCH_MEDIA)) {
         // Big hack to prevent the long press detection to fire!
         press_time_[SWITCH_MEDIA] = system_clock.milliseconds();
-        if (i == MIX_PARAMETER_FEEDBACK) {
+        const ProfileFeature feature = amount_feature_[i];
+        if (feature == FEATURE_GAIN_KNOB) {
           state->gain = 1.0f + p->hidden_parameter() * 255.0f;
-        } else {
-          const ProfileFeature feature = amount_feature_[i];
-          if (feature == FEATURE_WIDTH) {
-            settings_->set_stereo_width(StereoWidthFromPot(
-                p->hidden_parameter(), settings_->stereo_width()));
-          } else if (feature == FEATURE_DIFFUSION) {
-            settings_->set_diffusion(p->hidden_parameter());
-          }
+        } else if (feature == FEATURE_WIDTH) {
+          settings_->set_stereo_width(StereoWidthFromPot(
+              p->hidden_parameter(), settings_->stereo_width()));
+        } else if (feature == FEATURE_DIFFUSION) {
+          settings_->set_diffusion(p->hidden_parameter());
         }
       } else if (switches_.pressed(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
@@ -330,13 +331,13 @@ void Ui::UpdateLeds() {
   triangle = triangle >= 256 ? 511 - triangle : triangle;
 
   const bool led_features = settings_->led_features();
-  bool adjusting_manual_gain = switches_.pressed(SWITCH_MEDIA) && \
-      assignable_cv_pot_[MIX_PARAMETER_FEEDBACK].editing_hidden_parameter();
+  bool adjusting_manual_gain = false;
   bool adjusting_width = false;
   bool adjusting_diffusion = false;
-  for (int i = MIX_PARAMETER_DRY_WET; i <= MIX_PARAMETER_REVERB; ++i) {
+  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
     if (switches_.pressed(SWITCH_MEDIA) &&
         assignable_cv_pot_[i].editing_hidden_parameter()) {
+      adjusting_manual_gain |= amount_feature_[i] == FEATURE_GAIN_KNOB;
       adjusting_width |= amount_feature_[i] == FEATURE_WIDTH;
       adjusting_diffusion |= amount_feature_[i] == FEATURE_DIFFUSION;
     }
@@ -417,12 +418,11 @@ void Ui::UpdateLeds() {
             };
             leds_.set_media(cue);
           }
-          const uint32_t bank_elapsed =
-              system_clock.milliseconds() - bank_cue_time_;
-          if (bank_cue_time_ && bank_elapsed < kPlaitsBankCueTime) {
-            const BankCue& cue = plaits_bank_cues_[bank_cue_];
+          const uint32_t cue_elapsed =
+              system_clock.milliseconds() - cue_time_;
+          if (cue_time_ && cue_elapsed < kGestureCueTime) {
             leds_.set_media(
-                cue.color, PulseLit(cue.pulses, bank_elapsed) ? 1.0f : 0.0f);
+                cue_.color, PulseLit(cue_.pulses, cue_elapsed) ? 1.0f : 0.0f);
           }
         }
         
@@ -858,8 +858,8 @@ void Ui::StepPlaitsBank() {
       (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
   settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
   settings_->SaveState();
-  bank_cue_ = bank;
-  bank_cue_time_ = system_clock.milliseconds();
+  cue_ = plaits_bank_cues_[bank];
+  cue_time_ = system_clock.milliseconds();
 }
 
 bool Ui::DoAction(uint8_t slot) {
@@ -886,6 +886,17 @@ bool Ui::DoAction(uint8_t slot) {
       settings_->self_play_on_request() && !spectral_ && no_input_ &&
       !should_ignore_state_change()) {
     self_play_requested_ = true;
+    return true;
+  } else if (kFeatureDefinitions[feature].field != kNoField &&
+      !kFeatureDefinitions[feature].stateless) {
+    // Saved as from its options page, with that page's colour.
+    const uint8_t value = !settings_->FeatureValue(feature);
+    settings_->SetFeatureValue(feature, value);
+    settings_->SaveState();
+    const OptionValue& cue = FindOptionValue(OptionSetting(feature), value);
+    cue_.color = cue.color;
+    cue_.pulses = cue.pulses;
+    cue_time_ = system_clock.milliseconds();
     return true;
   }
   return false;

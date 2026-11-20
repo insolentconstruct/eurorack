@@ -90,6 +90,16 @@ const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts] = {
   0, 5000, 10000, 20000, 30000
 };
 
+const OptionValue& FindOptionValue(OptionSetting setting, int value) {
+  for (size_t i = 0; i < kNumOptionValues; ++i) {
+    if (kOptionValues[i].setting == setting &&
+        kOptionValues[i].value == value) {
+      return kOptionValues[i];
+    }
+  }
+  return kOptionValues[0];
+}
+
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
   bool enabled = current != 0;
   if (pot < kWidthStockThreshold) {
@@ -509,14 +519,7 @@ const OptionValue& Options::indication() const {
       return pitch_indication_;
     }
   }
-  for (size_t i = 0; i < kNumOptionValues; ++i) {
-    if (kOptionValues[i].setting == selected_ &&
-        kOptionValues[i].value == value) {
-      return kOptionValues[i];
-    }
-  }
-
-  return kOptionValues[0];
+  return FindOptionValue(selected_, value);
 }
 
 void Options::ApplySeedTaps() {

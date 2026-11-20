@@ -28,6 +28,7 @@
 
 #include <cstring>
 #include <cstdio>
+#include <vector>
 
 #include "beads/profile.h"
 #include "beads/test/test_checker.h"
@@ -276,6 +277,15 @@ void TestProfileParser() {
   b[19] = 0;
   Checksum(b);
   CHECK(!p.Init(b));
+  // An amount slot past the last is refused before it is marked used.
+  Template(b);
+  b[5] = 1;
+  b[6] = 6;
+  b[16] = FEATURE_WIDTH;
+  b[19] = b[21] = 0;
+  b[20] = AMOUNT_LAST;
+  Checksum(b);
+  CHECK(!p.Init(b));
   Template(b);
   b[5] = 82;
   b[6] = 236;
@@ -302,7 +312,7 @@ void TestProfileKinds() {
   for (int id = 1; id < FEATURE_LAST; ++id) {
     const FeatureDefinition& d = kFeatureDefinitions[id];
     for (int kind = 0; kind < 3; ++kind) {
-      const int max_slot = kind == 0 ? 21 : kind == 1 ? 2 : 3;
+      const int max_slot = kind == 0 ? 21 : 3;
       for (int slot = 1; slot <= max_slot + 1; ++slot) {
         Template(b);
         b[5] = 1;
@@ -317,9 +327,16 @@ void TestProfileKinds() {
         // Only Synth start takes the [A] hold, and it needs a gesture.
         const bool hold = kind == 2 && slot == ACTION_HOLD;
         const bool synth_start = id == FEATURE_SYNTH_START;
+        // Without a gain entry, manual gain keeps FEEDBACK (amount slot 3).
+        const bool feedback = kind == 1 && slot == AMOUNT_FEEDBACK &&
+            id != FEATURE_GAIN_KNOB;
+        // Plaits play keeps [A]+FREEZE, so the Synth toggle goes on SEED.
+        const bool synth_freeze = kind == 2 && slot == ACTION_FREEZE &&
+            id == FEATURE_SYNTH;
         const bool valid = slot <= max_slot &&
             (kind == 0 ? d.page : kind == 1 ? d.amount : d.action) &&
-            (!hold || synth_start) && (!synth_start || kind == 2);
+            (!hold || synth_start) && (!synth_start || kind == 2) &&
+            !feedback && !synth_freeze;
         CHECK(p.Init(b) == valid);
         if (kind == 0 && valid) {
           CHECK(p.Page(slot) == ProfileFeature(id));
@@ -335,7 +352,7 @@ void TestBetaProfileDefinitions() {
   CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
-    255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255
+    255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank; older profiles imply it.
@@ -547,6 +564,201 @@ void TestCustomScaleBank() {
   CHECK(!p.custom_bank() && p.scale_count() == 8);
 }
 
+// Accepts and parses as Beta 3 did: a digest of every result over single
+// entries and amount and action pairs in the Beta 3 vocabulary.
+uint32_t Beta3Digest(uint32_t* accepted) {
+  const uint8_t toggles[] = {
+    FEATURE_REVERB, FEATURE_PROCESSOR, FEATURE_FROZEN, FEATURE_SYNTH,
+    FEATURE_TIME_SCAN
+  };
+  const uint8_t pages[] = { 0, 1, 9, 21, 22 };
+  const uint8_t values[] = { 0, 1, 2, 3, 4, 5, 15, 16, 255 };
+  const int last = FEATURE_START_QUALITY + 1;
+  uint8_t b[kProfileSize];
+  std::vector<uint8_t> results;
+  std::vector<uint8_t> cases;
+  for (int id = 0; id < last; ++id) {
+    for (int state = 0; state <= 3; ++state) {
+      for (size_t v = 0; v < sizeof(values); ++v) {
+        for (size_t page = 0; page < sizeof(pages); ++page) {
+          for (int amount = 0; amount <= 3; ++amount) {
+            for (int action = 0; action <= 4; ++action) {
+              bool toggle = false;
+              for (size_t t = 0; t < sizeof(toggles); ++t) {
+                toggle = toggle || (id == toggles[t] && action);
+              }
+              if (toggle) {
+                continue;
+              }
+              const uint8_t entry[] = {
+                uint8_t(id), uint8_t(state), values[v], pages[page],
+                uint8_t(amount), uint8_t(action)
+              };
+              cases.insert(cases.end(), entry, entry + 6);
+              cases.insert(cases.end(), 6, 0);
+            }
+          }
+        }
+      }
+    }
+  }
+  const uint8_t pairs[][2] = {
+    { FEATURE_WIDTH, FEATURE_DIFFUSION },
+    { FEATURE_MONOPHONIC, FEATURE_TRIM },
+    { FEATURE_MONOPHONIC, FEATURE_SYNTH_START },
+    { FEATURE_TRIM, FEATURE_SYNTH_START }
+  };
+  for (size_t p = 0; p < 4; ++p) {
+    const int k = p ? 5 : 4;
+    for (int a = 0; a <= 3; ++a) {
+      for (int c = 0; c <= 3; ++c) {
+        uint8_t entries[12] = { 0 };
+        entries[0] = pairs[p][0];
+        entries[6] = pairs[p][1];
+        entries[1] = entries[7] = PROFILE_ADJUSTABLE;
+        entries[k] = a;
+        entries[6 + k] = c;
+        cases.insert(cases.end(), entries, entries + 12);
+      }
+    }
+  }
+  *accepted = 0;
+  for (size_t i = 0; i < cases.size(); i += 12) {
+    const int count = cases[i + 6] ? 2 : 1;
+    for (size_t j = 0; j < kProfileSize; ++j) {
+      b[j] = kProfileBlock[j];
+    }
+    b[5] = count;
+    b[6] = 6 * count;
+    b[7] = 0;
+    memcpy(b + 16, &cases[i], 6 * count);
+    const uint32_t crc = Profile::Crc32(b, 16 + 6 * count);
+    for (int j = 0; j < 4; ++j) {
+      b[16 + 6 * count + j] = crc >> (8 * j);
+    }
+    Profile parsed;
+    const bool ok = parsed.Init(b);
+    results.push_back(ok);
+    if (!ok) {
+      continue;
+    }
+    ++*accepted;
+    for (int id = 1; id < last; ++id) {
+      const uint8_t* e = reinterpret_cast<const uint8_t*>(
+          &parsed.entry(ProfileFeature(id)));
+      results.insert(results.end(), e, e + sizeof(ProfileEntry));
+    }
+    for (int slot = 1; slot < kNumPageSlots; ++slot) {
+      results.push_back(parsed.Page(slot));
+    }
+    for (int slot = 1; slot <= 2; ++slot) {
+      results.push_back(parsed.Amount(slot));
+    }
+    for (int slot = 1; slot <= 3; ++slot) {
+      results.push_back(parsed.Action(slot));
+    }
+  }
+  return Profile::Crc32(&results[0], results.size());
+}
+
+void TestBeta3Profiles() {
+  test_checker.Start("TestBeta3Profiles");
+  uint32_t accepted = 0;
+  // Measured on the parser before the FEEDBACK slot and the toggles.
+  CHECK(Beta3Digest(&accepted) == 0x1adfe3e4);
+  CHECK(accepted == 481);
+  Profile factory;
+  CHECK(factory.Init(kProfileBlock));
+  CHECK(factory.entry(FEATURE_GAIN_KNOB).state == PROFILE_OFF);
+  CHECK(factory.Amount(AMOUNT_DRY_WET) == FEATURE_WIDTH);
+  CHECK(factory.Amount(AMOUNT_REVERB) == FEATURE_DIFFUSION);
+  CHECK(factory.Amount(AMOUNT_FEEDBACK) == FEATURE_GAIN_KNOB);
+  CHECK(factory.Action(ACTION_SEED) == FEATURE_MONOPHONIC);
+  CHECK(factory.Action(ACTION_FREEZE) == FEATURE_TRIM);
+  CHECK(factory.Action(ACTION_HOLD) == FEATURE_SYNTH_START);
+  CHECK(factory.Amount(AMOUNT_NONE) == FEATURE_NONE);
+  Profile fallback;
+  fallback.Defaults();
+  CHECK(fallback.Amount(AMOUNT_FEEDBACK) == FEATURE_GAIN_KNOB);
+}
+
+// Lists entries after the factory header, without scales.
+bool ParseEntries(const uint8_t (*entries)[6], int count, Profile* p) {
+  uint8_t b[kProfileSize];
+  Template(b);
+  b[5] = count;
+  b[6] = 6 * count;
+  b[7] = 0;
+  for (int i = 0; i < count; ++i) {
+    memcpy(b + 16 + 6 * i, entries[i], 6);
+  }
+  Checksum(b);
+  return p->Init(b);
+}
+
+// Manual gain is on FEEDBACK unless the profile moves it to an amount slot
+// or fixes it off the knobs; each slot holds one setting.
+void TestGainKnobSlot() {
+  test_checker.Start("TestGainKnobSlot");
+  const FeatureDefinition& d = kFeatureDefinitions[FEATURE_GAIN_KNOB];
+  CHECK(d.values == 1 && d.field == kNoField && d.amount);
+  CHECK(!d.page && !d.action && !d.stateless);
+  const uint8_t gain = FEATURE_GAIN_KNOB;
+  const uint8_t width = FEATURE_WIDTH;
+  const uint8_t diff = FEATURE_DIFFUSION;
+  const uint8_t adj = PROFILE_ADJUSTABLE;
+  const uint8_t fixed = PROFILE_FIXED;
+  struct Case {
+    uint8_t entries[3][6];
+    int count;
+    bool valid;
+    uint8_t amounts[3];  // DRY/WET, REVERB, FEEDBACK.
+  };
+  const Case cases[] = {
+    // A FEEDBACK amount needs manual gain moved or fixed.
+    { { { width, adj, 0, 0, 3, 0 } }, 1, false, { 0 } },
+    { { { gain, 0, 0, 0, 0, 0 }, { width, adj, 0, 0, 3, 0 } },
+        2, false, { 0 } },
+    { { { gain, fixed, 0, 0, 0, 0 }, { width, adj, 0, 0, 3, 0 } },
+        2, true, { 0, 0, width } },
+    { { { gain, adj, 0, 0, 3, 0 }, { width, adj, 0, 0, 3, 0 } },
+        2, false, { 0 } },
+    { { { gain, adj, 0, 0, 1, 0 }, { width, adj, 0, 0, 1, 0 } },
+        2, false, { 0 } },
+    { { { gain, adj, 0, 0, 1, 0 }, { width, adj, 0, 0, 3, 0 },
+        { diff, adj, 0, 0, 2, 0 } }, 3, true, { gain, diff, width } },
+    { { { diff, adj, 0, 0, 3, 0 }, { gain, adj, 0, 0, 3, 0 } },
+        2, false, { 0 } },
+    { { { diff, adj, 0, 0, 3, 0 }, { gain, adj, 0, 0, 2, 0 } },
+        2, true, { 0, gain, diff } },
+    // Off is stock, Fixed takes it off the knobs, Adjustable needs a slot.
+    { { { gain, adj, 0, 0, 2, 0 } }, 1, true, { 0, gain, 0 } },
+    { { { gain, adj, 0, 0, 3, 0 } }, 1, true, { 0, 0, gain } },
+    { { { gain, fixed, 0, 0, 0, 0 } }, 1, true, { 0, 0, 0 } },
+    { { { gain, 0, 0, 0, 0, 0 } }, 1, true, { 0, 0, gain } },
+    { { { gain, adj, 0, 0, 0, 0 } }, 1, false, { 0 } },
+    { { { gain, fixed, 1, 0, 0, 0 } }, 1, false, { 0 } },
+    { { { gain, adj, 1, 0, 2, 0 } }, 1, false, { 0 } },
+    { { { gain, adj, 0, 1, 2, 0 } }, 1, false, { 0 } },
+    { { { gain, adj, 0, 0, 2, 1 } }, 1, false, { 0 } },
+    { { { gain, fixed, 0, 0, 2, 0 } }, 1, false, { 0 } },
+    { { { gain, 0, 0, 0, 2, 0 } }, 1, false, { 0 } },
+    { { { gain, adj, 0, 0, 4, 0 } }, 1, false, { 0 } },
+  };
+  for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+    Profile p;
+    const bool valid = ParseEntries(cases[i].entries, cases[i].count, &p);
+    if (!CHECK(valid == cases[i].valid)) {
+      printf("case %d\n", int(i));
+    }
+    if (valid) {
+      for (int slot = AMOUNT_DRY_WET; slot <= AMOUNT_FEEDBACK; ++slot) {
+        CHECK(p.Amount(slot) == cases[i].amounts[slot - 1]);
+      }
+    }
+  }
+}
+
 int main() {
   TestOptionalPageSlots();
   TestDefaultPageTwoAndExplicitLayouts();
@@ -554,6 +766,8 @@ int main() {
   TestCustomScaleBank();
   TestProfileKinds();
   TestBetaProfileDefinitions();
+  TestBeta3Profiles();
+  TestGainKnobSlot();
   puts("Profile validation: PASS");
   return test_checker.failures() ? 1 : 0;
 }

@@ -25,8 +25,9 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 |---|---|---|
 | the quality button [A] tap | TAKEN: cycle quality downward, 3 → 2 → 1 → 0 | Yes <!-- beads/ui.cc:472-495 --> |
 | [A] hold, 1.5 s | TAKEN: with no input, FREEZE off and Synth start on Manual, toggle wavetable synth; otherwise restart automatic gain and clear manual gain. Drizzlet acts on release, and not after a knob turn or button press while [A] was down (#289); stock acts at 1.5 s | Gain only; manual says 1 s <!-- beads/ui.cc:48-50,478-484; manual.md:44-45 --> |
-| [A] + feedback knob | TAKEN: manual input gain; release saves. A profile can start a blank gain in manual gain ([ID 27](#input-gain-at-power-on)) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
-| [A] + dry/wet knob | TAKEN by Drizzlet: stereo width; release saves | Yes |
+| [A] + feedback knob | TAKEN: manual input gain; release saves. A profile can start a blank gain in manual gain ([ID 27](#input-gain-at-power-on)), or put width, diffusion or nothing here instead ([ID 40](#a-gestures-in-profiles)) | Yes <!-- beads/ui.cc:174-177,491-495 --> |
+| [A] + dry/wet knob | TAKEN by Drizzlet: stereo width; release saves. A profile can choose diffusion, manual gain or nothing | Yes |
+| [A] + reverb knob | TAKEN by Drizzlet: grain diffusion; release saves. A profile can choose width, manual gain or nothing | Yes |
 | FREEZE tap | TAKEN: toggle freeze | Buffer/state save starts after 10 s (with interruption backoff below) if autosave enabled, outside wavetable synth and spectral modes <!-- beads/ui.cc:402-404; beads/background_buffer_backup.cc:144-161; beads/beads.cc:406-408 --> |
 | FREEZE hold | FREE dedicated long action; tap already toggles, 4 s event has no extra action | — <!-- beads/ui.cc:48-50,402-404,461-520 --> |
 | SEED press / release | TAKEN: unlatch, then generate while held; release stops | No; starts latched at boot, or unlatched with [ID 29](#seed-at-power-on) <!-- beads/ui.cc:81-83,406-411,463-469 --> |
@@ -38,8 +39,8 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 | Hold [M], press SEED | TAKEN: toggle R output between audio and grain gate | Yes <!-- beads/ui.cc:331-339; manual.md:138 --> |
 | Hold [M], press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | [M] + [A], either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
-| Hold [A], press SEED | TAKEN: toggle monophonic grains; consumes both releases; [A] first | Yes <!-- beads/ui.cc:358-369 --> |
-| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch. In Plaits synth play it steps the [Plaits bank](#plaits-bank) instead (ID 31) and leaves FREEZE alone | Gesture from the source Mutable Instruments published in 2026, disabled there; saves keep the length; stock loads full length. The bank is saved |
+| Hold [A], press SEED | TAKEN: toggle monophonic grains; consumes both releases; [A] first. A profile can put buffer trim, Synth start or a [toggle](#a-gestures-in-profiles) here | Yes <!-- beads/ui.cc:358-369 --> |
+| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch. In Plaits synth play it steps the [Plaits bank](#plaits-bank) instead (ID 31) and leaves FREEZE alone. A profile can put monophonic grains, Synth start or a [toggle](#a-gestures-in-profiles) here | Gesture from the source Mutable Instruments published in 2026, disabled there; saves keep the length; stock loads full length. The bank is saved |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + [M] | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration. With both copies of the calibration lost: repair with the factory calibration; result shown 3 s | Rewrites settings sector <!-- beads/settings.cc; beads/settings_storage.h --> |
@@ -121,6 +122,7 @@ not-set values use the profile default.
 | 37 | Options page preview (#285) | No saved value |
 | 38 | Options page on opening (#285) | No saved value |
 | 39 | Start in quality (#287) | No saved value |
+| 40 | Manual gain knob (#301) | No saved value; the gain is stock byte 5 |
 
 Fields 16 (byte 21 low) and 18 (byte 22 low) hold the identity of the
 profile that last saved, 0–224 from its checksum: field 18 × 15 + field 16.
@@ -636,3 +638,27 @@ recording is to be restored from flash, the module keeps that recording's
 quality instead; the check is that a restore is intended, so with an unreadable
 flash copy the old quality also stays. Chosen at power-on, with no panel slot
 or saved choice; the audio path is unchanged.
+
+### [A] gestures in profiles
+
+A Hygrostat profile chooses what the [A] gestures do (#301). The factory
+layout and every earlier profile keep their gestures.
+
+- [A]+SEED and [A]+FREEZE can take Monophonic grains, Buffer trim, Synth
+  start or a two-value toggle: Reverb character, Processor, Frozen feedback,
+  Synth or TIME modulation. A toggle flips its setting, saves it, and [A]
+  shows the new value's options page colour for half a second (green first
+  value, yellow second). Processor clears the recording, as from its page;
+  while FREEZE is on, the change waits for its release. In Plaits synth
+  play [A]+FREEZE still steps the bank, so a toggle there waits for the
+  synth to stop, and Synth goes on [A]+SEED only. The [A] hold stays Synth
+  start only.
+- [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB can each take Manual gain,
+  Stereo width or Diffusion, one per knob. Hygrostat feature ID 40, Manual
+  gain knob, places the gain: Off keeps it on FEEDBACK; Fixed takes it off
+  the knobs. Releasing [A] saves the gain wherever it is. Holding [A] still
+  restarts automatic gain when it doesn't start the synth, and ID 27 still
+  chooses the power-on gain.
+
+Firmware before Beta 4 refuses these layouts. The format is in
+[SCALE-PROFILES.md](SCALE-PROFILES.md#a-gestures-beta-4).

@@ -93,7 +93,7 @@ FREEZE saves after ten seconds. Interrupting a save doubles the next wait up to 
 
 https://hygrostat.insolentconstruct.net/ builds updates and guides locally. Choose features, controls and defaults, using templates or custom Off, Fixed and Adjustable settings. It shows no CPU estimate; not every combination of options has been measured on a module.
 
-In a Hygrostat profile, [A] gestures take only some settings: the hold, [A]+SEED and [A]+FREEZE take Synth start, Monophonic grains or Buffer trim; [A]+DRY/WET and [A]+REVERB take Stereo width or Diffusion. Processor and the other settings go on options pages.
+In a Hygrostat profile, [A] gestures take only some settings: the hold takes Synth start; [A]+SEED and [A]+FREEZE take Synth start, Monophonic grains, Buffer trim or a toggle (Reverb character, Processor, Frozen feedback, Synth on [A]+SEED only, or TIME modulation); [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB take Manual gain, Stereo width or Diffusion. The other settings go on options pages.
 
 Profiles, custom scales, LED indications and tail choices are checked by host tests, not yet on a module. Page 4 provides LED brightness and SEED latch with stock starting values. Seven additional options are off in standard firmware:
 

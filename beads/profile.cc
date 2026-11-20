@@ -35,12 +35,12 @@ namespace beads {
 const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 0, kNoField, false, false, false, false },  // None.
   { 16, 0, true, false, false, false },  // Pitch.
-  { 2, 1, true, false, false, false },  // Reverb.
+  { 2, 1, true, false, true, false },  // Reverb.
   { 3, 2, true, false, false, false },  // Delay.
-  { 2, 3, true, false, false, false },  // Processor.
+  { 2, 3, true, false, true, false },  // Processor.
   { 3, 4, true, false, false, false },  // Limiter.
-  { 2, 5, true, false, false, false },  // Frozen.
-  { 2, 6, true, false, false, false },  // Synth.
+  { 2, 5, true, false, true, false },  // Frozen.
+  { 2, 6, true, false, true, false },  // Synth.
   { 3, 7, true, false, false, false },  // Attacks.
   { 2, 8, true, false, true, true },  // Synth start.
   { 3, 9, true, false, false, false },  // Intervals.
@@ -56,7 +56,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Save freeze.
   { 4, 11, true, false, false, false },  // Seed latch.
   { 2, kNoField, false, false, false, false },  // Pitch notch.
-  { 2, 12, true, false, false, false },  // Time scan.
+  { 2, 12, true, false, true, false },  // Time scan.
   { 2, kNoField, false, false, false, false },  // Synth reverb tail.
   { 5, kNoField, false, false, false, false },  // Idle timeout.
   { 2, kNoField, false, false, false, false },  // Seed latch fade.
@@ -73,6 +73,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Page preview.
   { 2, kNoField, false, false, false, false },  // First page.
   { 5, kNoField, false, false, false, false },  // Start quality.
+  { 1, kNoField, false, true, false, false },  // Gain knob.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
@@ -861,9 +862,9 @@ bool Profile::Parse(const volatile uint8_t* b) {
         e.action >= ACTION_LAST) {
       return false;
     }
-    // Adjustable needs a page, or a saved field a gesture changes.
+    // Adjustable needs a page, a knob, or a saved field a gesture changes.
     if (id >= FEATURE_VERSION && e.state == PROFILE_ADJUSTABLE &&
-        !d.page && d.field == kNoField) {
+        !d.page && d.field == kNoField && !e.amount_slot) {
       return false;
     }
     // The Plaits bank is always stepped on the panel; only its start varies.
@@ -889,10 +890,17 @@ bool Profile::Parse(const volatile uint8_t* b) {
         (e.action == ACTION_HOLD && id != FEATURE_SYNTH_START)) {
       return false;
     }
+    // Plaits play keeps [A]+FREEZE for its bank, so Synth goes on [A]+SEED.
+    if (id == FEATURE_SYNTH && e.action == ACTION_FREEZE) {
+      return false;
+    }
     pages[e.page_slot] = amounts[e.amount_slot] = actions[e.action] = true;
     entries_[id] = e;
   }
-  if (!HasScale(entries_[FEATURE_PITCH].value)) {
+  // Another FEEDBACK amount needs manual gain moved or fixed.
+  if (!HasScale(entries_[FEATURE_PITCH].value) ||
+      (amounts[AMOUNT_FEEDBACK] &&
+          entries_[FEATURE_GAIN_KNOB].state == PROFILE_OFF)) {
     return false;
   }
   // Profiles from before the banks start on the first one.
@@ -917,6 +925,11 @@ ProfileFeature Profile::Amount(uint8_t slot) const {
     if (slot && entries_[i].amount_slot == slot) {
       return ProfileFeature(i);
     }
+  }
+  // Off leaves manual gain on FEEDBACK, as stock.
+  if (slot == AMOUNT_FEEDBACK &&
+      entries_[FEATURE_GAIN_KNOB].state == PROFILE_OFF) {
+    return FEATURE_GAIN_KNOB;
   }
   return FEATURE_NONE;
 }

@@ -2656,6 +2656,66 @@ void TestCalibrationStepOnRelease() {
   CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
 }
 
+// [A]+SEED as a Processor toggle takes the options page's path: it saves,
+// fades and swaps the engine both ways, clearing the recording for spectral.
+void TestProcessorToggle() {
+  test_checker.Start("TestProcessorToggle");
+  extern float reverb_style_gain;
+  extern uint8_t delay_buffer_1[];
+  Rig r(false, false);
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  MoveAction(block, FEATURE_MONOPHONIC, ACTION_NONE);
+  MoveAction(block, FEATURE_PROCESSOR, ACTION_SEED);
+  FlashProfile(block);
+  r.Reboot(false);
+  CHECK(!settings.profile_locked());
+  CHECK(settings.profile().Action(ACTION_SEED) == FEATURE_PROCESSOR);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+  for (int pass = 0; pass < 2; ++pass) {
+    const bool spectral = pass == 0;
+    RunSquare(&r, 2400);
+    CHECK(processor.spectral() == !spectral);
+    bool recorded = false;
+    for (size_t i = 0; i < 512 * 1024; ++i) {
+      recorded = recorded || delay_buffer_1[i];
+    }
+    CHECK(recorded || !spectral);
+    const uint32_t writes = test_writes;
+    bool faded = false;
+    for (int step = 0; step < 3; ++step) {
+      test_down[SWITCH_MEDIA] = step < 2;
+      test_down[SWITCH_SEED] = step == 1;
+      for (int i = 0; i < 20; ++i) {
+        r.Tick(1, true);
+        faded |= reverb_style_gain == 0.0f;
+      }
+    }
+    CHECK(settings.spectral() == spectral && ui.spectral() == spectral);
+    CHECK(test_writes == writes + 1);
+    CHECK(!settings.state().monophonic_mode);
+    for (int i = 0; i < 400 && processor.spectral() != spectral; ++i) {
+      RunSquare(&r, 1);
+      faded |= reverb_style_gain == 0.0f;
+    }
+    CHECK(faded && processor.spectral() == spectral);
+    if (spectral) {
+      bool cleared = true;
+      for (size_t i = 0; i < 512 * 1024; ++i) {
+        cleared = cleared && delay_buffer_1[i] == 0;
+      }
+      CHECK(cleared);
+    }
+  }
+  // The saved engine returns after a restart.
+  settings.set_spectral(true);
+  settings.SaveState();
+  r.Reboot(false);
+  CHECK(processor.spectral());
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  FlashProfile(factory_profile);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -2706,6 +2766,7 @@ int main() {
   TestManualSynthStartNeedsGesture();
   TestSlowMediaGestures();
   TestEngineChangeWhileFrozen();
+  TestProcessorToggle();
   TestCalibrationStepOnRelease();
   return test_checker.failures() ? 1 : 0;
 }
