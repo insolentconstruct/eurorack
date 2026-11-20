@@ -3453,34 +3453,33 @@ void TestFeedbackAmountSlot() {
       CHECK(r.ui.amount_feature_[knob[2]] == FEATURE_DIFFUSION);
       r.settings.mutable_state()->gain = 77;
       const uint8_t media = r.settings.state().media;
-      const uint32_t writes = test_writes;
-      r.Down(SWITCH_MEDIA);
-      // Two seconds in, the edit keeps the hold from restarting the gain.
-      r.Tick(2000, true);
       float* pots[] = { &r.feedback, &r.pot, &r.reverb };
-      *pots[knob[0]] = 0.75f;
-      r.Tick(20, true);
-      CHECK(r.settings.state().gain == 192);
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
-      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 121);
-      CHECK(uint32_t(stmlib::system_clock.milliseconds() -
-          r.ui.press_time_[SWITCH_MEDIA]) <= 1);
-      *pots[knob[1]] = 1.0f;
-      r.Tick(20, true);
-      CHECK(r.settings.stereo_width() == 255);
-      *pots[knob[2]] = 1.0f;
-      r.Tick(20, true);
-      CHECK(r.settings.state().diffusion == 255);
-      CHECK(uint32_t(stmlib::system_clock.milliseconds() -
-          r.ui.press_time_[SWITCH_MEDIA]) <= 1);
+      const float targets[] = { 0.75f, 1.0f, 1.0f };
       for (int k = 0; k < 3; ++k) {
-        CHECK(r.ui.mix_parameter(knobs[k]) == 0.5f);
+        const uint32_t writes = test_writes;
+        r.Down(SWITCH_MEDIA);
+        // Two seconds in, each edit keeps the hold from restarting the gain.
+        r.Tick(2000, true);
+        *pots[knob[k]] = targets[k];
+        r.Tick(20, true);
+        CHECK(uint32_t(stmlib::system_clock.milliseconds() -
+            r.ui.press_time_[SWITCH_MEDIA]) <= 1);
+        if (k == 0) {
+          CHECK(r.settings.state().gain == 192);
+          CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
+          CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 121);
+        } else if (k == 1) {
+          CHECK(r.settings.stereo_width() == 255);
+        } else {
+          CHECK(r.settings.state().diffusion == 255);
+        }
+        CHECK(r.ui.mix_parameter(knobs[knob[k]]) == 0.5f);
+        CHECK(test_writes == writes);
+        r.Up(SWITCH_MEDIA);
+        CHECK(test_writes == writes + 1);
+        CHECK(r.gain.restarts == 0);
+        CHECK(r.settings.state().media == media);
       }
-      CHECK(test_writes == writes);
-      r.Up(SWITCH_MEDIA);
-      CHECK(test_writes == writes + 1);
-      CHECK(r.gain.restarts == 0);
-      CHECK(r.settings.state().media == media);
       Settings loaded;
       CHECK(loaded.Init(false, b));
       CHECK(loaded.state().gain == 192);

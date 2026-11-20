@@ -2657,7 +2657,7 @@ void TestCalibrationStepOnRelease() {
 }
 
 // [A]+SEED as a Processor toggle takes the options page's path: it saves,
-// fades, swaps the engine and clears the recording, both ways.
+// fades and swaps the engine both ways, clearing the recording for spectral.
 void TestProcessorToggle() {
   test_checker.Start("TestProcessorToggle");
   extern float reverb_style_gain;

@@ -277,6 +277,15 @@ void TestProfileParser() {
   b[19] = 0;
   Checksum(b);
   CHECK(!p.Init(b));
+  // An amount slot past the last is refused before it is marked used.
+  Template(b);
+  b[5] = 1;
+  b[6] = 6;
+  b[16] = FEATURE_WIDTH;
+  b[19] = b[21] = 0;
+  b[20] = AMOUNT_LAST;
+  Checksum(b);
+  CHECK(!p.Init(b));
   Template(b);
   b[5] = 82;
   b[6] = 236;

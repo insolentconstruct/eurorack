@@ -1944,6 +1944,13 @@ cases = [
     '        const ProfileFeature',
     '        const ProfileFeature'),
   ('TestFeedbackAmountSlot', 'options', 'beads/ui.cc',
+    '        press_time_[SWITCH_MEDIA] = system_clock.milliseconds();\n'
+    '        const ProfileFeature feature = amount_feature_[i];\n'
+    '        if (feature == FEATURE_GAIN_KNOB) {\n',
+    '        const ProfileFeature feature = amount_feature_[i];\n'
+    '        if (feature == FEATURE_GAIN_KNOB) {\n'
+    '          press_time_[SWITCH_MEDIA] = system_clock.milliseconds();\n'),
+  ('TestFeedbackAmountSlot', 'options', 'beads/ui.cc',
     '        if (feature == FEATURE_GAIN_KNOB) {\n'
     '          state->gain',
     '        if (i == MIX_PARAMETER_FEEDBACK) {\n'
