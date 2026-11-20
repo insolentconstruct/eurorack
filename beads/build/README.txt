@@ -33,18 +33,20 @@ bottom of the knob it is Stock; turn upwards to enable width, reaching
 full random spread clockwise. Minimum width preserves stereo position
 and centres mono. Each grain, including synth, retains its pan, even at
 maximum DENSITY. [A] meters green through yellow to red; tapping [A]
-alone changes quality. Enabled WIDTH follows the three stock [M]
-destinations, pulsing all mix LEDs. CV input 7 adds width; custom
-assignments work. Stock retains routing and pan rounding.
+alone changes quality. Once width is enabled, tap [M] past the three
+stock destinations to WIDTH, with all mix LEDs pulsing; CV input 7 then
+adds width. Custom assignments work. Stock retains routing and pan
+rounding.
 
 Grain diffusion
 ---------------
 
 Hold [A] and turn REVERB; [A] meters the amount. Fully counter-clockwise
 removes diffusion. Until set, Stock has none and Clouds-style uses its
-own amount. Setting it adds DIFFUSION after REVERB and WIDTH in the [M]
-cycle, with REVERB pulsing alone. The amount is saved. Diffusion affects
-grains only.
+own amount. Setting a nonzero amount adds DIFFUSION after REVERB and
+WIDTH in the [M] cycle: tap [M] until REVERB pulses alone, and CV input
+7 then drives diffusion. The amount is saved. Diffusion affects grains
+only.
 
 Monophonic grains
 -----------------
@@ -59,10 +61,12 @@ Buffer trim
 -----------
 
 Hold [A], then press FREEZE to restart the recording window at zero
-length and clear the FREEZE latch. Release both, record, then freeze. A
-FREEZE gate holds the window empty until low. Existing grains finish on
-old audio; new grains use the new window. Saved buffers keep trimmed
-lengths; stock loads them full-length.
+length and clear the FREEZE latch. Release both, record, then freeze:
+the buffer holds only what came after, so TIME scans just that bar or
+sound. This is Mutable Instruments' own gesture, undocumented in the
+manual. A FREEZE gate holds the window empty until low. Existing grains
+finish on old audio; new grains use the new window. Saved buffers keep
+trimmed lengths; stock loads them full-length.
 
 Recording and switching
 -----------------------
@@ -94,6 +98,11 @@ https://hygrostat.insolentconstruct.net/ builds updates and guides
 locally. Choose features, controls and defaults, using templates or
 custom Off, Fixed and Adjustable settings. It shows no CPU estimate;
 not every combination of options has been measured on a module.
+
+In a Hygrostat profile, [A] gestures take only some settings: the hold,
+[A]+SEED and [A]+FREEZE take Synth start, Monophonic grains or Buffer
+trim; [A]+DRY/WET and [A]+REVERB take Stereo width or Diffusion.
+Processor and the other settings go on options pages.
 
 Profiles, custom scales, LED indications and tail choices are checked
 by host tests, not yet on a module. Page 4 provides LED brightness and
@@ -284,11 +293,16 @@ playback and Beads wavetable grains, not the delay pitch, the continuous
 oscillator, Plaits or Spectral; in the wavetable synth Recent notes
 plays as Free.
 
-Attacks selects Off, Snap or Snap and trigger in thirds. Snap moves
-grain starts onto recorded hits; Snap and trigger also starts a grain
-on each hit, on top of DENSITY's grains, at noon and while frozen too.
-Only granular playback uses hits: not delay, Spectral or the synths.
-SEED and its cable work as usual.
+Attacks selects Off, Snap or Snap and trigger in thirds. Hits are
+detected relative to the recent input level, before the input gain. Snap
+uses the last 64 hits recorded: each new grain's start moves back to the
+nearest earlier hit within a tenth of a second, if there is one. TIME
+still scans continuously, so Snap does not slice the buffer. Turn
+Attacks on before freezing; an already frozen recording is not analysed.
+Snap and trigger also starts a grain on each hit, on top of DENSITY's
+grains (at noon, hits only) and while frozen too. Only granular playback
+uses hits: not delay, Spectral or the synths. SEED and its cable work as
+usual.
 
 Reverb character selects Stock or Clouds-style, which adds diffusion
 until manually set. In delay and wavetable synth, only reverb changes.
