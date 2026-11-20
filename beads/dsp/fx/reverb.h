@@ -119,7 +119,7 @@ class Reverb {
       
       // Smear AP1 inside the loop.
       c.Interpolate(ap1, 10.0f, LFO_1, 80.0f, 1.0f);
-      
+
       // The other reads don't alias this sample's writes: load them first.
       const float ap1_tail = c.Tail(ap1);
       const float ap2_tail = c.Tail(ap2);
@@ -131,7 +131,7 @@ class Reverb {
       const float del1_tap = c.Tap(del1, 4460.0f, LFO_1, 40.0f);
       const float dap2a_tail = c.Tail(dap2a);
       const float dap2b_tail = c.Tail(dap2b);
-      
+
       c.Write(ap1, 100, 0.0f);
       
       c.Read(in_out->l + in_out->r, send_amount);

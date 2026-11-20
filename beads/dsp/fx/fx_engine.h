@@ -260,7 +260,7 @@ class FxEngine {
       return DataType<format>::Decompress(
           buffer_[(write_ptr_ + D::base + D::length - 1) & MASK]);
     }
-    
+
     template<typename D>
     inline float Tap(
         D& d, float offset, LFOIndex index, float amplitude) const {
@@ -273,12 +273,12 @@ class FxEngine {
           buffer_[(write_ptr_ + offset_integral + D::base + 1) & MASK]);
       return a + (b - a) * offset_fractional;
     }
-    
+
     inline void ReadTail(float tail, float scale) {
       previous_read_ = tail;
       accumulator_ += tail * scale;
     }
-    
+
     inline float peak() const { return peak_; }
     
    private:
