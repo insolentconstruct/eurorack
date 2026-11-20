@@ -6,7 +6,7 @@ Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overloa
 
 ## TL;DR
 
-On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These are development-board figures. On a 2021 module, peak audio-callback load (timing builds, heavy test patches) falls from 91% to 77% in granular mode and from 86% to 83% in the wavetable synth.
+On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These are development-board figures. On a 2021 module, peak audio-callback load (timing builds, heavy test patches) falls from 91% to 76% in granular mode and from 85–86% to 81–82% in the wavetable synth.
 
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|
@@ -86,7 +86,7 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 | Both pass-2 changes together | the two rows above | template | 4,369 / 4,281 | +1,376 B | 0 | 28/28, 20/20, 13/13, error 0 | kept |
 | Grain Hermite read on the stored integers, scaled once | Mutable Instruments: Clouds' `ReadHermite` interpolates the unscaled samples and multiplies by `scale` once (`clouds/dsp/audio_buffer.h:241-277`) | the three changes | 6,775 / 7,140 (run 2: 6,840 / 7,130) | -504 B | 0 | 28/28 development board hashes (audio and buffers); host tests | kept |
 | Synth: two playing grains computed side by side, mixed in index order | Port from Drizzlet: the in-order core overlaps two grains' independent sample and envelope chains; each grain's arithmetic is unchanged | integer Hermite, on this branch | unchanged (synth only) | +2,712 B | 0 | 14/14 synth development board hashes (audio and reverb); granular image byte-identical; host tests, `TestSynthGrainPairs` | kept |
-| Reverb: all-pass tails and modulated taps loaded before the sample's writes | Drizzlet's Clouds-style diffuser fix; the reads never alias the writes they now precede, and each value's arithmetic is unchanged | beads-tuneup-2026.11.09, on this branch | 1,238 / 1,329 (all 24 granular scenarios: 330 to 1,436 / 444 to 1,411 saved; all 14 synth scenarios: 1,121 to 1,318 / 1,228 to 1,265 saved) | +184 B | 0 | 24/24 granular and 14/14 synth development board hashes (audio and buffers); host tests and audio reference | proposed |
+| Reverb: all-pass tails and modulated taps loaded before the sample's writes | Drizzlet's Clouds-style diffuser fix; the reads never alias the writes they now precede, and each value's arithmetic is unchanged | beads-tuneup-2026.11.09, on this branch | 1,238 / 1,329 (all 24 granular scenarios: 330 to 1,436 / 444 to 1,411 saved; all 14 synth scenarios: 1,121 to 1,318 / 1,228 to 1,265 saved) | +184 B | 0 | 24/24 granular and 14/14 synth development board hashes (audio and buffers); host tests and audio reference | kept |
 | Delay grains computed in pairs (port of the synth pairs) | the synth pairs row | beads-tuneup-2026.11.09 | -19,222 / -19,004 (GCC keeps the split steps out of line); with `always_inline` -2,044 / -1,696 | -4,312 B; -456 B | 0 | 24/24 development board | rejected |
 | Synth grains summed in a local frame | the delay local-frame row | beads-tuneup-2026.11.09 | synth -851 / -439 at its peak, slower in all 14 synth scenarios | -64 B | 0 | 14/14 development board | rejected |
 | All sample loops in ITCM | Mutable Instruments: stmlib's `IN_RAM` placement | GCC 9 | -765 / -770 | +336 B | +21,440 B ITCM | 28/28 development board | rejected |
@@ -126,7 +126,7 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 
 Measured in November 2026 on one 2021 module, and on a development board with the same chip and clock.
 
-**TL;DR:** Audio breaks when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it [mechanism inferred]. That comes before a full-block underrun, and the SAI flags nothing. On the module, the first left word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz. In the crackle recipe this branch peaks about 12 points under the 48 kHz edge.
+**TL;DR:** Audio breaks when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it [mechanism inferred]. That comes before a full-block underrun, and the SAI flags nothing. Without the one-frame output delay, the module's first left word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz; with it (this branch), up to 97.7%, 97.3% and 96.9%. In the crackle recipe this branch peaks about 19 points under the 48 kHz edge.
 
 - **Module (measured).** A Drizzlet test build with the same codec driver held the audio callback at set lengths; firmware counters flag a block whose first left word is stored after the DMA has read it. Each edge was found twice. Callback peak cycles, budget 120,000:
 
@@ -140,9 +140,9 @@ Measured in November 2026 on one 2021 module, and on a development board with th
 - **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
 - **The historical left-channel click.** Reproduced on one module with the 2024 source rebuilt with GCC 9 (plus deadline tracing), in the historical crackle recipe: Bright digital (48 kHz), DENSITY 0.98, PITCH +24, SIZE 0.92. Its callback peaked at 93.5 to 94.0%, above the module's 48 kHz edge, and OUT L clicked. In the same recipe, this branch's code with the 2024 grain stealing (81.7 to 82.7%) and this branch (78.1 to 78.8%) stayed clean [measured]. The clicks are block-locked and match the output one ring lap earlier, which points to a late first left word [inferred; moderately high confidence, exploratory, not seen on the codec data line].
 - **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
-- **Headroom.** At 48 kHz the module is clean only up to 90.8%, not 99%. Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, under 86.6% and 82.7%.
+- **Headroom.** Without the delay the module is clean only up to 90.8% at 48 kHz, not 99%, and Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, under 86.6% and 82.7%. With the delay (this branch), keep a point under the measured edges: about 96.5%, 96% and 95.5%.
 
-### One-frame output delay (pending module qualification)
+### One-frame output delay
 
 This branch writes each block's output one frame late: the codec driver stores the last block's last frame at the start of the half before the callback runs, then copies the callback's first N−1 frames after it. The first word the callback must reach in time is then the third word of the half, one frame later, and the deadline moves to about the next codec interrupt. The same driver change is measured in Drizzlet; the development-board figures below are for that driver.
 
@@ -159,7 +159,17 @@ This branch writes each block's output one frame late: the codec driver stores t
 - **Cost (measured).** `Codec::Fill` with Beads' conversion loop, codec stopped, mean: +144, +93 and +86 cycles per block at 48, 32 and 24 kHz (about 0.12% of the block or less). The copy runs after the callback, so the DWT load figures do not include it. The bootloader links the same driver; the delay is compiled for the application only, so the bootloader is unchanged.
 - **Behaviour.** Latency rises by one frame. Patches that feed OUT back to IN, or line audio up with gates or triggers, shift by one frame. A pause or restart (quality changes) drops the one pending frame, inside the existing fade.
 - **Why Beads differs.** Mutable Instruments' other STM32 modules share one codec pattern (callback output written in place), but the Beads H7 DMA reads ahead of its sends, and Mutable Instruments noted that every project has something unique in hardware that makes reusable layers above the GPIO level of limited use ([STM32 miscellania](https://pichenettes.github.io/mutable-instruments-documentation/tech_notes/stm32_miscellania/)).
-- **Pending on the module.** Clean edges at 48, 32 and 24 kHz and a click scan; deliberate overruns above 100% (how output fails is not yet measured); start-up and sample-rate changes. Until then the headroom limits above stay as they are.
+- **Module (measured, one 2021 module).** A test build of this branch held the callback at set lengths, as above. Callback maximum, budget 120,000:
+
+| Codec rate | Clean up to | Without the delay | Gain |
+|---|---:|---:|---:|
+| 48 kHz | 117,228 (97.7%) | 108,908 (90.8%) | +6.9 points |
+| 32 kHz | 116,700 (97.3%) | 103,935 (86.6%) | +10.7 points |
+| 24 kHz | 116,297 (96.9%) | 99,182 (82.7%) | +14.2 points |
+
+  The firmware counter flagged the first late blocks half a point to a point higher, while OUT L was still clean. At about 101% every block is late and the output is scrambled at full level (the tone breaks into sidebands); heavier overruns were not measured.
+- **Clicks on the module (measured).** In the historical crackle recipe the release build made no clicks on OUT L in about 6 minutes, as beads-tuneup-2026.11.09. Installing by audio, start-up and quality changes passed; quality changes that keep the sample rate stayed click-free.
+- **Rate changes (measured).** The small rate-change click remains, as in beads-tuneup-2026.11.09. In 30 rounds per build of four rate changes each (15 rounds of this build, 30 of the previous release, then 15 of this build), its rarer features occurred about as often on both builds: a high-pass transient as the audio fades back in after 48 to 24 kHz (6 of 30 here, 8 of 29 before) and a larger converter power-down step after 32 to 48 kHz (1 of 30 here; before, 0 of 30 by step size and 1 of 30 by peak level). Thirty rounds rule out only a large increase, not small differences. One 24 to 48 kHz change on this build clicked about 5 dB above the previous release's usual level, and one on the previous release was louder on OUT R; with one each, no difference in rate can be read.
 
 ## Rules for future changes
 
