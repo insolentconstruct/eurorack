@@ -9,6 +9,7 @@ Where the [Mutable Instruments Beads manual](https://pichenettes.github.io/mutab
 
 - **Sunny tape buffer:** holds about 10.67 s in stereo or 21.33 s in mono, rather than 10 or 20 s. <!-- manual.md:34, images/quality_table.png; beads/dsp/processor.h:50-51,179-182; beads/dsp/processor.cc:49; beads/dsp/granular_processor.h:384-385 -->
 - **Restarting automatic gain** (Recording quality): hold [A] for about **1.5 s**, not one second; releasing earlier changes the recording quality. <!-- manual.md:44; beads/ui.cc:48-50,402-425 -->
+- **Manual gain** (Recording quality): hold [A] and move FEEDBACK by more than 3% of its range within about 1.5 s. Otherwise the long press clears the saved manual gain and restarts automatic gain; FEEDBACK then controls feedback. Holding [A] this long before pressing [M] to enter calibration also clears the saved manual gain. <!-- manual.md:44-45; beads/ui.cc:50-52,127-134,148-156,378-386,460-483; beads/pot_controller.h:87-92,112-118 -->
 - **Synth quality table** (Beads as a granular wavetable synth): the amber setting is **16-bit dry, 6-bit grains**, not 4-bit. <!-- manual.md:190, images/wavetable_quality_table.png; beads/dsp/synth.cc:83-84,112-118; beads/dsp/synth.h:50-54; beads/dsp/wavetable_grain.h:142 -->
 - **Update error** (Firmware update procedure): the [A] and input-level LEDs keep showing the input level; the other LEDs blink. <!-- manual.md:253; beads/bootloader/bootloader.cc:118-145 -->
 
