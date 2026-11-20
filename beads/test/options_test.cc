@@ -3307,6 +3307,219 @@ void TestProfileAmounts() {
   CHECK(none.settings.state().media == (media + 3) % 4);
 }
 
+// A profile of six-byte entries, without scales.
+void EntriesProfile(uint8_t* b, const uint8_t (*entries)[6], int count) {
+  for (size_t i = 0; i < kProfileSize; ++i) {
+    b[i] = kProfileBlock[i];
+  }
+  b[5] = 0;
+  b[6] = b[7] = 0;
+  b[12] = b[13] = 0;
+  for (int i = 0; i < count; ++i) {
+    memcpy(b + 16 + 6 * i, entries[i], 6);
+  }
+  b[5] = count;
+  b[6] = 6 * count;
+  const size_t size = 16 + 6 * count;
+  const uint32_t crc = Profile::Crc32(b, size);
+  for (int i = 0; i < 4; ++i) {
+    b[size + i] = crc >> (8 * i);
+  }
+}
+
+bool SawToggleValue(Rig* r, ProfileFeature feature) {
+  switch (feature) {
+    case FEATURE_REVERB:
+      return r->ui.clouds_style();
+    case FEATURE_PROCESSOR:
+      return r->ui.spectral();
+    case FEATURE_FROZEN:
+      return r->ui.evolving_feedback();
+    case FEATURE_SYNTH:
+      return r->ui.plaits_synth();
+    default:
+      return r->settings.FeatureValue(feature);
+  }
+}
+
+// [A]+SEED and [A]+FREEZE flip a two-value setting, save it and show the
+// colour its options page gives the new value for half a second.
+void TestProfileToggles() {
+  test_checker.Start("TestProfileToggles");
+  const ProfileFeature toggles[] = {
+    FEATURE_REVERB, FEATURE_PROCESSOR, FEATURE_FROZEN, FEATURE_SYNTH,
+    FEATURE_TIME_SCAN
+  };
+  uint8_t b[kProfileSize];
+  for (int t = 0; t < 5; ++t) {
+    const ProfileFeature feature = toggles[t];
+    CHECK(kFeatureDefinitions[feature].action);
+    CHECK(kFeatureDefinitions[feature].values == 2);
+    CHECK(kFeatureDefinitions[feature].field != kNoField);
+    for (int slot = ACTION_SEED; slot <= ACTION_FREEZE; ++slot) {
+      const Switch button = slot == ACTION_SEED ? SWITCH_SEED : SWITCH_FREEZE;
+      Rig r(false);
+      CustomProfile(b, feature, 0, 0, slot);
+      ApplyCustomProfile(&r, b);
+      CHECK(r.settings.profile().Action(slot) == feature);
+      const uint8_t media = r.settings.state().media;
+      for (int flip = 0; flip < 2; ++flip) {
+        const uint8_t value = flip == 0 ? 1 : 0;
+        const uint32_t writes = test_writes;
+        r.Down(SWITCH_MEDIA);
+        r.Down(button);
+        CHECK(r.settings.FeatureValue(feature) == value);
+        CHECK(SawToggleValue(&r, feature) == bool(value));
+        CHECK(test_writes == writes + 1);
+        const OptionValue& cue = FindOptionValue(OptionSetting(feature), value);
+        CHECK(cue.setting == OptionSetting(feature) && cue.value == value);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == cue.color.r);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == cue.color.g);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == cue.color.b);
+        r.Up(button);
+        r.Up(SWITCH_MEDIA);
+        CHECK(test_writes == writes + 1);
+        CHECK(r.settings.state().media == media);
+        CHECK(!r.ui.freeze_button_state_ && !r.ui.trim_flag_);
+        CHECK(!r.settings.state().monophonic_mode);
+        Settings loaded;
+        CHECK(loaded.Init(false, b));
+        CHECK(loaded.FeatureValue(feature) == value);
+        r.Tick(600, true);
+        const Leds::Color quality = r.ui.media_palette_[media];
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == quality.r);
+        CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
+      }
+    }
+  }
+}
+
+// In Plaits synth play [A]+FREEZE still steps the bank, so a toggle there
+// waits for the synth to stop; [A]+SEED toggles at once.
+void TestTogglesInPlaitsPlay() {
+  test_checker.Start("TestTogglesInPlaitsPlay");
+  uint8_t b[kProfileSize];
+  const ProfileFeature toggles[] = { FEATURE_REVERB, FEATURE_SYNTH };
+  for (int t = 0; t < 2; ++t) {
+    for (int slot = ACTION_SEED; slot <= ACTION_FREEZE; ++slot) {
+      for (int synth = 0; synth < 2; ++synth) {
+        Rig r(false);
+        CustomProfile(b, toggles[t], 0, 0, slot);
+        ApplyCustomProfile(&r, b);
+        PlaySynth(&r, synth, true);
+        const uint8_t before = r.settings.FeatureValue(toggles[t]);
+        r.Down(SWITCH_MEDIA);
+        r.Down(slot == ACTION_SEED ? SWITCH_SEED : SWITCH_FREEZE);
+        const bool stepped = synth && slot == ACTION_FREEZE;
+        CHECK((r.settings.FeatureValue(toggles[t]) == before) == stepped);
+        CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == stepped);
+        CHECK(r.ui.freeze_button_state_);
+      }
+    }
+  }
+}
+
+// Gain, width and diffusion on each arrangement of FEEDBACK, DRY/WET and
+// REVERB; a profile without a gain entry keeps the gain on FEEDBACK.
+void TestFeedbackAmountSlot() {
+  test_checker.Start("TestFeedbackAmountSlot");
+  uint8_t b[kProfileSize];
+  const uint8_t orders[][3] = {
+    { 3, 1, 2 }, { 3, 2, 1 }, { 1, 3, 2 }, { 1, 2, 3 }, { 2, 3, 1 },
+    { 2, 1, 3 }
+  };
+  const Ui::MixParameter knobs[] = {
+    Ui::MIX_PARAMETER_FEEDBACK, Ui::MIX_PARAMETER_DRY_WET,
+    Ui::MIX_PARAMETER_REVERB
+  };
+  for (int o = 0; o < 6; ++o) {
+    // FEEDBACK is amount slot 3; DRY/WET and REVERB keep 1 and 2.
+    int knob[3];
+    for (int k = 0; k < 3; ++k) {
+      knob[k] = orders[o][k] == AMOUNT_FEEDBACK ? 0 : orders[o][k];
+    }
+    const uint8_t entries[][6] = {
+      { FEATURE_GAIN_KNOB, PROFILE_ADJUSTABLE, 0, 0, orders[o][0], 0 },
+      { FEATURE_WIDTH, PROFILE_ADJUSTABLE, 0, 0, orders[o][1], 0 },
+      { FEATURE_DIFFUSION, PROFILE_ADJUSTABLE, 0, 0, orders[o][2], 0 },
+    };
+    // The stock arrangement is also the factory one, without the gain entry.
+    for (int implicit = 0; implicit < (o == 0 ? 2 : 1); ++implicit) {
+      Rig r(false);
+      EntriesProfile(b, implicit ? entries + 1 : entries, implicit ? 2 : 3);
+      ApplyCustomProfile(&r, b);
+      CHECK(r.ui.amount_feature_[knob[0]] == FEATURE_GAIN_KNOB);
+      CHECK(r.ui.amount_feature_[knob[1]] == FEATURE_WIDTH);
+      CHECK(r.ui.amount_feature_[knob[2]] == FEATURE_DIFFUSION);
+      r.settings.mutable_state()->gain = 77;
+      const uint8_t media = r.settings.state().media;
+      const uint32_t writes = test_writes;
+      r.Down(SWITCH_MEDIA);
+      // Two seconds in, the edit keeps the hold from restarting the gain.
+      r.Tick(2000, true);
+      float* pots[] = { &r.feedback, &r.pot, &r.reverb };
+      *pots[knob[0]] = 0.75f;
+      r.Tick(20, true);
+      CHECK(r.settings.state().gain == 192);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == 255);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == 121);
+      CHECK(uint32_t(stmlib::system_clock.milliseconds() -
+          r.ui.press_time_[SWITCH_MEDIA]) <= 1);
+      *pots[knob[1]] = 1.0f;
+      r.Tick(20, true);
+      CHECK(r.settings.stereo_width() == 255);
+      *pots[knob[2]] = 1.0f;
+      r.Tick(20, true);
+      CHECK(r.settings.state().diffusion == 255);
+      CHECK(uint32_t(stmlib::system_clock.milliseconds() -
+          r.ui.press_time_[SWITCH_MEDIA]) <= 1);
+      for (int k = 0; k < 3; ++k) {
+        CHECK(r.ui.mix_parameter(knobs[k]) == 0.5f);
+      }
+      CHECK(test_writes == writes);
+      r.Up(SWITCH_MEDIA);
+      CHECK(test_writes == writes + 1);
+      CHECK(r.gain.restarts == 0);
+      CHECK(r.settings.state().media == media);
+      Settings loaded;
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.state().gain == 192);
+      CHECK(loaded.stereo_width() == 255);
+      CHECK(loaded.state().diffusion == 255);
+      // A hold alone still restarts automatic gain.
+      r.Down(SWITCH_MEDIA);
+      r.Tick(1600, true);
+      r.Up(SWITCH_MEDIA);
+      CHECK(r.gain.restarts == 1);
+      CHECK(r.settings.state().gain == 0);
+    }
+  }
+  // Gain fixed: FEEDBACK can hold width; the hold still restarts the gain.
+  const uint8_t fixed[][6] = {
+    { FEATURE_GAIN_KNOB, PROFILE_FIXED, 0, 0, 0, 0 },
+    { FEATURE_WIDTH, PROFILE_ADJUSTABLE, 0, 0, AMOUNT_FEEDBACK, 0 },
+  };
+  Rig r(false);
+  EntriesProfile(b, fixed, 2);
+  ApplyCustomProfile(&r, b);
+  CHECK(r.ui.amount_feature_[0] == FEATURE_WIDTH);
+  CHECK(r.ui.amount_feature_[1] == FEATURE_NONE);
+  CHECK(r.ui.amount_feature_[2] == FEATURE_NONE);
+  r.settings.mutable_state()->gain = 77;
+  r.Down(SWITCH_MEDIA);
+  r.feedback = 1.0f;
+  r.pot = 1.0f;
+  r.Tick(40, true);
+  CHECK(r.settings.stereo_width() == 255);
+  CHECK(r.settings.state().gain == 77);
+  CHECK(r.ui.mix_parameter(Ui::MIX_PARAMETER_DRY_WET) == 1.0f);
+  r.Up(SWITCH_MEDIA);
+  r.Down(SWITCH_MEDIA);
+  r.Tick(1600, true);
+  r.Up(SWITCH_MEDIA);
+  CHECK(r.gain.restarts == 1 && r.settings.state().gain == 0);
+}
+
 void SetFixed(Rig* r, ProfileFeature feature, uint8_t value) {
   uint8_t b[kProfileSize];
   CustomProfile(b, feature, 0, 0, 0);
@@ -3878,6 +4091,9 @@ int main() {
   TestProfileActions();
   TestPlaitsBankGesture();
   TestProfileAmounts();
+  TestProfileToggles();
+  TestTogglesInPlaitsPlay();
+  TestFeedbackAmountSlot();
   TestOptionsIdleTimeout();
   TestOptionsEntryChoices();
   return test_checker.failures() ? 1 : 0;

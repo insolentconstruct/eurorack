@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Custom profiles can put a two-value setting on [A]+SEED or [A]+FREEZE (#301): Reverb character, Processor, Frozen feedback, Synth or TIME modulation. The gesture flips and saves it, and [A] shows the new value's options colour. Processor clears the recording, as from its page. [A]+FREEZE still steps the Plaits bank in Plaits synth play.
+- Custom profiles can put Manual gain, Stereo width or Diffusion on any of [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB, or leave manual gain off the knobs (#301). Without a choice, manual gain stays on FEEDBACK. Older firmware refuses these profiles.
 - Snap and trigger with SEED unpatched no longer stops the synths or replaces the delay's knob timing (#290). Each hit adds a grain on top of DENSITY's own grains, at noon too, in granular playback only; synths, delay and spectral ignore hits. With SEED patched, hits add grains instead of joining the SEED clock, so latch Off no longer counts them in its divider and Ignore no longer drops them.
 - Snap and trigger starts grains from hits while FREEZE is on, too (#294); marks are still taken only while recording.
 - SEED latch Sync is a hard sync (#293): each edge starts a grain as well as restarting the grain clock, so a clock faster than DENSITY's rate, or DENSITY at noon, plays a grain per edge instead of none. Both synths follow.

@@ -95,7 +95,10 @@
         21
       ],
       "amount_slots": [],
-      "actions": [],
+      "actions": [
+        1,
+        2
+      ],
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
@@ -184,7 +187,10 @@
         21
       ],
       "amount_slots": [],
-      "actions": [],
+      "actions": [
+        1,
+        2
+      ],
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
@@ -273,7 +279,10 @@
         21
       ],
       "amount_slots": [],
-      "actions": [],
+      "actions": [
+        1,
+        2
+      ],
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
@@ -317,7 +326,10 @@
         21
       ],
       "amount_slots": [],
-      "actions": [],
+      "actions": [
+        1,
+        2
+      ],
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
@@ -475,7 +487,8 @@
       "page_slots": [],
       "amount_slots": [
         1,
-        2
+        2,
+        3
       ],
       "actions": [],
       "stateless": false,
@@ -497,7 +510,8 @@
       "page_slots": [],
       "amount_slots": [
         1,
-        2
+        2,
+        3
       ],
       "actions": [],
       "stateless": false,
@@ -816,7 +830,10 @@
         21
       ],
       "amount_slots": [],
-      "actions": [],
+      "actions": [
+        1,
+        2
+      ],
       "cpu_cost": null,
       "touches_synth": false
     },
@@ -1159,6 +1176,31 @@
       "default": 0,
       "page_slots": [],
       "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
+    },
+    {
+      "id": 40,
+      "issue": 301,
+      "name": "Manual gain knob",
+      "values": [
+        "Not on a knob"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [
+        1,
+        2,
+        3
+      ],
       "actions": [],
       "cpu_cost": null,
       "touches_synth": false

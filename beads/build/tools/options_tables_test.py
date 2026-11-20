@@ -503,7 +503,7 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 39
+assert len(catalog["features"]) == len(exported) == 40
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 for feature, row in zip(catalog["features"], exported):
@@ -515,8 +515,11 @@ for feature, row in zip(catalog["features"], exported):
     assert len(feature["values"] or []) == count
     assert feature["field"] == (None if field == 255 else field)
     assert feature["page_slots"] == (list(range(1, 22)) if page else [])
-    assert bool(feature["amount_slots"]) == bool(amount)
+    assert feature["amount_slots"] == ([1, 2, 3] if amount else [])
     assert bool(feature["actions"]) == bool(action)
+    # Saved two-value toggles never take the [A] hold.
+    if action and field != 255 and not stateless:
+        assert feature["actions"] == [1, 2]
     assert feature.get("stateless", False) == bool(stateless)
     # The Plaits bank is Adjustable through its saved field, not a page.
     gesture = identity == 31 and field == 14 and not page
