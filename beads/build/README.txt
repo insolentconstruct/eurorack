@@ -103,9 +103,9 @@ not every combination of options has been measured on a module.
 In a Hygrostat profile, [A] gestures take only some settings: the hold
 takes Synth start; [A]+SEED and [A]+FREEZE take Synth start, Monophonic
 grains, Buffer trim or a toggle (Reverb character, Processor, Frozen
-feedback, Synth or TIME modulation); [A]+FEEDBACK, [A]+DRY/WET and
-[A]+REVERB take Manual gain, Stereo width or Diffusion. The other
-settings go on options pages.
+feedback, Synth on [A]+SEED only, or TIME modulation); [A]+FEEDBACK,
+[A]+DRY/WET and [A]+REVERB take Manual gain, Stereo width or
+Diffusion. The other settings go on options pages.
 
 Profiles, custom scales, LED indications and tail choices are checked
 by host tests, not yet on a module. Page 4 provides LED brightness and

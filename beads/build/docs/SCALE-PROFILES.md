@@ -83,8 +83,10 @@ Each slot holds one setting.
 - Stereo width and Diffusion can also take slot 3. While feature 40 is Off,
   slot 3 belongs to manual gain, so another setting there is refused.
 - Reverb character, Processor, Frozen feedback, Synth and TIME modulation
-  can take action 1 or 2 when Adjustable. They have permanent packed fields;
-  the gesture flips and saves the value. The [A] hold stays Synth start only.
+  can take action 1 or 2 when Adjustable; Synth takes action 1 only, since
+  Plaits play keeps [A]+FREEZE for its bank. They have permanent packed
+  fields; the gesture flips and saves the value. The [A] hold stays Synth
+  start only.
 
 Firmware before Beta 4 refuses amount slot 3, feature 40 and these actions,
 so it plays the factory layout and saves nothing with such a profile.

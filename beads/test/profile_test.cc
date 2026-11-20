@@ -330,10 +330,13 @@ void TestProfileKinds() {
         // Without a gain entry, manual gain keeps FEEDBACK (amount slot 3).
         const bool feedback = kind == 1 && slot == AMOUNT_FEEDBACK &&
             id != FEATURE_GAIN_KNOB;
+        // Plaits play keeps [A]+FREEZE, so the Synth toggle goes on SEED.
+        const bool synth_freeze = kind == 2 && slot == ACTION_FREEZE &&
+            id == FEATURE_SYNTH;
         const bool valid = slot <= max_slot &&
             (kind == 0 ? d.page : kind == 1 ? d.amount : d.action) &&
             (!hold || synth_start) && (!synth_start || kind == 2) &&
-            !feedback;
+            !feedback && !synth_freeze;
         CHECK(p.Init(b) == valid);
         if (kind == 0 && valid) {
           CHECK(p.Page(slot) == ProfileFeature(id));

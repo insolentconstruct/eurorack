@@ -890,6 +890,10 @@ bool Profile::Parse(const volatile uint8_t* b) {
         (e.action == ACTION_HOLD && id != FEATURE_SYNTH_START)) {
       return false;
     }
+    // Plaits play keeps [A]+FREEZE for its bank, so Synth goes on [A]+SEED.
+    if (id == FEATURE_SYNTH && e.action == ACTION_FREEZE) {
+      return false;
+    }
     pages[e.page_slot] = amounts[e.amount_slot] = actions[e.action] = true;
     entries_[id] = e;
   }

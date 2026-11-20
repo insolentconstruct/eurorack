@@ -517,9 +517,9 @@ for feature, row in zip(catalog["features"], exported):
     assert feature["page_slots"] == (list(range(1, 22)) if page else [])
     assert feature["amount_slots"] == ([1, 2, 3] if amount else [])
     assert bool(feature["actions"]) == bool(action)
-    # Saved two-value toggles never take the [A] hold.
+    # Saved two-value toggles never take the [A] hold; Synth only [A]+SEED.
     if action and field != 255 and not stateless:
-        assert feature["actions"] == [1, 2]
+        assert feature["actions"] == ([1] if identity == 7 else [1, 2])
     assert feature.get("stateless", False) == bool(stateless)
     # The Plaits bank is Adjustable through its saved field, not a page.
     gesture = identity == 31 and field == 14 and not page

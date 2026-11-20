@@ -327,8 +327,7 @@
       ],
       "amount_slots": [],
       "actions": [
-        1,
-        2
+        1
       ],
       "stateless": false,
       "default_state": "Adjustable",

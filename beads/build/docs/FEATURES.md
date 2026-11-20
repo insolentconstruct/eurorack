@@ -651,7 +651,8 @@ layout and every earlier profile keep their gestures.
   value, yellow second). Processor clears the recording, as from its page;
   while FREEZE is on, the change waits for its release. In Plaits synth
   play [A]+FREEZE still steps the bank, so a toggle there waits for the
-  synth to stop. The [A] hold stays Synth start only.
+  synth to stop, and Synth goes on [A]+SEED only. The [A] hold stays Synth
+  start only.
 - [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB can each take Manual gain,
   Stereo width or Diffusion, one per knob. Hygrostat feature ID 40, Manual
   gain knob, places the gain: Off keeps it on FEEDBACK; Fixed takes it off

@@ -3360,6 +3360,12 @@ void TestProfileToggles() {
       const Switch button = slot == ACTION_SEED ? SWITCH_SEED : SWITCH_FREEZE;
       Rig r(false);
       CustomProfile(b, feature, 0, 0, slot);
+      // The Synth toggle goes on [A]+SEED only.
+      if (feature == FEATURE_SYNTH && slot == ACTION_FREEZE) {
+        r.settings.Init(false, b);
+        CHECK(r.settings.profile_locked());
+        continue;
+      }
       ApplyCustomProfile(&r, b);
       CHECK(r.settings.profile().Action(slot) == feature);
       const uint8_t media = r.settings.state().media;
@@ -3402,6 +3408,9 @@ void TestTogglesInPlaitsPlay() {
   const ProfileFeature toggles[] = { FEATURE_REVERB, FEATURE_SYNTH };
   for (int t = 0; t < 2; ++t) {
     for (int slot = ACTION_SEED; slot <= ACTION_FREEZE; ++slot) {
+      if (toggles[t] == FEATURE_SYNTH && slot == ACTION_FREEZE) {
+        continue;
+      }
       for (int synth = 0; synth < 2; ++synth) {
         Rig r(false);
         CustomProfile(b, toggles[t], 0, 0, slot);
