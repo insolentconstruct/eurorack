@@ -63,10 +63,11 @@ Buffer trim
 Hold [A], then press FREEZE to restart the recording window at zero
 length and clear the FREEZE latch. Release both, record, then freeze:
 the buffer holds only what came after, so TIME scans just that bar or
-sound. This is Mutable Instruments' own gesture, undocumented in the
-manual. A FREEZE gate holds the window empty until low. Existing grains
-finish on old audio; new grains use the new window. Saved buffers keep
-trimmed lengths; stock loads them full-length.
+sound. Mutable Instruments wrote this gesture and monophonic grains into
+the 2026 source but left them switched off; neither was in the 2021 or
+2024 firmware. A FREEZE gate holds the window empty until low. Existing
+grains finish on old audio; new grains use the new window. Saved
+buffers keep trimmed lengths; stock loads them full-length.
 
 Recording and switching
 -----------------------

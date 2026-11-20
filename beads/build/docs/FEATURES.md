@@ -39,7 +39,7 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 | Hold [M], press FREEZE | TAKEN: toggle buffer autosave; briefly display status | Yes <!-- beads/ui.cc:346-355,560-562 --> |
 | [M] + [A], either order | WARNING: calibration entry; do not allocate | Calibration can be overwritten <!-- beads/ui.cc:390-398,428-453 --> |
 | Hold [A], press SEED | TAKEN: toggle monophonic grains; consumes both releases; [A] first | Yes <!-- beads/ui.cc:358-369 --> |
-| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch. In Plaits synth play it steps the [Plaits bank](#plaits-bank) instead (ID 31) and leaves FREEZE alone | Mutable Instruments' original gesture; saves keep the length; stock loads full length. The bank is saved |
+| [A] + FREEZE | TAKEN: hold [A] first, then press FREEZE to trim the recording window to zero and clear the button freeze latch. In Plaits synth play it steps the [Plaits bank](#plaits-bank) instead (ID 31) and leaves FREEZE alone | Gesture from Mutable Instruments' 2026 source, disabled there; saves keep the length; stock loads full length. The bank is saved |
 | Power on holding FREEZE | TAKEN: audio updater; FREEZE release retries after an error; TIME sets update gain | Writes firmware <!-- beads/bootloader/bootloader.cc:76-78,160-162,315,377-381; manual.md:247-253 --> |
 | Power on holding FREEZE + [M] | WARNING: erase app sectors 1–7, then receive update; enabled | Erase chord keeps boot/settings sectors; reception has no upper bound <!-- beads/bootloader/bootloader.cc:28,266-280,317-322 --> |
 | Power on holding SEED | WARNING: reset State to defaults, including limiter; retain valid calibration. With both copies of the calibration lost: repair with the factory calibration; result shown 3 s | Rewrites settings sector <!-- beads/settings.cc; beads/settings_storage.h --> |
@@ -234,7 +234,7 @@ No physical knob, CV jack, gate jack or LED is unallocated. New normal-mode cont
 
 ## Build options
 
-Buffer trim and monophonic grains use Mutable Instruments' original gestures and are always enabled. Automatic (Stock) input mono/stereo detection remains active.
+Buffer trim and monophonic grains use the gestures Mutable Instruments wrote into the 2026 source but left disabled (`ENABLE_ADVANCED_FEATURES`, `beads/ui.h`); Drizzlet enables them. Neither is in the 2021 or 2024 firmware. Automatic (Stock) input mono/stereo detection remains active.
 `PROFILE_INTERRUPT` and bootloader `ENABLE_ERROR_DETECTION` are off; their debug-pin/error-check paths are excluded. `ENABLE_HARDWARE_24K`, `ENABLE_BANDWIDTH_CONTROL` and bootloader `ENABLE_ERASE_BUTTON_COMBO` are ON; their alternate branches are excluded. `TEST` hooks belong to host tests. <!-- beads/beads.cc:74,109-111,338-340; beads/bootloader/bootloader.cc:27-28,190-264; beads/dsp/processor.h:46,79-92; beads/dsp/multitap_delay.h:38,90; beads/ui.cc:546-549 -->
 `WasteCPUCycles(16)` is always called in main, including wavetable synth and spectral modes: it renders a dummy vintage-digital grain workload with memory accesses, discarding output. In spectral mode the main loop also computes the frames (`Processor::Buffer()`), one per channel per hop. Main-loop occupancy is not audio CPU headroom. <!-- beads/beads.cc:403-410; beads/dsp/processor.h:150-153; beads/dsp/granular_processor.h:116-147 -->
 
