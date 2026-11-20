@@ -7,17 +7,20 @@ Controls, gestures, settings layout and default sound follow that source; a
 copy of the calibration is also kept in bank 2 sector 6, which stock firmware
 leaves unused. Options that master compiles out stay compiled out.
 
-Tested on one 2021 module: installing by audio, playback and the quality button.
-SIZE and input-patching checks reuse the previous build's results for unchanged
-code. Storage repair is covered by host tests, not a module test of this build.
+Tested on one 2021 module: installing by audio, playback, the quality button,
+delay mode and the one-frame output delay (clean audio up to about 97% of the
+block, no clicks in the historical crackle patch, rate-change clicks about as
+frequent as in beads-tuneup-2026.11.09). Input-patching checks reuse the
+previous build's results for unchanged code. Storage repair is covered by host
+tests, not a module test of this build.
 
 CPU, peak audio-callback load on that module (timing builds, heavy test
 patches):
 
 | Patch | Vanilla source | This branch |
 |---|---:|---:|
-| Granular | 91% | 76–78% |
-| Wavetable synth | 85–86% | 82–83% |
+| Granular | 91% | 76% |
+| Wavetable synth | 85–86% | 81–82% |
 
 CPU, busiest stock audio block on a development board (same die and clock as
 Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
@@ -57,7 +60,7 @@ Changes from master, one line per change:
 - Interpolate grain reads on the stored integers and scale once, as Clouds' `ReadHermite` does; audio stays bit-identical.
 - Compute the synth's playing grains in pairs, mixed in index order: 5.7 points of headroom in its busiest case; audio stays bit-identical.
 - Load the reverb's delay-line reads before its writes: 1.0 point of headroom in the synth's busiest case and in the stock granular peak; audio stays bit-identical.
-- **Behaviour fix:** audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz) than in the vanilla source. It addresses the likely cause of the historical left-channel click, a first left word stored after the output DMA has read it ([#1](https://github.com/insolentconstruct/eurorack/issues/1)): the audio callback can now run to about the full block instead of stopping a frame short. About 0.1% of the CPU. In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. The bootloader is unchanged. Pending module qualification.
+- **Behaviour fix:** audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz) than in the vanilla source. It addresses the likely cause of the historical left-channel click, a first left word stored after the output DMA has read it ([#1](https://github.com/insolentconstruct/eurorack/issues/1)): the audio callback can now run to about the full block instead of stopping a frame short. About 0.1% of the CPU. In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. The bootloader is unchanged. On one module the audio stays clean up to 97.7%, 97.3% and 96.9% of the block at 48, 32 and 24 kHz (90.8%, 86.6% and 82.7% without the delay); see [OPTIMIZATIONS.md](beads/build/docs/OPTIMIZATIONS.md#one-frame-output-delay).
 - Add pinned firmware/WAV hashes, deterministic WAV encoding, licence collection, host tests and build/test CI.
 - Pin the Python 3 audio encoder; the DSP support library remains at master's revision.
 
