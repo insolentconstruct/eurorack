@@ -384,11 +384,12 @@ void TestResonatorTonalLevel() {
   }
 }
 
-// Frozen, before the buffer, silent input and no hits: the resonator adds
-// exactly nothing, so each option plays as it does without the resonator.
+// Before the buffer, silent input and no hits: the resonator adds exactly
+// nothing, so each option plays as it does without the resonator.
 void TestResonatorOptionsMatch() {
   test_checker.Start("TestResonatorOptionsMatch");
-  static float result[2][2000 * 24];
+  static float result[2][8000 * 24];
+  static uint8_t recording[3][262144];
   for (int delay = 0; delay < 2; ++delay) {
     for (int c = 0; c < 8; ++c) {
       for (int pass = 0; pass < 2; ++pass) {
@@ -414,8 +415,12 @@ void TestResonatorOptionsMatch() {
           processor.set_resonator(RESONATOR_BEFORE_BUFFER);
         }
         memset(input, 0, sizeof(input));
-        for (int block = 0; block < 2000; ++block) {
-          density.base = block & 256 ? 0.3f : 0.7f;
+        for (int block = 0; block < 8000; ++block) {
+          density.base = block & 1024 ? 0.3f : 0.7f;
+          // Frozen, then recording silence: the feedback loop too.
+          if (block == 1000) {
+            std::fill(freeze, freeze + 12, false);
+          }
           Process();
           for (size_t i = 0; i < 12; ++i) {
             result[pass][(block * 12 + i) * 2] = output[i].l;
@@ -423,10 +428,16 @@ void TestResonatorOptionsMatch() {
           }
         }
         CHECK(processor.delay_active() == bool(delay));
+        // The recording, feedback included, matches too.
+        if (pass) {
+          CHECK(!memcmp(recording, banks, sizeof(banks)));
+        } else {
+          memcpy(recording, banks, sizeof(banks));
+        }
       }
       bool same = true;
       float level = 0.0f;
-      for (int i = 0; i < 2000 * 24; ++i) {
+      for (int i = 0; i < 8000 * 24; ++i) {
         same = same && result[0][i] == result[1][i];
         level += fabsf(result[0][i]);
       }

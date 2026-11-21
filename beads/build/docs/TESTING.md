@@ -1,6 +1,6 @@
 # Testing
 
-This source contains 21 host programs, 352 named test sections, 2,971
+This source contains 21 host programs, 352 named test sections, 2,972
 assertion sites and 650 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
@@ -75,12 +75,12 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | plaits_synth | 12 | 66 |
 | processor | 11 | 45 |
 | profile | 8 | 128 |
-| resonator | 11 | 53 |
+| resonator | 11 | 54 |
 | spectral | 8 | 42 |
 | storage | 27 | 416 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **352** | **2,971** |
+| **Total** | **352** | **2,972** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
@@ -547,7 +547,8 @@ The factory calibration was restored by debug probe after each saved run. Before
   detector at 40, so the resonance is scaled by 1/16 around it; unscaled, a
   sine at C7 reached 2.99. Frozen, before the buffer, with silence and no
   hits, every option (TIME scan, Mix law, Reverb input, Delay feedback, Delay
-  time, Evolving, diffusion) plays exactly as without the resonator.
+  time, Evolving, diffusion) plays and records exactly as without the
+  resonator, frozen and then recording.
 - Resonator with 32 grains on the Seed3 (stress32 priming, a strike every
   block, PITCH +24 and 0, one code layout): Bright digital 77.1% worst block
   (+8.6 points), Cold digital 59.8% (+6.7), Scorched cassette 45.9% (+6.4),
