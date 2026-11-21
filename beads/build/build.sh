@@ -16,7 +16,12 @@ if [[ "$mode" == --wav ]]; then
   root="$(git rev-parse --show-toplevel)"
   [[ "$root" != *,* && "$out" != *,* ]] || { echo "Docker mount paths must not contain commas" >&2; exit 2; }
   [[ -f "$root/stm_audio_bootloader/qpsk/encoder.py" && -f "$root/stmlib/makefile.inc" ]] || { echo "Run: git submodule update --init stmlib stm_audio_bootloader" >&2; exit 1; }
-  [[ "$(git -C "$root/stm_audio_bootloader" rev-parse HEAD)" == d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1 ]] || { echo "Wrong encoder commit" >&2; exit 1; }
+  # Submodules must be clean and at the pinned commits, which are also the gitlinks.
+  for pin in stmlib=e3bd7c9cc00e4364166f9905c0509b6ffd0535ec stm_audio_bootloader=d391c6f71eaeaa40ffd5d3d761a6843f675bc2b1; do
+    sub=${pin%%=*}
+    [[ "$(git -C "$root/$sub" rev-parse HEAD)" == "${pin#*=}" && "$(git -C "$root" rev-parse "HEAD:$sub")" == "${pin#*=}" ]] || { echo "Wrong $sub commit" >&2; exit 1; }
+    [[ -z "$(git -C "$root/$sub" status --porcelain)" ]] || { echo "$sub has local changes" >&2; exit 1; }
+  done
   mkdir -p "$out"
   name=${BEADS_RELEASE_NAME:-beads-dev}
   [[ "$name" =~ ^beads-[A-Za-z0-9._-]+$ ]] || { echo "BEADS_RELEASE_NAME must match beads-[A-Za-z0-9._-]+" >&2; exit 2; }
