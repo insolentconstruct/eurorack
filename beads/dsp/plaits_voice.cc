@@ -209,7 +209,7 @@ void PlaitsVoice::Render(
 #endif  // PLAITS_BLOBS
   if (patch.model != model_) {
 #ifdef PLAITS_BLOBS
-    // A blob is built in the zeroed slot and arena on every switch.
+    // A blob is built in its zeroed slot on every switch.
     if (e == &engines_->blob_engine) {
       engines_->blob_engine.Bind(
           region_->blob(patch.model), &plaits_blob_services, patch.model);
@@ -311,17 +311,14 @@ void PlaitsVoice::Render(
 }
 
 #ifdef PLAITS_BLOBS
-/* static */
-bool PlaitsVoice::Available(int model, const PlaitsRegion& region) {
-  return (model < kNumPlaitsModels && model != kPlaitsParticleNoise) ||
-      region.blob(model);
-}
+// The slot holds the largest stock engine's state.
+STATIC_ASSERT(sizeof(SixOpEngine) <= kPlaitsBlobMaxStateSize2, six_op_slot);
 
 Engine* PlaitsVoice::engine(int model) {
   if (model < kNumPlaitsModels && model != kPlaitsParticleNoise) {
     return engines_->registry.get(model);
   }
-  return region_ && region_->blob(model) ? &engines_->blob_engine : NULL;
+  return region_ && region_->has_blob(model) ? &engines_->blob_engine : NULL;
 }
 #endif  // PLAITS_BLOBS
 

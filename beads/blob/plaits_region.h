@@ -152,6 +152,7 @@ class PlaitsRegion {
 
   // A checked blob serving model, or NULL.
   const uint8_t* blob(uint8_t model) const;
+  inline bool has_blob(uint8_t model) const { return models_[model]; }
 
   inline bool ok(PlaitsSection section) const {
     return identity_.sections[section].status == PLAITS_BLOB_OK;

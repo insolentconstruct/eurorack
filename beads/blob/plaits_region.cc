@@ -188,10 +188,8 @@ PlaitsBlobStatus PlaitsRegion::ReadSection(
     return PLAITS_BLOB_ERROR_HEADER;
   }
   // An interrupted install fails here; bytes past size are never read.
-  const uint32_t crc = Profile::Crc32(data, size - 4);
-  if (crc != Read32(data + size - 4)) {
-    return PLAITS_BLOB_ERROR_CRC;
-  }
+  // A default section's digest covers it, so its CRC is not recomputed.
+  const uint32_t crc = Read32(data + size - 4);
   identity_.sections[section].crc = crc;
   if (expected_digest) {
     uint8_t digest[kPlaitsBlobDigestSize];
@@ -199,6 +197,8 @@ PlaitsBlobStatus PlaitsRegion::ReadSection(
     if (memcmp(digest, expected_digest, kPlaitsBlobDigestSize)) {
       return PLAITS_BLOB_ERROR_DIGEST;
     }
+  } else if (Profile::Crc32(data, size - 4) != crc) {
+    return PLAITS_BLOB_ERROR_CRC;
   } else if (crc != expected_crc) {
     return PLAITS_BLOB_ERROR_SELECTION;
   }

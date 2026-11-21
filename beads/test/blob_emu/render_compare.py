@@ -205,7 +205,8 @@ class Machine(object):
     return self.outputs('engine %d' % engine) + (state,)
 
   def select_blob(self, model):
-    # Poison the slot and arena: the voice must clear them before init.
+    # Poison the slot and arena: the voice clears the slot; a blob must not
+    # depend on what the arena held.
     slot = self.word(self.sym['harness_slot'])
     arena = self.sym['harness_blob_voice'] + self.arena
     self.uc.mem_write(slot, POISON * (SLOT_SIZE // 4))

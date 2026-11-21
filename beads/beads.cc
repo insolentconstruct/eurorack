@@ -490,17 +490,24 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 }
 
 #ifdef PLAITS_BLOBS
+// Reports and clears a double ECC error and the bus fault it raised.
 bool FlashEccOk() {
-  const bool ok = !(FLASH->SR1 & FLASH_SR_DBECCERR);
+  const uint32_t bus = SCB->CFSR &
+      (SCB_CFSR_PRECISERR_Msk | SCB_CFSR_IMPRECISERR_Msk |
+          SCB_CFSR_BFARVALID_Msk);
+  const bool ok = !(FLASH->SR1 & FLASH_SR_DBECCERR) && !bus;
   FLASH->CCR1 = FLASH_CCR_CLR_DBECCERR;
+  SCB->CFSR = bus;
   return ok;
 }
 
 // Reads the region with data bus faults ignored: a double ECC error (an
-// interrupted write) reads as garbage and faults that section only.
+// interrupted write) reads as garbage and faults that section only. The
+// D-cache is off meanwhile, so no linefill raises an imprecise fault later.
 void ReadPlaitsRegion() {
   const Profile& profile = settings.profile();
   plaits_region.set_flash_check(&FlashEccOk);
+  SCB_DisableDCache();
   SCB->CCR |= SCB_CCR_BFHFNMIGN_Msk;
   __DSB();
   __ISB();
@@ -516,13 +523,11 @@ void ReadPlaitsRegion() {
   SCB->CCR &= ~SCB_CCR_BFHFNMIGN_Msk;
   __DSB();
   __ISB();
-  bool plaits = plaits_region.ok(PLAITS_SECTION_PLAITS);
-  for (uint8_t i = 0; i < profile.num_plaits_banks(); ++i) {
-    for (uint8_t j = 0; j < kProfileBankSize; ++j) {
-      plaits = plaits &&
-          PlaitsVoice::Available(profile.plaits_bank(i)[j], plaits_region);
-    }
-  }
+  SCB_EnableDCache();
+  const bool plaits = PlaitsVoice::Playable(
+      profile.plaits_bank(0),
+      profile.num_plaits_banks() * kProfileBankSize,
+      plaits_region);
   // Beads' wavetables stay compiled in until their section (phase 4).
   synth_lock = PlaitsRegion::Lock(plaits, true);
   plaits_synth.set_bank_table(profile.plaits_banks());

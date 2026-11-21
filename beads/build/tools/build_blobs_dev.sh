@@ -68,8 +68,9 @@ import sys
 app = open(sys.argv[1], 'rb').read()
 region = open(sys.argv[2], 'rb').read()
 begin = int(sys.argv[4], 16) - 0x08020000
-if len(app) > begin:
-  raise SystemExit('the app overlaps the region')
+# Hygrostat places the region at the next 4 KiB boundary after app.bin.
+if begin != (len(app) + 4095) // 4096 * 4096:
+  raise SystemExit('the region does not start after app.bin')
 open(sys.argv[3], 'wb').write(app + b'\xff' * (begin - len(app)) + region)
 print('app %d B, region at 0x%08x, %d B' % (len(app), begin + 0x08020000,
                                            len(region)))

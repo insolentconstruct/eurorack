@@ -107,8 +107,24 @@ class PlaitsVoice {
 
 #ifdef PLAITS_BLOBS
   inline void set_region(const PlaitsRegion* region) { region_ = region; }
+
   // A model this build plays: compiled in, or a checked blob in region.
-  static bool Available(int model, const PlaitsRegion& region);
+  static inline bool Available(int model, const PlaitsRegion& region) {
+    return (model < kNumPlaitsModels && model != kPlaitsParticleNoise) ||
+        region.has_blob(model);
+  }
+
+  // Plaits may play when every model of every bank is available.
+  static inline bool Playable(
+      const uint8_t* models,
+      size_t count,
+      const PlaitsRegion& region) {
+    bool playable = true;
+    for (size_t i = 0; i < count; ++i) {
+      playable = playable && Available(models[i], region);
+    }
+    return playable;
+  }
 #endif  // PLAITS_BLOBS
 
  private:

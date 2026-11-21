@@ -311,10 +311,7 @@ PlaitsBlobStatus PlaitsBlob::Check(
   if (h.state_size > max_state || h.arena_size > kPlaitsBlobMaxArenaSize) {
     return PLAITS_BLOB_ERROR_RAM;
   }
-  if (Profile::Crc32(blob, crc_offset) != Read32(blob + crc_offset)) {
-    return PLAITS_BLOB_ERROR_CRC;
-  }
-
+  // The digest covers every byte: no CRC pass (55 cycles/B, bitwise).
   uint8_t own_digest[kPlaitsBlobDigestSize];
   if (!digest) {
     digest = own_digest;
