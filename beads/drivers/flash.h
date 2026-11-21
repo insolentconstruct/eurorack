@@ -34,6 +34,7 @@
 #define BEADS_DRIVERS_FLASH_H_
 
 #include <algorithm>
+#include <cstring>
 
 #include "stmlib/stmlib.h"
 
@@ -65,8 +66,8 @@ class Flash {
     return READ_BIT(PWR->CSR1, PWR_CSR1_PVDO);
   }
 
-  // Copies size bytes (a multiple of 4, at most kFlashMaxReadSize) from bank
-  // 2 to a word-aligned destination. Returns false if the read hit an
+  // Copies size bytes (a multiple of 4, at most kFlashMaxReadSize) from a
+  // word-aligned bank 2 address. Returns false if the read hit an
   // uncorrectable ECC error; the words read are then undefined.
   static bool Read(uint32_t address, void* destination, size_t size) {
     // Read the flash itself, not lines cached before an erase or program.
@@ -82,10 +83,13 @@ class Flash {
     __set_FAULTMASK(1);
     const volatile uint32_t* source =
         (const volatile uint32_t*)(uintptr_t)(address);
-    uint32_t* words = static_cast<uint32_t*>(destination);
+    // Copied as bytes: the destination may be any record type.
+    uint8_t* bytes = static_cast<uint8_t*>(destination);
     size_t num_words = size / 4;
     while (num_words--) {
-      *words++ = *source++;
+      const uint32_t word = *source++;
+      memcpy(bytes, &word, sizeof(word));
+      bytes += sizeof(word);
     }
     __DSB();
     const bool clean = !__HAL_FLASH_GET_FLAG_BANK2(FLASH_FLAG_DBECCERR_BANK2);

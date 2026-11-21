@@ -124,7 +124,7 @@ the same in-container runner. `JOBS` controls parallel compilation (default min(
 the named test, which must fail (`ERROR: TEST:` or a sanitizer report; a
 mutation that does not compile is an error). Survivors are listed and fail
 the run. `--patterns-only` checks, without building, that every replaced text
-occurs exactly once. The 107 cases cover #33, #57, #36, #56, #35, #149, #148,
+occurs exactly once. The 111 cases cover #33, #57, #36, #56, #35, #149, #148,
 the low-supply guard (#175), the #53 fades, reset/clock sequencing and synth
 reverb tail, the integer Hermite read, synth grain pairs and the local grain
 sum. Run it inside the image, from the repository root:
