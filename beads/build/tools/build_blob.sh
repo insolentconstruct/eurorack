@@ -60,9 +60,14 @@ printf 'CCFLAGS %s\nCPPFLAGS %s\nBLOB_FLAGS %s\n' \
 objects=()
 for source in "$@"; do
   object="$out/$name/$(basename "${source%.*}").o"
-  # shellcheck disable=SC2086
-  "${TOOLCHAIN}arm-none-eabi-g++" -c $CCFLAGS $CPPFLAGS $BLOB_FLAGS \
-    "$source" -o "$object"
+  if [ "${source##*.}" = S ]; then
+    # shellcheck disable=SC2086
+    "${TOOLCHAIN}arm-none-eabi-gcc" -c $CCFLAGS "$source" -o "$object"
+  else
+    # shellcheck disable=SC2086
+    "${TOOLCHAIN}arm-none-eabi-g++" -c $CCFLAGS $CPPFLAGS $BLOB_FLAGS \
+      "$source" -o "$object"
+  fi
   objects+=("$object")
 done
 # The linker makes the GOT and .blob; an object's own, writable, is refused.

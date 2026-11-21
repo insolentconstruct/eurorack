@@ -89,7 +89,7 @@ ALLOWED_INFO = re.compile(
 IMPORT = 'plaits_blob_import_'
 IMPORT_LOAD = re.compile(r'^ldr(\.w)?$')
 IMPORT_OPERANDS = re.compile(r'^(r[0-9]|r1[0-2]|ip), \[r0, #(\d+)\]')
-FUNCTION = re.compile(r'^[0-9a-f]+ <([^>]+)>:$')
+FUNCTION = re.compile(r'^([0-9a-f]+) <([^>]+)>:$')
 
 # The libc functions a blob may copy in: no state, no errno.
 LIBC = ('memcpy', 'memmove', 'memset')
@@ -150,7 +150,7 @@ class Elf(object):
       name, value, size, info, other, shndx = struct.unpack_from(
           '<IIIBBH', self.data, symtab[4] + i * 16)
       symbols.setdefault(self.String(strtab[4], name), []).append(
-          (value, shndx, info))
+          (value, shndx, info, size))
     return symbols
 
   def SymbolValue(self, index):
@@ -212,12 +212,13 @@ def library_record(path):
 def check_imports(listing, failures):
   """Import functions keep their exact shape and are entered only at their
   start; returns how many there are."""
+  # By address: two local functions may share a name.
   functions = {}
   name = None
   for line in listing.splitlines():
     m = FUNCTION.match(line.strip())
     if m:
-      name = m.group(1)
+      name = m.group(1), m.group(2)
       functions[name] = []
       continue
     fields = line.split('\t')
@@ -230,7 +231,7 @@ def check_imports(listing, failures):
     if target:
       failures.append('a branch into the middle of %s' % target.group(1))
   count = 0
-  for name, code in functions.items():
+  for (_, name), code in sorted(functions.items()):
     if not name.startswith(IMPORT):
       continue
     count += 1
@@ -297,7 +298,7 @@ def gate(elf, base, exports, objdump, path, num_libraries):
   if not import_values:
     failures.append('services version %d is not known' % services)
   for name, entries in symbols.items():
-    for value, shndx, info in entries:
+    for value, shndx, info, _ in entries:
       if shndx == SHN_UNDEF and name:
         failures.append('undefined symbol %s' % name)
       elif shndx == SHN_ABS and info & 0xf in (1, 2) and \
@@ -358,6 +359,12 @@ def gate(elf, base, exports, objdump, path, num_libraries):
     table = library_exports(elf, base, got, failures)
   elif '.blob_exports' in elf.names:
     failures.append('a model has an export table')
+  # Exported data tables (waveforms) may hold any values; the pointer check
+  # below skips them.
+  data_ranges = [(value - base, value - base + size)
+                 for entries in symbols.values()
+                 for value, shndx, info, size in entries
+                 if info & 0xf == 1 and size and value - base in table]
 
   # The source names how many libraries it needs; the build gives them.
   dependencies = struct.unpack_from('<I', data, 64)[0] if abi == 2 else 0
@@ -373,12 +380,12 @@ def gate(elf, base, exports, objdump, path, num_libraries):
   for line in listing.splitlines():
     m = FUNCTION.match(line.strip())
     if m:
-      name = m.group(1)
+      name = m.group(2)
     elif indirect(line) and not (name or '').startswith(IMPORT):
       failures.append('indirect branch: ' + line.strip())
   if check_imports(listing, failures) and not dependencies:
     failures.append('library imports without a library to call')
-  return failures, kinds, imports, table
+  return failures, kinds, imports, table, data_ranges
 
 
 def library_exports(elf, base, got, failures):
@@ -474,7 +481,7 @@ def main(argv):
   records = [library_record(p) for p in libraries]
   failures = []
   packed = {}
-  inside = {}
+  inside = set()
   evidence = {'links': [], 'dependencies': [
       {'id': struct.unpack_from('<I', r)[0], 'sha256': r[4:].hex()}
       for r in records]}
@@ -482,31 +489,26 @@ def main(argv):
     base_text, path = spec.split(':', 1)
     base = int(base_text, 16)
     elf = Elf(path)
-    f, kinds, imports, table = gate(elf, base, exports, objdump, path,
-                                    len(records))
+    f, kinds, imports, table, data_ranges = gate(
+        elf, base, exports, objdump, path, len(records))
     failures += ['%s: %s' % (path, x) for x in f]
     if f:
       continue
     data = pack(elf, base, table, records)
     packed[base] = data
-    # A secondary check: words that address the blob from this base. Data
-    # may look like an address at one base; a pointer moves with every base.
-    inside[base] = set(
+    # A secondary check: a word equal to an address inside the blob, outside
+    # exported data tables.
+    inside |= set(
         o for o in range(0, len(data) - 3, 2)
-        if base <= struct.unpack_from('<I', data, o)[0] < base + len(data))
+        if base <= struct.unpack_from('<I', data, o)[0] < base + len(data) and
+        not any(lo <= o < hi for lo, hi in data_ranges))
     evidence['links'].append({
         'base': '0x%08x' % base,
         'sha256': hashlib.sha256(data).hexdigest(),
         'relocations': kinds,
         'imports': ['0x%08x' % v for v in imports]})
-  moving = None
-  for base, offsets in inside.items():
-    data = packed[base]
-    relative = set((o, struct.unpack_from('<I', data, o)[0] - base)
-                   for o in offsets)
-    moving = relative if moving is None else moving & relative
-  if moving:
-    failures.append('blob addresses at offsets %s' % sorted(moving)[:8])
+  if inside:
+    failures.append('blob addresses at offsets %s' % sorted(inside)[:8])
   if not failures and len(set(packed.values())) != 1:
     failures.append('the packed bytes differ between bases')
   if not failures and len(packed) < 3:

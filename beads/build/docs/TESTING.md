@@ -105,14 +105,15 @@ host-test jobs; the release app does not link them:
 - `profile_blobs.mk` and `storage_blobs.mk`: version 3 profiles (bank table,
   directory, unknown IDs, counts, start bank) and the saved bank's fallback,
   built with `PLAITS_BLOBS`.
-- `blob_gate_test.sh`: five positive and twenty-five negative blobs, each
+- `blob_gate_test.sh`: five positive and twenty-seven negative blobs, each
   refused for its named reason (`R_ARM_REL32` outside the blob, a version 1
   blob importing the generator or naming services version 2, a state over the
   slot, its own generator state; a library call outside an import, an import
   of another shape or loading from another register, a branch into an
-  import, imports or a dependency count without libraries, export tables on
-  a model, missing or naming the services, libc beyond `memcpy`, `memmove`
-  and `memset`).
+  import, two local imports of one name, imports or a dependency count
+  without libraries, export tables on a model, missing or naming the
+  services, libc beyond `memcpy`, `memmove` and `memset`, a fixed pointer
+  into the blob).
 - `blob_emu/render_compare.py`: every OUT and AUX word and the generator's
   state of Particle Noise, Spectral Spiral, Phase Weave, a test sine,
   Wavetable and Speech as blobs against the same classes compiled in
