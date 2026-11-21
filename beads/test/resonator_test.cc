@@ -43,6 +43,7 @@ using namespace beads;
 
 namespace rings {
 extern const float lut_stiffness[];
+extern const float lut_4_decades[];
 }  // namespace rings
 
 static Processor processor;
@@ -150,6 +151,17 @@ float Goertzel(const float* x, size_t size, float frequency) {
     s1 = s;
   }
   return s1 * s1 + s2 * s2 - coefficient * s1 * s2;
+}
+
+// The fixed controls' constants are Rings' table values, bit for bit.
+void TestResonatorConstants() {
+  test_checker.Start("TestResonatorConstants");
+  const float stiffness = stmlib::Interpolate(
+      rings::lut_stiffness, kResonatorStructure, 256.0f);
+  const float decades = stmlib::Interpolate(
+      rings::lut_4_decades, kResonatorDamping, 256.0f);
+  CHECK(!memcmp(&stiffness, &kResonatorStiffness, sizeof(float)));
+  CHECK(!memcmp(&decades, &kResonatorDecades, sizeof(float)));
 }
 
 void TestResonatorBank() {
@@ -637,6 +649,7 @@ int main() {
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
 #endif  // defined(__SSE__)
+  TestResonatorConstants();
   TestResonatorBank();
   TestResonatorPitch();
   TestResonatorLevel();

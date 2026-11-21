@@ -35,8 +35,6 @@
 #include "stmlib/dsp/cosine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 
-#include "rings/resources.h"
-
 namespace beads {
 
 using namespace std;
@@ -48,9 +46,7 @@ void ModalResonator::Init(float sample_rate) {
     even_[i].Init();
   }
   set_frequency(220.0f / sample_rate);
-  set_structure(0.25f);
   set_brightness(0.5f);
-  set_damping(0.5f);
   set_position(0.3f);
   limiter_.Init(
       1.0f / (sample_rate * 0.5f), kResonatorPeak * kResonatorHeadroom);
@@ -81,17 +77,18 @@ void ModalResonator::Process(
   fill(&aux[0], &aux[size], 0.0f);
 
   // Rings' Resonator::ComputeFilters.
-  float stiffness = Interpolate(rings::lut_stiffness, structure_, 256.0f);
+  float stiffness = kResonatorStiffness;
   float harmonic = frequency_;
   float stretch_factor = 1.0f;
-  float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);
-  float brightness_attenuation = 1.0f - structure_;
+  float q = 500.0f * kResonatorDecades;
+  float brightness_attenuation = 1.0f - kResonatorStructure;
   brightness_attenuation *= brightness_attenuation;
   brightness_attenuation *= brightness_attenuation;
   brightness_attenuation *= brightness_attenuation;
   float brightness = brightness_ * (1.0f - 0.2f * brightness_attenuation);
   float q_loss = brightness * (2.0f - brightness) * 0.85f + 0.15f;
-  float q_loss_damping_rate = structure_ * (2.0f - structure_) * 0.1f;
+  float q_loss_damping_rate =
+      kResonatorStructure * (2.0f - kResonatorStructure) * 0.1f;
 
   CosineOscillator amplitudes;
   amplitudes.Init<COSINE_OSCILLATOR_APPROXIMATE>(position_);
