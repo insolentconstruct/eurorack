@@ -99,7 +99,7 @@ Profiles, custom scales, LED indications and tail choices are checked by host te
 
 - Version at boot flashes light-blue, then three times for Beta 3, without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.
-- Pitch notch indication lights [A] green at unison and octave knob plateaus, including both ends, independently of CV and randomness. These cues yield to warnings and meters.
+- Pitch notch indication lights [A] blue at unison and octave knob plateaus, including both ends, independently of CV and randomness. These cues yield to warnings and meters.
 - Live assignment LEDs follow CV magnitude, retaining assignment patterns and stock weighting.
 - FREEZE during saves keeps its LED fully lit.
 - Input attenuation extends [A]+FEEDBACK to silence, with unity near noon, marked green, and gain above. Saved gain immediately uses this range. Automatic gain never attenuates; hold [A] to restart.
