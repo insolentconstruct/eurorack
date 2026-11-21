@@ -29,7 +29,7 @@
 #ifndef BEADS_BLOB_PLAITS_BLOB_ENGINE_H_
 #define BEADS_BLOB_PLAITS_BLOB_ENGINE_H_
 
-#include <algorithm>
+#include <cstring>
 
 #include "stmlib/stmlib.h"
 #include "stmlib/utils/buffer_allocator.h"
@@ -80,9 +80,8 @@ class PlaitsBlobEngine : public plaits::Engine {
         ? reinterpret_cast<uint8_t*>(
             allocator->Allocate<float>((arena_size_ + 3) / 4))
         : NULL;
-    // By words: a byte loop costs a switch-in block about 1% (Seed3).
-    uint32_t* words = reinterpret_cast<uint32_t*>(state_);
-    std::fill(&words[0], &words[(state_size_ + 3) / 4], 0);
+    // newlib's memset clears by words; a byte loop cost 1% of a block.
+    memset(state_, 0, state_size_);
     object_ = abi_ == kPlaitsBlobAbi
         ? (*reinterpret_cast<PlaitsBlobInitFn>(init_))(
             state_, services_, arena, arena_size_)
