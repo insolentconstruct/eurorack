@@ -30,6 +30,10 @@
 
 #include "beads/drivers/codec.h"
 
+#ifdef CPU_CEILING
+#include "beads/cpu_ceiling.h"
+#endif  // CPU_CEILING
+
 #include <cstring>
 
 // Internal hardware definitions / configuration
@@ -365,7 +369,13 @@ void Codec::Fill(size_t offset) {
     
 #ifdef APPLICATION
     // The DMA reads the carried frame first, so store it before the callback.
+#ifdef CPU_CEILING
+    cpu_ceiling::StoreBegin();
+#endif  // CPU_CEILING
     out[0] = out_buffer_[0];
+#ifdef CPU_CEILING
+    cpu_ceiling::StoreEnd(offset, block_size_, 0);
+#endif  // CPU_CEILING
 #endif  // APPLICATION
 
     for (size_t i = 0; i < block_size_; ++i) {
@@ -378,9 +388,16 @@ void Codec::Fill(size_t offset) {
 #ifdef APPLICATION
     (*callback_)(event_buffer_, in, &out_buffer_[1], block_size_);
 
+#ifdef CPU_CEILING
+    cpu_ceiling::StoreBegin();
+#endif  // CPU_CEILING
     for (size_t i = 1; i < block_size_; ++i) {
       out[i] = out_buffer_[i];
     }
+#ifdef CPU_CEILING
+    cpu_ceiling::StoreEnd(offset, block_size_, 2);
+    cpu_ceiling::Filled(offset, block_size_);
+#endif  // CPU_CEILING
     // Carry this block's last frame to the start of the next half.
     out_buffer_[0] = out_buffer_[block_size_];
 #else
