@@ -54,6 +54,7 @@ TERRAIN = 64 * 64
 MAX_TERRAINS = 16
 MAX_BLOBS = 128
 HEADER_SIZES = {1: 64, 2: 96}
+BLOB_MAGIC = 0x424d5a44
 KIND_MODEL = 1
 
 
@@ -92,26 +93,41 @@ def section(kind, release, count, payload):
   return data + struct.pack('<I', zlib.crc32(data) & 0xffffffff)
 
 
-def blob_id(blob):
-  abi = struct.unpack_from('<I', blob, 8)[0]
-  if struct.unpack_from('<I', blob, 4)[0] != HEADER_SIZES.get(abi):
+def blob_ids(blob):
+  """The model IDs a blob serves; refuses what the firmware would refuse
+  before reading the blob's code."""
+  magic, header_size, abi = struct.unpack_from('<3I', blob, 0)
+  if magic != BLOB_MAGIC or header_size != HEADER_SIZES.get(abi):
     raise ValueError('not a blob')
-  model = struct.unpack_from('<I', blob, 16 if abi == 1 else 20)[0]
-  size = struct.unpack_from('<I', blob, 20 if abi == 1 else 28)[0]
-  if size != len(blob):
+  if abi == 1:
+    first, size = struct.unpack_from('<2I', blob, 16)
+    count = 1
+  else:
+    kind, first, count, size = struct.unpack_from('<4I', blob, 16)
+    if kind != KIND_MODEL:
+      raise ValueError('only model blobs until libraries arrive')
+  if size != len(blob) or size % 4 or size < header_size + 4:
     raise ValueError('a blob\'s size word does not match its file')
-  return model
+  if zlib.crc32(blob[:-4]) & 0xffffffff != struct.unpack_from(
+      '<I', blob, size - 4)[0]:
+    raise ValueError('a blob\'s CRC does not match')
+  if not count or first + count > 256:
+    raise ValueError('a blob serves IDs past 255')
+  return range(first, first + count)
 
 
 def plaits(release, blobs):
   if len(blobs) > MAX_BLOBS:
     raise ValueError('more than %d blobs' % MAX_BLOBS)
-  blobs = sorted(blobs, key=blob_id)
+  blobs = sorted(blobs, key=lambda b: blob_ids(b)[0])
+  served = [i for b in blobs for i in blob_ids(b)]
+  if len(served) != len(set(served)):
+    raise ValueError('two blobs serve the same model ID')
   offset = 32 + 16 * len(blobs)
   entries = []
   for blob in blobs:
     offset = align(offset)
-    entries.append((KIND_MODEL, blob_id(blob), offset, len(blob),
+    entries.append((KIND_MODEL, blob_ids(blob)[0], offset, len(blob),
                     struct.unpack_from('<I', blob, len(blob) - 4)[0]))
     offset += len(blob)
   payload = bytearray(b'\xff' * (offset - 32))
@@ -133,6 +149,8 @@ def main(argv):
   parser.add_argument('--terrain')
   parser.add_argument('blobs', nargs='*')
   args = parser.parse_intermixed_args(argv[1:])
+  if not 0 < args.release < 1 << 32:
+    raise ValueError('the release is a nonzero 32-bit number')
 
   sections = []
   if args.wave:
