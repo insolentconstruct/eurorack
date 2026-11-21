@@ -60,6 +60,9 @@ const size_t kPlaitsVoiceRamSize = 28 * 1024;
 #endif  // PLAITS_BLOBS
 // Speech's five word banks, decoded once for all voices.
 const size_t kPlaitsSpeechRamSize = 36 * 1024;
+// The engines, word banks and 6-op banks are built in place: every ram
+// argument and fixed region starts on this boundary.
+const size_t kPlaitsRamAlignment = 8;
 
 // Plaits' three 6-op banks, unpacked once and shared by all voices.
 const int kNumPlaitsFmBanks = 3;

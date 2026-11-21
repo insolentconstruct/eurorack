@@ -188,6 +188,43 @@ void TestEveryModelRenders() {
   }
 }
 
+// Every model, resolution and corner of the controls: the voices' quantizer
+// converts in range (the float-cast-overflow sanitizer traps otherwise) and
+// the output stays finite.
+void TestQuantizationBounds() {
+  test_checker.Start("TestQuantizationBounds");
+  CHECK(reinterpret_cast<uintptr_t>(Ram()) % kPlaitsRamAlignment == 0);
+  for (int model = 0; model < kNumPlaitsModels; ++model) {
+    for (int r = 0; r < 4; ++r) {
+      for (int corner = 0; corner < 8; ++corner) {
+        for (int high = 0; high < 2; ++high) {
+          Reset();
+          Controls c;
+          c.mix.feedback = ModelCentre(model);
+          c.density.base = 0.2f;
+          c.p.pitch.base = high ? 48.0f : -48.0f;
+          c.p.time.base = (corner & 1) ? 1.0f : 0.0f;
+          c.p.size.base = (corner & 2) ? 1.0f : 0.0f;
+          c.p.shape.base = (corner & 4) ? 1.0f : 0.0f;
+          bool finite = true;
+          for (int block = 0; block < 250; ++block) {
+            bool freeze[kBlockSize];
+            std::fill(&freeze[0], &freeze[kBlockSize], false);
+            FloatFrame out[kBlockSize];
+            synth.Render(c.seed, NULL, freeze, Synth::Resolution(r),
+                c.density, c.p, c.mix, out, kBlockSize);
+            for (size_t i = 0; i < kBlockSize; ++i) {
+              finite = finite && std::isfinite(out[i].l) &&
+                  std::isfinite(out[i].r);
+            }
+          }
+          CHECK(finite);
+        }
+      }
+    }
+  }
+}
+
 // The 6-op banks follow the voices and Speech's banks, unpacked once and
 // shared by all voices.
 void TestFmBanksShared() {
@@ -743,5 +780,6 @@ int main() {
   TestBankDetents();
   TestFreezeSustains();
   TestEveryModelRenders();
+  TestQuantizationBounds();
   return test_checker.failures() ? 1 : 0;
 }

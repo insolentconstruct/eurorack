@@ -1121,6 +1121,9 @@ cases = [
   ('TestFreezeSustains', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
     'sustain_level_ = level_;',
     'sustain_level_ = 0.0f;'),
+  ('TestQuantizationBounds', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
+    'out[i] = float(int32_t(out[i] * scale_up)) * scale_down;',
+    'out[i] = float(int32_t(out[i] * scale_up * 65536.0f)) * scale_down;'),
   ('TestEveryModelRenders', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
     '&fm_banks_[(patch.model - 2) * kPlaitsFmBankSize]',
     '&fm_banks_[0]'),
@@ -2298,6 +2301,9 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
         stack = report.split('SUMMARY:', 1)[0]
         assert re.search(r'^\s*#\d+ .*beads::Wavetable(?:Grain|Voice)::',
             stack, re.MULTILINE), failure
+      elif name == 'TestQuantizationBounds':
+        assert re.search(r'plaits_voice\.cc:\d+:\d+: runtime error: .* is '
+            r'outside the range of representable values', failure), failure
       elif name == 'TestClockIdleCounter':
         assert re.search(r'delay_clock\.cc:\d+:\d+: runtime error: '
             r'signed integer overflow', failure), failure
