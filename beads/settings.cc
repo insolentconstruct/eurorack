@@ -72,11 +72,13 @@ bool Settings::Init(bool recovery_mode) {
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],
       0);
-  const PersistentData factory = persistent_data_;
+  factory_ = persistent_data_;
+  const PersistentData& factory = factory_;
   const State defaults = state_;
   repair_ = STORAGE_REPAIR_NONE;
   
   Flash::Init();  // Every write checks the supply from here on.
+  chunk_storage_.set_calibration_check(&CalibrationPlausible, &factory_);
   StorageStatus status = chunk_storage_.Init(&persistent_data_, &state_);
   
   // A lost or implausible calibration comes back from the mirror, the

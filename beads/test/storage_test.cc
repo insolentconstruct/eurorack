@@ -546,6 +546,44 @@ void TestInterruptedRewrite() {
   }
 }
 
+// #317: a restore that failed at power-up leaves the calibration in the
+// mirror only. A recalibration copies it back to the settings sector before
+// the mirror is erased, so a cut at any point keeps a calibration.
+void TestMirrorOnlyCopy() {
+  test_checker.Start("TestMirrorOnlyCopy");
+  const PersistentData old_calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  // Sector erase, four copied words, mirror erase, four mirror words, sector
+  // erase, four calibration words, the state.
+  for (int cut = 0; cut <= 16; ++cut) {
+    Setup(old_calibration, 6);
+    static uint8_t blank[kSectorSize];
+    memset(blank, 255, sizeof(blank));
+    Poke(kSector, blank, sizeof(blank));
+    Settings s;
+    TestFlashBudget() = 0;  // The restore fails.
+    CHECK(s.Init(false));
+    TestFlashBudget() = -1;
+    CHECK(SameCalibration(s, old_calibration));
+    CHECK(Flash::IsBlank(kSector, kSectorSize));
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        new_calibration.adc_calibration,
+        sizeof(new_calibration.adc_calibration));
+    TestFlashBudget() = cut;
+    s.SavePersistentData();
+    TestFlashBudget() = -1;
+
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(!loaded.write_locked());
+    CHECK(SameCalibration(
+        loaded, cut <= 10 ? old_calibration : new_calibration));
+    Settings again;
+    CHECK(again.Init(false) && !again.write_locked());
+    CHECK(SameCalibration(again, loaded.persistent_data()));
+  }
+}
+
 void TestCalibrationWithoutState() {
   test_checker.Start("TestCalibrationWithoutState");
   const State defaults = Defaults();
@@ -1236,6 +1274,7 @@ int main() {
   TestStateTerminator();
   TestInterruptedAppend();
   TestInterruptedRewrite();
+  TestMirrorOnlyCopy();
   TestCalibrationWithoutState();
   TestBlankSector();
   TestWriteLock();
