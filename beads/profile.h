@@ -35,6 +35,9 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/pitch_quantizer.h"
+#ifdef PLAITS_BLOBS
+#include "beads/blob/plaits_region.h"
+#endif  // PLAITS_BLOBS
 
 namespace beads {
 
@@ -55,6 +58,18 @@ const uint8_t kIdentityField = 16;
 const uint8_t kNumIdentities = 225;
 // Page slot 0 is none; 1 to 21 are the options pages' knobs, in order.
 const uint8_t kNumPageSlots = 22;
+#ifdef PLAITS_BLOBS
+// Version 3 adds the Plaits banks (8 permanent model IDs each) and the
+// region directory after the scales; 0 banks means the stock three.
+const uint8_t kProfileVersionBlobs = 3;
+const uint8_t kMaxProfileBanks = 15;
+const uint8_t kMaxProfileSections = PLAITS_SECTION_LAST;
+const uint8_t kNumStockPlaitsBanks = 3;
+#else
+const uint8_t kMaxProfileBanks = 0;
+const uint8_t kMaxProfileSections = 0;
+#endif  // PLAITS_BLOBS
+const uint8_t kProfileBankSize = 8;
 
 enum ActionSlot {
   ACTION_NONE,
@@ -179,15 +194,46 @@ class Profile {
   ProfileFeature Amount(uint8_t slot) const;
   ProfileFeature Action(uint8_t slot) const;
 
+#ifdef PLAITS_BLOBS
+  // How many values a feature takes: its definition's, or the bank count.
+  uint8_t Values(ProfileFeature feature) const;
+
+  // The banks' model IDs: the profile's, or the stock 3 x 8.
+  inline uint8_t num_plaits_banks() const { return num_plaits_banks_; }
+  inline const uint8_t* plaits_bank(uint8_t bank) const {
+    return plaits_banks_[bank];
+  }
+  inline const uint8_t (*plaits_banks() const)[kProfileBankSize] {
+    return plaits_banks_;
+  }
+  // NULL without a directory: the release's default layout applies.
+  inline const PlaitsDirectoryEntry* directory() const {
+    return num_sections_ ? directory_ : NULL;
+  }
+  inline uint8_t num_sections() const { return num_sections_; }
+  static bool KnownModel(uint8_t id);
+#endif  // PLAITS_BLOBS
+
  private:
   bool Parse(const volatile uint8_t* block);
   void FactoryScales();
   bool ParseScales(const volatile uint8_t* block, uint8_t count);
+#ifdef PLAITS_BLOBS
+  void StockBanks();
+  bool ParseBanks(const volatile uint8_t* block, uint8_t count);
+  void ParseDirectory(const volatile uint8_t* block, uint8_t count);
+#endif  // PLAITS_BLOBS
   ProfileEntry entries_[FEATURE_LAST];
   bool custom_bank_;
   uint8_t identity_;
   uint8_t scale_count_;
   PitchScaleDefinition scales_[kMaxCustomScales];
+#ifdef PLAITS_BLOBS
+  uint8_t num_plaits_banks_;
+  uint8_t plaits_banks_[kMaxProfileBanks][kProfileBankSize];
+  uint8_t num_sections_;
+  PlaitsDirectoryEntry directory_[PLAITS_SECTION_LAST];
+#endif  // PLAITS_BLOBS
 
   DISALLOW_COPY_AND_ASSIGN(Profile);
 };

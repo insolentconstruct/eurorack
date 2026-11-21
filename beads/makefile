@@ -57,6 +57,11 @@ PACKAGES       = beads \
 		stmlib/third_party/STM/CMSIS/DSP_Lib/TransformFunctions
 RESOURCES      = beads/resources
 
+# Development builds with Plaits blobs (link-order.mk, PLAITS_BLOBS=1).
+ifeq ($(PLAITS_BLOBS),1)
+PACKAGES      += beads/blob
+endif
+
 # The spectral engine uses CMSIS' FFT, faster than ShyFFT on the H7.
 # Beads never plays Plaits' AUX output, so its engines skip it.
 PROJECT_CONFIGURATION = -DUSE_ARM_FFT -DPLAITS_NO_AUX

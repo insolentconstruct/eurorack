@@ -36,3 +36,9 @@ ifeq ($(DWT_CALIBRATION),1)
 CPPFLAGS += -DDWT_CALIBRATION
 LDFLAGS := -T beads/build/dwt.ld $(LDFLAGS)
 endif
+
+# Development builds with Plaits blobs: the loader, services and region.
+ifeq ($(PLAITS_BLOBS),1)
+CPPFLAGS += -DPLAITS_BLOBS
+LDFLAGS := -T beads/build/blobs.ld $(LDFLAGS)
+endif

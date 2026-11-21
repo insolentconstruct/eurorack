@@ -27,11 +27,20 @@
 	else in an output section other than .blob fails the gate.
 */
 
-INCLUDE beads/blob/services_v1.ld
+INCLUDE beads/blob/services_v2.ld
 
 _ZN6plaits8lut_sineE = PLAITS_BLOB_LUT_SINE;
 _ZN6stmlib20lut_pitch_ratio_highE = PLAITS_BLOB_LUT_PITCH_RATIO_HIGH;
 _ZN6stmlib19lut_pitch_ratio_lowE = PLAITS_BLOB_LUT_PITCH_RATIO_LOW;
+_ZN6stmlib6Random10rng_state_E = PLAITS_BLOB_RANDOM_STATE;
+_ZN6plaits8lut_foldE = PLAITS_BLOB_LUT_FOLD;
+_ZN6plaits26lut_fm_frequency_quantizerE =
+    PLAITS_BLOB_LUT_FM_FREQUENCY_QUANTIZER;
+_ZN6plaits22lut_4x_downsampler_firE = PLAITS_BLOB_LUT_4X_DOWNSAMPLER_FIR;
+_ZN6plaits18lut_ws_inverse_tanE = PLAITS_BLOB_LUT_WS_INVERSE_TAN;
+_ZN6plaits18lut_ws_inverse_sinE = PLAITS_BLOB_LUT_WS_INVERSE_SIN;
+_ZN6plaits13lut_ws_linearE = PLAITS_BLOB_LUT_WS_LINEAR;
+_ZN6plaits11lut_ws_bumpE = PLAITS_BLOB_LUT_WS_BUMP;
 
 ENTRY(plaits_blob_render)
 

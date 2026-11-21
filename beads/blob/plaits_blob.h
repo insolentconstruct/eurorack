@@ -22,7 +22,6 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-//
 // -----------------------------------------------------------------------------
 //
 // Precompiled Plaits models ("blobs"): the fixed binary interface and checks.
@@ -38,27 +37,32 @@ namespace beads {
 
 const uint32_t kPlaitsBlobMagic = 0x424d5a44;  // DZMB
 const uint32_t kPlaitsBlobAbi = 1;
+const uint32_t kPlaitsBlobAbi2 = 2;
 const uint32_t kPlaitsBlobServicesMagic = 0x56535a44;  // DZSV
 const uint32_t kPlaitsBlobServicesVersion = 1;
+const uint32_t kPlaitsBlobServicesVersion2 = 2;
 const uint32_t kPlaitsBlobServicesAddress = 0x08021400;
-const uint32_t kPlaitsBlobRegionMagic = 0x47525a44;  // DZRG
-const uint32_t kPlaitsBlobRegionVersion = 1;
+// stmlib::Random's state, shared by the app and every blob that draws.
+const uint32_t kPlaitsBlobRandomStateAddress = 0x20000000;
 
 // Blobs start on a cache line; state (8-byte aligned) and arena come from the
-// voice's RAM.
+// voice's RAM. Version 2's slot holds the largest stock state, 6-op FM.
 const size_t kPlaitsBlobAlignment = 32;
 const size_t kPlaitsBlobStateAlignment = 8;
 const size_t kPlaitsBlobMaxStateSize = 256;
+const size_t kPlaitsBlobMaxStateSize2 = 4352;
 const size_t kPlaitsBlobMaxArenaSize = 16384;
 const size_t kPlaitsBlobDigestSize = 32;
-const size_t kMaxPlaitsBlobs = 8;
+const uint32_t kPlaitsBlobKindModel = 1;
+const uint32_t kPlaitsBlobKindLibrary = 2;
+const uint32_t kNumPlaitsModelIds = 256;
 
 enum PlaitsBlobFlags {
   PLAITS_BLOB_FLAG_ENVELOPED = 1
 };
 
-// Sixteen little-endian words, code and constants, the imports (GOT), then
-// the profile's CRC-32 of all that. Entry offsets carry the Thumb bit.
+// Version 1: sixteen little-endian words, code and constants, the imports
+// (GOT), then a CRC-32 of all that. Entry offsets carry the Thumb bit.
 struct PlaitsBlobHeader {
   uint32_t magic;
   uint32_t header_size;
@@ -78,16 +82,52 @@ struct PlaitsBlobHeader {
   float aux_gain;
 };
 
-// Version 1 exports, frozen: address, size, alignment and contents never
-// change (services_v1.ld, services_section.ld, CheckServices).
+// Version 2: 24 words. A model serves num_ids consecutive IDs from first_id;
+// libraries and dependencies arrive with phase 2 and are refused for now.
+struct PlaitsBlobHeader2 {
+  uint32_t magic;
+  uint32_t header_size;
+  uint32_t abi;
+  uint32_t services_version;
+  uint32_t kind;
+  uint32_t first_id;
+  uint32_t num_ids;
+  uint32_t size;
+  uint32_t state_size;
+  uint32_t arena_size;
+  uint32_t init_offset;
+  uint32_t reset_offset;
+  uint32_t render_offset;
+  uint32_t got_offset;
+  uint32_t got_size;
+  uint32_t dependencies_offset;
+  uint32_t num_dependencies;
+  uint32_t flags;
+  float out_gain;
+  float aux_gain;
+  uint32_t reserved[4];
+};
+
+// Frozen: address, size, alignment and contents never change (services_v2.ld,
+// CheckServices). Version 1 blobs may import only the first three.
 enum PlaitsBlobExport {
   PLAITS_BLOB_EXPORT_LUT_SINE,  // plaits::lut_sine, 641 floats
   PLAITS_BLOB_EXPORT_LUT_PITCH_RATIO_HIGH,  // stmlib, 257 floats
   PLAITS_BLOB_EXPORT_LUT_PITCH_RATIO_LOW,  // stmlib, 257 floats
+  PLAITS_BLOB_EXPORT_RANDOM_STATE,  // stmlib::Random::rng_state_, in RAM
+  PLAITS_BLOB_EXPORT_LUT_FOLD,
+  PLAITS_BLOB_EXPORT_LUT_FM_FREQUENCY_QUANTIZER,
+  PLAITS_BLOB_EXPORT_LUT_4X_DOWNSAMPLER_FIR,
+  PLAITS_BLOB_EXPORT_LUT_WS_INVERSE_TAN,
+  PLAITS_BLOB_EXPORT_LUT_WS_INVERSE_SIN,
+  PLAITS_BLOB_EXPORT_LUT_WS_LINEAR,
+  PLAITS_BLOB_EXPORT_LUT_WS_BUMP,
   PLAITS_BLOB_EXPORT_LAST
 };
 
 const size_t kNumPlaitsBlobExports = PLAITS_BLOB_EXPORT_LAST;
+const size_t kNumPlaitsBlobExportsV1 = PLAITS_BLOB_EXPORT_RANDOM_STATE;
+// Size 0: a RAM export, checked by address, not contents.
 extern const uint32_t kPlaitsBlobExportSizes[kNumPlaitsBlobExports];
 extern const uint8_t kPlaitsBlobExportDigests[kNumPlaitsBlobExports][
     kPlaitsBlobDigestSize];
@@ -99,47 +139,6 @@ struct PlaitsBlobServices {
   uint32_t num_exports;
   const void* exports[kNumPlaitsBlobExports];
 };
-
-// After the app: this table, 32-byte aligned blobs, then a CRC-32 of it all;
-// size counts everything, and bytes past it are never read.
-struct PlaitsBlobRegionHeader {
-  uint32_t magic;
-  uint32_t version;
-  uint32_t release;
-  uint32_t services_version;
-  uint32_t size;
-  uint32_t num_blobs;
-};
-
-struct PlaitsBlobRegionEntry {
-  uint32_t model;
-  uint32_t offset;
-  uint32_t size;
-  uint32_t crc;
-};
-
-// Read back over SWD or a diagnostic: with app.bin's SHA-256 and the profile,
-// it names the configuration that runs.
-struct PlaitsBlobIdentity {
-  uint32_t release;
-  uint32_t services_version;
-  uint32_t services_status;
-  uint32_t region_status;
-  uint32_t region_crc;
-  uint32_t num_blobs;
-  struct {
-    uint32_t model;
-    uint32_t address;
-    uint32_t size;
-    uint32_t status;
-    uint8_t digest[kPlaitsBlobDigestSize];
-  } blobs[kMaxPlaitsBlobs];
-};
-
-STATIC_ASSERT(sizeof(PlaitsBlobHeader) == 64, plaits_blob_header);
-STATIC_ASSERT(sizeof(PlaitsBlobRegionHeader) == 24, plaits_blob_region);
-STATIC_ASSERT(sizeof(PlaitsBlobRegionEntry) == 16, plaits_blob_entry);
-STATIC_ASSERT(sizeof(plaits::EngineParameters) == 24, plaits_blob_abi);
 
 enum PlaitsBlobStatus {
   PLAITS_BLOB_OK,
@@ -157,11 +156,16 @@ enum PlaitsBlobStatus {
   PLAITS_BLOB_ERROR_SELECTION,
   PLAITS_BLOB_ERROR_TABLE,
   PLAITS_BLOB_ERROR_MODEL,
+  PLAITS_BLOB_ERROR_KIND,
+  PLAITS_BLOB_ERROR_LIBRARY,
+  PLAITS_BLOB_ERROR_CONTENT,
+  PLAITS_BLOB_ERROR_DIRECTORY,
+  PLAITS_BLOB_ERROR_ECC,
   PLAITS_BLOB_ERROR_LAST
 };
 
-// Init constructs the blob's state object in place and returns it; reset and
-// render take that pointer.
+// Version 1 entries. Init constructs the blob's state object in place and
+// returns it; reset and render take that pointer.
 typedef void* (*PlaitsBlobInitFn)(
     void* state,
     const PlaitsBlobServices* services,
@@ -179,7 +183,33 @@ typedef void (*PlaitsBlobRenderFn)(
     size_t size,
     bool* already_enveloped);
 
+// Version 2 entries: init also gets one context per dependency; reset gets
+// the selected ID minus the first.
+typedef void* (*PlaitsBlobInitFn2)(
+    void* state,
+    const PlaitsBlobServices* services,
+    uint8_t* arena,
+    size_t arena_size,
+    void* const* libraries);
+typedef void (*PlaitsBlobResetFn2)(
+    void* object,
+    const PlaitsBlobServices* services,
+    uint32_t argument);
+
 extern const PlaitsBlobServices plaits_blob_services;
+
+// What the loader needs from either header version, once Check passed.
+struct PlaitsBlobInfo {
+  uint32_t abi;
+  uint32_t first_id;
+  uint32_t num_ids;
+  uint32_t size;
+  uint32_t state_size;
+  uint32_t arena_size;
+  uint32_t init_offset;
+  uint32_t reset_offset;
+  uint32_t render_offset;
+};
 
 class PlaitsBlob {
  public:
@@ -187,7 +217,7 @@ class PlaitsBlob {
   static PlaitsBlobStatus CheckServices(const PlaitsBlobServices* services);
 
   // Checks a blob at blob, inside [begin, end), before any of its code runs;
-  // digest receives its SHA-256 (or is NULL).
+  // digest receives its SHA-256 (or is NULL). Version 1 and 2 headers.
   static PlaitsBlobStatus Check(
       const uint8_t* blob,
       const uint8_t* begin,
@@ -197,23 +227,20 @@ class PlaitsBlob {
       size_t num_digests,
       uint8_t* digest);
 
-  // Reads the region in [begin, end): services, table, then every blob, all
-  // or none. expected_crc is the region CRC the profile selected (0: none).
-  static PlaitsBlobStatus ReadRegion(
-      const uint8_t* begin,
-      const uint8_t* end,
-      uint32_t release,
-      uint32_t expected_crc,
-      const PlaitsBlobServices* services,
-      const uint8_t (*digests)[kPlaitsBlobDigestSize],
-      size_t num_digests,
-      PlaitsBlobIdentity* identity);
+  // The fields of a blob that passed Check.
+  static void Info(const uint8_t* blob, PlaitsBlobInfo* info);
 
   static void Sha256(
       const uint8_t* data,
       size_t size,
       uint8_t* digest);
 };
+
+STATIC_ASSERT(sizeof(PlaitsBlobHeader) == 64, plaits_blob_header);
+STATIC_ASSERT(sizeof(PlaitsBlobHeader2) == 96, plaits_blob_header_2);
+// On the target the table fits the 64 bytes before the first export.
+STATIC_ASSERT(16 + 4 * kNumPlaitsBlobExports <= 64, plaits_blob_services);
+STATIC_ASSERT(sizeof(plaits::EngineParameters) == 24, plaits_blob_abi);
 
 }  // namespace beads
 
