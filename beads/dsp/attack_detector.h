@@ -160,6 +160,7 @@ class AttackDetector {
   inline int mode() const { return mode_; }
 
   inline void SetOnset(bool onset) { pending_ = onset; }
+  inline bool pending() const { return pending_; }
 
   void BeginBlock(
       int write_ptr,

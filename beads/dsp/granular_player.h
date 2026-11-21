@@ -86,6 +86,7 @@ class GranularPlayer {
   }
 
   inline void set_pitch_scale(PitchScale scale) { pitch_scale_ = scale; }
+  inline PitchScale pitch_scale() const { return pitch_scale_; }
 
   inline void set_random_intervals(bool intervals) {
     random_intervals_ = intervals;

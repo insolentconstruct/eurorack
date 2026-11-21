@@ -213,6 +213,13 @@ Delay time: Crossfade keeps the delay time while DENSITY turns, then
 fades to the new one instead of bending the pitch; very short delays
 still glide, for flanging. Granular and both synths are unchanged.
 
+A resonator choice keeps stock behaviour by default and adds no panel
+gesture or options-page slot. Resonator: After the grains rings Rings'
+modal resonator on the grains; Before the buffer records the input
+through it, so the grains play the resonance. PITCH tunes it, Pitch
+scale snaps it and Attacks hits strike it. Spectral and both synths are
+unchanged.
+
 Plaits synth banks: FEEDBACK selects one of the eight models of the
 current bank, as on Plaits: green (its first bank), red (noise and
 drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays,
