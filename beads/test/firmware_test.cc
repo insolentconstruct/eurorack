@@ -1763,7 +1763,8 @@ void TestPitchNotchLaw() {
       ui.UpdateLeds();
       CHECK(ui.pitch_on_notch_ == expected[i]);
       CHECK((ui.leds_.intensity_[LED_MEDIA_R] == 0 &&
-          ui.leds_.intensity_[LED_MEDIA_G] == 255) == expected[i]);
+          ui.leds_.intensity_[LED_MEDIA_G] == 0 &&
+          ui.leds_.intensity_[LED_MEDIA_B] == 255) == expected[i]);
     }
   }
 }

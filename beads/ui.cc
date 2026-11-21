@@ -396,7 +396,7 @@ void Ui::UpdateLeds() {
           leds_.set_media(media_color, brightness);
           if (led_features && settings_->FeatureValue(FEATURE_PITCH_NOTCH) &&
               pitch_on_notch_) {
-            const Leds::Color cue = { 0, 255, 0 };
+            const Leds::Color cue = { 0, 0, 255 };
             leds_.set_media(cue);
           }
           if (led_features && settings_->FeatureValue(FEATURE_DELAY_CUE) &&

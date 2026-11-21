@@ -115,7 +115,7 @@ in standard firmware:
 - Version at boot flashes light-blue, then three times for Beta 3,
   without delaying startup.
 - Delay indication flashes [A] red entering or leaving delay.
-- Pitch notch indication lights [A] green at unison and octave knob
+- Pitch notch indication lights [A] blue at unison and octave knob
   plateaus, including both ends, independently of CV and randomness.
   These cues yield to warnings and meters.
 - Live assignment LEDs follow CV magnitude, retaining assignment
