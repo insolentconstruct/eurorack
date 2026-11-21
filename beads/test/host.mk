@@ -16,6 +16,11 @@ HOST_FLAGS += -fsanitize=address,undefined,integer-divide-by-zero \
 HOST_LDFLAGS += -fsanitize=address,undefined,integer-divide-by-zero -no-pie
 endif
 
+# The modal resonator in the processor's options block reads Rings' tables.
+ifneq ($(filter processor_options.cc,$(CC_FILES)),)
+CC_FILES += processor_resonator.cc modal_resonator.cc rings_resources.cc
+endif
+
 ifneq ($(filter settings.cc,$(CC_FILES)),)
 CC_FILES += profile.cc
 ifeq ($(filter pitch_quantizer.cc,$(CC_FILES)),)

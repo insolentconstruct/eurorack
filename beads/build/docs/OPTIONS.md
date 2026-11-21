@@ -109,6 +109,8 @@ Grain stealing follows the 2021 and 2024 firmware by default; a Hygrostat profil
 
 In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make DENSITY crossfade to a new delay time instead of bending the pitch ([Delay time](FEATURES.md#delay-time)).
 
+A Hygrostat profile can add Rings' modal resonator after the grains or before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it and Attacks hits strike it.
+
 Frozen feedback Evolving runs frozen grains, or frozen delay slices in delay mode, through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
 Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, stereo width, monophonic grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or wavetable synth; the R gate follows the grain clock DENSITY would set. A new processor takes over when the page closes and FREEZE is off, clearing the recording; until then the current one plays on. A frozen buffer saved to flash comes back with Granular.

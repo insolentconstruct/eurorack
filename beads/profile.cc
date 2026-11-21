@@ -74,6 +74,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // First page.
   { 5, kNoField, false, false, false, false },  // Start quality.
   { 1, kNoField, false, true, false, false },  // Gain knob.
+  { 3, kNoField, false, false, false, false },  // Resonator.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

@@ -84,6 +84,7 @@ class GranularProcessor {
   
   inline void SetAttacks(int mode) { attacks_.Configure(mode); }
   inline void SetAttackOnset(bool onset) { attacks_.SetOnset(onset); }
+  inline bool attack_onset() const { return attacks_.pending(); }
 
   inline void Reset() {
     attacks_.Reset();
@@ -245,6 +246,10 @@ class GranularProcessor {
 
   inline void set_pitch_scale(PitchScale scale) {
     granular_player_.set_pitch_scale(scale);
+  }
+
+  inline PitchScale pitch_scale() const {
+    return granular_player_.pitch_scale();
   }
 
   inline void set_random_intervals(bool intervals) {

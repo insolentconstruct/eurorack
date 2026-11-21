@@ -2441,6 +2441,80 @@ void TestDelayOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+// The resonator's energy: the first batch's filter state.
+float ResonatorEnergy() {
+  float energy = 0.0f;
+  for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+    energy += fabsf(processor.resonator_.odd_[0].state_1_[i]);
+    energy += fabsf(processor.resonator_.even_[0].state_1_[i]);
+  }
+  return energy;
+}
+
+// The resonator is a power-on profile choice; both synths are unchanged.
+void TestResonatorProfile() {
+  test_checker.Start("TestResonatorProfile");
+  const uint8_t expected[3] = {
+    0,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS,
+    Processor::OPTION_FLAG_RESONATOR_INPUT
+  };
+  for (int engine = 0; engine < 3; ++engine) {
+    uint64_t hashes[3];
+    for (int placement = 0; placement < 3; ++placement) {
+      Rig r(false, engine > 0);
+      settings.set_plaits_synth(engine == 2);
+      settings.SaveState();
+      if (placement) {
+        const uint8_t entry[] = { FEATURE_RESONATOR, uint8_t(placement) };
+        BootWithProfile(&r, entry, 1);
+      } else {
+        r.Reboot(false);
+      }
+      CHECK(processor.options_ == expected[placement]);
+      Random::Seed(1);
+      if (engine) {
+        r.StartAutomatic();
+        CHECK(synth_mode);
+      } else {
+        r.Settle();
+      }
+      hashes[placement] = MixOptionsHash(&r);
+    }
+    if (engine) {
+      CHECK(hashes[1] == hashes[0]);
+      CHECK(hashes[2] == hashes[0]);
+    }
+  }
+  // Through the audio callback: the input rings it before the buffer, and
+  // a Snap and trigger hit strikes it after the silent grains.
+  for (int placement = 1; placement < 3; ++placement) {
+    Rig r(false, false);
+    settings.set_plaits_synth(false);
+    settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
+    settings.SaveState();
+    const uint8_t entry[] = { FEATURE_RESONATOR, uint8_t(placement) };
+    BootWithProfile(&r, entry, 1);
+    PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+    // Quiet input, as for Hit(); before the buffer it would ring on it.
+    r.audio = placement == RESONATOR_AFTER_GRAINS ? 0x1000000 : 0;
+    r.Settle();
+    r.Tick(300, true);
+    CHECK(ResonatorEnergy() == 0.0f);
+    int first;
+    bool led;
+    Hit(&r, &first, &led);
+    CHECK(first == 1 && led);
+    CHECK(ResonatorEnergy() > 0.0f);
+  }
+  settings.set_attack_mode(ATTACK_MODE_OFF);
+  settings.SaveState();
+  // The factory profile omits it.
+  Rig r(false, false);
+  r.Reboot(false);
+  CHECK(processor.options_ == 0);
+}
+
 // The factory profile with one feature's action slot moved, as a Hygrostat
 // layout can place it.
 void MoveAction(uint8_t* block, uint8_t feature, uint8_t action) {
@@ -2762,6 +2836,7 @@ int main() {
   TestMixOptionsProfile();
   TestGrainStealingProfile();
   TestDelayOptionsProfile();
+  TestResonatorProfile();
   TestHoldActionRestartsAutoGain();
   TestManualSynthStartNeedsGesture();
   TestSlowMediaGestures();

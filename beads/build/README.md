@@ -133,6 +133,8 @@ Grain stealing: by default Drizzlet chooses which playing grain a new one replac
 
 Two delay choices keep stock behaviour by default and add no panel gesture or options-page slot. Delay feedback: Unity notch gives FEEDBACK a notch near 3 o'clock where repeats neither fade nor grow, for sound on sound, and keeps the bass in the loop; both ends of the knob stay stock. Delay time: Crossfade keeps the delay time while DENSITY turns, then fades to the new one instead of bending the pitch; very short delays still glide, for flanging. Granular and both synths are unchanged.
 
+A resonator choice keeps stock behaviour by default and adds no panel gesture or options-page slot. Resonator: After the grains rings Rings' modal resonator on the grains; Before the buffer records the input through it, so the grains play the resonance. PITCH tunes it, Pitch scale snaps it and Attacks hits strike it. Spectral and both synths are unchanged.
+
 Plaits synth banks: FEEDBACK selects one of the eight models of the current bank, as on Plaits: green (its first bank), red (noise and drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays, hold [A] and press FREEZE to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim; in spectral and the wavetable synth it only releases a latched FREEZE. A profile can choose the starting bank (green by default).
 
 ## Saved data
