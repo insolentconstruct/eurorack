@@ -4,6 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- The pitch notch cue lights [A] pure blue instead of green (#313), apart from every quality colour.
 - Optional Hygrostat Resonator (#88): Rings' modal resonator, 24 modes in stereo, after the grains or before the buffer; Off by default. PITCH tunes it with Pitch scale and Recent notes, Attacks hits strike it, and all 32 grains still play. Its controls are fixed for now.
 - Custom profiles can put a two-value setting on [A]+SEED or [A]+FREEZE (#301): Reverb character, Processor, Frozen feedback, Synth (on [A]+SEED only) or TIME modulation. The gesture flips and saves it, and [A] shows the new value's options colour. Processor clears the recording, as from its page. [A]+FREEZE still steps the Plaits bank in Plaits synth play.
 - Custom profiles can put Manual gain, Stereo width or Diffusion on any of [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB, or leave manual gain off the knobs (#301). Without a choice, manual gain stays on FEEDBACK. Older firmware refuses these profiles.
