@@ -128,7 +128,7 @@ enum PlaitsSynthLock {
 
 class PlaitsRegion {
  public:
-  PlaitsRegion() { }
+  PlaitsRegion() : flash_check_(NULL) { }
   ~PlaitsRegion() { }
 
   // Checked around each section's read; NULL on the host and emulator.
