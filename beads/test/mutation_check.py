@@ -1252,6 +1252,10 @@ cases = [
     '      // Keep the undefined words out of the cache.\n'
     '      Invalidate(address, size);',
     '      // Keep the undefined words out of the cache.'),
+  # Masked reads copy bytes: a word store needs an aligned destination.
+  ('TestReadIntoRecords', 'storage', 'beads/drivers/flash.h',
+    '      memcpy(bytes, &word, sizeof(word));',
+    '      *reinterpret_cast<uint32_t*>(bytes) = word;'),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
     '    if (calibration != CHUNK_VALID) {\n      return STORAGE_CALIBRATION_LOST;',
     '    if (calibration == CHUNK_UNREADABLE) {\n      return STORAGE_CALIBRATION_LOST;'),
@@ -2204,6 +2208,9 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
         stack = report.split('SUMMARY:', 1)[0]
         assert re.search(r'^\s*#\d+ .*beads::Wavetable(?:Grain|Voice)::',
             stack, re.MULTILINE), failure
+      elif name == 'TestReadIntoRecords':
+        assert re.search(r'flash\.h:\d+:\d+: runtime error: store to '
+            r'misaligned address', failure), failure
       elif name == 'TestClockIdleCounter':
         assert re.search(r'delay_clock\.cc:\d+:\d+: runtime error: '
             r'signed integer overflow', failure), failure

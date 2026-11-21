@@ -261,6 +261,24 @@ void TestMaskedReader() {
   CHECK(TestFlash().violations == 0);
 }
 
+// Reads copy bytes, so the destination may be any record at any address.
+void TestReadIntoRecords() {
+  test_checker.Start("TestReadIntoRecords");
+  Wipe();
+  const uint32_t base = 0x08100000 + 0x1000;
+  const PersistentData calibration = Calibration(0.1f);
+  Poke(base, &calibration, sizeof(calibration));
+  PersistentData data;
+  CHECK(Flash::Read(base, &data, sizeof(data)));
+  CHECK(!memcmp(&data, &calibration, sizeof(data)));
+  uint8_t bytes[sizeof(calibration) + 1];
+  bytes[0] = 0x5a;
+  CHECK(Flash::Read(base, &bytes[1], sizeof(calibration)));
+  CHECK(bytes[0] == 0x5a);
+  CHECK(!memcmp(&bytes[1], &calibration, sizeof(calibration)));
+  CHECK(TestFlash().violations == 0);
+}
+
 // Both copies of the calibration lost, as only damage can leave them.
 void LoseCalibration(int damage) {
   if (damage == 0) {
@@ -1771,6 +1789,7 @@ int main() {
   }
   TestFlashGuard(&OnUnmaskedRead);
   TestMaskedReader();
+  TestReadIntoRecords();
   TestCalibrationFromMirror();
   TestRestoredCalibrationChoice();
   TestCalibrationLost();
