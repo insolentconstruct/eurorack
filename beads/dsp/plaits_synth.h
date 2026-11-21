@@ -93,6 +93,13 @@ class PlaitsSynth {
   }
 
   void set_bank(int bank);
+#ifdef PLAITS_BLOBS
+  // Each bank's eight model IDs: the profile's (Plaits' three by default).
+  inline void set_bank_table(const uint8_t (*banks)[kPlaitsBankSize]) {
+    bank_table_ = banks;
+  }
+  void set_region(const PlaitsRegion* region);
+#endif  // PLAITS_BLOBS
 
  private:
   void StartNote(const Parameters& p, int model);
@@ -117,7 +124,12 @@ class PlaitsSynth {
   RandomWalkModulation morph_modulation_;
 
   stmlib::HysteresisQuantizer2 model_quantizer_;
+#ifdef PLAITS_BLOBS
+  const uint8_t (*bank_table_)[kPlaitsBankSize];
+  const uint8_t* bank_models_;
+#else
   int first_model_;
+#endif  // PLAITS_BLOBS
   float stereo_width_;
   bool width_enabled_;
   PitchScale pitch_scale_;

@@ -22,7 +22,6 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-//
 // -----------------------------------------------------------------------------
 //
 // A checked blob as a Plaits engine: its state lives in the voice's RAM.
@@ -30,8 +29,9 @@
 #ifndef BEADS_BLOB_PLAITS_BLOB_ENGINE_H_
 #define BEADS_BLOB_PLAITS_BLOB_ENGINE_H_
 
-#include "stmlib/stmlib.h"
+#include <cstring>
 
+#include "stmlib/stmlib.h"
 #include "stmlib/utils/buffer_allocator.h"
 
 #include "beads/blob/plaits_blob.h"
@@ -43,34 +43,65 @@ class PlaitsBlobEngine : public plaits::Engine {
   PlaitsBlobEngine() { }
   ~PlaitsBlobEngine() { }
 
-  // Only for a blob that passed PlaitsBlob::Check; Init must follow.
-  void Bind(const uint8_t* blob, const PlaitsBlobServices* services) {
+  // Only for a blob that passed PlaitsBlob::Check; Init must follow. model
+  // is the selected ID, which version 2 blobs get as reset's argument.
+  // Reads the header in place: a voice binds on every switch.
+  void Bind(
+      const uint8_t* blob,
+      const PlaitsBlobServices* services,
+      uint32_t model) {
     const PlaitsBlobHeader* h = reinterpret_cast<const PlaitsBlobHeader*>(
         blob);
     const uintptr_t base = reinterpret_cast<uintptr_t>(blob);
-    init_ = reinterpret_cast<PlaitsBlobInitFn>(base + h->init_offset);
-    reset_ = reinterpret_cast<PlaitsBlobResetFn>(base + h->reset_offset);
-    render_ = reinterpret_cast<PlaitsBlobRenderFn>(base + h->render_offset);
-    arena_size_ = h->arena_size;
+    abi_ = h->abi;
+    if (abi_ == kPlaitsBlobAbi) {
+      SetEntries(base, h->init_offset, h->reset_offset, h->render_offset);
+      state_size_ = h->state_size;
+      arena_size_ = h->arena_size;
+      argument_ = 0;
+      SetPostProcessing(h->flags, h->out_gain, h->aux_gain);
+    } else {
+      const PlaitsBlobHeader2* h2 =
+          reinterpret_cast<const PlaitsBlobHeader2*>(blob);
+      SetEntries(base, h2->init_offset, h2->reset_offset, h2->render_offset);
+      state_size_ = h2->state_size;
+      arena_size_ = h2->arena_size;
+      argument_ = model - h2->first_id;
+      SetPostProcessing(h2->flags, h2->out_gain, h2->aux_gain);
+    }
     services_ = services;
     object_ = NULL;
   }
 
-  // Check keeps arena_size within the freed shared buffer; float-aligned.
-  // The blob constructs its object in state_ and returns a pointer to it.
+  // The state starts zeroed, as Plaits' .bss does. The arena keeps what the
+  // last engine left, as the compiled-in engines' shared buffer does.
   virtual void Init(stmlib::BufferAllocator* allocator) {
     uint8_t* arena = arena_size_
         ? reinterpret_cast<uint8_t*>(
             allocator->Allocate<float>((arena_size_ + 3) / 4))
         : NULL;
-    object_ = (*init_)(state_, services_, arena, arena_size_);
+    // newlib's memset clears by words; a byte loop cost 1% of a block.
+    memset(state_, 0, state_size_);
+    object_ = abi_ == kPlaitsBlobAbi
+        ? (*reinterpret_cast<PlaitsBlobInitFn>(init_))(
+            state_, services_, arena, arena_size_)
+        : (*reinterpret_cast<PlaitsBlobInitFn2>(init_))(
+            state_, services_, arena, arena_size_, NULL);
   }
 
   virtual void Reset() {
-    (*reset_)(object_, services_);
+    if (abi_ == kPlaitsBlobAbi) {
+      (*reinterpret_cast<PlaitsBlobResetFn>(reset_))(object_, services_);
+    } else {
+      (*reinterpret_cast<PlaitsBlobResetFn2>(reset_))(
+          object_, services_, argument_);
+    }
   }
 
   virtual void LoadUserData(const uint8_t* user_data) { }
+
+  // The slot, for tests.
+  inline const uint8_t* state() const { return state_; }
 
   virtual void Render(
       const plaits::EngineParameters& parameters,
@@ -83,14 +114,34 @@ class PlaitsBlobEngine : public plaits::Engine {
   }
 
  private:
-  PlaitsBlobInitFn init_;
-  PlaitsBlobResetFn reset_;
+  void SetEntries(
+      uintptr_t base,
+      uint32_t init,
+      uint32_t reset,
+      uint32_t render) {
+    init_ = base + init;
+    reset_ = base + reset;
+    render_ = reinterpret_cast<PlaitsBlobRenderFn>(base + render);
+  }
+
+  void SetPostProcessing(uint32_t flags, float out_gain, float aux_gain) {
+    post_processing_settings.already_enveloped =
+        flags & PLAITS_BLOB_FLAG_ENVELOPED;
+    post_processing_settings.out_gain = out_gain;
+    post_processing_settings.aux_gain = aux_gain;
+  }
+
+  uint32_t abi_;
+  uintptr_t init_;
+  uintptr_t reset_;
   PlaitsBlobRenderFn render_;
   const PlaitsBlobServices* services_;
+  size_t state_size_;
   size_t arena_size_;
+  uint32_t argument_;
   void* object_;
   // Bytes, so that the blob's object is nested in this one.
-  uint8_t state_[kPlaitsBlobMaxStateSize] __attribute__((aligned(8)));
+  uint8_t state_[kPlaitsBlobMaxStateSize2] __attribute__((aligned(8)));
 
   DISALLOW_COPY_AND_ASSIGN(PlaitsBlobEngine);
 };

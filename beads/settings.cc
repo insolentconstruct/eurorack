@@ -379,7 +379,12 @@ bool Settings::LoadOptions() {
           if (extension == kPitchExtensionValue) {
             value = kPitchExtensionScale;
           }
+#ifdef PLAITS_BLOBS
+        // A saved bank past this profile's banks takes its start bank.
+        } else if (saved < profile_.Values(feature)) {
+#else
         } else if (saved < kFeatureDefinitions[i].values) {
+#endif  // PLAITS_BLOBS
           value = saved;
         }
       } else if (feature < FEATURE_TRIM) {

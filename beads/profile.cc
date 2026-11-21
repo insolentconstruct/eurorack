@@ -64,7 +64,12 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 3, kNoField, false, false, false, false },  // Attack sensitivity.
   { 2, kNoField, false, false, false, false },  // Seed start.
   { 2, kNoField, false, false, false, false },  // Pitch law.
+#ifdef PLAITS_BLOBS
+  // Up to 15 banks, the field's width; Parse checks the profile's count.
+  { kMaxProfileBanks, 14, false, false, false, false },  // Plaits bank.
+#else
   { 3, 14, false, false, false, false },  // Plaits bank.
+#endif  // PLAITS_BLOBS
   { 2, kNoField, false, false, false, false },  // Mix law.
   { 2, kNoField, false, false, false, false },  // Reverb input.
   { 2, kNoField, false, false, false, false },  // Grain stealing.
@@ -767,6 +772,9 @@ void Profile::Defaults() {
   custom_bank_ = false;
   identity_ = 0;
   FactoryScales();
+#ifdef PLAITS_BLOBS
+  StockBanks();
+#endif  // PLAITS_BLOBS
   memset(entries_, 0, sizeof(entries_));
   const ProfileEntry defaults[] = {
     { FEATURE_PITCH, PROFILE_ADJUSTABLE, 0, 1,
@@ -817,7 +825,18 @@ bool Profile::Init(const volatile uint8_t* block) {
 }
 
 bool Profile::Parse(const volatile uint8_t* b) {
+#ifdef PLAITS_BLOBS
+  // Version 3 is version 2 plus the banks and the directory.
+  const bool blobs = b[4] == kProfileVersionBlobs;
+  const uint8_t version = blobs ? 2 : b[4];
+  const uint8_t bank_count = blobs ? b[14] : 0;
+  const uint8_t section_count = blobs ? b[15] : 0;
+#else
+  const bool blobs = false;
   const uint8_t version = b[4];
+  const uint8_t bank_count = 0;
+  const uint8_t section_count = 0;
+#endif  // PLAITS_BLOBS
   if (version != 1 && version != 2) {
     return false;
   }
@@ -826,14 +845,16 @@ bool Profile::Parse(const volatile uint8_t* b) {
   const uint8_t scale_count = version == 2 ? b[13] : 0;
   const size_t limit = version == 1 ? 512 : kProfileSize;
   if (count > kMaxProfileEntries || scale_count > kMaxCustomScales ||
-      bytes != 6 * count + kScaleRecordSize * scale_count ||
+      bank_count > kMaxProfileBanks || section_count > kMaxProfileSections ||
+      bytes != 6 * count + kScaleRecordSize * scale_count +
+          kProfileBankSize * bank_count + 16 * section_count ||
       size_t(16 + bytes + 4) > limit) {
     return false;
   }
   if (Read32(b) != kProfileMagic || Read32(b + 8) != kProfileFormat ||
       (version == 1 && Read32(b + 12) != 0) ||
       (version == 2 && (b[12] > 1 || (!b[12] && scale_count) ||
-          b[14] || b[15])) ||
+          (!blobs && (b[14] || b[15])))) ||
       Crc32(b, 16 + bytes) != Read32(b + 16 + bytes)) {
     return false;
   }
@@ -843,6 +864,14 @@ bool Profile::Parse(const volatile uint8_t* b) {
   if (!ParseScales(b + 16 + 6 * count, scale_count)) {
     return false;
   }
+#ifdef PLAITS_BLOBS
+  const volatile uint8_t* banks = b + 16 + 6 * count +
+      kScaleRecordSize * scale_count;
+  if (!ParseBanks(banks, bank_count)) {
+    return false;
+  }
+  ParseDirectory(banks + 8 * bank_count, section_count);
+#endif  // PLAITS_BLOBS
   memset(entries_, 0, sizeof(entries_));
   bool seen[FEATURE_LAST] = { false };
   bool pages[kNumPageSlots] = { false };
@@ -871,6 +900,12 @@ bool Profile::Parse(const volatile uint8_t* b) {
     if (id == FEATURE_PLAITS_BANK && e.state != PROFILE_ADJUSTABLE) {
       return false;
     }
+#ifdef PLAITS_BLOBS
+    // The start bank is one of this profile's banks.
+    if (id == FEATURE_PLAITS_BANK && e.value >= num_plaits_banks_) {
+      return false;
+    }
+#endif  // PLAITS_BLOBS
     if ((e.page_slot && (!d.page || e.state != PROFILE_ADJUSTABLE)) ||
         (e.amount_slot && (!d.amount || e.state != PROFILE_ADJUSTABLE)) ||
         (e.action && (!d.action || e.state == PROFILE_OFF ||
@@ -910,6 +945,59 @@ bool Profile::Parse(const volatile uint8_t* b) {
   }
   return true;
 }
+
+#ifdef PLAITS_BLOBS
+uint8_t Profile::Values(ProfileFeature feature) const {
+  return feature == FEATURE_PLAITS_BANK
+      ? num_plaits_banks_ : kFeatureDefinitions[feature].values;
+}
+
+/* static */
+bool Profile::KnownModel(uint8_t id) {
+  // profile-features.json: 0-23 stock, 28-99 Palette; 24-27 never assigned.
+  return id < 24 || (id >= 28 && id <= 99);
+}
+
+// Plaits' order: green from Virtual analog, red from Swarm, yellow first.
+void Profile::StockBanks() {
+  const uint8_t first[kNumStockPlaitsBanks] = { 8, 16, 0 };
+  num_plaits_banks_ = kNumStockPlaitsBanks;
+  for (uint8_t i = 0; i < kNumStockPlaitsBanks; ++i) {
+    for (uint8_t j = 0; j < kProfileBankSize; ++j) {
+      plaits_banks_[i][j] = first[i] + j;
+    }
+  }
+  num_sections_ = 0;
+}
+
+bool Profile::ParseBanks(const volatile uint8_t* b, uint8_t count) {
+  StockBanks();
+  for (uint8_t i = 0; i < count; ++i) {
+    for (uint8_t j = 0; j < kProfileBankSize; ++j) {
+      const uint8_t id = b[i * kProfileBankSize + j];
+      if (!KnownModel(id)) {
+        return false;
+      }
+      plaits_banks_[i][j] = id;
+    }
+  }
+  if (count) {
+    num_plaits_banks_ = count;
+  }
+  return true;
+}
+
+// The region reader checks each entry's kind, place and order.
+void Profile::ParseDirectory(const volatile uint8_t* b, uint8_t count) {
+  num_sections_ = count;
+  for (uint8_t i = 0; i < count; ++i, b += 16) {
+    directory_[i].kind = Read32(b);
+    directory_[i].offset = Read32(b + 4);
+    directory_[i].size = Read32(b + 8);
+    directory_[i].crc = Read32(b + 12);
+  }
+}
+#endif  // PLAITS_BLOBS
 
 ProfileFeature Profile::Page(uint8_t slot) const {
   for (int i = 1; i < FEATURE_LAST; ++i) {

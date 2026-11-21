@@ -88,6 +88,31 @@ injects recorded faults into newer tests, each required to fail (604 current pat
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
+
+Plaits blobs (development builds, `beads/blob/ABI.md`), in the build and
+host-test jobs; the release app does not link them:
+- `plaits_blob.mk`: version 1 and 2 header refusals, services version 2
+  (contents, the generator's address), `WAVE`/`TERR`/`PLTS` sections and their
+  faults one at a time, the directory's layout, the `PLTS` table, all or none,
+  the default layout by digest, and the synth locks.
+- `profile_blobs.mk` and `storage_blobs.mk`: version 3 profiles (bank table,
+  directory, unknown IDs, counts, start bank) and the saved bank's fallback,
+  built with `PLAITS_BLOBS`.
+- `blob_gate_test.sh`: two positive and sixteen negative blobs, each refused
+  for its named reason (`R_ARM_REL32` outside the blob, a version 1 blob
+  importing the generator or naming services version 2, a state over the
+  slot, its own generator state).
+- `blob_emu/render_compare.py`: every OUT and AUX word and the generator's
+  state of Particle Noise, Spectral Spiral, Phase Weave and a test sine as
+  blobs against the same classes compiled in (Particle Noise against Plaits'
+  own `ParticleEngine`), at two placements and two FPSCR modes; switch
+  sequences with the slot and arena poisoned; writes from blob code outside
+  its slot, arena, stack and outputs; canaries; section faults and the lock
+  for every `WAVE`/`PLTS` outcome. Differences after a return to a model
+  that kept state compiled in are reported as findings.
+- `build_blobs_dev.sh`: the development app with `PLAITS_BLOBS=1`, its
+  default region, and `plaits_catalog.cc` regenerated and compared.
+
 Feature checks beyond the table:
 - **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, the [A]+DRY/WET gesture, its meter and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.
 - **Delay mode:** every stored byte value, preview and settled saving, Disabled at SIZE fully clockwise in every quality and channel mode, returning from delay to granular, detent boundaries, and neutral playback within 1e-7 FS with SIZE CV inside the detent.
