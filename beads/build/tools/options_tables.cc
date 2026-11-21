@@ -49,7 +49,8 @@ const char* const kOptionNames[] = {
   "Input gain at power-on", "Attack sensitivity", "SEED at power-on",
   "PITCH knob", "Plaits bank", "Mix law", "Reverb input", "Grain stealing",
   "Delay feedback", "Delay time", "Options page preview",
-  "Options page on opening", "Start in quality", "Manual gain knob"
+  "Options page on opening", "Start in quality", "Manual gain knob",
+  "Resonator"
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 const char* const kValueNames[] = {

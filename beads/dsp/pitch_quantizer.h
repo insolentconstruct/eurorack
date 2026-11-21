@@ -90,6 +90,8 @@ void RememberNote(RandomIntervals intervals, bool patched, float cv,
     float amount, uint32_t now);
 // A counter-clockwise random offset on fifths and octaves, or a recent note.
 float RandomStep(float offset);
+// The newest note sent to PITCH with Recent notes on, or offset.
+float NewestNote(float offset);
 
 }  // namespace beads
 

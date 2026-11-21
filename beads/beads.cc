@@ -525,6 +525,7 @@ void Init() {
   processor.set_unity_feedback(settings.FeatureValue(FEATURE_UNITY_FEEDBACK));
   processor.set_delay_crossfade(
       settings.FeatureValue(FEATURE_DELAY_CROSSFADE));
+  processor.set_resonator(settings.FeatureValue(FEATURE_RESONATOR));
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);
