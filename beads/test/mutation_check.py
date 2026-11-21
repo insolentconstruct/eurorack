@@ -1256,6 +1256,10 @@ cases = [
   ('TestReadIntoRecords', 'storage', 'beads/drivers/flash.h',
     '      memcpy(bytes, &word, sizeof(word));',
     '      *reinterpret_cast<uint32_t*>(bytes) = word;'),
+  # #317: a usable mirror is erased only with a usable calibration beside it.
+  ('TestMirrorOnlyCopy', 'storage', 'beads/settings_storage.h',
+    '    if (valid && Usable(mirror) && !SectorUsable(mirror)) {',
+    '    if (false) {'),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
     '    if (calibration != CHUNK_VALID) {\n      return STORAGE_CALIBRATION_LOST;',
     '    if (calibration == CHUNK_UNREADABLE) {\n      return STORAGE_CALIBRATION_LOST;'),
@@ -1302,7 +1306,7 @@ cases = [
     '        false) {\n'
     '      return true;'),
   ('TestMirrorWrites', 'storage', 'beads/settings_storage.h',
-    '        WriteChunk(MIRROR_BASE, persistent_data_) && \\',
+    '        WriteChunk(address, &data) && \\',
     '        true && \\'),
   ('TestRepair', 'storage', 'beads/settings_storage.h',
     '    locked_ = false;\n    recovering_ = true;\n    RewriteSector();',
