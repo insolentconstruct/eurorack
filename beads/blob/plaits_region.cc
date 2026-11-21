@@ -88,6 +88,7 @@ void PlaitsRegion::Read(
     size_t num_digests) {
   memset(&identity_, 0, sizeof(identity_));
   memset(models_, 0, sizeof(models_));
+  num_libraries_ = 0;
   blobs_ = NULL;
   for (int i = 0; i < PLAITS_SECTION_LAST; ++i) {
     sections_[i] = NULL;
@@ -152,6 +153,7 @@ void PlaitsRegion::Read(
       status = PLAITS_BLOB_ERROR_ECC;
       if (section == PLAITS_SECTION_PLAITS) {
         memset(models_, 0, sizeof(models_));
+        num_libraries_ = 0;
       }
     }
     identity_.sections[section].status = status;
@@ -243,18 +245,27 @@ PlaitsBlobStatus PlaitsRegion::ReadBlobs(
   }
   const uint8_t* table = data + sizeof(PlaitsSectionHeader);
 
-  // By ID, aligned, ascending, apart and inside, before any blob is read.
+  // Libraries by ID, then models by ID; aligned, apart and inside, before
+  // any blob is read.
   uint32_t next = sizeof(PlaitsSectionHeader) +
       count * sizeof(PlaitsSectionEntry);
   int previous_id = -1;
+  size_t num_libraries = 0;
   for (uint32_t i = 0; i < count; ++i) {
     PlaitsSectionEntry e;
     memcpy(&e, table + i * sizeof(e), sizeof(e));
     if (e.kind == kPlaitsBlobKindLibrary) {
-      return PLAITS_BLOB_ERROR_LIBRARY;
+      if (num_libraries != i || num_libraries == kMaxPlaitsLibraries ||
+          !e.id) {
+        return PLAITS_BLOB_ERROR_TABLE;
+      }
+      library_ids_[num_libraries++] = e.id;
+    } else if (e.kind != kPlaitsBlobKindModel) {
+      return PLAITS_BLOB_ERROR_TABLE;
+    } else if (i == num_libraries) {
+      previous_id = -1;
     }
-    if (e.kind != kPlaitsBlobKindModel || e.reserved ||
-        e.id <= previous_id ||
+    if (e.reserved || e.id <= previous_id ||
         e.offset % kPlaitsBlobAlignment || e.offset < next ||
         e.offset > crc_offset || e.size > crc_offset - e.offset) {
       return PLAITS_BLOB_ERROR_TABLE;
@@ -265,30 +276,59 @@ PlaitsBlobStatus PlaitsRegion::ReadBlobs(
   identity_.num_blobs = count;
   blobs_ = data;
 
-  // One refused blob refuses the section: it is one configuration.
-  PlaitsBlobStatus result = PLAITS_BLOB_OK;
+  // Each blob on its own, then what it needs. One refused blob refuses the
+  // section: it is one configuration.
+  uint8_t library_digests[kMaxPlaitsLibraries][kPlaitsBlobDigestSize];
   for (uint32_t i = 0; i < count; ++i) {
     PlaitsSectionEntry e;
     memcpy(&e, table + i * sizeof(e), sizeof(e));
     const uint8_t* blob = data + e.offset;
     PlaitsBlobStatus status = PlaitsBlob::Check(
-        blob, blob, blob + e.size, services, digests, num_digests, NULL);
+        blob, blob, blob + e.size, services, digests, num_digests,
+        i < num_libraries ? library_digests[i] : NULL);
     if (status == PLAITS_BLOB_OK) {
       PlaitsBlobInfo info;
       PlaitsBlob::Info(blob, &info);
       if (info.size != e.size || Read32(blob + e.size - 4) != e.crc) {
         status = PLAITS_BLOB_ERROR_TABLE;
+      } else if (info.kind != e.kind) {
+        status = PLAITS_BLOB_ERROR_KIND;
       } else if (info.first_id != e.id) {
         status = PLAITS_BLOB_ERROR_MODEL;
       }
-      for (uint32_t j = 0; status == PLAITS_BLOB_OK && j < info.num_ids;
-          ++j) {
-        uint8_t& slot = models_[info.first_id + j];
-        if (slot) {
-          status = PLAITS_BLOB_ERROR_TABLE;
-        } else {
-          slot = i + 1;
-        }
+    }
+    identity_.blob_status[i] = status;
+  }
+
+  // Each library takes its record and its RAM from what the synth gives.
+  size_t ram = PlaitsLibraryRamAlign(
+      num_libraries * sizeof(PlaitsBlobLibrary));
+  PlaitsBlobStatus result = PLAITS_BLOB_OK;
+  for (uint32_t i = 0; i < count; ++i) {
+    const bool library = i < num_libraries;
+    const uint8_t* blob = entry(i);
+    PlaitsBlobStatus status = PlaitsBlobStatus(identity_.blob_status[i]);
+    PlaitsBlobInfo info;
+    memset(&info, 0, sizeof(info));
+    if (status == PLAITS_BLOB_OK) {
+      PlaitsBlob::Info(blob, &info);
+      // A library needs only libraries before it: no cycle.
+      status = CheckDependencies(
+          blob, info, library ? i : num_libraries, library_digests);
+    }
+    if (status == PLAITS_BLOB_OK && library) {
+      ram += PlaitsLibraryRamAlign(info.state_size);
+      if (ram > library_ram_ || info.arena_size > library_scratch_) {
+        status = PLAITS_BLOB_ERROR_RAM;
+      }
+    }
+    for (uint32_t j = 0; status == PLAITS_BLOB_OK && !library &&
+        j < info.num_ids; ++j) {
+      uint8_t& slot = models_[info.first_id + j];
+      if (slot) {
+        status = PLAITS_BLOB_ERROR_TABLE;
+      } else {
+        slot = i + 1;
       }
     }
     identity_.blob_status[i] = status;
@@ -298,19 +338,49 @@ PlaitsBlobStatus PlaitsRegion::ReadBlobs(
   }
   if (result != PLAITS_BLOB_OK) {
     memset(models_, 0, sizeof(models_));
+  } else {
+    num_libraries_ = num_libraries;
   }
   return result;
 }
 
+// Every library the blob lists is among the first num_libraries entries,
+// was accepted, and is the build it was made against.
+PlaitsBlobStatus PlaitsRegion::CheckDependencies(
+    const uint8_t* blob,
+    const PlaitsBlobInfo& info,
+    size_t num_libraries,
+    const uint8_t (*library_digests)[kPlaitsBlobDigestSize]) const {
+  for (uint32_t i = 0; i < info.num_dependencies; ++i) {
+    PlaitsBlobDependency d;
+    memcpy(&d, blob + info.dependencies_offset + i * sizeof(d), sizeof(d));
+    bool found = false;
+    for (size_t j = 0; j < num_libraries && !found; ++j) {
+      found = library_ids_[j] == d.id &&
+          identity_.blob_status[j] == PLAITS_BLOB_OK &&
+          !memcmp(library_digests[j], d.digest, kPlaitsBlobDigestSize);
+    }
+    if (!found) {
+      return PLAITS_BLOB_ERROR_DEPENDENCY;
+    }
+  }
+  return PLAITS_BLOB_OK;
+}
+
+const uint8_t* PlaitsRegion::entry(size_t index) const {
+  PlaitsSectionEntry e;
+  memcpy(&e, blobs_ + sizeof(PlaitsSectionHeader) + index * sizeof(e),
+      sizeof(e));
+  return blobs_ + e.offset;
+}
+
 const uint8_t* PlaitsRegion::blob(uint8_t model) const {
   const uint8_t index = models_[model];
-  if (!index) {
-    return NULL;
-  }
-  PlaitsSectionEntry e;
-  memcpy(&e, blobs_ + sizeof(PlaitsSectionHeader) +
-      (index - 1) * sizeof(e), sizeof(e));
-  return blobs_ + e.offset;
+  return index ? entry(index - 1) : NULL;
+}
+
+const uint8_t* PlaitsRegion::library(size_t index) const {
+  return index < num_libraries_ ? entry(index) : NULL;
 }
 
 /* static */

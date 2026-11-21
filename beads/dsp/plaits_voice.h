@@ -41,6 +41,7 @@
 #include "plaits/dsp/fx/low_pass_gate.h"
 
 #ifdef PLAITS_BLOBS
+#include "beads/blob/plaits_libraries.h"
 #include "beads/blob/plaits_region.h"
 #endif  // PLAITS_BLOBS
 
@@ -53,8 +54,12 @@ const int kNumPlaitsModels = 24;
 #ifdef PLAITS_BLOBS
 // Plus one blob slot, the largest state a version 2 blob may declare.
 const size_t kPlaitsVoiceRamSize = 29 * 1024;
-// Stock models served by blobs in development builds: Particle noise.
+// Stock models served by blobs in development builds.
+const int kPlaitsWavetable = 13;
+const int kPlaitsSpeech = 15;
 const int kPlaitsParticleNoise = 18;
+// The libraries' records and RAM (Speech's decoded word banks among them).
+const size_t kPlaitsLibraryRamSize = 64 * 1024;
 #else
 const size_t kPlaitsVoiceRamSize = 28 * 1024;
 #endif  // PLAITS_BLOBS
@@ -107,11 +112,18 @@ class PlaitsVoice {
 
 #ifdef PLAITS_BLOBS
   inline void set_region(const PlaitsRegion* region) { region_ = region; }
+  inline void set_libraries(const PlaitsLibraries* libraries) {
+    libraries_ = libraries;
+  }
+
+  static inline bool CompiledIn(int model) {
+    return model < kNumPlaitsModels && model != kPlaitsWavetable &&
+        model != kPlaitsSpeech && model != kPlaitsParticleNoise;
+  }
 
   // A model this build plays: compiled in, or a checked blob in region.
   static inline bool Available(int model, const PlaitsRegion& region) {
-    return (model < kNumPlaitsModels && model != kPlaitsParticleNoise) ||
-        region.has_blob(model);
+    return CompiledIn(model) || region.has_blob(model);
   }
 
   // Plaits may play when every model of every bank is available.
@@ -131,6 +143,7 @@ class PlaitsVoice {
 #ifdef PLAITS_BLOBS
   plaits::Engine* engine(int model);
   const PlaitsRegion* region_;
+  const PlaitsLibraries* libraries_;
 #endif  // PLAITS_BLOBS
   PlaitsEngines* engines_;
   const plaits::fm::Patch* fm_banks_;

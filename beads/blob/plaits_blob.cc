@@ -239,15 +239,21 @@ static PlaitsBlobStatus ReadHeader(
     }
     memcpy(h, blob, sizeof(*h));
   }
+  const bool library = h->kind == kPlaitsBlobKindLibrary;
   info->abi = h->abi;
+  info->kind = h->kind;
   info->first_id = h->first_id;
   info->num_ids = h->num_ids;
   info->size = h->size;
   info->state_size = h->state_size;
   info->arena_size = h->arena_size;
   info->init_offset = h->init_offset;
-  info->reset_offset = h->reset_offset;
-  info->render_offset = h->render_offset;
+  info->reset_offset = library ? 0 : h->reset_offset;
+  info->render_offset = library ? 0 : h->render_offset;
+  info->exports_offset = library ? h->reset_offset : 0;
+  info->num_exports = library ? h->render_offset : 0;
+  info->dependencies_offset = h->dependencies_offset;
+  info->num_dependencies = h->num_dependencies;
   return PLAITS_BLOB_OK;
 }
 
@@ -285,29 +291,69 @@ PlaitsBlobStatus PlaitsBlob::Check(
           h.services_version != kPlaitsBlobServicesVersion)) {
     return PLAITS_BLOB_ERROR_SERVICES;
   }
-  if (h.kind != kPlaitsBlobKindModel) {
+  const bool library = h.kind == kPlaitsBlobKindLibrary;
+  if (h.kind != kPlaitsBlobKindModel && !library) {
     return PLAITS_BLOB_ERROR_KIND;
   }
+  // A library has one nonzero ID, and no flags or gains.
   if (!h.num_ids || h.first_id >= kNumPlaitsModelIds ||
       h.num_ids > kNumPlaitsModelIds - h.first_id ||
+      (library && (h.num_ids != 1 || !h.first_id || h.flags ||
+          Read32(blob + 72) || Read32(blob + 76))) ||
       h.reserved[0] || h.reserved[1] || h.reserved[2] || h.reserved[3]) {
     return PLAITS_BLOB_ERROR_HEADER;
   }
-  // Libraries and their dependents arrive with phase 2.
-  if (h.num_dependencies || h.dependencies_offset) {
-    return PLAITS_BLOB_ERROR_LIBRARY;
-  }
   const uint32_t crc_offset = h.size - 4;
-  // Entries lie between the header and the GOT, which ends before the CRC.
+  // Code, the GOT, a library's export table, the dependency list, the CRC.
+  const uint32_t got_end = h.got_offset + h.got_size;
   if (h.got_offset % 4 || h.got_size % 4 || h.got_offset > crc_offset ||
-      h.got_size > crc_offset - h.got_offset ||
-      !EntryInCode(h.init_offset, h.header_size, h.got_offset) ||
+      h.got_size > crc_offset - h.got_offset) {
+    return PLAITS_BLOB_ERROR_LAYOUT;
+  }
+  uint32_t next = got_end;
+  if (library) {
+    // reset_offset and render_offset hold the export table and its count.
+    const uint32_t table = h.reset_offset;
+    const uint32_t count = h.render_offset;
+    if (!count || count > kMaxPlaitsLibraryExports || table % 4 ||
+        table < got_end || table > crc_offset ||
+        count > (crc_offset - table) / 4 ||
+        (h.init_offset &&
+            !EntryInCode(h.init_offset, h.header_size, h.got_offset))) {
+      return PLAITS_BLOB_ERROR_LAYOUT;
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+      const uint32_t offset = Read32(blob + table + 4 * i);
+      if (offset < h.header_size || offset >= h.got_offset) {
+        return PLAITS_BLOB_ERROR_LAYOUT;
+      }
+    }
+    next = table + 4 * count;
+  } else if (!EntryInCode(h.init_offset, h.header_size, h.got_offset) ||
       !EntryInCode(h.reset_offset, h.header_size, h.got_offset) ||
       !EntryInCode(h.render_offset, h.header_size, h.got_offset)) {
     return PLAITS_BLOB_ERROR_LAYOUT;
   }
-  const size_t max_state = h.abi == kPlaitsBlobAbi
-      ? kPlaitsBlobMaxStateSize : kPlaitsBlobMaxStateSize2;
+  // The dependency list ends at the CRC; IDs are libraries' (nonzero).
+  if (h.num_dependencies > kMaxPlaitsBlobDependencies ||
+      (!h.num_dependencies && h.dependencies_offset) ||
+      (h.num_dependencies && (h.dependencies_offset < next ||
+          h.dependencies_offset % 4 ||
+          h.dependencies_offset > crc_offset ||
+          crc_offset - h.dependencies_offset !=
+              h.num_dependencies * sizeof(PlaitsBlobDependency)))) {
+    return PLAITS_BLOB_ERROR_LAYOUT;
+  }
+  for (uint32_t i = 0; i < h.num_dependencies; ++i) {
+    const uint32_t id = Read32(
+        blob + h.dependencies_offset + i * sizeof(PlaitsBlobDependency));
+    if (!id || id >= kNumPlaitsModelIds) {
+      return PLAITS_BLOB_ERROR_LIBRARY;
+    }
+  }
+  const size_t max_state = library ? kPlaitsBlobMaxLibraryRamSize
+      : (h.abi == kPlaitsBlobAbi
+          ? kPlaitsBlobMaxStateSize : kPlaitsBlobMaxStateSize2);
   if (h.state_size > max_state || h.arena_size > kPlaitsBlobMaxArenaSize) {
     return PLAITS_BLOB_ERROR_RAM;
   }

@@ -35,6 +35,7 @@
 #include "stmlib/utils/buffer_allocator.h"
 
 #include "beads/blob/plaits_blob.h"
+#include "beads/blob/plaits_libraries.h"
 
 namespace beads {
 
@@ -44,12 +45,14 @@ class PlaitsBlobEngine : public plaits::Engine {
   ~PlaitsBlobEngine() { }
 
   // Only for a blob that passed PlaitsBlob::Check; Init must follow. model
-  // is the selected ID, which version 2 blobs get as reset's argument.
-  // Reads the header in place: a voice binds on every switch.
+  // is the selected ID, which version 2 blobs get as reset's argument, with
+  // the libraries they list. Reads the header in place: a voice binds on
+  // every switch.
   void Bind(
       const uint8_t* blob,
       const PlaitsBlobServices* services,
-      uint32_t model) {
+      uint32_t model,
+      const PlaitsLibraries* libraries) {
     const PlaitsBlobHeader* h = reinterpret_cast<const PlaitsBlobHeader*>(
         blob);
     const uintptr_t base = reinterpret_cast<uintptr_t>(blob);
@@ -68,6 +71,9 @@ class PlaitsBlobEngine : public plaits::Engine {
       arena_size_ = h2->arena_size;
       argument_ = model - h2->first_id;
       SetPostProcessing(h2->flags, h2->out_gain, h2->aux_gain);
+      if (h2->num_dependencies) {
+        libraries->Resolve(blob, libraries_);
+      }
     }
     services_ = services;
     object_ = NULL;
@@ -86,7 +92,7 @@ class PlaitsBlobEngine : public plaits::Engine {
         ? (*reinterpret_cast<PlaitsBlobInitFn>(init_))(
             state_, services_, arena, arena_size_)
         : (*reinterpret_cast<PlaitsBlobInitFn2>(init_))(
-            state_, services_, arena, arena_size_, NULL);
+            state_, services_, arena, arena_size_, libraries_);
   }
 
   virtual void Reset() {
@@ -139,6 +145,7 @@ class PlaitsBlobEngine : public plaits::Engine {
   size_t state_size_;
   size_t arena_size_;
   uint32_t argument_;
+  const PlaitsBlobLibrary* libraries_[kMaxPlaitsBlobDependencies];
   void* object_;
   // Bytes, so that the blob's object is nested in this one.
   uint8_t state_[kPlaitsBlobMaxStateSize2] __attribute__((aligned(8)));

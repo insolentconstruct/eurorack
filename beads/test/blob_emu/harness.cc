@@ -25,9 +25,10 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Emulator harness: the region reader, a blob voice (one slot and arena, as
-// PlaitsVoice) and the same engines compiled in, sharing their own arena as
-// PlaitsVoice's do; called by render_compare.py under Unicorn's Cortex-M7.
+// Emulator harness: the region reader, the libraries built as at synth entry,
+// a blob voice (one slot and arena, as PlaitsVoice) and the same engines
+// compiled in, sharing their own arena as PlaitsVoice's do; called by
+// render_compare.py under Unicorn's Cortex-M7.
 
 #include <new>
 
@@ -38,9 +39,13 @@
 #include "beads/blob/models/spectral_spiral_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
+#include "beads/blob/plaits_libraries.h"
 #include "beads/blob/plaits_region.h"
 #include "beads/test/blob_gate/test_sine.h"
 #include "plaits/dsp/engine/particle_engine.h"
+#include "plaits/dsp/engine/speech_engine.h"
+#include "plaits/dsp/engine/wavetable_engine.h"
+#include "plaits/dsp/speech/lpc_speech_synth_words.h"
 
 using namespace beads;
 using namespace plaits;
@@ -73,10 +78,15 @@ class TestSineEngine : public Engine {
   DISALLOW_COPY_AND_ASSIGN(TestSineEngine);
 };
 
-const size_t kNumCompiled = 4;
+const size_t kNumCompiled = 6;
 const size_t kArenaSize = 16384;
 const size_t kCanaryWords = 16;
-const size_t kMaxDigests = 8;
+const size_t kMaxDigests = 16;
+// As the development build: kPlaitsLibraryRamSize, and the first voice's RAM
+// as scratch (enough for a word bank).
+const size_t kLibraryRamSize = 64 * 1024;
+const size_t kScratchSize = 16 * 1024;
+const size_t kSpeechRamSize = 36 * 1024;
 
 // Engines are placed by harness_setup: no static constructors run here.
 static uint8_t phase_weave_storage[sizeof(PhaseWeaveEngine)]
@@ -87,9 +97,16 @@ static uint8_t particle_storage[sizeof(ParticleEngine)]
     __attribute__((aligned(8)));
 static uint8_t spectral_spiral_storage[sizeof(SpectralSpiralEngine)]
     __attribute__((aligned(8)));
+static uint8_t wavetable_storage[sizeof(WavetableEngine)]
+    __attribute__((aligned(8)));
+static uint8_t speech_storage[sizeof(SpeechEngine)]
+    __attribute__((aligned(8)));
 static Engine* compiled[kNumCompiled];
 static uint8_t compiled_arena[kArenaSize] __attribute__((aligned(8)));
+// The compiled-in engines' decoded word banks (PlaitsVoice::DecodeSpeechBanks).
+static uint8_t compiled_speech_ram[kSpeechRamSize] __attribute__((aligned(8)));
 static PlaitsRegion region;
+static PlaitsLibraries libraries;
 
 extern "C" {
 
@@ -103,6 +120,9 @@ struct BlobVoice {
 };
 
 BlobVoice harness_blob_voice;
+uint8_t harness_library_ram[kLibraryRamSize] __attribute__((aligned(32)));
+uint8_t harness_scratch[kScratchSize] __attribute__((aligned(8)));
+uint32_t harness_library_ram_size = kLibraryRamSize;
 uint8_t harness_digests[kMaxDigests][kPlaitsBlobDigestSize];
 uint32_t harness_num_digests;
 PlaitsDirectoryEntry harness_directory[PLAITS_SECTION_LAST];
@@ -120,18 +140,34 @@ static PlaitsBlobEngine* blob_engine() {
   return reinterpret_cast<PlaitsBlobEngine*>(harness_blob_voice.engine);
 }
 
+static void DecodeSpeechBanks() {
+  stmlib::BufferAllocator allocator(compiled_speech_ram, kSpeechRamSize);
+  LPCSpeechSynthWordBank* banks = allocator.Allocate<LPCSpeechSynthWordBank>(
+      LPC_SPEECH_SYNTH_NUM_WORD_BANKS);
+  LPCSpeechSynthWordBank::set_decoded_banks(NULL);
+  for (int i = 0; i < LPC_SPEECH_SYNTH_NUM_WORD_BANKS; ++i) {
+    stmlib::BufferAllocator scratch(harness_scratch, kScratchSize);
+    banks[i].Init(word_banks_, LPC_SPEECH_SYNTH_NUM_WORD_BANKS, &scratch);
+    banks[i].Decode(i, &allocator);
+  }
+  LPCSpeechSynthWordBank::set_decoded_banks(banks);
+}
+
 // Reads the region: from the directory, or the defaults when use_directory
-// is 0. Returns the PLTS status.
+// is 0, then builds its libraries. Returns the PLTS status.
 uint32_t harness_setup(
     const uint8_t* begin,
     const uint8_t* end,
     uint32_t release,
     uint32_t use_directory) {
+  DecodeSpeechBanks();
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
   compiled[2] = new(particle_storage) ParticleEngine;
   compiled[3] = new(spectral_spiral_storage) SpectralSpiralEngine;
+  compiled[4] = new(wavetable_storage) WavetableEngine;
+  compiled[5] = new(speech_storage) SpeechEngine;
   for (size_t i = 0; i < kNumCompiled; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
@@ -140,6 +176,7 @@ uint32_t harness_setup(
   new(harness_blob_voice.engine) PlaitsBlobEngine;
   harness_slot = reinterpret_cast<uintptr_t>(blob_engine()->state());
 
+  region.set_library_ram(harness_library_ram_size, kScratchSize);
   region.Read(
       begin, end, release,
       use_directory ? harness_directory : NULL, harness_num_entries,
@@ -148,11 +185,16 @@ uint32_t harness_setup(
   harness_identity = region.identity();
   harness_lock = PlaitsRegion::Lock(
       region.ok(PLAITS_SECTION_PLAITS), region.ok(PLAITS_SECTION_WAVE));
+  libraries.Init(
+      region, &plaits_blob_services, harness_library_ram,
+      harness_library_ram_size, harness_scratch, kScratchSize);
   return harness_identity.sections[PLAITS_SECTION_PLAITS].status;
 }
 
-// A voice switching to a compiled-in engine: Reset only.
+// A voice switching to a compiled-in engine: Reset only, after the user data
+// PlaitsVoice loads (none).
 void harness_select_compiled(uint32_t engine) {
+  compiled[engine]->LoadUserData(NULL);
   compiled[engine]->Reset();
 }
 
@@ -164,7 +206,7 @@ uint32_t harness_select_blob(uint32_t model) {
     return 1;
   }
   stmlib::BufferAllocator allocator(harness_blob_voice.arena, kArenaSize);
-  blob_engine()->Bind(blob, &plaits_blob_services, model);
+  blob_engine()->Bind(blob, &plaits_blob_services, model, &libraries);
   blob_engine()->Init(&allocator);
   blob_engine()->Reset();
   return 0;

@@ -68,6 +68,7 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   morph_modulation_.Init(1.01f / sr);
 #ifdef PLAITS_BLOBS
   set_bank_table(kPlaitsStockBanks);
+  region_ = NULL;
 #endif  // PLAITS_BLOBS
   model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, false);
   set_bank(0);
@@ -79,10 +80,21 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
 
 void PlaitsSynth::InitVoices(uint8_t* ram) {
   // The first voice's RAM is scratch until the voice is built.
+#ifdef PLAITS_BLOBS
+  uint8_t* libraries = ram + kNumPlaitsVoices * kPlaitsVoiceRamSize;
+  if (region_) {
+    libraries_.Init(
+        *region_, &plaits_blob_services, libraries, kPlaitsLibraryRamSize,
+        ram, kPlaitsVoiceRamSize);
+  }
+  const plaits::fm::Patch* fm_banks = PlaitsVoice::UnpackFmBanks(
+      libraries + kPlaitsLibraryRamSize);
+#else
   PlaitsVoice::DecodeSpeechBanks(
       ram + kNumPlaitsVoices * kPlaitsVoiceRamSize, ram);
   const plaits::fm::Patch* fm_banks = PlaitsVoice::UnpackFmBanks(
       ram + kNumPlaitsVoices * kPlaitsVoiceRamSize + kPlaitsSpeechRamSize);
+#endif  // PLAITS_BLOBS
   for (int i = 0; i < kNumPlaitsVoices; ++i) {
     voice_[i].Init(ram + i * kPlaitsVoiceRamSize, fm_banks);
 
@@ -100,8 +112,10 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
 
 #ifdef PLAITS_BLOBS
 void PlaitsSynth::set_region(const PlaitsRegion* region) {
+  region_ = region;
   for (int i = 0; i < kNumPlaitsVoices; ++i) {
     voice_[i].set_region(region);
+    voice_[i].set_libraries(&libraries_);
   }
 }
 

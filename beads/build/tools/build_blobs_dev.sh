@@ -31,16 +31,12 @@ set -euo pipefail
 out=${1:?usage: build_blobs_dev.sh OUT}
 mkdir -p "$out"
 unset MAKEFLAGS MFLAGS MAKELEVEL
-models=beads/blob/models
 release=$(sed -n 's/^const uint32_t kPlaitsBlobRelease = \([0-9]*\);$/\1/p' \
   beads/blob/plaits_catalog.cc)
-bash beads/build/tools/build_blob.sh "$out/blob" particle_noise \
-  $models/particle_noise.cc $models/particle_noise_engine.cc
-bash beads/build/tools/build_blob.sh "$out/blob" spectral_spiral \
-  $models/spectral_spiral.cc $models/spectral_spiral_engine.cc
-bash beads/build/tools/build_blob.sh "$out/blob" phase_weave \
-  $models/phase_weave.cc $models/phase_weave_engine.cc
-blobs=("$out/blob/particle_noise.bin" "$out/blob/spectral_spiral.bin" \
+bash beads/build/tools/build_blobs.sh "$out/blob"
+blobs=("$out/blob/plaits_wavetables.bin" "$out/blob/speech_library.bin" \
+  "$out/blob/wavetable.bin" "$out/blob/speech.bin" \
+  "$out/blob/particle_noise.bin" "$out/blob/spectral_spiral.bin" \
   "$out/blob/phase_weave.bin")
 python3 beads/build/tools/blob_sections.py "$out/region.bin" "$release" \
   "${blobs[@]}"

@@ -47,8 +47,13 @@ const float kPlaitsRootNote = 48.0f - 0.0429f;
 
 // Engine RAM for all voices and the banks they share, lent by the caller
 // while the synth plays.
+#ifdef PLAITS_BLOBS
+const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize +
+    kPlaitsLibraryRamSize + kPlaitsFmBanksRamSize;
+#else
 const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize +
     kPlaitsSpeechRamSize + kPlaitsFmBanksRamSize;
+#endif  // PLAITS_BLOBS
 
 // FEEDBACK selects one of the eight models of the current bank.
 const int kPlaitsBankSize = 8;
@@ -127,6 +132,8 @@ class PlaitsSynth {
 #ifdef PLAITS_BLOBS
   const uint8_t (*bank_table_)[kPlaitsBankSize];
   const uint8_t* bank_models_;
+  const PlaitsRegion* region_;
+  PlaitsLibraries libraries_;
 #else
   int first_model_;
 #endif  // PLAITS_BLOBS

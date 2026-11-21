@@ -25,7 +25,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Blob gate controls for version 2 headers; STATE_SIZE may be predefined.
+// Blob gate controls for version 2 headers; STATE_SIZE and NUM_DEPENDENCIES
+// may be predefined.
 
 #ifndef BEADS_TEST_BLOB_GATE_COMMON2_H_
 #define BEADS_TEST_BLOB_GATE_COMMON2_H_
@@ -36,12 +37,17 @@
 #include "plaits/resources.h"
 
 using beads::PlaitsBlobHeader2;
+using beads::PlaitsBlobLibrary;
 using beads::PlaitsBlobServices;
 using plaits::EngineParameters;
 
 #ifndef STATE_SIZE
 #define STATE_SIZE 16
 #endif  // STATE_SIZE
+
+#ifndef NUM_DEPENDENCIES
+#define NUM_DEPENDENCIES 0
+#endif  // NUM_DEPENDENCIES
 
 extern "C" const PlaitsBlobHeader2 plaits_blob_header
     __attribute__((section(".blob_header"), used)) = {
@@ -50,7 +56,7 @@ extern "C" const PlaitsBlobHeader2 plaits_blob_header
   beads::kPlaitsBlobAbi2,
   beads::kPlaitsBlobServicesVersion2,
   beads::kPlaitsBlobKindModel,
-  100, 1, 0, STATE_SIZE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0f, 1.0f,
+  100, 1, 0, STATE_SIZE, 0, 0, 0, 0, 0, 0, 0, NUM_DEPENDENCIES, 0, 1.0f, 1.0f,
   { 0, 0, 0, 0 }
 };
 
@@ -59,7 +65,7 @@ extern "C" void* plaits_blob_init(
     const PlaitsBlobServices* services,
     uint8_t* arena,
     size_t arena_size,
-    void* const* libraries) {
+    const PlaitsBlobLibrary* const* libraries) {
   return state;
 }
 

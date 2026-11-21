@@ -24,16 +24,26 @@
 #
 # The blob gate's controls, in the build image from the Drizzlet root: every
 # beads/test/blob_gate/pos_*.cc must pass; every neg_*.cc must fail to link or
-# be refused, with the diagnostic named on its "// Expect:" line.
+# be refused, with the diagnostic named on its "// Expect:" line. A
+# "// Library: NAME" line builds against that control's library blob.
 #   beads/build/tools/blob_gate_test.sh OUT
 set -euo pipefail
 out=${1:?usage: blob_gate_test.sh OUT}
 mkdir -p "$out"
 failures=0
+libraries() {
+  sed -n 's|^// Library: \(.*\)$|--library '"$out"'/\1.bin|p' "$1"
+}
+# The library first: other controls build against it.
+sources=(beads/test/blob_gate/pos_library.cc)
 for source in beads/test/blob_gate/pos_*.cc; do
+  [ "$source" = "${sources[0]}" ] || sources+=("$source")
+done
+for source in "${sources[@]}"; do
   name=$(basename "$source" .cc)
-  if bash beads/build/tools/build_blob.sh "$out" "$name" "$source" \
-      > "$out/$name.log" 2>&1; then
+  # shellcheck disable=SC2046
+  if bash beads/build/tools/build_blob.sh "$out" "$name" \
+      $(libraries "$source") "$source" > "$out/$name.log" 2>&1; then
     echo "$name: accepted: $(tail -n1 "$out/$name.log")"
   else
     echo "ERROR: $name: the gate refused it"
@@ -44,8 +54,9 @@ done
 for source in beads/test/blob_gate/neg_*.cc; do
   name=$(basename "$source" .cc)
   expect=$(sed -n 's|^// Expect: ||p' "$source")
-  if bash beads/build/tools/build_blob.sh "$out" "$name" "$source" \
-      > "$out/$name.log" 2>&1; then
+  # shellcheck disable=SC2046
+  if bash beads/build/tools/build_blob.sh "$out" "$name" \
+      $(libraries "$source") "$source" > "$out/$name.log" 2>&1; then
     echo "ERROR: $name: the gate accepted it"
     failures=$((failures + 1))
   elif [ -z "$expect" ] || ! grep -qE "$expect" "$out/$name.log"; then

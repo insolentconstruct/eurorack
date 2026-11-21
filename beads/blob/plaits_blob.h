@@ -56,6 +56,12 @@ const size_t kPlaitsBlobDigestSize = 32;
 const uint32_t kPlaitsBlobKindModel = 1;
 const uint32_t kPlaitsBlobKindLibrary = 2;
 const uint32_t kNumPlaitsModelIds = 256;
+// A library's exports, the libraries a blob needs, and the libraries one
+// region may hold.
+const size_t kMaxPlaitsLibraryExports = 16;
+const size_t kMaxPlaitsBlobDependencies = 4;
+const size_t kMaxPlaitsLibraries = 8;
+const size_t kPlaitsBlobMaxLibraryRamSize = 65536;
 
 enum PlaitsBlobFlags {
   PLAITS_BLOB_FLAG_ENVELOPED = 1
@@ -82,8 +88,9 @@ struct PlaitsBlobHeader {
   float aux_gain;
 };
 
-// Version 2: 24 words. A model serves num_ids consecutive IDs from first_id;
-// libraries and dependencies arrive with phase 2 and are refused for now.
+// Version 2: 24 words. A model serves num_ids consecutive IDs from first_id.
+// Code, constants, the GOT, then (libraries) the export table, then the
+// dependency list, then the CRC-32.
 struct PlaitsBlobHeader2 {
   uint32_t magic;
   uint32_t header_size;
@@ -106,6 +113,37 @@ struct PlaitsBlobHeader2 {
   float out_gain;
   float aux_gain;
   uint32_t reserved[4];
+};
+
+// The same 24 words for a library: one ID, its RAM and scratch, an optional
+// init, and the export table's offsets (Thumb bit set on code).
+struct PlaitsBlobLibraryHeader {
+  uint32_t magic;
+  uint32_t header_size;
+  uint32_t abi;
+  uint32_t services_version;
+  uint32_t kind;
+  uint32_t id;
+  uint32_t num_ids;
+  uint32_t size;
+  uint32_t ram_size;
+  uint32_t scratch_size;
+  uint32_t init_offset;
+  uint32_t exports_offset;
+  uint32_t num_exports;
+  uint32_t got_offset;
+  uint32_t got_size;
+  uint32_t dependencies_offset;
+  uint32_t num_dependencies;
+  uint32_t zero[3];
+  uint32_t reserved[4];
+};
+
+// A library a blob needs: its ID and the SHA-256 of the blob it was built
+// against.
+struct PlaitsBlobDependency {
+  uint32_t id;
+  uint8_t digest[32];
 };
 
 // Frozen: address, size, alignment and contents never change (services_v2.ld,
@@ -161,6 +199,7 @@ enum PlaitsBlobStatus {
   PLAITS_BLOB_ERROR_CONTENT,
   PLAITS_BLOB_ERROR_DIRECTORY,
   PLAITS_BLOB_ERROR_ECC,
+  PLAITS_BLOB_ERROR_DEPENDENCY,
   PLAITS_BLOB_ERROR_LAST
 };
 
@@ -183,24 +222,43 @@ typedef void (*PlaitsBlobRenderFn)(
     size_t size,
     bool* already_enveloped);
 
-// Version 2 entries: init also gets one context per dependency; reset gets
-// the selected ID minus the first.
+// A built library, in RAM: what its init returned, then its exports'
+// addresses. The first argument of every exported function.
+struct PlaitsBlobLibrary {
+  void* context;
+  const void* exports[kMaxPlaitsLibraryExports];
+};
+
+// Version 2 entries: init also gets one library per dependency, in the
+// listed order; reset gets the selected ID minus the first.
 typedef void* (*PlaitsBlobInitFn2)(
     void* state,
     const PlaitsBlobServices* services,
     uint8_t* arena,
     size_t arena_size,
-    void* const* libraries);
+    const PlaitsBlobLibrary* const* libraries);
 typedef void (*PlaitsBlobResetFn2)(
     void* object,
     const PlaitsBlobServices* services,
     uint32_t argument);
 
+// A library's init, at synth entry outside the audio interrupt: builds its
+// shared state in ram (zeroed) and returns it as the context.
+typedef void* (*PlaitsBlobLibraryInitFn)(
+    uint8_t* ram,
+    size_t ram_size,
+    uint8_t* scratch,
+    size_t scratch_size,
+    const PlaitsBlobServices* services,
+    const PlaitsBlobLibrary* const* libraries);
+
 extern const PlaitsBlobServices plaits_blob_services;
 
-// What the loader needs from either header version, once Check passed.
+// What the loader needs from either header version, once Check passed. A
+// library's RAM and scratch are state_size and arena_size.
 struct PlaitsBlobInfo {
   uint32_t abi;
+  uint32_t kind;
   uint32_t first_id;
   uint32_t num_ids;
   uint32_t size;
@@ -209,6 +267,10 @@ struct PlaitsBlobInfo {
   uint32_t init_offset;
   uint32_t reset_offset;
   uint32_t render_offset;
+  uint32_t exports_offset;
+  uint32_t num_exports;
+  uint32_t dependencies_offset;
+  uint32_t num_dependencies;
 };
 
 class PlaitsBlob {
@@ -238,6 +300,8 @@ class PlaitsBlob {
 
 STATIC_ASSERT(sizeof(PlaitsBlobHeader) == 64, plaits_blob_header);
 STATIC_ASSERT(sizeof(PlaitsBlobHeader2) == 96, plaits_blob_header_2);
+STATIC_ASSERT(sizeof(PlaitsBlobLibraryHeader) == 96, plaits_blob_library);
+STATIC_ASSERT(sizeof(PlaitsBlobDependency) == 36, plaits_blob_dependency);
 // On the target the table fits the 64 bytes before the first export.
 STATIC_ASSERT(16 + 4 * kNumPlaitsBlobExports <= 64, plaits_blob_services);
 STATIC_ASSERT(sizeof(plaits::EngineParameters) == 24, plaits_blob_abi);

@@ -43,6 +43,13 @@ const uint32_t kPlaitsSectionTerrain = 0x52524554;  // TERR
 const uint32_t kPlaitsSectionPlaits = 0x53544c50;  // PLTS
 const uint32_t kPlaitsRegionEnd = 0x08100000;
 const size_t kMaxPlaitsRegionBlobs = 128;
+// Library RAM: the records, then each library's RAM, on 32 bytes.
+const size_t kPlaitsLibraryRamAlignment = 32;
+
+inline size_t PlaitsLibraryRamAlign(size_t size) {
+  return (size + kPlaitsLibraryRamAlignment - 1) &
+      ~(kPlaitsLibraryRamAlignment - 1);
+}
 
 // Beta 4 content limits (ABI.md).
 const uint32_t kNumWaveRows = 193;
@@ -128,12 +135,19 @@ enum PlaitsSynthLock {
 
 class PlaitsRegion {
  public:
-  PlaitsRegion() : flash_check_(NULL) { }
+  PlaitsRegion() : flash_check_(NULL), library_ram_(0), library_scratch_(0) { }
   ~PlaitsRegion() { }
 
   // Checked around each section's read; NULL on the host and emulator.
   inline void set_flash_check(PlaitsFlashCheck check) {
     flash_check_ = check;
+  }
+
+  // The RAM and scratch the synth gives libraries; a library that needs more
+  // is refused.
+  inline void set_library_ram(size_t ram, size_t scratch) {
+    library_ram_ = ram;
+    library_scratch_ = scratch;
   }
 
   // Reads [begin, end): the directory's sections, or the defaults when
@@ -153,6 +167,13 @@ class PlaitsRegion {
   // A checked blob serving model, or NULL.
   const uint8_t* blob(uint8_t model) const;
   inline bool has_blob(uint8_t model) const { return models_[model]; }
+
+  // The checked libraries, in table order: each after those it needs.
+  inline size_t num_libraries() const { return num_libraries_; }
+  inline uint8_t library_id(size_t index) const {
+    return library_ids_[index];
+  }
+  const uint8_t* library(size_t index) const;
 
   inline bool ok(PlaitsSection section) const {
     return identity_.sections[section].status == PLAITS_BLOB_OK;
@@ -185,13 +206,24 @@ class PlaitsRegion {
       const PlaitsBlobServices* services,
       const uint8_t (*digests)[kPlaitsBlobDigestSize],
       size_t num_digests);
+  PlaitsBlobStatus CheckDependencies(
+      const uint8_t* blob,
+      const PlaitsBlobInfo& info,
+      size_t num_libraries,
+      const uint8_t (*library_digests)[kPlaitsBlobDigestSize]) const;
+  const uint8_t* entry(size_t index) const;
 
   PlaitsRegionIdentity identity_;
   // Entry index + 1 per model ID; 0 when no checked blob serves it.
   uint8_t models_[kNumPlaitsModelIds];
+  // Libraries are the table's first entries.
+  uint8_t library_ids_[kMaxPlaitsLibraries];
+  size_t num_libraries_;
   const uint8_t* blobs_;
   const uint8_t* sections_[PLAITS_SECTION_LAST];
   PlaitsFlashCheck flash_check_;
+  size_t library_ram_;
+  size_t library_scratch_;
 
   DISALLOW_COPY_AND_ASSIGN(PlaitsRegion);
 };
