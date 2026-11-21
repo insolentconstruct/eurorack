@@ -47,12 +47,13 @@ void ModalResonator::Init(float sample_rate) {
     odd_[i].Init();
     even_[i].Init();
   }
-  set_frequency(220.0f / 48000.0f);
+  set_frequency(220.0f / sample_rate);
   set_structure(0.25f);
   set_brightness(0.5f);
   set_damping(0.5f);
   set_position(0.3f);
-  limiter_.Init(1.0f / (sample_rate * 4.0f), kResonatorPeak);
+  limiter_.Init(
+      1.0f / (sample_rate * 0.5f), kResonatorPeak * kResonatorHeadroom);
 }
 
 void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
@@ -61,13 +62,13 @@ void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
   Process(in, l, r, size);
   FloatFrame resonance[size];
   for (size_t i = 0; i < size; ++i) {
-    resonance[i].l = l[i];
-    resonance[i].r = r[i];
+    resonance[i].l = l[i] * kResonatorHeadroom;
+    resonance[i].r = r[i] * kResonatorHeadroom;
   }
   limiter_.Process(resonance, size);
   for (size_t i = 0; i < size; ++i) {
-    frames[i].l += resonance[i].l;
-    frames[i].r += resonance[i].r;
+    frames[i].l += resonance[i].l * (1.0f / kResonatorHeadroom);
+    frames[i].r += resonance[i].r * (1.0f / kResonatorHeadroom);
   }
 }
 

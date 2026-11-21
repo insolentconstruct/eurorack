@@ -58,8 +58,6 @@ const size_t kDelayBufferSizeBits = 768 * 1000 * 8;
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
-// As the codec's largest block.
-const size_t kMaxResonatorBlockSize = 24;
 // The grains' mono sum and an input hit strike the resonator.
 const float kResonatorInputGain = 0.5f;
 const float kResonatorStrike = 0.5f;
@@ -385,7 +383,9 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
-  void ProcessWithResonator(
+  // One source for both blocks, each inlined in ProcessWithOptions.
+  template<bool resonator>
+  inline void ProcessOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -394,7 +394,7 @@ class Processor {
       const MixParameters& mix_parameters,
       const FloatFrame* in,
       FloatFrame* out,
-      size_t size);
+      size_t size) __attribute__((always_inline));
   // A flat notch at unity loop gain; both ends of the knob stay stock.
   static float UnityFeedback(float feedback, float tap_gain);
   // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.
@@ -479,9 +479,8 @@ class Processor {
   AttackInput attack_input_;
   bool attack_trigger_;
   ModalResonator resonator_;
-  // It starts afresh at each new rate; Configure's code stays as it was.
+  // It starts afresh at each new rate.
   float resonator_sample_rate_;
-  FloatFrame resonated_[kMaxResonatorBlockSize];
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The whole FX chain, with TIME scan and the profile's mix options.
+// The whole FX chain, with TIME scan and the profile's options.
 
 #include "beads/dsp/processor.h"
 
@@ -62,7 +62,8 @@ void Processor::SetFeedbackCutoff(bool low) {
   SetOption(OPTION_FLAG_LOW_CUTOFF, low);
 }
 
-void Processor::ProcessWithOptions(
+template<bool resonator>
+void Processor::ProcessOptions(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -72,14 +73,6 @@ void Processor::ProcessWithOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  // The resonator has its own copy, so this block stays as it was.
-  if (options_ &
-      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
-    ProcessWithResonator(
-        seed_button_state, seed_input, freeze, density, input_parameters,
-        mix_parameters, in, out, size);
-    return;
-  }
   const float sr = sample_rate();
   Parameters scanned;
   const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&
@@ -176,26 +169,42 @@ void Processor::ProcessWithOptions(
     spectral_processor_.Process(
         seed_button_state, seed_input, freeze, density, parameters, feedback,
         dry_signal, out, size);
+    if (resonator) {
+      // No old tail when the grains return.
+      resonator_sample_rate_ = 0.0f;
+    }
   } else {
+    // Hits strike the resonator; read before the grains take their mark.
+    const bool strike = resonator && (attack_trigger_ || AttackOnset());
+    FloatFrame resonated[resonator ? size : 1];
+    const FloatFrame* recorded = in;
+    if (resonator && (options_ & OPTION_FLAG_RESONATOR_INPUT)) {
+      copy(&in[0], &in[size], &resonated[0]);
+      ProcessResonator(parameters.pitch, strike, resonated, size);
+      recorded = resonated;
+    }
     switch (media_) {
       case MEDIA_DIGITAL:
         processor_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, recorded, out, size);
         break;
       case MEDIA_VINTAGE_DIGITAL:
         processor_vintage_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, recorded, out, size);
         break;
       case MEDIA_CLEAN_TAPE:
         processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, recorded, out, size);
         break;
       case MEDIA_DIRTY_TAPE:
         processor_dirty_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, in, out, size);
+            parameters, loop_feedback, mono_, recorded, out, size);
         break;
     }
     QuantizeDrySignal(in, dry_signal, size);
+    if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
+      ProcessResonator(parameters.pitch, strike, out, size);
+    }
     if (evolving_feedback_ || !feedback_diffuser_.idle()) {
       feedback_diffuser_.Process(
           out, feedback, evolving_feedback_ && freeze[size - 1], size);
@@ -235,6 +244,29 @@ void Processor::ProcessWithOptions(
       out[i].l = (out[i].l + out[i].r) * 0.5f;
       out[i].r = gate_out[i] ? -0.8f : 0.0f;
     }
+  }
+}
+
+void Processor::ProcessWithOptions(
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* seed_input,
+    const bool* freeze,
+    const ModulatedParameter& density,
+    const Parameters& parameters,
+    const MixParameters& mix_parameters,
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size) {
+  // Resonator profiles run their own instance of the block.
+  if (options_ &
+      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
+    ProcessOptions<true>(
+        seed_button_state, seed_input, freeze, density, parameters,
+        mix_parameters, in, out, size);
+  } else {
+    ProcessOptions<false>(
+        seed_button_state, seed_input, freeze, density, parameters,
+        mix_parameters, in, out, size);
   }
 }
 

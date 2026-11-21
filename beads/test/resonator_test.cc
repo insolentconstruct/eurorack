@@ -41,6 +41,10 @@
 
 using namespace beads;
 
+namespace rings {
+extern const float lut_stiffness[];
+}  // namespace rings
+
 static Processor processor;
 static uint8_t banks[3][262144];
 static uint16_t reverb_buffer[32768];
@@ -325,6 +329,137 @@ void TestResonatorLevel() {
   }
 }
 
+float ResonatorEnergy() {
+  float energy = 0.0f;
+  for (int b = 0; b < kNumResonatorModes / 8; ++b) {
+    for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+      energy += fabsf(processor.resonator_.odd_[b].state_1_[i]);
+      energy += fabsf(processor.resonator_.even_[b].state_1_[i]);
+    }
+  }
+  return energy;
+}
+
+// A steady sine on the fundamental or the second mode, at low and high
+// PITCH: the limiter holds its ceiling at every rate.
+void TestResonatorTonalLevel() {
+  test_checker.Start("TestResonatorTonalLevel");
+  const float stiffness = stmlib::Interpolate(
+      rings::lut_stiffness, 0.25f, 256.0f);
+  for (int m = 0; m < 4; ++m) {
+    for (int note = 0; note < 2; ++note) {
+      for (int mode = 0; mode < 2; ++mode) {
+        Init(kMedia[m], false, RESONATOR_AFTER_GRAINS);
+        RandomizedParameter pitch;
+        memset(&pitch, 0, sizeof(pitch));
+        pitch.base = note ? 48.0f : 0.0f;
+        const size_t size = BlockSize();
+        FloatFrame frames[12];
+        memset(frames, 0, sizeof(frames));
+        processor.ProcessResonator(pitch, false, frames, size);
+        const float f0 = processor.resonator_.frequency_;
+        const float f = mode ? 2.0f * f0 * (1.0f + stiffness) : f0;
+        float peak = 0.0f;
+        bool finite = true;
+        for (int block = 0; block < 4000; ++block) {
+          for (size_t i = 0; i < size; ++i) {
+            const float t = float(block * size + i);
+            frames[i].l = frames[i].r = 0.9f * sinf(2.0f * float(M_PI) * f * t);
+          }
+          FloatFrame before[12];
+          std::copy(frames, frames + size, before);
+          processor.ProcessResonator(pitch, false, frames, size);
+          for (size_t i = 0; i < size; ++i) {
+            const float l = frames[i].l - before[i].l;
+            const float r = frames[i].r - before[i].r;
+            finite = finite && std::isfinite(l) && std::isfinite(r);
+            peak = std::max(peak, std::max(fabsf(l), fabsf(r)));
+          }
+        }
+        CHECK(finite);
+        CHECK(peak < 0.65f);
+        CHECK(peak > 0.1f);
+      }
+    }
+  }
+}
+
+// Frozen, before the buffer, silent input and no hits: the resonator adds
+// exactly nothing, so each option plays as it does without the resonator.
+void TestResonatorOptionsMatch() {
+  test_checker.Start("TestResonatorOptionsMatch");
+  static float result[2][2000 * 24];
+  for (int delay = 0; delay < 2; ++delay) {
+    for (int c = 0; c < 8; ++c) {
+      for (int pass = 0; pass < 2; ++pass) {
+        Init(Processor::MEDIA_DIGITAL, false, RESONATOR_OFF);
+        mix.dry_wet = 0.7f;
+        mix.feedback = 0.8f;
+        mix.reverb_amount = 0.5f;
+        parameters.size.base = delay ? 1.0f : 0.5f;
+        parameters.time.attenuverter = 0.5f;
+        for (int block = 0; block < 8000; ++block) {
+          FillSine(block, 0.3f);
+          Process();
+        }
+        processor.set_time_scan(c == 1 || c == 7);
+        processor.set_gentle_mix(c == 2 || c == 7);
+        processor.set_reverb_on_grains(c == 3 || c == 7);
+        processor.set_unity_feedback(c == 4 || c == 7);
+        processor.set_delay_crossfade(c == 5 || c == 7);
+        processor.set_evolving_feedback(c == 6 || c == 7);
+        processor.set_diffusion(c == 7 ? 0.5f : 0.0f);
+        std::fill(freeze, freeze + 12, true);
+        if (pass) {
+          processor.set_resonator(RESONATOR_BEFORE_BUFFER);
+        }
+        memset(input, 0, sizeof(input));
+        for (int block = 0; block < 2000; ++block) {
+          density.base = block & 256 ? 0.3f : 0.7f;
+          Process();
+          for (size_t i = 0; i < 12; ++i) {
+            result[pass][(block * 12 + i) * 2] = output[i].l;
+            result[pass][(block * 12 + i) * 2 + 1] = output[i].r;
+          }
+        }
+        CHECK(processor.delay_active() == bool(delay));
+      }
+      bool same = true;
+      float level = 0.0f;
+      for (int i = 0; i < 2000 * 24; ++i) {
+        same = same && result[0][i] == result[1][i];
+        level += fabsf(result[0][i]);
+      }
+      CHECK(same);
+      CHECK(level > 0.0f);
+    }
+  }
+}
+
+// Spectral leaves no old tail for when the grains return.
+void TestResonatorSpectralReset() {
+  test_checker.Start("TestResonatorSpectralReset");
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  density.base = 0.5f;
+  processor.set_attack_trigger(true);
+  Process();
+  processor.set_attack_trigger(false);
+  for (int block = 0; block < 100; ++block) {
+    Process();
+  }
+  CHECK(ResonatorEnergy() > 0.0f);
+  processor.set_spectral(true);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  for (int block = 0; block < 50; ++block) {
+    processor.Buffer();
+    Process();
+  }
+  processor.set_spectral(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Process();
+  CHECK(ResonatorEnergy() == 0.0f);
+}
+
 // After the grains: the recording and the dry stay as they were.
 void TestResonatorAfterGrains() {
   test_checker.Start("TestResonatorAfterGrains");
@@ -494,10 +629,13 @@ int main() {
   TestResonatorBank();
   TestResonatorPitch();
   TestResonatorLevel();
+  TestResonatorTonalLevel();
   TestResonatorAfterGrains();
   TestResonatorBeforeBuffer();
   TestResonatorOff();
   TestResonatorStrike();
   TestResonatorQualities();
+  TestResonatorOptionsMatch();
+  TestResonatorSpectralReset();
   return test_checker.failures() ? 1 : 0;
 }

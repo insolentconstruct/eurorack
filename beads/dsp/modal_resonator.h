@@ -44,6 +44,8 @@ namespace beads {
 const int kNumResonatorModes = 24;
 // Gain staging ahead of the mix: Rings' bank reaches +20 dBFS on noise.
 const float kResonatorPeak = 0.5f;
+// Scaled down, a sharp mode stays under the limiter's detector clamp.
+const float kResonatorHeadroom = 1.0f / 16.0f;
 
 class ModalResonator {
  public:

@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 21 host programs, 349 named test sections, 2,963
-assertion sites and 641 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 21 host programs, 352 named test sections, 2,971
+assertion sites and 650 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
 detected all 484 faults across eight shards. Named sections and assertion sites
@@ -9,8 +9,8 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased application `ca4427f0…` and WAV
-`da67746f…`. The release documentation and generated guides pass their
+This source pins its own unreleased application `24c39eb1…` and WAV
+`6107dd8b…`. The release documentation and generated guides pass their
 checker. Beta 3 module results are under [On a module](#beta-3); some
 checks are still pending.
 
@@ -55,7 +55,7 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | `beads/test/plaits_synth.mk` | Plaits synth: every model renders, with and without AUX (five engines skip it, as in the firmware), the 6-op banks unpacked once for all voices as each engine unpacks them, with notes switching banks on every voice pinned to per-voice unpacking, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent, including at noon, after a bank change, notes keeping their model), FREEZE sustain, RAM bounds; Speech word banks: the sliced decode matches Mutable Instruments' for every bank and after interrupted loads, at most 32 frames per block, and the word after a bank change is sample-exact to Mutable Instruments' controller with the change made once the bank is loaded; a waiting word is dropped by a Reset or the phonemes; the bit-reversal table matches a computed reversal for all 256 bytes; the banks decoded once for all voices leave each voice's RAM as its own decode does, call for call |
 | `beads/test/profile.mk` | Profile validation, feature modes/control allocation (only Synth start on the [A] hold; Synth start needs a gesture unless Automatic), page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections |
 | `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step; the optional start quality (#287): once per new profile, over stock and older saves, after a settings reset, never over a frozen recording, and the saved profile identity |
-| `beads/test/resonator.mk` | The modal resonator with sanitizers: the bank alone (the fundamental rings, decays, modes at 0.49 of the rate silent, the mono sum equal to both halves); tuning by PITCH and CV (not randomness), Recent notes, Pitch scale and the range clamp at every rate; its level on full-scale noise and strikes; after the grains (recording and dry unchanged) and before the buffer (resonance recorded, dry unchanged); Off and spectral identical to the stock block; strikes from Snap and trigger and Snap hits only; every quality, mono, stereo and delay mode finite and bounded |
+| `beads/test/resonator.mk` | The modal resonator with sanitizers: the bank alone (the fundamental rings, decays, modes at 0.49 of the rate silent, the mono sum equal to both halves); tuning by PITCH and CV (not randomness), Recent notes, Pitch scale and the range clamp at every rate; its level on full-scale noise and strikes; after the grains (recording and dry unchanged) and before the buffer (resonance recorded, dry unchanged); Off and spectral identical to the stock block; strikes from Snap and trigger and Snap hits only; every quality, mono, stereo and delay mode finite and bounded; a full-scale sine at a mode held under its ceiling at every rate; every option played identically through the resonator's instance of the options block; Spectral restarting it from silence |
 
 | Program | Tests | Assertion sites |
 |---|---:|---:|
@@ -75,17 +75,17 @@ Host programs use sanitizers. After README edits, keep README.md and README.txt 
 | plaits_synth | 12 | 66 |
 | processor | 11 | 45 |
 | profile | 8 | 128 |
-| resonator | 8 | 45 |
+| resonator | 11 | 53 |
 | spectral | 8 | 42 |
 | storage | 27 | 416 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **349** | **2,963** |
+| **Total** | **352** | **2,971** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (641 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (650 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -533,12 +533,21 @@ The factory calibration was restored by debug probe after each saved run. Before
   instructions per block identical to the previous build, the whole audio
   call included. `processor.cc` is unchanged: a resonator reset in
   `Configure` changed GCC's inlining of the stock block, so the resonator
-  starts afresh when the rate changes instead. The resonator has its own copy
-  of the options block (`processor_resonator.cc`); the other options' block
-  tests for it first and runs 3 to 6 more instructions per block, the same
-  output. On, per block: after the grains +3,956 to +6,039, before the buffer
-  +4,028 to +6,139; spectral +97 (the options blocks only). Flash +15.7 KB,
-  RAM +0.4 KB in DTCM.
+  starts afresh when the rate changes instead. The options block is one
+  template, inlined twice in `ProcessWithOptions`: as before, and with the
+  resonator. The other options run 1 to 5 more instructions per block, the
+  same output. On, per block: after the grains +3,966 to +6,090, before the
+  buffer +4,020 to +6,161; spectral +69 (the options block only). Flash
+  +8.8 KB, RAM +0.4 KB in DTCM. One call site for both SVF batches saved
+  1.5 KB more but ran up to 432 more instructions per block, so each parity
+  keeps its own.
+- Resonator level, host: a full-scale sine on the fundamental or the second
+  mode, C3 and C7, every rate, peaks at 0.50 to 0.56 (-6.0 to -5.0 dBFS);
+  full-scale noise with strikes at 0.23 to 0.64. Beads' limiter clamps its
+  detector at 40, so the resonance is scaled by 1/16 around it; unscaled, a
+  sine at C7 reached 2.99. Frozen, before the buffer, with silence and no
+  hits, every option (TIME scan, Mix law, Reverb input, Delay feedback, Delay
+  time, Evolving, diffusion) plays exactly as without the resonator.
 - Resonator with 32 grains on the Seed3 (stress32 priming, a strike every
   block, PITCH +24 and 0, one code layout): Bright digital 77.1% worst block
   (+8.6 points), Cold digital 59.8% (+6.7), Scorched cassette 45.9% (+6.4),

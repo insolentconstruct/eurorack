@@ -653,10 +653,15 @@ resonance is recorded, so the grains play the resonance; the dry stays dry
 and the feedback loop is not resonated. PITCH and its CV tune it (C3 at
 noon), not PITCH's randomness; Pitch scale snaps it, and with Recent notes
 it plays the newest note sent to PITCH. Attacks hits also strike it; with
-Attacks Off only the sound does. Structure, brightness, damping and pickup
-position are fixed (0.25, 0.5, 0.5, 0.3), and its own limiter keeps it near
--3 dBFS on full-scale noise before the mix. Granular and delay; spectral and
-both synths are unchanged. All 32 grains still play: on the development
+Attacks Off only the sound does. While FREEZE is on, Snap and trigger hits
+still strike it but Snap hits do not, as they also leave no marks then.
+Structure, brightness, damping and pickup position are fixed (0.25, 0.5,
+0.5, 0.3). Its own limiter stages it before the mix: a full-scale sine
+tuned to the fundamental or the second mode, C3 to C7, peaks at -6.0 to
+-5.0 dBFS, and full-scale noise at -12.9 to -3.9 dBFS, at every rate.
+Spectral restarts it from silence; after the synths an old tail can
+resume. Granular and delay; spectral and both synths are unchanged. All 32
+grains still play: on the development
 board, 32 grains plus the resonator measured 77.1% at Bright digital, an
 estimated 88.9% on a module against the 90% limit. Chosen at power-on, with
 no panel slot or saved-state nibble. Its controls, a strike source with
