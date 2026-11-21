@@ -1227,5 +1227,866 @@
       "touches_synth": false
     }
   ],
+  "plaits_models": [
+    {
+      "id": 0,
+      "name": "VA + VCF",
+      "palette": "virtual-analog-vcf",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 1,
+      "name": "Phase Distortion",
+      "palette": "phase-distortion",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 2,
+      "name": "6-Op FM Bank A",
+      "palette": "dx7-bank-a",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        4
+      ]
+    },
+    {
+      "id": 3,
+      "name": "6-Op FM Bank B",
+      "palette": "dx7-bank-b",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        4
+      ]
+    },
+    {
+      "id": 4,
+      "name": "6-Op FM Bank C",
+      "palette": "dx7-bank-c",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        4
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Wave Terrain",
+      "palette": "wave-terrain",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "name": "String Machine",
+      "palette": "string-machine",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Chiptune",
+      "palette": "chiptune",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Virtual Analog",
+      "palette": "virtual-analog",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 9,
+      "name": "Waveshaping",
+      "palette": "waveshaping",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 10,
+      "name": "Two-op FM",
+      "palette": "two-op-fm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 11,
+      "name": "Granular Formant",
+      "palette": "granular-formant",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 12,
+      "name": "Harmonic Oscillator",
+      "palette": "harmonic",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 13,
+      "name": "Wavetable",
+      "palette": "wavetable",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        1
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Chords",
+      "palette": "chords",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 15,
+      "name": "Speech",
+      "palette": "speech",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        3
+      ]
+    },
+    {
+      "id": 16,
+      "name": "Swarm",
+      "palette": "swarm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 17,
+      "name": "Filtered Noise",
+      "palette": "filtered-noise",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 18,
+      "name": "Particle Noise",
+      "palette": "particle-noise",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 19,
+      "name": "Inharmonic String",
+      "palette": "inharmonic-string",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 20,
+      "name": "Modal Resonator",
+      "palette": "modal-resonator",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 21,
+      "name": "Analog Bass Drum",
+      "palette": "analog-bass-drum",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 22,
+      "name": "Analog Snare",
+      "palette": "analog-snare",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 23,
+      "name": "Analog Hi-hat",
+      "palette": "analog-hi-hat",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 28,
+      "name": "Natural Speech",
+      "palette": "natural-speech",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "notice": "Voice data rendered with Kokoro-82M (Apache-2.0), voice af_heart.",
+      "libraries": []
+    },
+    {
+      "id": 29,
+      "name": "Glisson",
+      "palette": "glisson",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 30,
+      "name": "GENDY",
+      "palette": "gendy",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 31,
+      "name": "Scanned",
+      "palette": "scanned",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 32,
+      "name": "Pulsar",
+      "palette": "pulsar",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 33,
+      "name": "Loopback",
+      "palette": "loopback",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 34,
+      "name": "Lockstep",
+      "palette": "lockstep",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 35,
+      "name": "Tapfield",
+      "palette": "tapfield",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 36,
+      "name": "Phase Weave",
+      "palette": "phase-weave",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 37,
+      "name": "Sideband Bank",
+      "palette": "sideband-bank",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 38,
+      "name": "Attractor",
+      "palette": "attractor",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 39,
+      "name": "Undertow",
+      "palette": "undertow",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 40,
+      "name": "Reed Pipe",
+      "palette": "reed-pipe",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 41,
+      "name": "Phase Flock",
+      "palette": "phase-flock",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 42,
+      "name": "Rulefield",
+      "palette": "rulefield",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 43,
+      "name": "Spectral Spiral",
+      "palette": "spectral-spiral",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 44,
+      "name": "Z Filter",
+      "palette": "z-filter",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 45,
+      "name": "Toy",
+      "palette": "toy",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 46,
+      "name": "CSaw",
+      "palette": "csaw",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 47,
+      "name": "Ring Mod",
+      "palette": "ring-mod",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 48,
+      "name": "Fold",
+      "palette": "fold",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 49,
+      "name": "Buzz",
+      "palette": "buzz",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 50,
+      "name": "Dual Sync",
+      "palette": "dual-sync",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 51,
+      "name": "Granular Cloud",
+      "palette": "granular-cloud",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 52,
+      "name": "Morph",
+      "palette": "morph",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 53,
+      "name": "Noise Bank",
+      "palette": "noise-bank",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 54,
+      "name": "Particle Burst",
+      "palette": "particle-burst",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 55,
+      "name": "Saw Square",
+      "palette": "saw-square",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 56,
+      "name": "Saw Swarm",
+      "palette": "saw-swarm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 57,
+      "name": "Vowel",
+      "palette": "vowel",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 58,
+      "name": "Harmonics",
+      "palette": "harmonics",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 59,
+      "name": "VOSIM",
+      "palette": "vosim",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 60,
+      "name": "Plucked",
+      "palette": "plucked",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 61,
+      "name": "Blown",
+      "palette": "blown",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 62,
+      "name": "Struck Bell",
+      "palette": "struck-bell",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 63,
+      "name": "Struck Drum",
+      "palette": "struck-drum",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 64,
+      "name": "Kick",
+      "palette": "kick",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 65,
+      "name": "Snare",
+      "palette": "snare",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 66,
+      "name": "Cymbal",
+      "palette": "cymbal",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 67,
+      "name": "Wave Scan",
+      "palette": "wave-scan",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 68,
+      "name": "Wave Paraphonic",
+      "palette": "wave-paraphonic",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 69,
+      "name": "Fluted",
+      "palette": "fluted",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 70,
+      "name": "Question Mark",
+      "palette": "question-mark",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 71,
+      "name": "Virtual Analog Variant",
+      "palette": "virtual-analog-variant",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 72,
+      "name": "Bowed",
+      "palette": "bowed",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 73,
+      "name": "Sub Osc",
+      "palette": "sub-oscillator",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 74,
+      "name": "Digital Modulation",
+      "palette": "digital-modulation",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 75,
+      "name": "Saw Comb",
+      "palette": "saw-comb",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 76,
+      "name": "Vowel FOF",
+      "palette": "vowel-fof",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 77,
+      "name": "Raw FM",
+      "palette": "raw-fm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 78,
+      "name": "Triple",
+      "palette": "triple",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 79,
+      "name": "Bytebeat",
+      "palette": "bytebeat",
+      "credit": "Tim Churches",
+      "licence": "MIT",
+      "notice": "Expressions from Tim Churches' Bees-in-the-Trees (MIT), credited there to their authors.",
+      "libraries": []
+    },
+    {
+      "id": 80,
+      "name": "Diatonic Chord",
+      "palette": "diatonic-chord",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [
+        5
+      ]
+    },
+    {
+      "id": 81,
+      "name": "Scale Stack",
+      "palette": "scale-stack",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [
+        5
+      ]
+    },
+    {
+      "id": 82,
+      "name": "Wavetable Diatonic Chord",
+      "palette": "wavetable-chord",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [
+        1,
+        5,
+        6
+      ]
+    },
+    {
+      "id": 83,
+      "name": "Wavetable Scale Stack",
+      "palette": "wavetable-scale-stack",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [
+        1,
+        5,
+        6
+      ]
+    },
+    {
+      "id": 84,
+      "name": "Shakers",
+      "palette": "shakers",
+      "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "licence": "MIT",
+      "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
+      "libraries": []
+    },
+    {
+      "id": 85,
+      "name": "Brass",
+      "palette": "brass",
+      "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "licence": "MIT",
+      "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
+      "libraries": []
+    },
+    {
+      "id": 86,
+      "name": "Helix",
+      "palette": "helix",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 87,
+      "name": "Skins",
+      "palette": "skins",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 88,
+      "name": "Circuit Zaps",
+      "palette": "circuit-zaps",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 89,
+      "name": "Metalwork",
+      "palette": "metalwork",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 90,
+      "name": "Analog Clap",
+      "palette": "clap",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 91,
+      "name": "Analog Percussion",
+      "palette": "analog-percussion",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 92,
+      "name": "Freshets Formant",
+      "palette": "freshets-formant",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 93,
+      "name": "BubbleTime",
+      "palette": "bubbletime",
+      "credit": "Combust",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 94,
+      "name": "ZxPhase48k",
+      "palette": "zxphase48k",
+      "credit": "Combust",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 95,
+      "name": "ZxPulse48k",
+      "palette": "zxpulse48k",
+      "credit": "Combust",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 96,
+      "name": "Acid",
+      "palette": "acid",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "notice": "Parts from Open303, Copyright 2009 Robin Schmidt (MIT).",
+      "libraries": []
+    },
+    {
+      "id": 97,
+      "name": "Supersaw Chords",
+      "palette": "chords-supersaw",
+      "credit": "Dirk Hoppmann",
+      "licence": "MIT",
+      "libraries": [
+        2
+      ]
+    },
+    {
+      "id": 98,
+      "name": "Speech Sounds",
+      "palette": "formant-speech",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        3
+      ]
+    },
+    {
+      "id": 99,
+      "name": "LPC Words",
+      "palette": "lpc-speech",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [
+        3
+      ]
+    }
+  ],
+  "plaits_libraries": [
+    {
+      "id": 1,
+      "name": "plaits-wavetables",
+      "kind": "data",
+      "contents": "Plaits' integrated wavetables"
+    },
+    {
+      "id": 2,
+      "name": "chord-bank",
+      "kind": "code",
+      "contents": "Plaits' chord bank"
+    },
+    {
+      "id": 3,
+      "name": "speech",
+      "kind": "code",
+      "contents": "Plaits' speech synths and word banks"
+    },
+    {
+      "id": 4,
+      "name": "six-op",
+      "kind": "code",
+      "contents": "6-op FM: algorithms, DX units and patch banks"
+    },
+    {
+      "id": 5,
+      "name": "scale-voices",
+      "kind": "code",
+      "contents": "Palette's scale-voice renderers"
+    },
+    {
+      "id": 6,
+      "name": "scale-wavetable-voices",
+      "kind": "code",
+      "contents": "Palette's wavetable scale-voice renderers"
+    }
+  ],
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."
 }

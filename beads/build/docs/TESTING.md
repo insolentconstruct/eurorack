@@ -30,7 +30,8 @@ execute repeatedly.
 Host programs use sanitizers. After README edits, keep README.md and README.txt in step. After guide-generator edits, run
 `ASAN_OPTIONS=detect_leaks=0 ./build/options_tables | python3 beads/build/tools/options_guide.py`.
 `make -f beads/build/tools/options_tables.mk test` checks both formats,
-72-column text, firmware tables, guides and release packaging.
+72-column text, firmware tables, guides and release packaging, and pins the
+permanent Plaits model and library IDs in `profile-features.json`.
 
 | Check | What it covers |
 |---|---|
