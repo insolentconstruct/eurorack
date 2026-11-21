@@ -217,4 +217,11 @@ float RandomStep(float offset) {
   return recent_notes[(newest_note + kNumRecentNotes - age) % kNumRecentNotes];
 }
 
+float NewestNote(float offset) {
+  if (!recent_notes_mode || !num_recent_notes) {
+    return offset;
+  }
+  return recent_notes[newest_note];
+}
+
 }  // namespace beads

@@ -1203,6 +1203,28 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": false
+    },
+    {
+      "id": 41,
+      "issue": 88,
+      "name": "Resonator",
+      "values": [
+        "Off (stock)",
+        "After the grains",
+        "Before the buffer"
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "default_state": "Off",
+      "default": 0,
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "cpu_cost": null,
+      "touches_synth": false
     }
   ],
   "plaits_models": [

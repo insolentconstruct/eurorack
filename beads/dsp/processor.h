@@ -32,6 +32,7 @@
 #include "stmlib/stmlib.h"
 
 #include "beads/dsp/granular_processor.h"
+#include "beads/dsp/modal_resonator.h"
 #include "beads/dsp/modulated_parameter.h"
 #include "beads/dsp/spectral_processor.h"
 #include "beads/dsp/time_scan.h"
@@ -56,6 +57,18 @@ const size_t kDelayBufferSizeBits = 768 * 1000 * 8;
 
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
+
+// The grains' mono sum and an input hit strike the resonator.
+const float kResonatorInputGain = 0.5f;
+const float kResonatorStrike = 0.5f;
+// PITCH at noon tunes it to C3.
+const float kResonatorRootNote = 48.0f;
+
+enum ResonatorPlacement {
+  RESONATOR_OFF,
+  RESONATOR_AFTER_GRAINS,
+  RESONATOR_BEFORE_BUFFER
+};
 
 class Processor {
  public:
@@ -106,6 +119,14 @@ class Processor {
   // Delay mode: knob timing crossfades between delay times, as when clocked.
   inline void set_delay_crossfade(bool crossfade) {
     SetOption(OPTION_FLAG_DELAY_CROSSFADE, crossfade);
+  }
+  // Rings' modal resonator on the grains, or on the input before the buffer.
+  inline void set_resonator(int placement) {
+    SetOption(OPTION_FLAG_RESONATOR_GRAINS,
+        placement == RESONATOR_AFTER_GRAINS);
+    SetOption(OPTION_FLAG_RESONATOR_INPUT,
+        placement == RESONATOR_BEFORE_BUFFER);
+    resonator_sample_rate_ = 0.0f;
   }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
@@ -343,7 +364,9 @@ class Processor {
     OPTION_FLAG_UNITY_FEEDBACK = 8,
     OPTION_FLAG_DELAY_CROSSFADE = 16,
     // State, not a choice: the unity loop's 10 Hz cutoff is in place.
-    OPTION_FLAG_LOW_CUTOFF = 32
+    OPTION_FLAG_LOW_CUTOFF = 32,
+    OPTION_FLAG_RESONATOR_GRAINS = 64,
+    OPTION_FLAG_RESONATOR_INPUT = 128
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
@@ -360,6 +383,18 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
+  // One source for both blocks, each inlined in ProcessWithOptions.
+  template<bool resonator>
+  inline void ProcessOptions(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) __attribute__((always_inline));
   // A flat notch at unity loop gain; both ends of the knob stay stock.
   static float UnityFeedback(float feedback, float tap_gain);
   // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.
@@ -372,6 +407,14 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  // Struck by input hits, tuned by PITCH; adds its resonance to the frames.
+  void ProcessResonator(
+      const RandomizedParameter& pitch,
+      bool strike,
+      FloatFrame* frames,
+      size_t size);
+  // A hit marked for this block's grains, read before they take it.
+  bool AttackOnset() const;
   inline void AddAttackTrigger(TriggerGenerator::Output* triggers) {
     if (attack_trigger_) {
       triggers[0].trigger = true;
@@ -435,6 +478,9 @@ class Processor {
   bool evolving_feedback_;
   AttackInput attack_input_;
   bool attack_trigger_;
+  ModalResonator resonator_;
+  // It starts afresh at each new rate.
+  float resonator_sample_rate_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

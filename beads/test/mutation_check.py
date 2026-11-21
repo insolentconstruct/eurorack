@@ -1733,10 +1733,10 @@ cases = [
   ('TestUnityFeedbackLoop', 'delay_mode', 'beads/dsp/processor_options.cc',
     'if (unity != bool(options_ & OPTION_FLAG_LOW_CUTOFF)) {', 'if (false) {'),
   ('TestUnityFeedbackLoop', 'delay_mode', 'beads/dsp/processor_options.cc',
-    'parameters, loop_feedback, mono_, in, out, size);\n        break;\n'
-    '      case MEDIA_CLEAN_TAPE:',
-    'parameters, feedback, mono_, in, out, size);\n        break;\n'
-    '      case MEDIA_CLEAN_TAPE:'),
+    'parameters, loop_feedback, mono_, recorded, out, size);\n'
+    '        break;\n      case MEDIA_CLEAN_TAPE:',
+    'parameters, feedback, mono_, recorded, out, size);\n'
+    '        break;\n      case MEDIA_CLEAN_TAPE:'),
   ('TestUnityFeedbackTwoTaps', 'delay_mode', 'beads/dsp/delay_controller.h',
     'if (synchronized) {\n      return 1.0f;', 'if (true) {\n      return 1.0f;'),
   ('TestUnityFeedbackDensitySteps', 'delay_mode', 'beads/dsp/processor_options.cc',
@@ -2053,6 +2053,87 @@ cases = [
   ('TestRefusals', 'plaits_blob', 'beads/blob/plaits_blob.cc',
     '      h.num_ids > kNumPlaitsModelIds - h.first_id ||',
     '      false ||'),
+
+  # Modal resonator (resonator_test).
+  ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'if (partial_frequency >= 0.49f) {', 'if (partial_frequency >= 0.6f) {'),
+  ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'float harmonic = frequency_;', 'float harmonic = 1.5f * frequency_;'),
+  ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'float q = 500.0f * Interpolate', 'float q = 5000.0f * Interpolate'),
+  ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'float amplitude = amplitudes.Next() * 0.125f;',
+    'float amplitude = amplitudes.Next() * 0.0f;'),
+  ('TestResonatorPitch', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'SemitonesToRatio(note + kResonatorRootNote - 69.0f)',
+    'SemitonesToRatio(note + kResonatorRootNote - 57.0f)'),
+  ('TestResonatorPitch', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '        : NewestNote(0.0f);', '        : 0.0f;'),
+  ('TestResonatorPitch', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '    note = QuantizePitch(note, scale);',
+    '    note = QuantizePitch(note, PITCH_SCALE_CHROMATIC);'),
+  ('TestResonatorPitch', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'CONSTRAIN(note, -48.0f, 48.0f);', 'CONSTRAIN(note, -60.0f, 60.0f);'),
+  ('TestResonatorPitch', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '    note += pitch.attenuverter >= 0.0f',
+    '    note += pitch.attenuverter <= 0.0f'),
+  ('TestResonatorTonalLevel', 'resonator', 'beads/dsp/modal_resonator.h',
+    'const float kResonatorHeadroom = 1.0f / 16.0f;',
+    'const float kResonatorHeadroom = 1.0f;'),
+  ('TestResonatorTonalLevel', 'resonator', 'beads/dsp/modal_resonator.h',
+    'const float kResonatorPeak = 0.5f;', 'const float kResonatorPeak = 0.9f;'),
+  ('TestResonatorLevel', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '  limiter_.Process(resonance, size);\n', ''),
+  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
+    '      ProcessResonator(parameters.pitch, strike, out, size);\n', ''),
+  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
+    '    ProcessOptions<true>(', '    ProcessOptions<false>('),
+  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
+    '  if (options_ &\n'
+    '      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {',
+    '  if (false) {'),
+  ('TestResonatorBeforeBuffer', 'resonator', 'beads/dsp/processor_options.cc',
+    '      recorded = resonated;', '      recorded = in;'),
+  ('TestResonatorBeforeBuffer', 'resonator', 'beads/dsp/processor_options.cc',
+    '    QuantizeDrySignal(in, dry_signal, size);\n'
+    '    if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {',
+    '    QuantizeDrySignal(recorded, dry_signal, size);\n'
+    '    if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {'),
+  ('TestResonatorStrike', 'resonator', 'beads/dsp/processor_options.cc',
+    '(attack_trigger_ || AttackOnset());', '(attack_trigger_);'),
+  ('TestResonatorStrike', 'resonator', 'beads/dsp/processor_options.cc',
+    '(attack_trigger_ || AttackOnset());', '(AttackOnset());'),
+  ('TestResonatorStrike', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'excitation[0] += kResonatorStrike;', 'excitation[0] += 0.0f;'),
+  ('TestResonatorOff', 'resonator', 'beads/dsp/processor.h',
+    '        placement == RESONATOR_AFTER_GRAINS);',
+    '        placement != RESONATOR_BEFORE_BUFFER);'),
+  ('TestResonatorSpectralReset', 'resonator', 'beads/dsp/processor_options.cc',
+    '      resonator_sample_rate_ = 0.0f;\n', ''),
+  ('TestResonatorOptionsMatch', 'resonator', 'beads/dsp/processor_options.cc',
+    'const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&',
+    'const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !resonator &&\n'
+    '      !spectral_ &&'),
+  ('TestResonatorOptionsMatch', 'resonator', 'beads/dsp/processor_options.cc',
+    'const bool unity = (options_ & OPTION_FLAG_UNITY_FEEDBACK) && delay_mode;',
+    'const bool unity = (options_ & OPTION_FLAG_UNITY_FEEDBACK) && '
+    'delay_mode &&\n'
+    '      !resonator;'),
+  ('TestResonatorOptionsMatch', 'resonator', 'beads/dsp/processor_options.cc',
+    '    if (options_ & OPTION_FLAG_DELAY_CROSSFADE) {',
+    '    if ((options_ & OPTION_FLAG_DELAY_CROSSFADE) && !resonator) {'),
+  ('TestResonatorOptionsMatch', 'resonator', 'beads/dsp/processor_options.cc',
+    'const float wet_law = options_ & OPTION_FLAG_GENTLE_MIX',
+    'const float wet_law = (options_ & OPTION_FLAG_GENTLE_MIX) && !resonator'),
+  ('TestResonatorOptionsMatch', 'resonator', 'beads/dsp/processor_options.cc',
+    '  if (options_ & OPTION_FLAG_REVERB_ON_GRAINS) {',
+    '  if ((options_ & OPTION_FLAG_REVERB_ON_GRAINS) && !resonator) {'),
+  ('TestResonatorProfile', 'firmware', 'beads/beads.cc',
+    'processor.set_resonator(settings.FeatureValue(FEATURE_RESONATOR));',
+    'processor.set_resonator(RESONATOR_OFF);'),
+  ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
+    '{ 3, kNoField, false, false, false, false },  // Resonator.',
+    '{ 3, 15, false, false, false, false },  // Resonator.'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:
@@ -2131,7 +2212,7 @@ def run_make(arguments, stream, deadline):
 
 with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   work = pathlib.Path(tmp).resolve()
-  for directory in ('beads', 'plaits', 'stmlib', 'clouds'):
+  for directory in ('beads', 'plaits', 'stmlib', 'clouds', 'rings'):
     shutil.copytree(root / directory, work / directory,
         ignore=shutil.ignore_patterns('.runs', '.mutation-*',
             '__pycache__', 'core*'))

@@ -123,6 +123,7 @@ not-set values use the profile default.
 | 38 | Options page on opening (#285) | No saved value |
 | 39 | Start in quality (#287) | No saved value |
 | 40 | Manual gain knob (#301) | No saved value; the gain is stock byte 5 |
+| 41 | Resonator (#88) | No saved value |
 
 Fields 16 (byte 21 low) and 18 (byte 22 low) hold the identity of the
 profile that last saved, 0–224 from its checksum: field 18 × 15 + field 16.
@@ -638,6 +639,33 @@ recording is to be restored from flash, the module keeps that recording's
 quality instead; the check is that a restore is intended, so with an unreadable
 flash copy the old quality also stays. Chosen at power-on, with no panel slot
 or saved choice; the audio path is unchanged.
+
+### Resonator
+
+Hygrostat feature ID 41 chooses Off (stock) / After the grains / Before the
+buffer (#88). It adds Rings' modal resonator, 24 modes in stereo (odd modes
+left, even modes right), computed in Plaits' batched form with its tuning
+and pickup position updated once per 0.25 ms block, so it is close to
+Rings' but not identical. After the grains, the grains strike it and its
+resonance joins them before DRY/WET; the recording and the dry signal are
+unchanged. Before the buffer, the input strikes it and the input plus its
+resonance is recorded, so the grains play the resonance; the dry stays dry
+and the feedback loop is not resonated. PITCH and its CV tune it (C3 at
+noon), not PITCH's randomness; Pitch scale snaps it, and with Recent notes
+it plays the newest note sent to PITCH. Attacks hits also strike it; with
+Attacks Off only the sound does. While FREEZE is on, Snap and trigger hits
+still strike it but Snap hits do not, as they also leave no marks then.
+Structure, brightness, damping and pickup position are fixed (0.25, 0.5,
+0.5, 0.3). Its own limiter stages it before the mix: a full-scale sine
+tuned to the fundamental or the second mode, C3 to C7, peaks at -6.0 to
+-5.0 dBFS, and full-scale noise at -12.9 to -3.9 dBFS, at every rate.
+Spectral restarts it from silence; after the synths an old tail can
+resume. Granular and delay; spectral and both synths are unchanged. All 32
+grains still play: on the development
+board, 32 grains plus the resonator measured 77.1% at Bright digital, an
+estimated 88.9% on a module against the 90% limit. Chosen at power-on, with
+no panel slot or saved-state nibble. Its controls, a strike source with
+Attacks Off and any [A] gestures are still to be decided.
 
 ### [A] gestures in profiles
 
