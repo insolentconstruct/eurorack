@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The whole FX chain, with TIME scan and the profile's options.
+// The whole FX chain, with TIME scan and the profile's mix options.
 
 #include "beads/dsp/processor.h"
 
@@ -72,6 +72,14 @@ void Processor::ProcessWithOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
+  // The resonator has its own copy, so this block stays as it was.
+  if (options_ &
+      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
+    ProcessWithResonator(
+        seed_button_state, seed_input, freeze, density, input_parameters,
+        mix_parameters, in, out, size);
+    return;
+  }
   const float sr = sample_rate();
   Parameters scanned;
   const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&
@@ -169,38 +177,25 @@ void Processor::ProcessWithOptions(
         seed_button_state, seed_input, freeze, density, parameters, feedback,
         dry_signal, out, size);
   } else {
-    // Hits strike the resonator; read before the grains take their mark.
-    const bool strike = (options_ &
-        (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) &&
-        (attack_trigger_ || AttackOnset());
-    const FloatFrame* recorded = in;
-    if (options_ & OPTION_FLAG_RESONATOR_INPUT) {
-      copy(&in[0], &in[size], &resonated_[0]);
-      ProcessResonator(parameters.pitch, strike, resonated_, size);
-      recorded = resonated_;
-    }
     switch (media_) {
       case MEDIA_DIGITAL:
         processor_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
       case MEDIA_VINTAGE_DIGITAL:
         processor_vintage_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
       case MEDIA_CLEAN_TAPE:
         processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
       case MEDIA_DIRTY_TAPE:
         processor_dirty_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+            parameters, loop_feedback, mono_, in, out, size);
         break;
     }
     QuantizeDrySignal(in, dry_signal, size);
-    if (options_ & OPTION_FLAG_RESONATOR_GRAINS) {
-      ProcessResonator(parameters.pitch, strike, out, size);
-    }
     if (evolving_feedback_ || !feedback_diffuser_.idle()) {
       feedback_diffuser_.Process(
           out, feedback, evolving_feedback_ && freeze[size - 1], size);
@@ -240,54 +235,6 @@ void Processor::ProcessWithOptions(
       out[i].l = (out[i].l + out[i].r) * 0.5f;
       out[i].r = gate_out[i] ? -0.8f : 0.0f;
     }
-  }
-}
-
-void Processor::ProcessResonator(
-    const RandomizedParameter& pitch,
-    bool strike,
-    FloatFrame* frames,
-    size_t size) {
-  const float sr = sample_rate();
-  if (sr != resonator_sample_rate_) {
-    resonator_.Init(sr);
-    resonator_sample_rate_ = sr;
-  }
-  // PITCH and its CV, not its randomness; Recent notes plays the newest.
-  float note = pitch.base;
-  if (pitch.has_cv) {
-    note += pitch.attenuverter >= 0.0f
-        ? pitch.attenuverter * pitch.cv
-        : NewestNote(0.0f);
-  }
-  const PitchScale scale = processor_digital_.pitch_scale();
-  if (scale != PITCH_SCALE_OFF) {
-    note = QuantizePitch(note, scale);
-  }
-  CONSTRAIN(note, -48.0f, 48.0f);
-  resonator_.set_frequency(
-      SemitonesToRatio(note + kResonatorRootNote - 69.0f) * 440.0f / sr);
-
-  float excitation[size];
-  for (size_t i = 0; i < size; ++i) {
-    excitation[i] = (frames[i].l + frames[i].r) * kResonatorInputGain;
-  }
-  if (strike) {
-    excitation[0] += kResonatorStrike;
-  }
-  resonator_.Render(excitation, frames, size);
-}
-
-bool Processor::AttackOnset() const {
-  switch (media_) {
-    case MEDIA_DIRTY_TAPE:
-      return processor_dirty_tape_.attack_onset();
-    case MEDIA_CLEAN_TAPE:
-      return processor_clean_tape_.attack_onset();
-    case MEDIA_VINTAGE_DIGITAL:
-      return processor_vintage_digital_.attack_onset();
-    default:
-      return processor_digital_.attack_onset();
   }
 }
 
