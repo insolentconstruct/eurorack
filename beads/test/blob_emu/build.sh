@@ -22,18 +22,26 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
-# Build the emulator harness, the two blobs and their region, in the build
-# image from the Drizzlet root; then the services link's negative controls.
+# Build the emulator harness, the blobs and their region (WAVE and PLTS), in
+# the build image from the Drizzlet root; then the services link's negative
+# controls.
 #   beads/test/blob_emu/build.sh OUT
 set -euo pipefail
 out=${1:?usage: build.sh OUT}
 mkdir -p "$out/obj" "$out/negative"
+models=beads/blob/models
 bash beads/build/tools/build_blob.sh "$out/blob" phase_weave \
-  beads/blob/phase_weave.cc beads/blob/phase_weave_engine.cc
+  $models/phase_weave.cc $models/phase_weave_engine.cc
 bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
   beads/test/blob_gate/pos_sine.cc
-python3 beads/build/tools/blob_region.py "$out/region.bin" 20261117 \
-  "$out/blob/phase_weave.bin" "$out/blob/pos_sine.bin"
+bash beads/build/tools/build_blob.sh "$out/blob" particle_noise \
+  $models/particle_noise.cc $models/particle_noise_engine.cc
+bash beads/build/tools/build_blob.sh "$out/blob" spectral_spiral \
+  $models/spectral_spiral.cc $models/spectral_spiral_engine.cc
+python3 beads/build/tools/blob_sections.py "$out/region.bin" 20261121 \
+  --wave beads/resources.cc "$out/blob/phase_weave.bin" \
+  "$out/blob/pos_sine.bin" "$out/blob/particle_noise.bin" \
+  "$out/blob/spectral_spiral.bin"
 
 unset MAKEFLAGS MFLAGS MAKELEVEL
 mkdir -p "$out/make/beads"
@@ -60,8 +68,10 @@ link() {
 }
 objects=()
 for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
-    beads/blob/phase_weave_engine.cc beads/plaits_resources.cc \
-    beads/profile.cc beads/dsp/pitch_quantizer.cc stmlib/utils/random.cc; do
+    beads/blob/plaits_region.cc $models/phase_weave_engine.cc \
+    $models/spectral_spiral_engine.cc plaits/dsp/engine/particle_engine.cc \
+    beads/plaits_resources.cc beads/profile.cc beads/dsp/pitch_quantizer.cc \
+    stmlib/utils/random.cc; do
   object="$out/obj/$(basename "${source%.*}").o"
   compile "$source" "$object"
   objects+=("$object")
@@ -74,9 +84,20 @@ link "$out/harness.elf" "${objects[@]}" "$out/obj/units.o"
   $4 == "_ZN6plaits8lut_sineE" { s = s $1 ":" $2 " " }
   $4 == "_ZN6stmlib20lut_pitch_ratio_highE" { h = $1 ":" $2 }
   $4 == "_ZN6stmlib19lut_pitch_ratio_lowE" { l = $1 ":" $2 }
+  $4 == "_ZN6stmlib6Random10rng_state_E" { r = $1 ":" $2 }
+  $4 == "_ZN6plaits8lut_foldE" { f = $1 ":" $2 }
+  $4 == "_ZN6plaits26lut_fm_frequency_quantizerE" { q = $1 ":" $2 }
+  $4 == "_ZN6plaits22lut_4x_downsampler_firE" { d = $1 ":" $2 }
+  $4 == "_ZN6plaits18lut_ws_inverse_tanE" { t = $1 ":" $2 }
+  $4 == "_ZN6plaits18lut_ws_inverse_sinE" { n = $1 ":" $2 }
+  $4 == "_ZN6plaits13lut_ws_linearE" { i = $1 ":" $2 }
+  $4 == "_ZN6plaits11lut_ws_bumpE" { b = $1 ":" $2 }
   END {
-    got = s h " " l
-    want = "08021440:00000a04 08021e44:00000404 08022248:00000404"
+    got = s h " " l " " r " " f " " q " " d " " t " " n " " i " " b
+    want = "08021440:00000a04 08021e44:00000404 08022248:00000404 " \
+        "20000000:00000004 0802264c:00000810 08022e5c:00000208 " \
+        "08023064:00000010 08023074:00000202 08023278:00000202 " \
+        "0802347c:00000202 08023680:00000202"
     if (got != want) { print "ERROR: export symbols " got; exit 1 }
     print "export symbols: " got
   }'

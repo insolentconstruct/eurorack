@@ -22,11 +22,14 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
+#
 # -----------------------------------------------------------------------------
 #
 # Render each blob and the same engine compiled in, under Unicorn's Cortex-M7,
-# and compare every OUT and AUX word. The region is copied into flash at two
-# placements; the reader's refusals are checked on faulted copies.
+# and compare every OUT and AUX word and the shared generator's state. The
+# region (WAVE and PLTS sections) is copied into flash at two placements.
+# Also: model-switch sequences with poisoned storage, a write guard around
+# the blob voice's slot and arena, and the reader's faults and synth locks.
 #
 #   render_compare.py OUT  (beads/test/blob_emu/build.sh's output)
 
@@ -35,27 +38,36 @@ import json
 import random
 import struct
 import sys
+import zlib
 
 import unicorn
 from unicorn import arm_const as A
 
 FLASH, FLASH_SIZE = 0x08000000, 0x200000
+DTCM, DTCM_SIZE = 0x20000000, 0x1000
 RAM, RAM_SIZE = 0x24000000, 0x80000
 STACK = RAM + RAM_SIZE - 0x100
+STACK_LIMIT = STACK - 0x4000
 STOP = 0x0FF00000
 PLACEMENTS = (0x080C0000, 0x080C2FE0)
 REGION_END = 0x08100000
-RELEASE = 20261117
+RELEASE = 20261121
 FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
-# (blob model, compiled-in engine index)
-PAIRS = {36: 0, 37: 1}
-NUM_COMPILED = 2
+RANDOM_STATE = 0x20000000
+# Blob model: compiled-in engine (harness.cc's order).
+PAIRS = {36: 0, 37: 1, 18: 2, 43: 3}
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
-          'TABLE', 'MODEL']
+          'TABLE', 'MODEL', 'KIND', 'LIBRARY', 'CONTENT', 'DIRECTORY',
+          'ECC']
+LOCKS = ['AS_PROFILED', 'FORCE_BEADS', 'FORCE_PLAITS', 'SILENT']
+SECTIONS = ('WAVE', 'TERR', 'PLTS')
+KINDS = {'WAVE': 0x45564157, 'TERR': 0x52524554, 'PLTS': 0x53544c50}
 SINE = 0x08021440
 POISON = struct.pack('<I', 0x7fa5a5a5)  # a NaN no engine writes
+SLOT_SIZE = 4352
+ARENA_SIZE = 16384
 
 
 def symbols(path):
@@ -87,6 +99,7 @@ class Machine(object):
       raise RuntimeError('unicorn did not select the Cortex-M7 model')
     uc.mem_map(FLASH, FLASH_SIZE)
     uc.mem_write(FLASH, b'\xff' * FLASH_SIZE)
+    uc.mem_map(DTCM, DTCM_SIZE)
     uc.mem_map(RAM, RAM_SIZE)
     uc.mem_map(STOP, 0x1000)
     for address, data in segments(elf):
@@ -102,6 +115,9 @@ class Machine(object):
       raise RuntimeError('FPSCR did not take')
     self.uc = uc
     self.sym = sym
+    self.base = base
+    self.size = len(region)
+    self.arena = None
 
   def call(self, name, *args):
     uc = self.uc
@@ -109,45 +125,96 @@ class Machine(object):
       uc.reg_write(A.UC_ARM_REG_R0 + i, a & 0xffffffff)
     uc.reg_write(A.UC_ARM_REG_SP, STACK)
     uc.reg_write(A.UC_ARM_REG_LR, STOP | 1)
-    uc.emu_start(self.sym[name] | 1, STOP, count=200000000)
+    uc.emu_start(self.sym[name] | 1, STOP, count=400000000)
     if uc.reg_read(A.UC_ARM_REG_PC) != STOP:
       raise RuntimeError('%s did not return' % name)
     return uc.reg_read(A.UC_ARM_REG_R0)
 
-  def setup(self, base, expected_crc, digests):
+  def word(self, address):
+    return struct.unpack('<I', bytes(self.uc.mem_read(address, 4)))[0]
+
+  def setup(self, layout, digests, directory=None, defaults=None,
+            release=RELEASE):
     for i, d in enumerate(digests):
       self.uc.mem_write(self.sym['harness_digests'] + 32 * i, d)
-    return STATUS[self.call('harness_setup', base, REGION_END, RELEASE,
-                            expected_crc)]
+    self.uc.mem_write(self.sym['harness_num_digests'],
+                      struct.pack('<I', len(digests)))
+    entries = layout['sections'] if directory is None else directory
+    data = b''.join(struct.pack('<4I', KINDS[s['kind']], s['offset'],
+                                s['size'], int(s['crc'], 16))
+                    for s in entries)
+    self.uc.mem_write(self.sym['harness_directory'], data)
+    self.uc.mem_write(self.sym['harness_num_entries'],
+                      struct.pack('<I', len(entries)))
+    if defaults is not None:
+      data = b''.join(struct.pack('<3I', KINDS[s['kind']], s['offset'],
+                                  s['size']) + bytes.fromhex(s['sha256'])
+                      for s in defaults)
+      self.uc.mem_write(self.sym['harness_defaults'], data)
+      self.uc.mem_write(self.sym['harness_num_defaults'],
+                        struct.pack('<I', len(defaults)))
+    status = self.call('harness_setup', self.base, REGION_END, release,
+                       0 if defaults is not None else 1)
+    return STATUS[status]
 
   def identity(self):
-    raw = bytes(self.uc.mem_read(self.sym['harness_identity'], 24 + 8 * 48))
-    words = struct.unpack_from('<6I', raw, 0)
-    blobs = []
-    for i in range(words[5]):
-      model, address, size, status = struct.unpack_from('<4I', raw, 24 + 48 * i)
-      blobs.append({'model': model, 'address': '0x%08x' % address,
-                    'size': size, 'status': STATUS[status],
-                    'sha256': raw[40 + 48 * i:72 + 48 * i].hex()})
-    return {'release': words[0], 'services_version': words[1],
-            'services_status': STATUS[words[2]],
-            'region_status': STATUS[words[3]],
-            'region_crc': '0x%08x' % words[4], 'blobs': blobs}
+    # PlaitsRegionIdentity: three words, three sections of four, the count.
+    raw = bytes(self.uc.mem_read(self.sym['harness_identity'], 64))
+    words = struct.unpack_from('<16I', raw, 0)
+    sections = {}
+    for i, name in enumerate(SECTIONS):
+      status, address, size, crc = words[3 + 4 * i:7 + 4 * i]
+      sections[name] = {'status': STATUS[status],
+                        'address': '0x%08x' % address, 'size': size,
+                        'crc': '0x%08x' % crc}
+    return {'release': words[0], 'services_status': STATUS[words[1]],
+            'directory_status': STATUS[words[2]], 'sections': sections,
+            'num_blobs': words[15]}
 
-  def render(self, engine, parameters, size=BLOCK):
-    trigger, note, harmonics, timbre, morph, accent = parameters
+  def statuses(self):
+    identity = self.identity()
+    return tuple(identity['sections'][s]['status'] for s in SECTIONS)
+
+  def lock(self):
+    return LOCKS[self.word(self.sym['harness_lock'])]
+
+  def parameters(self, p):
+    trigger, note, harmonics, timbre, morph, accent = p
     # plaits::EngineParameters' order.
     self.uc.mem_write(self.sym['harness_parameters'], struct.pack(
         '<i5f', trigger, note, timbre, morph, harmonics, accent))
     for name in ('harness_out', 'harness_aux'):
-      self.uc.mem_write(self.sym[name], POISON * size)
-    self.call('harness_render', engine, size)
-    out = bytes(self.uc.mem_read(self.sym['harness_out'], 4 * size))
-    aux = bytes(self.uc.mem_read(self.sym['harness_aux'], 4 * size))
+      self.uc.mem_write(self.sym[name], POISON * BLOCK)
+
+  def outputs(self, label):
+    out = bytes(self.uc.mem_read(self.sym['harness_out'], 4 * BLOCK))
+    aux = bytes(self.uc.mem_read(self.sym['harness_aux'], 4 * BLOCK))
     for x in (out, aux):
       if any(x[i:i + 4] == POISON for i in range(0, len(x), 4)):
-        raise RuntimeError('engine %d left a sample unwritten' % engine)
+        raise RuntimeError('%s left a sample unwritten' % label)
     return out, aux
+
+  def render_blob(self, p, seed):
+    self.parameters(p)
+    state = self.call('harness_render_blob', BLOCK, seed)
+    return self.outputs('blob') + (state,)
+
+  def render_compiled(self, engine, p, seed):
+    self.parameters(p)
+    state = self.call('harness_render_compiled', engine, BLOCK, seed)
+    return self.outputs('engine %d' % engine) + (state,)
+
+  def select_blob(self, model):
+    # Poison the slot and arena: the voice must clear them before init.
+    slot = self.word(self.sym['harness_slot'])
+    arena = self.sym['harness_blob_voice'] + self.arena
+    self.uc.mem_write(slot, POISON * (SLOT_SIZE // 4))
+    self.uc.mem_write(arena, POISON * (ARENA_SIZE // 4))
+    if self.call('harness_select_blob', model):
+      raise RuntimeError('no blob for model %d' % model)
+
+  def select_compiled(self, engine):
+    self.call('harness_select_compiled', engine)
 
 
 def drive(seed):
@@ -167,25 +234,61 @@ def drive(seed):
   return steps
 
 
-def compare(m, blob_engine, compiled_engine, steps, nudge=0.0):
-  m.call('harness_reset', blob_engine)
-  m.call('harness_reset', compiled_engine)
-  differ = 0
-  samples = 0
-  h = hashlib.sha256()
-  for trigger, note, harmonics, timbre, morph, accent in steps:
+def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
+                   stats=None):
+  """Blob voice against compiled engine, block by block, from one seed."""
+  differ = samples = 0
+  for block, (trigger, note, harmonics, timbre, morph, accent) in enumerate(
+      steps):
     p = (trigger, note, harmonics, timbre, morph, accent)
-    a = m.render(blob_engine, p)
-    b = m.render(compiled_engine, (trigger, note + nudge) + p[2:])
-    h.update(a[0] + a[1])
-    for x, y in ((a[0], b[0]), (a[1], b[1])):
+    a_out, a_aux, a_seed = m.render_blob(p, seed)
+    b_out, b_aux, b_seed = m.render_compiled(
+        engine, (trigger, note + nudge) + p[2:], seed)
+    if digest is not None:
+      digest.update(a_out + a_aux)
+    for x, y in ((a_out, b_out), (a_aux, b_aux)):
       for i in range(0, len(x), 4):
         samples += 1
-        differ += x[i:i + 4] != y[i:i + 4]
         v, = struct.unpack_from('<f', x, i)
         if v != v or v in (float('inf'), float('-inf')):
           raise RuntimeError('non-finite output')
-  return differ, samples, h.hexdigest()
+        if x[i:i + 4] != y[i:i + 4]:
+          differ += 1
+          if stats is not None:
+            w, = struct.unpack_from('<f', y, i)
+            stats['max'] = max(stats.get('max', 0.0), abs(v - w))
+            stats['peak'] = max(stats.get('peak', 0.0), abs(w))
+            stats['last_block'] = block
+    if a_seed != b_seed:
+      raise RuntimeError('the generator diverged')
+    seed = a_seed
+  return differ, samples, seed
+
+
+class WriteGuard(object):
+  """Records writes made by code inside the region outside the places a
+  blob may write: its slot and arena, the stack, the outputs and the shared
+  generator's state."""
+
+  def __init__(self, m, state_size, arena_size):
+    self.violations = []
+    slot = m.word(m.sym['harness_slot'])
+    arena = m.sym['harness_blob_voice'] + m.arena
+    self.allowed = [(slot, slot + state_size), (arena, arena + arena_size),
+                    (STACK_LIMIT, STACK), (RANDOM_STATE, RANDOM_STATE + 4),
+                    (m.sym['harness_out'], m.sym['harness_out'] + 4 * BLOCK),
+                    (m.sym['harness_aux'], m.sym['harness_aux'] + 4 * BLOCK)]
+    self.begin, self.end = m.base, m.base + m.size
+    self.handle = m.uc.hook_add(unicorn.UC_HOOK_MEM_WRITE, self.hook)
+
+  def hook(self, uc, access, address, size, value, user):
+    pc = uc.reg_read(A.UC_ARM_REG_PC)
+    if not self.begin <= pc < self.end:
+      return
+    if not any(lo <= address and address + size <= hi
+               for lo, hi in self.allowed):
+      self.violations.append('pc 0x%08x wrote %d B at 0x%08x' % (
+          pc, size, address))
 
 
 def main(argv):
@@ -194,97 +297,314 @@ def main(argv):
   sym = symbols(out + '/harness.nm')
   region = open(out + '/region.bin', 'rb').read()
   layout = json.load(open(out + '/region.bin.json'))
-  crc = int(layout['crc'], 16)
-  digests = [bytes.fromhex(b['sha256']) for b in layout['blobs']]
+  plts = [s for s in layout['sections'] if s['kind'] == 'PLTS'][0]
+  wave = [s for s in layout['sections'] if s['kind'] == 'WAVE'][0]
+  blobs = {b['model']: b for b in plts['blobs']}
+  digests = [bytes.fromhex(b['sha256']) for b in plts['blobs']]
   steps = drive(1)
   results = {'unicorn': unicorn.__version__, 'blocks': len(steps),
-             'block_size': BLOCK, 'runs': [], 'controls': []}
+             'block_size': BLOCK, 'runs': [], 'switches': [], 'controls': [],
+             'faults': [], 'locks': []}
   failures = []
+  findings = []
+
+  def machine(base=PLACEMENTS[0], fpscr=0, data=region, patches=()):
+    return Machine(elf, sym, data, base, fpscr, patches)
+
+  # BlobVoice: 64 B of canary, the engine (whose last member is the slot),
+  # 64 B of canary, the arena, 64 B of canary.
+  def arena_of(m):
+    slot = m.word(sym['harness_slot'])
+    return slot + SLOT_SIZE + 64 - sym['harness_blob_voice']
 
   for base in PLACEMENTS:
     for fpscr in FPSCR:
-      m = Machine(elf, sym, region, base, fpscr)
-      status = m.setup(base, crc, digests)
-      identity = m.identity()
+      m = machine(base, fpscr)
+      status = m.setup(layout, digests)
       if status != 'OK':
-        failures.append('0x%08x: region %s' % (base, status))
+        failures.append('0x%08x: PLTS %s' % (base, status))
         continue
-      for i, blob in enumerate(identity['blobs']):
-        compiled = PAIRS[blob['model']]
-        differ, samples, digest = compare(m, NUM_COMPILED + i, compiled, steps)
+      m.arena = arena_of(m)
+      for model, engine in sorted(PAIRS.items()):
+        m.select_blob(model)
+        m.select_compiled(engine)
+        h = hashlib.sha256()
+        differ, samples, _ = compare_blocks(m, engine, steps, 0x21, digest=h)
         run = {'base': '0x%08x' % base, 'fpscr': '0x%08x' % fpscr,
-               'model': blob['model'], 'address': blob['address'],
-               'differ': differ, 'samples': samples, 'sha256': digest}
+               'model': model, 'differ': differ, 'samples': samples,
+               'sha256': h.hexdigest()}
         results['runs'].append(run)
-        print('0x%08x fpscr 0x%08x model %d at %s: %d of %d differ' % (
-            base, fpscr, blob['model'], blob['address'], differ, samples))
+        print('0x%08x fpscr 0x%08x model %d: %d of %d differ' % (
+            base, fpscr, model, differ, samples))
         if differ:
-          failures.append('model %d differs at 0x%08x' % (blob['model'], base))
-      results['identity'] = identity
+          failures.append('model %d differs at 0x%08x' % (model, base))
+      results['identity'] = m.identity()
+
+  def state_of(model):
+    info = blobs[model]
+    blob = region[plts['offset'] + info['offset']:]
+    abi = struct.unpack_from('<I', blob, 8)[0]
+    return struct.unpack_from('<I', blob, 24 if abi == 1 else 32)[0]
+
+  # Switch sequences, A -> B -> A: the blob voice constructs on every switch
+  # in a poisoned slot and arena; compiled-in engines only Reset. Retained
+  # state shows as differences after the return; they are reported.
+  sequence = steps[:300]
+  for first, second in ((18, 43), (43, 18), (18, 36), (43, 36), (36, 18)):
+    m = machine(PLACEMENTS[1])
+    m.setup(layout, digests)
+    m.arena = arena_of(m)
+    seed = 0x21
+    phases = []
+    for model, part in ((first, sequence[:100]), (second, sequence[100:200]),
+                        (first, sequence[200:])):
+      m.select_blob(model)
+      m.select_compiled(PAIRS[model])
+      slot = m.word(sym['harness_slot'])
+      cleared = POISON not in bytes(m.uc.mem_read(slot, state_of(model)))
+      stats = {}
+      differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
+                                             stats=stats)
+      phases.append({'model': model, 'differ': differ, 'samples': samples,
+                     'slot_cleared': cleared, 'max_difference':
+                     stats.get('max', 0.0), 'compiled_peak':
+                     stats.get('peak', 0.0), 'last_differing_block':
+                     stats.get('last_block')})
+      if not cleared:
+        failures.append('switch %d->%d: poison left in the slot' % (
+            first, second))
+    results['switches'].append({'sequence': [first, second, first],
+                                'phases': phases})
+    print('switch %d -> %d -> %d: %s' % (first, second, first, ', '.join(
+        '%d of %d differ' % (p['differ'], p['samples']) for p in phases)))
+    if phases[0]['differ'] or phases[1]['differ']:
+      failures.append('switch %d->%d differs before the return' % (
+          first, second))
+    if phases[2]['differ']:
+      findings.append('model %d after %d: %d of %d samples differ from the '
+                      'compiled-in engine, which keeps its state across a '
+                      'switch (Reset only); largest difference %.3g, '
+                      'compiled peak %.3g, last differing block %d of %d' % (
+                          first, second, phases[2]['differ'],
+                          phases[2]['samples'], phases[2]['max_difference'],
+                          phases[2]['compiled_peak'],
+                          phases[2]['last_differing_block'],
+                          len(sequence[200:])))
 
   # Each comparison must see a difference: the note nudged by 0.01.
-  m = Machine(elf, sym, region, PLACEMENTS[0], 0)
-  m.setup(PLACEMENTS[0], crc, digests)
-  for blob_engine, compiled in ((NUM_COMPILED, 0), (NUM_COMPILED + 1, 1)):
-    differ, samples, _ = compare(
-        m, blob_engine, compiled, steps[:200], nudge=0.01)
-    results['controls'].append({'case': 'note nudged, engine %d' % compiled,
+  m = machine()
+  m.setup(layout, digests)
+  m.arena = arena_of(m)
+  for model, engine in sorted(PAIRS.items()):
+    m.select_blob(model)
+    m.select_compiled(engine)
+    differ, samples, _ = compare_blocks(m, engine, steps[:200], 0x21,
+                                        nudge=0.01)
+    results['controls'].append({'case': 'note nudged, model %d' % model,
                                 'differ': differ, 'samples': samples})
-    print('control: note nudged, engine %d: %d of %d differ' % (
-        compiled, differ, samples))
+    print('control: note nudged, model %d: %d of %d differ' % (
+        model, differ, samples))
     if not differ:
-      failures.append('engine %d: a nudged note compared equal' % compiled)
+      failures.append('model %d: a nudged note compared equal' % model)
 
-  # The blob engines execute the region's bytes; the compiled ones do not.
+  # Particle Noise draws: a different seed must change its output.
+  m.select_blob(18)
+  m.select_compiled(2)
+  a = m.render_blob(steps[1], 0x21)
+  b = m.render_compiled(2, steps[1], 0x22)
+  results['controls'].append({'case': 'another seed, model 18',
+                              'equal': a[:2] == b[:2]})
+  if a[:2] == b[:2]:
+    failures.append('model 18 did not depend on the shared generator')
+
+  # Blob code runs inside the region and writes only its own places.
   base = PLACEMENTS[1]
-  m = Machine(elf, sym, region, base, 0)
-  m.setup(base, crc, digests)
+  m = machine(base)
+  m.setup(layout, digests)
+  m.arena = arena_of(m)
+  canary = b'\x5a\xc3\x3c\xa5' * 16
+  voice = sym['harness_blob_voice']
+  slot = m.word(sym['harness_slot'])
+  bands = (voice, slot + SLOT_SIZE, voice + m.arena + ARENA_SIZE)
+  for band in bands:
+    m.uc.mem_write(band, canary)
   executed = [0]
   def count(uc, address, size, user):
     executed[0] += 1
   m.uc.hook_add(unicorn.UC_HOOK_CODE, count, begin=base,
                 end=base + len(region) - 1)
-  for engine, inside in ((0, False), (1, False), (NUM_COMPILED, True),
-                         (NUM_COMPILED + 1, True)):
+  for model, engine in sorted(PAIRS.items()):
+    info = blobs[model]
+    blob = region[plts['offset'] + info['offset']:
+                  plts['offset'] + info['offset'] + info['size']]
+    abi = struct.unpack_from('<I', blob, 8)[0]
+    state, arena = struct.unpack_from('<2I', blob, 24 if abi == 1 else 32)
+    guard = WriteGuard(m, state, arena)
     executed[0] = 0
-    m.render(engine, steps[0])
-    results['controls'].append({'case': 'engine %d in the region' % engine,
-                                'instructions': executed[0]})
-    if bool(executed[0]) != inside:
-      failures.append('engine %d: %d instructions in the region' % (
-          engine, executed[0]))
+    m.select_blob(model)
+    for p in steps[:50]:
+      m.render_blob(p, 0x21)
+    inside = executed[0]
+    m.uc.hook_del(guard.handle)
+    executed[0] = 0
+    m.select_compiled(engine)
+    m.render_compiled(engine, steps[0], 0x21)
+    results['controls'].append({
+        'case': 'model %d: region code and writes' % model,
+        'blob_instructions': inside, 'compiled_instructions': executed[0],
+        'stray_writes': guard.violations[:8]})
+    print('control: model %d: %d instructions in the region, compiled %d, '
+          '%d stray writes' % (model, inside, executed[0],
+                               len(guard.violations)))
+    if not inside or executed[0] or guard.violations:
+      failures.append('model %d: region execution or writes' % model)
+  canaries_ok = all(bytes(m.uc.mem_read(band, 64)) == canary
+                    for band in bands)
+  results['controls'].append({'case': 'canaries', 'intact': canaries_ok})
+  if not canaries_ok:
+    failures.append('a canary around the slot or arena changed')
 
-  # The reader's refusals, each on a faulted copy.
-  base = PLACEMENTS[0]
+  # Faults, each section on its own; a damaged section hides no other.
+  pbase = PLACEMENTS[0]
+  p_off, w_off = plts['offset'], wave['offset']
+
+  def crc_fix(data, offset, size):
+    body = data[offset:offset + size - 4]
+    return data[:offset + size - 4] + struct.pack(
+        '<I', zlib.crc32(body) & 0xffffffff) + data[offset + size:]
+
+  def flip(data, at):
+    return data[:at] + bytes([data[at] ^ 1]) + data[at + 1:]
+
+  first_blob = p_off + plts['blobs'][0]['offset']
+  guard_row = w_off + 32 + 192 * 520 + 10
   cases = [
-      ('services export byte flipped', region, crc, digests,
-       [(SINE + 100, b'\x5a')], 'SERVICES'),
-      ('interrupted update', region[:len(region) // 2] +
-       b'\xff' * (len(region) - len(region) // 2), crc, digests, [], 'CRC'),
-      ('stale tail after the region', region, crc, digests,
-       [(base + len(region), b'DZMB' * 64)], 'OK'),
-      ('another selection', region, crc ^ 1, digests, [], 'SELECTION'),
-      ('no selection', region, 0, digests, [], 'NO_REGION'),
-      ('erased region', b'\xff' * 64, crc, digests, [], 'NO_REGION'),
-      ('digest not listed', region, crc, digests[1:], [], 'DIGEST'),
+      ('intact', region, None, None, ('OK', 'NO_REGION', 'OK')),
+      ('PLTS byte flipped', flip(region, first_blob + 200), None, None,
+       ('OK', 'NO_REGION', 'CRC')),
+      ('PLTS interrupted', region[:p_off + 2000] +
+       b'\xff' * (len(region) - p_off - 2000), None, None,
+       ('OK', 'NO_REGION', 'CRC')),
+      ('PLTS blob byte flipped, CRCs refreshed', crc_fix(
+          flip(region, first_blob + 200), p_off, plts['size']), None, None,
+       ('OK', 'NO_REGION', 'SELECTION')),
+      ('WAVE guard row changed, CRC refreshed', crc_fix(
+          flip(region, guard_row), w_off, wave['size']), None, None,
+       ('SELECTION', 'NO_REGION', 'OK')),
+      ('WAVE erased', b'\xff' * p_off + region[p_off:], None, None,
+       ('NO_REGION', 'NO_REGION', 'OK')),
+      ('stale tail after PLTS', region + b'DZSC' * 64, None, None,
+       ('OK', 'NO_REGION', 'OK')),
   ]
-  for name, data, expected_crc, listed, patches, expected in cases:
-    m = Machine(elf, sym, data, base, 0, patches)
-    status = m.setup(base, expected_crc, listed)
-    results['controls'].append({'case': name, 'status': status})
-    print('control: %s: %s' % (name, status))
-    if status != expected:
-      failures.append('%s: %s, not %s' % (name, status, expected))
-  # Another release's region: its table says 20261116.
-  m = Machine(elf, sym, region, base, 0)
-  status = STATUS[m.call('harness_setup', base, REGION_END, RELEASE - 1, crc)]
-  results['controls'].append({'case': 'another release', 'status': status})
-  print('control: another release: %s' % status)
-  if status != 'RELEASE':
-    failures.append('another release: %s' % status)
+  for name, data, directory, defaults, expected in cases:
+    m = machine(pbase, data=data)
+    m.setup(layout, digests)
+    got = m.statuses()
+    results['faults'].append({'case': name, 'statuses': got})
+    print('fault: %s: %s' % (name, ' '.join(got)))
+    if got != expected:
+      failures.append('%s: %s, not %s' % (name, got, expected))
 
+  # The guard row on its own: selected by a directory with its new CRC, the
+  # content check refuses it.
+  data = crc_fix(flip(region, guard_row), w_off, wave['size'])
+  new_crc = '0x%08x' % struct.unpack_from('<I', data, w_off + wave['size'] - 4)
+  directory = [dict(s) for s in layout['sections']]
+  directory[0]['crc'] = new_crc
+  m = machine(pbase, data=data)
+  m.setup(layout, digests, directory=directory)
+  got = m.statuses()
+  results['faults'].append({'case': 'WAVE guard row, selected',
+                            'statuses': got})
+  print('fault: WAVE guard row, selected: %s' % ' '.join(got))
+  if got[0] != 'CONTENT' or got[2] != 'OK':
+    failures.append('WAVE guard row, selected: %s' % (got,))
+
+  # Release, selection, digests, services, directory layout.
+  more = [
+      ('another release', {'release': RELEASE - 1}, ('RELEASE', 'NO_REGION',
+                                                     'RELEASE')),
+      ('digest not listed', {'digests': digests[1:]}, ('OK', 'NO_REGION',
+                                                       'DIGEST')),
+      ('directory out of order', {'directory': layout['sections'][::-1]},
+       ('DIRECTORY',) * 3),
+      ('directory past the region', {'directory': [dict(
+          plts, offset=REGION_END - pbase - 64)]}, ('DIRECTORY',) * 3),
+      ('directory misaligned', {'directory': [dict(
+          plts, offset=plts['offset'] + 4)]}, ('DIRECTORY',) * 3),
+      ('directory overlapping', {'directory': [
+          dict(wave, size=wave['size'] + 64), plts]}, ('DIRECTORY',) * 3),
+      ('PLTS only', {'directory': [plts]}, ('NO_REGION', 'NO_REGION', 'OK')),
+      ('another selection', {'directory': [dict(
+          plts, crc='0x%08x' % (int(plts['crc'], 16) ^ 1))]},
+       ('NO_REGION', 'NO_REGION', 'SELECTION')),
+  ]
+  for name, options, expected in more:
+    m = machine(pbase)
+    status = m.setup(layout, options.get('digests', digests),
+                     directory=options.get('directory'),
+                     release=options.get('release', RELEASE))
+    got = m.statuses()
+    results['faults'].append({'case': name, 'statuses': got})
+    print('fault: %s: %s' % (name, ' '.join(got)))
+    if got != expected:
+      failures.append('%s: %s, not %s' % (name, got, expected))
+  m = machine(pbase, patches=[(SINE + 100, b'\x5a')])
+  m.setup(layout, digests)
+  got = m.statuses()
+  results['faults'].append({'case': 'services export byte flipped',
+                            'statuses': got})
+  print('fault: services export byte flipped: %s' % ' '.join(got))
+  if got != ('OK', 'NO_REGION', 'SERVICES'):
+    failures.append('services export byte flipped: %s' % (got,))
+
+  # Without a profile directory: the release's default layout, by digest.
+  defaults = layout['sections']
+  for name, data, expected in (
+      ('defaults', region, ('OK', 'NO_REGION', 'OK')),
+      ('defaults, PLTS changed', crc_fix(flip(region, first_blob + 200),
+                                         p_off, plts['size']),
+       ('OK', 'NO_REGION', 'DIGEST')),
+      ('defaults, erased region', b'\xff' * len(region),
+       ('NO_REGION', 'NO_REGION', 'NO_REGION'))):
+    m = machine(pbase, data=data)
+    m.setup(layout, digests, defaults=defaults)
+    got = m.statuses()
+    results['faults'].append({'case': name, 'statuses': got})
+    print('fault: %s: %s' % (name, ' '.join(got)))
+    if got != expected:
+      failures.append('%s: %s, not %s' % (name, got, expected))
+
+  # The synth locks for every WAVE and PLTS outcome (ABI.md, faults).
+  wave_states = {'ok': region, 'fault': flip(region, w_off + 1000),
+                 'absent': b'\xff' * p_off + region[p_off:]}
+  expected_locks = {
+      ('ok', 'ok'): 'AS_PROFILED', ('ok', 'fault'): 'FORCE_BEADS',
+      ('ok', 'absent'): 'FORCE_BEADS', ('fault', 'ok'): 'FORCE_PLAITS',
+      ('absent', 'ok'): 'FORCE_PLAITS', ('fault', 'fault'): 'SILENT',
+      ('fault', 'absent'): 'SILENT', ('absent', 'fault'): 'SILENT',
+      ('absent', 'absent'): 'SILENT'}
+  for (w, p), expected in sorted(expected_locks.items()):
+    data = wave_states[w]
+    if p == 'fault':
+      data = flip(data, first_blob + 200)
+    elif p == 'absent':
+      data = data[:p_off] + b'\xff' * (len(region) - p_off)
+    m = machine(pbase, data=data)
+    m.setup(layout, digests)
+    got = m.lock()
+    results['locks'].append({'wave': w, 'plts': p, 'lock': got,
+                             'statuses': m.statuses()})
+    print('lock: WAVE %s, PLTS %s: %s' % (w, p, got))
+    if got != expected:
+      failures.append('lock WAVE %s PLTS %s: %s, not %s' % (w, p, got,
+                                                           expected))
+
+  results['findings'] = findings
   json.dump(results, open(out + '/render_compare.json', 'w'), indent=1,
             sort_keys=True)
+  for f in findings:
+    print('FINDING: ' + f)
   for f in failures:
     print('ERROR: ' + f)
   if not failures:

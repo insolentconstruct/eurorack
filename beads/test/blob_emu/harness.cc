@@ -25,17 +25,22 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Emulator harness: the region reader, the blob adapter and the same engines
-// compiled in, called by render_compare.py under Unicorn's Cortex-M7.
+// Emulator harness: the region reader, a blob voice (one slot and arena, as
+// PlaitsVoice) and the same engines compiled in, sharing their own arena as
+// PlaitsVoice's do; called by render_compare.py under Unicorn's Cortex-M7.
 
 #include <new>
 
 #include "stmlib/utils/buffer_allocator.h"
+#include "stmlib/utils/random.h"
 
-#include "beads/blob/phase_weave_engine.h"
+#include "beads/blob/models/phase_weave_engine.h"
+#include "beads/blob/models/spectral_spiral_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
+#include "beads/blob/plaits_region.h"
 #include "beads/test/blob_gate/test_sine.h"
+#include "plaits/dsp/engine/particle_engine.h"
 
 using namespace beads;
 using namespace plaits;
@@ -68,60 +73,120 @@ class TestSineEngine : public Engine {
   DISALLOW_COPY_AND_ASSIGN(TestSineEngine);
 };
 
-const size_t kNumCompiled = 2;
-const size_t kArenaSize = 1024;
+const size_t kNumCompiled = 4;
+const size_t kArenaSize = 16384;
+const size_t kCanaryWords = 16;
+const size_t kMaxDigests = 8;
 
 // Engines are placed by harness_setup: no static constructors run here.
 static uint8_t phase_weave_storage[sizeof(PhaseWeaveEngine)]
     __attribute__((aligned(8)));
 static uint8_t sine_storage[sizeof(TestSineEngine)]
     __attribute__((aligned(8)));
-static uint8_t blob_storage[kMaxPlaitsBlobs][sizeof(PlaitsBlobEngine)]
+static uint8_t particle_storage[sizeof(ParticleEngine)]
     __attribute__((aligned(8)));
-static Engine* engines[kNumCompiled + kMaxPlaitsBlobs];
-static uint8_t arena[kArenaSize];
+static uint8_t spectral_spiral_storage[sizeof(SpectralSpiralEngine)]
+    __attribute__((aligned(8)));
+static Engine* compiled[kNumCompiled];
+static uint8_t compiled_arena[kArenaSize] __attribute__((aligned(8)));
+static PlaitsRegion region;
 
 extern "C" {
 
-uint8_t harness_digests[kMaxPlaitsBlobs][kPlaitsBlobDigestSize];
-PlaitsBlobIdentity harness_identity;
+// Guard bands around the blob voice's slot and arena.
+struct BlobVoice {
+  uint32_t canary_before[kCanaryWords];
+  uint8_t engine[sizeof(PlaitsBlobEngine)] __attribute__((aligned(8)));
+  uint32_t canary_between[kCanaryWords];
+  uint8_t arena[kArenaSize] __attribute__((aligned(8)));
+  uint32_t canary_after[kCanaryWords];
+};
+
+BlobVoice harness_blob_voice;
+uint8_t harness_digests[kMaxDigests][kPlaitsBlobDigestSize];
+uint32_t harness_num_digests;
+PlaitsDirectoryEntry harness_directory[PLAITS_SECTION_LAST];
+uint32_t harness_num_entries;
+PlaitsDefaultSection harness_defaults[PLAITS_SECTION_LAST];
+uint32_t harness_num_defaults;
+PlaitsRegionIdentity harness_identity;
+uint32_t harness_lock;
+uintptr_t harness_slot;
 float harness_out[kMaxBlockSize];
 float harness_aux[kMaxBlockSize];
 EngineParameters harness_parameters;
 
+static PlaitsBlobEngine* blob_engine() {
+  return reinterpret_cast<PlaitsBlobEngine*>(harness_blob_voice.engine);
+}
+
+// Reads the region: from the directory, or the defaults when use_directory
+// is 0. Returns the PLTS status.
 uint32_t harness_setup(
     const uint8_t* begin,
     const uint8_t* end,
     uint32_t release,
-    uint32_t expected_crc) {
-  stmlib::BufferAllocator allocator(arena, kArenaSize);
-  engines[0] = new(phase_weave_storage) PhaseWeaveEngine;
-  engines[1] = new(sine_storage) TestSineEngine;
-  engines[0]->Init(&allocator);
-  engines[1]->Init(&allocator);
-  const PlaitsBlobStatus status = PlaitsBlob::ReadRegion(
-      begin, end, release, expected_crc, &plaits_blob_services,
-      harness_digests, kMaxPlaitsBlobs, &harness_identity);
-  for (uint32_t i = 0; status == PLAITS_BLOB_OK &&
-      i < harness_identity.num_blobs; ++i) {
-    PlaitsBlobEngine* e = new(blob_storage[i]) PlaitsBlobEngine;
-    e->Bind(reinterpret_cast<const uint8_t*>(
-        harness_identity.blobs[i].address), &plaits_blob_services);
-    allocator.Init(arena, kArenaSize);
-    e->Init(&allocator);
-    engines[kNumCompiled + i] = e;
+    uint32_t use_directory) {
+  stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+  compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
+  compiled[1] = new(sine_storage) TestSineEngine;
+  compiled[2] = new(particle_storage) ParticleEngine;
+  compiled[3] = new(spectral_spiral_storage) SpectralSpiralEngine;
+  for (size_t i = 0; i < kNumCompiled; ++i) {
+    // All engines share the same RAM space, as in PlaitsVoice::Init.
+    allocator.Free();
+    compiled[i]->Init(&allocator);
   }
-  return status;
+  new(harness_blob_voice.engine) PlaitsBlobEngine;
+  harness_slot = reinterpret_cast<uintptr_t>(blob_engine()->state());
+
+  region.Read(
+      begin, end, release,
+      use_directory ? harness_directory : NULL, harness_num_entries,
+      harness_defaults, harness_num_defaults,
+      &plaits_blob_services, harness_digests, harness_num_digests);
+  harness_identity = region.identity();
+  harness_lock = PlaitsRegion::Lock(
+      region.ok(PLAITS_SECTION_PLAITS), region.ok(PLAITS_SECTION_WAVE));
+  return harness_identity.sections[PLAITS_SECTION_PLAITS].status;
 }
 
-void harness_reset(uint32_t engine) {
-  engines[engine]->Reset();
+// A voice switching to a compiled-in engine: Reset only.
+void harness_select_compiled(uint32_t engine) {
+  compiled[engine]->Reset();
 }
 
-void harness_render(uint32_t engine, uint32_t size) {
+// A voice switching to a blob: bound, constructed in the zeroed slot and
+// arena, then reset. Returns 1 when no checked blob serves the model.
+uint32_t harness_select_blob(uint32_t model) {
+  const uint8_t* blob = region.blob(model);
+  if (!blob) {
+    return 1;
+  }
+  stmlib::BufferAllocator allocator(harness_blob_voice.arena, kArenaSize);
+  blob_engine()->Bind(blob, &plaits_blob_services, model);
+  blob_engine()->Init(&allocator);
+  blob_engine()->Reset();
+  return 0;
+}
+
+// Each render starts from the given generator state and returns the one it
+// leaves, so the blob and compiled-in renders draw the same numbers.
+uint32_t harness_render_compiled(uint32_t engine, uint32_t size,
+    uint32_t seed) {
   bool already_enveloped = false;
-  engines[engine]->Render(
+  stmlib::Random::Seed(seed);
+  compiled[engine]->Render(
       harness_parameters, harness_out, harness_aux, size, &already_enveloped);
+  return stmlib::Random::state();
+}
+
+uint32_t harness_render_blob(uint32_t size, uint32_t seed) {
+  bool already_enveloped = false;
+  stmlib::Random::Seed(seed);
+  blob_engine()->Render(
+      harness_parameters, harness_out, harness_aux, size, &already_enveloped);
+  return stmlib::Random::state();
 }
 
 }  // extern "C"

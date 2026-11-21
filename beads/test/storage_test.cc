@@ -38,6 +38,9 @@
 #define private public
 #include "beads/settings.h"
 #undef private
+#ifdef PLAITS_BLOBS
+#include "beads/test/profile_v3.h"
+#endif  // PLAITS_BLOBS
 
 bool test_down[4];
 uint32_t test_writes;
@@ -1254,6 +1257,17 @@ void Pitch15Profile(uint8_t* block, uint8_t value) {
   ProfileChecksum(block);
 }
 
+// The values a packed field takes under this test's stock-bank profile:
+// development builds size the Plaits bank by the profile.
+uint8_t FieldValues(ProfileFeature feature) {
+#ifdef PLAITS_BLOBS
+  if (feature == FEATURE_PLAITS_BANK) {
+    return kNumStockPlaitsBanks;
+  }
+#endif  // PLAITS_BLOBS
+  return kFeatureDefinitions[feature].values;
+}
+
 void TestPackedFeaturePairs() {
   test_checker.Start("TestPackedFeaturePairs");
   ProfileFeature features[FEATURE_LAST];
@@ -1287,24 +1301,24 @@ void TestPackedFeaturePairs() {
   CHECK(!dense.profile_locked());
   for (size_t i = 0; i < count; ++i) {
     dense.SetFeatureValue(
-        features[i], kFeatureDefinitions[features[i]].values - 1);
+        features[i], FieldValues(features[i]) - 1);
   }
   dense.SaveState();
   for (size_t changed = 0; changed < count; ++changed) {
     CHECK(dense.Init(false, block));
     for (size_t i = 0; i < count; ++i) {
       CHECK(dense.FeatureValue(features[i]) ==
-          kFeatureDefinitions[features[i]].values - 1);
+          FieldValues(features[i]) - 1);
     }
     dense.SetFeatureValue(features[changed], 0);
     dense.SaveState();
     CHECK(dense.Init(false, block));
     for (size_t i = 0; i < count; ++i) {
       CHECK(dense.FeatureValue(features[i]) ==
-          (i == changed ? 0 : kFeatureDefinitions[features[i]].values - 1));
+          (i == changed ? 0 : FieldValues(features[i]) - 1));
     }
     dense.SetFeatureValue(
-        features[changed], kFeatureDefinitions[features[changed]].values - 1);
+        features[changed], FieldValues(features[changed]) - 1);
     dense.SaveState();
   }
   size_t pairs = 0;
@@ -1322,16 +1336,16 @@ void TestPackedFeaturePairs() {
         Settings both;
         CHECK(both.Init(false, block));
         both.SetFeatureValue(
-            features[a], kFeatureDefinitions[features[a]].values - 1);
+            features[a], FieldValues(features[a]) - 1);
         both.SetFeatureValue(
-            features[b], kFeatureDefinitions[features[b]].values - 1);
+            features[b], FieldValues(features[b]) - 1);
         both.SaveState();
         Settings loaded;
         CHECK(loaded.Init(false, block));
         for (size_t i = 0; i < count; ++i) {
           CHECK(loaded.FeatureValue(features[i]) ==
               (i == a || i == b
-                  ? kFeatureDefinitions[features[i]].values - 1 : 0));
+                  ? FieldValues(features[i]) - 1 : 0));
         }
         uint8_t dormant[kProfileSize];
         memcpy(dormant, block, sizeof(dormant));
@@ -1344,7 +1358,7 @@ void TestPackedFeaturePairs() {
         loaded.SaveState();
         CHECK(loaded.Init(false, block));
         CHECK(loaded.FeatureValue(features[a]) ==
-            kFeatureDefinitions[features[a]].values - 1);
+            FieldValues(features[a]) - 1);
         CHECK(loaded.FeatureValue(features[b]) == 0);
         CHECK(loaded.state().gain == 137);
         CHECK(loaded.state().assignable_cv_amount[1] == 173);
@@ -1762,6 +1776,44 @@ void TestStartQuality() {
   CHECK(fresh.state().media == 1);
 }
 
+#ifdef PLAITS_BLOBS
+// The saved bank (field 14) is kept while the profile has that many banks;
+// past them it takes the profile's start bank.
+void TestPlaitsBanks() {
+  test_checker.Start("TestPlaitsBanks");
+  uint8_t banks[5 * 8];
+  for (int i = 0; i < 5 * 8; ++i) {
+    banks[i] = i % 24;
+  }
+  uint8_t b[kProfileSize];
+  Wipe();
+  ProfileV3(b, banks, 5, NULL, 0, 1);
+  Settings s;
+  s.Init(false, b);
+  CHECK(s.FeatureValue(FEATURE_PLAITS_BANK) == 1);
+  s.SetFeatureValue(FEATURE_PLAITS_BANK, 4);
+  s.SaveState();
+  Settings five;
+  five.Init(false, b);
+  CHECK(five.FeatureValue(FEATURE_PLAITS_BANK) == 4);
+  ProfileV3(b, banks, 3, NULL, 0, 2);
+  Settings three;
+  three.Init(false, b);
+  CHECK(three.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+  ProfileV3(b, banks, 0, NULL, 0, 0);
+  Settings stock;
+  stock.Init(false, b);
+  CHECK(stock.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+  // The same saved bank within a smaller table is kept.
+  stock.SetFeatureValue(FEATURE_PLAITS_BANK, 2);
+  stock.SaveState();
+  ProfileV3(b, banks, 5, NULL, 0, 0);
+  Settings again;
+  again.Init(false, b);
+  CHECK(again.FeatureValue(FEATURE_PLAITS_BANK) == 2);
+}
+#endif  // PLAITS_BLOBS
+
 int main() {
   setbuf(stdout, NULL);
   void* bank_2 = reinterpret_cast<void*>(0x08100000);
@@ -1796,6 +1848,9 @@ int main() {
   TestProfileNewAssignment();
   TestProfileDiffusionOff();
   TestStartQuality();
+#ifdef PLAITS_BLOBS
+  TestPlaitsBanks();
+#endif  // PLAITS_BLOBS
   test_checker.Start("main");
   CHECK(TestFlash().violations == 0);
   CHECK(TestFlash().wide_sectors == 0);

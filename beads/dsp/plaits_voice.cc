@@ -33,6 +33,10 @@
 
 #include "stmlib/utils/buffer_allocator.h"
 
+#ifdef PLAITS_BLOBS
+#include "beads/blob/plaits_blob_engine.h"
+#endif  // PLAITS_BLOBS
+
 #include "plaits/dsp/engine/additive_engine.h"
 #include "plaits/dsp/engine/bass_drum_engine.h"
 #include "plaits/dsp/engine/chord_engine.h"
@@ -76,7 +80,11 @@ struct PlaitsEngines {
 
   SwarmEngine swarm_engine;
   NoiseEngine noise_engine;
+#ifdef PLAITS_BLOBS
+  PlaitsBlobEngine blob_engine;
+#else
   ParticleEngine particle_engine;
+#endif  // PLAITS_BLOBS
   StringEngine string_engine;
   ModalEngine modal_engine;
   BassDrumEngine bass_drum_engine;
@@ -146,7 +154,12 @@ void PlaitsVoice::Init(uint8_t* ram, const fm::Patch* fm_banks) {
 
   r.RegisterInstance(&e.swarm_engine, false, -3.0f, 1.0f);
   r.RegisterInstance(&e.noise_engine, false, -1.0f, -1.0f);
+#ifdef PLAITS_BLOBS
+  // Its blob sets the gains; engine() never returns this entry.
+  r.RegisterInstance(&e.blob_engine, false, -2.0f, 1.0f);
+#else
   r.RegisterInstance(&e.particle_engine, false, -2.0f, 1.0f);
+#endif  // PLAITS_BLOBS
   r.RegisterInstance(&e.string_engine, true, -1.0f, 0.8f);
   r.RegisterInstance(&e.modal_engine, true, -1.0f, 0.8f);
   r.RegisterInstance(&e.bass_drum_engine, true, 0.8f, 0.8f);
@@ -155,6 +168,12 @@ void PlaitsVoice::Init(uint8_t* ram, const fm::Patch* fm_banks) {
 
   BufferAllocator allocator(ram + sizeof(PlaitsEngines), kEngineRamSize);
   for (int i = 0; i < r.size(); ++i) {
+#ifdef PLAITS_BLOBS
+    // A blob is built when a voice selects it.
+    if (r.get(i) == &e.blob_engine) {
+      continue;
+    }
+#endif  // PLAITS_BLOBS
     // All engines will share the same RAM space.
     allocator.Free();
     r.get(i)->Init(&allocator);
@@ -178,8 +197,28 @@ void PlaitsVoice::Render(
     int bit_shift,
     float* out,
     size_t size) {
+#ifdef PLAITS_BLOBS
+  Engine* e = engine(patch.model);
+  if (!e) {
+    // Not reached: the synth is locked when a bank's model is missing.
+    fill(&out[0], &out[size], 0.0f);
+    return;
+  }
+#else
   Engine* e = engines_->registry.get(patch.model);
+#endif  // PLAITS_BLOBS
   if (patch.model != model_) {
+#ifdef PLAITS_BLOBS
+    // A blob is built in the zeroed slot and arena on every switch.
+    if (e == &engines_->blob_engine) {
+      engines_->blob_engine.Bind(
+          region_->blob(patch.model), &plaits_blob_services, patch.model);
+      BufferAllocator allocator(
+          reinterpret_cast<uint8_t*>(engines_) + sizeof(PlaitsEngines),
+          kEngineRamSize);
+      e->Init(&allocator);
+    }
+#endif  // PLAITS_BLOBS
     if (patch.model >= 2 && patch.model <= 4) {
       engines_->six_op_engine.LoadUnpackedBank(
           &fm_banks_[(patch.model - 2) * kPlaitsFmBankSize]);
@@ -270,6 +309,21 @@ void PlaitsVoice::Render(
     }
   }
 }
+
+#ifdef PLAITS_BLOBS
+/* static */
+bool PlaitsVoice::Available(int model, const PlaitsRegion& region) {
+  return (model < kNumPlaitsModels && model != kPlaitsParticleNoise) ||
+      region.blob(model);
+}
+
+Engine* PlaitsVoice::engine(int model) {
+  if (model < kNumPlaitsModels && model != kPlaitsParticleNoise) {
+    return engines_->registry.get(model);
+  }
+  return region_ && region_->blob(model) ? &engines_->blob_engine : NULL;
+}
+#endif  // PLAITS_BLOBS
 
 /* static */
 void PlaitsVoice::DecodeSpeechBanks(uint8_t* ram, uint8_t* scratch) {

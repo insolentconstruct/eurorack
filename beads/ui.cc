@@ -501,6 +501,17 @@ void Ui::UpdateLeds() {
       break;
   }
   
+#ifdef PLAITS_BLOBS
+  // No synth can play until a good install: [A] blinks fast, as the
+  // recovery firmware shows a failure.
+  if (synth_fault_ && synth_mode_ && mode_ == MODE_NORMAL) {
+    const bool fast_blink = (system_clock.milliseconds() % 250) < 125;
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      leds_.set(Led(LED_ASSIGN_1 + i), fast_blink ? 255 : 0);
+    }
+  }
+#endif  // PLAITS_BLOBS
+
   if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
       options_.stage() == Options::STAGE_EDITING) {
     const uint8_t page_leds = kOptionPages[options_.page()].leds;
@@ -854,11 +865,22 @@ void Ui::DoEvents() {
 }
 
 void Ui::StepPlaitsBank() {
+#ifdef PLAITS_BLOBS
+  const uint8_t bank = uint8_t(
+      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) %
+          settings_->profile().num_plaits_banks());
+#else
   const uint8_t bank = uint8_t(
       (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
+#endif  // PLAITS_BLOBS
   settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
   settings_->SaveState();
+#ifdef PLAITS_BLOBS
+  // Past three banks the colours repeat until Hygrostat's bank colours.
+  cue_ = plaits_bank_cues_[bank % kNumPlaitsBanks];
+#else
   cue_ = plaits_bank_cues_[bank];
+#endif  // PLAITS_BLOBS
   cue_time_ = system_clock.milliseconds();
 }
 

@@ -1,6 +1,6 @@
 # Plaits model blobs: interface
 
-Version 1 is the frozen proof, not linked into the firmware; `plaits_blob.h` is its source of truth. Version 2 is a draft for Beta 4: phase 1 fixes it in code, and nothing in it ships before then.
+`plaits_blob.h` and `plaits_region.h` are the source of truth. Version 1 is the frozen proof's blob format; its blobs still load. Version 2 is in code since phase 1, in development builds only (`PLAITS_BLOBS=1`): the release app does not link the loader. Library blobs and their dependencies arrive with phase 2 and are refused until then.
 
 # Version 1 (frozen)
 
@@ -27,28 +27,17 @@ The firmware places these at fixed addresses, after the profile:
 
 ## Region
 
-After the app: `PlaitsBlobRegionHeader` (magic, version, release, services version, size, count), one `PlaitsBlobRegionEntry` per blob (model, offset, size, CRC), the blobs verbatim at 32-byte aligned offsets, then a CRC-32 of everything before it.
-
-- `PlaitsBlob::ReadRegion` checks services, then the table (release, bounds, CRC, the profile's selected CRC, ascending non-overlapping entries, one per model), then every blob. One refused blob refuses the whole region.
-- Interrupted update: the region CRC fails, so no blob runs. Stale tail: bytes after `size` are never read. Stale region (another install or release): refused by release or by the selected CRC. A selected CRC of 0 means no blobs.
+Version 1's single-table region (`DZRG`) was never shipped; version 2's sections replace it.
 
 ## Identity
 
-One release covers the app and its approved blobs. A support report or qualification run identifies its configuration by:
-
-1. the release number (the tag's date, compiled into the app) and its `app.bin` SHA-256 from the release manifest (Hygrostat's decode checks the app bytes against it);
-2. services version and `CheckServices` status;
-3. the region CRC, which is also the profile's selection;
-4. in order: each blob's model, address, size, status and SHA-256;
-5. the profile block's CRC.
-
-`ReadRegion` fills 1 (the number) to 4 in a `PlaitsBlobIdentity` record (408 bytes of RAM), which can be read over SWD by symbol, or later shown by a diagnostic.
+One release covers the app and its approved blobs. A support report or qualification run identifies its configuration by the release number and `app.bin` SHA-256, the profile block's CRC, and version 2's identity record (below).
 
 ## Not reserved
 
 No 8 KiB slot for I-cache alignment. Reserve one only if a mixed-model worst-case block (several blobs and compiled-in models switching in one voice set) shows placement costs well above the 0.5-point spread measured for one engine.
 
-# Version 2 (draft)
+# Version 2
 
 Version 2 moves all Plaits content out of the app: the stock 24 models, Palette models and the libraries they share become blobs, and Beads' wavetables become a section of their own. Version 1's rules stay unless a line below changes them.
 
@@ -76,27 +65,43 @@ The header grows to 96 bytes (24 little-endian words). The blob still ends with 
 | 17–19 | flags, OUT gain, AUX gain | 0 |
 | 20–23 | reserved, 0 | same |
 
-- **Model entries:** `init(state, services, arena, arena_size, libraries)`, where `libraries` holds one context per dependency in the listed order. `reset(object, services, argument)`; the argument is the selected ID minus the first ID (the 6-op bank). `render` as in version 1.
+- **Model entries:** `init(state, services, arena, arena_size, libraries)`, where `libraries` holds one context per dependency in the listed order (`NULL` in phase 1). `reset(object, services, argument)`; the argument is the selected ID minus the first ID (the 6-op bank). `render` as in version 1.
+- **On every switch** the voice binds the selected blob, zeroes the declared state and arena, runs `init`, then `reset`. A compiled-in engine runs `Init` once at synth entry and only `Reset` on a switch, so it keeps state (filters, particles) that a blob rebuilds. The emulator reports where outputs differ after such a return; the blob's output matches the engine's first selection after power-on.
 - **Library entries:** `init(ram, ram_size, services)` runs once at synth entry, outside the audio interrupt, and returns the library's context. A library has no writable statics; shared state (decoded word banks, unpacked 6-op banks) lives in its declared RAM. Its export table lists offsets of the functions and tables dependents may call or read; the loader turns them into the dependents' import table. Calls through that table are the gate's one exception to "no branch through a register".
-- **State slot:** at least the largest offered model's state. Palette's largest is 1,080 B (Dual Sync); the stock engines' plain-class sizes are measured in phase 1.
+- **State slot:** 4,352 B, aligned to 8 (`kPlaitsBlobMaxStateSize2`). The largest stock engine, 6-op FM, is 4,292 B with its 16-byte `Engine` base [M, GCC 9]; Palette's largest is 1,080 B (Dual Sync). The gate and the loader refuse a larger declared state. A development build's voice grows from 28 KiB to 29 KiB to hold the slot beside the compiled-in engines.
 - **Still refused:** writable data, libc functions that write `errno` (`sinf`, `tanhf`), and absolute pointer tables. A port turns pointer tables into offsets. `memcpy` and `memmove` are copied into the blob.
 
 ## Services version 2
 
-- Version 1's three exports keep their addresses and indexes.
-- New: `stmlib::Random`'s shared state, so a ported stock model draws from the same generator as the compiled-in engine. Bit identity needs this.
-- New table exports: any table that two or more blobs read and no library owns. The phase 0 links found seven: `lut_fold`, `lut_ws_bump`, `lut_ws_linear`, `lut_ws_inverse_sin`, `lut_ws_inverse_tan`, `lut_fm_frequency_quantizer`, `lut_4x_downsampler_fir` (4,656 B). Each is hashed at boot like version 1's.
-- Version-1 blobs keep loading as long as a release lists them.
+Frozen as version 1's, in `services_v2.ld`, `services_section.ld` and `kPlaitsBlobExportDigests`:
+
+| Export | Address | Size |
+|---|---|---:|
+| version 1's three | as above | |
+| `stmlib::Random::rng_state_` | 0x20000000 (DTCM) | 4 |
+| `plaits::lut_fold` | 0x0802264c | 2,064 |
+| `plaits::lut_fm_frequency_quantizer` | 0x08022e5c | 520 |
+| `plaits::lut_4x_downsampler_fir` | 0x08023064 | 16 |
+| `plaits::lut_ws_inverse_tan` | 0x08023074 | 514 |
+| `plaits::lut_ws_inverse_sin` | 0x08023278 | 514 |
+| `plaits::lut_ws_linear` | 0x0802347c | 514 |
+| `plaits::lut_ws_bump` | 0x08023680 | 514 |
+
+- The services table (version 2, 11 exports) still fits the 64 bytes at 0x08021400. Tables are hashed at boot; the generator's state is checked by address.
+- **The shared generator is a fixed RAM export,** not a function: a blob's GOT holds 0x20000000 and its inlined `Random::GetWord` updates the app's own state, at no cost per draw and with the same numbers as the compiled-in engine. The app places the state there (not loaded) and seeds it with stmlib's 0x21 at boot.
+- A version 1 blob may import only version 1's exports; the gate and the loader refuse anything else (`neg_import`).
+- **`R_ARM_REL32`** (a text-relative literal, as GCC emits for local tables under `-mpic-data-is-text-relative`) is accepted when the symbol it names lies inside the blob; `neg_rel32` names an export and is refused.
 
 ## Region
 
 From the first 4 KiB boundary after the app to 0x08100000. Sections come in a fixed order, `WAVE`, `TERR`, `PLTS`, each starting on a 32-byte flash word (the H7's ECC unit), so no flash word holds bytes of two sections.
 
 - **Section header** (32 bytes): magic `DZSC`, kind (`WAVE`, `TERR` or `PLTS` as a four-character code), version, release, size (header to CRC), item count, two reserved words. Then the payload, then a CRC-32 of everything before it. A section is valid on its own, without the profile.
-- **Directory, in the profile block:** for each section, its kind, offset, size and CRC, plus the selection CRC. The firmware checks every entry lies inside the region, is aligned and doesn't overlap another before it reads anything. The profile also carries the bank table (up to 15 rows of 8 model IDs) and the synth lock.
-- **Without a valid profile:** the firmware uses the release's own default layout, compiled into the app as fixed offsets and the SHA-256 of each default section. It never trusts a region offset from anywhere else.
-- **`PLTS` payload:** one 16-byte entry per blob (kind and ID, offset, size, CRC), libraries first, then models by first ID; blobs follow at 32-byte offsets. Every dependency must be present and approved, or the dependent is refused. All or none within the section.
-- **Faults:** a damaged section never hides another. With no valid `PLTS`, Synth uses the Beads wavetables; with no valid `WAVE`, it uses Plaits; with neither, the synth is silent and [A] shows the error cue until a good install.
+- **Directory, in the profile block (version 3):** byte 14 is the bank count (0 = Plaits' three stock banks, else 1–15) and byte 15 the section count (0–3). After the entries and scale records come the bank table (8 model IDs per bank) and the directory (per section: kind, offset from the region start, size and the section's CRC, 16 bytes). The entry's CRC is the selection: a section written for another install fails it. Every ID must be known (0–23, 28–99) and the start bank (feature 31) below the bank count; a saved bank at or past it takes the start bank. The firmware checks every entry lies inside the region, is aligned, in order and apart before it reads anything; a bad directory faults every section. The synth lock follows from which sections are valid (below), not from a stored field.
+- **Without a directory:** the firmware uses the release's own default layout, compiled into the app as fixed offsets and the SHA-256 of each default section (`plaits_catalog.cc`, written by `blob_catalog.py` and checked by `build_blobs_dev.sh`). It never trusts a region offset from anywhere else.
+- **Reads:** a section is read only up to its size (a stale tail is never read), its header checked, then its CRC, then the directory's CRC or the default digest, then its content. Development builds read the region at boot with data bus faults ignored and check `FLASH_SR1` DBECCERR around each section, so a double ECC error in an interrupted write faults that section (`ECC`) instead of the boot (not yet exercised on hardware).
+- **`PLTS` payload:** one 16-byte entry per blob (byte kind, byte ID, two zero bytes, then offset from the section start, size and the blob's CRC), libraries first, then models by ascending first ID, at most 128; blobs follow at 32-byte offsets. Every dependency must be present and approved, or the dependent is refused. All or none within the section.
+- **Faults:** a damaged section never hides another. With no valid `PLTS`, Synth uses the Beads wavetables; with no valid `WAVE`, it uses Plaits; with neither, the synth is silent and [A] blinks fast until a good install. Plaits is also locked out when a bank names a model no checked blob or compiled-in engine serves. Profile and State are never rewritten. In phase 1 Beads' wavetables are still compiled in, so only the first two cases occur on a unit.
 - **Install order:** Hygrostat writes `WAVE` before `PLTS`.
 
 ## Content limits (Beta 4)
@@ -116,4 +121,4 @@ Firmware and Hygrostat both refuse content outside these limits.
 
 ## Identity
 
-The version 1 record grows with every blob, so version 2 keeps digests in flash (the app's allowlist) and only statuses in RAM: release, services status, one status and CRC per section, and one status byte per `PLTS` entry. It is readable over SWD by symbol.
+The version 1 record grew with every blob, so version 2 keeps digests in flash (the app's allowlist, `kPlaitsApprovedBlobs`) and only statuses in RAM: `PlaitsRegionIdentity`, 192 bytes (release, services status, directory status, per section status, address, size and CRC, the blob count and one status byte per `PLTS` entry), in `plaits_region` (beads.cc). It is readable over SWD by symbol.

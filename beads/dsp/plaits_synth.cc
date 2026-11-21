@@ -41,8 +41,17 @@ using namespace stmlib;
 const float kPlaitsVoiceGain = 2.0f / 3.0f;
 const float kModelHysteresis = 0.048f;
 
+#ifdef PLAITS_BLOBS
+// Plaits' banks, until the profile's are set: green, red, yellow.
+const uint8_t kPlaitsStockBanks[kNumPlaitsBanks][kPlaitsBankSize] = {
+  { 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 16, 17, 18, 19, 20, 21, 22, 23 },
+  { 0, 1, 2, 3, 4, 5, 6, 7 }
+};
+#else
 // First model of each bank, in Plaits' order: green, red, yellow.
 const uint8_t kPlaitsBankFirstModel[kNumPlaitsBanks] = { 8, 16, 0 };
+#endif  // PLAITS_BLOBS
 
 void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   clouds_style_ = false;
@@ -57,6 +66,9 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   harmonics_modulation_.Init(1.01f / sr);
   timbre_modulation_.Init(1.01f / sr);
   morph_modulation_.Init(1.01f / sr);
+#ifdef PLAITS_BLOBS
+  set_bank_table(kPlaitsStockBanks);
+#endif  // PLAITS_BLOBS
   model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, false);
   set_bank(0);
 
@@ -86,9 +98,21 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
   drone_ = false;
 }
 
+#ifdef PLAITS_BLOBS
+void PlaitsSynth::set_region(const PlaitsRegion* region) {
+  for (int i = 0; i < kNumPlaitsVoices; ++i) {
+    voice_[i].set_region(region);
+  }
+}
+
+void PlaitsSynth::set_bank(int bank) {
+  bank_models_ = bank_table_[bank];
+}
+#else
 void PlaitsSynth::set_bank(int bank) {
   first_model_ = kPlaitsBankFirstModel[bank];
 }
+#endif  // PLAITS_BLOBS
 
 void PlaitsSynth::StartNote(const Parameters& p, int model) {
   active_voice_ = (active_voice_ + 1) % kNumPlaitsVoices;
@@ -160,8 +184,13 @@ void PlaitsSynth::Render(
   noon_ = noon;
   drone_ = drone_ && noon && !trigger;
 
+#ifdef PLAITS_BLOBS
+  const int model = bank_models_[
+      model_quantizer_.Process(mix_parameters.feedback)];
+#else
   const int model = first_model_ +
       model_quantizer_.Process(mix_parameters.feedback);
+#endif  // PLAITS_BLOBS
   if (trigger) {
     StartNote(p, model);
   } else if (drone_) {

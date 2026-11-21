@@ -36,6 +36,11 @@
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
 #include "beads/dsp/plaits_synth.h"
+#ifdef PLAITS_BLOBS
+#include "beads/blob/plaits_catalog.h"
+#include "beads/blob/plaits_region.h"
+#include "stmlib/utils/random.h"
+#endif  // PLAITS_BLOBS
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/dwt_calibration.h"
@@ -71,6 +76,12 @@ FreezeInput freeze_input;
 GainControl gain_control;
 NormalizationDetector normalization_detector;
 PlaitsSynth plaits_synth;
+#ifdef PLAITS_BLOBS
+// Read once at boot; its identity record is readable over SWD.
+PlaitsRegion plaits_region;
+PlaitsSynthLock synth_lock;
+extern "C" const uint8_t plaits_region_begin[];
+#endif  // PLAITS_BLOBS
 Processor processor;
 SeedInput seed_input;
 Settings settings;
@@ -345,7 +356,17 @@ void Process(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
+#ifdef PLAITS_BLOBS
+  const bool plaits_synth_on = synth_lock == PLAITS_SYNTH_FORCE_PLAITS ||
+      (synth_lock == PLAITS_SYNTH_AS_PROFILED && ui.plaits_synth());
+  if (synth_mode && synth_lock == PLAITS_SYNTH_SILENT) {
+    FloatFrame silence;
+    silence = 0.0f;
+    fill(&float_out[0], &float_out[size], silence);
+  } else if (synth_mode && plaits_synth_on) {
+#else
   if (synth_mode && ui.plaits_synth()) {
+#endif  // PLAITS_BLOBS
     plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
     plaits_synth.set_pitch_scale(ui.pitch_scale());
     plaits_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -468,7 +489,53 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   codec_sample_rate = sr;
 }
 
+#ifdef PLAITS_BLOBS
+bool FlashEccOk() {
+  const bool ok = !(FLASH->SR1 & FLASH_SR_DBECCERR);
+  FLASH->CCR1 = FLASH_CCR_CLR_DBECCERR;
+  return ok;
+}
+
+// Reads the region with data bus faults ignored: a double ECC error (an
+// interrupted write) reads as garbage and faults that section only.
+void ReadPlaitsRegion() {
+  const Profile& profile = settings.profile();
+  plaits_region.set_flash_check(&FlashEccOk);
+  SCB->CCR |= SCB_CCR_BFHFNMIGN_Msk;
+  __DSB();
+  __ISB();
+  __set_FAULTMASK(1);
+  plaits_region.Read(
+      plaits_region_begin,
+      reinterpret_cast<const uint8_t*>(kPlaitsRegionEnd),
+      kPlaitsBlobRelease,
+      profile.directory(), profile.num_sections(),
+      kPlaitsDefaultLayout, kNumPlaitsDefaultSections,
+      &plaits_blob_services, kPlaitsApprovedBlobs, kNumPlaitsApprovedBlobs);
+  __set_FAULTMASK(0);
+  SCB->CCR &= ~SCB_CCR_BFHFNMIGN_Msk;
+  __DSB();
+  __ISB();
+  bool plaits = plaits_region.ok(PLAITS_SECTION_PLAITS);
+  for (uint8_t i = 0; i < profile.num_plaits_banks(); ++i) {
+    for (uint8_t j = 0; j < kProfileBankSize; ++j) {
+      plaits = plaits &&
+          PlaitsVoice::Available(profile.plaits_bank(i)[j], plaits_region);
+    }
+  }
+  // Beads' wavetables stay compiled in until their section (phase 4).
+  synth_lock = PlaitsRegion::Lock(plaits, true);
+  plaits_synth.set_bank_table(profile.plaits_banks());
+  plaits_synth.set_region(&plaits_region);
+  ui.set_synth_fault(synth_lock == PLAITS_SYNTH_SILENT);
+}
+#endif  // PLAITS_BLOBS
+
 void Init() {
+#ifdef PLAITS_BLOBS
+  // Its state is not loaded: seed it with stmlib's initial value.
+  Random::Seed(0x21);
+#endif  // PLAITS_BLOBS
   System sys;
   sys.Init(true);
 #ifdef DWT_CALIBRATION
@@ -515,6 +582,9 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+#ifdef PLAITS_BLOBS
+  ReadPlaitsRegion();
+#endif  // PLAITS_BLOBS
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
