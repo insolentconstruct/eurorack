@@ -26,6 +26,7 @@
 
 """Keep the plain-text Options page's reference table tied to firmware."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -530,3 +531,28 @@ for feature, row in zip(catalog["features"], exported):
     elif identity >= 15:
         assert feature["default_state"] == "Off" and feature["default"] == 0
 print("Profile page catalogue: PASS")
+
+
+# Plaits model and library IDs are permanent: profiles and regions store them.
+# Entries may be added; frozen ones (models below 100, libraries 1-6) never change.
+models = catalog["plaits_models"]
+libraries = catalog["plaits_libraries"]
+model_ids = [m["id"] for m in models]
+library_ids = [lib["id"] for lib in libraries]
+assert model_ids == sorted(set(model_ids))
+assert library_ids == sorted(set(library_ids)) and library_ids[0] >= 1
+assert model_ids[:24] == list(range(24))
+assert not set(model_ids) & {24, 25, 26, 27, 255}
+assert max(model_ids) < 255 and max(library_ids) < 255
+assert len({m["palette"] for m in models}) == len(models)
+for m in models:
+    assert set(m["libraries"]) <= set(library_ids), m["name"]
+frozen = "".join(
+    "%d %s\n" % (m["id"], m["palette"]) for m in models if m["id"] < 100)
+assert hashlib.sha256(frozen.encode()).hexdigest() == (
+    "cb44e2e5a8899943be4cbe2661b2ede814ef59d5d3a49cad479a7342dceb5ef6")
+frozen = "".join(
+    "%d %s\n" % (lib["id"], lib["name"]) for lib in libraries if lib["id"] <= 6)
+assert hashlib.sha256(frozen.encode()).hexdigest() == (
+    "e74da01e14d4223418bf753ad8e962c8cd654d0fecba81efb836dc68d369516d")
+print("Plaits model and library IDs: PASS")
