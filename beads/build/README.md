@@ -10,7 +10,7 @@ Updating is not a remedy for unexplained module behaviour. Disconnect speakers: 
 
 ## Options page
 
-[A] is the quality button; [M] is CV assign. Hold [M] alone for three seconds with the mix knobs still, then release. Tap [M] to change pages. All three mix LEDs pulse while the entry hold continues; after release, the indicated page LEDs pulse. Reopening remembers the page until power-off; startup selects page 1. Custom layouts can add pages 5-7 (FEEDBACK and REVERB, DRY/WET and REVERB, then all three); taps skip empty pages.
+[A] is the quality button; [M] is CV assign. Hold [M] alone for three seconds with the mix knobs still, then release. Tap [M] to change pages. All three mix LEDs pulse while the entry hold continues; after release, the indicated page LEDs pulse. Reopening remembers the page until power-off; startup selects page 1. Custom layouts can add pages 6-7 (DRY/WET and REVERB, then all three); taps skip empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more than a tenth of its travel to take over; [A] shows its setting. Unused knobs do nothing.
 
@@ -19,6 +19,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
 4 / FEEDBACK and DRY/WET  LED brightness  SEED latch    Limiter
+5 / FEEDBACK and REVERB  Resonator  Resonator material  Resonator ring time
 
 Changes save about a second after turning stops. Wait before power-off. Hold [M] for three seconds or press another button to close; mix controls catch up smoothly. On page 1 with Scale selected, SEED taps step the scale instead of closing. The exit press does nothing else until the button is released. The page LED flashes on entry, close and save. First values are steady green; later values use yellow, red and blinking colours. See [OPTIONS.md](docs/OPTIONS.md) for every value.
 
@@ -39,6 +40,8 @@ Processor: Lower half selects Granular (Stock); upper half selects Spectral, usi
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retaining pitch and random settings. FEEDBACK selects one of eight models in the current bank; TIME controls HARMONICS, SIZE controls TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the oscillator/grain balance it sets in the stock synth; FREEZE sustains. Other grain controls remain. At DENSITY noon with SEED unpatched, the last voice drones.
 
 Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half and release to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, the same hold restarts automatic gain. The hold acts on release, and not at all if a knob or button was used while [A] was down.
+
+Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off (Stock), After the grains or Before the buffer, in thirds. DRY/WET picks its Material in quarters: Wood, String, Glass or Bell; REVERB its Ring time: Short, Medium, Long or Very long, each about four times longer. String and Medium are the defaults; page 5 is not saved yet, so each start-up uses the profile's values. PITCH tunes it and Pitch scale snaps it. Attacks hits strike it, and so does SEED: each press, and each rising gate; latched, each gate. In delay mode SEED stays the clock. Before the buffer, a strike while frozen is not heard. With the resonator on, tapping [M] after REVERB, width and diffusion makes the CV input move its damping, until power-off.
 
 ## Plaits synth
 
@@ -133,7 +136,7 @@ Grain stealing: by default Drizzlet chooses which playing grain a new one replac
 
 Two delay choices keep stock behaviour by default and add no panel gesture or options-page slot. Delay feedback: Unity notch gives FEEDBACK a notch near 3 o'clock where repeats neither fade nor grow, for sound on sound, and keeps the bass in the loop; both ends of the knob stay stock. Delay time: Crossfade keeps the delay time while DENSITY turns, then fades to the new one instead of bending the pitch; very short delays still glide, for flanging. Granular and both synths are unchanged.
 
-A resonator choice keeps stock behaviour by default and adds no panel gesture or options-page slot. Resonator: After the grains rings Rings' modal resonator on the grains; Before the buffer records the input through it, so the grains play the resonance. PITCH tunes it, Pitch scale snaps it and Attacks hits strike it. Spectral and both synths are unchanged.
+A resonator choice keeps stock behaviour by default. Its placement, Material and Ring time are on options page 5. Hygrostat can also set exact structure, brightness, damping, pickup position and amount, which replace the page's values for that control. Spectral and both synths are unchanged.
 
 Plaits synth banks: FEEDBACK selects one of the eight models of the current bank, as on Plaits: green (its first bank), red (noise and drums) or yellow (the Plaits 1.2 models). While the Plaits synth plays, hold [A] and press FREEZE to step to the next bank; [A] flashes the bank colour and FREEZE stays as it was. Everywhere else [A]+FREEZE is still buffer trim; in spectral and the wavetable synth it only releases a latched FREEZE. A profile can choose the starting bank (green by default).
 

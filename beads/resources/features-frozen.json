@@ -40,7 +40,14 @@
     {"id": 38, "symbol": "FIRST_PAGE", "values": ["Last used", "First page"]},
     {"id": 39, "symbol": "START_QUALITY", "values": ["Keep current", "Bright digital", "Cold digital", "Sunny tape", "Scorched cassette"]},
     {"id": 40, "symbol": "GAIN_KNOB", "values": ["Not on a knob"]},
-    {"id": 41, "symbol": "RESONATOR", "values": ["Off (stock)", "After the grains", "Before the buffer"]}
+    {"id": 41, "symbol": "RESONATOR", "values": ["Off (stock)", "After the grains", "Before the buffer"]},
+    {"id": 43, "symbol": "RESONATOR_MATERIAL", "values": ["Wood", "String", "Glass", "Bell"]},
+    {"id": 44, "symbol": "RESONATOR_RING", "values": ["Short", "Medium", "Long", "Very long"]},
+    {"id": 45, "symbol": "RESONATOR_STRUCTURE", "values": null},
+    {"id": 46, "symbol": "RESONATOR_BRIGHTNESS", "values": null},
+    {"id": 47, "symbol": "RESONATOR_DAMPING", "values": null},
+    {"id": 48, "symbol": "RESONATOR_POSITION", "values": null},
+    {"id": 49, "symbol": "RESONATOR_AMOUNT", "values": null}
   ],
   "reserved": [
     {"id": 42, "for": "Rings polyphony"}

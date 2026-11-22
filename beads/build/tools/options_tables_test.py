@@ -190,13 +190,16 @@ for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
-assert len(values) == 12 and "Stereo width" not in values
+assert len(values["Resonator"]) == 3
+assert len(values["Resonator material"]) == 4
+assert len(values["Resonator ring time"]) == 4
+assert len(values) == 15 and "Stereo width" not in values
 # [A]+DRY/WET width keeps its meter on the guides.
 assert [indication(row) for row in WIDTH_ROWS] == [
     "green; steady", "green → yellow → red"
 ]
 page_numbers = sorted({row.split("\t")[0] for row in rows})
-assert page_numbers == ["1", "2", "3", "4"]
+assert page_numbers == ["1", "2", "3", "4", "5"]
 
 print("Options page map and TSV match firmware tables: PASS")
 

@@ -40,6 +40,7 @@
 #include "beads/test/test_checker.h"
 
 using namespace beads;
+using namespace stmlib;
 
 namespace rings {
 extern const float lut_stiffness[];
@@ -153,15 +154,51 @@ float Goertzel(const float* x, size_t size, float frequency) {
   return s1 * s1 + s2 * s2 - coefficient * s1 * s2;
 }
 
-// The fixed controls' constants are Rings' table values, bit for bit.
-void TestResonatorConstants() {
-  test_checker.Start("TestResonatorConstants");
+// The defaults read table entries, the constants of the fixed resonator.
+void TestResonatorDefaults() {
+  test_checker.Start("TestResonatorDefaults");
   const float stiffness = stmlib::Interpolate(
       rings::lut_stiffness, kResonatorStructure, 256.0f);
   const float decades = stmlib::Interpolate(
       rings::lut_4_decades, kResonatorDamping, 256.0f);
-  CHECK(!memcmp(&stiffness, &kResonatorStiffness, sizeof(float)));
-  CHECK(!memcmp(&decades, &kResonatorDecades, sizeof(float)));
+  const float zero = 0.0f;
+  const float hundred = 100.0f;
+  CHECK(!memcmp(&stiffness, &zero, sizeof(float)));
+  CHECK(!memcmp(&decades, &hundred, sizeof(float)));
+  // String and Medium are the defaults.
+  CHECK(kResonatorMaterials[1].structure == kResonatorStructure);
+  CHECK(kResonatorMaterials[1].brightness == kResonatorBrightness);
+  CHECK(kResonatorRingTimes[1] == kResonatorDamping);
+  // Default controls, as the UI sets them, change nothing.
+  for (int placement = 1; placement < 3; ++placement) {
+    uint64_t hashes[2][2];
+    for (int pass = 0; pass < 2; ++pass) {
+      Init(Processor::MEDIA_DIGITAL, false, placement);
+      if (pass) {
+        ResonatorControls c;
+        c.structure = kResonatorStructure;
+        c.brightness = kResonatorBrightness;
+        c.damping = kResonatorDamping;
+        c.position = kResonatorPosition;
+        c.amount = 1.0f;
+        processor.set_resonator_controls(c);
+      }
+      mix.dry_wet = 0.8f;
+      uint64_t hash = 14695981039346656037ull;
+      for (int block = 0; block < 2000; ++block) {
+        FillSine(block, 0.3f);
+        processor.set_attack_trigger(block % 300 == 0);
+        Process();
+        hash = Hash(hash, output, BlockSize());
+      }
+      hashes[pass][0] = hash;
+      hashes[pass][1] = Hash(14695981039346656037ull,
+          reinterpret_cast<const FloatFrame*>(&banks[0][0]),
+          sizeof(banks) / sizeof(FloatFrame));
+    }
+    CHECK(hashes[0][0] == hashes[1][0]);
+    CHECK(hashes[0][1] == hashes[1][1]);
+  }
 }
 
 void TestResonatorBank() {
@@ -240,7 +277,7 @@ void TestResonatorBank() {
 float TunedFrequency(const RandomizedParameter& pitch) {
   FloatFrame frames[12];
   memset(frames, 0, sizeof(frames));
-  processor.ProcessResonator(pitch, false, frames, BlockSize());
+  processor.ProcessResonator(pitch, false, false, frames, BlockSize());
   return processor.resonator_.frequency_ * processor.sample_rate();
 }
 
@@ -322,7 +359,8 @@ void TestResonatorLevel() {
           frames[i].r = 0.9f * Noise();
           before[i] = frames[i];
         }
-        processor.ProcessResonator(pitch, block % 200 == 0, frames, size);
+        processor.ProcessResonator(
+            pitch, block % 200 == 0, false, frames, size);
         for (size_t i = 0; i < size; ++i) {
           const float l = frames[i].l - before[i].l;
           const float r = frames[i].r - before[i].r;
@@ -368,7 +406,7 @@ void TestResonatorTonalLevel() {
         const size_t size = BlockSize();
         FloatFrame frames[12];
         memset(frames, 0, sizeof(frames));
-        processor.ProcessResonator(pitch, false, frames, size);
+        processor.ProcessResonator(pitch, false, false, frames, size);
         const float f0 = processor.resonator_.frequency_;
         const float f = mode ? 2.0f * f0 * (1.0f + stiffness) : f0;
         float peak = 0.0f;
@@ -380,7 +418,7 @@ void TestResonatorTonalLevel() {
           }
           FloatFrame before[12];
           std::copy(frames, frames + size, before);
-          processor.ProcessResonator(pitch, false, frames, size);
+          processor.ProcessResonator(pitch, false, false, frames, size);
           for (size_t i = 0; i < size; ++i) {
             const float l = frames[i].l - before[i].l;
             const float r = frames[i].r - before[i].r;
@@ -601,6 +639,270 @@ void TestResonatorStrike() {
   }
 }
 
+bool Same(const float* a, const float* b, size_t size) {
+  for (size_t i = 0; i < size; ++i) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The resonance alone for 1 s after one strike, at 48 kHz: its peak, and
+// the second half-second's energy over the first's.
+void StrikeResponse(const ResonatorControls& c, bool seed, float note,
+    float* peak, float* decay) {
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  processor.set_resonator_controls(c);
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  pitch.base = note;
+  *peak = 0.0f;
+  float energy[2] = { 0.0f, 0.0f };
+  for (int block = 0; block < 4000; ++block) {
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, !block && !seed, !block && seed,
+        frames, 12);
+    for (size_t i = 0; i < 12; ++i) {
+      *peak = std::max(*peak, std::max(fabsf(frames[i].l),
+          fabsf(frames[i].r)));
+      energy[block / 2000] += frames[i].l * frames[i].l +
+          frames[i].r * frames[i].r;
+    }
+  }
+  *decay = energy[1] / energy[0];
+}
+
+ResonatorControls Controls(int material, int ring) {
+  ResonatorControls c;
+  c.structure = kResonatorMaterials[material].structure;
+  c.brightness = kResonatorMaterials[material].brightness;
+  c.damping = kResonatorRingTimes[ring];
+  c.position = kResonatorPosition;
+  c.amount = 1.0f;
+  return c;
+}
+
+// Each Ring time rings longer than the last; the Materials sound apart, at
+// levels close to String's; Amount scales the resonance exactly.
+void TestResonatorControls() {
+  test_checker.Start("TestResonatorControls");
+  for (int material = 0; material < kNumResonatorMaterials; ++material) {
+    float previous = 0.0f;
+    for (int ring = 0; ring < kNumResonatorRingTimes; ++ring) {
+      float peak;
+      float decay;
+      StrikeResponse(Controls(material, ring), true, 0.0f, &peak, &decay);
+      CHECK(decay > previous * 1.5f);
+      CHECK(peak > 0.05f && peak < 0.5f);
+      previous = decay;
+    }
+  }
+  uint64_t hashes[kNumResonatorMaterials];
+  float levels[kNumResonatorMaterials];
+  for (int material = 0; material < kNumResonatorMaterials; ++material) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    processor.set_resonator_controls(Controls(material, 1));
+    RandomizedParameter pitch;
+    memset(&pitch, 0, sizeof(pitch));
+    uint64_t hash = 14695981039346656037ull;
+    float energy = 0.0f;
+    for (int block = 0; block < 4000; ++block) {
+      FloatFrame frames[12];
+      for (size_t i = 0; i < 12; ++i) {
+        frames[i].l = 0.3f * Noise();
+        frames[i].r = 0.3f * Noise();
+      }
+      FloatFrame before[12];
+      std::copy(frames, frames + 12, before);
+      processor.ProcessResonator(pitch, false, false, frames, 12);
+      for (size_t i = 0; i < 12; ++i) {
+        const float l = frames[i].l - before[i].l;
+        const float r = frames[i].r - before[i].r;
+        energy += l * l + r * r;
+      }
+      hash = Hash(hash, frames, 12);
+    }
+    hashes[material] = hash;
+    levels[material] = sqrtf(energy / (4000.0f * 24.0f));
+    for (int other = 0; other < material; ++other) {
+      CHECK(hashes[other] != hash);
+    }
+  }
+  // On noise at C3, each Material is within 4 dB of String.
+  for (int material = 0; material < kNumResonatorMaterials; ++material) {
+    CHECK(levels[material] > levels[1] * 0.63f);
+    CHECK(levels[material] < levels[1] * 1.58f);
+  }
+  // Amount: the limited resonance times the amount, bit for bit.
+  float resonance[3][120];
+  const float amounts[3] = { 0.0f, 1.0f, 2.0f };
+  for (int a = 0; a < 3; ++a) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    ResonatorControls c = Controls(1, 1);
+    c.amount = amounts[a];
+    processor.set_resonator_controls(c);
+    RandomizedParameter pitch;
+    memset(&pitch, 0, sizeof(pitch));
+    for (int block = 0; block < 10; ++block) {
+      FloatFrame frames[12];
+      memset(frames, 0, sizeof(frames));
+      processor.ProcessResonator(pitch, false, !block, frames, 12);
+      for (size_t i = 0; i < 12; ++i) {
+        resonance[a][block * 12 + i] = frames[i].l;
+      }
+    }
+  }
+  bool exact = true;
+  float level = 0.0f;
+  for (int i = 0; i < 120; ++i) {
+    exact = exact && resonance[0][i] == 0.0f &&
+        resonance[2][i] == 2.0f * resonance[1][i];
+    level += fabsf(resonance[1][i]);
+  }
+  CHECK(exact);
+  CHECK(level > 0.0f);
+  // The controls outlive a rate change, which restarts the resonator.
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  processor.set_resonator_controls(Controls(3, 0));
+  Process();
+  processor.Configure(Processor::MEDIA_DIRTY_TAPE, false);
+  Process();
+  CHECK(processor.resonator_.structure_ == kResonatorMaterials[3].structure);
+  CHECK(processor.resonator_.damping_ == kResonatorRingTimes[0]);
+}
+
+// SEED's strike is near -12 dBFS from C2 to C5, and far louder than a hit's.
+void TestResonatorSeedLevel() {
+  test_checker.Start("TestResonatorSeedLevel");
+  for (int note = -12; note <= 24; note += 12) {
+    float seed_peak;
+    float hit_peak;
+    float decay;
+    StrikeResponse(Controls(1, 1), true, float(note), &seed_peak, &decay);
+    StrikeResponse(Controls(1, 1), false, float(note), &hit_peak, &decay);
+    CHECK(seed_peak > 0.13f && seed_peak < 0.4f);
+    CHECK(seed_peak > 10.0f * hit_peak);
+  }
+}
+
+// The edge policy: one gate unlatched, the jack's edges latched.
+void TestResonatorSeedEdges() {
+  test_checker.Start("TestResonatorSeedEdges");
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  GateFlags low[12];
+  GateFlags rising[12];
+  GateFlags high[12];
+  std::fill(low, low + 12, GATE_FLAG_LOW);
+  std::fill(high, high + 12, GATE_FLAG_HIGH);
+  std::fill(rising, rising + 5, GATE_FLAG_LOW);
+  std::fill(rising + 5, rising + 12, GATE_FLAG_HIGH);
+  rising[5] = GateFlags(GATE_FLAG_RISING | GATE_FLAG_HIGH);
+  // A held button starts nothing when it turns on.
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_ON, NULL, 12));
+  // Button: each press, not the hold.
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, NULL, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_ON, NULL, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_ON, NULL, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, NULL, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_ON, NULL, 12));
+  // Jack: each rising edge; merged with a held button, none.
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, low, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_OFF, rising, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, high, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, low, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_ON, low, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_ON, rising, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, high, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_ON, high, 12));
+  // Latched: the jack's edges only; unlatching is no press.
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_LOCKED, NULL, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_LOCKED, rising, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_LOCKED, high, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_ON, NULL, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, NULL, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_ON, NULL, 12));
+  // Sync and Add strike at the jack's edges; Ignore has no jack.
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_SYNC, rising, 12));
+  CHECK(processor.SeedStrike(SEED_BUTTON_STATE_ADD, rising, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_ADD, high, 12));
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_IGNORE, NULL, 12));
+  // A held button and a jack held high, when it is turned on: no strike.
+  processor.set_resonator(RESONATOR_BEFORE_BUFFER);
+  CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, high, 12));
+}
+
+// Through the block: delay mode keeps SEED for its clock; a hit in the same
+// block adds nothing; frozen, a strike before the buffer is not heard.
+void TestResonatorSeedBlock() {
+  test_checker.Start("TestResonatorSeedBlock");
+  for (int delay = 0; delay < 2; ++delay) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    density.base = 0.5f;
+    parameters.size.base = delay ? 1.0f : 0.5f;
+    for (int block = 0; block < 8000; ++block) {
+      Process();
+    }
+    CHECK(processor.delay_active() == bool(delay));
+    CHECK(ResonatorEnergy() == 0.0f);
+    processor.Process(SEED_BUTTON_STATE_OFF, NULL, freeze, density,
+        parameters, mix, input, output, 12);
+    processor.Process(SEED_BUTTON_STATE_ON, NULL, freeze, density,
+        parameters, mix, input, output, 12);
+    CHECK((ResonatorEnergy() > 0.0f) == !delay);
+  }
+  float outputs[2][24000];
+  for (int hit = 0; hit < 2; ++hit) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    density.base = 0.5f;
+    mix.dry_wet = 1.0f;
+    for (int block = 0; block < 1000; ++block) {
+      const SeedButtonState state = block == 500
+          ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
+      processor.set_attack_trigger(hit && block == 500);
+      processor.Process(state, NULL, freeze, density, parameters, mix, input,
+          output, 12);
+      for (size_t i = 0; i < 12; ++i) {
+        outputs[hit][(block * 12 + i) * 2] = output[i].l;
+        outputs[hit][(block * 12 + i) * 2 + 1] = output[i].r;
+      }
+    }
+  }
+  CHECK(Same(outputs[0], outputs[1], 24000));
+  float level = 0.0f;
+  for (int i = 0; i < 24000; ++i) {
+    level = std::max(level, fabsf(outputs[0][i]));
+  }
+  CHECK(level > 0.01f);
+  // Frozen, SEED pressed: the same output with the resonator before the
+  // buffer as without it, though it rings.
+  for (int on = 0; on < 2; ++on) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_OFF);
+    mix.dry_wet = 1.0f;
+    density.base = 0.9f;
+    for (int block = 0; block < 1000; ++block) {
+      FillSine(block, 0.3f);
+      Process();
+    }
+    std::fill(freeze, freeze + 12, true);
+    memset(input, 0, sizeof(input));
+    processor.set_resonator(on ? RESONATOR_BEFORE_BUFFER : RESONATOR_OFF);
+    for (int block = 0; block < 1000; ++block) {
+      const SeedButtonState state = block == 500
+          ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
+      processor.Process(state, NULL, freeze, density, parameters, mix, input,
+          output, 12);
+      for (size_t i = 0; i < 12; ++i) {
+        outputs[on][(block * 12 + i) * 2] = output[i].l;
+        outputs[on][(block * 12 + i) * 2 + 1] = output[i].r;
+      }
+    }
+    CHECK(!on || ResonatorEnergy() > 0.0f);
+  }
+  CHECK(Same(outputs[0], outputs[1], 24000));
+}
+
 // Every quality, mono and stereo, in delay mode too: finite, and no louder
 // than the stock block by more than the resonance it adds.
 void TestResonatorQualities() {
@@ -649,7 +951,7 @@ int main() {
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
 #endif  // defined(__SSE__)
-  TestResonatorConstants();
+  TestResonatorDefaults();
   TestResonatorBank();
   TestResonatorPitch();
   TestResonatorLevel();
@@ -659,6 +961,10 @@ int main() {
   TestResonatorOff();
   TestResonatorStrike();
   TestResonatorQualities();
+  TestResonatorControls();
+  TestResonatorSeedLevel();
+  TestResonatorSeedEdges();
+  TestResonatorSeedBlock();
   TestResonatorOptionsMatch();
   TestResonatorSpectralReset();
   return test_checker.failures() ? 1 : 0;

@@ -106,14 +106,14 @@ void TestOptionalPageSlots() {
   CHECK(embedded.Init(kProfileBlock));
   Profile fallback;
   fallback.Defaults();
-  // The factory layout stays on pages 1-4, which Beta 2 also accepts.
+  // The factory layout fills pages 1-5.
   for (int slot = 1; slot < kNumPageSlots; ++slot) {
-    CHECK((embedded.Page(slot) != FEATURE_NONE) == (slot <= 12));
+    CHECK((embedded.Page(slot) != FEATURE_NONE) == (slot <= 15));
     CHECK(fallback.Page(slot) == embedded.Page(slot));
   }
   CHECK(embedded.Page(1) == FEATURE_PITCH);
   uint8_t b[kProfileSize];
-  for (int slot = 13; slot <= kNumPageSlots; ++slot) {
+  for (int slot = 16; slot <= kNumPageSlots; ++slot) {
     Template(b);
     uint8_t* pitch = NULL;
     uint8_t* limiter = NULL;

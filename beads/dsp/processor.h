@@ -61,6 +61,8 @@ const float kDelayModeFadeTime = 0.75f;  // seconds
 // The grains' mono sum and an input hit strike the resonator.
 const float kResonatorInputGain = 0.5f;
 const float kResonatorStrike = 0.5f;
+// SEED's pulse over the fundamental's frequency peaks near -12 dBFS.
+const float kResonatorSeedStrike = 0.07f;
 // PITCH at noon tunes it to C3.
 const float kResonatorRootNote = 48.0f;
 
@@ -68,6 +70,14 @@ enum ResonatorPlacement {
   RESONATOR_OFF,
   RESONATOR_AFTER_GRAINS,
   RESONATOR_BEFORE_BUFFER
+};
+
+struct ResonatorControls {
+  float structure;
+  float brightness;
+  float damping;
+  float position;
+  float amount;
 };
 
 class Processor {
@@ -127,6 +137,13 @@ class Processor {
     SetOption(OPTION_FLAG_RESONATOR_INPUT,
         placement == RESONATOR_BEFORE_BUFFER);
     resonator_sample_rate_ = 0.0f;
+    // A SEED held while it starts does not strike it.
+    seed_gate_ = true;
+  }
+  // Set at the UI rate; until then the resonator keeps its defaults.
+  inline void set_resonator_controls(const ResonatorControls& controls) {
+    resonator_controls_ = controls;
+    resonator_controls_set_ = true;
   }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
@@ -411,10 +428,16 @@ class Processor {
   void ProcessResonator(
       const RandomizedParameter& pitch,
       bool strike,
+      bool seed_strike,
       FloatFrame* frames,
       size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
+  // A rising SEED, button and jack merged as the grains see them.
+  bool SeedStrike(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      size_t size);
   inline void AddAttackTrigger(TriggerGenerator::Output* triggers) {
     if (attack_trigger_) {
       triggers[0].trigger = true;
@@ -481,6 +504,9 @@ class Processor {
   ModalResonator resonator_;
   // It starts afresh at each new rate.
   float resonator_sample_rate_;
+  ResonatorControls resonator_controls_;
+  bool resonator_controls_set_;
+  bool seed_gate_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

@@ -51,6 +51,7 @@ PAGE_CONTROLS = ['none', 'halves', 'zones', 'steps', 'scale']
 # Values 0-2 of a page feature light these, steady, unless listed.
 OPTION_COLORS = [[0, 255, 0], [255, 255, 0], [255, 0, 0]]
 NOT_USED = 'Not used yet'
+RESERVED = 'Reserved'
 
 # LED mask of each options page (bit 0 FEEDBACK, 1 DRY/WET, 2 REVERB).
 PAGE_LEDS = [1, 2, 4, 3, 5, 6, 7]
@@ -68,8 +69,14 @@ def header_constant(header, name):
   return int(value, 0)
 
 
-def check_manifest(features):
-  for i, feature in enumerate(features, 1):
+def check_manifest(features, reserved):
+  # IDs run 1, 2, 3... and skip only the reserved ones.
+  for feature in features:
+    assert feature['id'] not in reserved, 'ID %d is reserved for %s' % (
+        feature['id'], reserved[feature['id']])
+  ids = [i for i in range(1, len(features) + len(reserved) + 1)
+         if i not in reserved][:len(features)]
+  for i, feature in zip(ids, features):
     assert feature['id'] == i, 'IDs run 1, 2, 3... without gaps: %d' % i
     assert re.match(r'^[A-Z][A-Z0-9_]*$', feature['symbol']), feature
     assert set(feature['states']) <= set(STATES), feature['symbol']
@@ -144,9 +151,20 @@ def definition(values, f):
       ', '.join('true' if flag else 'false' for flag in flags), label(f))
 
 
-def definitions(features):
+def by_id(features, reserved):
+  # Each ID up to the last feature's: the feature, or None while reserved.
+  rows = dict((f['id'], f) for f in features)
+  return [rows.get(i) for i in range(1, features[-1]['id'] + 1)]
+
+
+def definitions(features, reserved):
   lines = ['  { 0, kNoField, false, false, false, false },  // None.']
-  for f in features:
+  for f in by_id(features, reserved):
+    if f is None:
+      # A reserved ID parses only as Off or Fixed at 0, and does nothing.
+      lines.append('  { 1, kNoField, false, false, false, false },'
+          '  // Reserved.')
+      continue
     count = len(f['values']) if f['values'] else 0
     if f.get('values_from') == 'banks':
       lines += [
@@ -220,8 +238,12 @@ def option_pages(features):
       page, knob = (slot - 1) // 3, (slot - 1) % 3
       assert knobs[page][knob] == 'FEATURE_NONE', 'Page slot %d' % slot
       knobs[page][knob] = 'FEATURE_' + f['symbol']
-  lines = ['  { %d, { %s } },' % (leds, ', '.join(k))
-           for leds, k in zip(PAGE_LEDS, knobs)]
+  lines = []
+  for leds, k in zip(PAGE_LEDS, knobs):
+    line = '  { %d, { %s } },' % (leds, ', '.join(k))
+    if len(line) > 80:
+      line = '  { %d, { %s,\n      %s } },' % (leds, ', '.join(k[:2]), k[2])
+    lines.append(line)
   lines[-1] = lines[-1].rstrip(',')
   return lines
 
@@ -234,9 +256,12 @@ def page_feature_list(features):
   return ['  FEATURE_%s,' % f['symbol'] for f in page_features(features)]
 
 
-def page_controls(features):
+def page_controls(features, reserved):
   lines = ['  PAGE_CONTROL_NONE,  // None.']
-  for f in features:
+  for f in by_id(features, reserved):
+    if f is None:
+      lines.append('  PAGE_CONTROL_NONE,  // Reserved.')
+      continue
     lines.append('  PAGE_CONTROL_%s,  // %s' % (
         f.get('page_control', 'none').upper(), label(f)))
   return lines
@@ -258,8 +283,9 @@ def option_values(features):
   return lines
 
 
-def option_names(features):
-  names = [NOT_USED] + [f.get('label', f['name']) for f in features]
+def option_names(features, reserved):
+  names = [NOT_USED] + [f.get('label', f['name']) if f else RESERVED
+      for f in by_id(features, reserved)]
   return ['  %s,' % json.dumps(n) for n in names]
 
 
@@ -321,8 +347,10 @@ def replace(text, start, end, lines, path):
 def outputs(root):
   manifest = json.loads((root / MANIFEST).read_text())
   features = manifest['features']
-  check_manifest(features)
-  check_frozen(features, json.loads((root / FROZEN).read_text()))
+  frozen = json.loads((root / FROZEN).read_text())
+  reserved = dict((row['id'], row['for']) for row in frozen['reserved'])
+  check_manifest(features, reserved)
+  check_frozen(features, frozen)
   header = (root / 'beads/profile.h').read_text()
   magic = header_constant(header, 'kProfileMagic')
   profile_format = header_constant(header, 'kProfileFormat')
@@ -335,7 +363,7 @@ def outputs(root):
         feature_enum(features)),
     ('beads/profile.cc',
         'const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {', '};',
-        definitions(features)),
+        definitions(features, reserved)),
     ('beads/profile.cc',
         '    __attribute__((section(".profile"), used, aligned(32))) = {',
         '};', block_lines(block)),
@@ -354,14 +382,15 @@ def outputs(root):
         page_feature_list(features)),
     ('beads/options.cc',
         'const uint8_t kPageControls[FEATURE_LAST] = {', '};',
-        page_controls(features)),
+        page_controls(features, reserved)),
     ('beads/options.cc',
         'const Leds::Color kOptionColors[kNumOptionColors] = {', '};',
         option_colors()),
     ('beads/options.cc', 'const OptionValue kOptionValues[] = {', '};',
         option_values(features)),
     ('beads/build/tools/options_tables.cc',
-        'const char* const kOptionNames[] = {', '};', option_names(features)),
+        'const char* const kOptionNames[] = {', '};',
+        option_names(features, reserved)),
     ('beads/build/tools/options_tables.cc',
         'const NamedValue kValueNames[] = {', '};', value_names(features)),
   ]

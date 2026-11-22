@@ -81,7 +81,8 @@ assert set(block[size + 4:]) == {0xff}
 print('Factory profile block holds the manifest factory rows: PASS')
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features']] == list(range(1, 42))
+assert [r['id'] for r in frozen['features']] == (
+    list(range(1, 42)) + list(range(43, 50)))
 assert [r['id'] for r in frozen['reserved']] == [42]
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
 LAST = '    }\n  ],\n  "plaits_models"'
@@ -102,9 +103,15 @@ faults = [
       RESONATOR.replace('41', '43')),
   ('reserved for Rings polyphony', features.MANIFEST, LAST,
       LAST.replace('    }', '    }' + POLYPHONY, 1)),
+  # A gap is allowed only at a reserved ID.
+  ('without gaps', features.MANIFEST, '"id": 49,\n      "symbol"',
+      '"id": 51,\n      "symbol"'),
   ('stale', 'beads/profile.cc',
-      '{ 3, kNoField, false, false, false, false },  // Resonator.',
-      '{ 4, kNoField, false, false, false, false },  // Resonator.'),
+      '{ 3, kNoField, true, false, false, false },  // Resonator.',
+      '{ 4, kNoField, true, false, false, false },  // Resonator.'),
+  ('stale', 'beads/profile.cc',
+      '{ 1, kNoField, false, false, false, false },  // Reserved.',
+      '{ 0, kNoField, false, false, false, false },  // Reserved.'),
   ('stale', 'beads/profile.h',
       'FEATURE_RESONATOR = 41,', 'FEATURE_RESONATOR = 40,'),
   ('stale', 'beads/profile.cc',
@@ -119,7 +126,7 @@ faults = [
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
   ('stale', 'beads/options.h',
-      'kNumOptionValues = 10;', 'kNumOptionValues = 11;'),
+      'kNumOptionValues = 12;', 'kNumOptionValues = 13;'),
   ('stale', 'beads/options.h',
       'PAGE_VALUES_DELAY = 3,', 'PAGE_VALUES_DELAY = 4,'),
   ('stale', 'beads/options.cc',

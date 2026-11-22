@@ -174,13 +174,17 @@ void Processor::ProcessOptions(
       resonator_sample_rate_ = 0.0f;
     }
   } else {
-    // Hits strike the resonator; read before the grains take their mark.
+    // Hits, read before the grains take their mark, and SEED strike it;
+    // in delay mode SEED is the clock.
     const bool strike = resonator && (attack_trigger_ || AttackOnset());
+    const bool seed_strike = resonator &&
+        SeedStrike(seed_button_state, seed_input, size) && !delay_mode;
     FloatFrame resonated[resonator ? size : 1];
     const FloatFrame* recorded = in;
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_INPUT)) {
       copy(&in[0], &in[size], &resonated[0]);
-      ProcessResonator(parameters.pitch, strike, resonated, size);
+      ProcessResonator(
+          parameters.pitch, strike, seed_strike, resonated, size);
       recorded = resonated;
     }
     switch (media_) {
@@ -203,7 +207,7 @@ void Processor::ProcessOptions(
     }
     QuantizeDrySignal(in, dry_signal, size);
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
-      ProcessResonator(parameters.pitch, strike, out, size);
+      ProcessResonator(parameters.pitch, strike, seed_strike, out, size);
     }
     if (evolving_feedback_ || !feedback_diffuser_.idle()) {
       feedback_diffuser_.Process(

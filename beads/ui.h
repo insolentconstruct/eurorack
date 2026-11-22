@@ -155,6 +155,11 @@ class Ui {
   inline PitchScale pitch_scale() const { return pitch_scale_; }
   inline bool random_intervals() const { return random_intervals_; }
   inline RandomIntervals intervals_mode() const { return intervals_mode_; }
+  inline uint8_t resonator() const { return resonator_; }
+  inline uint8_t resonator_material() const { return resonator_material_; }
+  inline uint8_t resonator_ring() const { return resonator_ring_; }
+  // The assignable CV moves the resonator's damping; not saved yet.
+  inline bool resonator_assigned() const { return resonator_assigned_; }
 
   // The saved engine, applied once the options page has closed.
   inline bool spectral() const { return spectral_; }
@@ -266,6 +271,10 @@ class Ui {
   volatile RandomIntervals intervals_mode_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;
+  volatile uint8_t resonator_;
+  volatile uint8_t resonator_material_;
+  volatile uint8_t resonator_ring_;
+  volatile bool resonator_assigned_;
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];

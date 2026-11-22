@@ -8,13 +8,13 @@
 ## Steps
 
 1. Open: hold the CV-assign button [M] 3 seconds; all three mix LEDs pulse. Release.
-2. Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, then FEEDBACK and DRY/WET together.
+2. Change page: tap [M]. Pages 1-5 pulse FEEDBACK, DRY/WET, REVERB, FEEDBACK and DRY/WET, then FEEDBACK and REVERB.
 3. [A] shows each stored value in turn. Turn a mix knob (not a big knob) to change it.
 4. Close: hold [M] 3 seconds or press another button. On page 1 with Pitch scale on Scale, tap SEED to step the scale. Release the exit button before normal use.
 
 It saves by itself; wait before powering off. Move a knob more than a tenth of its travel before it responds.
 
-Custom layouts can add pages 5-7: FEEDBACK and REVERB, DRY/WET and REVERB, then all three. Taps skip empty pages.
+Custom layouts can add pages 6-7: DRY/WET and REVERB, then all three. Taps skip empty pages.
 
 The quality LED [A] shows the setting value: steady, slow blink, fast blink or two pulses; colours are named below.
 
@@ -64,6 +64,16 @@ Scale (tap SEED to step through):
 | FEEDBACK | LED brightness | 100% / 66% / 33% | green; steady / yellow; steady / red; steady |
 | DRY/WET | SEED latch | Off / Ignore / Sync / Add | green; steady / yellow; steady / red; steady / green; slow blink |
 | REVERB | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
+
+## Page 5 — FEEDBACK and REVERB LEDs pulsing
+
+| Knob | Setting | Values left to right | [A] LED per value |
+|---|---|---|---|
+| FEEDBACK | Resonator | Off (stock) / After the grains / Before the buffer | green; steady / yellow; steady / red; steady |
+| DRY/WET | Resonator material | Wood / String / Glass / Bell | green; steady / yellow; steady / red; steady / green; slow blink |
+| REVERB | Resonator ring time | Short / Medium / Long / Very long | green; steady / yellow; steady / red; steady / green; slow blink |
+
+**Resonator:** SEED strikes it; not saved yet.
 
 ## Other gestures
 
