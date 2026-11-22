@@ -297,9 +297,6 @@ cases = [
   ('TestCalibrationFromMirror', 'storage', 'beads/settings.cc',
     '      (status == STORAGE_OK || status == STORAGE_RESTORED) && \\',
     '      false && \\'),
-  ('TestRestoredCalibrationChoice', 'storage', 'beads/settings.cc',
-    '      (status == STORAGE_OK || status == STORAGE_RESTORED) && \\',
-    '      status == STORAGE_OK && \\'),
   ('TestCalibrationWithoutState', 'storage', 'beads/settings.cc',
     '  if (status == STORAGE_RESTORED) {\n    chunk_storage_.SavePersistentData();',
     '  if (false) {\n    chunk_storage_.SavePersistentData();'),
@@ -468,6 +465,21 @@ cases = [
     '    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);',
     '    codec.Stop();\n'
     '    codec.Start(sr, sr / kBlockRate, &Process);'),
+  ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
+    '      if (mode_ == MODE_NORMAL && !settings_->SavePersistentData()) {',
+    '      if (mode_ == MODE_NORMAL && (settings_->SavePersistentData(), false)) {'),
+  ('TestRejectedCalibrationCue', 'firmware', 'beads/settings.cc',
+    '  return !memcmp(&requested, &persistent_data_, sizeof(PersistentData));',
+    '  return requested.padding[0] == persistent_data_.padding[0];'),
+  ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
+    '        queue_.Touch();  // A full second of it after the save\'s erase.\n',
+    ''),
+  ('TestOutOfRangeRecalibration', 'storage', 'beads/settings_storage.h',
+    '    if (!Usable(*persistent_data_) && \\\n',
+    '    if (false && \\\n'),
+  ('TestOutOfRangeRecalibration', 'storage', 'beads/settings_storage.h',
+    '            (ReadChunk(MIRROR_BASE, &data) == CHUNK_VALID && Usable(data)))) {',
+    '            false)) {'),
 
 ]
 GUARD = 'const int16_t wav_integrated_waves[] = {'
