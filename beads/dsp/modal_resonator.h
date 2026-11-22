@@ -52,12 +52,23 @@ const float kResonatorBrightness = 0.5f;
 const float kResonatorDamping = 0.5f;
 const float kResonatorPosition = 0.3f;
 
+// Drizzlet's own objects: modes in left-right pairs, each with its ring time
+// over the fundamental's and its level; a strike bends the pitch.
+struct ResonatorModes {
+  float ratio[kNumResonatorModes];
+  float decay[kNumResonatorModes];
+  float gain[kNumResonatorModes];
+  float glide;  // Frequency offset at a strike, falling to 0.
+  float glide_rate;  // Per second.
+};
+
 struct ResonatorMaterial {
   float structure;
   float brightness;
+  const ResonatorModes* modes;  // NULL: Rings' stiffness curve.
 };
 
-const int kNumResonatorMaterials = 4;
+const int kNumResonatorMaterials = 8;
 const int kNumResonatorRingTimes = 4;
 
 // The options page's curated values; Hygrostat can set exact ones instead.
@@ -102,13 +113,26 @@ class ModalResonator {
     amount_ = amount;
   }
 
+  inline void set_modes(const ResonatorModes* modes) {
+    modes_ = modes;
+  }
+
+  inline void Strike() {
+    glide_ = modes_ ? modes_->glide : 0.0f;
+  }
+
  private:
+  void ProcessModes(const float* in, float* out, float* aux, size_t size);
+
   float frequency_;
   float structure_;
   float brightness_;
   float damping_;
   float position_;
   float amount_;
+  const ResonatorModes* modes_;
+  float glide_;
+  float sample_period_;
   Limiter limiter_;
 
   plaits::ResonatorSvf<plaits::kModeBatchSize> odd_[kNumResonatorModes / 8];

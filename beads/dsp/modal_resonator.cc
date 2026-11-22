@@ -42,12 +42,111 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
+// Drizzlet's objects: measured or textbook mode sets, levels matched to
+// String's on grain-like noise.
+// Tuned bar, 1:4:10 (Rossing); upper modes short.
+const ResonatorModes kResonatorMarimba = {
+  {
+    1.0f, 1.0f, 3.99f, 3.99f, 9.95f, 9.95f,
+    17.8f, 17.8f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+  },
+  {
+    1.0f, 1.0f, 0.3f, 0.3f, 0.12f, 0.12f,
+    0.06f, 0.06f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+  },
+  {
+    7.4f, 7.4f, 3.7f, 3.7f, 1.85f, 1.85f,
+    0.74f, 0.74f, 0.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+  },
+  0.0f, 1.0f
+};
+
+// Ideal membrane, Bessel zeros over j01; m > 0 pairs split 0.3%.
+const ResonatorModes kResonatorDrum = {
+  {
+    1.0f, 1.0f, 1.58856f, 1.59812f, 2.12914f, 2.14196f,
+    2.29542f, 2.29542f, 2.64511f, 2.66103f, 2.90854f, 2.92605f,
+    3.146f, 3.16493f, 3.48965f, 3.51065f, 3.59848f, 3.59848f,
+    3.63651f, 3.65839f, 4.04676f, 4.07111f, 4.11934f, 4.14413f
+  },
+  {
+    1.0f, 1.0f, 0.848895f, 0.848895f, 0.745899f, 0.745899f,
+    0.720137f, 0.720137f, 0.668485f, 0.668485f, 0.634845f, 0.634845f,
+    0.607297f, 0.607297f, 0.571414f, 0.571414f, 0.561941f, 0.561941f,
+    0.55734f, 0.55734f, 0.521464f, 0.521464f, 0.515591f, 0.515591f
+  },
+  {
+    2.08f, 2.08f, 2.05977f, 2.05977f, 1.77917f, 1.77917f,
+    1.37288f, 1.37288f, 1.59624f, 1.59624f, 1.52224f, 1.52224f,
+    1.46366f, 1.46366f, 1.38973f, 1.38973f, 1.09649f, 1.09649f,
+    1.36138f, 1.36138f, 1.29053f, 1.29053f, 1.27911f, 1.27911f
+  },
+  0.1f, 8.0f
+};
+
+// Bowl, n(n^2-1)/sqrt(n^2+1) from n = 2; pairs split 0.4%.
+const ResonatorModes kResonatorBowl = {
+  {
+    0.996f, 1.004f, 2.81711f, 2.83974f, 5.40157f, 5.44495f,
+    8.7355f, 8.80566f, 12.8148f, 12.9177f, 17.6379f, 17.7796f,
+    23.2042f, 23.3906f, 29.5134f, 29.7504f, 36.5652f, 36.8589f,
+    44.3595f, 44.7158f, 52.8964f, 53.3213f, 62.1758f, 62.6752f
+  },
+  {
+    1.0f, 1.0f, 0.820068f, 0.820068f, 0.653257f, 0.653257f,
+    0.517473f, 0.517473f, 0.41255f, 0.41255f, 0.332773f, 0.332773f,
+    0.272058f, 0.272058f, 0.225437f, 0.225437f, 0.189199f, 0.189199f,
+    0.160655f, 0.160655f, 0.137873f, 0.137873f, 0.119459f, 0.119459f
+  },
+  {
+    2.4f, 2.4f, 1.28613f, 1.28613f, 0.870272f, 0.870272f,
+    0.65222f, 0.65222f, 0.518251f, 0.518251f, 0.427857f, 0.427857f,
+    0.362933f, 0.362933f, 0.314163f, 0.314163f, 0.276265f, 0.276265f,
+    0.246022f, 0.246022f, 0.221366f, 0.221366f, 0.200907f, 0.200907f
+  },
+  0.0f, 1.0f
+};
+
+// Free circular plate (Rossing); m > 0 pairs split 0.35%.
+const ResonatorModes kResonatorGong = {
+  {
+    0.9965f, 1.0035f, 1.73f, 1.73f, 2.31985f, 2.33615f,
+    3.89632f, 3.92369f, 4.09562f, 4.12439f, 6.27795f, 6.32205f,
+    6.68651f, 6.73348f, 7.34f, 7.34f, 8.71938f, 8.78063f,
+    9.7956f, 9.86441f, 11.3601f, 11.4399f, 11.6591f, 11.7409f
+  },
+  {
+    1.0f, 1.0f, 0.971628f, 0.971628f, 0.949559f, 0.949559f,
+    0.895736f, 0.895736f, 0.889363f, 0.889363f, 0.825083f, 0.825083f,
+    0.814067f, 0.814067f, 0.797703f, 0.797703f, 0.763359f, 0.763359f,
+    0.738989f, 0.738989f, 0.706215f, 0.706215f, 0.70028f, 0.70028f
+  },
+  {
+    1.75f, 1.75f, 1.3305f, 1.3305f, 1.14696f, 1.14696f,
+    0.885013f, 0.885013f, 0.863211f, 0.863211f, 0.697217f, 0.697217f,
+    0.67558f, 0.67558f, 0.645937f, 0.645937f, 0.591608f, 0.591608f,
+    0.558163f, 0.558163f, 0.518305f, 0.518305f, 0.511617f, 0.511617f
+  },
+  -0.06f, 3.0f
+};
+
 /* extern */
 const ResonatorMaterial kResonatorMaterials[kNumResonatorMaterials] = {
-  { 0.5f, 0.3f },  // Wood: darker, mildly stretched.
-  { kResonatorStructure, kResonatorBrightness },  // String.
-  { 0.4f, 0.5f },  // Glass: stretched, brighter.
-  { 0.8f, 0.15f },  // Bell: strongly stretched, dark.
+  { 0.5f, 0.3f, NULL },  // Wood: darker, mildly stretched.
+  { kResonatorStructure, kResonatorBrightness, NULL },  // String.
+  { 0.4f, 0.5f, NULL },  // Glass: stretched, brighter.
+  { 0.8f, 0.15f, NULL },  // Bell: strongly stretched, dark.
+  // Brightness shapes only their strike, kept under the limiter's ceiling.
+  { kResonatorStructure, 0.7f, &kResonatorMarimba },
+  { kResonatorStructure, 0.85f, &kResonatorDrum },  // Pitch falls at a strike.
+  { kResonatorStructure, 0.5f, &kResonatorBowl },  // Pairs beat left-right.
+  { kResonatorStructure, 0.75f, &kResonatorGong },  // Pitch rises at a strike.
 };
 
 // Each step rings four times longer; 2.3 s at Medium, 48 kHz.
@@ -67,6 +166,9 @@ void ModalResonator::Init(float sample_rate) {
   set_damping(kResonatorDamping);
   set_position(kResonatorPosition);
   set_amount(1.0f);
+  modes_ = NULL;
+  glide_ = 0.0f;
+  sample_period_ = 1.0f / sample_rate;
   limiter_.Init(
       1.0f / (sample_rate * 0.5f), kResonatorPeak * kResonatorHeadroom);
   // Init leaves its peak 24 dB over the threshold.
@@ -95,6 +197,10 @@ void ModalResonator::Process(
     float* out,
     float* aux,
     size_t size) {
+  if (modes_) {
+    ProcessModes(in, out, aux, size);
+    return;
+  }
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
 
@@ -143,6 +249,61 @@ void ModalResonator::Process(
       q_loss += q_loss_damping_rate * (1.0f - q_loss);
       harmonic += frequency_;
       q *= q_loss;
+    }
+    if (audible) {
+      odd->Process<FILTER_MODE_BAND_PASS, true>(
+          mode_f[0], mode_q[0], mode_a[0], in, out, size);
+      even->Process<FILTER_MODE_BAND_PASS, true>(
+          mode_f[1], mode_q[1], mode_a[1], in, aux, size);
+    }
+    ++odd;
+    ++even;
+  }
+}
+
+void ModalResonator::ProcessModes(
+    const float* in,
+    float* out,
+    float* aux,
+    size_t size) {
+  fill(&out[0], &out[size], 0.0f);
+  fill(&aux[0], &aux[size], 0.0f);
+
+  const ResonatorModes& modes = *modes_;
+  const float frequency = frequency_ * (1.0f + glide_);
+  glide_ -= glide_ * min(modes.glide_rate * sample_period_ * float(size), 1.0f);
+  const float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);
+
+  CosineOscillator amplitudes;
+  amplitudes.Init<COSINE_OSCILLATOR_APPROXIMATE>(position_);
+
+  float mode_f[2][plaits::kModeBatchSize];
+  float mode_q[2][plaits::kModeBatchSize];
+  float mode_a[2][plaits::kModeBatchSize];
+  const float* ratio = modes.ratio;
+  const float* decay = modes.decay;
+  const float* gain = modes.gain;
+  plaits::ResonatorSvf<plaits::kModeBatchSize>* odd = &odd_[0];
+  plaits::ResonatorSvf<plaits::kModeBatchSize>* even = &even_[0];
+  for (int batch = 0; batch < kNumResonatorModes / 8; ++batch) {
+    bool audible = false;
+    for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+      // A pair shares its pickup; its left and right modes may differ.
+      const float pickup = amplitudes.Next() * 0.125f;
+      for (int side = 0; side < 2; ++side) {
+        float partial_frequency = frequency * *ratio++;
+        float amplitude = pickup * *gain;
+        if (partial_frequency >= 0.49f) {
+          partial_frequency = 0.49f;
+          amplitude = 0.0f;
+        } else if (*gain != 0.0f) {
+          audible = true;
+        }
+        mode_f[side][i] = partial_frequency;
+        mode_q[side][i] = 1.0f + partial_frequency * q * *decay++;
+        mode_a[side][i] = amplitude;
+        ++gain;
+      }
     }
     if (audible) {
       odd->Process<FILTER_MODE_BAND_PASS, true>(

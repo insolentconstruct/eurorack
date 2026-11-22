@@ -1166,26 +1166,28 @@ void TestResonatorSaved() {
   Settings s;
   s.Init(false);
   for (int placement = 0; placement < 3; ++placement) {
-    for (int value = 0; value < 4; ++value) {
+    for (int value = 0; value < 8; ++value) {
       s.SetFeatureValue(FEATURE_RESONATOR, placement);
       s.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, value);
-      s.SetFeatureValue(FEATURE_RESONATOR_RING, 3 - value);
+      s.SetFeatureValue(FEATURE_RESONATOR_RING, 3 - value % 4);
       s.SaveOptions();
       Settings loaded;
       CHECK(loaded.Init(false));
       CHECK(loaded.FeatureValue(FEATURE_RESONATOR) == placement);
       CHECK(loaded.FeatureValue(FEATURE_RESONATOR_MATERIAL) == value);
-      CHECK(loaded.FeatureValue(FEATURE_RESONATOR_RING) == 3 - value);
+      CHECK(loaded.FeatureValue(FEATURE_RESONATOR_RING) == 3 - value % 4);
       const uint8_t* raw =
           reinterpret_cast<const uint8_t*>(&loaded.stored_record_);
-      CHECK(raw[24] == placement && raw[25] == value && raw[26] == 3 - value);
+      CHECK(raw[24] == placement && raw[25] == value &&
+          raw[26] == 3 - value % 4);
     }
   }
   // A byte past the values is not set: the profile's default.
-  const uint8_t bad[3] = { 4, 0x80, 0xff };
+  const uint8_t bad[3][2] = { { 4, 8 }, { 0x80, 0x80 }, { 0xff, 0xff } };
   for (int i = 0; i < 3; ++i) {
     uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.record_);
-    bytes[24] = bytes[25] = bytes[26] = bad[i];
+    bytes[24] = bytes[26] = bad[i][0];
+    bytes[25] = bad[i][1];
     CHECK(s.chunk_storage_.SaveRecord());
     Settings loaded;
     CHECK(loaded.Init(false));

@@ -816,7 +816,11 @@
         {"name": "Wood", "led": [0, 255, 0]},
         {"name": "String", "led": [255, 255, 0]},
         {"name": "Glass", "led": [255, 0, 0]},
-        {"name": "Bell", "led": [0, 255, 0], "pulse": "slow"}
+        {"name": "Bell", "led": [0, 255, 0], "pulse": "slow"},
+        {"name": "Marimba", "led": [255, 255, 0], "pulse": "slow"},
+        {"name": "Drum", "led": [255, 0, 0], "pulse": "slow"},
+        {"name": "Bowl", "led": [0, 255, 0], "pulse": "double"},
+        {"name": "Gong", "led": [255, 255, 0], "pulse": "double"}
       ],
       "field": null,
       "saved": 25,

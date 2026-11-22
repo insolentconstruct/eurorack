@@ -70,7 +70,7 @@ Scale (tap SEED to step through):
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Resonator | Off (stock) / After the grains / Before the buffer | green; steady / yellow; steady / red; steady |
-| DRY/WET | Resonator material | Wood / String / Glass / Bell | green; steady / yellow; steady / red; steady / green; slow blink |
+| DRY/WET | Resonator material | Wood / String / Glass / Bell / Marimba / Drum / Bowl / Gong | green; steady / yellow; steady / red; steady / green; slow blink / yellow; slow blink / red; slow blink / green; two pulses / yellow; two pulses |
 | REVERB | Resonator ring time | Short / Medium / Long / Very long | green; steady / yellow; steady / red; steady / green; slow blink |
 
 **Resonator:** SEED and hits strike it.

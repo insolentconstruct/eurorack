@@ -2566,7 +2566,7 @@ void TestResonatorPage() {
     CHECK(processor.options_ == flags[placement % 3]);
   }
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
-  for (int material = 0; material < 4; ++material) {
+  for (int material = 0; material < kNumResonatorMaterials; ++material) {
     for (int ring = 0; ring < 4; ++ring) {
       settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, material);
       settings.SetFeatureValue(FEATURE_RESONATOR_RING, ring);
@@ -2575,6 +2575,8 @@ void TestResonatorPage() {
           kResonatorMaterials[material].structure,
           kResonatorMaterials[material].brightness,
           kResonatorRingTimes[ring], kResonatorPosition, 1.0f));
+      CHECK(processor.resonator_controls_.modes ==
+          kResonatorMaterials[material].modes);
     }
   }
   // Off, the controls are left alone.
@@ -2582,8 +2584,8 @@ void TestResonatorPage() {
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 1);
   r.Tick(2, true);
   CHECK(processor.options_ == 0);
-  CHECK(processor.resonator_controls_.structure ==
-      kResonatorMaterials[3].structure);
+  CHECK(processor.resonator_controls_.modes ==
+      kResonatorMaterials[kNumResonatorMaterials - 1].modes);
   // Saved: a power cycle brings it back, before the buffer from the start.
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER);
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
@@ -2623,6 +2625,13 @@ void TestResonatorPage() {
   CHECK(ControlsEqual(processor.resonator_controls_, 0.25f,
       kResonatorMaterials[3].brightness, 10.0f / 256.0f, 255.0f / 256.0f,
       0.25f));
+  // An exact structure is Rings' curve under Drizzlet's objects too.
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 5);
+  r.Tick(2, true);
+  CHECK(processor.resonator_controls_.structure == 0.25f);
+  CHECK(processor.resonator_controls_.brightness ==
+      kResonatorMaterials[5].brightness);
+  CHECK(processor.resonator_controls_.modes == NULL);
   const uint8_t bright[] = {
     FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER,
     FEATURE_RESONATOR_BRIGHTNESS, 0
@@ -2632,6 +2641,11 @@ void TestResonatorPage() {
   CHECK(ControlsEqual(processor.resonator_controls_,
       kResonatorMaterials[1].structure, 0.0f, kResonatorRingTimes[1],
       kResonatorPosition, 1.0f));
+  // An exact brightness keeps the object's modes.
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 5);
+  r.Tick(2, true);
+  CHECK(processor.resonator_controls_.brightness == 0.0f);
+  CHECK(processor.resonator_controls_.modes == kResonatorMaterials[5].modes);
 }
 
 // [A] taps reach resonator damping after the other destinations, while the
