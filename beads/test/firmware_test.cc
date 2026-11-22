@@ -2581,7 +2581,7 @@ void TestResonatorPage() {
   r.Tick(2, true);
   CHECK(processor.options_ == 0);
   CHECK(processor.resonator_controls_.structure ==
-      kResonatorMaterials[0].structure);
+      kResonatorMaterials[3].structure);
   // Not saved yet: a save and a power cycle bring back the profile's values.
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER);
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
@@ -2649,12 +2649,16 @@ void TestResonatorDampingCv() {
     r.Tick(200, true);
     const float cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
     float damping = kResonatorRingTimes[1] + cv;
-    CONSTRAIN(damping, 0.0f, 1.0f);
+    CONSTRAIN(damping, 0.0f, 0.9995f);
     CHECK(processor.resonator_controls_.damping == damping);
     CHECK(!step || fabsf(damping - kResonatorRingTimes[1]) > 0.05f);
     feedback[step] = processor.processor_digital_.feedback_;
   }
   CHECK(feedback[0] == feedback[1]);
+  // Held below the end of Rings' damping table.
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 0;
+  r.Tick(200, true);
+  CHECK(processor.resonator_controls_.damping == 0.9995f);
   // The LEDs show page 5's: FEEDBACK and REVERB pulse, DRY/WET is dark.
   bool lit = false;
   for (int ms = 0; ms < 1100; ++ms) {

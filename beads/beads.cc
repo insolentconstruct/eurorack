@@ -112,7 +112,8 @@ void UpdateResonator() {
       kResonatorRingTimes[ui.resonator_ring()], 1.0f / 256.0f);
   if (ui.resonator_assigned()) {
     c.damping += cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
-    CONSTRAIN(c.damping, 0.0f, 1.0f);
+    // Below the table's last entry, as Rings holds STRUCTURE.
+    CONSTRAIN(c.damping, 0.0f, 0.9995f);
   }
   c.position = ResonatorValue(
       FEATURE_RESONATOR_POSITION, kResonatorPosition, 1.0f / 256.0f);

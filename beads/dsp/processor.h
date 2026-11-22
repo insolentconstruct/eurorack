@@ -134,10 +134,14 @@ class Processor {
   }
   // Rings' modal resonator on the grains, or on the input before the buffer.
   inline void set_resonator(int placement) {
-    SetOption(OPTION_FLAG_RESONATOR_GRAINS,
-        placement == RESONATOR_AFTER_GRAINS);
-    SetOption(OPTION_FLAG_RESONATOR_INPUT,
-        placement == RESONATOR_BEFORE_BUFFER);
+    // One store: the audio interrupt never sees both placements.
+    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
+        ? OPTION_FLAG_RESONATOR_GRAINS
+        : (placement == RESONATOR_BEFORE_BUFFER
+            ? OPTION_FLAG_RESONATOR_INPUT : 0);
+    resonator_sample_rate_ = 0.0f;
+    options_ = (options_ &
+        ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
     resonator_sample_rate_ = 0.0f;
     // A SEED held while it starts does not strike it.
     seed_gate_ = true;
