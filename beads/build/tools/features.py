@@ -25,7 +25,8 @@
 #
 # -----------------------------------------------------------------------------
 #
-# Writes the feature tables from features.json into their source files.
+# Writes the feature tables from features.json into their source files,
+# including the options record's layout.
 #
 # Each output is a whole file or the body between an anchor line and its
 # closing line, so the tables stay in the translation units that own them.
@@ -54,6 +55,9 @@ NOT_USED = 'Not used yet'
 
 # LED mask of each options page (bit 0 FEEDBACK, 1 DRY/WET, 2 REVERB).
 PAGE_LEDS = [1, 2, 4, 3, 5, 6, 7]
+# OptionsRecord: the header bytes, then one byte per saved feature.
+RECORD_FIRST = 8
+RECORD_SIZE = 56
 FACTORY_PROFILE_VERSION = 2
 PROFILE_SIZE = 4096
 
@@ -112,6 +116,32 @@ def check_frozen(features, frozen):
   for row in frozen['reserved']:
     assert row['id'] not in by_id, 'ID %d is reserved for %s' % (
         row['id'], row['for'])
+
+
+def check_record(manifest, frozen):
+  # Each record version's layout is frozen; within one, only enumerated
+  # features may be added, in bytes no earlier layout used.
+  version = manifest['record_version']
+  saved = dict((f['id'], f['saved']) for f in manifest['features']
+      if 'saved' in f)
+  for f in manifest['features']:
+    assert f['field'] is None or 'saved' in f, 'Saved: %s' % f['symbol']
+  offsets = sorted(saved.values())
+  assert len(set(offsets)) == len(offsets), 'Record offsets overlap'
+  assert all(RECORD_FIRST <= o < RECORD_SIZE for o in offsets), offsets
+  layouts = dict((r['version'], dict(r['saved'])) for r in frozen['records'])
+  assert version in layouts, 'Freeze record layout %d' % version
+  layout = layouts[version]
+  by_id = dict((f['id'], f) for f in manifest['features'])
+  for feature_id, offset in layout.items():
+    assert saved.get(feature_id) == offset, (
+        'Record layout %d: ID %d' % (version, feature_id))
+  for feature_id, offset in saved.items():
+    if feature_id not in layout:
+      assert by_id[feature_id]['values'], (
+          'Record layout %d: a full byte needs a new version' % version)
+      assert offset > max(layout.values()), (
+          'Record layout %d: append after the frozen bytes' % version)
 
 
 def page_features(features):
@@ -199,6 +229,13 @@ def defaults(features):
       lines.append(first + ' ' + second)
     else:
       lines += [first, '      ' + second]
+  return lines
+
+
+def record_offsets(features):
+  lines = ['  0,  // None.']
+  for f in features:
+    lines.append('  %d,  // %s' % (f.get('saved', 0), label(f)))
   return lines
 
 
@@ -322,7 +359,9 @@ def outputs(root):
   manifest = json.loads((root / MANIFEST).read_text())
   features = manifest['features']
   check_manifest(features)
-  check_frozen(features, json.loads((root / FROZEN).read_text()))
+  frozen = json.loads((root / FROZEN).read_text())
+  check_frozen(features, frozen)
+  check_record(manifest, frozen)
   header = (root / 'beads/profile.h').read_text()
   magic = header_constant(header, 'kProfileMagic')
   profile_format = header_constant(header, 'kProfileFormat')
@@ -341,6 +380,12 @@ def outputs(root):
         '};', block_lines(block)),
     ('beads/profile.cc', '  const ProfileEntry defaults[] = {', '  };',
         defaults(features)),
+    ('beads/settings.h', 'const uint8_t kOptionsRecordVersion = ', None,
+        ['const uint8_t kOptionsRecordVersion = %d;' %
+            manifest['record_version']]),
+    ('beads/settings.cc',
+        'const uint8_t kRecordOffsets[FEATURE_LAST] = {', '};',
+        record_offsets(features)),
     ('beads/options.h', 'enum PageValues {', '};', page_values(features)),
     ('beads/options.h', 'const size_t kNumOptionValues = ', None,
         num_option_values(features)),

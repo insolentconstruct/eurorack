@@ -23,9 +23,8 @@ channels; indication patterns are steady, slow, fast or two pulses.
 ## Wire format
 
 The profile remains at application offset 1024 and grows to 4096 bytes. Version 2
-keeps every six-byte feature entry and permanent packed-settings nibble meaning.
-The save marker remains c1; the wire-profile version and saved-state format are
-separate. Version 1 profiles retain their legacy 512-byte parser bounds.
+keeps every six-byte feature entry and permanent feature meaning. The
+wire-profile version and the options record's version are separate. Version 1 profiles retain their legacy 512-byte parser bounds.
 
 | Header byte(s) | Meaning |
 | --- | --- |
@@ -84,8 +83,8 @@ Each slot holds one setting.
   slot 3 belongs to manual gain, so another setting there is refused.
 - Reverb character, Processor, Frozen feedback, Synth and TIME modulation
   can take action 1 or 2 when Adjustable; Synth takes action 1 only, since
-  Plaits play keeps [A]+FREEZE for its bank. They have permanent packed
-  fields; the gesture flips and saves the value. The [A] hold stays Synth
+  Plaits play keeps [A]+FREEZE for its bank. They have saved bytes; the
+  gesture flips and saves the value. The [A] hold stays Synth
   start only.
 
 Firmware before Beta 4 refuses amount slot 3, feature 40 and these actions,

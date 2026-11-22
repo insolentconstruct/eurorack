@@ -804,7 +804,7 @@ void Ui::DoEvents() {
       }
     }
     if (changed) {
-      settings_->SaveState();
+      settings_->SaveOptions();
       FlashOptionsPage();
     }
     options_.ClearCommit();
@@ -855,7 +855,7 @@ void Ui::StepPlaitsBank() {
       (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
 #endif  // PLAITS_BLOBS
   settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
-  settings_->SaveState();
+  settings_->SaveOptions();
 #ifdef PLAITS_BLOBS
   // Past three banks the colours repeat until Hygrostat's bank colours.
   cue_ = plaits_bank_cues_[bank % kNumPlaitsBanks];
@@ -895,7 +895,7 @@ bool Ui::DoAction(uint8_t slot) {
     // Saved as from its options page, with that page's colour.
     const uint8_t value = !settings_->FeatureValue(feature);
     settings_->SetFeatureValue(feature, value);
-    settings_->SaveState();
+    settings_->SaveOptions();
     const OptionValue cue = FindOptionValue(feature, value);
     cue_.color = cue.color;
     cue_.pulses = cue.pulses;
