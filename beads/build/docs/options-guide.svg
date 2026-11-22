@@ -449,16 +449,12 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="374" cy="1706" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
 <text x="390" y="1711" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Drum</text>
 <text x="677" y="1711" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; slow</text>
-<circle cx="374" cy="1727" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<circle cx="370" cy="1727" r="1" fill="#222" stroke="#333" stroke-width="2"/>
-<circle cx="378" cy="1727" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<circle cx="374" cy="1727" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
 <text x="390" y="1732" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bowl</text>
-<text x="677" y="1732" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; two pulses</text>
-<circle cx="374" cy="1748" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<circle cx="370" cy="1748" r="1" fill="#222" stroke="#333" stroke-width="2"/>
-<circle cx="378" cy="1748" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<text x="677" y="1732" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; fast</text>
+<circle cx="374" cy="1748" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
 <text x="390" y="1753" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Gong</text>
-<text x="677" y="1753" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; two pulses</text>
+<text x="677" y="1753" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; fast</text>
 <text x="695" y="1489" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Resonator ring time</text>
 <circle cx="852.5" cy="1561" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 852.5 1561 v -16" stroke="#222" stroke-width="2"/>

@@ -477,16 +477,12 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="31" cy="6415.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
 <text x="47" y="6420.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Drum</text>
 <text x="47" y="6439.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; slow blink</text>
-<circle cx="31" cy="6459.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<circle cx="27" cy="6459.102362204724" r="1" fill="#222" stroke="#333" stroke-width="2"/>
-<circle cx="35" cy="6459.102362204724" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<circle cx="31" cy="6459.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
 <text x="47" y="6464.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bowl</text>
-<text x="47" y="6483.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; two pulses</text>
-<circle cx="31" cy="6503.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<circle cx="27" cy="6503.102362204724" r="1" fill="#222" stroke="#333" stroke-width="2"/>
-<circle cx="35" cy="6503.102362204724" r="1" fill="#222" stroke="#333" stroke-width="2"/>
+<text x="47" y="6483.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; fast blink</text>
+<circle cx="31" cy="6503.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
 <text x="47" y="6508.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Gong</text>
-<text x="47" y="6527.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; two pulses</text>
+<text x="47" y="6527.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; fast blink</text>
 <text x="22" y="6572.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Resonator ring time</text>
 <circle cx="195.0" cy="6644.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 6644.102362204724 v -16" stroke="#222" stroke-width="2"/>

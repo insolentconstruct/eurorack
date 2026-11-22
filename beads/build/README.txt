@@ -412,8 +412,8 @@ page	LED	knob	setting	value	colour	pulse
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Bell	green	slow (0.98 Hz)
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Marimba	yellow	slow (0.98 Hz)
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Drum	red	slow (0.98 Hz)
-5	FEEDBACK and REVERB	DRY/WET	Resonator material	Bowl	green	2 pulses / 2.048 s
-5	FEEDBACK and REVERB	DRY/WET	Resonator material	Gong	yellow	2 pulses / 2.048 s
+5	FEEDBACK and REVERB	DRY/WET	Resonator material	Bowl	green	fast (3.91 Hz)
+5	FEEDBACK and REVERB	DRY/WET	Resonator material	Gong	yellow	fast (3.91 Hz)
 5	FEEDBACK and REVERB	REVERB	Resonator ring time	Short	green	steady
 5	FEEDBACK and REVERB	REVERB	Resonator ring time	Medium	yellow	steady
 5	FEEDBACK and REVERB	REVERB	Resonator ring time	Long	red	steady
