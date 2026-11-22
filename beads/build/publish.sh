@@ -17,7 +17,8 @@ names() { for f in "$@"; do basename "$f"; done | sort; }
 publish() {
   if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
     # Re-run: make the existing release match this build.
-    gh release edit "$tag" --repo "$repo" --draft=false --prerelease=false --latest \
+    # No --latest here: re-running an old release must not move Latest back to it.
+    gh release edit "$tag" --repo "$repo" --draft=false --prerelease=false \
       --title "$title" --notes "$notes"
     gh release upload "$tag" --repo "$repo" --clobber "${assets[@]}"
     local wanted name
