@@ -28,7 +28,7 @@
 */
 
 ENTRY(harness_setup)
-EXTERN(harness_select_compiled harness_select_blob)
+EXTERN(harness_select_compiled harness_select_blob harness_rebuild_compiled)
 EXTERN(harness_render_compiled harness_render_blob)
 
 MEMORY

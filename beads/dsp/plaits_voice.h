@@ -52,13 +52,11 @@ const int kNumPlaitsModels = 24;
 // A voice's engines and the RAM they take turns in. The engines stay out of
 // this header: Plaits' and Beads' resources.h define clashing macros.
 #ifdef PLAITS_BLOBS
-// Plus one blob slot, the largest state a version 2 blob may declare.
-const size_t kPlaitsVoiceRamSize = 29 * 1024;
-// Stock models served by blobs in development builds.
-const int kPlaitsWavetable = 13;
-const int kPlaitsSpeech = 15;
-const int kPlaitsParticleNoise = 18;
-// The libraries' records and RAM (Speech's decoded word banks among them).
+// One blob slot, the largest state a version 2 blob may declare, and the
+// engines' shared buffer.
+const size_t kPlaitsVoiceRamSize = 21 * 1024;
+// The libraries' records and RAM (Speech's decoded word banks and the 6-op
+// banks among them).
 const size_t kPlaitsLibraryRamSize = 64 * 1024;
 #else
 const size_t kPlaitsVoiceRamSize = 28 * 1024;
@@ -90,6 +88,10 @@ class PlaitsVoice {
   PlaitsVoice() { }
   ~PlaitsVoice() { }
 
+#ifdef PLAITS_BLOBS
+  // Builds the blob slot in kPlaitsVoiceRamSize bytes of ram.
+  void Init(uint8_t* ram);
+#else
   // Decodes Speech's word banks into kPlaitsSpeechRamSize bytes of ram for
   // all voices, with kPlaitsVoiceRamSize bytes of scratch.
   static void DecodeSpeechBanks(uint8_t* ram, uint8_t* scratch);
@@ -100,6 +102,7 @@ class PlaitsVoice {
   // Builds the engines in kPlaitsVoiceRamSize bytes of ram; the 6-op models
   // play the shared fm_banks.
   void Init(uint8_t* ram, const plaits::fm::Patch* fm_banks);
+#endif  // PLAITS_BLOBS
 
   // trigger takes plaits::TriggerState flags; size is at most 24 samples.
   void Render(
@@ -119,14 +122,9 @@ class PlaitsVoice {
     libraries_ = libraries;
   }
 
-  static inline bool CompiledIn(int model) {
-    return model < kNumPlaitsModels && model != kPlaitsWavetable &&
-        model != kPlaitsSpeech && model != kPlaitsParticleNoise;
-  }
-
-  // A model this build plays: compiled in, or a checked blob in region.
+  // A model this build plays: a checked blob in region.
   static inline bool Available(int model, const PlaitsRegion& region) {
-    return CompiledIn(model) || region.has_blob(model);
+    return region.has_blob(model);
   }
 
   // Plaits may play when every model of every bank is available.
@@ -143,13 +141,13 @@ class PlaitsVoice {
 #endif  // PLAITS_BLOBS
 
  private:
+  PlaitsEngines* engines_;
 #ifdef PLAITS_BLOBS
-  plaits::Engine* engine(int model);
   const PlaitsRegion* region_;
   const PlaitsLibraries* libraries_;
-#endif  // PLAITS_BLOBS
-  PlaitsEngines* engines_;
+#else
   const plaits::fm::Patch* fm_banks_;
+#endif  // PLAITS_BLOBS
   int model_;
 
   bool sustain_;

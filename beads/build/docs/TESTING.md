@@ -9,8 +9,8 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased application `51eb5204…` and WAV
-`952344c5…`. The release documentation and generated guides pass their
+This source pins its own unreleased application `0673a8d4…` and WAV
+`12649d3e…`. The release documentation and generated guides pass their
 checker. Beta 3 module results are under [On a module](#beta-3); some
 checks are still pending.
 
@@ -117,21 +117,25 @@ host-test jobs; the release app does not link them:
   services, libc beyond `memcpy`, `memmove` and `memset`, a fixed pointer
   into the blob).
 - `blob_emu/render_compare.py`: every OUT and AUX word and the generator's
-  state of Particle Noise, Spectral Spiral, Phase Weave, a test sine,
-  Wavetable and Speech as blobs against the same classes compiled in
-  (Particle Noise, Wavetable and Speech against Plaits' own engines), at two
-  placements and two FPSCR modes; Wavetable and Speech also with their
-  libraries placed apart (four layouts); the libraries built in the emulator
+  state of the 24 stock models, Spectral Spiral, Phase Weave and a test sine
+  as blobs against the same classes compiled in (the stock models against
+  Plaits' own engines, built in the voice's order), at two placements and two
+  FPSCR modes; every model that calls a library also with its libraries
+  placed apart (four layouts); every 6-op patch; the libraries built in the emulator
   as at synth entry; switch sequences with the slot and arena poisoned;
   writes from blob or library code outside the slot, arena, stack and
   outputs (a library's shared RAM included); canaries; section and library
   faults and the lock for every `WAVE`/`PLTS` outcome. A blob's first 48
   OUT samples after each build must equal the compiled-in samples times the
   fade-in, bit for bit, and every other OUT and AUX sample must equal them. Differences
-  after a return to a model that kept state compiled in are reported as
-  findings.
-- `build_blobs_dev.sh`: the development app with `PLAITS_BLOBS=1`, its
-  default region, and `plaits_catalog.cc` regenerated and compared.
+  after a return to a model that kept state compiled in, and Wave terrain's
+  reads past Plaits' wavetable (`KNOWN`), are reported as findings.
+- `build_region.sh` (run by the release build): every blob, the default
+  region (the 24 stock models and their four libraries), and
+  `plaits_catalog.cc` regenerated and compared.
+- `six_op_blob.mk`: the 6-op blob's indexed algorithms compile every
+  algorithm to Plaits' render calls, and each index runs the renderer
+  Plaits' function pointer names.
 
 Feature checks beyond the table:
 - **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, the [A]+DRY/WET gesture, its meter and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.

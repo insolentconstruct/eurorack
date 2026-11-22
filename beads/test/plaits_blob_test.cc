@@ -1311,40 +1311,37 @@ void TestPlayable() {
   test_checker.Start("TestPlayable");
   BuildRegion();
   Read(directory, 3);
-  const uint8_t compiled[16] = {
-    0, 1, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 19, 20, 23
-  };
+  // This region serves 2-4 (one blob) and 43; nothing is compiled in.
+  const uint8_t served[4] = { 2, 3, 4, 43 };
   const uint8_t stock[24] = {
     8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     0, 1, 2, 3, 4, 5, 6, 7
   };
-  const uint8_t palette[8] = { 43, 2, 3, 4, 0, 1, 5, 6 };
-  CHECK(PlaitsVoice::Playable(compiled, 16, plaits_region));
-  // Wavetable (13), Speech (15) and Particle Noise (18) are blobs in
-  // development builds; this region has none, so the stock banks cannot play.
-  CHECK(!PlaitsVoice::Available(13, plaits_region));
-  CHECK(!PlaitsVoice::Available(15, plaits_region));
-  CHECK(!PlaitsVoice::Available(18, plaits_region));
+  CHECK(PlaitsVoice::Playable(served, 4, plaits_region));
+  for (int i = 0; i < 24; ++i) {
+    CHECK(PlaitsVoice::Available(i, plaits_region) == (i >= 2 && i <= 4));
+  }
   CHECK(!PlaitsVoice::Playable(stock, 24, plaits_region));
-  CHECK(PlaitsVoice::Playable(palette, 8, plaits_region));
   CHECK(!PlaitsVoice::Available(44, plaits_region));
   CHECK(!PlaitsVoice::Available(24, plaits_region));
-  // Without a valid PLTS only the compiled-in models are available.
+  // Without a valid PLTS no model is available.
   BuildRegion();
   flash[kPlaitsOffset + 40] ^= 1;
   Read(directory, 3);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_CRC);
-  CHECK(PlaitsVoice::Playable(compiled, 16, plaits_region));
-  CHECK(!PlaitsVoice::Playable(palette, 8, plaits_region));
+  CHECK(!PlaitsVoice::Playable(served, 4, plaits_region));
+  CHECK(!PlaitsVoice::Available(2, plaits_region));
   // Fifteen banks: one missing model anywhere locks Plaits out.
   BuildRegion();
   Read(directory, 3);
   uint8_t many[15 * 8];
   for (int i = 0; i < 15 * 8; ++i) {
-    many[i] = compiled[i % 16];
+    many[i] = served[i % 4];
   }
   CHECK(PlaitsVoice::Playable(many, sizeof(many), plaits_region));
   many[15 * 8 - 1] = 44;
+  CHECK(!PlaitsVoice::Playable(many, sizeof(many), plaits_region));
+  many[15 * 8 - 1] = 0;
   CHECK(!PlaitsVoice::Playable(many, sizeof(many), plaits_region));
   many[15 * 8 - 1] = 43;
   CHECK(PlaitsVoice::Playable(many, sizeof(many), plaits_region));
