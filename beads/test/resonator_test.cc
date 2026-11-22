@@ -391,9 +391,8 @@ float ResonatorEnergy() {
   return energy;
 }
 
-// A steady sine on the fundamental or the second mode, at low and high
-// PITCH: the limiter holds its ceiling at every rate once settled; its
-// attack lets a sudden high mode overshoot for the first few milliseconds.
+// A steady sine on a mode, low and high: the limiter holds its ceiling once
+// settled; a sudden high mode overshoots it for a few milliseconds.
 void TestResonatorTonalLevel() {
   test_checker.Start("TestResonatorTonalLevel");
   const float stiffness = stmlib::Interpolate(
@@ -988,9 +987,8 @@ bool WithinOneDecibel(float a, float b) {
   return a > b * 0.891f && a < b * 1.122f;
 }
 
-// Every start finds the limiter at rest: the first strike is as loud as
-// one after a long silence. Power-on, a quality changing the rate,
-// leaving spectral, a placement change.
+// After power-on, a rate change, spectral or a placement change, the first
+// strike is as loud as one after a long silence.
 void TestResonatorLimiterAtRest() {
   test_checker.Start("TestResonatorLimiterAtRest");
   for (int m = 0; m < 4; ++m) {
@@ -1001,9 +999,11 @@ void TestResonatorLimiterAtRest() {
     CHECK(rested > 0.1f);
     CHECK(WithinOneDecibel(first, rested));
   }
-  Init(Processor::MEDIA_CLEAN_TAPE, false, RESONATOR_AFTER_GRAINS);
+  Init(Processor::MEDIA_DIRTY_TAPE, false, RESONATOR_AFTER_GRAINS);
   Silence();
+  const float rate = processor.sample_rate();
   processor.Configure(Processor::MEDIA_DIGITAL, false);
+  CHECK(processor.sample_rate() != rate);
   const float first = StrikePeak();
   Silence();
   const float rested = StrikePeak();
