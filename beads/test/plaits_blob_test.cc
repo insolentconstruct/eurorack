@@ -838,6 +838,9 @@ void TestDirectory() {
     { 2, 0, kPlaitsSectionRings },
     { 3, 1, kRingsOffset + 4 },
     { 2, 2, kRingsOffset - kPlaitsOffset + 32 },
+    // The last section past the region's end.
+    { 3, 2, kFlashSize },
+    { 3, 2, 0xffffffe0 },
   };
   for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
     BuildRegion();
