@@ -3617,7 +3617,7 @@ void TestTransitionTraces() {
   // Synth entry 10 s after the inputs empty, and exit when a cable returns.
   for (int plaits = 0; plaits < 2; ++plaits) {
     Rig r(false, true);
-    settings.set_plaits_synth(plaits);
+    settings.set_synth(plaits ? SYNTH_PLAITS : SYNTH_BEADS);
     ui.LoadOptions();
     Quiet(&r);
     CHECK(!synth_mode);
