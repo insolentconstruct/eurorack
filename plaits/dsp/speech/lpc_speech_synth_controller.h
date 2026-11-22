@@ -184,6 +184,7 @@ class LPCSpeechSynthController {
   int playback_frame_;
   int last_playback_frame_;
   size_t remaining_frame_samples_;
+  int playback_bank_;
 
   LPCSpeechSynthWordBank* word_bank_;
   
