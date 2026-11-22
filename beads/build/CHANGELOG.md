@@ -2,6 +2,10 @@
 
 ## Unreleased
 - Releases add `<tag>-combo.hex`, the ST-Link recovery image as Intel HEX: it carries its flash address, so programmers need none.
+- The audio update is encoded with Python 3 in the compiler image (Debian Trixie, qemu-user with a fixed CPU model) instead of a separate Python 2 image; the WAV is unchanged.
+- The build stops if `stmlib` or `stm_audio_bootloader` has local changes or is not at its pinned commit.
+- Re-running an older release no longer makes it the Latest release.
+- The build script and release tool carry copyright headers; the flash simulator carries the MIT licence.
 
 ## 2026.10.11 (tag `beads-2026.10.11`)
 - First build: the vanilla Mutable Instruments Beads source, unmodified.

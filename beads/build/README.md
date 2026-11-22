@@ -65,7 +65,8 @@ docker build --platform linux/amd64 --target compiler -t beads-build-kit beads/b
 bash beads/build/build.sh "$PWD/artifacts" --wav
 ```
 
-The build checks every firmware output against pinned hashes.
+The build stops unless `stmlib` and `stm_audio_bootloader` are clean at their pinned commits, and checks every firmware output and the WAV against pinned hashes.
+The WAV is encoded inside the same image by a Python 3 port of Mutable Instruments' encoder (the `stm_audio_bootloader` submodule), run under qemu-user with a fixed CPU model so it comes out identical on any host.
 GitHub Actions builds and publishes releases from `beads-*` tags.
 
 ## License and credits
