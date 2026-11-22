@@ -38,19 +38,50 @@ const char* const kPageNames[] = {
   "none", "FEEDBACK", "DRY/WET", "FEEDBACK and DRY/WET", "REVERB",
   "FEEDBACK and REVERB", "DRY/WET and REVERB", "all three"
 };
+// Names come from beads/resources/features.json (build/tools/features.py).
 const char* const kOptionNames[] = {
-  "Not used yet", "Pitch scale", "Reverb character", "Delay mode",
-  "Processor", "Limiter", "Frozen feedback", "Synth", "Attacks",
-  "Synth start", "Random pitch steps",
-  "Stereo width", "Diffusion", "Monophonic grains", "Buffer trim",
-  "Version at boot", "Input attenuation", "Delay cue", "LED brightness",
-  "Live assignment", "Save FREEZE", "SEED latch", "Pitch notch", "TIME scan",
-  "Synth reverb tail", "Options page idle timeout", "Delay SEED latch fade",
-  "Input gain at power-on", "Attack sensitivity", "SEED at power-on",
-  "PITCH knob", "Plaits bank", "Mix law", "Reverb input", "Grain stealing",
-  "Delay feedback", "Delay time", "Options page preview",
-  "Options page on opening", "Start in quality", "Manual gain knob",
-  "Resonator"
+  "Not used yet",
+  "Pitch scale",
+  "Reverb character",
+  "Delay mode",
+  "Processor",
+  "Limiter",
+  "Frozen feedback",
+  "Synth",
+  "Attacks",
+  "Synth start",
+  "Random pitch steps",
+  "Stereo width",
+  "Diffusion",
+  "Monophonic grains",
+  "Buffer trim",
+  "Version at boot",
+  "Input attenuation",
+  "Delay cue",
+  "LED brightness",
+  "Live assignment",
+  "Save FREEZE",
+  "SEED latch",
+  "Pitch notch",
+  "TIME scan",
+  "Synth reverb tail",
+  "Options page idle timeout",
+  "Delay SEED latch fade",
+  "Input gain at power-on",
+  "Attack sensitivity",
+  "SEED at power-on",
+  "PITCH knob",
+  "Plaits bank",
+  "Mix law",
+  "Reverb input",
+  "Grain stealing",
+  "Delay feedback",
+  "Delay time",
+  "Options page preview",
+  "Options page on opening",
+  "Start in quality",
+  "Manual gain knob",
+  "Resonator",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 const char* const kValueNames[] = {
@@ -130,10 +161,14 @@ const char* ColorName(const beads::Leds::Color& color) {
 int main(int argc, char** argv) {
   using namespace beads;
   if (argc > 1) {
+    Profile factory;
+    factory.Defaults();
     for (int id = FEATURE_PITCH; id < FEATURE_LAST; ++id) {
       const FeatureDefinition& d = kFeatureDefinitions[id];
-      printf("%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n", id, kOptionNames[id],
-          d.values, d.field, d.page, d.amount, d.action, d.stateless);
+      const ProfileEntry& e = factory.entry(ProfileFeature(id));
+      printf("%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", id,
+          kOptionNames[id], d.values, d.field, d.page, d.amount, d.action,
+          d.stateless, e.state, e.value);
     }
     return 0;
   }

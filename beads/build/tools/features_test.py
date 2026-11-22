@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# Copyright 2026 Insolent Construct.
+#
+# Author: Insolent Construct (insolentconstruct@gmail.com)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+# See http://creativecommons.org/licenses/MIT/ for more information.
+#
+# -----------------------------------------------------------------------------
+#
+# The committed feature tables are features.py's output, the frozen IDs hold,
+# and each check refuses a deliberate fault in a scratch copy.
+
+import json
+import pathlib
+import re
+import shutil
+import sys
+import tempfile
+import zlib
+
+sys.path.insert(0, 'beads/build/tools')
+import features
+
+ROOT = pathlib.Path('.')
+FILES = [features.MANIFEST, features.FROZEN, features.CATALOGUE,
+    'beads/profile.h', 'beads/profile.cc', 'beads/options.h',
+    'beads/options.cc', 'beads/build/tools/options_tables.cc']
+
+
+def outcome(directory, path, before, after):
+  # Applies one fault to a fresh copy: the generator's refusal, or 'stale'
+  # when the committed outputs no longer match.
+  for name in FILES:
+    (directory / name).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ROOT / name, directory / name)
+  text = (directory / path).read_text()
+  assert text.count(before) == 1, (path, before)
+  (directory / path).write_text(text.replace(before, after))
+  try:
+    return 'stale' if features.stale_outputs(directory, False) else 'clean'
+  except AssertionError as error:
+    return str(error)
+
+
+assert not features.stale_outputs(ROOT, False), (
+    'Stale feature tables: run make -f beads/build/tools/features.mk')
+print('Generated feature tables match features.json: PASS')
+
+# The factory block decodes to the manifest's factory rows, CRC included.
+source = (ROOT / 'beads/profile.cc').read_text()
+block = source.split('const volatile uint8_t kProfileBlock[kProfileSize]')[1]
+block = bytes(int(b, 16) for b in re.findall(
+    r'0x([0-9a-f]{2})', block.split('};')[0]))
+manifest = json.loads((ROOT / features.MANIFEST).read_text())
+rows = list(features.factory_entries(manifest['features']))
+size = 16 + 6 * len(rows)
+assert len(block) == features.PROFILE_SIZE and block[5] == len(rows)
+assert [list(block[16 + 6 * i:22 + 6 * i]) for i in range(len(rows))] == [
+    e for _, e in rows]
+assert int.from_bytes(block[size:size + 4], 'little') == zlib.crc32(
+    block[:size])
+assert set(block[size + 4:]) == {0xff}
+print('Factory profile block holds the manifest factory rows: PASS')
+
+frozen = json.loads((ROOT / features.FROZEN).read_text())
+assert [r['id'] for r in frozen['features']] == list(range(1, 42))
+assert [r['id'] for r in frozen['reserved']] == [42]
+RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
+LAST = '    }\n  ],\n  "plaits_models"'
+POLYPHONY = (', {"id": 42, "symbol": "POLYPHONY", "name": "Polyphony",'
+    ' "values": [{"name": "Off"}, {"name": "On"}], "field": null,'
+    ' "states": ["Off", "Fixed"], "page": false, "amount": false,'
+    ' "actions": [], "stateless": false, "touches_synth": true}')
+faults = [
+  ('Frozen ID 29', features.MANIFEST,
+      '"symbol": "SEED_START"', '"symbol": "SEED_BEGIN"'),
+  ('Frozen ID 5: value meanings', features.MANIFEST,
+      '{"name": "Fast release", "led": [255, 255, 0]}',
+      '{"name": "Hard clip", "led": [255, 255, 0]}'),
+  ('Frozen ID 8: value meanings', features.MANIFEST,
+      '{"name": "Snap and trigger", "led": [255, 0, 0]}', '{"name": "Snap"}'),
+  ('without gaps', features.MANIFEST, RESONATOR,
+      RESONATOR.replace('41', '43')),
+  ('reserved for Rings polyphony', features.MANIFEST, LAST,
+      LAST.replace('    }', '    }' + POLYPHONY, 1)),
+  ('stale', 'beads/profile.cc',
+      '{ 3, kNoField, false, false, false, false },  // Resonator.',
+      '{ 4, kNoField, false, false, false, false },  // Resonator.'),
+  ('stale', 'beads/profile.h',
+      'FEATURE_RESONATOR = 41,', 'FEATURE_RESONATOR = 40,'),
+  ('stale', 'beads/profile.cc',
+      '0x1f, 0x02, 0x00, 0x00', '0x1f, 0x02, 0x01, 0x00'),
+  ('stale', 'beads/profile.cc',
+      '{ FEATURE_TRIM, PROFILE_FIXED, 1, 0,',
+      '{ FEATURE_TRIM, PROFILE_FIXED, 0, 0,'),
+  ('stale', 'beads/options.cc',
+      'OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS',
+      'OPTION_INTERVALS, OPTION_PITCH, OPTION_ATTACKS'),
+  ('stale', 'beads/options.cc',
+      '{ OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
+      '{ OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
+  ('stale', 'beads/options.h',
+      'kNumOptionValues = 42;', 'kNumOptionValues = 43;'),
+  ('stale', 'beads/build/tools/options_tables.cc',
+      '"Synth reverb tail",', '"Synth tail",'),
+  ('stale', features.CATALOGUE,
+      '"name": "Resonator",', '"name": "Rings resonator",'),
+  # Values may be appended after the frozen ones.
+  ('stale', features.MANIFEST,
+      '{"name": "Snap and trigger", "led": [255, 0, 0]}',
+      '{"name": "Snap and trigger", "led": [255, 0, 0]}, {"name": "Soft"}'),
+]
+with tempfile.TemporaryDirectory(prefix='features-') as directory:
+  for expected, path, before, after in faults:
+    result = outcome(pathlib.Path(directory), path, before, after)
+    assert expected in result, (expected, result)
+print('%d deliberate changes caught for the right reason: PASS' % len(faults))
