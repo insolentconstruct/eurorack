@@ -136,6 +136,27 @@ host-test jobs; the release app does not link them:
   `plaits_catalog.cc` regenerated and compared; `blob_libraries.py` checks
   every model ID each blob serves lists exactly its catalogue libraries, built
   there, and `blob_emu/build.sh` checks five wrong catalogues are refused.
+
+The Rings synth blob (development only, `beads/blob/ABI.md` "Synth blobs"):
+- `rings_synth.mk`: the core at block 12 with sanitizers: sizes, a used bank
+  zeroed before `init` renders as fresh RAM, refused targets keep the
+  configuration, Beads' controls (clamps, FREEZE, Rings' chord hysteresis,
+  FEEDBACK's twelve zones), strum precedence for every SEED/PITCH patching
+  (triggers, PITCH steps, the 10 ms inhibit), and the pitch bound against the
+  active chord tables read from Rings' source.
+- `rings_vanilla.py` (G1): Rings' sources equal Mutable Instruments master
+  except the four allowed edits, also after preprocessing; five faults caught.
+- `rings_emu/build.sh`: the blob at block 12 and 24, refused when built from
+  the unedited sources or with newlib's `errno`; vanilla references at each
+  block size, linked with the toolchain's libm.
+- `rings_emu/rings_compare.py`: every OUT and AUX word of the blob against
+  vanilla Rings (G2 at block 24, G2b at 12), 40 scenarios (six models and six
+  Disastrous peace FX at polyphony 1, 2 and 4, model, FX and core changes,
+  PITCH strums, a held tail), two placements, two FPSCR modes; a nudged
+  model gain must differ; writes outside the synth's RAM, stack, outputs,
+  controls and generator; canaries; no reconfiguration or FX clear inside
+  `render` (and some inside `configure`). Then G3: block 12 against vanilla
+  block 24, difference over RMS per scenario, with WAV pairs.
 - `six_op_blob.mk`: the 6-op blob's indexed algorithms compile every
   algorithm to Plaits' render calls, and each index runs the renderer
   Plaits' function pointer names.

@@ -24,14 +24,17 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # Build one Plaits blob in the build image, from the Drizzlet root:
-#   beads/build/tools/build_blob.sh OUT NAME [--library LIBRARY.bin]... SOURCE...
+#   beads/build/tools/build_blob.sh OUT NAME [--library LIBRARY.bin]...
+#       [-DMACRO[=VALUE]]... SOURCE...
 # Beads' release CCFLAGS and CPPFLAGS plus the blob flags, for these objects
 # only; linked at three bases, gated and packed by blob_pack.py, then checked
 # against beads/blob/expected-blobs.sha256 when NAME is listed there. Each
-# --library is a dependency, in the order the blob lists them. Each object's
-# .nd lists its sources, for the release's notices.
+# --library is a dependency, in the order the blob lists them; each -D is
+# defined for every source. C sources (newlib's) get CCFLAGS and the blob's
+# code generation flags only. Each object's .nd lists its sources, for the
+# release's notices.
 set -euo pipefail
-usage='usage: build_blob.sh OUT NAME [--library LIBRARY.bin]... SOURCE...'
+usage='usage: build_blob.sh OUT NAME [--library LIBRARY.bin]... [-D...]... SOURCE...'
 out=${1:?$usage}
 name=${2:?$usage}
 shift 2
@@ -39,6 +42,11 @@ libraries=()
 while [ "${1:-}" = --library ]; do
   libraries+=(--library "${2:?$usage}")
   shift 2
+done
+defines=()
+while [ "${1:-}" != "${1#-D}" ]; do
+  defines+=("$1")
+  shift
 done
 mkdir -p "$out/$name"
 unset MAKEFLAGS MFLAGS MAKELEVEL
@@ -53,11 +61,12 @@ TOOLCHAIN=$($M --eval 'blob_q: ; @echo $(TOOLCHAIN_BIN)' blob_q)
 # The prelude keeps the services' exports in the GOT and makes the rest
 # PC-relative; PLAITS_BLOB selects blob variants of shared code. Without
 # jump tables a switch is compares, never a branch through a register.
-BLOB_FLAGS="-fPIC -fvisibility=hidden -mpic-data-is-text-relative \
--mno-single-pic-base -fno-threadsafe-statics -fno-stack-protector \
--fno-jump-tables -include beads/blob/blob_visibility.h -DPLAITS_BLOB"
-printf 'CCFLAGS %s\nCPPFLAGS %s\nBLOB_FLAGS %s\n' \
-  "$CCFLAGS" "$CPPFLAGS" "$BLOB_FLAGS" > "$out/$name/flags.txt"
+CODE_FLAGS="-fPIC -fvisibility=hidden -mpic-data-is-text-relative \
+-mno-single-pic-base -fno-stack-protector -fno-jump-tables"
+BLOB_FLAGS="$CODE_FLAGS -fno-threadsafe-statics \
+-include beads/blob/blob_visibility.h -DPLAITS_BLOB"
+printf 'CCFLAGS %s\nCPPFLAGS %s\nBLOB_FLAGS %s\nDEFINES %s\n' \
+  "$CCFLAGS" "$CPPFLAGS" "$BLOB_FLAGS" "${defines[*]:-}" > "$out/$name/flags.txt"
 "${TOOLCHAIN}arm-none-eabi-gcc" --version | sed -n 1p >> "$out/$name/flags.txt"
 objects=()
 for source in "$@"; do
@@ -66,10 +75,17 @@ for source in "$@"; do
     # shellcheck disable=SC2086
     "${TOOLCHAIN}arm-none-eabi-gcc" -c $CCFLAGS -MD -MF "${object%.o}.nd" \
       "$source" -o "$object"
+  elif [ "${source##*.}" = c ]; then
+    # No -std=c99 (stmlib's): it would stop the FMA contraction libm has.
+    # shellcheck disable=SC2086
+    "${TOOLCHAIN}arm-none-eabi-gcc" -c $CCFLAGS $CODE_FLAGS \
+      ${defines[@]+"${defines[@]}"} -MD -MF "${object%.o}.nd" "$source" \
+      -o "$object"
   else
     # shellcheck disable=SC2086
     "${TOOLCHAIN}arm-none-eabi-g++" -c $CCFLAGS $CPPFLAGS $BLOB_FLAGS \
-      -MD -MF "${object%.o}.nd" "$source" -o "$object"
+      ${defines[@]+"${defines[@]}"} -MD -MF "${object%.o}.nd" "$source" \
+      -o "$object"
   fi
   objects+=("$object")
 done

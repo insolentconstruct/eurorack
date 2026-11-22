@@ -124,7 +124,7 @@ void Part::ConfigureResonators() {
 #ifdef BRYAN_CHORDS
 
 // Chord table by Bryan Noll:
-float chords[kMaxPolyphony][11][8] = {
+RINGS_TABLE float chords[kMaxPolyphony][11][8] = {
   {
     { -12.0f, -0.01f, 0.0f,  0.01f, 0.02f, 11.98f, 11.99f, 12.0f }, // OCT
     { -12.0f, -5.0f,  0.0f,  6.99f, 7.0f,  11.99f, 12.0f,  19.0f }, // 5
@@ -566,7 +566,7 @@ void Part::Process(
 }
 
 /* static */
-float Part::model_gains_[] = {
+RINGS_TABLE float Part::model_gains_[] = {
   1.4f,  // RESONATOR_MODEL_MODAL
   1.0f,  // RESONATOR_MODEL_SYMPATHETIC_STRING
   1.4f,  // RESONATOR_MODEL_STRING

@@ -182,7 +182,7 @@ class Part {
   Reverb reverb_;
   Limiter limiter_;
   
-  static float model_gains_[RESONATOR_MODEL_LAST];
+  static RINGS_TABLE float model_gains_[RESONATOR_MODEL_LAST];
   
   DISALLOW_COPY_AND_ASSIGN(Part);
 };
