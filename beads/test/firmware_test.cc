@@ -2766,8 +2766,12 @@ void TestRejectedCalibrationCue() {
           CV_ADC_CHANNEL_TIME].offset *= 3.0f;
     }
     CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
+    // The last event over a second ago, as after a slow flash rewrite.
+    for (int i = 0; i < 400 && ui.queue_.idle_time() <= 1500; ++i) {
+      r.Advance(10);
+    }
+    CHECK(ui.queue_.idle_time() > 1500);
     ui.mode_ = Ui::MODE_CALIBRATION_4;
-    ui.queue_.Touch();  // As the [A] press that confirms the step.
     ui.NextCalibrationStep();
     CHECK(ui.mode_ == (wild ? Ui::MODE_PANIC : Ui::MODE_NORMAL));
     CHECK(SameCalibration(settings.persistent_data(), wild ? stored : attempt));

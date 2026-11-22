@@ -2291,6 +2291,9 @@ cases = [
   ('TestRejectedCalibrationCue', 'firmware', 'beads/settings.cc',
     '  return !memcmp(&requested, &persistent_data_, sizeof(PersistentData));',
     '  return requested.padding[0] == persistent_data_.padding[0];'),
+  ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
+    '        queue_.Touch();  // A full second of it after the save\'s erase.\n',
+    ''),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:
