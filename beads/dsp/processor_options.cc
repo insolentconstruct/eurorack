@@ -208,7 +208,11 @@ void Processor::ProcessOptions(
     }
     QuantizeDrySignal(in, dry_signal, size);
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
-      ProcessResonator(parameters.pitch, strike, out, size);
+      if (resonator_chord_) {
+        ProcessChord(strike, grain_triggers, out, size);
+      } else {
+        ProcessResonator(parameters.pitch, strike, out, size);
+      }
     }
     if (evolving_feedback_ || !feedback_diffuser_.idle()) {
       feedback_diffuser_.Process(

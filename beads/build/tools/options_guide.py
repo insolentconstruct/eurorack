@@ -137,6 +137,7 @@ SHORT = {
     "Off (stock)": "Off",
     "After the grains": "After",
     "Before the buffer": "Before",
+    "Chord": "Chord",
 }
 # On the printable, with width's card on page 1: [A] gestures off the pages.
 PAGE_GESTURES = ("Manual gain",)

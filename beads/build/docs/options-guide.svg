@@ -420,6 +420,9 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="44" cy="1643" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
 <text x="60" y="1648" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Before the buffer</text>
 <text x="347" y="1648" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
+<circle cx="44" cy="1664" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="60" y="1669" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Chord</text>
+<text x="347" y="1669" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; slow</text>
 <text x="365" y="1489" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Resonator material</text>
 <circle cx="522.5" cy="1561" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 522.5 1561 v -16" stroke="#222" stroke-width="2"/>

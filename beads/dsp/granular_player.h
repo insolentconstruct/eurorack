@@ -158,6 +158,7 @@ class GranularPlayer {
   }
   
   inline T* new_grain() { return grain_priority_list_[0]; }
+  inline const T& grain(int i) const { return grain_[i]; }
   
   inline void Tick() {
     ++grain_interval_;

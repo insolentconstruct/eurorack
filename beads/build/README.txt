@@ -350,17 +350,22 @@ the same hold restarts automatic gain. The hold acts on release, and not
 at all if a knob or button was used while [A] was down.
 
 Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off
-(Stock), After the grains or Before the buffer, in thirds. DRY/WET picks
-its Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl
-or Gong (a Drum strike bends down in pitch, a Gong strike up; Bowl and
-Gong beat between left and right); REVERB its Ring time: Short, Medium,
-Long or Very long, each about four times longer. String and Medium are
-the defaults; page 5 saves like the other pages. PITCH tunes it and
-Pitch scale snaps it. Attacks hits strike it, and so does SEED: each
-press, and each rising gate; latched, each gate. In delay mode SEED
-stays the clock. Before the buffer, a strike while frozen is not heard.
-With the resonator on, tapping [M] after REVERB, width and diffusion
-makes the CV input move its damping, until power-off (not saved).
+(Stock), After the grains, Before the buffer or Chord, in quarters.
+Chord sits after the grains, but only the grains' starts strike it: each
+new grain strikes one of three voices, tuned to the grains' own pitches,
+so Pitch scale or Recent notes make it ring a chord. A grain strikes the
+voice at its pitch, or retunes the quietest voice once it has rung 40 dB
+down; until then it strikes the nearest voice. DRY/WET picks its
+Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl or
+Gong (a Drum strike bends down in pitch, a Gong strike up; Bowl and Gong
+beat between left and right); REVERB its Ring time: Short, Medium, Long
+or Very long, each about four times longer. String and Medium are the
+defaults; page 5 saves like the other pages. PITCH tunes it and Pitch
+scale snaps it. Attacks hits strike it, and so does SEED: each press,
+and each rising gate; latched, each gate. In delay mode SEED stays the
+clock. Before the buffer, a strike while frozen is not heard. With the
+resonator on, tapping [M] after REVERB, width and diffusion makes the CV
+input move its damping, until power-off (not saved).
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
@@ -406,6 +411,7 @@ page	LED	knob	setting	value	colour	pulse
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Off (stock)	green	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	After the grains	yellow	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Before the buffer	red	steady
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	Chord	green	slow (0.98 Hz)
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Wood	green	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	String	yellow	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Glass	red	steady

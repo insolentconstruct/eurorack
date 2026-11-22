@@ -252,6 +252,12 @@ class GranularProcessor {
     return granular_player_.pitch_scale();
   }
 
+  // Grains run at the sample rate over ratio.
+  inline int ratio_to_grains() const { return ratio; }
+  inline const DelayGrain& grain(int i) const {
+    return granular_player_.grain(i);
+  }
+
   inline void set_random_intervals(bool intervals) {
     granular_player_.set_random_intervals(intervals);
   }

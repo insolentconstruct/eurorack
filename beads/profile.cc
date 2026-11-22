@@ -79,7 +79,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // First page.
   { 5, kNoField, false, false, false, false },  // Start quality.
   { 1, kNoField, false, true, false, false },  // Gain knob.
-  { 3, kNoField, true, false, false, false },  // Resonator.
+  { 4, kNoField, true, false, false, false },  // Resonator.
   { 0, kReservedField, false, false, false, false },  // Reserved.
   { 8, kNoField, true, false, false, false },  // Resonator material.
   { 4, kNoField, true, false, false, false },  // Resonator ring.
