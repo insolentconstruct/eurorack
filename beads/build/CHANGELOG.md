@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Options pages: LED brightness keeps the chosen level when the pages close before the save, instead of returning to the old level for up to a second (#355); SEED latch and TIME scan take effect while their knob turns, as the other page settings do (#356).
+- [M] moves the CV from stereo width to diffusion in one step, never passing through no target (#357). A manual gain, width or diffusion set with [A] is saved when an [A]+SEED or [A]+FREEZE gesture runs; stock's [A]+FREEZE skipped that save too (#358).
 - A recalibration more than 25% from the factory values, which is not saved, now blinks all LEDs for about a second, as a rejected calibration step does, and the stored calibration stays in use.
 - Plaits synth: all 24 models are installed in flash after the app, written by the same WAV (#194). They play bit for bit as before, except that a model fades in over its first 48 samples (1 ms) each time a voice switches to it, from a fresh start where it used to keep its old filters; Wave terrain's terrains 5-7 keep their path inside the wavetable bank where Plaits read past it, and 6-op FM no longer plays the previous model's leftovers in its first blocks. The WAV plays for about 9 minutes.
 - Drizzlet's options move to their own record in flash sector 14, after the calibration copy; the settings sector is written exactly as stock writes it. Options saved by Beta 2 or 3 start from the profile's defaults after updating; calibration and stock settings are kept. Changing an option no longer writes the settings sector, and a recalibration keeps the options. SEED at power-up resets the options too.

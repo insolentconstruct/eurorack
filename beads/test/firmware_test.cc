@@ -1790,6 +1790,7 @@ void TestSeedLatchPatched() {
   ui.seed_button_locked_ = true;
   for (int mode = 0; mode < 4; ++mode) {
     settings.SetFeatureValue(FEATURE_SEED_LATCH, mode);
+    SysTick_Handler();  // The UI publishes the page's or the saved value.
     MonitorStateChange();
     CHECK(seed_latch_mode == mode);
     // Feed actual callback edges, checking the generator selected by the
@@ -1850,6 +1851,7 @@ void TestSeedLatchPatched() {
   r.seed_patched = false;
   r.Settle();
   settings.SetFeatureValue(FEATURE_SEED_LATCH, 3);
+  SysTick_Handler();
   MonitorStateChange();
   CHECK(normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED));
   settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
@@ -3463,7 +3465,8 @@ void TestOptionFanOut() {
   Rig r(false, false);
   r.Settle();
 
-  // Main loop: one pass applies them, even while frozen or blanking.
+  // Main loop: one pass applies them, even while frozen or blanking. SEED
+  // latch and TIME scan come from the page, which SysTick publishes first.
   for (int pass = 0; pass < 3; ++pass) {
     if (pass == 1) {
       ui.set_freeze_button_state(true);
@@ -3484,6 +3487,10 @@ void TestOptionFanOut() {
       CHECK((processor.delay_controller_.timing_gain_ !=
           DelayController::TIMING_FADE_OFF) == !value);
       CHECK(plaits_synth.first_model_ == (value ? 8 : 0));
+      SysTick_Handler();
+      CHECK(seed_latch_mode == (value ? 0 : 2));
+      CHECK(bool(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN) ==
+          !value);
       MainLoopStep();
       CHECK(seed_latch_mode == (value ? 2 : 0));
       CHECK(gain_control.attenuation_ == bool(value));
@@ -3631,6 +3638,72 @@ void TestOptionFanOut() {
   CHECK(player.simple_scheduler_threshold_ != threshold);
 }
 
+// Opens the options pages with [M] held 3 s, then taps to a page.
+void OpenOptionsPage(Rig* r, int page) {
+  test_down[SWITCH_ASSIGN] = true;
+  r->Tick(3010, true);
+  test_down[SWITCH_ASSIGN] = false;
+  r->Tick(20, true);
+  while (page--) {
+    test_down[SWITCH_ASSIGN] = true;
+    r->Tick(20, true);
+    test_down[SWITCH_ASSIGN] = false;
+    r->Tick(20, true);
+  }
+  CHECK(ui.options_.stage() == Options::STAGE_EDITING);
+}
+
+// SEED latch and TIME scan follow their page while it is open, as the other
+// page settings do; the page's save then keeps them.
+void TestPagePreviewSeedLatchAndTimeScan() {
+  test_checker.Start("TestPagePreviewSeedLatchAndTimeScan");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(seed_latch_mode == 0);
+  // Page 4, DRY/WET fully clockwise: Add.
+  OpenOptionsPage(&r, 3);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+  r.Tick(100, true);
+  CHECK(ui.options_.Value(FEATURE_SEED_LATCH) == 3);
+  CHECK(settings.FeatureValue(FEATURE_SEED_LATCH) == 0);
+  CHECK(seed_latch_mode == 3);
+  r.Tick(1100, true);
+  CHECK(settings.FeatureValue(FEATURE_SEED_LATCH) == 3);
+  CHECK(seed_latch_mode == 3);
+
+  // TIME scan on page 6, FEEDBACK, in a profile.
+  uint8_t block[kProfileSize];
+  const uint8_t scan[] = { FEATURE_TIME_SCAN, 0 };
+  BuildProfile(block, scan, 1);
+  uint8_t* entry = block + 16 + 6 * (block[5] - 1);
+  CHECK(entry[0] == FEATURE_TIME_SCAN);
+  entry[1] = PROFILE_ADJUSTABLE;
+  entry[3] = 16;
+  const size_t size = 16 + 6 * block[5];
+  const uint32_t crc = Profile::Crc32(block, size);
+  for (size_t i = 0; i < 4; ++i) {
+    block[size + i] = crc >> (8 * i);
+  }
+  FlashProfile(block);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  r.Reboot(false);
+  FlashProfile(factory_profile);
+  r.Settle();
+  CHECK(settings.profile().Page(16) == FEATURE_TIME_SCAN);
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN));
+  OpenOptionsPage(&r, 5);
+  CHECK(ui.options_.page() == 5);
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 65535;
+  r.Tick(100, true);
+  CHECK(ui.options_.Value(FEATURE_TIME_SCAN) == 1);
+  CHECK(settings.FeatureValue(FEATURE_TIME_SCAN) == 0);
+  CHECK(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN);
+  r.Tick(1100, true);
+  CHECK(settings.FeatureValue(FEATURE_TIME_SCAN) == 1);
+  CHECK(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN);
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 0;
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -3691,5 +3764,6 @@ int main() {
   TestTransitionTraces();
   TestTransitionFadeLevels();
   TestOptionFanOut();
+  TestPagePreviewSeedLatchAndTimeScan();
   return test_checker.failures() ? 1 : 0;
 }

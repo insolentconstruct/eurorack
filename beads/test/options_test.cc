@@ -56,6 +56,31 @@ uint32_t test_writes = 0;
 
 using namespace beads;
 
+// Every CV target the instrumented UI leaves between two of its calls.
+const Settings* watched_settings = NULL;
+uint32_t watched_targets = 0;
+
+extern "C" {
+
+void __cyg_profile_func_enter(void*, void*)
+    __attribute__((no_instrument_function));
+void __cyg_profile_func_exit(void*, void*)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_enter(void*, void*) {
+  if (watched_settings) {
+    watched_targets |= 1 << watched_settings->cv_target_;
+  }
+}
+
+void __cyg_profile_func_exit(void*, void*) {
+  if (watched_settings) {
+    watched_targets |= 1 << watched_settings->cv_target_;
+  }
+}
+
+}  // extern "C"
+
 // A dimmed quality LED channel (0 red, 1 green, 2 blue) at percent: red *
 // level^1.5; lit green and blue at the level plus 12 * (1 - level), rounded.
 int DimmedMedia(int channel, uint8_t c, int percent) {
@@ -189,6 +214,42 @@ void TestTrimGesture() {
   CHECK(!page.ui.trim_flag_);
   CHECK(!page.ui.freeze_button_state_);
   CHECK(page.settings.state().media == page_media);
+}
+
+// An [A] knob edit is saved when an [A] gesture consumes the release.
+void TestAmountSavedByAction() {
+  test_checker.Start("TestAmountSavedByAction");
+  const Switch buttons[] = { SWITCH_FREEZE, SWITCH_SEED };
+  for (int b = 0; b < 2; ++b) {
+    for (int knob = 0; knob < 3; ++knob) {
+      Rig r(false);
+      const int before[] = {
+        r.settings.state().gain,
+        r.settings.stereo_width(),
+        r.settings.FeatureValue(FEATURE_DIFFUSION)
+      };
+      r.Down(SWITCH_MEDIA);
+      float* pots[] = { &r.feedback, &r.pot, &r.reverb };
+      *pots[knob] = 0.8f;
+      r.Tick(20, true);
+      r.Down(buttons[b]);
+      r.Up(buttons[b]);
+      r.Up(SWITCH_MEDIA);
+      CHECK(r.ui.ignore_release_[SWITCH_MEDIA]);
+      Settings loaded;
+      CHECK(loaded.Init(false));
+      CHECK(loaded.state().gain == r.settings.state().gain);
+      CHECK(loaded.stereo_width() == r.settings.stereo_width());
+      CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) ==
+          r.settings.FeatureValue(FEATURE_DIFFUSION));
+      const int after[] = {
+        r.settings.state().gain,
+        r.settings.stereo_width(),
+        r.settings.FeatureValue(FEATURE_DIFFUSION)
+      };
+      CHECK(after[knob] != before[knob]);
+    }
+  }
 }
 
 void TestMonophonicGesture() {
@@ -1723,6 +1784,36 @@ void TestDiffusionAssignCycle() {
   CHECK(r.settings.state().assignable_cv_destination == 3);
 }
 
+// [M] moves the CV from width to diffusion in one store: the audio interrupt
+// never sees the target cleared in between.
+void TestWidthToDiffusionTarget() {
+  test_checker.Start("TestWidthToDiffusionTarget");
+  Rig r(false);
+  r.settings.set_stereo_width(128);
+  r.settings.set_diffusion(0.4f);
+  r.settings.mutable_state()->assignable_cv_destination = 2;
+  r.Tick(20, true);
+  r.Tap();
+  CHECK(r.settings.width_assigned());
+  watched_settings = &r.settings;
+  watched_targets = 0;
+  r.Tap();
+  watched_settings = NULL;
+  CHECK(r.settings.diffusion_assigned());
+  CHECK(watched_targets == ((1 << 1) | (1 << 2)));
+  // Without a diffusion amount, width hands over to FEEDBACK as before.
+  Rig none(false);
+  none.settings.set_stereo_width(128);
+  none.settings.mutable_state()->assignable_cv_destination = 2;
+  none.Tick(20, true);
+  none.Tap();
+  CHECK(none.settings.width_assigned());
+  none.Tap();
+  CHECK(!none.settings.width_assigned());
+  CHECK(!none.settings.diffusion_assigned());
+  CHECK(none.settings.state().assignable_cv_destination == 0);
+}
+
 // [A]+DRY/WET sets the stereo width as Beads' [A]+FEEDBACK sets the gain:
 // fully CCW is stock, and the amount saves when [A] is released.
 void TestWidthGestureAndMeter() {
@@ -2263,6 +2354,26 @@ void TestPendingSeed() {
   CHECK(before.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   before.Tick(1001, true);
   CHECK(before.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+}
+
+// A brightness chosen just before the pages close holds until it is saved.
+void TestBrightnessHoldsAfterClose() {
+  test_checker.Start("TestBrightnessHoldsAfterClose");
+  Rig r(false);
+  r.EnterPage(3);
+  r.feedback = 0.9f;  // 33%.
+  r.Tick(40, true);
+  CHECK(r.ui.options_.Value(FEATURE_BRIGHTNESS) == 2);
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(!r.ui.options_.active());
+  r.ui.set_freeze_led_state(true);
+  for (int t = 0; t < 1100; ++t) {
+    r.Tick(1, true);
+    CHECK(r.ui.leds_.intensity_[LED_FREEZE] == 255 * 33 / 100);
+  }
+  CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 2);
 }
 
 void TestPendingExitButtons() {
@@ -4174,6 +4285,7 @@ int main() {
   TestCommitPublication();
   TestPendingSeed();
   TestPendingExitButtons();
+  TestBrightnessHoldsAfterClose();
   TestOptionsTablesAndLifetime();
   TestOptionsKnobsAndSettling();
   TestOptionsSeed();
@@ -4188,6 +4300,7 @@ int main() {
   TestDiffusionGestureAndMeter();
   TestDiffusionStorage();
   TestDiffusionAssignCycle();
+  TestWidthToDiffusionTarget();
   TestPlaybackStorage();
   TestCloudsStorage();
   TestFrozenFeedbackStorage();
@@ -4203,6 +4316,7 @@ int main() {
   TestSelfPlayHold();
   TestTrimGesture();
   TestMonophonicGesture();
+  TestAmountSavedByAction();
   TestAudioPatchDetection();
   TestFrozenStateChangeGuard();
   TestGateOutputChordPersistence();
