@@ -53,7 +53,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | `beads/test/delay_mode.mk` | Delay mode through the processor with sanitizers: continuous playback with SIZE fully clockwise, the fade when switching modes, the pitch shifter and its bypass at noon, the delay bandwidth control and SIZE CV |
 | `beads/test/attack.mk` | Attacks: hit detection on the input and its three sensitivities, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
-| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, with and without AUX (five engines skip it, as in the firmware), the 6-op banks unpacked once for all voices as each engine unpacks them, with notes switching banks on every voice pinned to per-voice unpacking, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent, including at noon, after a bank change, notes keeping their model), FREEZE sustain, RAM bounds; Speech word banks: the sliced decode matches Mutable Instruments' for every bank and after interrupted loads, at most 32 frames per block, and the word after a bank change is sample-exact to Mutable Instruments' controller with the change made once the bank is loaded; a waiting word is dropped by a Reset or the phonemes; the bit-reversal table matches a computed reversal for all 256 bytes; the banks decoded once for all voices leave each voice's RAM as its own decode does, call for call |
+| `beads/test/plaits_synth.mk` | Plaits synth: every model renders, with and without AUX (five engines skip it, as in the firmware), the 6-op banks unpacked once for all voices as each engine unpacks them, with notes switching banks on every voice pinned to per-voice unpacking, voice allocation, the drone ending through the low-pass gate without a step, the eight-model banks on FEEDBACK (detents, both ends and the held detent, including at noon, after a bank change, notes keeping their model), FREEZE sustain, RAM bounds; Speech word banks: the sliced decode matches Mutable Instruments' for every bank and after interrupted loads, at most 32 frames per block, and the word after a bank change is sample-exact to Mutable Instruments' controller with the change made once the bank is loaded; a waiting word is dropped by a Reset or the phonemes; the bit-reversal table matches a computed reversal for all 256 bytes; the banks decoded once for all voices leave each voice's RAM as its own decode does, call for call |
 | `beads/test/profile.mk` | Profile validation, feature modes/control allocation (only Synth start on the [A] hold; Synth start needs a gesture unless Automatic), page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections; the valid and invalid profiles in `profile_cases.txt`, which Hygrostat's codec must answer alike |
 | `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step; a calibration copy in one sector after every erase and program of a save; State as stock writes it, with older releases' bytes 10–23 ignored; each saved option's record byte, dormant values and the not-set rule; the optional start quality (#287): once per new profile, over stock and older saves, after a settings reset, never over a frozen recording, and the saved profile identity; a recalibration reported as refused, with nothing written, while writes are locked |
 | `beads/test/record.mk` | The options record in sector 14: appends, record before State, the unsigned checksum, other versions and bad tags, sizes or checksums, torn slots, a full journal; power cut at each compaction step; compaction refused unless the settings sector's calibration is readable, usable and in use; a stale mirror refreshed; the factory-calibration guard; an implausible settings sector with a cut at every recalibration step; SEED resets through append or compaction; low supply; gestures across reboots; Beta 3 downgrades and recalibration; foreign records in either sector (stock's overwrite and boot fault, kept from the design study); a record slot that never programs, compacted once per power-up, with a cut at each step |
@@ -74,7 +74,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | mix | 10 | 49 |
 | options | 73 | 846 |
 | pitch_quantizer | 7 | 83 |
-| plaits_synth | 13 | 68 |
+| plaits_synth | 14 | 72 |
 | processor | 11 | 45 |
 | profile | 10 | 135 |
 | record | 20 | 181 |
@@ -83,12 +83,12 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | storage | 31 | 466 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **389** | **3,277** |
+| **Total** | **390** | **3,281** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (768 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (797 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -133,7 +133,9 @@ host-test jobs; the release app does not link them:
   reads past Plaits' wavetable (`KNOWN`), are reported as findings.
 - `build_region.sh` (run by the release build): every blob, the default
   region (the 24 stock models and their four libraries), and
-  `plaits_catalog.cc` regenerated and compared.
+  `plaits_catalog.cc` regenerated and compared; `blob_libraries.py` checks
+  every model ID each blob serves lists exactly its catalogue libraries, built
+  there, and `blob_emu/build.sh` checks five wrong catalogues are refused.
 - `six_op_blob.mk`: the 6-op blob's indexed algorithms compile every
   algorithm to Plaits' render calls, and each index runs the renderer
   Plaits' function pointer names.
