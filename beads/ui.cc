@@ -436,8 +436,8 @@ void Ui::NextCalibrationStep() {
       mode_ = calibrator_->Calibrate(CV_ADC_CHANNEL_DENSITY, 1, 0.6f)
           ? MODE_NORMAL
           : MODE_PANIC;
-      // An out-of-range calibration isn't saved: the same rejection blink.
-      if (mode_ == MODE_NORMAL && !settings_->SavePersistentData()) {
+      // A calibration refused by the settings: the same rejection blink.
+      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {
         mode_ = MODE_PANIC;
         queue_.Touch();  // A full second of it after the save's erase.
       }

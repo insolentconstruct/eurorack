@@ -39,6 +39,7 @@ class Calibrator {
   void Start() { ++starts; }
   void CalibrateOffsets() { }
   bool Calibrate(CvAdcChannel, int, float) { return true; }
+  bool Save() { return true; }
 };
 
 }  // namespace beads

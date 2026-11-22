@@ -1017,9 +1017,10 @@ void TestRejectedCalibrationCue() {
     PersistentData attempt = stored;
     attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
     attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+    // The run's values stay in the calibrator until it completes.
+    calibrator.Start();
     if (wild) {
-      settings.mutable_persistent_data()->adc_calibration[
-          CV_ADC_CHANNEL_TIME].offset *= 3.0f;
+      calibrator.calibration_data_[CV_ADC_CHANNEL_TIME].offset *= 3.0f;
     }
     CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
     static uint8_t mirror[0x20000];
@@ -1052,6 +1053,73 @@ void TestRejectedCalibrationCue() {
   }
 }
 
+// A button, or a chord with the first held, pressed and released.
+void Press(Rig* r, int first, int second) {
+  test_down[first] = true;
+  r->Advance(20);
+  test_down[second] = true;
+  r->Advance(20);
+  test_down[first] = test_down[second] = false;
+  r->Advance(20);
+}
+
+// The next save rewrites the settings sector, as when it is full.
+void RewriteOnNextSave() {
+  settings.chunk_storage_.next_state_chunk_index_ = 0xffff;
+  settings.SaveState();
+}
+
+// #346: a run that doesn't complete changes nothing, in use or in flash,
+// though the sector is rewritten during it: a step rejected after the
+// offsets, or after the pitch, or the run left by the autosave chord.
+void TestUnfinishedCalibrationKept() {
+  test_checker.Start("TestUnfinishedCalibrationKept");
+  for (int exit = 0; exit < 3; ++exit) {
+    Rig r(false);
+    // Cables left in TIME, PITCH and DENSITY.
+    r.cv_patched[CV_ADC_CHANNEL_TIME] = true;
+    r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+    r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+    r.cv[CV_ADC_CHANNEL_TIME] = 20000;
+    r.cv[CV_ADC_CHANNEL_PITCH] = 40000;
+    r.cv[CV_ADC_CHANNEL_DENSITY] = 13107;
+    r.Settle();
+    const PersistentData stored = settings.persistent_data();
+    Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+    CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+    Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+    CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
+    CHECK(fabsf(calibrator.calibration_data_[CV_ADC_CHANNEL_TIME].offset -
+        stored.adc_calibration[CV_ADC_CHANNEL_TIME].offset) > 0.1f);
+    RewriteOnNextSave();
+    if (exit == 0) {
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);  // PITCH unchanged: rejected.
+    } else if (exit == 1) {
+      r.cv[CV_ADC_CHANNEL_PITCH] -= 13107;  // 2 V higher: accepted.
+      r.Settle();
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_3);
+      CHECK(fabsf(calibrator.calibration_data_[CV_ADC_CHANNEL_PITCH].offset -
+          stored.adc_calibration[CV_ADC_CHANNEL_PITCH].offset) > 1.0f);
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_4);
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);  // DENSITY unchanged: rejected.
+    } else {
+      Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+      CHECK(ui.mode_ == Ui::MODE_DISPLAY_AUTOSAVE);
+    }
+    CHECK(exit == 2 || ui.mode_ == Ui::MODE_PANIC);
+    CHECK(SameCalibration(settings.persistent_data(), stored));
+    RewriteOnNextSave();
+    Settings loaded;
+    PersistentData mirror;
+    CHECK(loaded.Init(false));
+    CHECK(SameCalibration(loaded.persistent_data(), stored));
+    CHECK(loaded.chunk_storage_.ReadMirror(&mirror));
+    CHECK(SameCalibration(mirror, stored));
+  }
+}
+
 int main() {
   InitTestFpu();
   setbuf(stdout, NULL);
@@ -1074,5 +1142,6 @@ int main() {
   TestCodecRestartFade();
   TestSynthStopPreservesReverb();
   TestRejectedCalibrationCue();
+  TestUnfinishedCalibrationKept();
   return test_checker.failures() ? 1 : 0;
 }
