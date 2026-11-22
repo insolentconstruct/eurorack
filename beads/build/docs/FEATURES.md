@@ -265,7 +265,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - It is off by default and hard to reach by accident.
 - One manual paragraph explains it; no hidden state the panel can't show.
 - Patching can't already do it.
-- CPU: the worst measured block stays at or under 90% of the budget. This is a working limit; the real one comes from timing the click recipe (#1) on the 2021 and 2024 firmware against the vanilla source. A one-frame output delay moves the deadline to about the full block: on the module, through the beads-tuneup build with the same codec driver, late samples start at 96.9%, 97.3% and 97.7% of the block at 48, 32 and 24 kHz ([One-frame output delay](OPTIMIZATIONS.md#one-frame-output-delay)). This Drizzlet build is not yet measured on the module, so the limit stays.
+- CPU: the worst measured block stays at or under its codec rate's working limit: 96.5% of the budget at 48 kHz and 97.0% at 32 kHz, at least a point under the clean edges a Beta 4 test build measured on the module (97.8% and 98.1%, with the one-frame output delay; [One-frame output delay](OPTIMIZATIONS.md#one-frame-output-delay)). 24 kHz is not yet measured on Beta 4 and keeps the earlier 90% limit.
 
 Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the factory layout's twelve page slots are taken).
 
@@ -663,7 +663,7 @@ Spectral restarts it from silence; after the synths an old tail can
 resume. Granular and delay; spectral and both synths are unchanged. All 32
 grains still play: on the development
 board, 32 grains plus the resonator measured 77.1% at Bright digital, an
-estimated 88.9% on a module against the 90% limit. Chosen at power-on, with
+estimated 88.9% on a module against the 90% limit then in force. Chosen at power-on, with
 no panel slot or saved-state nibble. Its controls, a strike source with
 Attacks Off and any [A] gestures are still to be decided.
 
