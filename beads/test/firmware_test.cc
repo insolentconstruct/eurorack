@@ -2584,13 +2584,24 @@ void TestResonatorPage() {
   CHECK(processor.options_ == 0);
   CHECK(processor.resonator_controls_.structure ==
       kResonatorMaterials[3].structure);
-  // Not saved yet: a save and a power cycle bring back the profile's values.
+  // Saved: a power cycle brings it back, before the buffer from the start.
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER);
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
-  settings.SaveState();
+  settings.SetFeatureValue(FEATURE_RESONATOR_RING, 0);
+  settings.SaveOptions();
   r.Reboot(false);
-  CHECK(settings.FeatureValue(FEATURE_RESONATOR) == RESONATOR_OFF);
-  CHECK(settings.FeatureValue(FEATURE_RESONATOR_MATERIAL) == 1);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR) == RESONATOR_BEFORE_BUFFER);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR_MATERIAL) == 3);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR_RING) == 0);
+  CHECK(processor.options_ == Processor::OPTION_FLAG_RESONATOR_INPUT);
+  r.Settle();
+  CHECK(ControlsEqual(processor.resonator_controls_,
+      kResonatorMaterials[3].structure, kResonatorMaterials[3].brightness,
+      kResonatorRingTimes[0], kResonatorPosition, 1.0f));
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_OFF);
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 1);
+  settings.SetFeatureValue(FEATURE_RESONATOR_RING, 1);
+  settings.SaveOptions();
   // Exact values replace the curated ones; the others stay curated.
   const uint8_t exact[] = {
     FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS,
@@ -2992,7 +3003,7 @@ void TestProcessorToggle() {
       }
     }
     CHECK(settings.spectral() == spectral && ui.spectral() == spectral);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + 2);  // One options record, no state.
     CHECK(!settings.state().monophonic_mode);
     for (int i = 0; i < 400 && processor.spectral() != spectral; ++i) {
       RunSquare(&r, 1);

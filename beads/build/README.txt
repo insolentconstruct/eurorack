@@ -353,13 +353,13 @@ Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off
 (Stock), After the grains or Before the buffer, in thirds. DRY/WET picks
 its Material in quarters: Wood, String, Glass or Bell; REVERB its Ring
 time: Short, Medium, Long or Very long, each about four times longer.
-String and Medium are the defaults; page 5 is not saved yet, so each
-start-up uses the profile's values. PITCH tunes it and Pitch scale snaps
-it. Attacks hits strike it, and so does SEED: each press, and each
-rising gate; latched, each gate. In delay mode SEED stays the clock.
-Before the buffer, a strike while frozen is not heard. With the
-resonator on, tapping [M] after REVERB, width and diffusion makes the CV
-input move its damping, until power-off.
+String and Medium are the defaults; page 5 saves like the other pages.
+PITCH tunes it and Pitch scale snaps it. Attacks hits strike it, and so
+does SEED: each press, and each rising gate; latched, each gate. In
+delay mode SEED stays the clock. Before the buffer, a strike while
+frozen is not heard. With the resonator on, tapping [M] after REVERB,
+width and diffusion makes the CV input move its damping, until power-off
+(not saved).
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse

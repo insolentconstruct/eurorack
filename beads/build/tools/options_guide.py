@@ -144,7 +144,7 @@ OFF_PAGES = "Off the pages: "
 # A line under a setting's card in the guides.
 CARD_NOTES = {
     "Processor": "Switching clears the recording.",
-    "Resonator": "SEED strikes it; not saved yet.",
+    "Resonator": "SEED and hits strike it.",
     "Random pitch steps": "Relative to PITCH; scale follows.",
 }
 # Stereo width is set with [A]+DRY/WET, outside the pages.

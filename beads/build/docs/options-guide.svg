@@ -399,7 +399,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="256" y="1455" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
 <circle cx="278" cy="1450" r="7" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="291" y="1455" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pulsing</text>
-<text x="1065" y="1455" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="end">Resonator: seed strikes it; not saved yet.</text>
+<text x="1065" y="1455" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="end">Resonator: seed and hits strike it.</text>
 <text x="35" y="1489" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Resonator</text>
 <circle cx="192.5" cy="1561" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 192.5 1561 v -16" stroke="#222" stroke-width="2"/>

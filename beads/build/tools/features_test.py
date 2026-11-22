@@ -42,7 +42,8 @@ import features
 ROOT = pathlib.Path('.')
 FILES = [features.MANIFEST, features.FROZEN, features.CATALOGUE,
     'beads/profile.h', 'beads/profile.cc', 'beads/options.h',
-    'beads/options.cc', 'beads/build/tools/options_tables.cc']
+    'beads/options.cc', 'beads/build/tools/options_tables.cc',
+    'beads/settings.h', 'beads/settings.cc']
 
 
 def outcome(directory, path, before, after):
@@ -138,9 +139,11 @@ faults = [
       '{"name": "Evolving", "led": [255, 255, 0]}',
       '{"name": "Evolving", "led": [255, 0, 0]}'),
   ('Zones: REVERB', features.MANIFEST,
-      '"field": 1,\n      "states": ["Off", "Fixed", "Adjustable"],\n'
+      '"field": 1,\n      "saved": 9,\n'
+      '      "states": ["Off", "Fixed", "Adjustable"],\n'
       '      "page": true,\n      "page_control": "halves",',
-      '"field": 1,\n      "states": ["Off", "Fixed", "Adjustable"],\n'
+      '"field": 1,\n      "saved": 9,\n'
+      '      "states": ["Off", "Fixed", "Adjustable"],\n'
       '      "page": true,\n      "page_control": "zones",'),
   ('Page values 0-2 light: LIMITER', features.MANIFEST,
       '{"name": "Off", "led": [255, 0, 0]}', '{"name": "Off"}'),
@@ -148,6 +151,17 @@ faults = [
       '"Synth reverb tail",', '"Synth tail",'),
   ('stale', features.CATALOGUE,
       '"name": "Resonator",', '"name": "Rings resonator",'),
+  # The options record: each version's layout is frozen.
+  ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 30,'),
+  ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),
+  ('Saved: PITCH', features.MANIFEST, '"saved": 8,\n', ''),
+  ('Freeze record layout 2', features.MANIFEST,
+      '"record_version": 1,', '"record_version": 2,'),
+  ('a full byte needs a new version', features.FROZEN, '[12, 19], ', ''),
+  ('append after the frozen bytes', features.FROZEN, '[1, 8], ', ''),
+  ('stale', 'beads/settings.cc', '  9,  // Reverb.', '  10,  // Reverb.'),
+  ('stale', 'beads/settings.h',
+      'kOptionsRecordVersion = 1;', 'kOptionsRecordVersion = 2;'),
   # Values may be appended after the frozen ones.
   ('stale', features.MANIFEST,
       '{"name": "Low"},\n        {"name": "High"}',

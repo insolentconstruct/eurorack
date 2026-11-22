@@ -73,7 +73,7 @@ Scale (tap SEED to step through):
 | DRY/WET | Resonator material | Wood / String / Glass / Bell | green; steady / yellow; steady / red; steady / green; slow blink |
 | REVERB | Resonator ring time | Short / Medium / Long / Very long | green; steady / yellow; steady / red; steady / green; slow blink |
 
-**Resonator:** SEED strikes it; not saved yet.
+**Resonator:** SEED and hits strike it.
 
 ## Other gestures
 

@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 21 host programs, 363 named test sections, 3,088
-assertion sites and 746 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 22 host programs, 385 named test sections, 3,305
+assertion sites and 756 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
 detected all 484 faults across eight shards. Named sections and assertion sites
@@ -55,7 +55,8 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
 | `beads/test/plaits_synth.mk` | Plaits synth: every model renders, with and without AUX (five engines skip it, as in the firmware), the 6-op banks unpacked once for all voices as each engine unpacks them, with notes switching banks on every voice pinned to per-voice unpacking, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent, including at noon, after a bank change, notes keeping their model), FREEZE sustain, RAM bounds; Speech word banks: the sliced decode matches Mutable Instruments' for every bank and after interrupted loads, at most 32 frames per block, and the word after a bank change is sample-exact to Mutable Instruments' controller with the change made once the bank is loaded; a waiting word is dropped by a Reset or the phonemes; the bit-reversal table matches a computed reversal for all 256 bytes; the banks decoded once for all voices leave each voice's RAM as its own decode does, call for call |
 | `beads/test/profile.mk` | Profile validation, feature modes/control allocation (only Synth start on the [A] hold; Synth start needs a gesture unless Automatic), page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections |
-| `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step; the optional start quality (#287): once per new profile, over stock and older saves, after a settings reset, never over a frozen recording, and the saved profile identity |
+| `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step; a calibration copy in one sector after every erase and program of a save; State as stock writes it, with older releases' bytes 10–23 ignored; each saved option's record byte, dormant values and the not-set rule; the optional start quality (#287): once per new profile, over stock and older saves, after a settings reset, never over a frozen recording, and the saved profile identity |
+| `beads/test/record.mk` | The options record in sector 14: appends, record before State, the unsigned checksum, other versions and bad tags, sizes or checksums, torn slots, a full journal; power cut at each compaction step; compaction refused unless the settings sector's calibration is readable, usable and in use; a stale mirror refreshed; the factory-calibration guard; an implausible settings sector with a cut at every recalibration step; SEED resets through append or compaction; low supply; gestures across reboots; Beta 3 downgrades and recalibration; foreign records in either sector (stock's overwrite and boot fault, kept from the design study) |
 | `beads/test/resonator.mk` | The modal resonator with sanitizers: the bank alone (the fundamental rings, decays, modes at 0.49 of the rate silent, the mono sum equal to both halves); tuning by PITCH and CV (not randomness), Recent notes, Pitch scale and the range clamp at every rate; its level on full-scale noise and strikes; after the grains (recording and dry unchanged) and before the buffer (resonance recorded, dry unchanged); Off and spectral identical to the stock block; strikes from Snap and trigger and Snap hits only; every quality, mono, stereo and delay mode finite and bounded; a full-scale sine at a mode held under its ceiling at every rate; every option played identically through the resonator's instance of the options block; Spectral restarting it from silence; the curated Material and Ring time values (defaults equal to the fixed resonator, bit for bit; each Ring time rings longer; Materials within 4 dB of String), Amount exact, controls kept across a rate change; the strike, SEED's and a hit's alike (level from silence), its edge policy (button and jack as one gate, latched jack edges, no strike when turned on held) and, through the block, none in delay mode, a hit striking as SEED does, one per block with both, and none heard before the buffer while frozen |
 
 | Program | Tests | Assertion sites |
@@ -78,15 +79,16 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | profile | 8 | 128 |
 | resonator | 16 | 104 |
 | spectral | 8 | 42 |
-| storage | 29 | 430 |
+| record | 20 | 181 |
+| storage | 31 | 466 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **363** | **3,088** |
+| **Total** | **385** | **3,305** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (746 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (756 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 

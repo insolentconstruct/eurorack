@@ -447,7 +447,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="31" cy="5988.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
 <text x="47" y="5993.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Before the buffer</text>
 <text x="47" y="6012.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
-<text x="22" y="6037.102362204724" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">SEED strikes it; not saved yet.</text>
+<text x="22" y="6037.102362204724" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">SEED and hits strike it.</text>
 <text x="22" y="6083.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Resonator material</text>
 <circle cx="195.0" cy="6155.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 6155.102362204724 v -16" stroke="#222" stroke-width="2"/>

@@ -47,15 +47,6 @@ const uint8_t kMaxProfileEntries = 82;
 const uint8_t kNoField = 255;
 // Changes only for incompatible profile meanings (SCALE-PROFILES.md).
 const uint32_t kProfileFormat = 1;
-const uint8_t kSettingsFormat = 0xc1;
-// Field 0 keeps 15 as not-set; field 13 explicitly selects custom scale 15.
-const uint8_t kPitchExtensionField = 13;
-const uint8_t kPitchExtensionScale = 15;
-const uint8_t kPitchExtensionValue = 1;
-// Fields 16 and 18 (low nibbles 0-14 each) keep the identity of the profile
-// that last saved; 15 is not set.
-const uint8_t kIdentityField = 16;
-const uint8_t kNumIdentities = 225;
 // Page slot 0 is none; 1 to 21 are the options pages' knobs, in order.
 const uint8_t kNumPageSlots = 22;
 #ifdef PLAITS_BLOBS
@@ -159,7 +150,7 @@ STATIC_ASSERT(sizeof(ProfileEntry) == 6, profile_entry_size);
 
 struct FeatureDefinition {
   uint8_t values;  // Zero means a full byte.
-  uint8_t field;  // Permanent nibble, or 255 for no packed value.
+  uint8_t field;  // Saved by the user (catalogue field), or kNoField.
   bool page;
   bool amount;
   bool action;
@@ -187,7 +178,8 @@ class Profile {
   }
 
   inline bool custom_bank() const { return custom_bank_; }
-  inline uint8_t identity() const { return identity_; }
+  // The profile's CRC; 0 for the built-in fallback.
+  inline uint32_t identity() const { return identity_; }
   inline uint8_t scale_count() const { return scale_count_; }
   inline const PitchScaleDefinition& scale(size_t index) const {
     return scales_[index];
@@ -232,7 +224,7 @@ class Profile {
 #endif  // PLAITS_BLOBS
   ProfileEntry entries_[FEATURE_LAST];
   bool custom_bank_;
-  uint8_t identity_;
+  uint32_t identity_;
   uint8_t scale_count_;
   PitchScaleDefinition scales_[kMaxCustomScales];
 #ifdef PLAITS_BLOBS

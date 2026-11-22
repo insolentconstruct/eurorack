@@ -64,102 +64,80 @@ Custom profiles can leave knobs unused; unused knobs have no effect on [A] or sa
 
 ## Saved data
 
-Hygrostat format v1 keeps State at 24 bytes. Bytes 0–9 retain their stock
-meaning. Width (14), CV destination (16) and diffusion (17) use full-byte
-encoding.
-Settings from stock carry over exactly as stock reads them, including
-monophonic mode. Drizzlet's options from earlier releases (alphas and Beta 1)
-start from the profile's defaults. Calibration is always kept.
-Byte 23 is the format marker: 0 is the old layout, 0xC1 is packed v1, and
-every other marker selects the profile defaults. Old records are decoded in
-RAM; the next save writes packed v1.
+Settings live in two records. **State**, in the settings sector (15), is
+exactly stock's: bytes 0–9 keep their stock meanings, including monophonic
+mode (byte 9) and the manual gain (byte 5), and bytes 10–23 are written as
+zero, as stock writes them. Stock, the alphas and Beta 1 read it as their own.
 
-Bytes 10–13, 15 and 18–22 hold twenty permanent nibble fields. The low
-nibble admits 0–14, with 15 meaning not set; the high admits 0–8, with 9
-meaning not set. Pitch uses a low nibble. No packed byte can be 0xA0–0xAF,
-so Beta 1 reads the packed choices as Stock. Fields never move or get reused;
-Off and Fixed features keep their dormant saved fields. Unsupported or
-not-set values use the profile default.
+Every other saved option is in the **options record** (`DRZL`, 56 bytes,
+stmlib's chunk format) in sector 14, after the mirrored calibration, in fixed
+64-byte slots as stock's states are. The latest slot that passes its tag, size
+and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 
-| Feature ID | Feature | Permanent field |
+| Payload byte | Content |
+|---|---|
+| 0 | Layout version, 1 |
+| 1 | CV target: 0 none, 1 stereo width, 2 diffusion |
+| 2–3 | Reserved, 0xFF |
+| 4–7 | The profile that last saved: its CRC-32, 0 for the built-in fallback |
+| 8–23 | One byte per saved option (below) |
+| 24–55 | Reserved, 0xFF |
+
+A latest record of another version gives the profile's defaults; no older slot
+is read instead. A byte at or past its option's value count is not set, so the
+profile's default applies. Off and Fixed features keep their saved byte.
+Options are not promised across betas: Beta 2 and 3 options start from the
+profile's defaults, and their packed bytes 10–23 are ignored and cleared at the
+next state save. A new layout changes the version; within a version only new
+enumerated options take reserved bytes. `resources/features-frozen.json`
+freezes each version's offsets.
+
+| Feature ID | Feature | Saved in |
 |---|---|---|
-| 1 | Pitch scale | 0 (byte 10 low), extension 13 (byte 19 high) |
-| 2 | Reverb character | 1 (byte 10 high) |
-| 3 | Delay mode | 2 (byte 11 low) |
-| 4 | Processor | 3 (byte 11 high) |
-| 5 | Limiter | 4 (byte 12 low) |
-| 6 | Frozen feedback | 5 (byte 12 high) |
-| 7 | Synth | 6 (byte 13 low) |
-| 8 | Attacks | 7 (byte 13 high) |
-| 9 | Synth start | 8 (byte 15 low) |
-| 10 | Random pitch steps | 9 (byte 15 high) |
-| 11 | Stereo width | Full byte 14 |
-| 12 | Diffusion | Full byte 17 |
-| 13 | Monophonic grains | Stock byte 9 |
-| 14 | Buffer trim | No saved value |
-| 15 | Version at boot (#54) | No saved value |
-| 16 | Input attenuation (#44) | No saved value |
-| 17 | Delay indication (#42) | No saved value |
-| 18 | LED brightness (#40) | 10 (byte 18 low) |
-| 19 | Live assignment LEDs (#27) | No saved value |
-| 20 | FREEZE during saves (#25) | No saved value |
-| 21 | SEED latch (#13) | 11 (byte 18 high) |
-| 22 | Pitch notch indication (#7) | No saved value |
-| 23 | TIME modulation (#141) | 12 (byte 19 low) |
-| 24 | Synth reverb tail (#192) | No saved value |
-| 25 | Options page idle timeout (#202) | No saved value |
-| 26 | Delay SEED latch fade (#183) | No saved value |
-| 27 | Input gain at power-on (#19) | No saved value |
-| 28 | Attack sensitivity (#58, #47) | No saved value |
-| 29 | SEED at power-on (#41) | No saved value |
-| 30 | PITCH knob (#43) | No saved value |
-| 31 | Plaits bank (#190) | 14 (byte 20 low) |
-| 32 | Mix law (#21) | No saved value |
-| 33 | Reverb input (#20) | No saved value |
-| 34 | Grain stealing (#237) | No saved value |
-| 35 | Delay feedback (#10) | No saved value |
-| 36 | Delay time (#30) | No saved value |
-| 37 | Options page preview (#285) | No saved value |
-| 38 | Options page on opening (#285) | No saved value |
-| 39 | Start in quality (#287) | No saved value |
-| 40 | Manual gain knob (#301) | No saved value; the gain is stock byte 5 |
-| 41 | Resonator (#88) | No saved value yet; page 5 |
-| 42 | Reserved for Rings polyphony | — |
-| 43 | Resonator material (#88) | No saved value yet; page 5 |
-| 44 | Resonator ring time (#88) | No saved value yet; page 5 |
-| 45–49 | Resonator structure, brightness, damping, position, amount (#88) | No saved value; exact profile values |
+| 1 | Pitch scale | Record byte 8 |
+| 2 | Reverb character | 9 |
+| 3 | Delay mode | 10 |
+| 4 | Processor | 11 |
+| 5 | Limiter | 12 |
+| 6 | Frozen feedback | 13 |
+| 7 | Synth | 14 |
+| 8 | Attacks | 15 |
+| 9 | Synth start | 16 |
+| 10 | Random pitch steps | 17 |
+| 11 | Stereo width | 18, full byte |
+| 12 | Diffusion | 19, full byte |
+| 13 | Monophonic grains | State byte 9 |
+| 18 | LED brightness (#40) | 20 |
+| 21 | SEED latch (#13) | 21 |
+| 23 | TIME modulation (#141) | 22 |
+| 31 | Plaits bank (#190) | 23 |
+| 40 | Manual gain knob (#301) | The gain is State byte 5 |
+| 41 | Resonator (#88) | 24; page 5 |
+| 43 | Resonator material (#88) | 25; page 5 |
+| 44 | Resonator ring time (#88) | 26; page 5 |
 
-Fields 16 (byte 21 low) and 18 (byte 22 low) hold the identity of the
-profile that last saved, 0–224 from its checksum: field 18 × 15 + field 16.
-It tells a newly installed profile from the one that last saved
-([Start in quality](#start-in-quality)); 15 in either field means none.
-The identity is approximate: about 1 in 225 different profiles share one, and
-then the quality is not applied; editing a profile can change it, and then the
-quality applies again. Stock treats bytes 10–23 as padding and ignores it.
-Beta 3 may clear it when it saves; if so, after upgrading again the
-profile's quality applies until something is saved.
+Other features are not saved: they always take the profile's value. Bytes 24–26 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
 
-Pitch field 0 retains 15 as the not-set sentinel. Field 13 is the permanent
-pitch extension: 0 means no extension, 1 explicitly selects scale ID 15 when
-field 0 is 15, and 9 means unset. Old erased extension values (15) are also
-unset. Unknown extension values use the profile default, never an implicit
-scale ID 15. Base selections 0–14 retain their original meanings and take
-precedence over the extension.
+Options-only changes (an options page, an [A] gesture, the Plaits bank) append
+a record and leave the settings sector alone; a change to both writes the
+record first. Either sector is erased only while the other holds a usable
+calibration (valid and within 25% of the factory values), read back from flash;
+the one exception is a store with none (a new module, or a repair with SEED).
+A full journal (2,046 slots) or a damaged slot compacts sector 14: erase, then
+the settings sector's calibration, copied from flash and only if usable and
+the one in use, then the latest record. A power cut there leaves the settings
+sector untouched and may reset the options. A recalibration puts the record
+back in the mirror before the settings sector is erased. If the settings
+sector holds exactly the factory calibration while the mirror holds another
+plausible one, as a stock-storage firmware can leave after an interrupted
+rewrite, the mirror's comes back. SEED at power-up resets the options too.
 
-Saving an Adjustable pitch choice writes extension 1 for ID 15 and extension 0
-for choices 0–14. Off and Fixed profiles preserve both dormant fields. A
-never-configured pitch field remains unset even when a later profile includes
-ID 15; that profile uses its own starting value. An explicitly saved ID 15
-falls back to Off if that ID is absent from the installed bank.
-
-Field 14 holds the Plaits bank (ID 31, Beta 3); fields 16 and 18 the profile
-identity (Beta 4); fields 15, 17 and 19 remain unallocated in v1. Fields 10–13 are permanent from this release; the marker stays 0xC1 and every existing field keeps its position.
 The profile table in `beads/profile.cc` owns identities and allowed controls.
 Missing or invalid profiles use the release layout and lock settings writes;
 the boot guard's own recoveries still run from storage state. SEED at boot
 with a valid profile resets to its defaults, preserving calibration.
 
-### Legacy and runtime settings layout
+### State layout
 
 State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no payload bytes. Defaults below are before flash loading. <!-- beads/settings.h:51-62; beads/settings.cc:60-70 -->
 
@@ -173,24 +151,11 @@ State is 24 bytes, all `uint8_t`, with no implicit gaps; enum tags occupy no pay
 | 7 | `frozen` | 0; TAKEN: completed backup flag, not immediate button latch <!-- beads/settings.h:57; beads/background_buffer_backup.cc:84-86,136-139 --> |
 | 8 | `disable_autosave` | 0; TAKEN <!-- beads/settings.h:58; beads/settings.cc:68 --> |
 | 9 | `monophonic_mode` | 0 = off (default), 1 = on; TAKEN: monophonic grains, using Mutable Instruments' original code <!-- beads/settings.h:59; beads/beads.cc:203; beads/ui.cc:358-369 --> |
-| 10 | `padding[0]` | Drizzlet limiter: 0 = Stock, 0xA1 = Fast, 0xA2 = Off; everything else decodes to Stock <!-- beads/settings.h:74-85 --> |
-| 11 | `padding[1]` | Synth start: 0xA1 = Manual; 0 and all unknown values = Automatic (Stock); canonicalized on load/save |
-| 12 | `padding[2]` | Pitch: 0 Off; 0xA1 Chromatic; 0xA2–0xA9 Fifths, Major, Minor, Major pentatonic, Minor pentatonic, Pelog, Bhairav, Shri; unknown values read Off |
-| 13 | `padding[3]` | Reverb character: 0xA2 Clouds-style; 0 and every other value Stock. 0xA1 reserved for future Grains only; canonicalized on load/save |
-| 14 | `padding[4]` | Stereo width: 0 Stock; 1..255 enabled, zero to full displacement |
-| 15 | `padding[5]` | Delay mode: 0 Auto (Stock), 0xA1 Disabled, 0xA2 Wide/smooth filter; unknown values read Auto (Stock) |
-| 16 | `padding[6]` | ASSIGN extra destination: 0 off, 1 WIDTH, 2 DIFFUSION; other values read off; stock destination stays FEEDBACK |
-| 17 | `padding[7]` | Grain diffusion: 0 follows the reverb character (none with Stock, 0.7 with Clouds-style); 1..255 = amount 0..1 set with [A]+REVERB |
-| 18 | `frozen_feedback` | Frozen feedback: 0xA1 = Evolving; 0 and all unknown values = Stock; canonicalized on load/save |
-| 19 | `attacks` | Attacks: 0xA1 = Snap, 0xA2 = Snap and trigger; 0 and all unknown values = Off; canonicalized on load/save |
-| 20 | `engine` | Processor: 0xA1 = Spectral; 0 and all unknown values = Granular (Stock); canonicalized on load/save |
-| 21 | `synth_engine` | Synth: 0 Beads (Stock), 0xA1 Plaits; unknown values read Beads (Stock); canonicalized on load/save |
-| 22 | `random_intervals` | Random pitch steps: 0xA1 = Fifths and octaves, 0xA2 = Recent notes; 0 and all unknown values = Free (Stock); canonicalized on load/save |
-| 23 | `padding[0]` | RESERVED: variant ID. 0 = main Drizzlet or stock; zeroed on every save |
+| 10–23 | `padding[14]` | Zero, as stock writes it. Beta 1 to 3 kept options here; they are ignored and cleared at the next save |
 
 Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, but plays grains polyphonically. <!-- stock:beads/ui.cc:191; stock:beads/settings.cc:94-96; stock:beads/beads.cc:203-207 -->
 
-Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Saving on stock loses Drizzlet options (wavetable synth returns to Automatic (Stock)). Drizzlet canonicalizes bytes 10–16 and 18–21 on load/save, keeps byte 17 and clears 22 and 23. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
+Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Drizzlet writes State the same way; its options are in sector 14, which stock never reads or writes. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
 Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded; an out-of-range CALI with no such mirror loads as stock loads it. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. Only a lost CALI with no usable mirror, or a blank sector with a mirror that isn't blank but holds no CALI, is damage: every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. Each erase and program first checks the programmable voltage detector (level 6, 2.69-2.83 V falling) and is refused while it shows VDD low: a state save is skipped, and any other refused operation fails like a flash error, so a save cut short loads as a power cut at that point would. The detector is set at each start-up; no option byte is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/drivers/flash.h; beads/test/storage_test.cc -->
@@ -200,7 +165,7 @@ Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC erro
 | Bootloader, 0x08000000–0x0801FFFF | Reserved 128 KiB sector; updater starts app at 0x08020000 | Not free app space <!-- beads/bootloader/bootloader.cc:53,266-280 --> |
 | CALI + STAT, 0x081E0000–0x081FFFFF | One 128 KiB sector; CALI payload 120 B (6×8 B calibration + 72 B padding), record 128 B; STAT payload 24 B, record 32 B | Append space is owned by storage, not a new feature area; CALI padding[0–71] FREE format bytes, but cleared on save; change clearing before use <!-- beads/settings.h:40-61,101; beads/drivers/cv_adc.h:45-52; beads/settings.cc:88-99; stmlib/system/sector_storage_h7xx.h:58-59,213-224 --> |
 | FRZZ, 0x08100000–0x081BFFFF | Intended reservation: six 128 KiB sectors; 32 B header word + 768,000 B audio | 18,400 B tail reserved with backup; header layout below <!-- beads/background_buffer_backup.cc; beads/background_buffer_backup.h; beads/dsp/processor.h:51; stmlib/system/sector_storage_h7xx.h:51-57 --> |
-| Calibration mirror, 0x081C0000–0x081DFFFF | TAKEN by Drizzlet: a CALI record, as in the settings sector, written before each settings-sector erase when missing or different. Stock ignores it | Restores the calibration when the settings sector is blank <!-- beads/settings_storage.h --> |
+| Calibration mirror and options, 0x081C0000–0x081DFFFF | TAKEN by Drizzlet: a CALI record, as in the settings sector, written before each settings-sector erase when missing or different, then the options records in 64 B slots (2,046 per erase). Stock ignores it | Restores the calibration when the settings sector is blank <!-- beads/settings_storage.h --> |
 | Application, 0x08020000–0x080FFFFF | Bank 1 after the bootloader | The build fails if the image reaches bank 2 <!-- beads/build/flash_bound.ld --> |
 
 Frozen-buffer backup header: one 32-byte flash word at 0x08100000, little-endian, followed by the 768,000 audio bytes. Stock firmware reads bytes 0–9 only, so stock and Drizzlet load each other's backups.
@@ -287,7 +252,7 @@ Prefer, in order: no control (a better default or an indicator), a new value in 
 Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurorack/issues/32).
 
 - **Saved fields keep their meaning permanently.** Layout and defaults in
-  [Saved data](#saved-data); byte 23 holds the format marker.
+  [Saved data](#saved-data); the options record carries a layout version.
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
 - **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Factory cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
@@ -413,7 +378,7 @@ Hygrostat feature ID 24 chooses Keep (stock) / Clear. Off or an omitted entry
 keeps the shared reverb memory when leaving either synth, allowing its tail to
 continue as in stock firmware. Fixed Clear clears it on manual stop, input
 patching and processor changes. This is a firmware-profile choice, with no
-panel slot or gesture. It has no saved-state nibble and no per-audio-block work;
+panel slot or gesture. It has no saved byte and no per-audio-block work;
 the check and optional clear run only during transitions. Fades and codec
 handling are independent of this choice.
 
@@ -427,7 +392,7 @@ never while a button is held. An option knob counts as turned once it is more th
 last counted, however slowly; jitter, CV and the stored-value preview don't
 count. Closing by timeout is the same as holding [M]: changes are kept and
 saved once if unsaved. Firmware-profile choice, with no panel slot or
-saved-state nibble.
+saved byte.
 
 ### Delay SEED latch fade
 
@@ -436,8 +401,8 @@ Hygrostat feature ID 26 chooses Switch at once (stock) / Fade. In delay mode
 tapped and knob timing in one sample, which can pop. Fade dips the delay taps
 for 10 ms, switches timing at silence and fades back in over 10 ms, without
 the short chirp. Patching SEED while latched fades the same way; a clocked
-latch never fades. Firmware-profile choice, with no panel slot or saved-state
-nibble.
+latch never fades. Firmware-profile choice, with no panel slot or saved
+byte.
 
 ### Input gain at power-on
 
@@ -449,8 +414,8 @@ attenuation. A saved manual gain always wins. [A]+FEEDBACK still sets and
 saves manual gain, and holding [A] still restarts automatic gain until the
 next power-on. The unity value is saved with the next settings save, like any
 manual gain, so it stays after switching back to Automatic until [A] is
-held. This is a firmware-profile choice, with no panel slot or saved-state
-nibble; it runs only at power-on.
+held. This is a firmware-profile choice, with no panel slot or saved
+byte; it runs only at power-on.
 
 ### Attack sensitivity
 
@@ -461,7 +426,7 @@ input's slow peak (0.5 s release). Normal keeps Beta 2's 1.5 (+3.5 dB). Low
 is 2.0 (+6 dB) and ignores softer notes after a hit. High is 1.3 (+2.3 dB):
 it catches quieter ghost notes, and more false attacks on noisy input. The
 threshold is chosen at power-on; Snap and Snap and trigger share it. No panel
-slot or saved-state nibble. Host measurements are in
+slot or saved byte. Host measurements are in
 [Testing](TESTING.md#beta-3-host-measurements).
 
 ### SEED at power-on
@@ -471,8 +436,8 @@ Unlatched powers on as after a SEED tap: SEED presses, gates and, with Snap
 and trigger, detected attacks start the grains, and in delay mode SEED taps set the time. Holding SEED for 4 s or
 SEED+FREEZE latches as usual; the SEED latch options (#13) apply once
 latched, and with the delay SEED latch fade the delay starts in tapped
-timing without a fade. Power-on only, with no panel slot or saved-state
-nibble.
+timing without a fade. Power-on only, with no panel slot or saved
+byte.
 
 ### PITCH knob
 
@@ -482,7 +447,7 @@ major third, fifth, one and two octaves) but moves linearly between them,
 without the flat zone around each. Calibrated PITCH CV and the PITCH
 attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
 Smooth. Grains, delay pitch and both synths follow the knob law. The law is
-chosen at power-on. No panel slot or saved-state nibble.
+chosen at power-on. No panel slot or saved byte.
 
 ### Plaits bank
 
@@ -493,7 +458,7 @@ added in Plaits 1.2 (1–8). FEEDBACK selects one of the eight, about 34
 degrees each; Beta 2's 24 models on one knob are gone. While the Plaits synth
 plays, hold [A] and press FREEZE to step green, red, yellow, then green
 again; [A] shows the new bank's colour for half a second, the bank is saved
-(field 14) and FREEZE stays as it was. FREEZE alone still sustains.
+(record byte 23) and FREEZE stays as it was. FREEZE alone still sustains.
 Elsewhere [A]+FREEZE stays buffer trim; spectral and the wavetable synth
 have no recording to trim there, so it only releases a latched FREEZE.
 
@@ -530,7 +495,7 @@ Gentle makes the wet side rise in a straight line, so at 9 o'clock the
 grains are 7.6 dB under the dry (Clouds: 8.8 dB) and at noon 3.5 dB quieter
 than stock. The dry level and both ends of the knob stay stock. DRY/WET CV
 follows the same law. Granular, delay and spectral; both synths keep their
-own DRY/WET. Chosen at power-on, with no panel slot or saved-state nibble.
+own DRY/WET. Chosen at power-on, with no panel slot or saved byte.
 
 ### Reverb input
 
@@ -544,7 +509,7 @@ and flutter comes after the reverb, so the tail wobbles too. The reverb
 returns with the grains, so the granular/delay switch fades its tail out and
 back in with them. Granular, delay and spectral; both synths keep the stock
 routing. Chosen at power-on, with
-no panel slot or saved-state nibble.
+no panel slot or saved byte.
 
 ### Grain stealing
 
@@ -565,7 +530,7 @@ module the 2021/2024 stealing added 3.4 to 3.6 points of peak load in Bright
 digital, Sunny tape and Scorched cassette ([CPU ceiling](TESTING.md#beta-3));
 Cold digital is not measured. Granular and the wavetable synth; delay,
 spectral and the Plaits synth have no grain stealing. Chosen at power-on, with
-no panel slot or saved-state nibble. Value 0 always means 2021/2024, so
+no panel slot or saved byte. Value 0 always means 2021/2024, so
 profiles without ID 34, including all Beta 3 profiles, get it.
 
 ### Delay feedback
@@ -587,7 +552,7 @@ delay times adding in phase, so the loop never rises above unity; other
 material loses up to 3 dB on the passage that fades. Mutable
 Instruments noted that grain levels vary too much for a fixed unity, so
 granular, spectral and both synths keep the stock feedback. Chosen at
-power-on, with no panel slot or saved-state nibble.
+power-on, with no panel slot or saved byte.
 
 ### Delay time
 
@@ -604,7 +569,7 @@ when its two copies are out of phase. Delays under 10 ms still glide, for
 flanging. FREEZE slices keep stock's glide too: they replay at their own
 speed, so they never bend the pitch. A fade already running when FREEZE
 engages finishes first. Clocked and tapped timing and TIME are unchanged.
-Chosen at power-on, with no panel slot or saved-state nibble.
+Chosen at power-on, with no panel slot or saved byte.
 
 ### Options page preview
 
@@ -615,8 +580,8 @@ turn for 2048 ms, with that knob's mix LED steady, then the page's first
 setting. First setting only goes straight to that end state: the page's mix
 LEDs pulse at once and [A] shows the first used setting, its blink restarted.
 The 100 ms open flash, knob pickup, SEED scale taps, saving and the idle
-timeout are unchanged. Chosen at power-on, with no panel slot or saved-state
-nibble; it runs only while the pages are open.
+timeout are unchanged. Chosen at power-on, with no panel slot or saved
+byte; it runs only while the pages are open.
 
 ### Options page on opening
 
@@ -627,7 +592,7 @@ idle timeout closes the pages; on a custom layout whose page 1 is empty that
 is the first page with a setting. While the opening hold continues, [A]
 already shows that page's first setting and the open flash lights its LEDs.
 Tapping [M] still steps through the pages. Chosen at power-on, with no panel
-slot or saved-state nibble; it runs only when the pages open.
+slot or saved byte; it runs only when the pages open.
 
 ### Start in quality
 
@@ -637,7 +602,7 @@ changes the saved quality. Any other value is the quality at start-up after
 the profile is installed, over stock, an older release or another profile, and
 after a settings reset (SEED held at power-up). Until something is saved, every
 start-up applies it again. The saved settings record which profile last saved
-them (fields 16 and 18), so any save, even an unrelated one, accepts the
+them (the record's profile identity), so any save, even an unrelated one, accepts the
 profile; from then on a quality chosen on [A] wins. When a frozen granular
 recording is to be restored from flash, the module keeps that recording's
 quality instead; the check is that a restore is intended, so with an unreadable
@@ -683,8 +648,9 @@ quarters) sets damping: Short 0.35, Medium 0.5, Long 0.65, Very long 0.8,
 each step ringing about four times longer (the fundamental about 0.6, 2.3,
 9 and 37 s at 48 kHz; Cold digital rings 1.5 times longer, the tapes twice).
 String and Medium are the fixed values of Beta 4's first resonator, so the
-factory sound is unchanged; both light yellow, second of four. Page 5 is
-not saved yet: each start-up uses the profile's values.
+factory sound is unchanged; both light yellow, second of four. Page 5 saves
+like the other pages, in options record bytes 24 (placement), 25
+(Material) and 26 (Ring time).
 
 Hygrostat can set exact values, IDs 45 to 49 (Fixed only, one byte):
 structure, brightness, damping and pickup position as byte / 256, and amount
