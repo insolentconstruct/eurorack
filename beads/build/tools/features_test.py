@@ -28,6 +28,7 @@
 # The committed feature tables are features.py's output, the frozen IDs hold,
 # and each check refuses a deliberate fault in a scratch copy.
 
+import hashlib
 import json
 import pathlib
 import re
@@ -43,7 +44,7 @@ ROOT = pathlib.Path('.')
 FILES = [features.MANIFEST, features.FROZEN, features.CATALOGUE,
     'beads/profile.h', 'beads/profile.cc', 'beads/options.h',
     'beads/options.cc', 'beads/build/tools/options_tables.cc',
-    'beads/settings.h', 'beads/settings.cc']
+    'beads/settings.h', 'beads/settings.cc', features.FEATURES_DOC]
 
 
 def outcome(directory, path, before, after):
@@ -80,6 +81,19 @@ assert int.from_bytes(block[size:size + 4], 'little') == zlib.crc32(
     block[:size])
 assert set(block[size + 4:]) == {0xff}
 print('Factory profile block holds the manifest factory rows: PASS')
+
+# Catalogue format 2 names the manifest it came from and its record layout.
+catalogue = json.loads((ROOT / features.CATALOGUE).read_text())
+assert catalogue['format'] == 2
+assert catalogue['manifest_sha256'] == hashlib.sha256(
+    (ROOT / features.MANIFEST).read_bytes()).hexdigest()
+assert catalogue['record_version'] == manifest['record_version']
+assert [c['factory'] for c in catalogue['features'] if c['factory']] == [
+    e for _, e in rows]
+assert [c.get('saved') for c in catalogue['features']] == [
+    f.get('saved') for f in manifest['features']]
+print('Catalogue format 2, manifest digest and record bytes: PASS')
+DIGEST = '"manifest_sha256": "%s"' % catalogue['manifest_sha256']
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
 assert [r['id'] for r in frozen['features']] == (
@@ -162,6 +176,26 @@ faults = [
   ('stale', 'beads/settings.cc', '  9,  // Reverb.', '  10,  // Reverb.'),
   ('stale', 'beads/settings.h',
       'kOptionsRecordVersion = 1;', 'kOptionsRecordVersion = 2;'),
+  # The catalogue's format, digest and record bytes come from the manifest.
+  ('stale', features.CATALOGUE, '"format": 2,', '"format": 1,'),
+  ('stale', features.CATALOGUE, DIGEST, DIGEST[:-1] + 'x'),
+  ('stale', features.CATALOGUE, '"saved": 23', '"saved": 24'),
+  ('stale', features.MANIFEST, '"record_version": 1,', '"record_version":  1,'),
+  # FEATURES.md's saved data table follows the record layout.
+  ('Saved data: ID 2', features.FEATURES_DOC,
+      '| 2 | Reverb character | 9 |', '| 2 | Reverb character | 10 |'),
+  ('Saved data: ID 11', features.FEATURES_DOC,
+      '| 11 | Stereo width | 18, full byte |', '| 11 | Stereo width | 18 |'),
+  ('Saved data: ID 23', features.FEATURES_DOC,
+      '| 23 | TIME modulation (#141) | 22 |\n', ''),
+  ('Saved data: ID 13 is not in the record', features.FEATURES_DOC,
+      '| 13 | Monophonic grains | State byte 9 |',
+      '| 13 | Monophonic grains | 24 |'),
+  ('Saved data: ID 2 twice', features.FEATURES_DOC,
+      '| 2 | Reverb character | 9 |',
+      '| 2 | Reverb character | 8 |\n| 2 | Reverb character | 9 |'),
+  ('Saved data: ID 5 name', features.FEATURES_DOC,
+      '| 5 | Limiter |', '| 5 | Soft clip |'),
   # Values may be appended after the frozen ones.
   ('stale', features.MANIFEST,
       '{"name": "Low"},\n        {"name": "High"}',

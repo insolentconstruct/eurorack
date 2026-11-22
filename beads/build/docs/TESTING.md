@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 22 host programs, 385 named test sections, 3,305
-assertion sites and 756 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 22 host programs, 389 named test sections, 3,277
+assertion sites and 767 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
 detected all 484 faults across eight shards. Named sections and assertion sites
@@ -9,8 +9,8 @@ are source inventory counts; loops and parameter sweeps execute them repeatedly.
 
 The Beta 2 release build reproduces application `2558dd77…`, timing image
 `8459e0fa…` and WAV `28e28efa…`, and decodes the WAV back to the application.
-This source pins its own unreleased application `30091787…` and WAV
-`e8c8235d…`. The release documentation and generated guides pass their
+This source pins its own unreleased application `0673a8d4…` and WAV
+`87c95ccb…`. The release documentation and generated guides pass their
 checker. Beta 3 module results are under [On a module](#beta-3); some
 checks are still pending.
 
@@ -42,7 +42,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | `beads/test/gain.mk` | Input gain with sanitizers: the learning window, headroom after a level rise, digital and tape clipping, and gain on quiet inputs |
 | `beads/test/trigger.mk` | Grain triggering with sanitizers: free-running rates at both ends of DENSITY, silence at noon (free and clocked), clock probability and divisions, SEED and gate enabling, one grain per press or gate at noon, density FM, and SEED latch Sync as a hard sync (a grain per edge, also with a clock faster than DENSITY's rate and at noon) |
 | `beads/test/granular.mk` | Grain playback and attenurandomizers with sanitizers: TIME, direction, SIZE, SHAPE, the PITCH notches and the smooth PITCH law, patched and unpatched knob laws, random distributions and the shared random stream; through the processor, parameters fixed at grain start, envelopes, voice stealing and the grain count, PITCH CV response, random pan, and CV channel separation; monophonic grains fading earlier grains; quantized grain pitch and trimmed-window reads; Recent notes grains |
-| `beads/test/delay.mk` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5, slice changes only at slice boundaries, every clock divider ratio, and the clock's idle counter stopping at its limit; every tap reads a valid delay. Also DENSITY and its CV, the secondary tap, SEED clocking and its crossfade, TIME multipliers, SHAPE envelopes and TIME's random modulation |
+| `beads/test/delay.mk` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5, slice changes only at slice boundaries, every clock divider ratio, and the clock's idle counter stopping at its limit; every tap reads a valid delay. Also DENSITY and its CV, the secondary tap, SEED clocking and its crossfade, TIME multipliers, SHAPE envelopes (one shape per sample, equal to the stock per-tap envelopes) and TIME's random modulation |
 | `beads/test/backup.mk` | Frozen-buffer save format byte by byte; no save before 10 s of FREEZE and a clean cancel; stock saves load; out-of-range headers refused when loading; corrupted audio or header refused on saves carrying the CRC tag; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; trimmed and empty buffer saves, older saves, invalid lengths and trim under a FREEZE gate; settings saved during a save; the backoff after cut-short saves, its cap and resets, across the clock wrapping and after a restored frozen buffer |
 | `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios; FEEDBACK's bank selection and its hysteresis; dry/wet, FREEZE, the output resolution of each quality, 1 V/octave and pitch spread, and the dry sine level at octaves from C3 to C9; quantized synth grains; stereo width in rendered grains (Stock, zero, small and full displacement, CV clamped at both ends, grains keep the width they started with) |
 | `beads/test/processor.mk` | The whole audio processor with sanitizers: each quality's sample rate, bit depth and buffer length, mono and stereo; FREEZE from the button and the gate; frozen grains keep playing; the crossfade when recording resumes; trim dispatch for every quality, mono and stereo |
@@ -54,7 +54,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | `beads/test/attack.mk` | Attacks: hit detection on the input and its three sensitivities, marks in the recording, grain starts moved onto them, Off leaving the grains alone |
 | `beads/test/feedback_diffuser.mk` | Evolving frozen feedback: a stable loop, running only while FREEZE is on, cleared after a fade |
 | `beads/test/plaits_synth.mk` | Plaits synth: every model renders, with and without AUX (five engines skip it, as in the firmware), the 6-op banks unpacked once for all voices as each engine unpacks them, with notes switching banks on every voice pinned to per-voice unpacking, voice allocation, the eight-model banks on FEEDBACK (detents, both ends and the held detent, including at noon, after a bank change, notes keeping their model), FREEZE sustain, RAM bounds; Speech word banks: the sliced decode matches Mutable Instruments' for every bank and after interrupted loads, at most 32 frames per block, and the word after a bank change is sample-exact to Mutable Instruments' controller with the change made once the bank is loaded; a waiting word is dropped by a Reset or the phonemes; the bit-reversal table matches a computed reversal for all 256 bytes; the banks decoded once for all voices leave each voice's RAM as its own decode does, call for call |
-| `beads/test/profile.mk` | Profile validation, feature modes/control allocation (only Synth start on the [A] hold; Synth start needs a gesture unless Automatic), page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections |
+| `beads/test/profile.mk` | Profile validation, feature modes/control allocation (only Synth start on the [A] hold; Synth start needs a gesture unless Automatic), page slots 1-21, defaults and packed settings; ordered custom scale banks, IDs, UTF-8 names, finite note/repeat limits, reserved bytes, checksums, malformed banks and absent selections; the valid and invalid profiles in `profile_cases.txt`, which Hygrostat's codec must answer alike |
 | `beads/test/storage.mk` | Damaged settings: an uncorrectable flash error at each calibration and settings record the firmware reads, bad checks, blank sectors with and without the calibration copy, interrupted saves and rewrites; nothing written while damaged; the SEED repair, the calibration it keeps, failed erases and programs, and power lost at each repair step; a calibration copy in one sector after every erase and program of a save; State as stock writes it, with older releases' bytes 10–23 ignored; each saved option's record byte, dormant values and the not-set rule; the optional start quality (#287): once per new profile, over stock and older saves, after a settings reset, never over a frozen recording, and the saved profile identity |
 | `beads/test/record.mk` | The options record in sector 14: appends, record before State, the unsigned checksum, other versions and bad tags, sizes or checksums, torn slots, a full journal; power cut at each compaction step; compaction refused unless the settings sector's calibration is readable, usable and in use; a stale mirror refreshed; the factory-calibration guard; an implausible settings sector with a cut at every recalibration step; SEED resets through append or compaction; low supply; gestures across reboots; Beta 3 downgrades and recalibration; foreign records in either sector (stock's overwrite and boot fault, kept from the design study) |
 | `beads/test/resonator.mk` | The modal resonator with sanitizers: the bank alone (the fundamental rings, decays, modes at 0.49 of the rate silent, the mono sum equal to both halves); tuning by PITCH and CV (not randomness), Recent notes, Pitch scale and the range clamp at every rate; its level on full-scale noise and strikes; after the grains (recording and dry unchanged) and before the buffer (resonance recorded, dry unchanged); Off and spectral identical to the stock block; strikes from Snap and trigger and Snap hits only; every quality, mono, stereo and delay mode finite and bounded; a full-scale sine at a mode held under its ceiling at every rate; every option played identically through the resonator's instance of the options block; Spectral restarting it from silence; the curated Material and Ring time values (defaults equal to the fixed resonator, bit for bit; each Ring time rings longer; Materials within 4 dB of String), Amount exact, controls kept across a rate change; the strike, SEED's and a hit's alike (level from silence), its edge policy (button and jack as one gate, latched jack edges, no strike when turned on held) and, through the block, none in delay mode, a hit striking as SEED does, one per block with both, and none heard before the buffer while frozen |
@@ -65,30 +65,30 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | backup | 25 | 166 |
 | clouds | 5 | 17 |
 | codec | 5 | 60 |
-| delay | 11 | 46 |
+| delay | 12 | 47 |
 | delay_mode | 25 | 169 |
 | feedback_diffuser | 4 | 23 |
-| firmware | 49 | 481 |
+| firmware | 50 | 492 |
 | gain | 6 | 29 |
 | granular | 28 | 128 |
 | mix | 10 | 49 |
-| options | 73 | 893 |
+| options | 73 | 846 |
 | pitch_quantizer | 7 | 83 |
 | plaits_synth | 13 | 68 |
 | processor | 11 | 45 |
-| profile | 8 | 128 |
+| profile | 10 | 135 |
+| record | 20 | 181 |
 | resonator | 16 | 104 |
 | spectral | 8 | 42 |
-| record | 20 | 181 |
 | storage | 31 | 466 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **385** | **3,305** |
+| **Total** | **389** | **3,277** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (756 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (767 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -118,21 +118,25 @@ host-test jobs; the release app does not link them:
   services, libc beyond `memcpy`, `memmove` and `memset`, a fixed pointer
   into the blob).
 - `blob_emu/render_compare.py`: every OUT and AUX word and the generator's
-  state of Particle Noise, Spectral Spiral, Phase Weave, a test sine,
-  Wavetable and Speech as blobs against the same classes compiled in
-  (Particle Noise, Wavetable and Speech against Plaits' own engines), at two
-  placements and two FPSCR modes; Wavetable and Speech also with their
-  libraries placed apart (four layouts); the libraries built in the emulator
+  state of the 24 stock models, Spectral Spiral, Phase Weave and a test sine
+  as blobs against the same classes compiled in (the stock models against
+  Plaits' own engines, built in the voice's order), at two placements and two
+  FPSCR modes; every model that calls a library also with its libraries
+  placed apart (four layouts); every 6-op patch; the libraries built in the emulator
   as at synth entry; switch sequences with the slot and arena poisoned;
   writes from blob or library code outside the slot, arena, stack and
   outputs (a library's shared RAM included); canaries; section and library
   faults and the lock for every `WAVE`/`PLTS` outcome. A blob's first 48
   OUT samples after each build must equal the compiled-in samples times the
   fade-in, bit for bit, and every other OUT and AUX sample must equal them. Differences
-  after a return to a model that kept state compiled in are reported as
-  findings.
-- `build_blobs_dev.sh`: the development app with `PLAITS_BLOBS=1`, its
-  default region, and `plaits_catalog.cc` regenerated and compared.
+  after a return to a model that kept state compiled in, and Wave terrain's
+  reads past Plaits' wavetable (`KNOWN`), are reported as findings.
+- `build_region.sh` (run by the release build): every blob, the default
+  region (the 24 stock models and their four libraries), and
+  `plaits_catalog.cc` regenerated and compared.
+- `six_op_blob.mk`: the 6-op blob's indexed algorithms compile every
+  algorithm to Plaits' render calls, and each index runs the renderer
+  Plaits' function pointer names.
 
 Feature checks beyond the table:
 - **Stereo width:** the unchanged Stock calculation and RNG sequence, zero displacement, full spread with zero randomness, CV clamping, stock and enabled [M] cycles, every saved width byte, the [A]+DRY/WET gesture, its meter and saving, unchanged bytes 12/13, WIDTH CV routing, processor and synth propagation, rendered grain pan retention, saved assignments through the stock destination clamp.

@@ -113,9 +113,9 @@ freezes each version's offsets.
 | 23 | TIME modulation (#141) | 22 |
 | 31 | Plaits bank (#190) | 23 |
 | 40 | Manual gain knob (#301) | The gain is State byte 5 |
-| 41 | Resonator (#88) | 24; page 5 |
-| 43 | Resonator material (#88) | 25; page 5 |
-| 44 | Resonator ring time (#88) | 26; page 5 |
+| 41 | Resonator (#88) | 24 |
+| 43 | Resonator material (#88) | 25 |
+| 44 | Resonator ring time (#88) | 26 |
 
 Other features are not saved: they always take the profile's value. Bytes 24–26 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
 
@@ -317,7 +317,9 @@ choice can occupy any page slot (1–21). They have no amount, action,
 SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
 only, with no control placement. Omitted entries are Off. The default profile
 block is unchanged. The page-facing catalogue is
-`beads/build/profile-features.json`; costs are unknown until measured.
+`beads/build/profile-features.json`; costs are unknown until measured. Its
+format 2 adds the manifest's SHA-256, the record version, and each feature's
+record byte and factory entry; each release publishes it.
 
 Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
 when Adjustable or set via Hygrostat when Fixed. There is no power-on

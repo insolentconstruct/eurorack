@@ -28,7 +28,8 @@
 # Beads' release CCFLAGS and CPPFLAGS plus the blob flags, for these objects
 # only; linked at three bases, gated and packed by blob_pack.py, then checked
 # against beads/blob/expected-blobs.sha256 when NAME is listed there. Each
-# --library is a dependency, in the order the blob lists them.
+# --library is a dependency, in the order the blob lists them. Each object's
+# .nd lists its sources, for the release's notices.
 set -euo pipefail
 usage='usage: build_blob.sh OUT NAME [--library LIBRARY.bin]... SOURCE...'
 out=${1:?$usage}
@@ -50,10 +51,11 @@ CCFLAGS=$($M --eval 'blob_q: ; @echo $(CCFLAGS)' blob_q)
 CPPFLAGS=$($M --eval 'blob_q: ; @echo $(CPPFLAGS)' blob_q)
 TOOLCHAIN=$($M --eval 'blob_q: ; @echo $(TOOLCHAIN_BIN)' blob_q)
 # The prelude keeps the services' exports in the GOT and makes the rest
-# PC-relative; PLAITS_BLOB selects blob variants of shared code.
+# PC-relative; PLAITS_BLOB selects blob variants of shared code. Without
+# jump tables a switch is compares, never a branch through a register.
 BLOB_FLAGS="-fPIC -fvisibility=hidden -mpic-data-is-text-relative \
 -mno-single-pic-base -fno-threadsafe-statics -fno-stack-protector \
--include beads/blob/blob_visibility.h -DPLAITS_BLOB"
+-fno-jump-tables -include beads/blob/blob_visibility.h -DPLAITS_BLOB"
 printf 'CCFLAGS %s\nCPPFLAGS %s\nBLOB_FLAGS %s\n' \
   "$CCFLAGS" "$CPPFLAGS" "$BLOB_FLAGS" > "$out/$name/flags.txt"
 "${TOOLCHAIN}arm-none-eabi-gcc" --version | sed -n 1p >> "$out/$name/flags.txt"
@@ -62,11 +64,12 @@ for source in "$@"; do
   object="$out/$name/$(basename "${source%.*}").o"
   if [ "${source##*.}" = S ]; then
     # shellcheck disable=SC2086
-    "${TOOLCHAIN}arm-none-eabi-gcc" -c $CCFLAGS "$source" -o "$object"
+    "${TOOLCHAIN}arm-none-eabi-gcc" -c $CCFLAGS -MD -MF "${object%.o}.nd" \
+      "$source" -o "$object"
   else
     # shellcheck disable=SC2086
     "${TOOLCHAIN}arm-none-eabi-g++" -c $CCFLAGS $CPPFLAGS $BLOB_FLAGS \
-      "$source" -o "$object"
+      -MD -MF "${object%.o}.nd" "$source" -o "$object"
   fi
   objects+=("$object")
 done

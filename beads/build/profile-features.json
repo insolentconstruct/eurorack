@@ -1,5 +1,7 @@
 {
-  "format": 1,
+  "format": 2,
+  "manifest_sha256": "0f742b5a3f494f05afe481864006333f4d0f0deafc380dd7834c015a6dcab717",
+  "record_version": 1,
   "features": [
     {
       "id": 1,
@@ -55,9 +57,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        1,
+        2,
+        0,
+        1,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 0
+      "saved": 8
     },
     {
       "id": 2,
@@ -102,9 +112,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        2,
+        2,
+        0,
+        6,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 1
+      "saved": 9
     },
     {
       "id": 3,
@@ -147,9 +165,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        3,
+        2,
+        0,
+        5,
+        0,
+        0
+      ],
       "touches_synth": false,
       "cpu_cost": null,
-      "field": 2
+      "saved": 10
     },
     {
       "id": 4,
@@ -194,9 +220,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        4,
+        2,
+        0,
+        7,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 3
+      "saved": 11
     },
     {
       "id": 5,
@@ -239,9 +273,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        5,
+        2,
+        0,
+        12,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 4
+      "saved": 12
     },
     {
       "id": 6,
@@ -286,9 +328,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        6,
+        2,
+        0,
+        4,
+        0,
+        0
+      ],
       "touches_synth": false,
       "cpu_cost": null,
-      "field": 5
+      "saved": 13
     },
     {
       "id": 7,
@@ -332,9 +382,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        7,
+        2,
+        0,
+        8,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 6
+      "saved": 14
     },
     {
       "id": 8,
@@ -377,9 +435,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        8,
+        2,
+        0,
+        3,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 7
+      "saved": 15
     },
     {
       "id": 9,
@@ -425,9 +491,17 @@
       "stateless": true,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        9,
+        2,
+        0,
+        9,
+        0,
+        3
+      ],
       "touches_synth": false,
       "cpu_cost": null,
-      "field": 8
+      "saved": 16
     },
     {
       "id": 10,
@@ -470,9 +544,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        10,
+        2,
+        0,
+        2,
+        0,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": 9
+      "saved": 17
     },
     {
       "id": 11,
@@ -493,9 +575,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        11,
+        2,
+        0,
+        0,
+        1,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": null
+      "saved": 18
     },
     {
       "id": 12,
@@ -516,9 +606,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        12,
+        2,
+        0,
+        0,
+        2,
+        0
+      ],
       "touches_synth": true,
       "cpu_cost": null,
-      "field": null
+      "saved": 19
     },
     {
       "id": 13,
@@ -542,9 +640,17 @@
       "stateless": false,
       "default_state": "Adjustable",
       "default": 0,
+      "factory": [
+        13,
+        2,
+        0,
+        0,
+        0,
+        1
+      ],
       "touches_synth": false,
       "cpu_cost": null,
-      "field": null
+      "saved": null
     },
     {
       "id": 14,
@@ -568,90 +674,97 @@
       "stateless": true,
       "default_state": "Fixed",
       "default": 1,
+      "factory": [
+        14,
+        1,
+        1,
+        0,
+        0,
+        2
+      ],
       "touches_synth": false,
       "cpu_cost": null,
-      "field": null
+      "saved": null
     },
     {
       "id": 15,
-      "issue": 54,
       "name": "Version at boot",
       "values": [
         "Off",
         "On"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 16,
-      "issue": 44,
       "name": "Input attenuation",
       "values": [
         "Off",
         "On"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 17,
-      "issue": 42,
       "name": "Delay indication",
       "values": [
         "Off",
         "On"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 18,
-      "issue": 40,
       "name": "LED brightness",
       "values": [
         "100%",
         "66%",
         "33%"
       ],
-      "field": 10,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Adjustable",
-      "default": 0,
       "page_slots": [
         1,
         2,
@@ -677,54 +790,67 @@
       ],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "factory": [
+        18,
+        2,
+        0,
+        10,
+        0,
+        0
+      ],
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": 20
     },
     {
       "id": 19,
-      "issue": 27,
       "name": "Live assignment LEDs",
       "values": [
         "Off",
         "On"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 20,
-      "issue": 25,
       "name": "FREEZE during saves",
       "values": [
         "Off",
         "On"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 21,
-      "issue": 13,
       "name": "SEED latch",
       "values": [
         "Off",
@@ -732,14 +858,11 @@
         "Sync",
         "Add"
       ],
-      "field": 11,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Adjustable",
-      "default": 0,
       "page_slots": [
         1,
         2,
@@ -765,46 +888,55 @@
       ],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "factory": [
+        21,
+        2,
+        0,
+        11,
+        0,
+        0
+      ],
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": 21
     },
     {
       "id": 22,
-      "issue": 7,
       "name": "Pitch notch indication",
       "values": [
         "Off",
         "On"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 23,
-      "issue": 141,
       "name": "TIME modulation",
       "values": [
         "Random",
         "Scan"
       ],
-      "field": 12,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [
         1,
         2,
@@ -833,33 +965,38 @@
         1,
         2
       ],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": 22
     },
     {
       "id": 24,
-      "issue": 192,
       "name": "Synth reverb tail",
       "values": [
         "Keep (stock)",
         "Clear"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 25,
-      "issue": 202,
       "name": "Options page idle timeout",
       "values": [
         "Off (stay open)",
@@ -868,296 +1005,317 @@
         "20 s",
         "30 s"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 26,
-      "issue": 183,
       "name": "Delay SEED latch fade",
       "values": [
         "Switch at once (stock)",
         "Fade"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 27,
-      "issue": 19,
       "name": "Input gain at power-on",
       "values": [
         "Automatic (stock)",
         "Manual"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 28,
-      "issue": 58,
       "name": "Attack sensitivity",
       "values": [
         "Normal (default)",
         "Low",
         "High"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 29,
-      "issue": 41,
       "name": "SEED at power-on",
       "values": [
         "Latched (stock)",
         "Unlatched"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 30,
-      "issue": 43,
       "name": "PITCH knob",
       "values": [
         "Notches (stock)",
         "Smooth"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 31,
-      "issue": 190,
       "name": "Plaits bank",
       "values": [
         "Green",
         "Red",
         "Yellow"
       ],
-      "field": 14,
       "states": [
         "Adjustable"
       ],
-      "default_state": "Adjustable",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "factory": [
+        31,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": 23
     },
     {
       "id": 32,
-      "issue": 21,
       "name": "Mix law",
       "values": [
         "Stock",
         "Gentle"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 33,
-      "issue": 20,
       "name": "Reverb input",
       "values": [
         "Mix (stock)",
         "Grains"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 34,
-      "issue": 237,
       "name": "Grain stealing",
       "values": [
         "2021/2024 (default)",
         "2026"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
-      "touches_synth": true
+      "saved": null
     },
     {
       "id": 35,
-      "issue": 10,
       "name": "Delay feedback",
       "values": [
         "Stock",
         "Unity notch"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 36,
-      "issue": 30,
       "name": "Delay time",
       "values": [
         "Glide (stock)",
         "Crossfade"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 37,
-      "issue": 285,
       "name": "Options page preview",
       "values": [
         "Each knob in turn",
         "First setting only"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 38,
-      "issue": 285,
       "name": "Options page on opening",
       "values": [
         "Last used",
         "First page"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 39,
-      "issue": 287,
       "name": "Start in quality",
       "values": [
         "Keep current",
@@ -1166,34 +1324,32 @@
         "Sunny tape",
         "Scorched cassette"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 40,
-      "issue": 301,
       "name": "Manual gain knob",
       "values": [
         "Not on a knob"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [
         1,
@@ -1201,26 +1357,27 @@
         3
       ],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 41,
-      "issue": 88,
       "name": "Resonator",
       "values": [
         "Off (stock)",
         "After the grains",
         "Before the buffer"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Adjustable",
-      "default": 0,
       "page_slots": [
         1,
         2,
@@ -1246,12 +1403,23 @@
       ],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "factory": [
+        41,
+        2,
+        0,
+        13,
+        0,
+        0
+      ],
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": 24
     },
     {
       "id": 43,
-      "issue": 88,
       "name": "Resonator material",
       "values": [
         "Wood",
@@ -1259,14 +1427,11 @@
         "Glass",
         "Bell"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Adjustable",
-      "default": 1,
       "page_slots": [
         1,
         2,
@@ -1292,12 +1457,23 @@
       ],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 1,
+      "factory": [
+        43,
+        2,
+        1,
+        14,
+        0,
+        0
+      ],
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": 25
     },
     {
       "id": 44,
-      "issue": 88,
       "name": "Resonator ring time",
       "values": [
         "Short",
@@ -1305,14 +1481,11 @@
         "Long",
         "Very long"
       ],
-      "field": null,
       "states": [
         "Off",
         "Fixed",
         "Adjustable"
       ],
-      "default_state": "Adjustable",
-      "default": 1,
       "page_slots": [
         1,
         2,
@@ -1338,98 +1511,115 @@
       ],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 1,
+      "factory": [
+        44,
+        2,
+        1,
+        15,
+        0,
+        0
+      ],
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": 26
     },
     {
       "id": 45,
-      "issue": 88,
       "name": "Resonator structure",
       "values": null,
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 46,
-      "issue": 88,
       "name": "Resonator brightness",
       "values": null,
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 47,
-      "issue": 88,
       "name": "Resonator damping",
       "values": null,
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 48,
-      "issue": 88,
       "name": "Resonator position",
       "values": null,
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     },
     {
       "id": 49,
-      "issue": 88,
       "name": "Resonator amount",
       "values": null,
-      "field": null,
       "states": [
         "Off",
         "Fixed"
       ],
-      "default_state": "Off",
-      "default": 0,
       "page_slots": [],
       "amount_slots": [],
       "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
-      "touches_synth": false
+      "saved": null
     }
   ],
   "plaits_models": [

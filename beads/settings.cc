@@ -263,14 +263,17 @@ bool Settings::CalibrationPlausible(
   return true;
 }
 
-void Settings::SavePersistentData() {
+bool Settings::SavePersistentData() {
   fill(
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],
       0);
   PackRecord();
   PackState();
+  const PersistentData requested = persistent_data_;
   chunk_storage_.SavePersistentData();
+  // False when the calibration was out of range and the stored one kept.
+  return !memcmp(&requested, &persistent_data_, sizeof(PersistentData));
 }
 
 void Settings::NormalizeOptions() {

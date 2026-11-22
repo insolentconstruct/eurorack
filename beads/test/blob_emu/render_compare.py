@@ -37,6 +37,7 @@
 
 import hashlib
 import json
+import multiprocessing
 import random
 import struct
 import sys
@@ -51,15 +52,28 @@ RAM, RAM_SIZE = 0x24000000, 0x80000
 STACK = RAM + RAM_SIZE - 0x100
 STACK_LIMIT = STACK - 0x4000
 STOP = 0x0FF00000
-PLACEMENTS = (0x080C0000, 0x080C2FE0)
+PLACEMENTS = (0x08080000, 0x08082FE0)
 REGION_END = 0x08100000
 RELEASE = 20261121
 FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
-# Blob model: compiled-in engine (harness.cc's order).
-PAIRS = {36: 0, 37: 1, 18: 2, 43: 3, 13: 4, 15: 5}
-# Models that call libraries: Wavetable (Plaits wavetables), Speech.
-DEPENDENTS = (13, 15)
+# Blob model: compiled-in engine (harness.cc's order): the proof's Palette
+# models and test sine, then the stock engines in PlaitsVoice's order, the
+# 6-op engine serving models 2-4.
+PAIRS = dict([(36, 0), (37, 1), (43, 2)] + [
+    (m, 3 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+# Models that call libraries (profile-features.json): 6-op FM (6-op), Wave
+# terrain, Wavetable and Chords (Plaits wavetables), String machine,
+# Chiptune and Chords (chord bank), Speech.
+DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
+# Models whose blob clamps where Plaits read outside a table: they may
+# differ only in blocks where the compiled-in engine's lookups left the table
+# (counted by terrain_probe.h). Wave terrain's terrains 5-7 clamp their wave
+# and sample positions to the bank.
+KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
+# A -> B -> A switch sequences: every stock model returns once.
+SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
+    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18)]
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -216,9 +230,10 @@ class Machine(object):
   def outputs(self, label):
     out = bytes(self.uc.mem_read(self.sym['harness_out'], 4 * BLOCK))
     aux = bytes(self.uc.mem_read(self.sym['harness_aux'], 4 * BLOCK))
-    for x in (out, aux):
-      if any(x[i:i + 4] == POISON for i in range(0, len(x), 4)):
-        raise RuntimeError('%s left a sample unwritten' % label)
+    # AUX may stay unwritten: PLAITS_NO_AUX skips it, blob and compiled
+    # alike, and the comparison sees the same poison in both.
+    if any(out[i:i + 4] == POISON for i in range(0, len(out), 4)):
+      raise RuntimeError('%s left a sample unwritten' % label)
     return out, aux
 
   def render_blob(self, p, seed):
@@ -228,7 +243,10 @@ class Machine(object):
 
   def render_compiled(self, engine, p, seed):
     self.parameters(p)
+    counter = self.sym['harness_terrain_overshoot']
+    self.uc.mem_write(counter, b'\0\0\0\0')
     state = self.call('harness_render_compiled', engine, BLOCK, seed)
+    self.overshoot = self.word(counter)
     return self.outputs('engine %d' % engine) + (state,)
 
   def select_blob(self, model):
@@ -242,8 +260,11 @@ class Machine(object):
       raise RuntimeError('no blob for model %d' % model)
     self.fade = 0
 
-  def select_compiled(self, engine):
-    self.call('harness_select_compiled', engine)
+  def select_compiled(self, engine, model):
+    self.call('harness_select_compiled', engine, model)
+
+  def rebuild_compiled(self, engine, model):
+    self.call('harness_rebuild_compiled', engine, model)
 
 
 def drive(seed):
@@ -256,15 +277,30 @@ def drive(seed):
         for m in values:
           for block in range(4):
             steps.append((1 if block == 0 else 0, note, h, t, m, 0.5))
+  # Every 6-op patch (HARMONICS picks one of 32), a note each.
+  for patch in range(32):
+    for block in range(8):
+      steps.append((1 if block == 0 else 0, 60.0,
+                    (patch + 0.5) / (32 * 1.02), 0.5, 0.5, 0.8))
   r = random.Random(seed)
   for _ in range(2000):
     steps.append((r.choice((0, 0, 0, 1)), r.uniform(0.0, 127.0),
                   r.random(), r.random(), r.random(), r.random()))
+  # Gates as the synth sends them: held notes (rising edge with HIGH, HIGH,
+  # then released), and unpatched (drone) blocks.
+  for i in range(24):
+    p = (r.uniform(24.0, 96.0), r.random(), r.random(), r.random(), 0.8)
+    for block in range(16):
+      trigger = 5 if block == 0 else 4 if block < 8 else 0
+      steps.append((trigger,) + p)
+  for i in range(32):
+    for block in range(8):
+      steps.append((2, 48.0 + i, i / 31.0, 0.5, block / 7.0, 0.8))
   return steps
 
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
-                   stats=None):
+                   stats=None, retained=False):
   """Blob voice against compiled engine, block by block, from one seed.
   Inside the blob's fade-in the expected OUT sample is the compiled one
   times the fade's gain; every other sample is the compiled sample itself."""
@@ -275,11 +311,19 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
     a_out, a_aux, a_seed = m.render_blob(p, seed)
     b_out, b_aux, b_seed = m.render_compiled(
         engine, (trigger, note + nudge) + p[2:], seed)
+    if stats is not None and m.overshoot:
+      stats.setdefault('overshoot_blocks', []).append(block)
     if digest is not None:
       digest.update(a_out + a_aux)
     for x, y, fades in ((a_out, b_out, True), (a_aux, b_aux, False)):
       for i in range(0, len(x), 4):
         samples += 1
+        if not fades and x[i:i + 4] == POISON:
+          if y[i:i + 4] != POISON:
+            differ += 1
+            if stats is not None:
+              stats.setdefault('positions', []).append((block, 1, i // 4))
+          continue
         v, = struct.unpack_from('<f', x, i)
         if v != v or v in (float('inf'), float('-inf')):
           raise RuntimeError('non-finite output')
@@ -288,15 +332,24 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
             else y[i:i + 4]
         if stats is not None and position < FADE_SIZE:
           stats['fade_peak'] = max(stats.get('fade_peak', 0.0), abs(v))
+        if stats is not None and fades:
+          stats['out_peak'] = max(stats.get('out_peak', 0.0), abs(v))
         if x[i:i + 4] != expected:
           differ += 1
           if stats is not None:
+            stats.setdefault('positions', []).append(
+                (block, 0 if fades else 1, i // 4))
             w, = struct.unpack_from('<f', y, i)
             stats['max'] = max(stats.get('max', 0.0), abs(v - w))
             stats['peak'] = max(stats.get('peak', 0.0), abs(w))
             stats['last_block'] = block
-    if a_seed != b_seed:
-      raise RuntimeError('the generator diverged')
+    # A nudged note, or a compiled-in engine's retained state, may draw
+    # differently: compared from the blob's generator on, and reported.
+    if a_seed != b_seed and not nudge:
+      if not retained:
+        raise RuntimeError('the generator diverged')
+      if stats is not None:
+        stats.setdefault('diverged_block', block)
     seed = a_seed
     m.fade += BLOCK
   return differ, samples, seed
@@ -328,132 +381,265 @@ class WriteGuard(object):
           pc, size, address))
 
 
+# Per process: the harness, regions and layouts (load()).
+CTX = {}
+
+
+def load(out):
+  CTX['elf'] = out + '/harness.elf'
+  CTX['sym'] = symbols(out + '/harness.nm')
+  CTX['region'] = open(out + '/region.bin', 'rb').read()
+  CTX['layout'] = json.load(open(out + '/region.bin.json'))
+  CTX['gap_region'] = open(out + '/region-gap.bin', 'rb').read()
+  CTX['gap_layout'] = json.load(open(out + '/region-gap.bin.json'))
+  plts = [s for s in CTX['layout']['sections'] if s['kind'] == 'PLTS'][0]
+  CTX['digests'] = [bytes.fromhex(b['sha256']) for b in plts['blobs']]
+  CTX['steps'] = drive(1)
+
+
+def machine(base=PLACEMENTS[0], fpscr=0, data=None, patches=()):
+  return Machine(CTX['elf'], CTX['sym'],
+                 CTX['region'] if data is None else data, base, fpscr,
+                 patches)
+
+
+def arena_of(m):
+  """BlobVoice: 64 B of canary, the engine (whose last member is the slot),
+  64 B of canary, the arena, 64 B of canary."""
+  slot = m.word(CTX['sym']['harness_slot'])
+  return slot + SLOT_SIZE + 64 - CTX['sym']['harness_blob_voice']
+
+
+def plts_of(layout):
+  return [s for s in layout['sections'] if s['kind'] == 'PLTS'][0]
+
+
+def entry_of(layout, key, value):
+  """A library's entry, or the model entry whose blob serves the ID (6-op
+  FM serves 2-4: its header's first ID and count)."""
+  p = plts_of(layout)
+  data = CTX['gap_region'] if layout is CTX['gap_layout'] else CTX['region']
+  for b in p['blobs']:
+    if key == 'model' and 'model' in b:
+      at = p['offset'] + b['offset']
+      first, count = b['model'], 1
+      if struct.unpack_from('<I', data, at + 8)[0] == 2:
+        first, count = struct.unpack_from('<2I', data, at + 20)
+      if first <= value < first + count:
+        return b
+    elif b.get(key) == value:
+      return b
+  raise KeyError('%s %d' % (key, value))
+
+
+def address(layout, base, key, value):
+  return base + plts_of(layout)['offset'] + entry_of(
+      layout, key, value)['offset']
+
+
+def state_of(model):
+  plts = plts_of(CTX['layout'])
+  info = entry_of(CTX['layout'], 'model', model)
+  blob = CTX['region'][plts['offset'] + info['offset']:]
+  abi = struct.unpack_from('<I', blob, 8)[0]
+  return struct.unpack_from('<I', blob, 24 if abi == 1 else 32)[0]
+
+
+def dependencies(layout, model):
+  """The library IDs a model's blob lists, from its header and list."""
+  plts = plts_of(layout)
+  info = entry_of(CTX['layout'], 'model', model)
+  blob = CTX['region'][plts['offset'] + info['offset']:]
+  if struct.unpack_from('<I', blob, 8)[0] != 2:
+    return []
+  offset, count = struct.unpack_from('<2I', blob, 60)
+  return [struct.unpack_from('<I', blob, offset + 36 * i)[0]
+          for i in range(count)]
+
+
+def identity_run(job):
+  """One model at one layout and FPSCR mode, against its engine."""
+  try:
+    return identity_compare(*job)
+  except RuntimeError as e:
+    return {'model': job[0], 'error': '%s at 0x%08x%s' % (
+        e, job[1], ' gap' if job[3] else '')}
+
+
+def identity_compare(model, base, fpscr, gap):
+  data = CTX['gap_region'] if gap else CTX['region']
+  layout = CTX['gap_layout'] if gap else CTX['layout']
+  m = machine(base, fpscr, data)
+  status = m.setup(layout, CTX['digests'])
+  if status != 'OK':
+    return {'model': model, 'error': 'PLTS %s' % status}
+  m.arena = arena_of(m)
+  engine = PAIRS[model]
+  m.select_blob(model)
+  m.select_compiled(engine, model)
+  h = hashlib.sha256()
+  stats = {}
+  differ, samples, _ = compare_blocks(m, engine, CTX['steps'], 0x21,
+                                      digest=h, stats=stats)
+  run = {'base': '0x%08x' % base, 'gap': gap, 'fpscr': '0x%08x' % fpscr,
+         'model': model,
+         'blob': '0x%08x' % address(layout, base, 'model', model),
+         'differ': differ, 'samples': samples, 'sha256': h.hexdigest(),
+         'out_peak': stats.get('out_peak', 0.0),
+         'positions': sorted(stats.get('positions', [])),
+         'overshoot_blocks': stats.get('overshoot_blocks', [])}
+  libraries = dependencies(layout, model)
+  if libraries:
+    run['libraries'] = dict(
+        (str(i), '0x%08x' % address(layout, base, 'library', i))
+        for i in libraries)
+  if not gap and base == PLACEMENTS[0] and fpscr == 0:
+    run['identity'] = m.identity()
+  return run
+
+
+def switch_run(pair):
+  """A -> B -> A: the blob voice constructs on every switch in a poisoned
+  slot and arena; compiled-in engines only Reset. Retained state shows as
+  differences after the return; they are reported."""
+  try:
+    run = switch_compare(pair[0], pair[1], False)
+    fresh = switch_compare(pair[0], pair[1], True)
+    run['fresh_differ'] = [p['differ'] for p in fresh['phases']]
+    return run
+  except RuntimeError as e:
+    return {'sequence': [pair[0], pair[1], pair[0]], 'error': str(e)}
+
+
+def switch_compare(first, second, fresh):
+  """fresh: each selection compares with the compiled-in engine built afresh
+  (first selection after power-on), which a rebuilt blob must equal."""
+  sequence = CTX['steps'][:300]
+  m = machine(PLACEMENTS[1])
+  m.setup(CTX['layout'], CTX['digests'])
+  m.arena = arena_of(m)
+  seed = 0x21
+  phases = []
+  for model, part in ((first, sequence[:100]), (second, sequence[100:200]),
+                      (first, sequence[200:])):
+    before = m.word(RANDOM_STATE)
+    m.select_blob(model)
+    if fresh:
+      m.rebuild_compiled(PAIRS[model], model)
+    else:
+      m.select_compiled(PAIRS[model], model)
+    drew = m.word(RANDOM_STATE) != before
+    slot = m.word(CTX['sym']['harness_slot'])
+    cleared = POISON not in bytes(m.uc.mem_read(slot, state_of(model)))
+    stats = {}
+    # The return, or a second model of one compiled-in engine, meets the
+    # state the compiled-in engine kept.
+    retained = not fresh and bool(phases) and PAIRS[model] == PAIRS[first]
+    differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
+                                           stats=stats, retained=retained)
+    phases.append({'model': model, 'differ': differ, 'samples': samples,
+                   'slot_cleared': cleared, 'switch_drew': drew,
+                   'max_difference': stats.get('max', 0.0),
+                   'compiled_peak': stats.get('peak', 0.0),
+                   'last_differing_block': stats.get('last_block'),
+                   'fade_window_peak': stats.get('fade_peak', 0.0),
+                   'generator_diverged_block': stats.get('diverged_block')})
+  return {'sequence': [first, second, first], 'phases': phases}
+
+
 def main(argv):
   out = argv[1]
-  elf = out + '/harness.elf'
-  sym = symbols(out + '/harness.nm')
-  region = open(out + '/region.bin', 'rb').read()
-  layout = json.load(open(out + '/region.bin.json'))
-  gap_region = open(out + '/region-gap.bin', 'rb').read()
-  gap_layout = json.load(open(out + '/region-gap.bin.json'))
-  plts = [s for s in layout['sections'] if s['kind'] == 'PLTS'][0]
+  jobs = int(argv[2]) if len(argv) > 2 else multiprocessing.cpu_count()
+  load(out)
+  sym = CTX['sym']
+  region = CTX['region']
+  layout = CTX['layout']
+  plts = plts_of(layout)
   wave = [s for s in layout['sections'] if s['kind'] == 'WAVE'][0]
   blobs = {b['model']: b for b in plts['blobs'] if 'model' in b}
   libraries = [b for b in plts['blobs'] if 'library' in b]
-  digests = [bytes.fromhex(b['sha256']) for b in plts['blobs']]
-  steps = drive(1)
+  digests = CTX['digests']
+  steps = CTX['steps']
   results = {'unicorn': unicorn.__version__, 'blocks': len(steps),
              'block_size': BLOCK, 'runs': [], 'switches': [], 'controls': [],
              'faults': [], 'locks': []}
   failures = []
   findings = []
-
-  def machine(base=PLACEMENTS[0], fpscr=0, data=region, patches=()):
-    return Machine(elf, sym, data, base, fpscr, patches)
-
-  # BlobVoice: 64 B of canary, the engine (whose last member is the slot),
-  # 64 B of canary, the arena, 64 B of canary.
-  def arena_of(m):
-    slot = m.word(sym['harness_slot'])
-    return slot + SLOT_SIZE + 64 - sym['harness_blob_voice']
-
-  def address(layout_, base, key, value):
-    p = [s for s in layout_['sections'] if s['kind'] == 'PLTS'][0]
-    entry = [b for b in p['blobs'] if b.get(key) == value][0]
-    return base + p['offset'] + entry['offset']
+  pool = multiprocessing.Pool(jobs, load, (out,))
 
   # Four layouts for the dependents: the region at two placements, with and
   # without the gap between libraries and models. The others need no
   # library: two placements.
-  for data, layout_, gap in ((region, layout, False),
-                             (gap_region, gap_layout, True)):
-    for base in PLACEMENTS:
-      for fpscr in FPSCR:
-        m = machine(base, fpscr, data)
-        status = m.setup(layout_, digests)
-        if status != 'OK':
-          failures.append('0x%08x: PLTS %s' % (base, status))
-          continue
-        m.arena = arena_of(m)
-        for model, engine in sorted(PAIRS.items()):
-          if gap and model not in DEPENDENTS:
-            continue
-          m.select_blob(model)
-          m.select_compiled(engine)
-          h = hashlib.sha256()
-          differ, samples, _ = compare_blocks(m, engine, steps, 0x21,
-                                              digest=h)
-          run = {'base': '0x%08x' % base, 'gap': gap,
-                 'fpscr': '0x%08x' % fpscr, 'model': model,
-                 'blob': '0x%08x' % address(layout_, base, 'model', model),
-                 'differ': differ, 'samples': samples,
-                 'sha256': h.hexdigest()}
-          if model in DEPENDENTS:
-            run['library'] = '0x%08x' % address(
-                layout_, base, 'library', 1 if model == 13 else 3)
-          results['runs'].append(run)
-          print('0x%08x%s fpscr 0x%08x model %d: %d of %d differ' % (
-              base, ' gap' if gap else '', fpscr, model, differ, samples))
-          if differ:
-            failures.append('model %d differs at 0x%08x%s' % (
-                model, base, ' gap' if gap else ''))
-        if not gap:
-          results['identity'] = m.identity()
+  runs = [(model, base, fpscr, gap) for gap in (False, True)
+          for base in PLACEMENTS for fpscr in FPSCR
+          for model in sorted(PAIRS) if not gap or model in DEPENDENTS]
+  for run in pool.imap(identity_run, runs):
+    if 'error' in run:
+      failures.append('model %d: %s' % (run['model'], run['error']))
+      continue
+    if 'identity' in run:
+      results['identity'] = run.pop('identity')
+    results['runs'].append(run)
+    print('%s%s fpscr %s model %d: %d of %d differ' % (
+        run['base'], ' gap' if run['gap'] else '', run['fpscr'],
+        run['model'], run['differ'], run['samples']))
+    sys.stdout.flush()
+    if not run['out_peak']:
+      failures.append('model %d: silent at %s' % (run['model'], run['base']))
+    known = KNOWN.get(run['model'])
+    overshoot = set(run['overshoot_blocks'])
+    if run['differ'] and known and overshoot and all(
+        p[0] in overshoot for p in run['positions']):
+      findings.append('model %d: %d of %d samples differ at %s%s fpscr %s: '
+                      '%s' % (run['model'], run['differ'], run['samples'],
+                              run['base'], ' gap' if run['gap'] else '',
+                              run['fpscr'], known) + ' (%d of %d '
+                      'blocks with lookups past the bank differ)' % (
+                          len(set(p[0] for p in run['positions'])),
+                          len(overshoot)))
+    elif run['differ']:
+      failures.append('model %d differs at %s%s' % (
+          run['model'], run['base'], ' gap' if run['gap'] else ''))
 
-  def state_of(model):
-    info = blobs[model]
-    blob = region[plts['offset'] + info['offset']:]
-    abi = struct.unpack_from('<I', blob, 8)[0]
-    return struct.unpack_from('<I', blob, 24 if abi == 1 else 32)[0]
-
-  # Switch sequences, A -> B -> A: the blob voice constructs on every switch
-  # in a poisoned slot and arena; compiled-in engines only Reset. Retained
-  # state shows as differences after the return; they are reported.
-  sequence = steps[:300]
-  for first, second in ((18, 43), (43, 18), (18, 36), (43, 36), (36, 18),
-                        (13, 15), (15, 13), (15, 18), (13, 43)):
-    m = machine(PLACEMENTS[1])
-    m.setup(layout, digests)
-    m.arena = arena_of(m)
-    seed = 0x21
-    phases = []
-    for model, part in ((first, sequence[:100]), (second, sequence[100:200]),
-                        (first, sequence[200:])):
-      m.select_blob(model)
-      m.select_compiled(PAIRS[model])
-      slot = m.word(sym['harness_slot'])
-      cleared = POISON not in bytes(m.uc.mem_read(slot, state_of(model)))
-      stats = {}
-      differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
-                                             stats=stats)
-      phases.append({'model': model, 'differ': differ, 'samples': samples,
-                     'slot_cleared': cleared, 'max_difference':
-                     stats.get('max', 0.0), 'compiled_peak':
-                     stats.get('peak', 0.0), 'last_differing_block':
-                     stats.get('last_block'), 'fade_window_peak':
-                     stats.get('fade_peak', 0.0)})
-      if not cleared:
-        failures.append('switch %d->%d: poison left in the slot' % (
-            first, second))
-    results['switches'].append({'sequence': [first, second, first],
-                                'phases': phases})
+  for switch in pool.imap(switch_run, SWITCHES):
+    first, second = switch['sequence'][:2]
+    if 'error' in switch:
+      failures.append('switch %d->%d: %s' % (first, second, switch['error']))
+      continue
+    phases = switch['phases']
+    results['switches'].append(switch)
+    if any(switch['fresh_differ']):
+      failures.append('switch %d->%d: a rebuilt blob differs from the '
+                      'engine built afresh: %s' % (first, second,
+                                                   switch['fresh_differ']))
     print('switch %d -> %d -> %d: %s' % (first, second, first, ', '.join(
         '%d of %d differ' % (p['differ'], p['samples']) for p in phases)))
-    if phases[0]['differ'] or phases[1]['differ']:
+    if any(not p['slot_cleared'] for p in phases):
+      failures.append('switch %d->%d: poison left in the slot' % (
+          first, second))
+    if any(p['switch_drew'] for p in phases):
+      failures.append('switch %d->%d: a switch drew from the generator' % (
+          first, second))
+    # Models served by one compiled-in engine (6-op banks) share its state.
+    shared = PAIRS[first] == PAIRS[second]
+    if phases[0]['differ'] or (phases[1]['differ'] and not shared):
       failures.append('switch %d->%d differs before the return' % (
           first, second))
-    if phases[2]['differ']:
-      findings.append('model %d after %d: %d of %d samples differ from the '
-                      'compiled-in engine, which keeps its state across a '
-                      'switch (Reset only); largest difference %.3g, '
-                      'compiled peak %.3g, last differing block %d of %d, '
-                      'peak inside the fade-in %.3g' % (
-                          first, second, phases[2]['differ'],
-                          phases[2]['samples'], phases[2]['max_difference'],
-                          phases[2]['compiled_peak'],
-                          phases[2]['last_differing_block'],
-                          len(sequence[200:]),
-                          phases[2]['fade_window_peak']))
+    for i in (1, 2) if shared else (2,):
+      p = phases[i]
+      if p['differ']:
+        findings.append('model %d after %d: %d of %d samples differ from '
+                        'the compiled-in engine, which keeps its state '
+                        'across a switch (Reset only); largest difference '
+                        '%.3g, compiled peak %.3g, last differing block %d '
+                        'of %d, peak inside the fade-in %.3g' % (
+                            p['model'], phases[i - 1]['model'], p['differ'],
+                            p['samples'], p['max_difference'],
+                            p['compiled_peak'], p['last_differing_block'],
+                            p['samples'] // (2 * BLOCK),
+                            p['fade_window_peak']))
+  pool.close()
+  pool.join()
 
   # Each comparison must see a difference: the note nudged by 0.01.
   m = machine()
@@ -461,7 +647,7 @@ def main(argv):
   m.arena = arena_of(m)
   for model, engine in sorted(PAIRS.items()):
     m.select_blob(model)
-    m.select_compiled(engine)
+    m.select_compiled(engine, model)
     differ, samples, _ = compare_blocks(m, engine, steps[:200], 0x21,
                                         nudge=0.01)
     results['controls'].append({'case': 'note nudged, model %d' % model,
@@ -473,9 +659,9 @@ def main(argv):
 
   # Particle Noise draws: a different seed must change its output.
   m.select_blob(18)
-  m.select_compiled(2)
+  m.select_compiled(PAIRS[18], 18)
   a = m.render_blob(steps[1], 0x21)
-  b = m.render_compiled(2, steps[1], 0x22)
+  b = m.render_compiled(PAIRS[18], steps[1], 0x22)
   results['controls'].append({'case': 'another seed, model 18',
                               'equal': a[:2] == b[:2]})
   if a[:2] == b[:2]:
@@ -498,7 +684,7 @@ def main(argv):
   m.uc.hook_add(unicorn.UC_HOOK_CODE, count, begin=base,
                 end=base + len(region) - 1)
   for model, engine in sorted(PAIRS.items()):
-    info = blobs[model]
+    info = entry_of(layout, 'model', model)
     blob = region[plts['offset'] + info['offset']:
                   plts['offset'] + info['offset'] + info['size']]
     abi = struct.unpack_from('<I', blob, 8)[0]
@@ -511,7 +697,7 @@ def main(argv):
     inside = executed[0]
     m.uc.hook_del(guard.handle)
     executed[0] = 0
-    m.select_compiled(engine)
+    m.select_compiled(engine, model)
     m.render_compiled(engine, steps[0], 0x21)
     results['controls'].append({
         'case': 'model %d: region code and writes' % model,
@@ -616,16 +802,41 @@ def main(argv):
   # Libraries: refused for their own reason, then every dependent with them.
   names = [b.get('model', b.get('library')) for b in plts['blobs']]
   kinds = ['library' if 'library' in b else 'model' for b in plts['blobs']]
+  library_ids = [b['library'] for b in libraries]
+  users = dict((m, dependencies(layout, m)) for m in blobs)
+
+  def ram_of(library):
+    info = [b for b in libraries if b['library'] == library][0]
+    blob = region[plts['offset'] + info['offset']:]
+    return struct.unpack_from('<I', blob, 32)[0]
+
+  def align(size):
+    return (size + 31) // 32 * 32
+
+  def expect(refused, status):
+    """Every library and model: the refused libraries' status, DEPENDENCY
+    for their users, OK for the rest."""
+    table = dict((('library', i), status if i in refused else 'OK')
+                 for i in library_ids)
+    for model, listed in users.items():
+      table[('model', model)] = 'DEPENDENCY' if set(listed) & set(refused) \
+          else 'OK'
+    return table
+
+  # The records, then each library's RAM in ID order: the last with RAM
+  # comes up one byte short.
+  needed = align(len(libraries) * 68) + sum(align(ram_of(i))
+                                            for i in library_ids)
+  last_with_ram = [i for i in library_ids if ram_of(i)][-1]
   speech_library = names.index(3)
   library_cases = [
       ('library RAM not given', {'library_ram': 0}, 'RAM',
-       {1: 'RAM', 3: 'RAM', 13: 'DEPENDENCY', 15: 'DEPENDENCY'}),
-      ('library RAM one byte short', {'library_ram': (
-          (len(libraries) * 68 + 31) // 32 * 32 + 36864 - 1)}, 'RAM',
-       {1: 'OK', 3: 'RAM', 13: 'OK', 15: 'DEPENDENCY'}),
+       expect(library_ids, 'RAM')),
+      ('library RAM one byte short', {'library_ram': needed - 1}, 'RAM',
+       expect([last_with_ram], 'RAM')),
       ('speech library not listed', {'digests': digests[:speech_library] +
                                      digests[speech_library + 1:]}, 'DIGEST',
-       {1: 'OK', 3: 'DIGEST', 13: 'OK', 15: 'DEPENDENCY'}),
+       expect([3], 'DIGEST')),
   ]
   for name, options, expected, entries in library_cases:
     m = machine(pbase)
@@ -633,14 +844,13 @@ def main(argv):
             library_ram=options.get('library_ram'))
     identity = m.identity()
     got = identity['sections']['PLTS']['status']
-    by_id = dict(((k, n), st) for k, n, st in zip(
+    statuses = dict(((k, n), st) for k, n, st in zip(
         kinds, names, identity['blob_status']))
-    statuses = dict((n, by_id[('library' if n in (1, 3) else 'model', n)])
-                    for n in entries)
-    results['faults'].append({'case': name, 'plts': got,
-                              'entries': statuses})
+    results['faults'].append({'case': name, 'plts': got, 'entries': dict(
+        ('%s %d' % k, v) for k, v in sorted(statuses.items()))})
     print('fault: %s: PLTS %s, %s' % (name, got, ' '.join(
-        '%d %s' % x for x in sorted(statuses.items()))))
+        '%s %d %s' % (k[0], k[1], v) for k, v in sorted(statuses.items())
+        if v != 'OK')))
     if got != expected or statuses != entries or m.lock() != 'FORCE_BEADS':
       failures.append('%s: PLTS %s, %s' % (name, got, statuses))
 

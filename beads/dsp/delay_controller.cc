@@ -438,6 +438,8 @@ void DelayController::RenderInternal(
       multiplier_fractional = 0.5f + 8.0f * (multiplier_fractional - 0.5f);
       CONSTRAIN(multiplier_fractional, 0.0f, 1.0f);
       
+      TapShape tap_shape;
+      TapEnvelope::ComputeShape(shape, &tap_shape);
       float loudest = 0.0f;
       int loudest_index = 0;
       
@@ -462,7 +464,7 @@ void DelayController::RenderInternal(
             : 1.0f - multiplier_fractional;
         const float base_gain = tap_gain[ratio] * ratio_fade * \
             clock_.gain(interval);
-        out->tap[i].gain = base_gain * tap_envelope_[i].Render(shape);
+        out->tap[i].gain = base_gain * tap_envelope_[i].Render(tap_shape);
         if (base_gain > loudest) {
           loudest = base_gain;
           loudest_index = i;
@@ -637,6 +639,8 @@ void DelayController::RenderKnobCrossfade(
       multiplier_fractional = 0.5f + 8.0f * (multiplier_fractional - 0.5f);
       CONSTRAIN(multiplier_fractional, 0.0f, 1.0f);
 
+      TapShape tap_shape;
+      TapEnvelope::ComputeShape(shape, &tap_shape);
       float loudest = 0.0f;
       int loudest_index = 0;
 
@@ -660,7 +664,7 @@ void DelayController::RenderKnobCrossfade(
             ? multiplier_fractional
             : 1.0f - multiplier_fractional;
         const float base_gain = tap_gain[ratio] * ratio_fade * power[interval];
-        out->tap[i].gain = base_gain * tap_envelope_[i].Render(shape);
+        out->tap[i].gain = base_gain * tap_envelope_[i].Render(tap_shape);
         if (base_gain > loudest) {
           loudest = base_gain;
           loudest_index = i;

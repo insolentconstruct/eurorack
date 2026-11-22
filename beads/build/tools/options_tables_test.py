@@ -460,8 +460,7 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
     out = Path(directory)
     for name in ("test.wav", "combo.bin", "NOTICE.txt"):
         (out / name).write_bytes(b"fixture")
-    (out / "objects/beads").mkdir(parents=True)
-    combo_hex = out / "objects/beads/beads_bootloader_combo.hex"
+    combo_hex = out / "combo.hex"
     for wrong in (WRONG_CONTENT, WRONG_ADDRESS):
         combo_hex.write_text(wrong)
         try:
@@ -499,7 +498,11 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
     for guide in ("OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"):
         assert guide in listed, guide
         assert (out / guide).read_bytes() == Path("beads/build/docs", guide).read_bytes()
-print("Release ZIPs include the generated guides and the combo HEX; wrong HEX rejected: PASS")
+    assert "profile-features.json" in listed
+    assert (out / "profile-features.json").read_bytes() == Path(
+        "beads/build/profile-features.json").read_bytes()
+print("Release ZIPs include the generated guides and the combo HEX; wrong HEX "
+      "rejected; the catalogue is a release asset: PASS")
 
 
 # The profile page consumes permanent IDs and placements, never source enums.
@@ -527,7 +530,9 @@ for feature, row, source in zip(catalog["features"], exported,
     assert (feature["default_state"], feature["default"]) == (
         states[state], default), identity
     assert len(feature["values"] or []) == count
-    assert feature["field"] == (None if field == 255 else field)
+    assert feature["saved"] == source.get("saved"), identity
+    # A feature the firmware saves has a record byte.
+    assert field == 255 or feature["saved"] is not None, identity
     assert feature["page_slots"] == (list(range(1, 22)) if page else [])
     assert feature["amount_slots"] == ([1, 2, 3] if amount else [])
     assert bool(feature["actions"]) == bool(action)

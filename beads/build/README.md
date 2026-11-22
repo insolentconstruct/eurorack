@@ -148,6 +148,8 @@ Stock settings, Beta 2 settings and calibration carry over; options, width and d
 
 Hold SEED at power-on only to reset settings; valid calibration is kept.
 
+A recalibration more than 25% from the factory values is not saved: all LEDs blink for about a second, as for a rejected step, and the stored calibration stays in use.
+
 Damaged calibration restores automatically from its copy; damaged frozen buffers are skipped. If both calibration copies are lost, all LEDs blink fast for three seconds. It then uses factory calibration and defaults, saves nothing and restores no buffer.
 
 Power on holding SEED to repair. Blinking green [A] with mix LEDs lit means success; recalibrate. Fast red and mix blinking means failure; retry. If reinstalling fails to restore startup, consult https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27 and its warnings.
