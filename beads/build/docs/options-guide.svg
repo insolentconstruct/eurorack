@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="253.82mm"
- viewBox="0 0 1295 1730" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="253.80mm"
+ viewBox="0 0 1358 1814" role="img" aria-labelledby="title desc">
 <title id="title">Drizzlet hidden options guide</title>
 <desc id="desc">Five pages of mix knob settings with quality LED [A] colour and blink
 indications. Full text version in OPTIONS.md.</desc>
 <metadata>Author: Insolent Construct</metadata>
 <rect width="100%" height="100%" fill="white"/>
 <g font-family="sans-serif" fill="#222">
-<g transform="translate(97 0)">
+<g transform="translate(129 0)">
 <text x="35" y="35" font-size="24" font-weight="bold" fill="#222" text-anchor="start">Drizzlet Hidden Options</text>
 <text x="35" y="55" font-size="15" font-weight="normal" fill="#222" text-anchor="start">1. Open: hold [M] 3 seconds (all mix LEDs</text>
 <text x="35" y="76" font-size="15" font-weight="normal" fill="#222" text-anchor="start">pulse), release.</text>
@@ -443,6 +443,18 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="374" cy="1664" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
 <text x="390" y="1669" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bell</text>
 <text x="677" y="1669" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; slow</text>
+<circle cx="374" cy="1685" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="390" y="1690" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Marimba</text>
+<text x="677" y="1690" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; slow</text>
+<circle cx="374" cy="1706" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="390" y="1711" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Drum</text>
+<text x="677" y="1711" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; slow</text>
+<circle cx="374" cy="1727" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="390" y="1732" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bowl</text>
+<text x="677" y="1732" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; fast</text>
+<circle cx="374" cy="1748" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="390" y="1753" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Gong</text>
+<text x="677" y="1753" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; fast</text>
 <text x="695" y="1489" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Resonator ring time</text>
 <circle cx="852.5" cy="1561" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 852.5 1561 v -16" stroke="#222" stroke-width="2"/>
@@ -466,7 +478,7 @@ indications. Full text version in OPTIONS.md.</desc>
 <circle cx="704" cy="1664" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
 <text x="720" y="1669" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Very long</text>
 <text x="1007" y="1669" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; slow</text>
-<text x="35" y="1700" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch • Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).</text>
+<text x="35" y="1784" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control sketch • Panel layout from the Mutable Instruments Beads panel file, geometry only (CC BY-SA 3.0).</text>
 </g>
 </g>
 </svg>

@@ -80,6 +80,7 @@ struct ResonatorControls {
   // While the CV moves damping, FEEDBACK is the knob alone.
   float feedback;
   bool hold_feedback;
+  const ResonatorModes* modes;
 };
 
 class Processor {
