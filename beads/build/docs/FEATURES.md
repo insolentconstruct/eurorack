@@ -654,8 +654,8 @@ Pitch scale and Recent notes, which already snap the grains, therefore
 tune the voices; with neither, voices take the grains' free pitches.
 A grain within half a semitone of a voice strikes it as tuned. Otherwise
 the quietest voice is retuned to the grain, but only once a bound on its
-fundamental, from the filter's own poles, is 40 dB under its own loudest
-(about 0.4, 1.6, 6 and 25 s after a single strike at the four Ring times;
+fundamental, from the filter's own poles, is 41 dB under its own loudest
+(1 dB more than the 40 dB rule, for strikes that partly cancelled; about 0.4, 1.6, 6 and 25 s after a single strike at the four Ring times;
 a grain that strikes silently does not hold a voice); until then the grain strikes
 the nearest voice, so no ringing tail is bent. Each strike is Rings' strum: its level
 follows the voice's pitch, and its low-pass is folded into the mode

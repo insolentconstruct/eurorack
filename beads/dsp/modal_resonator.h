@@ -73,8 +73,9 @@ struct ResonatorMaterial {
 
 // Chord: each voice is one batch, the Material's first eight modes.
 const int kNumChordVoices = kNumResonatorModes / 8;
-// A voice is retuned only once 40 dB under its loudest.
-const float kChordRetuneLevel = 0.01f;
+// A voice is retuned only 41 dB under its loudest, so that a tail whose
+// strikes partly cancelled is still 40 dB down.
+const float kChordRetuneLevel = 0.0089f;
 const float kChordSilence = 1.0e-4f;
 // A grain within half a semitone of a voice strikes it as it is.
 const float kChordNoteTolerance = 0.9715319f;

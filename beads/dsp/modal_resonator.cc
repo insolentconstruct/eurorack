@@ -257,7 +257,7 @@ void ModalResonator::StrikeVoice(
   int voice = nearest;
   if (closest < kChordNoteTolerance && quiet < kChordRetuneLevel) {
     // Steal the quietest; a ringing voice keeps its tuning. Its residue,
-    // under 1% of its loudest, is not counted against the new note.
+    // 41 dB under its loudest, is not counted against the new note.
     chord_ratio_[quietest] = ratio;
     chord_level_[quietest] = 0.0f;
     chord_peak_[quietest] = 0.0f;
