@@ -157,6 +157,22 @@ void TestCalibrationFromMirror() {
     CHECK(!memcmp(stored, mirror, sizeof(stored)));
     CHECK(StockLoads(calibration, saved.state));
   }
+  // The factory values in both copies, as on a new or repaired module: a
+  // header that fails its checks is still restored from the mirror.
+  for (int damage = 0; damage < 3; ++damage) {
+    Wipe();
+    Settings fresh;
+    fresh.Init(false);
+    fresh.SaveState();
+    uint8_t header[8];
+    Peek(header, kSector, sizeof(header));
+    header[damage == 0 ? 0 : (damage == 1 ? 4 : 6)] ^= 1;
+    Poke(kSector, header, sizeof(header));
+    Settings s;
+    CHECK(s.Init(false) && !s.write_locked());
+    CHECK(SameCalibration(s, Factory()));
+    CHECK(HoldsCalibration(kSector, Factory()));
+  }
   // SEED held as well: the state and the options reset.
   {
     Setup(calibration, 5);
@@ -1370,6 +1386,9 @@ void TestStockSettingsCarryOver() {
         CHECK(SameOptions(loaded, defaults));
         CHECK(SameCalibration(loaded, calibration));
         CHECK(!loaded.width_assigned() && !loaded.diffusion_assigned());
+        // The profile's own width and diffusion, not older bytes.
+        CHECK(loaded.stereo_width() == (custom ? 127 : 0));
+        CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == (custom ? 200 : 0));
         // The first save writes stock's bytes, then the record.
         loaded.SaveState();
         CHECK(!memcmp(&loaded.stored_state_, &expected.state, sizeof(State)));
