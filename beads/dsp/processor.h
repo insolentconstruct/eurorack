@@ -83,6 +83,7 @@ struct ResonatorControls {
   float feedback;
   bool hold_feedback;
   const ResonatorModes* modes;
+  float chord_gain;
 };
 
 class Processor {
@@ -453,6 +454,7 @@ class Processor {
   void StrikeChord(
       const GrainSource& source,
       const TriggerGenerator::Output* triggers,
+      float gain,
       float* strikes,
       size_t size);
   // A hit marked for this block's grains, read before they take it.
@@ -531,6 +533,8 @@ class Processor {
   ResonatorControls resonator_controls_;
   bool resonator_controls_set_;
   bool resonator_chord_;
+  // The grains' level, which a grain's strike in a chord follows.
+  float grain_level_;
   bool seed_gate_;
   // SEED's pulse, low-passed as Rings' strum, while it still sounds.
   stmlib::Svf strike_filter_;

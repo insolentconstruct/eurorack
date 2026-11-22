@@ -654,17 +654,23 @@ Pitch scale and Recent notes, which already snap the grains, therefore
 tune the voices; with neither, voices take the grains' free pitches.
 A grain within half a semitone of a voice strikes it as tuned. Otherwise
 the quietest voice is retuned to the grain, but only once a bound on its
-fundamental, from the filter's own poles, is 40 dB under one strike (about
-0.4, 1.6, 6 and 25 s at the four Ring times); until then the grain strikes
+fundamental, from the filter's own poles, is 40 dB under its own loudest
+(about 0.4, 1.6, 6 and 25 s after a single strike at the four Ring times;
+a grain that strikes silently does not hold a voice); until then the grain strikes
 the nearest voice, so no ringing tail is bent. Each strike is Rings' strum: its level
 follows the voice's pitch, and its low-pass is folded into the mode
 levels, so one voice's strike is within 0.2 dB of the same eight modes
 struck by SEED. For Wood, String, Glass, Bell, Marimba and Bowl eight
 modes sound within 0.2 dB and 1.3% centroid of all 24; Drum and Gong
 spread their energy over all 24, so a chord voice is 6.5 and 9 dB
-quieter and darker than their full bank. SEED and hits strike every voice
-already tuned. A Drum or Gong strike bends only the voice struck. Off and
-the other placements are unchanged.
+quieter and darker than their full bank. A grain's strike is then scaled
+by the grains' recent level (RMS, held for half a second) and by a gain per
+Material, so a chord follows the input's loudness and sits near After the
+grains' level: on 72 test clouds (nine clouds, eight Materials) 65 are
+within 2 dB of it and all within 2.7 dB, where an unscaled chord was up to
+8 dB louder. SEED and hits strike every voice already tuned, at Rings'
+level. A Drum or Gong strike bends only the voice struck. Off and the other
+placements are unchanged.
 
 Material (ID 43, DRY/WET, eighths) sets structure and brightness: Wood
 (0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They

@@ -138,16 +138,17 @@ const ResonatorModes kResonatorGong = {
 };
 
 /* extern */
+// Chord gains: a chord about as loud as After the grains on test clouds.
 const ResonatorMaterial kResonatorMaterials[kNumResonatorMaterials] = {
-  { 0.5f, 0.3f, NULL },  // Wood: darker, mildly stretched.
-  { kResonatorStructure, kResonatorBrightness, NULL },  // String.
-  { 0.4f, 0.5f, NULL },  // Glass: stretched, brighter.
-  { 0.8f, 0.15f, NULL },  // Bell: strongly stretched, dark.
+  { 0.5f, 0.3f, NULL, 1.03f },  // Wood: darker, mildly stretched.
+  { kResonatorStructure, kResonatorBrightness, NULL, 1.72f },  // String.
+  { 0.4f, 0.5f, NULL, 1.62f },  // Glass: stretched, brighter.
+  { 0.8f, 0.15f, NULL, 3.22f },  // Bell: strongly stretched, dark.
   // Brightness shapes only their strike, kept under the limiter's ceiling.
-  { kResonatorStructure, 0.7f, &kResonatorMarimba },
-  { kResonatorStructure, 0.85f, &kResonatorDrum },  // Pitch falls at a strike.
-  { kResonatorStructure, 0.5f, &kResonatorBowl },  // Pairs beat left-right.
-  { kResonatorStructure, 0.75f, &kResonatorGong },  // Pitch rises at a strike.
+  { kResonatorStructure, 0.7f, &kResonatorMarimba, 6.44f },
+  { kResonatorStructure, 0.85f, &kResonatorDrum, 15.5f },  // Pitch falls.
+  { kResonatorStructure, 0.5f, &kResonatorBowl, 2.61f },  // Pairs beat.
+  { kResonatorStructure, 0.75f, &kResonatorGong, 8.65f },  // Pitch rises.
 };
 
 // Each step rings four times longer; 2.3 s at Medium, 48 kHz.
@@ -173,6 +174,7 @@ void ModalResonator::Init(float sample_rate) {
   for (int v = 0; v < kNumChordVoices; ++v) {
     chord_ratio_[v] = 0.0f;
     chord_level_[v] = 0.0f;
+    chord_peak_[v] = 0.0f;
     chord_glide_[v] = 0.0f;
   }
   chord_modes_ = NULL;
@@ -208,6 +210,7 @@ static inline float StrikeLowPass(float x2, float damping) {
 void ModalResonator::Strike(
     int voice,
     size_t offset,
+    float gain,
     float* strikes,
     size_t size) {
   UpdateChordModes();
@@ -216,20 +219,23 @@ void ModalResonator::Strike(
   const float cutoff = min(frequency_ * chord_ratio_[voice] *
       SemitonesToRatio((brightness - 0.5f) * 96.0f), 0.499f);
   strikes[voice * size + offset] +=
-      0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
-  chord_level_[voice] += 1.0f;
+      gain * 0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
+  chord_level_[voice] += gain;
+  chord_peak_[voice] = max(chord_peak_[voice], chord_level_[voice]);
   chord_glide_[voice] = modes_ ? modes_->glide : 0.0f;
 }
 
 void ModalResonator::StrikeVoice(
     float ratio,
     size_t offset,
+    float gain,
     float* strikes,
     size_t size) {
   CONSTRAIN(ratio, 1.0f / 16.0f, 16.0f);
   int nearest = -1;
   int quietest = 0;
   float closest = 0.0f;
+  float quiet = 2.0f;
   for (int v = 0; v < kNumChordVoices; ++v) {
     const float r = chord_ratio_[v];
     if (r != 0.0f) {
@@ -239,24 +245,31 @@ void ModalResonator::StrikeVoice(
         nearest = v;
       }
     }
-    if (chord_level_[v] < chord_level_[quietest]) {
+    // Under its own loudest; a voice never struck audibly is silent.
+    const float relative = chord_peak_[v] > 0.0f
+        ? chord_level_[v] / chord_peak_[v]
+        : 0.0f;
+    if (relative < quiet) {
+      quiet = relative;
       quietest = v;
     }
   }
   int voice = nearest;
-  if (closest < kChordNoteTolerance &&
-      chord_level_[quietest] < kChordRetuneLevel) {
-    // Steal the quietest; a ringing voice keeps its tuning.
+  if (closest < kChordNoteTolerance && quiet < kChordRetuneLevel) {
+    // Steal the quietest; a ringing voice keeps its tuning. Its residue,
+    // under 1% of its loudest, is not counted against the new note.
     chord_ratio_[quietest] = ratio;
+    chord_level_[quietest] = 0.0f;
+    chord_peak_[quietest] = 0.0f;
     voice = quietest;
   }
-  Strike(voice, offset, strikes, size);
+  Strike(voice, offset, gain, strikes, size);
 }
 
 void ModalResonator::StrikeChord(float* strikes, size_t size) {
   for (int v = 0; v < kNumChordVoices; ++v) {
     if (chord_ratio_[v] != 0.0f) {
-      Strike(v, 0, strikes, size);
+      Strike(v, 0, 1.0f, strikes, size);
     }
   }
 }
@@ -330,7 +343,7 @@ void ModalResonator::RenderChord(
       ? min(modes_->glide_rate * sample_period_ * float(size), 1.0f)
       : 0.0f;
   for (int v = 0; v < kNumChordVoices; ++v) {
-    if (chord_level_[v] < kChordSilence) {
+    if (chord_level_[v] <= kChordSilence * chord_peak_[v]) {
       continue;
     }
     const float frequency =

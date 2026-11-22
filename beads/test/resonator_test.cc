@@ -186,6 +186,7 @@ void TestResonatorDefaults() {
         c.feedback = 0.0f;
         c.hold_feedback = false;
         c.modes = NULL;
+        c.chord_gain = 1.0f;
         processor.set_resonator_controls(c);
       }
       mix.dry_wet = 0.8f;
@@ -700,6 +701,7 @@ ResonatorControls Controls(int material, int ring) {
   c.feedback = 0.0f;
   c.hold_feedback = false;
   c.modes = kResonatorMaterials[material].modes;
+  c.chord_gain = kResonatorMaterials[material].chord_gain;
   return c;
 }
 
@@ -1186,7 +1188,7 @@ void ChordBlock(float ratio, size_t offset, FloatFrame* frames) {
   memset(strikes, 0, sizeof(strikes));
   memset(frames, 0, 12 * sizeof(FloatFrame));
   if (ratio > 0.0f) {
-    processor.resonator_.StrikeVoice(ratio, offset, strikes, chord_size);
+    processor.resonator_.StrikeVoice(ratio, offset, 1.0f, strikes, chord_size);
   }
   processor.resonator_.RenderChord(strikes, frames, chord_size);
 }
@@ -1222,10 +1224,31 @@ void TestResonatorChordVoices() {
   r.StrikeChord(strikes, 12);
   size_t offset = 0;
   CHECK(StruckVoice(strikes, &offset) == -1);
-  // Near a tuned voice, a quiet one is not taken.
-  r.StrikeVoice(1.0f, 0, strikes, 12);
+  // Silent strikes leave every voice free for the next audible grain.
+  r.StrikeVoice(1.0f, 0, 0.0f, strikes, 12);
+  r.StrikeVoice(1.5f, 0, 0.0f, strikes, 12);
+  r.StrikeVoice(2.0f, 0, 0.0f, strikes, 12);
   memset(strikes, 0, sizeof(strikes));
-  r.StrikeVoice(1.01f, 0, strikes, 12);
+  r.StrikeVoice(3.0f, 0, 1.0f, strikes, 12);
+  CHECK(r.chord_ratio_[StruckVoice(strikes, &offset)] == 3.0f);
+  // So do silent strikes on voices whose old notes are nearly gone.
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    r.chord_ratio_[v] = 1.0f + 0.5f * float(v);
+    r.chord_peak_[v] = 1.0f;
+    r.chord_level_[v] = 0.005f + 0.001f * float(v);
+  }
+  r.StrikeVoice(4.0f, 0, 0.0f, strikes, 12);
+  r.StrikeVoice(5.0f, 0, 0.0f, strikes, 12);
+  r.StrikeVoice(6.0f, 0, 0.0f, strikes, 12);
+  memset(strikes, 0, sizeof(strikes));
+  r.StrikeVoice(8.0f, 0, 1.0f, strikes, 12);
+  CHECK(r.chord_ratio_[StruckVoice(strikes, &offset)] == 8.0f);
+  ChordSetup(1, 0);
+  memset(strikes, 0, sizeof(strikes));
+  // Near a tuned voice, a quiet one is not taken.
+  r.StrikeVoice(1.0f, 0, 1.0f, strikes, 12);
+  memset(strikes, 0, sizeof(strikes));
+  r.StrikeVoice(1.01f, 0, 1.0f, strikes, 12);
   CHECK(StruckVoice(strikes, &offset) == 0 && r.chord_ratio_[1] == 0.0f);
   ChordSetup(1, 0);
   memset(strikes, 0, sizeof(strikes));
@@ -1233,7 +1256,7 @@ void TestResonatorChordVoices() {
   const int voices[5] = { 0, 1, 2, 0, 2 };
   for (int i = 0; i < 5; ++i) {
     memset(strikes, 0, sizeof(strikes));
-    r.StrikeVoice(ratios[i], 7, strikes, 12);
+    r.StrikeVoice(ratios[i], 7, 1.0f, strikes, 12);
     CHECK(StruckVoice(strikes, &offset) == voices[i] && offset == 7);
   }
   CHECK(r.chord_ratio_[0] == 1.0f && r.chord_ratio_[1] == 1.5f &&
@@ -1246,29 +1269,45 @@ void TestResonatorChordVoices() {
   ChordBlock(1.0f, 5, frames);
   CHECK(frames[4].l == 0.0f && frames[4].r == 0.0f);
   CHECK(frames[5].l != 0.0f || frames[5].r != 0.0f);
-  // Retuned only once 40 dB under its loudest, and then the quietest.
+  // Retuned only once 40 dB under its loudest, and then the quietest
+  // against its own loudest.
   ChordSetup(1, 0);
   ChordBlock(1.0f, 0, frames);
   ChordBlock(1.5f, 0, frames);
   ChordBlock(2.0f, 0, frames);
-  ChordBlock(2.0f, 0, frames);
-  ChordBlock(1.0f, 0, frames);
-  float loudest = 0.0f;
+  float loudest[kNumChordVoices] = { 0.0f, 0.0f, 0.0f };
   int block = 0;
   for (; block < 40000; ++block) {
-    loudest = std::max(loudest, VoiceAmplitude(1));
-    const float before = VoiceAmplitude(1);
+    float before[kNumChordVoices];
+    float quiet = 2.0f;
+    int quietest = -1;
+    for (int v = 0; v < kNumChordVoices; ++v) {
+      loudest[v] = std::max(loudest[v], VoiceAmplitude(v));
+      before[v] = VoiceAmplitude(v);
+      const float relative = r.chord_level_[v] / r.chord_peak_[v];
+      if (relative < quiet) {
+        quiet = relative;
+        quietest = v;
+      }
+    }
+    const float level = r.chord_level_[2];
+    const float peak = r.chord_peak_[2];
     memset(strikes, 0, sizeof(strikes));
-    r.StrikeVoice(3.0f, 0, strikes, 12);
-    if (r.chord_ratio_[1] == 3.0f) {
-      CHECK(StruckVoice(strikes, &offset) == 1);
-      CHECK(before < 0.0112f * loudest);  // -39 dB
-      CHECK(r.chord_ratio_[0] == 1.0f && r.chord_ratio_[2] == 2.0f);
+    r.StrikeVoice(3.0f, 0, 1.0f, strikes, 12);
+    const int struck = StruckVoice(strikes, &offset);
+    if (r.chord_ratio_[struck] == 3.0f) {
+      CHECK(struck == quietest);
+      CHECK(before[struck] < 0.0112f * loudest[struck]);  // -39 dB
+      for (int v = 0; v < kNumChordVoices; ++v) {
+        CHECK(v == struck || r.chord_ratio_[v] == 1.0f + 0.5f * float(v));
+      }
       break;
     }
-    CHECK(StruckVoice(strikes, &offset) == 2);
-    CHECK(r.chord_ratio_[1] == 1.5f);
-    r.chord_level_[2] -= 1.0f;  // Undo the probe's strike.
+    CHECK(struck == 2);
+    CHECK(r.chord_ratio_[0] == 1.0f && r.chord_ratio_[1] == 1.5f);
+    // Undo the probe's strike.
+    r.chord_level_[2] = level;
+    r.chord_peak_[2] = peak;
     memset(strikes, 0, sizeof(strikes));
     r.RenderChord(strikes, frames, 12);
   }
@@ -1436,7 +1475,11 @@ void CheckGrainStrikes(const Source& source, const ModalResonator& before,
   for (int v = 0; v < kNumChordVoices; ++v) {
     level -= r.chord_level_[v];
   }
-  processor.StrikeChord(source, triggers, strikes, size);
+  // Silent grains strike silently; here every strike must show.
+  const float grain_level = processor.grain_level_;
+  processor.grain_level_ = 1.0f;
+  processor.StrikeChord(source, triggers, 1.0f, strikes, size);
+  processor.grain_level_ = grain_level;
   for (int v = 0; v < kNumChordVoices; ++v) {
     level += r.chord_level_[v];
   }
@@ -1461,6 +1504,7 @@ template<typename Source, typename Line>
 void CheckGrainEdges(Source* source, const Line* line) {
   const size_t size = BlockSize();
   const size_t ratio = source->ratio_to_grains();
+  processor.grain_level_ = 1.0f;
   for (size_t start = 0; start < size; start += size - ratio) {
     processor.resonator_.Init(processor.sample_rate());
     source->granular_player_.Reset();
@@ -1477,7 +1521,7 @@ void CheckGrainEdges(Source* source, const Line* line) {
       }
       float strikes[kNumChordVoices * 12];
       memset(strikes, 0, sizeof(strikes));
-      processor.StrikeChord(*source, triggers, strikes, size);
+      processor.StrikeChord(*source, triggers, 1.0f, strikes, size);
       int count = 0;
       for (size_t i = 0; i < kNumChordVoices * size; ++i) {
         count += strikes[i] != 0.0f;
@@ -1506,7 +1550,7 @@ void CheckGrainEdges(Source* source, const Line* line) {
     }
     float strikes[kNumChordVoices * 12];
     memset(strikes, 0, sizeof(strikes));
-    processor.StrikeChord(*source, triggers, strikes, size);
+    processor.StrikeChord(*source, triggers, 1.0f, strikes, size);
   }
   CHECK(fabsf(processor.resonator_.chord_ratio_[1] - 1.4983f) < 0.002f);
 }
@@ -1620,6 +1664,47 @@ void TestResonatorChordGrains() {
   }
 }
 
+// The output level over 3 s of a dense pentatonic cloud.
+float CloudLevel(int placement, int material) {
+  Init(Processor::MEDIA_DIGITAL, false, placement);
+  processor.set_resonator_controls(Controls(material, 1));
+  processor.set_pitch_scale(PITCH_SCALE_PENTATONIC_MAJOR);
+  parameters.time.base = 0.3f;
+  parameters.time.attenuverter = 0.2f;
+  parameters.size.base = 0.45f;
+  parameters.pitch.attenuverter = 0.5f;
+  density.base = 0.95f;
+  mix.dry_wet = 1.0f;
+  mix.reverb_amount = 0.0f;
+  double energy = 0.0;
+  for (int block = 0; block < 12000; ++block) {
+    for (size_t i = 0; i < 12; ++i) {
+      const float t = float(block * 12 + i) / 48000.0f;
+      const float s = 0.25f * sinf(2.0f * float(M_PI) * 261.6f * t) +
+          0.1f * sinf(2.0f * float(M_PI) * 392.0f * t) + 0.03f * Noise();
+      input[i].l = input[i].r = s;
+    }
+    Process();
+    for (size_t i = 0; i < 12; ++i) {
+      energy += output[i].l * output[i].l + output[i].r * output[i].r;
+    }
+  }
+  return float(10.0 * log10(energy / 288000.0));
+}
+
+// A chord is near After the grains' level on a short dense cloud, for
+// Rings' curve and a table (20 s clouds are within 2.6 dB).
+void TestResonatorChordGains() {
+  test_checker.Start("TestResonatorChordGains");
+  const int materials[2] = { 1, 5 };
+  for (int i = 0; i < 2; ++i) {
+    const int m = materials[i];
+    const float chord = CloudLevel(RESONATOR_CHORD, m);
+    const float after = CloudLevel(RESONATOR_AFTER_GRAINS, m);
+    CHECK(fabsf(chord - after) < 3.0f);
+  }
+}
+
 int main() {
   // Match the firmware FPU setup in drivers/system.cc.
 #if defined(__SSE__)
@@ -1651,5 +1736,6 @@ int main() {
   TestResonatorChordVoices();
   TestResonatorChordLevel();
   TestResonatorChordGrains();
+  TestResonatorChordGains();
   return test_checker.failures() ? 1 : 0;
 }

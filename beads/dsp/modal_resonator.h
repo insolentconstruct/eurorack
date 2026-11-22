@@ -68,15 +68,18 @@ struct ResonatorMaterial {
   float structure;
   float brightness;
   const ResonatorModes* modes;  // NULL: Rings' stiffness curve.
+  float chord_gain;  // A grain's strike over the grains' level.
 };
 
 // Chord: each voice is one batch, the Material's first eight modes.
 const int kNumChordVoices = kNumResonatorModes / 8;
-// A voice is retuned only once 40 dB under one strike.
+// A voice is retuned only once 40 dB under its loudest.
 const float kChordRetuneLevel = 0.01f;
 const float kChordSilence = 1.0e-4f;
 // A grain within half a semitone of a voice strikes it as it is.
 const float kChordNoteTolerance = 0.9715319f;
+// A grain's strike follows the grains' level, held for half a second.
+const float kChordLevelRelease = 0.5f;
 
 const int kNumResonatorMaterials = 8;
 const int kNumResonatorRingTimes = 4;
@@ -136,15 +139,26 @@ class ModalResonator {
   }
 
   // Chord: strikes[v * size + i] excites voice v at sample i. A grain at
-  // this pitch ratio strikes its nearest voice; only a quiet one is retuned.
-  void StrikeVoice(float ratio, size_t offset, float* strikes, size_t size);
-  // SEED and hits strike every tuned voice.
+  // this pitch ratio strikes its nearest voice, at gain times Rings' strum;
+  // only a quiet voice is retuned.
+  void StrikeVoice(
+      float ratio,
+      size_t offset,
+      float gain,
+      float* strikes,
+      size_t size);
+  // SEED and hits strike every tuned voice, as Rings' strum.
   void StrikeChord(float* strikes, size_t size);
   void RenderChord(const float* strikes, FloatFrame* frames, size_t size);
 
  private:
   void ProcessModes(const float* in, float* out, float* aux, size_t size);
-  void Strike(int voice, size_t offset, float* strikes, size_t size);
+  void Strike(
+      int voice,
+      size_t offset,
+      float gain,
+      float* strikes,
+      size_t size);
   // Another object starts the voices unbent.
   inline void UpdateChordModes() {
     if (modes_ != chord_modes_) {
@@ -162,10 +176,11 @@ class ModalResonator {
   const ResonatorModes* modes_;
   float glide_;
   float sample_period_;
-  // Pitch ratio over frequency_ (0 before a first strike), and level in
-  // strikes, from the fundamental's poles, which decay slowest.
+  // Pitch ratio over frequency_ (0 before a first strike); level, a bound
+  // from the fundamental's poles, which decay slowest, and its peak.
   float chord_ratio_[kNumChordVoices];
   float chord_level_[kNumChordVoices];
+  float chord_peak_[kNumChordVoices];
   float chord_glide_[kNumChordVoices];
   const ResonatorModes* chord_modes_;
   Limiter limiter_;

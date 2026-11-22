@@ -113,9 +113,25 @@ void Processor::ProcessChord(
   const float sr = sample_rate();
   if (sr != resonator_sample_rate_) {
     resonator_.Init(sr);
+    grain_level_ = 0.0f;
     resonator_sample_rate_ = sr;
   }
   ApplyResonatorControls();
+  // The grains' level, held for a while.
+  float power = 0.0f;
+  for (size_t i = 0; i < size; ++i) {
+    power += frames[i].l * frames[i].l + frames[i].r * frames[i].r;
+  }
+  const float level = Sqrt(power / float(2 * size));
+  if (level > grain_level_) {
+    grain_level_ = level;
+  } else {
+    grain_level_ += (level - grain_level_) * float(size) /
+        (kChordLevelRelease * sr);
+  }
+  const float gain = resonator_controls_set_
+      ? resonator_controls_.chord_gain
+      : kResonatorMaterials[1].chord_gain;
   // Voices are tuned by the grains' own pitch ratios, over C3.
   resonator_.set_frequency(
       SemitonesToRatio(kResonatorRootNote - 69.0f) * 440.0f / sr);
@@ -125,16 +141,17 @@ void Processor::ProcessChord(
   if (triggers) {
     switch (media_) {
       case MEDIA_DIGITAL:
-        StrikeChord(processor_digital_, triggers, strikes, size);
+        StrikeChord(processor_digital_, triggers, gain, strikes, size);
         break;
       case MEDIA_VINTAGE_DIGITAL:
-        StrikeChord(processor_vintage_digital_, triggers, strikes, size);
+        StrikeChord(processor_vintage_digital_, triggers, gain, strikes,
+            size);
         break;
       case MEDIA_CLEAN_TAPE:
-        StrikeChord(processor_clean_tape_, triggers, strikes, size);
+        StrikeChord(processor_clean_tape_, triggers, gain, strikes, size);
         break;
       case MEDIA_DIRTY_TAPE:
-        StrikeChord(processor_dirty_tape_, triggers, strikes, size);
+        StrikeChord(processor_dirty_tape_, triggers, gain, strikes, size);
         break;
     }
   }
@@ -148,8 +165,11 @@ template<typename GrainSource>
 void Processor::StrikeChord(
     const GrainSource& source,
     const TriggerGenerator::Output* triggers,
+    float gain,
     float* strikes,
     size_t size) {
+  // A grain strikes as loud as the grains have been playing.
+  const float level = gain * grain_level_;
   // Each trigger started one grain, whose envelope has counted its samples
   // since, from the trigger's fraction as DownsampleTriggers gives it.
   const size_t ratio = source.ratio_to_grains();
@@ -177,7 +197,7 @@ void Processor::StrikeChord(
         taken |= 1 << i;
         resonator_.StrikeVoice(
             fabsf(float(grain.speed())) * (1.0f / 1024.0f),
-            j * ratio, strikes, size);
+            j * ratio, level, strikes, size);
         break;
       }
     }
