@@ -22,10 +22,10 @@ all:  braids_test
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(BUILD_DIR)%.o: %.cc
+$(BUILD_DIR)%.o: %.cc | $(BUILD_DIR)
 	g++ -c -DTEST -g -Wall -Werror -Wno-unused-variable -I. $< -o $@
 
-$(BUILD_DIR)%.d: %.cc
+$(BUILD_DIR)%.d: %.cc | $(BUILD_DIR)
 	g++ -MM -DTEST -I. $< -MF $@ -MT $(@:.d=.o)
 
 braids_test:  $(OBJS)
@@ -34,7 +34,7 @@ braids_test:  $(OBJS)
 depends:  $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)
 
-$(DEP_FILE):  $(BUILD_DIR) $(DEPS)
+$(DEP_FILE):  $(DEPS) | $(BUILD_DIR)
 	cat $(DEPS) > $(DEP_FILE)
 
 include $(DEP_FILE)
