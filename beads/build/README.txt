@@ -341,7 +341,10 @@ eight models in the current bank; TIME controls HARMONICS, SIZE controls
 TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the
 oscillator/grain balance it sets in the stock synth; FREEZE sustains.
 Other grain controls remain. At DENSITY noon with SEED unpatched, the
-last voice drones.
+last voice drones. With the Rings synth installed, DRY/WET picks Beads,
+Plaits or Rings in thirds (green / yellow / red); without it, in halves.
+While Rings plays, hold [A] and press FREEZE to step its polyphony: one,
+two or four voices ([A] flashes green, yellow or red).
 
 Synth start selects Automatic (Stock), starting after ten seconds with
 both inputs unpatched, or Manual. With inputs unpatched and FREEZE off,
@@ -379,6 +382,7 @@ page	LED	knob	setting	value	colour	pulse
 3	REVERB	FEEDBACK	Processor	Spectral	yellow	steady
 3	REVERB	DRY/WET	Synth	Beads (Stock)	green	steady
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
+3	REVERB	DRY/WET	Synth	Rings	red	steady
 3	REVERB	REVERB	Synth start	Automatic (Stock)	green	steady
 3	REVERB	REVERB	Synth start	Manual	yellow	steady
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	100%	green	steady

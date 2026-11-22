@@ -353,22 +353,32 @@ void TestBetaProfileDefinitions() {
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    255
+    255, 255
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
-  // The factory profile lists the Plaits bank; older profiles imply it.
+  // The factory profile lists the Plaits bank and Rings' polyphony; older
+  // profiles imply them.
   Template(b);
   Profile factory;
   CHECK(factory.Init(b));
   CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
   CHECK(!factory.entry(FEATURE_PLAITS_BANK).value);
-  CHECK(b[16 + 6 * (b[5] - 1)] == FEATURE_PLAITS_BANK);
-  --b[5];
-  b[6] -= 6;
-  Checksum(b);
-  CHECK(factory.Init(b));
-  CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
-  CHECK(factory.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
+  CHECK(factory.adjustable(FEATURE_RINGS_POLYPHONY));
+  CHECK(!factory.entry(FEATURE_RINGS_POLYPHONY).value);
+  CHECK(b[16 + 6 * (b[5] - 2)] == FEATURE_PLAITS_BANK);
+  CHECK(b[16 + 6 * (b[5] - 1)] == FEATURE_RINGS_POLYPHONY);
+  for (int older = 0; older < 2; ++older) {
+    --b[5];
+    b[6] -= 6;
+    Checksum(b);
+    CHECK(factory.Init(b));
+    CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
+    CHECK(factory.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
+    CHECK(factory.adjustable(FEATURE_RINGS_POLYPHONY));
+    CHECK(factory.entry(FEATURE_RINGS_POLYPHONY).feature ==
+        FEATURE_RINGS_POLYPHONY);
+    CHECK(!factory.entry(FEATURE_RINGS_POLYPHONY).value);
+  }
   for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
     CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);
     for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
@@ -383,11 +393,13 @@ void TestBetaProfileDefinitions() {
         Checksum(b);
         Profile p;
         // Adjustable needs a page, or a saved field set by a gesture; the
-        // Plaits bank is only Adjustable.
+        // Plaits bank and Rings' polyphony are only Adjustable.
+        const bool stepped = id == FEATURE_PLAITS_BANK ||
+            id == FEATURE_RINGS_POLYPHONY;
         const bool valid = value < kFeatureDefinitions[id].values &&
             (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page ||
-                kFeatureDefinitions[id].field != kNoField) &&
-            (id != FEATURE_PLAITS_BANK || state == PROFILE_ADJUSTABLE);
+                kFeatureDefinitions[id].field != kNoField || stepped) &&
+            (!stepped || state == PROFILE_ADJUSTABLE);
         CHECK(p.Init(b) == valid);
       }
     }
@@ -639,6 +651,18 @@ uint32_t Beta3Digest(uint32_t* accepted) {
     }
     Profile parsed;
     const bool ok = parsed.Init(b);
+    // Beta 3 refused Synth value 2; as Rings it is accepted where Plaits is.
+    if (cases[i] == FEATURE_SYNTH && cases[i + 2] == 2) {
+      b[18] = 1;
+      const uint32_t plaits_crc = Profile::Crc32(b, 16 + 6 * count);
+      for (int j = 0; j < 4; ++j) {
+        b[16 + 6 * count + j] = plaits_crc >> (8 * j);
+      }
+      Profile plaits;
+      CHECK(ok == plaits.Init(b));
+      results.push_back(false);
+      continue;
+    }
     results.push_back(ok);
     if (!ok) {
       continue;
@@ -695,6 +719,32 @@ bool ParseEntries(const uint8_t (*entries)[6], int count, Profile* p) {
   }
   Checksum(b);
   return p->Init(b);
+}
+
+// Rings is Synth value 2: legal fixed, as a default and with an action.
+void TestRingsSynthProfiles() {
+  test_checker.Start("TestRingsSynthProfiles");
+  CHECK(kFeatureDefinitions[FEATURE_SYNTH].values == 3);
+  const FeatureDefinition& d = kFeatureDefinitions[FEATURE_RINGS_POLYPHONY];
+  CHECK(d.values == 3 && d.field == kNoField && !d.page && !d.action);
+  for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
+    for (int value = 0; value <= 3; ++value) {
+      for (int action = 0; action <= ACTION_FREEZE; ++action) {
+        const uint8_t entry[1][6] = {
+          { FEATURE_SYNTH, uint8_t(state), uint8_t(value), 0, 0,
+            uint8_t(action) }
+        };
+        Profile p;
+        const bool valid = value < 3 && action != ACTION_FREEZE &&
+            (!action || state == PROFILE_ADJUSTABLE);
+        CHECK(ParseEntries(entry, 1, &p) == valid);
+        if (valid) {
+          CHECK(p.entry(FEATURE_SYNTH).value == value);
+          CHECK(p.Action(action) == (action ? FEATURE_SYNTH : FEATURE_NONE));
+        }
+      }
+    }
+  }
 }
 
 // Manual gain is on FEEDBACK unless the profile moves it to an amount slot
@@ -784,6 +834,7 @@ int main() {
   TestProfileKinds();
   TestBetaProfileDefinitions();
   TestBeta3Profiles();
+  TestRingsSynthProfiles();
   TestGainKnobSlot();
   TestFactoryProfileIsDefaults();
   puts("Profile validation: PASS");

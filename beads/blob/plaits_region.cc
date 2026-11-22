@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The region after the app: WAVE, TERR and PLTS sections.
+// The region after the app: WAVE, TERR, PLTS and RNGS sections.
 
 #include "beads/blob/plaits_region.h"
 
@@ -47,13 +47,16 @@ static int SectionIndex(uint32_t kind) {
       return PLAITS_SECTION_TERRAIN;
     case kPlaitsSectionPlaits:
       return PLAITS_SECTION_PLAITS;
+    case kPlaitsSectionRings:
+      return PLAITS_SECTION_RINGS;
     default:
       return -1;
   }
 }
 
 static const uint32_t kSectionKinds[PLAITS_SECTION_LAST] = {
-  kPlaitsSectionWave, kPlaitsSectionTerrain, kPlaitsSectionPlaits
+  kPlaitsSectionWave, kPlaitsSectionTerrain, kPlaitsSectionPlaits,
+  kPlaitsSectionRings
 };
 
 // The smallest section: header, then the CRC.
@@ -226,7 +229,9 @@ PlaitsBlobStatus PlaitsRegion::ReadSection(
       if (identity_.services_status != PLAITS_BLOB_OK) {
         return PLAITS_BLOB_ERROR_SERVICES;
       }
-      return ReadBlobs(data, size, h.count, services, digests, num_digests);
+      return section == PLAITS_SECTION_RINGS
+          ? ReadSynth(data, size, h.count, services, digests, num_digests)
+          : ReadBlobs(data, size, h.count, services, digests, num_digests);
   }
 }
 
@@ -342,6 +347,34 @@ PlaitsBlobStatus PlaitsRegion::ReadBlobs(
     num_libraries_ = num_libraries;
   }
   return result;
+}
+
+// RNGS: one synth blob, right after the header, filling the payload.
+PlaitsBlobStatus PlaitsRegion::ReadSynth(
+    const uint8_t* data,
+    uint32_t size,
+    uint32_t count,
+    const PlaitsBlobServices* services,
+    const uint8_t (*digests)[kPlaitsBlobDigestSize],
+    size_t num_digests) {
+  if (count != 1) {
+    return PLAITS_BLOB_ERROR_TABLE;
+  }
+  const uint8_t* blob = data + sizeof(PlaitsSectionHeader);
+  PlaitsBlobStatus status = PlaitsBlob::Check(
+      blob, blob, data + size - 4, services, digests, num_digests, NULL);
+  if (status != PLAITS_BLOB_OK) {
+    return status;
+  }
+  PlaitsBlobInfo info;
+  PlaitsBlob::Info(blob, &info);
+  if (info.kind != kPlaitsBlobKindSynth) {
+    return PLAITS_BLOB_ERROR_KIND;
+  }
+  if (info.size != size - kMinSectionSize) {
+    return PLAITS_BLOB_ERROR_TABLE;
+  }
+  return PLAITS_BLOB_OK;
 }
 
 // Every library the blob lists is among the first num_libraries entries,

@@ -82,6 +82,7 @@ const char* const kOptionNames[] = {
   "Start in quality",
   "Manual gain knob",
   "Resonator",
+  "Rings polyphony",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.
@@ -115,6 +116,7 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_FROZEN, 1, "Evolving" },
   { beads::FEATURE_SYNTH, 0, "Beads (Stock)" },
   { beads::FEATURE_SYNTH, 1, "Plaits" },
+  { beads::FEATURE_SYNTH, 2, "Rings" },
   { beads::FEATURE_ATTACKS, 0, "Off" },
   { beads::FEATURE_ATTACKS, 1, "Snap" },
   { beads::FEATURE_ATTACKS, 2, "Snap and trigger" },

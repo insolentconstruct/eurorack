@@ -79,7 +79,7 @@ The header grows to 96 bytes (24 little-endian words). The blob still ends with 
 
 ## Synth blobs (kind 3)
 
-A whole synth that is not Plaits: Mutable Instruments' Rings (synth ID 1). Development only: `blob_pack.py` gates and packs the kind; the firmware's reader, `RNGS` section and RAM grant come with the Rings synth's firmware work.
+A whole synth that is not Plaits: Mutable Instruments' Rings (synth ID 1). `blob_pack.py` gates and packs the kind; the firmware's reader checks it in the `RNGS` section (Region, below), and the default region carries it.
 
 | Word | Synth blob |
 |---:|---|
@@ -123,15 +123,16 @@ Frozen as version 1's, in `services_v2.ld`, `services_section.ld` and `kPlaitsBl
 
 ## Region
 
-From the first 4 KiB boundary after the app to 0x08100000. Sections come in a fixed order, `WAVE`, `TERR`, `PLTS`, each starting on a 32-byte flash word (the H7's ECC unit), so no flash word holds bytes of two sections.
+From the first 4 KiB boundary after the app to 0x08100000. Sections come in a fixed order, `WAVE`, `TERR`, `PLTS`, `RNGS`, each starting on a 32-byte flash word (the H7's ECC unit), so no flash word holds bytes of two sections.
 
-- **Section header** (32 bytes): magic `DZSC`, kind (`WAVE`, `TERR` or `PLTS` as a four-character code), version, release, size (header to CRC), item count, two reserved words. Then the payload, then a CRC-32 of everything before it. A section is valid on its own, without the profile.
-- **Directory, in the profile block (version 3):** byte 14 is the bank count (0 = Plaits' three stock banks, else 1–15) and byte 15 the section count (0–3). After the entries and scale records come the bank table (8 model IDs per bank) and the directory (per section: kind, offset from the region start, size and the section's CRC, 16 bytes). The entry's CRC is the selection: a section written for another install fails it. Every ID must be known (0–23, 28–99) and the start bank (feature 31) below the bank count; a saved bank at or past it takes the start bank. The firmware checks every entry lies inside the region, is aligned, in order and apart before it reads anything; a bad directory faults every section. The synth lock follows from which sections are valid (below), not from a stored field.
+- **Section header** (32 bytes): magic `DZSC`, kind (`WAVE`, `TERR`, `PLTS` or `RNGS` as a four-character code), version, release, size (header to CRC), item count, two reserved words. Then the payload, then a CRC-32 of everything before it. A section is valid on its own, without the profile.
+- **Directory, in the profile block (version 3):** byte 14 is the bank count (0 = Plaits' three stock banks, else 1–15) and byte 15 the section count (0–4). After the entries and scale records come the bank table (8 model IDs per bank) and the directory (per section: kind, offset from the region start, size and the section's CRC, 16 bytes). The entry's CRC is the selection: a section written for another install fails it. Every ID must be known (0–23, 28–99) and the start bank (feature 31) below the bank count; a saved bank at or past it takes the start bank. The firmware checks every entry lies inside the region, is aligned, in order and apart before it reads anything; a bad directory faults every section. The synth lock follows from which sections are valid (below), not from a stored field.
 - **Without a directory:** the firmware uses the release's own default layout, compiled into the app as fixed offsets and the SHA-256 of each default section (`plaits_catalog.cc`, written by `blob_catalog.py` and checked by `build_blobs_dev.sh`). It never trusts a region offset from anywhere else.
 - **Reads:** a section is read only up to its size (a stale tail is never read), its header checked, then its CRC against the directory's (or, on the default layout, its SHA-256 alone), then its content. A blob's own CRC is not recomputed: its SHA-256 on the allowlist covers every byte (each bitwise CRC pass costs 55 cycles/B). The app reads the region at boot with the D-cache off and data bus faults ignored, then check `FLASH_SR1` DBECCERR and the bus fault status around each section, so a double ECC error in an interrupted write faults that section (`ECC`) instead of the boot (not yet exercised on hardware). Seed3: 0.97 M cycles (2.0 ms) for the 7,920 B development region, services check included.
 - **`PLTS` payload:** one 16-byte entry per blob (byte kind, byte ID, two zero bytes, then offset from the section start, size and the blob's CRC), libraries first by ascending ID, then models by ascending first ID, at most 128; blobs follow at 32-byte offsets. Every blob is checked on its own first; then every dependency must be an earlier library entry with that ID, itself accepted, whose SHA-256 is the one recorded, or the dependent is refused (`DEPENDENCY`). All or none within the section.
+- **`RNGS` payload:** exactly one synth blob (kind 3), at offset 32, filling the payload; the item count is 1. The blob passes `PlaitsBlob::Check` against the allowlist (its header rules, imports, services OK) or the section takes its status; another count or a size that does not fill the payload is `TABLE`, a model or library `KIND`. The reader does not compare the blob with the app: the app checks its ID, RAM, control block and block size before `init` (`PlaitsRegion::synth_blob`, `PlaitsBlobInfo`'s `controls_size` and `block_size`).
 - **Faults:** a damaged section never hides another. Plaits may play when every model of every bank is served by a checked blob (`PlaitsVoice::Playable`), so it needs a valid `PLTS`; Beads' synth when `WAVE` is valid. With only one, Synth is forced to it; with neither, the synth is silent and [A] blinks fast until a good install. Profile and State are never rewritten. Until phase 4 Beads' wavetables are compiled in, so a unit sees only "as profiled" and "forced to Beads".
-- **Install order:** Hygrostat writes `WAVE` before `PLTS`.
+- **Install order:** Hygrostat writes `WAVE` before `PLTS`, and `RNGS` last.
 
 ## Content limits (Beta 4)
 
@@ -150,4 +151,4 @@ Firmware and Hygrostat both refuse content outside these limits.
 
 ## Identity
 
-The version 1 record grew with every blob, so version 2 keeps digests in flash (the app's allowlist, `kPlaitsApprovedBlobs`) and only statuses in RAM: `PlaitsRegionIdentity`, 192 bytes (release, services status, directory status, per section status, address, size and CRC, the blob count and one status byte per `PLTS` entry), in `plaits_region` (beads.cc). It is readable over SWD by symbol.
+The version 1 record grew with every blob, so version 2 keeps digests in flash (the app's allowlist, `kPlaitsApprovedBlobs`) and only statuses in RAM: `PlaitsRegionIdentity`, 208 bytes since `RNGS` (release, services status, directory status, per section status, address, size and CRC for `WAVE`, `TERR`, `PLTS` and `RNGS`, the blob count and one status byte per `PLTS` entry), in `plaits_region` (beads.cc). It is readable over SWD by symbol.

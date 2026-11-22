@@ -83,6 +83,7 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   0,  // Start quality.
   0,  // Gain knob.
   0,  // Resonator.
+  27,  // Rings polyphony.
 };
 
 bool Settings::Init(bool recovery_mode) {

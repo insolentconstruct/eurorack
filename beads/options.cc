@@ -28,6 +28,7 @@
 
 #include "beads/options.h"
 
+#include "beads/blob/synth_choice.h"
 #include "beads/settings.h"
 
 namespace beads {
@@ -40,6 +41,7 @@ STATIC_ASSERT(
     PAGE_VALUES_ATTACKS == ATTACK_MODE_SNAP_AND_TRIGGER + 1, attack_values);
 STATIC_ASSERT(
     PAGE_VALUES_INTERVALS == int(RANDOM_INTERVALS_LAST), interval_values);
+STATIC_ASSERT(PAGE_VALUES_SYNTH == int(SYNTH_LAST), synth_values);
 
 const OptionPage kOptionPages[kNumOptionPages] = {
   { 1, { FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS } },
@@ -73,7 +75,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_HALVES,  // Processor.
   PAGE_CONTROL_ZONES,  // Limiter.
   PAGE_CONTROL_HALVES,  // Frozen.
-  PAGE_CONTROL_HALVES,  // Synth.
+  PAGE_CONTROL_ZONES,  // Synth.
   PAGE_CONTROL_ZONES,  // Attacks.
   PAGE_CONTROL_HALVES,  // Synth start.
   PAGE_CONTROL_ZONES,  // Intervals.
@@ -108,6 +110,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // Start quality.
   PAGE_CONTROL_NONE,  // Gain knob.
   PAGE_CONTROL_NONE,  // Resonator.
+  PAGE_CONTROL_NONE,  // Rings polyphony.
 };
 const Leds::Color kOptionColors[kNumOptionColors] = {
   { 0, 255, 0 },
@@ -182,6 +185,7 @@ void Options::Init() {
     preview_[i] = 0;
   }
   scale_ = PITCH_SCALE_FIFTHS;
+  playable_synths_ = SynthMask(true, true, false);
   profile_ = NULL;
   seed_held_ = false;
   seed_time_ = 0;
@@ -368,7 +372,8 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
           }
           break;
         case PAGE_CONTROL_ZONES:
-          *value = zone_[i];
+          *value = setting == FEATURE_SYNTH
+              ? PlayableSynth(pot, zone_[i], *value) : zone_[i];
           break;
         case PAGE_CONTROL_STEPS:
           {
@@ -565,6 +570,20 @@ void Options::UpdateZone(float pot, int* zone) {
              (*zone == 2 && pot < kOptionsZoneHigh - kOptionsZoneBand)) {
     *zone = 1;
   }
+}
+
+// Three playable synths take the zones and two the halves; with one, any
+// edit selects it (a saved synth that cannot play stays until then).
+uint8_t Options::PlayableSynth(float pot, int zone, uint8_t value) const {
+  const uint8_t first = NextSynth(SYNTH_LAST - 1, playable_synths_);
+  const uint8_t second = NextSynth(first, playable_synths_);
+  if (NextSynth(second, playable_synths_) != first) {
+    return zone;
+  } else if (second == first) {
+    return first;
+  }
+  return pot < kOptionsHalfLow ? first : pot > kOptionsHalfHigh ? second
+      : value;
 }
 
 void Options::Finish() {

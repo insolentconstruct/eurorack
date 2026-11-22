@@ -82,14 +82,9 @@ assert set(block[size + 4:]) == {0xff}
 print('Factory profile block holds the manifest factory rows: PASS')
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features']] == list(range(1, 42))
-assert [r['id'] for r in frozen['reserved']] == [42]
+assert [r['id'] for r in frozen['features']] == list(range(1, 43))
+assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
-LAST = '    }\n  ],\n  "plaits_models"'
-POLYPHONY = (', {"id": 42, "symbol": "POLYPHONY", "name": "Polyphony",'
-    ' "values": [{"name": "Off"}, {"name": "On"}], "field": null,'
-    ' "states": ["Off", "Fixed"], "page": false, "amount": false,'
-    ' "actions": [], "stateless": false, "touches_synth": true}')
 faults = [
   ('Frozen ID 29', features.MANIFEST,
       '"symbol": "SEED_START"', '"symbol": "SEED_BEGIN"'),
@@ -101,8 +96,13 @@ faults = [
       '{"name": "Snap", "led": [255, 0, 0]}'),
   ('without gaps', features.MANIFEST, RESONATOR,
       RESONATOR.replace('41', '43')),
-  ('reserved for Rings polyphony', features.MANIFEST, LAST,
-      LAST.replace('    }', '    }' + POLYPHONY, 1)),
+  ('reserved for Rings polyphony', features.FROZEN, '"reserved": []',
+      '"reserved": [{"id": 42, "for": "Rings polyphony"}]'),
+  ('Frozen ID 7: value meanings', features.MANIFEST,
+      '{"name": "Rings", "led": [255, 0, 0]}',
+      '{"name": "Resonator", "led": [255, 0, 0]}'),
+  ('Frozen ID 42', features.MANIFEST,
+      '"symbol": "RINGS_POLYPHONY"', '"symbol": "POLYPHONY"'),
   ('stale', 'beads/profile.cc',
       '{ 3, kNoField, false, false, false, false },  // Resonator.',
       '{ 4, kNoField, false, false, false, false },  // Resonator.'),
@@ -146,6 +146,8 @@ faults = [
       '"name": "Resonator",', '"name": "Rings resonator",'),
   # The options record: each version's layout is frozen.
   ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 24,'),
+  ('Record layout 1: ID 42', features.MANIFEST, '"saved": 27,',
+      '"saved": 28,'),
   ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),
   ('Saved: PITCH', features.MANIFEST, '"saved": 8,\n', ''),
   ('Freeze record layout 2', features.MANIFEST,

@@ -79,7 +79,14 @@ class Codec {
     ++stops_;
   }
   void Pause() { callback_ = NULL; }
-  void Resume(FillBufferCallback callback) { callback_ = callback; }
+  // A test may run a block the moment the callback is back, as the DMA can.
+  void Resume(FillBufferCallback callback) {
+    callback_ = callback;
+    if (on_resume_) {
+      on_resume_();
+    }
+  }
+  void (*on_resume_)();
   int sample_rate_;
   size_t block_size_;
   FillBufferCallback callback_;

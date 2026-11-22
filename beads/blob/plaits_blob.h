@@ -284,7 +284,8 @@ typedef void* (*PlaitsBlobLibraryInitFn)(
 extern const PlaitsBlobServices plaits_blob_services;
 
 // What the loader needs from either header version, once Check passed. A
-// library's RAM and scratch are state_size and arena_size.
+// library's RAM and scratch are state_size and arena_size; a synth's RAM is
+// state_size and its configure entry reset_offset.
 struct PlaitsBlobInfo {
   uint32_t abi;
   uint32_t kind;
@@ -300,6 +301,8 @@ struct PlaitsBlobInfo {
   uint32_t num_exports;
   uint32_t dependencies_offset;
   uint32_t num_dependencies;
+  uint32_t controls_size;
+  uint32_t block_size;
 };
 
 class PlaitsBlob {
@@ -308,7 +311,8 @@ class PlaitsBlob {
   static PlaitsBlobStatus CheckServices(const PlaitsBlobServices* services);
 
   // Checks a blob at blob, inside [begin, end), before any of its code runs;
-  // digest receives its SHA-256 (or is NULL). Version 1 and 2 headers.
+  // digest receives its SHA-256 (or is NULL). Version 1 and 2 headers:
+  // models, libraries and synths.
   static PlaitsBlobStatus Check(
       const uint8_t* blob,
       const uint8_t* begin,

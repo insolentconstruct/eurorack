@@ -40,7 +40,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, 3, true, false, true, false },  // Processor.
   { 3, 4, true, false, false, false },  // Limiter.
   { 2, 5, true, false, true, false },  // Frozen.
-  { 2, 6, true, false, true, false },  // Synth.
+  { 3, 6, true, false, true, false },  // Synth.
   { 3, 7, true, false, false, false },  // Attacks.
   { 2, 8, true, false, true, true },  // Synth start.
   { 3, 9, true, false, false, false },  // Intervals.
@@ -80,11 +80,12 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 5, kNoField, false, false, false, false },  // Start quality.
   { 1, kNoField, false, true, false, false },  // Gain knob.
   { 3, kNoField, false, false, false, false },  // Resonator.
+  { 3, kNoField, false, false, false, false },  // Rings polyphony.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
     __attribute__((section(".profile"), used, aligned(32))) = {
-  0x44, 0x5a, 0x50, 0x46, 0x02, 0x11, 0x66, 0x00,
+  0x44, 0x5a, 0x50, 0x46, 0x02, 0x12, 0x6c, 0x00,
   0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02,
   0x00, 0x06, 0x00, 0x00, 0x03, 0x02, 0x00, 0x05,
@@ -98,8 +99,8 @@ const volatile uint8_t kProfileBlock[kProfileSize]
   0x0d, 0x02, 0x00, 0x00, 0x00, 0x01, 0x0e, 0x01,
   0x01, 0x00, 0x00, 0x02, 0x12, 0x02, 0x00, 0x0a,
   0x00, 0x00, 0x15, 0x02, 0x00, 0x0b, 0x00, 0x00,
-  0x1f, 0x02, 0x00, 0x00, 0x00, 0x00, 0x27, 0x5a,
-  0x14, 0x94, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0x1f, 0x02, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x02,
+  0x00, 0x00, 0x00, 0x00, 0xaa, 0x82, 0xf1, 0xb3,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -811,6 +812,8 @@ void Profile::Defaults() {
       AMOUNT_NONE, ACTION_NONE },  // Seed latch.
     { FEATURE_PLAITS_BANK, PROFILE_ADJUSTABLE, 0, 0,
       AMOUNT_NONE, ACTION_NONE },  // Plaits bank.
+    { FEATURE_RINGS_POLYPHONY, PROFILE_ADJUSTABLE, 0, 0,
+      AMOUNT_NONE, ACTION_NONE },  // Rings polyphony.
   };
   for (size_t i = 0; i < sizeof(defaults) / sizeof(defaults[0]); ++i) {
     entries_[defaults[i].feature] = defaults[i];
@@ -894,11 +897,14 @@ bool Profile::Parse(const volatile uint8_t* b) {
     }
     // Adjustable needs a page, a knob, or a saved field a gesture changes.
     if (id >= FEATURE_VERSION && e.state == PROFILE_ADJUSTABLE &&
-        !d.page && d.field == kNoField && !e.amount_slot) {
+        !d.page && d.field == kNoField && !e.amount_slot &&
+        id != FEATURE_RINGS_POLYPHONY) {
       return false;
     }
-    // The Plaits bank is always stepped on the panel; only its start varies.
-    if (id == FEATURE_PLAITS_BANK && e.state != PROFILE_ADJUSTABLE) {
+    // The Plaits bank and Rings' polyphony are always stepped on the panel;
+    // only their start varies.
+    if ((id == FEATURE_PLAITS_BANK || id == FEATURE_RINGS_POLYPHONY) &&
+        e.state != PROFILE_ADJUSTABLE) {
       return false;
     }
 #ifdef PLAITS_BLOBS
@@ -943,6 +949,11 @@ bool Profile::Parse(const volatile uint8_t* b) {
   if (!seen[FEATURE_PLAITS_BANK]) {
     entries_[FEATURE_PLAITS_BANK].feature = FEATURE_PLAITS_BANK;
     entries_[FEATURE_PLAITS_BANK].state = PROFILE_ADJUSTABLE;
+  }
+  // And profiles from before Rings start with one voice.
+  if (!seen[FEATURE_RINGS_POLYPHONY]) {
+    entries_[FEATURE_RINGS_POLYPHONY].feature = FEATURE_RINGS_POLYPHONY;
+    entries_[FEATURE_RINGS_POLYPHONY].state = PROFILE_ADJUSTABLE;
   }
   return true;
 }

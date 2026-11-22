@@ -32,59 +32,15 @@
 
 #include "stmlib/stmlib.h"
 
+#include "beads/blob/synths/rings_synth_controls.h"
 #include "rings/dsp/part.h"
-#include "rings/dsp/patch.h"
-#include "rings/dsp/performance_state.h"
 #include "rings/dsp/string_synth_part.h"
 #include "rings/dsp/strummer.h"
 
 namespace beads {
 
-// Permanent synth ID of the Rings synth blob.
-const uint32_t kRingsSynthId = 1;
 // Rings' reverb, shared by both cores as in rings.cc.
 const size_t kRingsReverbSize = 32768;
-
-enum RingsCoreType {
-  RINGS_CORE_PART,
-  RINGS_CORE_STRING_SYNTH,
-  RINGS_CORE_LAST
-};
-
-// One block's controls, fixed by the blob's interface.
-struct RingsSynthControls {
-  rings::Patch patch;
-  rings::PerformanceState performance_state;
-};
-
-// What plays: a core, Part's model (0-5), the polyphony (1, 2 or 4) and
-// Disastrous peace's FX (0-5).
-struct RingsSynthTarget {
-  uint8_t core;
-  uint8_t model;
-  uint8_t polyphony;
-  uint8_t fx;
-};
-
-struct PlaitsBlobServices;
-
-// The blob's entries. Init and configure run in the main loop with the codec
-// paused; render in the audio interrupt.
-typedef void* (*RingsSynthInitFn)(
-    uint8_t* ram,
-    size_t ram_size,
-    const PlaitsBlobServices* services);
-typedef bool (*RingsSynthConfigureFn)(
-    void* context,
-    const RingsSynthTarget* target,
-    const RingsSynthControls* controls,
-    bool entry);
-typedef void (*RingsSynthRenderFn)(
-    void* context,
-    RingsSynthControls* controls,
-    float* out,
-    float* aux,
-    size_t size);
 
 class RingsSynthCore {
  public:
@@ -125,10 +81,9 @@ class RingsSynthCore {
   DISALLOW_COPY_AND_ASSIGN(RingsSynthCore);
 };
 
-STATIC_ASSERT(sizeof(rings::Patch) == 16, rings_patch);
-STATIC_ASSERT(sizeof(rings::PerformanceState) == 20, rings_performance_state);
-STATIC_ASSERT(sizeof(RingsSynthControls) == 36, rings_synth_controls);
-STATIC_ASSERT(sizeof(RingsSynthTarget) == 4, rings_synth_target);
+STATIC_ASSERT(kNumRingsModels == rings::RESONATOR_MODEL_LAST, rings_models);
+STATIC_ASSERT(kNumRingsFx == rings::FX_LAST, rings_fx);
+STATIC_ASSERT(kRingsDefaultFx == rings::FX_ENSEMBLE, rings_default_fx);
 
 }  // namespace beads
 

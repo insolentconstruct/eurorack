@@ -295,7 +295,8 @@
       "name": "Synth",
       "values": [
         "Beads (Stock)",
-        "Plaits"
+        "Plaits",
+        "Rings"
       ],
       "states": [
         "Off",
@@ -1225,6 +1226,27 @@
       "actions": [],
       "cpu_cost": null,
       "touches_synth": false
+    },
+    {
+      "id": 42,
+      "name": "Rings polyphony",
+      "values": [
+        "1",
+        "2",
+        "4"
+      ],
+      "states": [
+        "Adjustable"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "field": null
     }
   ],
   "plaits_models": [

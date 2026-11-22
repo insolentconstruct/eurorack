@@ -183,9 +183,10 @@ for row in rows:
     assert (color, pulse) not in seen, (setting, value)
     seen.add((color, pulse))
 assert len(values["Pitch scale"]) == 10
-for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps"):
+for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps",
+                "Synth"):
     assert len(values[setting]) == 3, setting
-for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
+for setting in ("Reverb character", "Frozen feedback", "Processor",
                 "Synth start"):
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
@@ -503,7 +504,7 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 41
+assert len(catalog["features"]) == len(exported) == 42
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 manifest = json.loads(Path("beads/resources/features.json").read_text())
@@ -527,8 +528,8 @@ for feature, row, source in zip(catalog["features"], exported,
     if action and field != 255 and not stateless:
         assert feature["actions"] == ([1] if identity == 7 else [1, 2])
     assert feature.get("stateless", False) == bool(stateless)
-    # The Plaits bank is Adjustable through its saved field, not a page.
-    gesture = identity == 31 and field == 14 and not page
+    # The Plaits bank and Rings polyphony are Adjustable through gestures.
+    gesture = (identity == 31 and field == 14 or identity == 42) and not page
     assert ("Adjustable" in feature["states"]) == bool(
         page or amount or action or gesture)
 # Every value label the firmware shows on a page is the catalogue's.

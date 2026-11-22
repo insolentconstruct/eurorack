@@ -23,7 +23,8 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # Build the development blobs in the build image, from the Drizzlet root:
-# the libraries first, then the models built against them.
+# the libraries first, then the models built against them, then the Rings
+# synth.
 #   beads/build/tools/build_blobs.sh OUT
 set -euo pipefail
 out=${1:?usage: build_blobs.sh OUT}
@@ -81,6 +82,14 @@ build chords "${waves[@]}" "${chords[@]}" $blob/models/chords.cc \
 build modal_resonator $blob/models/modal_resonator.cc \
   $blob/models/modal_resonator_engine.cc $physical/modal_voice.cc \
   $physical/resonator.cc beads/plaits_resources.cc
+# The Rings synth at Beads' block size, as beads/test/rings_emu/build.sh
+# builds it.
+libm=$blob/libm
+build rings_synth -DRINGS_BLOB -DRINGS_BLOCK_SIZE=12 $blob/synths/rings.cc \
+  $blob/synths/rings_synth_core.cc rings/dsp/part.cc \
+  rings/dsp/string_synth_part.cc rings/dsp/string.cc rings/dsp/fm_voice.cc \
+  rings/dsp/resonator.cc rings/resources.cc $libm/sf_pow.c \
+  $libm/sf_pow_log2_data.c $libm/sf_exp2_data.c $libm/math_errf_no_errno.c
 # Each model's libraries are those profile-features.json lists for its ID.
 python3 - "$out" <<'PYCODE'
 import json, sys

@@ -22,9 +22,9 @@
 #
 #
 # The release's Plaits region, in the build image from the Drizzlet root: the
-# blobs, the default region (the stock models and their libraries), and the
-# catalogue, which must equal beads/blob/plaits_catalog.cc (its digests
-# approve every blob built here).
+# blobs, the default region (the stock models, their libraries and the Rings
+# synth), and the catalogue, which must equal beads/blob/plaits_catalog.cc
+# (its digests approve every blob built here).
 #   beads/build/tools/build_region.sh OUT
 set -euo pipefail
 out=${1:?usage: build_region.sh OUT}
@@ -43,7 +43,8 @@ stock=("$blob/plaits_wavetables.bin" "$blob/chord_bank_library.bin" \
   "$blob/wavetable.bin" "$blob/chords.bin" "$blob/speech.bin" \
   "$blob/swarm.bin" "$blob/filtered_noise.bin" "$blob/particle_noise.bin" \
   "$blob/inharmonic_string.bin" "$blob/modal_resonator.bin" \
-  "$blob/bass_drum.bin" "$blob/snare_drum.bin" "$blob/hi_hats.bin")
+  "$blob/bass_drum.bin" "$blob/snare_drum.bin" "$blob/hi_hats.bin" \
+  "$blob/rings_synth.bin")
 python3 beads/build/tools/blob_sections.py "$out/region.bin" "$release" \
   "${stock[@]}"
 python3 beads/build/tools/blob_catalog.py "$out/plaits_catalog.cc" \

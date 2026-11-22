@@ -87,7 +87,7 @@ void TestRecordJournal() {
   }
   // Both changed, cut after one, two and three words: the record comes
   // first, so a cut never leaves the new state with the old options. Its
-  // second word holds only erased reserved bytes: one word completes it.
+  // second word holds Rings' polyphony: a cut after one leaves the old one.
   for (int cut = 1; cut <= 3; ++cut) {
     const Saved before = Setup(kCalibration, 5);
     Settings both;
@@ -99,7 +99,8 @@ void TestRecordJournal() {
     TestFlashBudget() = -1;
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.pitch_scale() == PITCH_SCALE_MINOR);
+    CHECK(loaded.pitch_scale() == (cut == 1
+        ? PitchScale(before.values[FEATURE_PITCH]) : PITCH_SCALE_MINOR));
     CHECK(loaded.state().media == (cut == 3 ? 0 : before.state.media));
     CHECK(before.values[FEATURE_PITCH] != PITCH_SCALE_MINOR);
   }
@@ -257,7 +258,7 @@ void TestSector14Full() {
 // A cut at each step of a compaction (erase, four calibration words, two
 // record words): the calibration is the old one, never lost or locked; the
 // options are the last saved, the defaults inside the window, or the new
-// ones once the record's first word is in.
+// ones once both record words are in.
 void TestInterruptedCompaction() {
   test_checker.Start("TestInterruptedCompaction");
   const Saved defaults = Defaults();
@@ -277,7 +278,7 @@ void TestInterruptedCompaction() {
     CHECK(SameState(loaded, saved));
     if (cut == 0) {
       CHECK(SameOptions(loaded, saved));
-    } else if (cut < 6) {
+    } else if (cut < 7) {
       CHECK(SameOptions(loaded, defaults));
     } else {
       CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);

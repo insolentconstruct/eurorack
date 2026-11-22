@@ -280,7 +280,8 @@ void TestRefusals() {
     { 3, kPlaitsBlobServicesVersion2 + 1, PLAITS_BLOB_ERROR_SERVICES },
     { 3, 0, PLAITS_BLOB_ERROR_SERVICES },
     { 4, kPlaitsBlobKindLibrary, PLAITS_BLOB_ERROR_HEADER },
-    { 4, 3, PLAITS_BLOB_ERROR_KIND },
+    { 4, 4, PLAITS_BLOB_ERROR_KIND },
+    { 4, kPlaitsBlobKindSynth, PLAITS_BLOB_ERROR_HEADER },
     { 4, 0, PLAITS_BLOB_ERROR_KIND },
     { 5, 256, PLAITS_BLOB_ERROR_HEADER },
     { 6, 0, PLAITS_BLOB_ERROR_HEADER },
@@ -404,8 +405,110 @@ void TestServicesTable() {
   CHECK(kNumPlaitsBlobExportsV1 == 3);
 }
 
-// A region of WAVE, TERR (two grids) and PLTS (two version 2 blobs, the
-// first serving IDs 2 to 4), as blob_sections.py lays them out.
+// A synth blob: one ID, its RAM, three entries, one import and both sizes.
+const uint32_t kSynthRam = 180000;
+
+void MakeSynth(uint8_t* b, uint8_t* digest) {
+  PlaitsBlobSynthHeader h;
+  memset(&h, 0, sizeof(h));
+  h.magic = kPlaitsBlobMagic;
+  h.header_size = sizeof(h);
+  h.abi = kPlaitsBlobAbi2;
+  h.services_version = kPlaitsBlobServicesVersion2;
+  h.kind = kPlaitsBlobKindSynth;
+  h.id = 1;
+  h.num_ids = 1;
+  h.size = kBlobSize;
+  h.ram_size = kSynthRam;
+  h.init_offset = 0x61;
+  h.configure_offset = 0x79;
+  h.render_offset = 0x7d;
+  h.got_offset = kGotOffset;
+  h.got_size = 4;
+  h.controls_size = 36;
+  h.block_size = 12;
+  memcpy(b, &h, sizeof(h));
+  for (uint32_t i = sizeof(h); i < kGotOffset; ++i) {
+    b[i] = i * 3;
+  }
+  Write32(b + kGotOffset, kPlaitsBlobRandomStateAddress);
+  Write32(b + kBlobSize - 4, Profile::Crc32(b, kBlobSize - 4));
+  PlaitsBlob::Sha256(b, kBlobSize, digest);
+}
+
+void TestSynthRefusals() {
+  test_checker.Start("TestSynthRefusals");
+  Services();
+  uint8_t* b = region + 64;
+  memset(region, 0, sizeof(region));
+  MakeSynth(b, digest);
+  CHECK(Check(b) == PLAITS_BLOB_OK);
+  PlaitsBlobInfo info;
+  PlaitsBlob::Info(b, &info);
+  CHECK(info.abi == 2 && info.kind == kPlaitsBlobKindSynth);
+  CHECK(info.first_id == 1 && info.num_ids == 1 && info.size == kBlobSize);
+  CHECK(info.state_size == kSynthRam && info.arena_size == 0);
+  CHECK(info.init_offset == 0x61 && info.reset_offset == 0x79);
+  CHECK(info.render_offset == 0x7d);
+  CHECK(info.controls_size == 36 && info.block_size == 12);
+  CHECK(!info.num_exports && !info.num_dependencies);
+  // A model has no control block or block size: its gains are not read.
+  Build2(b);
+  Seal(b, true);
+  PlaitsBlob::Info(b, &info);
+  CHECK(!info.controls_size && !info.block_size);
+
+  const Fault faults[] = {
+    { 2, kPlaitsBlobAbi, PLAITS_BLOB_ERROR_HEADER },
+    { 3, kPlaitsBlobServicesVersion2 + 1, PLAITS_BLOB_ERROR_SERVICES },
+    { 3, 0, PLAITS_BLOB_ERROR_SERVICES },
+    { 5, 0, PLAITS_BLOB_ERROR_HEADER },
+    { 5, 256, PLAITS_BLOB_ERROR_HEADER },
+    { 6, 2, PLAITS_BLOB_ERROR_HEADER },
+    { 6, 0, PLAITS_BLOB_ERROR_HEADER },
+    { 8, kPlaitsBlobMaxSynthRamSize, PLAITS_BLOB_OK },
+    { 8, kPlaitsBlobMaxSynthRamSize + 1, PLAITS_BLOB_ERROR_RAM },
+    { 9, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 10, 0x60, PLAITS_BLOB_ERROR_LAYOUT },
+    { 11, kGotOffset + 1, PLAITS_BLOB_ERROR_LAYOUT },
+    { 12, 0x41, PLAITS_BLOB_ERROR_LAYOUT },
+    { 13, kGotOffset + 2, PLAITS_BLOB_ERROR_LAYOUT },
+    { 15, kGotOffset + 4, PLAITS_BLOB_ERROR_HEADER },
+    { 16, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 17, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 18, 0, PLAITS_BLOB_ERROR_HEADER },
+    { 19, 0, PLAITS_BLOB_ERROR_HEADER },
+    { 20, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 23, 1, PLAITS_BLOB_ERROR_HEADER },
+  };
+  for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
+    memset(region, 0, sizeof(region));
+    MakeSynth(b, digest);
+    Write32(b + 4 * faults[i].field, faults[i].value);
+    Seal(b, true, kBlobSize);
+    const PlaitsBlobStatus status = Check(b);
+    if (status != faults[i].expected) {
+      printf("ERROR: TestSynthRefusals: field %d = 0x%x gave %d\n",
+          faults[i].field, faults[i].value, status);
+    }
+    CHECK(status == faults[i].expected);
+  }
+
+  // Imports as for a model; the digest covers every byte.
+  memset(region, 0, sizeof(region));
+  MakeSynth(b, digest);
+  Write32(b + kGotOffset, kPlaitsBlobRandomStateAddress + 4);
+  Seal(b, true, kBlobSize);
+  CHECK(Check(b) == PLAITS_BLOB_ERROR_IMPORTS);
+  MakeSynth(b, digest);
+  b[100] ^= 1;
+  Seal(b, false, kBlobSize);
+  CHECK(Check(b) == PLAITS_BLOB_ERROR_DIGEST);
+}
+
+// A region of WAVE, TERR (two grids), PLTS (two version 2 blobs, the first
+// serving IDs 2 to 4) and RNGS (one synth), as blob_sections.py lays them
+// out.
 const uint32_t kRelease = 20261121;
 const uint32_t kWaveSize = 32 + kNumWaveRows * kWaveRowSize * 2 + 4;
 const uint32_t kTerrainSectionSize = 32 + 2 * kTerrainSize + 4;
@@ -416,12 +519,15 @@ const uint32_t kPlaitsOffset =
 const uint32_t kFirstBlob = 64;
 const uint32_t kSecondBlob = 320;
 const uint32_t kPlaitsSize = kSecondBlob + kBlobSize + 4;
-const uint32_t kFlashSize = kPlaitsOffset + kPlaitsSize + 2048;
+const uint32_t kRingsOffset = (kPlaitsOffset + kPlaitsSize + 31) / 32 * 32;
+const uint32_t kRingsSize = 32 + kBlobSize + 4;
+const uint32_t kFlashSize = kRingsOffset + kRingsSize + 2048;
+const size_t kNumSections = 4;
 
 uint8_t* flash;
-uint8_t blob_digests[2][kPlaitsBlobDigestSize];
-PlaitsDirectoryEntry directory[3];
-PlaitsDefaultSection defaults[3];
+uint8_t blob_digests[3][kPlaitsBlobDigestSize];
+PlaitsDirectoryEntry directory[kNumSections + 1];
+PlaitsDefaultSection defaults[kNumSections];
 PlaitsRegion plaits_region;
 
 void SectionHeader(uint8_t* s, uint32_t kind, uint32_t size, uint32_t count) {
@@ -506,12 +612,22 @@ void BuildRegion() {
   }
   directory[2].crc = SealSection(p);
 
-  const uint32_t kinds[3] = {
-    kPlaitsSectionWave, kPlaitsSectionTerrain, kPlaitsSectionPlaits
+  uint8_t* r = flash + kRingsOffset;
+  SectionHeader(r, kPlaitsSectionRings, kRingsSize, 1);
+  MakeSynth(r + 32, blob_digests[2]);
+  directory[3].crc = SealSection(r);
+
+  const uint32_t kinds[kNumSections] = {
+    kPlaitsSectionWave, kPlaitsSectionTerrain, kPlaitsSectionPlaits,
+    kPlaitsSectionRings
   };
-  const uint32_t at[3] = { kWaveOffset, kTerrainOffset, kPlaitsOffset };
-  const uint32_t sizes[3] = { kWaveSize, kTerrainSectionSize, kPlaitsSize };
-  for (int i = 0; i < 3; ++i) {
+  const uint32_t at[kNumSections] = {
+    kWaveOffset, kTerrainOffset, kPlaitsOffset, kRingsOffset
+  };
+  const uint32_t sizes[kNumSections] = {
+    kWaveSize, kTerrainSectionSize, kPlaitsSize, kRingsSize
+  };
+  for (size_t i = 0; i < kNumSections; ++i) {
     directory[i].kind = defaults[i].kind = kinds[i];
     directory[i].offset = defaults[i].offset = at[i];
     directory[i].size = defaults[i].size = sizes[i];
@@ -519,9 +635,9 @@ void BuildRegion() {
   }
 }
 
-void Read(const PlaitsDirectoryEntry* d, size_t n, size_t digests = 2) {
+void Read(const PlaitsDirectoryEntry* d, size_t n, size_t digests = 3) {
   plaits_region.Read(
-      flash, flash + kFlashSize, kRelease, d, n, defaults, 3,
+      flash, flash + kFlashSize, kRelease, d, n, defaults, kNumSections,
       &plaits_blob_services, blob_digests, digests);
 }
 
@@ -532,7 +648,7 @@ uint32_t Status(PlaitsSection s) {
 void TestSections() {
   test_checker.Start("TestSections");
   BuildRegion();
-  Read(directory, 3);
+  Read(directory, kNumSections);
   const PlaitsRegionIdentity& id = plaits_region.identity();
   CHECK(id.release == kRelease && id.services_status == PLAITS_BLOB_OK);
   CHECK(id.directory_status == PLAITS_BLOB_OK);
@@ -551,7 +667,7 @@ void TestSections() {
 
   // A stale tail from a longer, older region is never read.
   memset(flash + kPlaitsOffset + kPlaitsSize, 0x5a, 512);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK);
 
   // Without a directory, the defaults by digest; the directory unused.
@@ -576,7 +692,7 @@ void TestSections() {
   // Erased flash: every section absent.
   BuildRegion();
   memset(flash, 0xff, kFlashSize);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   for (int i = 0; i < PLAITS_SECTION_LAST; ++i) {
     CHECK(Status(PlaitsSection(i)) == PLAITS_BLOB_ERROR_NO_REGION);
   }
@@ -614,6 +730,15 @@ void TestSectionFaults() {
     { PLAITS_SECTION_PLAITS, 3, kRelease + 1, true,
       PLAITS_BLOB_ERROR_RELEASE },
     { PLAITS_SECTION_PLAITS, 40, 0x12345678, false, PLAITS_BLOB_ERROR_CRC },
+    { PLAITS_SECTION_RINGS, 0, kPlaitsSectionMagic + 1, true,
+      PLAITS_BLOB_ERROR_HEADER },
+    { PLAITS_SECTION_RINGS, 1, kPlaitsSectionPlaits, true,
+      PLAITS_BLOB_ERROR_HEADER },
+    { PLAITS_SECTION_RINGS, 3, kRelease + 1, true, PLAITS_BLOB_ERROR_RELEASE },
+    { PLAITS_SECTION_RINGS, 4, kRingsSize - 4, false,
+      PLAITS_BLOB_ERROR_HEADER },
+    { PLAITS_SECTION_RINGS, 5, 2, true, PLAITS_BLOB_ERROR_SELECTION },
+    { PLAITS_SECTION_RINGS, 30, 0x12345678, false, PLAITS_BLOB_ERROR_CRC },
   };
   for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
     BuildRegion();
@@ -622,16 +747,17 @@ void TestSectionFaults() {
     if (faults[i].reseal) {
       SealSection(s);
     }
-    Read(directory, 3);
+    Read(directory, kNumSections);
     bool ok = Status(faults[i].section) == uint32_t(faults[i].expected);
     for (int j = 0; j < PLAITS_SECTION_LAST; ++j) {
       ok = ok && (j == faults[i].section ||
           Status(PlaitsSection(j)) == PLAITS_BLOB_OK);
     }
     if (!ok) {
-      printf("ERROR: TestSectionFaults: case %d gave %d %d %d\n",
+      printf("ERROR: TestSectionFaults: case %d gave %d %d %d %d\n",
           static_cast<int>(i), Status(PLAITS_SECTION_WAVE),
-          Status(PLAITS_SECTION_TERRAIN), Status(PLAITS_SECTION_PLAITS));
+          Status(PLAITS_SECTION_TERRAIN), Status(PLAITS_SECTION_PLAITS),
+          Status(PLAITS_SECTION_RINGS));
     }
     CHECK(ok);
   }
@@ -641,23 +767,23 @@ void TestSectionFaults() {
   uint8_t* w = flash + kWaveOffset;
   w[32 + 2 * kWaveRowSize * 2 + 2] ^= 1;  // Row 2, sample 1 vs 257.
   directory[0].crc = SealSection(w);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_ERROR_CONTENT);
   BuildRegion();
   w[32 + 192 * kWaveRowSize * 2 + 100] ^= 1;  // The guard row.
   directory[0].crc = SealSection(w);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_ERROR_CONTENT);
   BuildRegion();
   uint8_t* t = flash + kTerrainOffset;
   Write32(t + 20, 0);
   directory[1].crc = SealSection(t);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_ERROR_CONTENT);
   BuildRegion();
   Write32(t + 20, 17);
   directory[1].crc = SealSection(t);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_ERROR_CONTENT);
 
   // Sixteen grids are the most; seventeen are refused even when complete.
@@ -681,10 +807,12 @@ void TestSectionFaults() {
   sine[3] += 1.0f;
   PlaitsBlobServices copy = plaits_blob_services;
   copy.exports[PLAITS_BLOB_EXPORT_LUT_SINE] = sine;
-  plaits_region.Read(flash, flash + kFlashSize, kRelease, directory, 3,
-      defaults, 3, &copy, blob_digests, 2);
+  plaits_region.Read(flash, flash + kFlashSize, kRelease, directory,
+      kNumSections, defaults, kNumSections, &copy, blob_digests, 3);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_SERVICES);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_ERROR_SERVICES);
   CHECK(Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_OK);
+  CHECK(!plaits_region.synth_blob());
   CHECK(!plaits_region.blob(43));
 }
 
@@ -706,12 +834,16 @@ void TestDirectory() {
     { 2, 2, kFlashSize },
     { 2, 2, 32 },
     { 0, 2, kTerrainOffset + 4 },
+    { 3, 0, kPlaitsSectionPlaits },
+    { 2, 0, kPlaitsSectionRings },
+    { 3, 1, kRingsOffset + 4 },
+    { 2, 2, kRingsOffset - kPlaitsOffset + 32 },
   };
   for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
     BuildRegion();
     uint32_t* words = reinterpret_cast<uint32_t*>(&directory[faults[i].entry]);
     words[faults[i].word] = faults[i].value;
-    Read(directory, 3);
+    Read(directory, kNumSections);
     bool ok = plaits_region.identity().directory_status ==
         PLAITS_BLOB_ERROR_DIRECTORY;
     for (int j = 0; j < PLAITS_SECTION_LAST; ++j) {
@@ -723,11 +855,12 @@ void TestDirectory() {
     CHECK(ok);
   }
   BuildRegion();
-  Read(directory, 4);
+  Read(directory, kNumSections + 1);
   CHECK(plaits_region.identity().directory_status ==
       PLAITS_BLOB_ERROR_DIRECTORY);
-  plaits_region.Read(flash + 4, flash + kFlashSize, kRelease, directory, 3,
-      defaults, 3, &plaits_blob_services, blob_digests, 2);
+  plaits_region.Read(flash + 4, flash + kFlashSize, kRelease, directory,
+      kNumSections, defaults, kNumSections, &plaits_blob_services,
+      blob_digests, 3);
   CHECK(plaits_region.identity().directory_status ==
       PLAITS_BLOB_ERROR_DIRECTORY);
   CHECK(!plaits_region.blob(2));
@@ -770,7 +903,7 @@ void TestPlaitsTable() {
       SetEntry(faults[i].entry, faults[i].word, faults[i].value);
     }
     directory[2].crc = SealSection(p);
-    Read(directory, 3);
+    Read(directory, kNumSections);
     const uint32_t status = Status(PLAITS_SECTION_PLAITS);
     if (status != uint32_t(faults[i].expected)) {
       printf("ERROR: TestPlaitsTable: case %d gave %d\n",
@@ -787,7 +920,7 @@ void TestPlaitsTable() {
   SetEntry(1, 1, kSecondBlob + 4);
   SetEntry(1, 2, kBlobSize - 8);
   directory[2].crc = SealSection(flash + kPlaitsOffset);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_TABLE);
   CHECK(plaits_region.identity().num_blobs == 0);
 
@@ -798,7 +931,7 @@ void TestPlaitsTable() {
   SetEntry(1, 0, kPlaitsBlobKindModel | 4 << 8);
   SetEntry(1, 3, Read32(p + kSecondBlob + kBlobSize - 4));
   directory[2].crc = SealSection(p);
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_TABLE);
   CHECK(plaits_region.identity().blob_status[0] == PLAITS_BLOB_OK);
   CHECK(plaits_region.identity().blob_status[1] == PLAITS_BLOB_ERROR_TABLE);
@@ -806,7 +939,7 @@ void TestPlaitsTable() {
 
   // The second blob is not on this firmware's list.
   BuildRegion();
-  Read(directory, 3, 1);
+  Read(directory, kNumSections, 1);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_DIGEST);
   CHECK(!plaits_region.blob(2));
 }
@@ -1003,7 +1136,7 @@ uint32_t ReadPlaits(
   PlaitsDirectoryEntry e = WritePlaits(blobs, count, entry_kinds);
   plaits_region.set_library_ram(ram, scratch);
   plaits_region.Read(
-      flash, flash + kFlashSize, kRelease, &e, 1, defaults, 3,
+      flash, flash + kFlashSize, kRelease, &e, 1, defaults, kNumSections,
       &plaits_blob_services, test_digests, count);
   return Status(PLAITS_SECTION_PLAITS);
 }
@@ -1065,7 +1198,7 @@ void TestDependencies() {
   SetEntry(0, 3, Read32(library + library_size - 4));
   e.crc = SealSection(flash + kPlaitsOffset);
   plaits_region.Read(
-      flash, flash + kFlashSize, kRelease, &e, 1, defaults, 3,
+      flash, flash + kFlashSize, kRelease, &e, 1, defaults, kNumSections,
       &plaits_blob_services, test_digests, 3);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_SERVICES);
   CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_SERVICES);
@@ -1075,7 +1208,7 @@ void TestDependencies() {
   // A library this firmware does not list fails; so do its users.
   e = WritePlaits(ok, 3, NULL);
   plaits_region.Read(
-      flash, flash + kFlashSize, kRelease, &e, 1, defaults, 3,
+      flash, flash + kFlashSize, kRelease, &e, 1, defaults, kNumSections,
       &plaits_blob_services, test_digests + 1, 2);
   CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_DIGEST);
   CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_DEPENDENCY);
@@ -1226,6 +1359,125 @@ void TestLibraries() {
   CHECK(libraries.Find(1) && !libraries.Find(6));
 }
 
+// RNGS on its own: one synth blob after the header, selected and checked as
+// the other sections; a fault there hides no other section, nor they it.
+uint8_t* rings_section;
+
+uint32_t ReadRings(size_t digests = 3) {
+  directory[3].crc = SealSection(rings_section);
+  Read(directory, kNumSections, digests);
+  return Status(PLAITS_SECTION_RINGS);
+}
+
+bool OthersOk() {
+  return Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_OK &&
+      Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_OK &&
+      Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK &&
+      plaits_region.blob(43);
+}
+
+void TestRings() {
+  test_checker.Start("TestRings");
+  rings_section = flash + kRingsOffset;
+  uint8_t* synth = rings_section + 32;
+  BuildRegion();
+  CHECK(ReadRings() == PLAITS_BLOB_OK && OthersOk());
+  CHECK(plaits_region.synth_blob() == synth);
+  CHECK(plaits_region.section(PLAITS_SECTION_RINGS) == synth);
+  CHECK(plaits_region.identity().sections[3].crc == directory[3].crc);
+  CHECK(plaits_region.identity().sections[3].size == kRingsSize);
+
+  // The section holds exactly one blob, filling its payload.
+  const uint32_t counts[2] = { 0, 2 };
+  for (int i = 0; i < 2; ++i) {
+    BuildRegion();
+    Write32(rings_section + 20, counts[i]);
+    CHECK(ReadRings() == PLAITS_BLOB_ERROR_TABLE && OthersOk());
+    CHECK(!plaits_region.synth_blob());
+  }
+  BuildRegion();
+  Write32(rings_section + 16, kRingsSize + 32);
+  directory[3].size = kRingsSize + 32;
+  CHECK(ReadRings() == PLAITS_BLOB_ERROR_TABLE && OthersOk());
+  BuildRegion();
+  Write32(rings_section + 16, kRingsSize - 32);
+  directory[3].size = kRingsSize - 32;
+  CHECK(ReadRings() == PLAITS_BLOB_ERROR_HEADER && OthersOk());
+
+  // The blob: its own checks, on the allowlist, and a synth's kind.
+  BuildRegion();
+  synth[100] ^= 1;
+  Write32(synth + kBlobSize - 4, Profile::Crc32(synth, kBlobSize - 4));
+  CHECK(ReadRings() == PLAITS_BLOB_ERROR_DIGEST && OthersOk());
+  BuildRegion();
+  Write32(synth + 4 * 19, 0);
+  Write32(synth + kBlobSize - 4, Profile::Crc32(synth, kBlobSize - 4));
+  PlaitsBlob::Sha256(synth, kBlobSize, blob_digests[2]);
+  CHECK(ReadRings() == PLAITS_BLOB_ERROR_HEADER && OthersOk());
+  BuildRegion();
+  CHECK(ReadRings(2) == PLAITS_BLOB_ERROR_DIGEST && OthersOk());
+  CHECK(!plaits_region.synth_blob());
+  // A model or a library in RNGS, each on the allowlist.
+  BuildRegion();
+  MakeBlob2(synth, 43, 1, blob_digests[2]);
+  CHECK(ReadRings() == PLAITS_BLOB_ERROR_KIND && OthersOk());
+  CHECK(!plaits_region.synth_blob());
+  BuildRegion();
+  memset(synth, 0xff, kBlobSize);
+  const uint32_t library_size = MakeBlob(
+      synth, kPlaitsBlobKindLibrary, 3, NULL, 0, blob_digests[2]);
+  Write32(rings_section + 16, 32 + library_size + 4);
+  directory[3].size = 32 + library_size + 4;
+  CHECK(ReadRings() == PLAITS_BLOB_ERROR_KIND && OthersOk());
+  // A synth blob in PLTS is not a table entry.
+  BuildRegion();
+  SetEntry(1, 0, kPlaitsBlobKindSynth | 43 << 8);
+  directory[2].crc = SealSection(flash + kPlaitsOffset);
+  CHECK(ReadRings() == PLAITS_BLOB_OK);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_TABLE);
+  CHECK(plaits_region.synth_blob() == synth && !plaits_region.blob(43));
+
+  // Erased, misaligned, left out, or past a stale tail.
+  BuildRegion();
+  memset(rings_section, 0xff, kRingsSize);
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_ERROR_NO_REGION);
+  CHECK(OthersOk() && !plaits_region.synth_blob());
+  BuildRegion();
+  memset(rings_section + kRingsSize, 0x5a, 512);
+  CHECK(ReadRings() == PLAITS_BLOB_OK && OthersOk());
+  BuildRegion();
+  directory[3].offset += 4;
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_ERROR_DIRECTORY);
+  CHECK(!plaits_region.synth_blob() && !plaits_region.blob(43));
+  BuildRegion();
+  Read(directory, kNumSections - 1);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_ERROR_NO_REGION);
+  CHECK(OthersOk() && !plaits_region.synth_blob());
+  BuildRegion();
+  Read(directory + 3, 1);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_OK);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_NO_REGION);
+  CHECK(plaits_region.synth_blob() == synth);
+
+  // The default layout: each section by its own digest.
+  BuildRegion();
+  Read(NULL, 0);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_OK && OthersOk());
+  CHECK(plaits_region.synth_blob() == synth);
+  defaults[3].digest[5] ^= 1;
+  Read(NULL, 0);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_ERROR_DIGEST);
+  CHECK(OthersOk() && !plaits_region.synth_blob());
+  BuildRegion();
+  defaults[2].digest[5] ^= 1;
+  Read(NULL, 0);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_DIGEST);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_OK);
+  CHECK(plaits_region.synth_blob() == synth);
+}
+
 // A rebuilt blob's first 48 samples of OUT fade in on a squared ramp from 0,
 // in blocks of any size; nothing after them changes.
 void TestFadeIn() {
@@ -1280,12 +1532,12 @@ void TestFlashErrors() {
   // Two calls per section: before its read (cleared) and after it.
   flash_calls = 0;
   flash_failing_call = 0;
-  Read(directory, 3);
-  CHECK(flash_calls == 6);
+  Read(directory, kNumSections);
+  CHECK(flash_calls == 8);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK);
   flash_calls = 0;
   flash_failing_call = 4;
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_ERROR_ECC);
   CHECK(Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_OK);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK);
@@ -1293,14 +1545,22 @@ void TestFlashErrors() {
       PLAITS_SECTION_TERRAIN));
   flash_calls = 0;
   flash_failing_call = 6;
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_ECC);
   CHECK(Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_OK);
   CHECK(!plaits_region.blob(2) && !plaits_region.blob(43));
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_OK);
+  CHECK(plaits_region.synth_blob() == flash + kRingsOffset + 32);
+  flash_calls = 0;
+  flash_failing_call = 8;
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_RINGS) == PLAITS_BLOB_ERROR_ECC);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK);
+  CHECK(!plaits_region.synth_blob() && plaits_region.blob(43));
   // A flag left from before the read is cleared, not counted.
   flash_calls = 0;
   flash_failing_call = 1;
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_OK);
   plaits_region.set_flash_check(NULL);
 }
@@ -1310,7 +1570,7 @@ void TestFlashErrors() {
 void TestPlayable() {
   test_checker.Start("TestPlayable");
   BuildRegion();
-  Read(directory, 3);
+  Read(directory, kNumSections);
   // This region serves 2-4 (one blob) and 43; nothing is compiled in.
   const uint8_t served[4] = { 2, 3, 4, 43 };
   const uint8_t stock[24] = {
@@ -1327,13 +1587,13 @@ void TestPlayable() {
   // Without a valid PLTS no model is available.
   BuildRegion();
   flash[kPlaitsOffset + 40] ^= 1;
-  Read(directory, 3);
+  Read(directory, kNumSections);
   CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_CRC);
   CHECK(!PlaitsVoice::Playable(served, 4, plaits_region));
   CHECK(!PlaitsVoice::Available(2, plaits_region));
   // Fifteen banks: one missing model anywhere locks Plaits out.
   BuildRegion();
-  Read(directory, 3);
+  Read(directory, kNumSections);
   uint8_t many[15 * 8];
   for (int i = 0; i < 15 * 8; ++i) {
     many[i] = served[i % 4];
@@ -1362,12 +1622,14 @@ int main() {
   TestAccepts();
   TestPlacement();
   TestRefusals();
+  TestSynthRefusals();
   TestServicesTable();
   TestServicesFrozen();
   TestSections();
   TestSectionFaults();
   TestDirectory();
   TestPlaitsTable();
+  TestRings();
   TestLibraryRefusals();
   TestDependencies();
   TestLibraries();
