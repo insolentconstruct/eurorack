@@ -2285,6 +2285,12 @@ cases = [
   ('TestRecoveryRestoredStorage', 'record', 'beads/settings.cc',
     '  if (recovery_mode && !profile_locked_) {\n    record_ = default_record;',
     '  if (recovery_mode && status == STORAGE_OK && !profile_locked_) {\n    record_ = default_record;'),
+  ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
+    '      if (mode_ == MODE_NORMAL && !settings_->SavePersistentData()) {',
+    '      if (mode_ == MODE_NORMAL && (settings_->SavePersistentData(), false)) {'),
+  ('TestRejectedCalibrationCue', 'firmware', 'beads/settings.cc',
+    '  return !memcmp(&requested, &persistent_data_, sizeof(PersistentData));',
+    '  return requested.padding[0] == persistent_data_.padding[0];'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

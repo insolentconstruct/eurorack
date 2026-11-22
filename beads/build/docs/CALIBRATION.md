@@ -36,6 +36,8 @@ step measures outside about 1.8–2.2 V) is rejected: all LEDs blink for about
 a second, then normal operation resumes without saving. **Power-cycle to
 reload the stored calibration:** rejected values may remain active until then.
 This catches gross errors such as unplugged cables; 2 V and 4 V or slightly
-wrong references still pass.
+wrong references still pass. A result more than 25% from the factory values
+on any input is not saved either: the same blink, and the stored calibration
+stays in use at once.
 
 To undo a calibration, restore only the calibration from the backup ([RECOVERY.md](RECOVERY.md)); your settings stay as they are.
