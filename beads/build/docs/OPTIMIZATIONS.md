@@ -75,7 +75,7 @@ Development-board re-measure of the same source, worst / median: GCC 4.9.3 101,7
 
 ## Code changes
 
-Cycles saved on the development board's worst stock case (historical, on Drizzlet's tree), peak / median, against the build in the "Against" column. Run 1 is the figure used; run 2 is a repeat. Negative is a slowdown.
+Cycles saved on the development board's worst stock case (historical, on Drizzlet's tree), peak / median, against the build in the "Against" column. Run 1 is the figure used; run 2 is a repeat. Negative is a slowdown. [E] marks a change not yet measured on the development board.
 
 | Change | Based on | Against | Stock | Flash | RAM | Sound | Verdict |
 |---|---|---|---|---:|---|---|---|
@@ -87,6 +87,7 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 | Grain Hermite read on the stored integers, scaled once | Mutable Instruments: Clouds' `ReadHermite` interpolates the unscaled samples and multiplies by `scale` once (`clouds/dsp/audio_buffer.h:241-277`) | the three changes | 6,775 / 7,140 (run 2: 6,840 / 7,130) | -504 B | 0 | 28/28 development board hashes (audio and buffers); host tests | kept |
 | Synth: two playing grains computed side by side, mixed in index order | Port from Drizzlet: the in-order core overlaps two grains' independent sample and envelope chains; each grain's arithmetic is unchanged | integer Hermite, on this branch | unchanged (synth only) | +2,712 B | 0 | 14/14 synth development board hashes (audio and reverb); granular image byte-identical; host tests, `TestSynthGrainPairs` | kept |
 | Reverb: all-pass tails and modulated taps loaded before the sample's writes | Drizzlet's Clouds-style diffuser fix; the reads never alias the writes they now precede, and each value's arithmetic is unchanged | beads-tuneup-2026.11.09, on this branch | 1,238 / 1,329 (all 24 granular scenarios: 330 to 1,436 / 444 to 1,411 saved; all 14 synth scenarios: 1,121 to 1,318 / 1,228 to 1,265 saved) | +184 B | 0 | 24/24 granular and 14/14 synth development board hashes (audio and buffers); host tests and audio reference | kept |
+| Delay taps: one SHAPE envelope (pulse width and both slopes) per sample, shared by the eight taps | Port from Drizzlet; Mutable Instruments: do the work once, outside the inner loop; the stock code divided both slopes for every tap | beads-tuneup-2026.11.20, on this branch | [E] delay only; Drizzlet's tree measured 5.5% to 7.9% lighter delay worst blocks on the development board | -40 B | 0 | 16/16 emulator fixtures (four qualities: delay, grains, mono, synth); host tests and audio reference, `TestTapShapeMatchesStock`, 2 fault checks | kept [E] |
 | Delay grains computed in pairs (port of the synth pairs) | the synth pairs row | beads-tuneup-2026.11.09 | -19,222 / -19,004 (GCC keeps the split steps out of line); with `always_inline` -2,044 / -1,696 | -4,312 B; -456 B | 0 | 24/24 development board | rejected |
 | Synth grains summed in a local frame | the delay local-frame row | beads-tuneup-2026.11.09 | synth -851 / -439 at its peak, slower in all 14 synth scenarios | -64 B | 0 | 14/14 development board | rejected |
 | All sample loops in ITCM | Mutable Instruments: stmlib's `IN_RAM` placement | GCC 9 | -765 / -770 | +336 B | +21,440 B ITCM | 28/28 development board | rejected |
