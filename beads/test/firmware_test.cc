@@ -3091,6 +3091,36 @@ void TestUnfinishedCalibrationKept() {
   }
 }
 
+// The factory test may repeat its last step: the completed run stays in the
+// calibrator, so the repeat saves the same offsets and pitch again.
+void TestFactoryCalibrationRepeat() {
+  test_checker.Start("TestFactoryCalibrationRepeat");
+  Rig r(false, false);
+  // Readings that give a calibration within 25% of the factory one.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    r.cv_patched[i] = true;
+    r.cv[i] = 30000;
+  }
+  r.cv[CV_ADC_CHANNEL_PITCH] = 28000;
+  r.cv[CV_ADC_CHANNEL_DENSITY] = 22938;
+  r.Settle();
+  const PersistentData stored = settings.persistent_data();
+  CHECK(factory_test.Calibrate(3) && factory_test.Calibrate(4));
+  r.cv[CV_ADC_CHANNEL_PITCH] -= 13107;
+  r.Settle();
+  CHECK(factory_test.Calibrate(5) && factory_test.Calibrate(6));
+  r.cv[CV_ADC_CHANNEL_DENSITY] -= 13107;
+  r.Settle();
+  CHECK(factory_test.Calibrate(7));
+  const PersistentData measured = settings.persistent_data();
+  CHECK(!SameCalibration(measured, stored));
+  CHECK(factory_test.Calibrate(7));
+  CHECK(SameCalibration(settings.persistent_data(), measured));
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(SameCalibration(loaded.persistent_data(), measured));
+}
+
 // #347: with the profile refused, nothing can be saved: a recalibration
 // shows the rejection blink, and the stored calibration stays in use.
 void TestLockedCalibrationCue() {
@@ -3238,5 +3268,6 @@ int main() {
   TestRejectedCalibrationCue();
   TestUnfinishedCalibrationKept();
   TestLockedCalibrationCue();
+  TestFactoryCalibrationRepeat();
   return test_checker.failures() ? 1 : 0;
 }

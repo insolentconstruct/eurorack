@@ -127,12 +127,13 @@ class Calibrator {
   inline bool Save() {
     AdcCalibrationData* c = \
         settings_->mutable_persistent_data()->adc_calibration;
-    std::swap_ranges(
+    AdcCalibrationData previous[CV_ADC_CHANNEL_LAST];
+    std::copy(&c[0], &c[CV_ADC_CHANNEL_LAST], &previous[0]);
+    std::copy(
         &calibration_data_[0], &calibration_data_[CV_ADC_CHANNEL_LAST], c);
     const bool saved = settings_->SavePersistentData();
     if (!saved) {
-      std::copy(
-          &calibration_data_[0], &calibration_data_[CV_ADC_CHANNEL_LAST], c);
+      std::copy(&previous[0], &previous[CV_ADC_CHANNEL_LAST], c);
     }
     return saved;
   }
