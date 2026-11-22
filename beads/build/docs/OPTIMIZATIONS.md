@@ -126,7 +126,7 @@ Cycles saved on the development board's worst stock case (historical, on Drizzle
 
 Measured in November 2026 on one 2021 module, and on a development board with the same chip and clock.
 
-**TL;DR:** Audio breaks when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it [mechanism inferred]. That comes before a full-block underrun, and the SAI flags nothing. Without the one-frame output delay, the module's first left word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz; with it (this branch), up to 97.7%, 97.3% and 96.9%. In the crackle recipe this branch peaks about 19 points under the 48 kHz edge.
+**TL;DR:** Audio breaks when the callback stores a block's first left word after the DAC DMA has already read it, one slot before sending it [mechanism inferred]. That comes before a full-block underrun, and the SAI flags nothing. Without the one-frame output delay, the module's first left word stays on time up to 90.8% of the block at 48 kHz, 86.6% at 32 kHz and 82.7% at 24 kHz; with it (this branch), up to 96.9%, 97.3% and 97.7%. In the crackle recipe this branch peaks about 18 points under the 48 kHz edge.
 
 - **Module (measured).** A Drizzlet test build with the same codec driver held the audio callback at set lengths; firmware counters flag a block whose first left word is stored after the DMA has read it. Each edge was found twice. Callback peak cycles, budget 120,000:
 
@@ -140,7 +140,7 @@ Measured in November 2026 on one 2021 module, and on a development board with th
 - **Why the first left word [inferred].** The TX DMA runs in direct mode and reads each word from RAM one slot before sending it (RM0433). When the callback is late, the slot still holds the value from one ring lap earlier (0.5 ms), and the DMA keeps the SAI FIFO fed, so the SAI never underruns. The first right word is read one slot later, so in the loads studied only OUT L clicked.
 - **The historical left-channel click.** Reproduced on one module with the 2024 source rebuilt with GCC 9 (plus deadline tracing), in the historical crackle recipe: Bright digital (48 kHz), DENSITY 0.98, PITCH +24, SIZE 0.92. Its callback peaked at 93.5 to 94.0%, above the module's 48 kHz edge, and OUT L clicked. In the same recipe, this branch's code with the 2024 grain stealing (81.7 to 82.7%) and this branch (78.1 to 78.8%) stayed clean [measured]. The clicks are block-locked and match the output one ring lap earlier, which points to a late first left word [inferred; moderately high confidence, exploratory, not seen on the codec data line].
 - **Input level (measured).** Level barely moves CPU: a 4.5x louder input moved the module's callback peak by at most 0.7 points; on the development board (vanilla DSP, 24 scenarios), silence to overload moved the peak by at most 0.74 points.
-- **Headroom.** Without the delay the module is clean only up to 90.8% at 48 kHz, not 99%, and Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, under 86.6% and 82.7%. With the delay (this branch), keep a point under the measured edges: about 96.5%, 96% and 95.5%.
+- **Headroom.** Without the delay the module is clean only up to 90.8% at 48 kHz, not 99%, and Cold digital (32 kHz) and Scorched cassette (24 kHz) need their own, lower limits, under 86.6% and 82.7%. With the delay (this branch), keep a point under the measured edges: about 95.5%, 96% and 96.5%.
 
 ### One-frame output delay
 
@@ -163,9 +163,9 @@ This branch writes each block's output one frame late: the codec driver stores t
 
 | Codec rate | Clean up to | Without the delay | Gain |
 |---|---:|---:|---:|
-| 48 kHz | 117,228 (97.7%) | 108,908 (90.8%) | +6.9 points |
+| 48 kHz | 116,297 (96.9%) | 108,908 (90.8%) | +6.1 points |
 | 32 kHz | 116,700 (97.3%) | 103,935 (86.6%) | +10.7 points |
-| 24 kHz | 116,297 (96.9%) | 99,182 (82.7%) | +14.2 points |
+| 24 kHz | 117,228 (97.7%) | 99,182 (82.7%) | +15.0 points |
 
   The firmware counter flagged the first late blocks half a point to a point higher, while OUT L was still clean. At about 101% every block is late and the output is scrambled at full level (the tone breaks into sidebands); heavier overruns were not measured.
 - **Clicks on the module (measured).** In the historical crackle recipe the release build made no clicks on OUT L in about 6 minutes, as beads-tuneup-2026.11.09. Installing by audio, start-up and quality changes passed; quality changes that keep the sample rate stayed click-free.
