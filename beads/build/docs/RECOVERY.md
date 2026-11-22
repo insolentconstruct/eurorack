@@ -1,28 +1,30 @@
 # Settings backup and recovery
 
-The settings sector holds the CV calibration and the settings. Back it up with ST-Link + OpenOCD; use a backup on the same unit only. Recalibrating the CV inputs: [CALIBRATION.md](CALIBRATION.md).
+Two flash sectors hold the CV calibration and the settings: the settings sector (0x081E0000: calibration and stock settings) and its copy sector (0x081C0000: a copy of the calibration, then Drizzlet's options). Back both up with ST-Link + OpenOCD; use a backup on the same unit only. Recalibrating the CV inputs: [CALIBRATION.md](CALIBRATION.md).
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-    -c "init; halt; dump_image beads-settings.bin 0x081E0000 0x20000; reset run; shutdown"
+    -c "init; halt; dump_image beads-settings.bin 0x081E0000 0x20000; dump_image beads-options.bin 0x081C0000 0x20000; reset run; shutdown"
 ```
 
-Check that `beads-settings.bin` is 131072 bytes and label it with the module it came from.
+Check that both files are 131072 bytes and label them with the module they came from.
 
-To restore, build an image with Python 3 from the backup and, for a partial restore, a dump of the sector as it is now (`beads-now.bin`, made with the backup command):
+To restore, first dump both sectors as they are now with the same command, naming the files `beads-now.bin` and `beads-options-now.bin`. Then build the two images with Python 3:
 
-- **Both:** `python3 beads/build/tools/settings_sector.py --calibration beads-settings.bin --settings beads-settings.bin beads-restore.bin`
-- **Calibration only**, keeping today's settings, e.g. to undo a recalibration: `python3 beads/build/tools/settings_sector.py --calibration beads-settings.bin --settings beads-now.bin beads-restore.bin`
-- **Settings only**, keeping today's calibration: `python3 beads/build/tools/settings_sector.py --calibration beads-now.bin --settings beads-settings.bin beads-restore.bin`
+- **Both:** `python3 beads/build/tools/settings_sector.py --calibration beads-settings.bin --settings beads-settings.bin --options beads-options.bin --now beads-now.bin --mirror-out beads-restore-copy.bin beads-restore.bin`
+- **Calibration only**, keeping today's settings and options, e.g. to undo a recalibration: `--calibration beads-settings.bin --settings beads-now.bin --options beads-options-now.bin`, the rest as above.
+- **Settings only**, keeping today's calibration: `--calibration beads-now.bin --settings beads-settings.bin --options beads-options.bin`, the rest as above.
 
-Then write it:
+Without `--options`, Drizzlet's options start from the profile's defaults. The tool prints `write 1` and `write 2`, each an image and its address: write them in that order, and go on only if the first verifies. The first command leaves the module halted, so the firmware doesn't start between the two:
 
 ```sh
 openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
-    -c "init; halt; flash write_image erase beads-restore.bin 0x081E0000; verify_image beads-restore.bin 0x081E0000; reset run; shutdown"
+    -c "init; halt; flash write_image erase IMAGE1 ADDRESS1; verify_image IMAGE1 ADDRESS1; shutdown"
+openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
+    -c "init; halt; flash write_image erase IMAGE2 ADDRESS2; verify_image IMAGE2 ADDRESS2; reset run; shutdown"
 ```
 
-The image holds only the calibration and the latest settings. If the module showed the damaged-settings warning, restoring a backup this way also repairs it. OpenOCD erases the whole sector and programs just those, so later saves land on erased flash; don't write the 128 KB backup itself back. The tool refuses a dump the firmware would not read and never overwrites a file. To reset the settings to defaults instead, hold SEED while powering on; calibration is kept.
+The order keeps a usable calibration in one of the two sectors at every step: the copy sector goes first while the settings sector holds a usable calibration, otherwise the settings sector does. Each image holds only the calibration and the latest settings or options, so later saves land on erased flash; don't write the 128 KB backups themselves back. If the module showed the damaged-settings warning, restoring this way also repairs it. The tool refuses a dump the firmware would not read and a calibration more than 25% from the factory values, and never overwrites a file. To reset the settings and options to defaults instead, hold SEED while powering on; calibration is kept.
 
 ## ST-Link recovery
 

@@ -38,37 +38,45 @@
 #include "beads/dsp/limiter.h"
 #include "beads/dsp/pitch_quantizer.h"
 #include "beads/dsp/playback_options.h"
+#include "beads/profile.h"
 
 namespace beads {
 
-class Profile;
 class Settings;
 
 enum { MIX_PARAMETER_LAST = 3 };
 const int kNumOptionPages = 7;
 
-enum OptionSetting {
-  OPTION_RESERVED = 0,
-  OPTION_PITCH = 1,
-  OPTION_REVERB = 2,
-  OPTION_DELAY = 3,
-  OPTION_PROCESSOR = 4,
-  OPTION_LIMITER = 5,
-  OPTION_FROZEN = 6,
-  OPTION_SYNTH = 7,
-  OPTION_ATTACKS = 8,
-  OPTION_SYNTH_START = 9,
-  OPTION_INTERVALS = 10,
-  OPTION_BRIGHTNESS = 18,
-  OPTION_SEED_LATCH = 21,
-  OPTION_TIME_SCAN = 23,
-  OPTION_LAST,
+// Value counts of the page features, checked against their enums.
+enum PageValues {
+  PAGE_VALUES_PITCH = 16,
+  PAGE_VALUES_REVERB = 2,
+  PAGE_VALUES_DELAY = 3,
+  PAGE_VALUES_PROCESSOR = 2,
+  PAGE_VALUES_LIMITER = 3,
+  PAGE_VALUES_FROZEN = 2,
+  PAGE_VALUES_SYNTH = 2,
+  PAGE_VALUES_ATTACKS = 3,
+  PAGE_VALUES_SYNTH_START = 2,
+  PAGE_VALUES_INTERVALS = 3,
+  PAGE_VALUES_BRIGHTNESS = 3,
+  PAGE_VALUES_SEED_LATCH = 4,
+  PAGE_VALUES_TIME_SCAN = 2,
+};
+
+// How a knob picks a page feature's value.
+enum PageControl {
+  PAGE_CONTROL_NONE,
+  PAGE_CONTROL_HALVES,
+  PAGE_CONTROL_ZONES,
+  PAGE_CONTROL_STEPS,
+  PAGE_CONTROL_SCALE
 };
 
 // Pages 1-3 light one mix LED, pages 4-7 two or all three of them.
 struct OptionPage {
   uint8_t leds;  // Bit 0 FEEDBACK, bit 1 DRY/WET, bit 2 REVERB.
-  OptionSetting knobs[MIX_PARAMETER_LAST];  // FEEDBACK, DRY/WET, REVERB.
+  ProfileFeature knobs[MIX_PARAMETER_LAST];  // FEEDBACK, DRY/WET, REVERB.
 };
 
 const uint32_t kOptionsHoldTime = 3000;
@@ -97,6 +105,9 @@ const float kOptionsIdleMovement = 0.02f;
 const int kNumIdleTimeouts = 5;
 extern const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts];
 extern const OptionPage kOptionPages[kNumOptionPages];
+const int kNumPageFeatures = 13;
+extern const ProfileFeature kPageFeatures[kNumPageFeatures];
+extern const uint8_t kPageControls[FEATURE_LAST];
 
 // [A]+DRY/WET: fully CCW is stock; hysteresis keeps it from flickering.
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current);
@@ -106,16 +117,18 @@ enum PulsePattern {
 };
 
 struct OptionValue {
-  OptionSetting setting;
+  ProfileFeature setting;
   uint8_t value;
   Leds::Color color;
   PulsePattern pulses;
 };
-const size_t kNumOptionValues = 42;
-// Shared by the MEDIA renderer, host export and documentation check.
+const int kNumOptionColors = 3;
+extern const Leds::Color kOptionColors[kNumOptionColors];
+const size_t kNumOptionValues = 10;
+// The indications other than the shared colours, then none.
 extern const OptionValue kOptionValues[kNumOptionValues];
 // A value's colour and pattern on its options page.
-const OptionValue& FindOptionValue(OptionSetting setting, int value);
+OptionValue FindOptionValue(ProfileFeature setting, int value);
 
 class Options {
  public:
@@ -137,7 +150,7 @@ class Options {
       bool just_pressed, bool normal, bool pot_touched, const float* pots,
       bool seed, bool seed_pressed, const Settings& settings);
 
-  int Value(OptionSetting setting) const;
+  inline int Value(ProfileFeature setting) const { return preview_[setting]; }
 
   const OptionValue& indication() const;
 
@@ -151,28 +164,6 @@ class Options {
 
   inline bool any_page() const { return any_page_; }
 
-  inline OutputLimiterMode limiter_preview() const { return limiter_preview_; }
-
-  inline bool spectral_preview() const { return spectral_preview_; }
-
-  inline bool manual_start_preview() const { return manual_start_preview_; }
-
-  inline RandomIntervals intervals_preview() const {
-    return intervals_preview_;
-  }
-
-  inline bool clouds_preview() const { return clouds_preview_; }
-
-  inline bool plaits_preview() const { return plaits_preview_; }
-
-  inline DelayMode delay_preview() const { return delay_preview_; }
-
-  inline PitchScale pitch_preview() const { return pitch_preview_; }
-
-  inline bool evolving_preview() const { return evolving_preview_; }
-
-  inline AttackMode attack_preview() const { return attack_preview_; }
-
   // The knob whose stored value [A] shows after a page opens, or -1.
   inline int preview_knob() const { return preview_knob_; }
 
@@ -181,7 +172,7 @@ class Options {
 
   inline bool seed_allowed() const {
     return stage_ == STAGE_EDITING && PageHasPitch() &&
-        pitch_preview_ >= PITCH_SCALE_FIFTHS;
+        preview_[FEATURE_PITCH] >= PITCH_SCALE_FIFTHS;
   }
 
   inline bool commit_requested() const { return commit_; }
@@ -198,13 +189,14 @@ class Options {
   void RequestCommit(uint32_t now);
   void ResetPots(const float* pots);
   void StartPreview(uint32_t now, int knob);
-  void Select(uint32_t now, OptionSetting setting);
+  void Select(uint32_t now, ProfileFeature setting);
   void UpdateZone(float pot, int* zone);
   void Finish();
 
   OptionPage pages_[kNumOptionPages];
   bool any_page_;
-  uint8_t profile_preview_[OPTION_LAST];
+  // The values on the pages, committed together.
+  uint8_t preview_[FEATURE_LAST];
 
   // SysTick publishes transitions and a stable batch to main.
   volatile Stage stage_;
@@ -217,7 +209,7 @@ class Options {
   uint32_t press_time_;
   uint32_t last_action_;
   int page_;
-  OptionSetting selected_;
+  ProfileFeature selected_;
   int preview_knob_;
   int first_preview_knob_;
   bool first_page_;
@@ -230,19 +222,9 @@ class Options {
   float previous_[MIX_PARAMETER_LAST];
   bool qualified_[MIX_PARAMETER_LAST];
   int zone_[MIX_PARAMETER_LAST];
-  OutputLimiterMode limiter_preview_;
-  bool spectral_preview_;
-  bool manual_start_preview_;
-  RandomIntervals intervals_preview_;
-  bool clouds_preview_;
-  bool plaits_preview_;
-  DelayMode delay_preview_;
-  PitchScale pitch_preview_;
-  bool evolving_preview_;
-  AttackMode attack_preview_;
   PitchScale scale_;
   const Profile* profile_;
-  mutable OptionValue pitch_indication_;
+  mutable OptionValue indication_;
   bool seed_held_;
   uint32_t seed_time_;
   uint32_t seed_taps_;

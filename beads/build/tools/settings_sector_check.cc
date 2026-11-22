@@ -24,15 +24,18 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Load a settings sector image with stmlib's ChunkStorage, as the firmware
+// Load a settings sector image with stmlib's ChunkStorage, as stock firmware
 // does at boot, and print whether it loaded, the calibration record and the
-// settings record in hex.
+// settings record in hex. Given a calibration copy sector image too, load
+// both as this firmware does and print its calibration, State and options.
 
 #include <sys/mman.h>
 
 #include <cstdio>
 
+#define private public
 #include "beads/settings.h"
+#undef private
 
 bool test_down[4];
 uint32_t test_writes;
@@ -50,19 +53,39 @@ void Print(const char* name, const void* data, size_t size) {
   printf("\n");
 }
 
+bool Load(const char* path, uint32_t address) {
+  FILE* f = fopen(path, "rb");
+  const bool loaded = f && \
+      fread(reinterpret_cast<void*>(address), 1, 0x20000, f) == 0x20000;
+  if (f) {
+    fclose(f);
+  }
+  return loaded;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-  void* const sector = reinterpret_cast<void*>(0x081e0000);
-  if (argc != 2 || mmap(sector, 0x20000, PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) != sector) {
+  void* const bank = reinterpret_cast<void*>(0x081c0000);
+  if (argc < 2 || argc > 3 || mmap(bank, 0x40000, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) != bank) {
     return 2;
   }
-  FILE* f = fopen(argv[1], "rb");
-  if (!f || fread(sector, 1, 0x20000, f) != 0x20000) {
+  memset(bank, 255, 0x40000);
+  if (!Load(argv[1], 0x081e0000) || (argc == 3 && !Load(argv[2], 0x081c0000))) {
     return 2;
   }
-  fclose(f);
+  if (argc == 3) {
+    TestFlashBudget() = 0;  // Read only: nothing written.
+    Settings settings;
+    settings.Init(false);
+    printf("locked %d\n", settings.write_locked());
+    printf("record %d\n", settings.chunk_storage_.record_found());
+    Print("calibration", &settings.persistent_data(), sizeof(PersistentData));
+    Print("settings", &settings.state(), sizeof(State));
+    Print("options", &settings.record_, sizeof(OptionsRecord));
+    return 0;
+  }
   PersistentData persistent_data = { };
   State state = { };
   stmlib::ChunkStorage<15, PersistentData, State> storage;

@@ -76,15 +76,8 @@ STATIC_ASSERT(offsetof(State, gate_output_mode) == 6, gate);
 STATIC_ASSERT(offsetof(State, frozen) == 7, frozen);
 STATIC_ASSERT(offsetof(State, disable_autosave) == 8, autosave);
 STATIC_ASSERT(offsetof(State, monophonic_mode) == 9, mono);
-namespace state_layout_test {
-STATIC_ASSERT(offsetof(State, diffusion) == 17, diffusion);
-STATIC_ASSERT(offsetof(State, frozen_feedback) == 18, frozen_feedback);
-STATIC_ASSERT(offsetof(State, attacks) == 19, attacks);
-STATIC_ASSERT(offsetof(State, engine) == 20, engine);
-STATIC_ASSERT(offsetof(State, synth_engine) == 21, synth_engine);
-STATIC_ASSERT(offsetof(State, random_intervals) == 22, random_intervals);
-STATIC_ASSERT(offsetof(State, padding) == 23, padding);
-}  // namespace state_layout_test
+STATIC_ASSERT(offsetof(State, padding) == 10, padding);
+STATIC_ASSERT(sizeof(OptionsRecord) == 56, record_size);
 
 struct Rig {
   Settings settings;
@@ -102,6 +95,9 @@ struct Rig {
     test_down[SWITCH_ASSIGN] = startup_assign;
     memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
     settings.Init(false);
+    // A new module's first save also fills in its record; do it here so
+    // the tests count only their own writes.
+    settings.SaveOptions();
     ui.Init(&settings, &gain, &calibration, &backup);
     ui.LoadOptions();
     Tick(40, true);
@@ -349,21 +345,52 @@ void TestQueueRace() {
   puts("queue interrupt/pre-entry/normal dispatch: PASS");
 }
 
-struct LegacyState {
-  uint8_t media;
-  uint8_t assignable_cv_destination;
-  uint8_t assignable_cv_amount[3];
-  uint8_t gain;  // 0 for auto-gain
-  uint8_t gate_output_mode;
-  uint8_t frozen;
-  uint8_t disable_autosave;
-  uint8_t monophonic_mode;
-  uint8_t padding[14];
-  enum { tag = 0x54415453 };  // STAT
-};
+// An options record takes two flash words; a state takes one.
+const uint32_t kRecordWords = 2;
+
+// A feature's byte in the record held in RAM, and in the one last stored.
+uint8_t* RecordByte(Settings* s, ProfileFeature feature) {
+  return reinterpret_cast<uint8_t*>(&s->record_) + kRecordOffsets[feature];
+}
+
+uint8_t StoredByte(const Settings& s, ProfileFeature feature) {
+  return reinterpret_cast<const uint8_t*>(
+      &s.stored_record_)[kRecordOffsets[feature]];
+}
+
+// Appends a raw byte, as a damaged or later record may hold it.
+void SaveRaw(Settings* s, ProfileFeature feature, uint8_t raw) {
+  *RecordByte(s, feature) = raw;
+  CHECK(s->chunk_storage_.SaveRecord());
+}
+
+// A STAT as stock firmware writes it (padding zero), or with the bytes
+// 10-23 an older Drizzlet packed its options into.
+void SaveStockState(Settings* s, uint8_t padding) {
+  s->stored_state_ = s->state();
+  memset(s->stored_state_.padding, padding, sizeof(s->stored_state_.padding));
+  s->chunk_storage_.SaveState();
+}
+
+// Every raw byte of a saved feature: a value loads, a byte past them gives
+// the profile's default; the next save writes the value back.
+void CheckRecordByte(ProfileFeature feature, int values) {
+  Rig r(false);
+  const uint8_t fallback = r.settings.profile().entry(feature).value;
+  for (int raw = 0; raw < 256; ++raw) {
+    SaveRaw(&r.settings, feature, raw);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    const uint8_t expected = raw < values ? raw : fallback;
+    CHECK(loaded.FeatureValue(feature) == expected);
+    loaded.SaveState();
+    CHECK(StoredByte(loaded, feature) == expected);
+  }
+}
 
 void TestStorage() {
   test_checker.Start("TestStorage");
+  CheckRecordByte(FEATURE_LIMITER, 3);
   Settings s;
   memset(reinterpret_cast<void*>(0x081c0000), 255, 0x40000);
   CHECK(!s.Init(false));
@@ -371,11 +398,6 @@ void TestStorage() {
   Settings old_record;
   CHECK(old_record.Init(false));
   CHECK(old_record.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
-  for (int i = 0; i < 256; ++i) {
-    s.mutable_state()->output_limiter_mode = i;
-    CHECK(s.output_limiter_mode() == (i == 0xa1 ? OUTPUT_LIMITER_FAST :
-        i == 0xa2 ? OUTPUT_LIMITER_OFF : OUTPUT_LIMITER_STOCK));
-  }
   for (int i = 0; i < 3; ++i) {
     s.set_output_limiter_mode(OutputLimiterMode(i));
     s.SaveState();
@@ -383,18 +405,24 @@ void TestStorage() {
     CHECK(loaded.Init(false));
     CHECK(loaded.output_limiter_mode() == i);
     CHECK(loaded.state().media == 3);
+    for (size_t j = 0; j < sizeof(loaded.stored_state_.padding); ++j) {
+      CHECK(loaded.stored_state_.padding[j] == 0);  // Written as stock.
+    }
   }
-  // The legacy layout reads the new record with the same tag and size.
-  LegacyState legacy_state = { };
-  PersistentData legacy_calibration = { };
-  stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
-  CHECK(legacy.Init(&legacy_calibration, &legacy_state));
-  CHECK(legacy_state.media == 3 && legacy_state.padding[0] == 0);
-  memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
-  legacy.SaveState();
-  Settings downgrade;
-  CHECK(downgrade.Init(false));
-  CHECK(downgrade.output_limiter_mode() == OUTPUT_LIMITER_STOCK);
+  // Stock or an older Drizzlet saves State only: the record keeps the
+  // options, and the bytes after monophonic mode are ignored, then zeroed.
+  for (int padding = 0; padding < 2; ++padding) {
+    Settings older;
+    CHECK(older.Init(false));
+    SaveStockState(&older, padding ? 0xa1 : 0);
+    Settings upgrade;
+    CHECK(upgrade.Init(false));
+    CHECK(upgrade.output_limiter_mode() == OUTPUT_LIMITER_OFF);
+    CHECK(upgrade.state().padding[0] == 0);
+    upgrade.mutable_state()->media = 1;
+    upgrade.SaveState();
+    CHECK(upgrade.stored_state_.padding[sizeof(State) - 11] == 0);
+  }
   puts("STAT persistence/compatibility: PASS");
 }
 
@@ -492,7 +520,7 @@ void TestStockAssignAmounts() {
     CHECK(r.settings.state().assignable_cv_amount[i] == expected[i]);
     CHECK(r.settings.state().assignable_cv_destination == 3);
     r.Up(SWITCH_ASSIGN);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + kRecordWords + 1);
     Settings loaded;
     CHECK(loaded.Init(false));
     for (int j = 0; j < 3; ++j) {
@@ -933,34 +961,16 @@ void TestCorruptCalibrationLocks() {
 void TestSelfPlayStorage() {
   test_checker.Start("TestSelfPlayStorage");
   Rig r(false);
-  for (int i = 0; i < 256; ++i) {
-    r.settings.mutable_state()->self_play = i;
-    CHECK(r.settings.self_play_on_request() == (i == 0xa1));
-    r.settings.SaveState();
-    Settings loaded;
-    CHECK(loaded.Init(false));
-    CHECK(loaded.self_play_on_request() == (i == 0xa1));
-    CHECK(loaded.state().self_play == (i == 0xa1 ? 0xa1 : 0));
-  }
+  CheckRecordByte(FEATURE_SYNTH_START, 2);
   r.settings.set_self_play_on_request(true);
   r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
   r.settings.SaveState();
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.self_play_on_request());
   CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
-  LegacyState legacy_state = { };
-  PersistentData calibration = { };
-  stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
-  CHECK(legacy.Init(&calibration, &legacy_state));
-  memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
-  legacy.SaveState();
-  CHECK(loaded.Init(false) && !loaded.self_play_on_request());
-  loaded.mutable_state()->self_play = 0xff;
-  loaded.stored_state_ = loaded.state_;
-  loaded.stored_state_.padding[0] = 0;
-  loaded.chunk_storage_.SaveState();
-  CHECK(loaded.Init(false));
-  CHECK(loaded.state().self_play == 0);
+  // A stock State save keeps the choice in the record.
+  SaveStockState(&loaded, 0);
+  CHECK(loaded.Init(false) && loaded.self_play_on_request());
 }
 
 void TestAttackStorage() {
@@ -968,25 +978,7 @@ void TestAttackStorage() {
   // One threshold per Attack sensitivity value.
   CHECK(kFeatureDefinitions[FEATURE_ATTACK_SENSITIVITY].values ==
       sizeof(kAttackThresholds) / sizeof(kAttackThresholds[0]));
-  Rig r(false);
-  for (int value = 0; value < 256; ++value) {
-    r.settings.mutable_state()->attacks = value;
-    const AttackMode mode = value == 0xa1 ? ATTACK_MODE_SNAP
-        : value == 0xa2 ? ATTACK_MODE_SNAP_AND_TRIGGER : ATTACK_MODE_OFF;
-    CHECK(r.settings.attack_mode() == mode);
-    r.settings.SaveState();
-    Settings loaded;
-    CHECK(loaded.Init(false));
-    CHECK(loaded.attack_mode() == mode);
-    CHECK(loaded.state().attacks == (mode ? 0xa0 + mode : 0));
-    loaded.mutable_state()->attacks = value;
-    loaded.stored_state_ = loaded.state_;
-    loaded.stored_state_.padding[0] = 0;
-    loaded.chunk_storage_.SaveState();
-    CHECK(loaded.Init(false));
-    CHECK(loaded.state().attacks == 0);
-    CHECK(r.settings.Init(false));
-  }
+  CheckRecordByte(FEATURE_ATTACKS, 3);
   // Page 1, REVERB, in thirds.
   // Far enough from the entry position (0.5) to take over.
   const float positions[] = { 0.05f, 0.62f, 0.95f };
@@ -1005,22 +997,7 @@ void TestAttackStorage() {
 
 void TestFrozenFeedbackStorage() {
   test_checker.Start("TestFrozenFeedbackStorage");
-  Rig r(false);
-  for (int value = 0; value < 256; ++value) {
-    r.settings.mutable_state()->frozen_feedback = value;
-    CHECK(r.settings.evolving_feedback() == (value == 0xa1));
-    r.settings.SaveState();
-    Settings loaded;
-    CHECK(loaded.Init(false));
-    CHECK(loaded.state().frozen_feedback == (value == 0xa1 ? 0xa1 : 0));
-    loaded.mutable_state()->frozen_feedback = value;
-    loaded.stored_state_ = loaded.state_;
-    loaded.stored_state_.padding[0] = 0;
-    loaded.chunk_storage_.SaveState();
-    CHECK(loaded.Init(false));
-    CHECK(!loaded.evolving_feedback());
-    CHECK(r.settings.Init(false));
-  }
+  CheckRecordByte(FEATURE_FROZEN, 2);
   // Page 2, FEEDBACK: upper half is Evolving, saved when the page settles.
   Rig s(false);
   s.Enter();
@@ -1036,21 +1013,17 @@ void TestFrozenFeedbackStorage() {
 
 void TestCloudsStorage() {
   test_checker.Start("TestCloudsStorage");
+  CheckRecordByte(FEATURE_REVERB, 2);
+  // Its neighbour in the record is kept.
   Rig r(false);
-  for (int value = 0; value < 256; ++value) {
-    r.settings.mutable_state()->reverb_style = value;
-    CHECK(r.settings.clouds_style() == (value == 0xa2));
-    r.settings.mutable_state()->pitch_scale = 0xa7;
-    r.settings.mutable_state()->padding[0] = 0xff;
+  r.settings.set_pitch_scale(PITCH_SCALE_PELOG);
+  for (int value = 0; value < 2; ++value) {
+    r.settings.set_clouds_style(value);
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.clouds_style() == (value == 0xa2));
-    CHECK(loaded.state().reverb_style == (value == 0xa2 ? 0xa2 : 0));
-    CHECK(loaded.state().pitch_scale == 0xa7);
+    CHECK(loaded.clouds_style() == bool(value));
     CHECK(loaded.pitch_scale() == PITCH_SCALE_PELOG);
-    CHECK(loaded.state().padding[0] == 0);
-    CHECK(r.settings.Init(false));
   }
 }
 
@@ -1058,26 +1031,7 @@ void TestSynthEngineStorage() {
   test_checker.Start("TestSynthEngineStorage");
   Rig r(false);
   CHECK(!r.settings.plaits_synth() && !r.ui.plaits_synth());
-  for (int value = 0; value < 256; ++value) {
-    r.settings.mutable_state()->synth_engine = value;
-    CHECK(r.settings.plaits_synth() == (value == 0xa1));
-    r.settings.mutable_state()->random_intervals = 0xff;
-    r.settings.mutable_state()->padding[0] = 0xff;
-    r.settings.SaveState();
-    Settings loaded;
-    CHECK(loaded.Init(false));
-    CHECK(loaded.plaits_synth() == (value == 0xa1));
-    CHECK(loaded.state().synth_engine == (value == 0xa1 ? 0xa1 : 0));
-    CHECK(!loaded.state().random_intervals && !loaded.state().padding[0]);
-    // Bypass SaveState normalization to exercise load normalization too.
-    loaded.mutable_state()->synth_engine = value;
-    loaded.stored_state_ = loaded.state_;
-    loaded.stored_state_.padding[0] = 0;
-    loaded.chunk_storage_.SaveState();
-    CHECK(loaded.Init(false));
-    CHECK(loaded.state().synth_engine == 0);
-    CHECK(r.settings.Init(false));
-  }
+  CheckRecordByte(FEATURE_SYNTH, 2);
   // Page 3, DRY/WET knob: two halves with a dead band, previewed live.
   r.settings.set_plaits_synth(false);
   r.settings.SaveState();
@@ -1085,68 +1039,51 @@ void TestSynthEngineStorage() {
   r.EnterPage(2);
   r.pot = .9f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.plaits_preview() && r.ui.plaits_synth());
+  CHECK(r.ui.options_.Value(FEATURE_SYNTH) && r.ui.plaits_synth());
   CHECK(!r.settings.plaits_synth());
   r.pot = .5f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.plaits_preview());
+  CHECK(r.ui.options_.Value(FEATURE_SYNTH));
   r.pot = .46f;
   r.Tick(1, true);
-  CHECK(!r.ui.options_.plaits_preview() && !r.ui.plaits_synth());
+  CHECK(!r.ui.options_.Value(FEATURE_SYNTH) && !r.ui.plaits_synth());
   r.pot = .54f;
   r.Tick(1001, true);
   CHECK(r.settings.plaits_synth());
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.plaits_synth());
-  CHECK(loaded.state().synth_engine == 0xa1);
+  CHECK(StoredByte(loaded, FEATURE_SYNTH) == 1);
 }
 
-// Byte 20 holds Spectral and byte 11 the synth start; each is its own
-// setting, and firmware without spectral reads byte 11 as before.
+// Spectral and the synth start are separate record bytes.
 void TestEngineStorage() {
   test_checker.Start("TestEngineStorage");
+  CheckRecordByte(FEATURE_PROCESSOR, 2);
   Rig r(false);
-  for (int i = 0; i < 256; ++i) {
-    r.settings.mutable_state()->engine = i;
-    r.settings.mutable_state()->self_play = 0xa1;
-    CHECK(r.settings.spectral() == (i == 0xa1));
-    CHECK(r.settings.self_play_on_request());
+  for (int i = 0; i < 4; ++i) {
+    r.settings.set_spectral(i & 1);
+    r.settings.set_self_play_on_request(i & 2);
+    CHECK(r.settings.spectral() == bool(i & 1));
+    CHECK(r.settings.self_play_on_request() == bool(i & 2));
     r.settings.SaveState();
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.spectral() == (i == 0xa1));
-    CHECK(loaded.state().engine == (i == 0xa1 ? 0xa1 : 0));
-    CHECK(loaded.self_play_on_request());
+    CHECK(loaded.spectral() == bool(i & 1));
+    CHECK(loaded.self_play_on_request() == bool(i & 2));
+    CHECK(StoredByte(loaded, FEATURE_PROCESSOR) == (i & 1));
+    CHECK(StoredByte(loaded, FEATURE_SYNTH_START) == (i & 2) / 2);
   }
+  // Packed bytes an older Drizzlet left in State are ignored; a stock
+  // State save keeps Spectral.
   r.settings.set_spectral(true);
-  r.settings.set_self_play_on_request(false);
-  CHECK(r.settings.state().engine == 0xa1 && !r.settings.state().self_play);
-  r.settings.set_self_play_on_request(true);
-  CHECK(r.settings.state().engine == 0xa1);
-  CHECK(r.settings.state().self_play == 0xa1);
-  r.settings.set_spectral(false);
-  CHECK(!r.settings.state().engine && r.settings.state().self_play == 0xa1);
-  // Unknown legacy values read as Stock; the runtime view clears byte 23.
-  r.settings.set_spectral(true);
-  r.settings.mutable_state()->frozen_feedback = 0x12;
-  r.settings.mutable_state()->attacks = 0x34;
-  r.settings.mutable_state()->padding[0] = 0x56;
   r.settings.SaveState();
+  SaveStockState(&r.settings, 0x12);
   Settings loaded;
   CHECK(loaded.Init(false) && loaded.spectral());
-  CHECK(!loaded.state().frozen_feedback && !loaded.state().attacks);
-  CHECK(!loaded.state().padding[0]);
+  CHECK(!loaded.evolving_feedback() && !loaded.attack_mode());
   CHECK(loaded.self_play_on_request());
-  // A stock save clears the packed choices and selects Granular.
-  LegacyState legacy_state = { };
-  PersistentData calibration = { };
-  stmlib::ChunkStorage<15, PersistentData, LegacyState> legacy;
-  CHECK(legacy.Init(&calibration, &legacy_state));
-  // Byte 20: the Plaits bank (green) and an unset field 15.
-  CHECK(legacy_state.padding[10] == 0x90);
-  memset(legacy_state.padding, 0, sizeof(legacy_state.padding));
-  legacy.SaveState();
-  CHECK(loaded.Init(false) && !loaded.spectral());
+  SaveStockState(&loaded, 0);
+  CHECK(loaded.Init(false) && loaded.spectral());
 }
 
 // Page 3, FEEDBACK: Granular / Spectral. The saved processor reaches the
@@ -1162,7 +1099,7 @@ void TestEngineOption() {
     const bool was_spectral = r.settings.spectral();
     r.EnterPage(2);
     CHECK(r.ui.options_.page() == 2);
-    CHECK(r.ui.options_.spectral_preview() == was_spectral);
+    CHECK(r.ui.options_.Value(FEATURE_PROCESSOR) == was_spectral);
     r.feedback = target ? 0.05f : 0.95f;
     r.Tick(50, true);
     for (int step = 0; step < 20; ++step) {
@@ -1170,9 +1107,9 @@ void TestEngineOption() {
       r.feedback = from + (positions[target] - from) * (step + 1) / 20.0f;
       r.Tick(10, true);
     }
-    CHECK(r.ui.options_.spectral_preview() == bool(target));
+    CHECK(r.ui.options_.Value(FEATURE_PROCESSOR) == bool(target));
     const OptionValue& v = r.ui.options_.indication();
-    CHECK(v.setting == OPTION_PROCESSOR && v.value == target);
+    CHECK(v.setting == FEATURE_PROCESSOR && v.value == target);
     CHECK(v.color.r == (target ? 255 : 0) && v.color.g == 255);
     CHECK(v.color.b == 0 && v.pulses == PULSE_STEADY);
     r.Tick(1100, true);
@@ -1191,31 +1128,10 @@ void TestEngineOption() {
   }
 }
 
-// Byte 22: Random intervals. Unknown values read as Free (Stock).
+// Random intervals. A byte past its values reads as Free (Stock).
 void TestIntervalsStorage() {
   test_checker.Start("TestIntervalsStorage");
-  Rig r(false);
-  for (int value = 0; value < 256; ++value) {
-    const RandomIntervals expected = value == 0xa1 ? RANDOM_INTERVALS_FIFTHS
-        : value == 0xa2 ? RANDOM_INTERVALS_RECENT_NOTES : RANDOM_INTERVALS_OFF;
-    const uint8_t canonical = value == 0xa1 || value == 0xa2 ? value : 0;
-    r.settings.mutable_state()->random_intervals = value;
-    CHECK(r.settings.random_intervals() == expected);
-    r.settings.mutable_state()->padding[0] = 0xff;
-    r.settings.SaveState();
-    Settings loaded;
-    CHECK(loaded.Init(false));
-    CHECK(loaded.random_intervals() == expected);
-    CHECK(loaded.state().random_intervals == canonical);
-    CHECK(loaded.state().padding[0] == 0);
-    loaded.mutable_state()->random_intervals = value;
-    loaded.stored_state_ = loaded.state_;
-    loaded.stored_state_.padding[0] = 0;
-    loaded.chunk_storage_.SaveState();
-    CHECK(loaded.Init(false));
-    CHECK(loaded.state().random_intervals == 0);
-    CHECK(r.settings.Init(false));
-  }
+  CheckRecordByte(FEATURE_INTERVALS, 3);
 }
 
 // Page 1, DRY/WET: Free / Fifths and octaves / Recent notes, independent of
@@ -1225,7 +1141,6 @@ void TestIntervalsOption() {
   const float positions[3] = { 0.05f, 0.5f, 0.95f };
   const uint8_t red[3] = { 0, 255, 255 };
   const uint8_t green[3] = { 255, 255, 0 };
-  const uint8_t tags[3] = { 0, 0xa1, 0xa2 };
   for (int target = 0; target < 3; ++target) {
     const RandomIntervals from = RandomIntervals((target + 1) % 3);
     Rig r(false);
@@ -1233,16 +1148,16 @@ void TestIntervalsOption() {
     r.settings.set_random_intervals(from);
     r.ui.LoadOptions();
     r.Enter();
-    CHECK(r.ui.options_.intervals_preview() == from);
+    CHECK(r.ui.options_.Value(FEATURE_INTERVALS) == from);
     r.pot = positions[from];
     r.Tick(50, true);
     r.pot = positions[target];
     r.Tick(50, true);
-    CHECK(r.ui.options_.intervals_preview() == target);
+    CHECK(r.ui.options_.Value(FEATURE_INTERVALS) == target);
     CHECK(r.ui.intervals_mode() == target);
     CHECK(r.ui.random_intervals() == (target != 0));
     const OptionValue& v = r.ui.options_.indication();
-    CHECK(v.setting == OPTION_INTERVALS && v.value == target);
+    CHECK(v.setting == FEATURE_INTERVALS && v.value == target);
     CHECK(v.color.r == red[target] && v.color.g == green[target]);
     r.Tick(1100, true);
     CHECK(r.settings.random_intervals() == target);
@@ -1250,7 +1165,7 @@ void TestIntervalsOption() {
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.random_intervals() == target);
-    CHECK(loaded.state().random_intervals == tags[target]);
+    CHECK(StoredByte(loaded, FEATURE_INTERVALS) == target);
   }
 }
 
@@ -1264,21 +1179,21 @@ void TestSynthStartOption() {
     r.settings.set_self_play_on_request(!target);
     r.ui.LoadOptions();
     r.EnterPage(2);
-    CHECK(r.ui.options_.manual_start_preview() == !target);
+    CHECK(r.ui.options_.Value(FEATURE_SYNTH_START) == !target);
     r.reverb = target ? 0.05f : 0.95f;
     r.Tick(50, true);
     r.reverb = target ? 0.85f : 0.15f;
     r.Tick(50, true);
-    CHECK(r.ui.options_.manual_start_preview() == bool(target));
+    CHECK(r.ui.options_.Value(FEATURE_SYNTH_START) == bool(target));
     const OptionValue& v = r.ui.options_.indication();
-    CHECK(v.setting == OPTION_SYNTH_START && v.value == target);
+    CHECK(v.setting == FEATURE_SYNTH_START && v.value == target);
     r.Tick(1100, true);
     CHECK(r.settings.self_play_on_request() == bool(target));
     CHECK(r.settings.spectral());
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.self_play_on_request() == bool(target));
-    CHECK(loaded.state().self_play == (target ? 0xa1 : 0));
+    CHECK(StoredByte(loaded, FEATURE_SYNTH_START) == target);
   }
 }
 
@@ -1328,15 +1243,15 @@ const int kStateChunks = (0x20000 - kCalibrationChunk) / kStateChunk;
 
 void TestSettingsRollover() {
   test_checker.Start("TestSettingsRollover");
-  // Rolling save: erase, four calibration blocks, one state block.
+  // Rolling save: erase, four calibration blocks, one state block. The
+  // options live in the mirror sector, which the rollover leaves alone.
   for (int cut = 0; cut <= 6; ++cut) {
     Rig r(false);
     const State defaults = r.settings.state();
-    const PersistentData factory = r.settings.persistent_data();
     PersistentData* calibration = r.settings.mutable_persistent_data();
     for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
-      calibration->adc_calibration[i].scale = -2.5f - 0.125f * i;
-      calibration->adc_calibration[i].offset = 0.75f + 0.0625f * i;
+      calibration->adc_calibration[i].scale *= 1.1f;
+      calibration->adc_calibration[i].offset *= 0.9f;
     }
     r.settings.SavePersistentData();
     r.settings.set_output_limiter_mode(OUTPUT_LIMITER_FAST);
@@ -1349,16 +1264,22 @@ void TestSettingsRollover() {
     r.settings.SaveState();
     const PersistentData old_calibration = r.settings.persistent_data();
     r.EnterPage(1);
-    CHECK(!r.ui.options_.clouds_preview());
-    // Real settled saves: the REVERB knob alone flips the style each time.
+    CHECK(!r.ui.options_.Value(FEATURE_REVERB));
+    // Real settled saves: the REVERB knob alone flips the style each time,
+    // writing a record (two flash words) and no state.
     const uint32_t erases = TestFlashErases();
+    const uint16_t index = r.settings.chunk_storage_.next_state_chunk_index_;
     for (int i = 0; i < 2; ++i) {
       const uint32_t writes = test_writes;
       r.reverb = i ? .1f : .9f;
       r.Tick(1100, true);
-      CHECK(test_writes == writes + 1);
+      CHECK(test_writes == writes + 2);
     }
     CHECK(!r.settings.clouds_style());
+    CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == index);
+    r.reverb = .9f;
+    r.Tick(1100, true);
+    CHECK(r.settings.clouds_style());
     while (r.settings.chunk_storage_.next_state_chunk_index_ <=
         kStateChunks) {
       r.settings.SaveState();
@@ -1366,56 +1287,42 @@ void TestSettingsRollover() {
     CHECK(TestFlashErases() == erases);
     const State old_state = r.settings.state();
     State new_state = old_state;
-    new_state.reverb_style = kOptionTag + 2;
+    new_state.media = (old_state.media + 1) % 4;
 
     const uint32_t writes = test_writes;
     TestFlashBudget() = cut;
-    r.reverb = .9f;
-    r.Tick(1100, true);
+    r.settings.mutable_state()->media = new_state.media;
+    r.settings.SaveState();
     TestFlashBudget() = -1;
-    CHECK(r.settings.clouds_style());
     CHECK(TestFlashErases() == erases + (cut ? 1 : 0));
     CHECK(test_writes == writes + (cut > 1 ? cut - 1 : 0));
 
     Settings loaded;
-    // Never the factory test.
+    // Never the factory test, never locked.
     CHECK(loaded.Init(false));
+    CHECK(!loaded.write_locked());
     const State& state = loaded.state();
     const AdcCalibrationData* data = loaded.persistent_data().adc_calibration;
+    CHECK(!memcmp(data, old_calibration.adc_calibration,
+        sizeof(old_calibration.adc_calibration)));
     if (cut == 0) {
       // Power went before the erase: the previous record is untouched.
-      CHECK(!loaded.write_locked());
       CHECK(!memcmp(&state, &old_state, sizeof(State)));
-      CHECK(!memcmp(data, old_calibration.adc_calibration,
-          sizeof(old_calibration.adc_calibration)));
-    } else if (cut == 1 || cut == 5) {
-      // Erased, or the calibration written but no state: the calibration
-      // survives (from the mirror after the erase), the options reset.
-      CHECK(!loaded.write_locked());
+    } else if (cut <= 5) {
+      // Erased, or partly or wholly rewritten without a state: the
+      // calibration from the mirror, the state reset.
       CHECK(!memcmp(&state, &defaults, sizeof(State)));
-      CHECK(!memcmp(data, old_calibration.adc_calibration,
-          sizeof(old_calibration.adc_calibration)));
-    } else if (cut < 5) {
-      // Partly written: damaged until SEED repairs it. The mirror is over
-      // 25% from the factory values, so the factory values play.
-      CHECK(loaded.write_locked());
-      CHECK(!memcmp(&state, &defaults, sizeof(State)));
-      CHECK(!memcmp(data, factory.adc_calibration,
-          sizeof(factory.adc_calibration)));
     } else {
-      CHECK(!loaded.write_locked());
       CHECK(!memcmp(&state, &new_state, sizeof(State)));
-      CHECK(!memcmp(data, old_calibration.adc_calibration,
-          sizeof(old_calibration.adc_calibration)));
       CHECK(loaded.chunk_storage_.next_state_chunk_index_ == 2);
-      CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_FAST);
-      CHECK(loaded.self_play_on_request());
-      CHECK(loaded.pitch_scale() == PITCH_SCALE_PENTATONIC_MAJOR);
-      CHECK(loaded.clouds_style());
-      CHECK(loaded.stereo_width() == 200);
-      CHECK(loaded.width_assigned());
-      CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     }
+    CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_FAST);
+    CHECK(loaded.self_play_on_request());
+    CHECK(loaded.pitch_scale() == PITCH_SCALE_PENTATONIC_MAJOR);
+    CHECK(loaded.clouds_style());
+    CHECK(loaded.stereo_width() == 200);
+    CHECK(loaded.width_assigned());
+    CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     // Whatever came back is stable.
     Settings again;
     CHECK(again.Init(false));
@@ -1423,6 +1330,7 @@ void TestSettingsRollover() {
     CHECK(!memcmp(&again.state(), &state, sizeof(State)));
     CHECK(!memcmp(again.persistent_data().adc_calibration, data,
         sizeof(old_calibration.adc_calibration)));
+    CHECK(again.clouds_style());
   }
 }
 
@@ -1576,8 +1484,10 @@ void TestStorageMatchesStmlib() {
       calibration.adc_calibration[i].offset = 0.75f + 0.0625f * i;
     }
     if (pass == 0) {
-      ChunkStorage<15, 14, PersistentData, State> storage;
-      storage.Init(&calibration, &state);
+      OptionsRecord record;
+      memset(&record, 0, sizeof(record));
+      ChunkStorage<15, 14, PersistentData, State, OptionsRecord> storage;
+      storage.Init(&calibration, &state, &record, false);
       for (int i = 0; i < kStateChunks + 10; ++i) {
         state.media = i & 3;
         state.gain = uint8_t(i);
@@ -1601,23 +1511,16 @@ void TestStorageMatchesStmlib() {
 
 void TestPitchStorage() {
   test_checker.Start("TestPitchStorage");
+  // The factory profile's scales end at Raag Shri; IDs 10-15 are custom.
+  CheckRecordByte(FEATURE_PITCH, PITCH_SCALE_SHRI + 1);
   Rig r(false);
   r.settings.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
   r.settings.set_self_play_on_request(true);
-  for (int i = 0; i < 256; ++i) {
-    const PitchScale expected = i >= 0xa1 && i <= 0xa9
-        ? PitchScale(i - 0xa0) : PITCH_SCALE_OFF;
-    r.settings.mutable_state()->pitch_scale = i;
-    CHECK(r.settings.pitch_scale() == expected);
+  for (int i = 0; i <= PITCH_SCALE_SHRI; ++i) {
+    r.settings.set_pitch_scale(PitchScale(i));
     r.settings.SaveState();
-    Settings loaded;
-    CHECK(loaded.Init(false));
-    CHECK(loaded.pitch_scale() == expected);
-    CHECK(loaded.state().pitch_scale == (expected ? i : 0));
-    loaded.mutable_state()->padding[0] = 0xff;
-    loaded.SaveState();
     CHECK(r.settings.Init(false));
-    CHECK(r.settings.pitch_scale() == expected);
+    CHECK(r.settings.pitch_scale() == i);
     CHECK(r.settings.output_limiter_mode() == OUTPUT_LIMITER_OFF);
     CHECK(r.settings.self_play_on_request());
     CHECK(r.settings.state().padding[0] == 0);
@@ -1626,11 +1529,17 @@ void TestPitchStorage() {
 
 void TestPlaybackStorage() {
   test_checker.Start("TestPlaybackStorage");
+  // Only a saved target of 1 assigns the width.
   for (int raw = 0; raw < 256; ++raw) {
     Rig r(false);
     r.settings.set_stereo_width(128);
-    r.settings.mutable_state()->width_assigned = raw;
-    CHECK(r.settings.width_assigned() == (raw == 1));
+    r.settings.SaveState();
+    r.settings.record_.cv_target = raw;
+    CHECK(r.settings.chunk_storage_.SaveRecord());
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.width_assigned() == (raw == 1));
+    CHECK(!loaded.diffusion_assigned());
   }
 
   Rig r(false);
@@ -1647,18 +1556,14 @@ void TestPlaybackStorage() {
       CHECK(loaded.stereo_width() == StereoWidth(width));
       CHECK(loaded.state().assignable_cv_destination == 0);
       CHECK(loaded.width_assigned() == (width != 0));
-      CHECK(loaded.state().width_assigned == (width ? 1 : 0));
-      State stock_view = loaded.state();
-      CONSTRAIN(stock_view.assignable_cv_destination, 0, 3);
-      CHECK(stock_view.assignable_cv_destination == 0);
+      CHECK(loaded.stored_record_.cv_target == (width ? 1 : 0));
       CHECK(loaded.delay_mode() == DelayMode(delay));
-      CHECK(loaded.state().pitch_scale == 0xa9);
-      CHECK(loaded.state().reverb_style == 0xa2);
-      CHECK(loaded.state().stereo_width == width);
-      CHECK(loaded.state().delay_mode == (delay ? 0xa0 + delay : 0));
-      for (int byte = 7; byte < 14; ++byte) {
-        CHECK(reinterpret_cast<const uint8_t*>(
-            &loaded.state())[byte + 10] == 0);
+      CHECK(StoredByte(loaded, FEATURE_PITCH) == PITCH_SCALE_SHRI);
+      CHECK(StoredByte(loaded, FEATURE_REVERB) == 1);
+      CHECK(StoredByte(loaded, FEATURE_WIDTH) == width);
+      CHECK(StoredByte(loaded, FEATURE_DELAY) == delay);
+      for (size_t byte = 0; byte < sizeof(State) - 10; ++byte) {
+        CHECK(loaded.state().padding[byte] == 0);
       }
     }
   }
@@ -1692,7 +1597,7 @@ void TestDiffusionGestureAndMeter() {
   Rig r(false);
   const uint8_t media = r.settings.state().media;
   const uint8_t gain = r.settings.state().gain;
-  CHECK(r.settings.state().diffusion == 0);
+  CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) == 0);
   CHECK(r.settings.diffusion() == 0.0f);
   uint32_t writes = test_writes;
   r.Down(SWITCH_MEDIA);
@@ -1700,7 +1605,7 @@ void TestDiffusionGestureAndMeter() {
   for (int i = 0; i < 3; ++i) {
     r.reverb = positions[i];
     r.Tick(20, true);
-    CHECK(r.settings.state().diffusion ==
+    CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) ==
         1 + int(positions[i] * 254.0f + 0.5f));
     CHECK(fabsf(r.settings.diffusion() - positions[i]) < 0.003f);
     CHECK(r.ui.mix_parameter(Ui::MIX_PARAMETER_REVERB) == 0.5f);
@@ -1714,15 +1619,15 @@ void TestDiffusionGestureAndMeter() {
   r.Up(SWITCH_MEDIA);
   CHECK(r.settings.state().media == media);
   CHECK(r.settings.state().gain == gain);
-  CHECK(test_writes == writes + 1);
+  CHECK(test_writes == writes + kRecordWords + 1);
   Settings loaded;
   CHECK(loaded.Init(false));
-  CHECK(loaded.state().diffusion == 128);
+  CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == 128);
   // A quality tap without turning REVERB leaves the amount alone.
   r.Down(SWITCH_MEDIA);
   r.Up(SWITCH_MEDIA);
   CHECK(r.settings.state().media == (media + 3) % 4);
-  CHECK(r.settings.state().diffusion == 128);
+  CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) == 128);
 }
 
 void TestDiffusionStorage() {
@@ -1731,7 +1636,7 @@ void TestDiffusionStorage() {
     for (int raw = 0; raw < 256; ++raw) {
       Rig r(false);
       r.settings.set_clouds_style(clouds);
-      r.settings.mutable_state()->diffusion = raw;
+      r.settings.values_[FEATURE_DIFFUSION] = raw;
       const float expected = raw
           ? float(raw - 1) / 254.0f : (clouds ? kCloudsDiffusion : 0.0f);
       CHECK(r.settings.diffusion() == expected);
@@ -1743,7 +1648,7 @@ void TestDiffusionStorage() {
       r.settings.SaveState();
       Settings loaded;
       CHECK(loaded.Init(false));
-      CHECK(loaded.state().diffusion == raw);
+      CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == raw);
       CHECK(loaded.diffusion_assigned() == assignable);
       CHECK(!loaded.width_assigned());
       CHECK(loaded.state().assignable_cv_destination == (assignable ? 0 : 2));
@@ -1757,9 +1662,9 @@ void TestDiffusionStorage() {
   CHECK(r.settings.diffusion_assigned());
   r.settings.set_diffusion(0.0f);  // No diffusion left to modulate.
   CHECK(!r.settings.diffusion_assigned());
-  CHECK(r.settings.state().diffusion == 1);
+  CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) == 1);
   r.settings.set_diffusion(1.02f);  // A pot reading past the end.
-  CHECK(r.settings.state().diffusion == 255);
+  CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) == 255);
 }
 
 void TestDiffusionAssignCycle() {
@@ -1836,7 +1741,7 @@ void TestWidthGestureAndMeter() {
   CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 0);  // The meter, not quality.
   // Every code on Beads' meter, below its wrap at 1.0.
   for (int width = 0; width <= 255; ++width) {
-    r.settings.mutable_state()->stereo_width = width;
+    r.settings.values_[FEATURE_WIDTH] = width;
     r.ui.UpdateLeds();
     Leds meter;
     meter.Init();
@@ -1862,7 +1767,7 @@ void TestWidthGestureAndMeter() {
   r.Up(SWITCH_MEDIA);
   CHECK(r.settings.state().media == media);
   CHECK(r.gain.restarts == 0);
-  CHECK(test_writes == writes + 1);
+  CHECK(test_writes == writes + kRecordWords + 1);
   const StereoWidth width = r.settings.stereo_width();
   CHECK(width > 1);
   Settings loaded;
@@ -1877,7 +1782,7 @@ void TestWidthGestureAndMeter() {
   r.Enter();
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
-      CHECK(kOptionPages[page].knobs[knob] != OPTION_RESERVED ||
+      CHECK(kOptionPages[page].knobs[knob] != FEATURE_NONE ||
           page == 0 || page >= 3);
     }
   }
@@ -1888,11 +1793,11 @@ void TestWidthGestureAndMeter() {
 
 void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
-  const OptionSetting expected[4][3] = {
-    { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS },
-    { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB },
-    { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
-    { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER }
+  const ProfileFeature expected[4][3] = {
+    { FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS },
+    { FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB },
+    { FEATURE_PROCESSOR, FEATURE_SYNTH, FEATURE_SYNTH_START },
+    { FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_LIMITER }
   };
   CHECK(kNumOptionPages == 7);
   // Pages 1-3 light one LED, then two together, then all three.
@@ -1900,7 +1805,7 @@ void TestOptionsTablesAndLifetime() {
   for (int page = 0; page < kNumOptionPages; ++page) {
     CHECK(kOptionPages[page].leds == masks[page]);
     for (int knob = 0; knob < 3; ++knob) {
-      CHECK((kOptionPages[page].knobs[knob] == OPTION_RESERVED) == (page >= 4));
+      CHECK((kOptionPages[page].knobs[knob] == FEATURE_NONE) == (page >= 4));
     }
   }
   Rig r(false);
@@ -1953,7 +1858,7 @@ void TestOptionsKnobsAndSettling() {
         r.Tap();
       }
       float* pot = knob == 0 ? &r.feedback : knob == 1 ? &r.pot : &r.reverb;
-      const OptionSetting setting = kOptionPages[page].knobs[knob];
+      const ProfileFeature setting = kOptionPages[page].knobs[knob];
       const State state = r.settings.state();
       const uint32_t writes = test_writes;
       *pot = 0.59f;
@@ -1962,7 +1867,7 @@ void TestOptionsKnobsAndSettling() {
       CHECK(test_writes == writes);
       *pot = 0.9f;
       r.Tick(100, true);
-      if (setting == OPTION_RESERVED) {
+      if (setting == FEATURE_NONE) {
         CHECK(!r.ui.options_.qualified_[knob]);
         CHECK(!memcmp(&state, &r.settings.state(), sizeof(state)));
         r.Tick(2000, true);
@@ -1979,24 +1884,24 @@ void TestOptionsKnobsAndSettling() {
       r.Tick(999, true);
       CHECK(test_writes == writes);
       r.Tick(2, true);
-      CHECK(test_writes == writes + 1);
+      CHECK(test_writes == writes + kRecordWords);
       CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
-      CHECK(r.ui.options_.Value(setting) == (setting == OPTION_PITCH
-          ? int(r.settings.pitch_scale()) : setting == OPTION_DELAY
-          ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
-          ? r.settings.clouds_style() : setting == OPTION_PROCESSOR
-          ? r.settings.spectral() : setting == OPTION_SYNTH_START
-          ? r.settings.self_play_on_request() : setting == OPTION_INTERVALS
-          ? int(r.settings.random_intervals()) : setting == OPTION_FROZEN
-          ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
-          ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
-          ? int(r.settings.attack_mode()) : setting == OPTION_BRIGHTNESS
+      CHECK(r.ui.options_.Value(setting) == (setting == FEATURE_PITCH
+          ? int(r.settings.pitch_scale()) : setting == FEATURE_DELAY
+          ? int(r.settings.delay_mode()) : setting == FEATURE_REVERB
+          ? r.settings.clouds_style() : setting == FEATURE_PROCESSOR
+          ? r.settings.spectral() : setting == FEATURE_SYNTH_START
+          ? r.settings.self_play_on_request() : setting == FEATURE_INTERVALS
+          ? int(r.settings.random_intervals()) : setting == FEATURE_FROZEN
+          ? r.settings.evolving_feedback() : setting == FEATURE_SYNTH
+          ? r.settings.plaits_synth() : setting == FEATURE_ATTACKS
+          ? int(r.settings.attack_mode()) : setting == FEATURE_BRIGHTNESS
           ? r.settings.FeatureValue(FEATURE_BRIGHTNESS)
-          : setting == OPTION_SEED_LATCH
+          : setting == FEATURE_SEED_LATCH
           ? r.settings.FeatureValue(FEATURE_SEED_LATCH)
           : int(r.settings.output_limiter_mode())));
       r.Tick(5000, true);
-      CHECK(test_writes == writes + 1);
+      CHECK(test_writes == writes + kRecordWords);
       CHECK(r.ui.options_.active());
     }
   }
@@ -2016,7 +1921,7 @@ void TestOptionsKnobsAndSettling() {
     r.Tick(1000, true);
     CHECK(!r.ui.options_.active());
     CHECK(r.settings.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + kRecordWords);
   }
 }
 
@@ -2027,13 +1932,13 @@ void TestOptionsSeed() {
   saved.Enter();
   saved.Down(SWITCH_SEED);
   saved.Up(SWITCH_SEED);
-  CHECK(saved.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(saved.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   CHECK(!saved.ui.options_.qualified_[0]);
   Rig r(false);
   r.Enter();
   r.feedback = .9f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   const bool seed_state = r.ui.seed_button_state_;
   const bool seed_locked = r.ui.seed_button_locked_;
   for (int i = 0; i < 8; ++i) {
@@ -2046,14 +1951,14 @@ void TestOptionsSeed() {
     r.ui.DoEvents();
     CHECK(r.ui.seed_button_state_ == seed_state);
     CHECK(r.ui.seed_button_locked_ == seed_locked);
-    CHECK(r.ui.options_.pitch_preview() ==
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) ==
         PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 8));
     CHECK(r.ui.options_.active());
   }
   r.Down(SWITCH_SEED);
   r.Tick(600, true);
   r.Up(SWITCH_SEED);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   r.Tick(1001, true);
   CHECK(r.settings.pitch_scale() == PITCH_SCALE_FIFTHS);
 }
@@ -2065,28 +1970,28 @@ void TestOptionsZonesAndSaveBatch() {
   // Pitch thirds, including hysteresis around both boundaries.
   r.feedback = .1f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
   r.feedback = .35f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
   r.feedback = .38f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_CHROMATIC);
   r.feedback = .68f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_CHROMATIC);
   r.feedback = .71f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   r.feedback = .65f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   r.feedback = .62f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_CHROMATIC);
   r.feedback = .29f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
   // Halves retain a value inside the midpoint dead band; two knobs
   // settle in one batch.
   {
@@ -2096,16 +2001,16 @@ void TestOptionsZonesAndSaveBatch() {
     halves.Tick(1, true);
     halves.reverb = .5f;
     halves.Tick(1, true);
-    CHECK(halves.ui.options_.clouds_preview());
+    CHECK(halves.ui.options_.Value(FEATURE_REVERB));
     halves.reverb = .46f;
     halves.Tick(1, true);
-    CHECK(!halves.ui.options_.clouds_preview());
+    CHECK(!halves.ui.options_.Value(FEATURE_REVERB));
     halves.reverb = .54f;
     halves.Tick(1, true);
     const uint32_t writes = test_writes;
     halves.feedback = .9f;
     halves.Tick(1001, true);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + kRecordWords);
     CHECK(halves.settings.clouds_style());
     CHECK(halves.settings.evolving_feedback());
     Settings loaded;
@@ -2118,7 +2023,7 @@ void TestOptionsZonesAndSaveBatch() {
   CHECK(r.ui.options_.commit_requested());
   r.feedback = .1f;
   r.Tick(2000, false);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   // Exit remains responsive even if main is delayed by a flash operation.
   test_down[SWITCH_MEDIA] = true;
   r.Tick(8, false);
@@ -2133,20 +2038,40 @@ void TestOptionsZonesAndSaveBatch() {
 
 void TestOptionsPalette() {
   test_checker.Start("TestOptionsPalette");
-  for (size_t i = 1; i < kNumOptionValues; ++i) {
-    const OptionValue& v = kOptionValues[i];
+  // Every page value lights, shared colours included; pitch up to Raag Shri.
+  OptionValue values[64];
+  size_t count = 0;
+  for (int i = 0; i < kNumPageFeatures; ++i) {
+    const ProfileFeature f = kPageFeatures[i];
+    const int n = f == FEATURE_PITCH
+        ? int(PITCH_SCALE_LAST) : int(kFeatureDefinitions[f].values);
+    for (int value = 0; value < n && count < 64; ++value) {
+      const OptionValue v = FindOptionValue(f, value);
+      CHECK(v.setting == f && v.value == value);
+      values[count++] = v;
+    }
+  }
+  CHECK(count > kNumOptionValues);
+  CHECK(FindOptionValue(FEATURE_PITCH, PITCH_SCALE_LAST).setting ==
+      FEATURE_NONE);
+  // Only page values light, and only the values a feature has.
+  CHECK(FindOptionValue(FEATURE_REVERB, 2).setting == FEATURE_NONE);
+  CHECK(FindOptionValue(FEATURE_ATTACK_SENSITIVITY, 0).setting ==
+      FEATURE_NONE);
+  for (size_t i = 0; i < count; ++i) {
+    const OptionValue& v = values[i];
     CHECK(v.color.r || v.color.g || v.color.b);
     if (v.value == 0) {
       CHECK(v.color.r == 0 && v.color.g == 255 &&
           v.color.b == 0 && v.pulses == 0);
     }
-    if (v.setting != OPTION_PITCH) {
+    if (v.setting != FEATURE_PITCH) {
       CHECK(v.color.b == 0);
       CHECK((v.color.r == 0 && v.color.g == 255) ||
           (v.color.r == 255 && (v.color.g == 0 || v.color.g == 255)));
     }
-    for (size_t j = i + 1; j < kNumOptionValues; ++j) {
-      const OptionValue& w = kOptionValues[j];
+    for (size_t j = i + 1; j < count; ++j) {
+      const OptionValue& w = values[j];
       if (v.setting == w.setting) {
         CHECK(v.color.r != w.color.r || v.color.g != w.color.g ||
             v.color.b != w.color.b || v.pulses != w.pulses);
@@ -2156,52 +2081,11 @@ void TestOptionsPalette() {
   // Renderer consumes the table at every phase of its pulse period.
   Rig r(false);
   r.Enter();
-  for (size_t i = 1; i < kNumOptionValues; ++i) {
-    const OptionValue& v = kOptionValues[i];
+  for (size_t i = 0; i < count; ++i) {
+    const OptionValue& v = values[i];
     r.ui.options_.selected_ = v.setting;
-    switch (v.setting) {
-      case OPTION_BRIGHTNESS:
-      case OPTION_SEED_LATCH:
-      case OPTION_TIME_SCAN:
-        r.ui.options_.profile_preview_[v.setting] = v.value;
-        break;
-      case OPTION_PITCH:
-        r.ui.options_.pitch_preview_ = PitchScale(v.value);
-        break;
-      case OPTION_REVERB:
-        r.ui.options_.clouds_preview_ = v.value;
-        break;
-      case OPTION_DELAY:
-        r.ui.options_.delay_preview_ = DelayMode(v.value);
-        break;
-      case OPTION_PROCESSOR:
-        r.ui.options_.spectral_preview_ = v.value;
-        break;
-      case OPTION_SYNTH_START:
-        r.ui.options_.manual_start_preview_ = v.value;
-        break;
-      case OPTION_INTERVALS:
-        r.ui.options_.intervals_preview_ = RandomIntervals(v.value);
-        break;
-      case OPTION_SYNTH:
-        r.ui.options_.plaits_preview_ = v.value;
-        break;
-      case OPTION_LIMITER:
-        r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
-        break;
-      case OPTION_FROZEN:
-        r.ui.options_.evolving_preview_ = v.value;
-        break;
-      case OPTION_ATTACKS:
-        r.ui.options_.attack_preview_ = AttackMode(v.value);
-        break;
-      default:
-        break;
-    }
+    r.ui.options_.preview_[v.setting] = v.value;
     const OptionValue& indication = r.ui.options_.indication();
-    if (v.setting != OPTION_PITCH || v.value < PITCH_SCALE_FIFTHS) {
-      CHECK(&indication == &v);
-    }
     CHECK(indication.setting == v.setting && indication.value == v.value);
     CHECK(indication.color.r == v.color.r && indication.color.g == v.color.g &&
         indication.color.b == v.color.b && indication.pulses == v.pulses);
@@ -2216,7 +2100,7 @@ void TestOptionsPalette() {
           (v.pulses == 1 && now % 1024 < 512) ||
           (v.pulses == 2 && now % 256 < 128) ||
           (v.pulses == 3 && (phase < 128 || (phase >= 256 && phase < 384)));
-      const uint8_t level = r.ui.options_.Value(OPTION_BRIGHTNESS);
+      const uint8_t level = r.ui.options_.Value(FEATURE_BRIGHTNESS);
       const int percent = level == 0 ? 100 : level == 1 ? 66 : 33;
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
           (lit ? DimmedMedia(0, v.color.r, percent) : 0));
@@ -2238,7 +2122,7 @@ void TestOptionsConfirmations() {
   r.reverb = .9f;  // Ends the preview.
   r.Tick(1010, true);
   CHECK(r.ui.options_.preview_knob() == -1);
-  CHECK(test_writes == writes + 1);
+  CHECK(test_writes == writes + kRecordWords);
   CHECK(r.ui.options_flash_time_ != entry);
   CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1] == 255);
   const uint32_t saved = r.ui.options_flash_time_;
@@ -2274,7 +2158,9 @@ void TestOptionsPreview() {
   r.settings.set_evolving_feedback(false);
   r.ui.LoadOptions();
   r.EnterPage(1);
-  const OptionSetting order[3] = { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB };
+  const ProfileFeature order[3] = {
+    FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB
+  };
   const int values[3] = { 0, DELAY_MODE_WIDE_DETENT, 1 };
   for (int knob = 0; knob < 3; ++knob) {
     CHECK(r.ui.options_.preview_knob() == knob);
@@ -2285,7 +2171,7 @@ void TestOptionsPreview() {
     r.Tick(2048 - 1, true);
   }
   CHECK(r.ui.options_.preview_knob() == -1);
-  CHECK(r.ui.options_.indication().setting == OPTION_FROZEN);
+  CHECK(r.ui.options_.indication().setting == FEATURE_FROZEN);
   // Page four previews brightness, latch and limiter; a knob ends preview.
   r.Tap();
   r.Tap();
@@ -2299,10 +2185,10 @@ void TestOptionsPreview() {
   r.reverb = .9f;
   r.Tick(1, true);
   CHECK(r.ui.options_.preview_knob() == -1);
-  CHECK(r.ui.options_.indication().setting == OPTION_ATTACKS);
+  CHECK(r.ui.options_.indication().setting == FEATURE_ATTACKS);
   const uint32_t writes = test_writes;
   r.Tick(1100, true);
-  CHECK(test_writes == writes + 1);
+  CHECK(test_writes == writes + kRecordWords);
   // Each shown value starts its blink pattern, even on the same setting.
   Rig phase(false);
   phase.Enter();
@@ -2347,10 +2233,10 @@ void TestPendingSeed() {
     }
     test_down[SWITCH_SEED] = false;
     r.Tick(20, false);
-    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
     r.ui.DoEvents();
     r.Tick(1, true);
-    CHECK(r.ui.options_.pitch_preview() ==
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) ==
         (hold ? PITCH_SCALE_FIFTHS : PITCH_SCALE_MAJOR));
     r.Tick(1001, true);
     CHECK(r.settings.pitch_scale() ==
@@ -2370,7 +2256,7 @@ void TestPendingSeed() {
   before.Tick(620, false);
   before.ui.DoEvents();
   before.Tick(1, true);
-  CHECK(before.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(before.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   before.Tick(1001, true);
   CHECK(before.settings.pitch_scale() == PITCH_SCALE_MAJOR);
 }
@@ -2397,7 +2283,7 @@ void TestPendingExitButtons() {
   CHECK(r.ui.freeze_button_state_ != frozen);
   r.Tick(1001, true);
   CHECK(r.settings.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
-  CHECK(test_writes == writes + 1);
+  CHECK(test_writes == writes + kRecordWords);
 }
 
 void CustomProfile(uint8_t* b, int id, int page, int amount, int action) {
@@ -2617,7 +2503,7 @@ void TestOptionsIdleTimeout() {
     r.Up(SWITCH_SEED);
     CHECK(Idle(&r, 4900));
     CHECK(!Idle(&r, 120));
-    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   }
   {
     Rig r(false);
@@ -2643,9 +2529,9 @@ void TestOptionsIdleTimeout() {
     r.Tick(100, true);
     CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
     CHECK(r.settings.attack_mode() != mode);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + kRecordWords);
     r.Tick(60000, true);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + kRecordWords);
   }
 }
 
@@ -2764,10 +2650,7 @@ void TestCustomScalePersistenceAndLeds() {
   r.settings.set_pitch_scale(PitchScale(15));
   r.settings.SaveState();
   CHECK(r.settings.pitch_scale() == 15);
-  CHECK(r.settings.state().pitch_scale == 0xaf);
-  CHECK((reinterpret_cast<const uint8_t*>(&r.settings.stored_state_)[10] & 15)
-      == 15);
-  CHECK(r.settings.stored_state_.padding[0] == kSettingsFormat);
+  CHECK(StoredByte(r.settings, FEATURE_PITCH) == 15);  // A plain byte.
   // Cycle order is independent of the permanent saved ID.
   uint8_t record[kScaleRecordSize];
   memcpy(record, b + 22, sizeof(record));
@@ -2780,7 +2663,7 @@ void TestCustomScalePersistenceAndLeds() {
   r.Enter();
   r.Down(SWITCH_SEED);
   r.Up(SWITCH_SEED);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   const OptionValue& indication = r.ui.options_.indication();
   CHECK(indication.value == 3 && indication.color.r == 17);
   CHECK(indication.color.g == 83 && indication.color.b == 199);
@@ -2822,10 +2705,10 @@ void TestProfilePages() {
       r.Enter();
       CHECK(r.ui.options_.page() == (slot - 1) / 3);
       CHECK(r.ui.options_.preview_knob() == (slot - 1) % 3);
-      CHECK(r.ui.options_.selected_ == OptionSetting(id));
+      CHECK(r.ui.options_.selected_ == ProfileFeature(id));
       r.Tap();
       CHECK(r.ui.options_.page() == (slot - 1) / 3);
-      r.ui.options_.pitch_preview_ = PITCH_SCALE_FIFTHS;
+      r.ui.options_.preview_[FEATURE_PITCH] = PITCH_SCALE_FIFTHS;
       CHECK(r.ui.options_.seed_allowed() == (id == FEATURE_PITCH));
     }
   }
@@ -2905,8 +2788,8 @@ void TestOptionalPages() {
   r.Enter();
   const int order[] = { 0, 4, 6, 0, 4 };
   const int knob[] = { 0, 1, 2, 0, 1 };
-  const OptionSetting setting[] = {
-    OPTION_PITCH, OPTION_DELAY, OPTION_LIMITER, OPTION_PITCH, OPTION_DELAY
+  const ProfileFeature setting[] = {
+    FEATURE_PITCH, FEATURE_DELAY, FEATURE_LIMITER, FEATURE_PITCH, FEATURE_DELAY
   };
   for (int i = 0; i < 5; ++i) {
     if (i) {
@@ -2961,9 +2844,9 @@ void TestOptionalPages() {
     { FEATURE_BRIGHTNESS, 19 }, { FEATURE_SEED_LATCH, 20 },
     { FEATURE_TIME_SCAN, 21 }, { FEATURE_SYNTH_START, 11 }
   };
-  const OptionSetting first[] = {
-    OPTION_PITCH, OPTION_REVERB, OPTION_DELAY, OPTION_PROCESSOR,
-    OPTION_FROZEN, OPTION_ATTACKS, OPTION_BRIGHTNESS
+  const ProfileFeature first[] = {
+    FEATURE_PITCH, FEATURE_REVERB, FEATURE_DELAY, FEATURE_PROCESSOR,
+    FEATURE_FROZEN, FEATURE_ATTACKS, FEATURE_BRIGHTNESS
   };
   Rig all(false);
   PagesProfile(b, full, 13);
@@ -3153,7 +3036,7 @@ void TestPlaitsBankGesture() {
       r.Down(SWITCH_MEDIA);
       r.Down(SWITCH_FREEZE);
       CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
-      CHECK(test_writes == writes + 1);
+      CHECK(test_writes == writes + kRecordWords);
       CHECK(!r.ui.trim_flag_);
       CHECK(r.ui.freeze_button_state_);
       const Leds::Color color = r.ui.plaits_bank_cues_[banks[i]].color;
@@ -3167,8 +3050,7 @@ void TestPlaitsBankGesture() {
       Settings loaded;
       CHECK(loaded.Init(false));
       CHECK(loaded.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
-      // Field 14 is byte 20's low nibble; field 15 stays unset.
-      CHECK(loaded.stored_state_.engine == (0x90 | banks[i]));
+      CHECK(StoredByte(loaded, FEATURE_PLAITS_BANK) == banks[i]);
     }
     // Each bank has its own colour; the cue lasts half a second.
     const Ui::BankCue* cues = r.ui.plaits_bank_cues_;
@@ -3278,7 +3160,7 @@ void TestProfileAmounts() {
         CHECK(r.settings.stereo_width() == 255);
         CHECK(r.settings.diffusion() == 0.0f);
       } else {
-        CHECK(r.settings.state().diffusion == 255);
+        CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) == 255);
         CHECK(r.settings.stereo_width() == 0);
       }
       // The knob without an amount keeps its stock role during the hold.
@@ -3376,15 +3258,15 @@ void TestProfileToggles() {
         r.Down(button);
         CHECK(r.settings.FeatureValue(feature) == value);
         CHECK(SawToggleValue(&r, feature) == bool(value));
-        CHECK(test_writes == writes + 1);
-        const OptionValue& cue = FindOptionValue(OptionSetting(feature), value);
-        CHECK(cue.setting == OptionSetting(feature) && cue.value == value);
+        CHECK(test_writes == writes + kRecordWords);
+        const OptionValue& cue = FindOptionValue(feature, value);
+        CHECK(cue.setting == feature && cue.value == value);
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == cue.color.r);
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == cue.color.g);
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == cue.color.b);
         r.Up(button);
         r.Up(SWITCH_MEDIA);
-        CHECK(test_writes == writes + 1);
+        CHECK(test_writes == writes + kRecordWords);
         CHECK(r.settings.state().media == media);
         CHECK(!r.ui.freeze_button_state_ && !r.ui.trim_flag_);
         CHECK(!r.settings.state().monophonic_mode);
@@ -3480,12 +3362,13 @@ void TestFeedbackAmountSlot() {
         } else if (k == 1) {
           CHECK(r.settings.stereo_width() == 255);
         } else {
-          CHECK(r.settings.state().diffusion == 255);
+          CHECK(r.settings.FeatureValue(FEATURE_DIFFUSION) == 255);
         }
         CHECK(r.ui.mix_parameter(knobs[knob[k]]) == 0.5f);
         CHECK(test_writes == writes);
         r.Up(SWITCH_MEDIA);
-        CHECK(test_writes == writes + 1);
+        // The gain's save also records the new profile's identity.
+        CHECK(test_writes == writes + kRecordWords + 1);
         CHECK(r.gain.restarts == 0);
         CHECK(r.settings.state().media == media);
       }
@@ -3493,7 +3376,7 @@ void TestFeedbackAmountSlot() {
       CHECK(loaded.Init(false, b));
       CHECK(loaded.state().gain == 192);
       CHECK(loaded.stereo_width() == 255);
-      CHECK(loaded.state().diffusion == 255);
+      CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == 255);
       // A hold alone still restarts automatic gain.
       r.Down(SWITCH_MEDIA);
       r.Tick(1600, true);
@@ -3749,7 +3632,7 @@ void TestBetaOptionsLeds() {
     preview.Tick(40, true);
     CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) ==
           (i ? preview_values[i - 1] : 0));
-    CHECK(preview.ui.options_.Value(OPTION_BRIGHTNESS) == level);
+    CHECK(preview.ui.options_.Value(FEATURE_BRIGHTNESS) == level);
     CHECK(preview.ui.leds_.intensity_[LED_ASSIGN_1] ==
           255 * percentages[level] / 100);
     preview.Tick(1002, true);
@@ -3809,7 +3692,7 @@ void TestBetaOptionPages() {
         }
         r.Tick(40, true);
         if (f == 0) {
-          CHECK(r.ui.options_.Value(OPTION_BRIGHTNESS) == value);
+          CHECK(r.ui.options_.Value(FEATURE_BRIGHTNESS) == value);
           const int percent[] = { 100, 66, 33 };
           CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
               DimmedMedia(0, value ? 255 : 0, percent[value]));
@@ -3918,9 +3801,9 @@ void TestOptionsEntryChoices() {
     const AttackMode mode = r.settings.attack_mode();
     r.reverb = 0.9f;
     r.Tick(1, true);
-    CHECK(r.ui.options_.indication().setting == OPTION_ATTACKS);
+    CHECK(r.ui.options_.indication().setting == FEATURE_ATTACKS);
     r.Tick(1100, true);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + kRecordWords);
     CHECK(r.settings.attack_mode() != mode);
     Close(&r);
     r.Enter();
@@ -3955,7 +3838,7 @@ void TestOptionsEntryChoices() {
     CHECK(r.ui.options_.stage() == Options::STAGE_WAIT_RELEASE);
     CHECK(r.ui.options_.page() == 0);
     CHECK(r.ui.options_flash_page_ == 0);
-    CHECK(r.ui.options_.indication().setting == OPTION_PITCH);
+    CHECK(r.ui.options_.indication().setting == FEATURE_PITCH);
     r.Up(SWITCH_ASSIGN);
     CHECK(r.ui.options_.page() == 0);
     CHECK(r.ui.options_.preview_knob() == 0);
@@ -3991,19 +3874,19 @@ void TestOptionsEntryChoices() {
     r.Enter();
     CHECK(r.ui.options_.page() == 4);
     CHECK(r.ui.options_.preview_knob() == -1);
-    CHECK(r.ui.options_.indication().setting == OPTION_DELAY);
+    CHECK(r.ui.options_.indication().setting == FEATURE_DELAY);
     CheckPageLeds(&r, 4);
     r.Tap();
     CHECK(r.ui.options_.page() == 6);
-    CHECK(r.ui.options_.indication().setting == OPTION_LIMITER);
+    CHECK(r.ui.options_.indication().setting == FEATURE_LIMITER);
     Close(&r);
     r.Enter();
     CHECK(r.ui.options_.page() == 4);
   }
 
   // The same edit writes the same settings with the choices on or off; only
-  // the profile identity (fields 16 and 18) names the other profile.
-  State saved[2];
+  // the profile identity names the other profile.
+  OptionsRecord saved[2];
   for (int on = 0; on < 2; ++on) {
     Rig r(false);
     if (on) {
@@ -4016,13 +3899,12 @@ void TestOptionsEntryChoices() {
     r.reverb = 0.9f;
     r.Tick(1100, true);
     Close(&r);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + 2);  // One record, no state.
     CHECK(r.settings.attack_mode() != mode);
-    saved[on] = r.settings.stored_state_;
-    saved[on].synth_engine &= 0xf0;
-    saved[on].random_intervals &= 0xf0;
+    saved[on] = r.settings.stored_record_;
+    saved[on].profile_identity = 0;
   }
-  CHECK(!memcmp(&saved[0], &saved[1], sizeof(State)));
+  CHECK(!memcmp(&saved[0], &saved[1], sizeof(OptionsRecord)));
 }
 
 int main() {

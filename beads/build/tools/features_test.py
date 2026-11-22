@@ -42,7 +42,8 @@ import features
 ROOT = pathlib.Path('.')
 FILES = [features.MANIFEST, features.FROZEN, features.CATALOGUE,
     'beads/profile.h', 'beads/profile.cc', 'beads/options.h',
-    'beads/options.cc', 'beads/build/tools/options_tables.cc']
+    'beads/options.cc', 'beads/build/tools/options_tables.cc',
+    'beads/settings.h', 'beads/settings.cc']
 
 
 def outcome(directory, path, before, after):
@@ -96,7 +97,8 @@ faults = [
       '{"name": "Fast release", "led": [255, 255, 0]}',
       '{"name": "Hard clip", "led": [255, 255, 0]}'),
   ('Frozen ID 8: value meanings', features.MANIFEST,
-      '{"name": "Snap and trigger", "led": [255, 0, 0]}', '{"name": "Snap"}'),
+      '{"name": "Snap and trigger", "led": [255, 0, 0]}',
+      '{"name": "Snap", "led": [255, 0, 0]}'),
   ('without gaps', features.MANIFEST, RESONATOR,
       RESONATOR.replace('41', '43')),
   ('reserved for Rings polyphony', features.MANIFEST, LAST,
@@ -112,21 +114,51 @@ faults = [
       '{ FEATURE_TRIM, PROFILE_FIXED, 1, 0,',
       '{ FEATURE_TRIM, PROFILE_FIXED, 0, 0,'),
   ('stale', 'beads/options.cc',
-      'OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS',
-      'OPTION_INTERVALS, OPTION_PITCH, OPTION_ATTACKS'),
+      'FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS',
+      'FEATURE_INTERVALS, FEATURE_PITCH, FEATURE_ATTACKS'),
   ('stale', 'beads/options.cc',
-      '{ OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
-      '{ OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
+      '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
+      '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
   ('stale', 'beads/options.h',
-      'kNumOptionValues = 42;', 'kNumOptionValues = 43;'),
+      'kNumOptionValues = 10;', 'kNumOptionValues = 11;'),
+  ('stale', 'beads/options.h',
+      'PAGE_VALUES_DELAY = 3,', 'PAGE_VALUES_DELAY = 4,'),
+  ('stale', 'beads/options.cc',
+      'PAGE_CONTROL_STEPS,  // Brightness.',
+      'PAGE_CONTROL_ZONES,  // Brightness.'),
+  ('stale', 'beads/options.cc', '  { 255, 0, 0 }\n};', '  { 255, 0, 32 }\n};'),
+  # A value that leaves the shared colours is listed.
+  ('stale', features.MANIFEST,
+      '{"name": "Evolving", "led": [255, 255, 0]}',
+      '{"name": "Evolving", "led": [255, 0, 0]}'),
+  ('Zones: REVERB', features.MANIFEST,
+      '"field": 1,\n      "saved": 9,\n'
+      '      "states": ["Off", "Fixed", "Adjustable"],\n'
+      '      "page": true,\n      "page_control": "halves",',
+      '"field": 1,\n      "saved": 9,\n'
+      '      "states": ["Off", "Fixed", "Adjustable"],\n'
+      '      "page": true,\n      "page_control": "zones",'),
+  ('Page values 0-2 light: LIMITER', features.MANIFEST,
+      '{"name": "Off", "led": [255, 0, 0]}', '{"name": "Off"}'),
   ('stale', 'beads/build/tools/options_tables.cc',
       '"Synth reverb tail",', '"Synth tail",'),
   ('stale', features.CATALOGUE,
       '"name": "Resonator",', '"name": "Rings resonator",'),
+  # The options record: each version's layout is frozen.
+  ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 24,'),
+  ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),
+  ('Saved: PITCH', features.MANIFEST, '"saved": 8,\n', ''),
+  ('Freeze record layout 2', features.MANIFEST,
+      '"record_version": 1,', '"record_version": 2,'),
+  ('a full byte needs a new version', features.FROZEN, '[12, 19], ', ''),
+  ('append after the frozen bytes', features.FROZEN, '[1, 8], ', ''),
+  ('stale', 'beads/settings.cc', '  9,  // Reverb.', '  10,  // Reverb.'),
+  ('stale', 'beads/settings.h',
+      'kOptionsRecordVersion = 1;', 'kOptionsRecordVersion = 2;'),
   # Values may be appended after the frozen ones.
   ('stale', features.MANIFEST,
-      '{"name": "Snap and trigger", "led": [255, 0, 0]}',
-      '{"name": "Snap and trigger", "led": [255, 0, 0]}, {"name": "Soft"}'),
+      '{"name": "Low"},\n        {"name": "High"}',
+      '{"name": "Low"},\n        {"name": "High"}, {"name": "Highest"}'),
 ]
 with tempfile.TemporaryDirectory(prefix='features-') as directory:
   for expected, path, before, after in faults:
