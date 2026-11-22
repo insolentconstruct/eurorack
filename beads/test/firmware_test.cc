@@ -2677,6 +2677,15 @@ void TestResonatorDampingCv() {
   CHECK(settings.state().assignable_cv_destination == 0);
   r.Tick(200, true);
   CHECK(processor.processor_digital_.feedback_ != feedback[0]);
+  // The synths, where it does not run, return the CV to FEEDBACK.
+  TapAssign(&r);
+  TapAssign(&r);
+  TapAssign(&r);
+  CHECK(ui.resonator_assigned());
+  ui.set_synth_mode(true);
+  SysTick_Handler();
+  CHECK(!ui.resonator_assigned());
+  ui.set_synth_mode(false);
   // Turning the resonator off returns the CV to FEEDBACK.
   TapAssign(&r);
   TapAssign(&r);

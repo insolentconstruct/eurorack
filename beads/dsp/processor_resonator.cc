@@ -38,7 +38,6 @@ using namespace stmlib;
 void Processor::ProcessResonator(
     const RandomizedParameter& pitch,
     bool strike,
-    bool seed_strike,
     FloatFrame* frames,
     size_t size) {
   const float sr = sample_rate();
@@ -76,7 +75,7 @@ void Processor::ProcessResonator(
     excitation[i] = (frames[i].l + frames[i].r) * kResonatorInputGain;
   }
   float strike_pulse = 0.0f;
-  if (seed_strike) {
+  if (strike) {
     // Rings' strum: a pulse through a low-pass that follows brightness.
     const float brightness = resonator_.brightness();
     const float cutoff = min(frequency * SemitonesToRatio(
@@ -84,8 +83,6 @@ void Processor::ProcessResonator(
     strike_filter_.set_f_q<FREQUENCY_DIRTY>(cutoff, 1.5f);
     strike_pulse = 0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
     strike_sounding_ = true;
-  } else if (strike) {
-    excitation[0] += kResonatorStrike;
   }
   if (strike_sounding_) {
     float pulse[size];

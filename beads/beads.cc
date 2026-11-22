@@ -110,6 +110,10 @@ void UpdateResonator() {
       FEATURE_RESONATOR_BRIGHTNESS, material.brightness, 1.0f / 256.0f);
   c.damping = ResonatorValue(FEATURE_RESONATOR_DAMPING,
       kResonatorRingTimes[ui.resonator_ring()], 1.0f / 256.0f);
+  // The CV also reaches FEEDBACK (destination 0): the resonator holds the knob.
+  c.feedback = ui.mix_parameter(Ui::MIX_PARAMETER_FEEDBACK) * 1.005f;
+  CONSTRAIN(c.feedback, 0.0f, 1.0f);
+  c.hold_feedback = ui.resonator_assigned();
   if (ui.resonator_assigned()) {
     c.damping += cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
     // Below the table's last entry, as Rings holds STRUCTURE.
@@ -306,8 +310,7 @@ void Process(
 
   const bool width_assigned = settings.width_assigned();
   const bool diffusion_assigned = settings.diffusion_assigned();
-  const bool mix_assigned = !width_assigned && !diffusion_assigned &&
-      !ui.resonator_assigned();
+  const bool mix_assigned = !width_assigned && !diffusion_assigned;
   const float assign_cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
   float mix_parameter[Ui::MIX_PARAMETER_LAST];
   for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {

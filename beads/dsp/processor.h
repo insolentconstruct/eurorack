@@ -60,9 +60,8 @@ const size_t kDelayBufferSizeBits = 768 * 1000 * 8;
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
-// The grains' mono sum and an input hit strike the resonator.
+// The grains' mono sum excites the resonator.
 const float kResonatorInputGain = 0.5f;
-const float kResonatorStrike = 0.5f;
 // PITCH at noon tunes it to C3.
 const float kResonatorRootNote = 48.0f;
 
@@ -78,6 +77,9 @@ struct ResonatorControls {
   float damping;
   float position;
   float amount;
+  // While the CV moves damping, FEEDBACK is the knob alone.
+  float feedback;
+  bool hold_feedback;
 };
 
 class Processor {
@@ -432,7 +434,6 @@ class Processor {
   void ProcessResonator(
       const RandomizedParameter& pitch,
       bool strike,
-      bool seed_strike,
       FloatFrame* frames,
       size_t size);
   // A hit marked for this block's grains, read before they take it.

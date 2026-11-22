@@ -319,7 +319,8 @@ void Ui::Poll() {
   resonator_ring_ = previewing
       ? options_.Value(FEATURE_RESONATOR_RING)
       : settings_->FeatureValue(FEATURE_RESONATOR_RING);
-  if (!resonator_) {
+  // Off, or in the synths, the CV goes back to FEEDBACK.
+  if (!resonator_ || synth_mode_) {
     resonator_assigned_ = false;
   }
   if (!previewing) {

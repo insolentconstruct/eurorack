@@ -277,7 +277,7 @@ void TestResonatorBank() {
 float TunedFrequency(const RandomizedParameter& pitch) {
   FloatFrame frames[12];
   memset(frames, 0, sizeof(frames));
-  processor.ProcessResonator(pitch, false, false, frames, BlockSize());
+  processor.ProcessResonator(pitch, false, frames, BlockSize());
   return processor.resonator_.frequency_ * processor.sample_rate();
 }
 
@@ -359,8 +359,7 @@ void TestResonatorLevel() {
           frames[i].r = 0.9f * Noise();
           before[i] = frames[i];
         }
-        processor.ProcessResonator(
-            pitch, block % 200 == 0, false, frames, size);
+        processor.ProcessResonator(pitch, block % 200 == 0, frames, size);
         for (size_t i = 0; i < size; ++i) {
           const float l = frames[i].l - before[i].l;
           const float r = frames[i].r - before[i].r;
@@ -406,7 +405,7 @@ void TestResonatorTonalLevel() {
         const size_t size = BlockSize();
         FloatFrame frames[12];
         memset(frames, 0, sizeof(frames));
-        processor.ProcessResonator(pitch, false, false, frames, size);
+        processor.ProcessResonator(pitch, false, frames, size);
         const float f0 = processor.resonator_.frequency_;
         const float f = mode ? 2.0f * f0 * (1.0f + stiffness) : f0;
         float peak = 0.0f;
@@ -418,7 +417,7 @@ void TestResonatorTonalLevel() {
           }
           FloatFrame before[12];
           std::copy(frames, frames + size, before);
-          processor.ProcessResonator(pitch, false, false, frames, size);
+          processor.ProcessResonator(pitch, false, frames, size);
           for (size_t i = 0; i < size; ++i) {
             const float l = frames[i].l - before[i].l;
             const float r = frames[i].r - before[i].r;
@@ -650,7 +649,7 @@ bool Same(const float* a, const float* b, size_t size) {
 
 // The resonance alone for 1 s after one strike, at 48 kHz: its peak, and
 // the second half-second's energy over the first's.
-void StrikeResponse(const ResonatorControls& c, bool seed, float note,
+void StrikeResponse(const ResonatorControls& c, float note,
     float* peak, float* decay) {
   Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
   processor.set_resonator_controls(c);
@@ -663,13 +662,12 @@ void StrikeResponse(const ResonatorControls& c, bool seed, float note,
   for (int block = 0; block < 32000; ++block) {
     FloatFrame frames[12];
     memset(frames, 0, sizeof(frames));
-    processor.ProcessResonator(pitch, false, false, frames, 12);
+    processor.ProcessResonator(pitch, false, frames, 12);
   }
   for (int block = 0; block < 4000; ++block) {
     FloatFrame frames[12];
     memset(frames, 0, sizeof(frames));
-    processor.ProcessResonator(pitch, !block && !seed, !block && seed,
-        frames, 12);
+    processor.ProcessResonator(pitch, !block, frames, 12);
     for (size_t i = 0; i < 12; ++i) {
       *peak = std::max(*peak, std::max(fabsf(frames[i].l),
           fabsf(frames[i].r)));
@@ -699,7 +697,7 @@ void TestResonatorControls() {
     for (int ring = 0; ring < kNumResonatorRingTimes; ++ring) {
       float peak;
       float decay;
-      StrikeResponse(Controls(material, ring), true, 0.0f, &peak, &decay);
+      StrikeResponse(Controls(material, ring), 0.0f, &peak, &decay);
       CHECK(decay > previous * 1.2f);
       CHECK(peak > 0.03f && peak < 0.5f);
       previous = decay;
@@ -722,7 +720,7 @@ void TestResonatorControls() {
       }
       FloatFrame before[12];
       std::copy(frames, frames + 12, before);
-      processor.ProcessResonator(pitch, false, false, frames, 12);
+      processor.ProcessResonator(pitch, false, frames, 12);
       for (size_t i = 0; i < 12; ++i) {
         const float l = frames[i].l - before[i].l;
         const float r = frames[i].r - before[i].r;
@@ -754,7 +752,7 @@ void TestResonatorControls() {
     for (int block = 0; block < 10; ++block) {
       FloatFrame frames[12];
       memset(frames, 0, sizeof(frames));
-      processor.ProcessResonator(pitch, false, !block, frames, 12);
+      processor.ProcessResonator(pitch, !block, frames, 12);
       for (size_t i = 0; i < 12; ++i) {
         resonance[a][block * 12 + i] = frames[i].l;
       }
@@ -779,18 +777,14 @@ void TestResonatorControls() {
   CHECK(processor.resonator_.damping_ == kResonatorRingTimes[0]);
 }
 
-// From silence, SEED's strike is near -8 dBFS from C2 to C5, and louder
-// than a hit's.
-void TestResonatorSeedLevel() {
-  test_checker.Start("TestResonatorSeedLevel");
+// From silence, a strike (SEED or a hit) is near -8 dBFS from C2 to C5.
+void TestResonatorStrikeLevel() {
+  test_checker.Start("TestResonatorStrikeLevel");
   for (int note = -12; note <= 24; note += 12) {
-    float seed_peak;
-    float hit_peak;
+    float peak;
     float decay;
-    StrikeResponse(Controls(1, 1), true, float(note), &seed_peak, &decay);
-    StrikeResponse(Controls(1, 1), false, float(note), &hit_peak, &decay);
-    CHECK(seed_peak > 0.3f && seed_peak < 0.5f);
-    CHECK(seed_peak > 1.5f * hit_peak);
+    StrikeResponse(Controls(1, 1), float(note), &peak, &decay);
+    CHECK(peak > 0.3f && peak < 0.5f);
   }
 }
 
@@ -840,8 +834,8 @@ void TestResonatorSeedEdges() {
   CHECK(!processor.SeedStrike(SEED_BUTTON_STATE_OFF, high, 12));
 }
 
-// Through the block: delay mode keeps SEED for its clock; a hit in the same
-// block adds nothing; frozen, a strike before the buffer is not heard.
+// Through the block: delay mode keeps SEED for its clock; a hit strikes as
+// SEED does, once per block; frozen, a strike before the buffer is not heard.
 void TestResonatorSeedBlock() {
   test_checker.Start("TestResonatorSeedBlock");
   for (int delay = 0; delay < 2; ++delay) {
@@ -859,13 +853,14 @@ void TestResonatorSeedBlock() {
         parameters, mix, input, output, 12);
     CHECK((ResonatorEnergy() > 0.0f) == !delay);
   }
-  float outputs[2][24000];
-  for (int hit = 0; hit < 2; ++hit) {
+  // SEED alone, SEED with a hit, a hit alone: the same strike.
+  float outputs[3][24000];
+  for (int hit = 0; hit < 3; ++hit) {
     Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
     density.base = 0.5f;
     mix.dry_wet = 1.0f;
     for (int block = 0; block < 1000; ++block) {
-      const SeedButtonState state = block == 500
+      const SeedButtonState state = block == 500 && hit != 2
           ? SEED_BUTTON_STATE_ON : SEED_BUTTON_STATE_OFF;
       processor.set_attack_trigger(hit && block == 500);
       processor.Process(state, NULL, freeze, density, parameters, mix, input,
@@ -877,6 +872,7 @@ void TestResonatorSeedBlock() {
     }
   }
   CHECK(Same(outputs[0], outputs[1], 24000));
+  CHECK(Same(outputs[0], outputs[2], 24000));
   float level = 0.0f;
   for (int i = 0; i < 24000; ++i) {
     level = std::max(level, fabsf(outputs[0][i]));
@@ -969,7 +965,7 @@ int main() {
   TestResonatorStrike();
   TestResonatorQualities();
   TestResonatorControls();
-  TestResonatorSeedLevel();
+  TestResonatorStrikeLevel();
   TestResonatorSeedEdges();
   TestResonatorSeedBlock();
   TestResonatorOptionsMatch();

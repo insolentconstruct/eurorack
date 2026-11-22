@@ -271,10 +271,6 @@ class Ui {
   volatile RandomIntervals intervals_mode_;
   volatile StereoWidth stereo_width_;
   volatile DelayMode delay_mode_;
-  volatile uint8_t resonator_;
-  volatile uint8_t resonator_material_;
-  volatile uint8_t resonator_ring_;
-  volatile bool resonator_assigned_;
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
@@ -285,6 +281,11 @@ class Ui {
   };
   static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
   BankCue cue_;
+  // Last, so the audio callback's members keep their places.
+  volatile uint8_t resonator_;
+  volatile uint8_t resonator_material_;
+  volatile uint8_t resonator_ring_;
+  volatile bool resonator_assigned_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

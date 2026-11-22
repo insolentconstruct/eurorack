@@ -659,12 +659,11 @@ noon), not PITCH's randomness; Pitch scale snaps it, and with Recent notes
 it plays the newest note sent to PITCH. Attacks hits also strike it. While FREEZE is on, Snap and trigger hits
 still strike it but Snap hits do not, as they also leave no marks then.
 
-SEED strikes it too, in every Attacks mode, as Rings' strum does: a pulse
-through a low-pass that follows pitch and brightness, at Rings' level. From
-silence String peaks near -8 dBFS from C2 to C5, Wood and Glass at -7 to
--13 dBFS, and Bell, the darkest, near -21 dBFS. A hit's single-sample pulse
-peaks 4 to 19 dB lower than String's strike, higher pitches louder, with a
-click. Unlatched, the button and the jack make one gate, as the grains
+SEED strikes it too, in every Attacks mode. A hit and SEED strike it the
+same way, as Rings' strum does: a pulse through a low-pass that follows
+pitch and brightness, at Rings' level. From silence String peaks near
+-8 dBFS from C2 to C5, Wood and Glass at -7 to -13 dBFS, and Bell, the
+darkest, near -21 dBFS. Unlatched, the button and the jack make one gate, as the grains
 see them, and each rising edge strikes once; a press while the jack is high,
 or a gate while the button is held, does not. Latched, each rising edge at
 the jack strikes it (Sync and Add too; Ignore has no jack), and the press
@@ -699,8 +698,11 @@ With the resonator on, tapping [M] after REVERB (and width and diffusion,
 when they can be assigned) makes the CV input move its damping: FEEDBACK
 and REVERB pulse, and the CV adds to Ring time's or the exact damping,
 held between 0 and 1. The next tap returns to FEEDBACK. Turning the
-resonator off returns the CV to FEEDBACK. It is not saved yet: a power
-cycle starts at FEEDBACK. The controls are updated once a millisecond.
+resonator off, or a synth starting, returns the CV to FEEDBACK. It is not
+saved yet: a power cycle starts at FEEDBACK. The controls are updated once
+a millisecond. While the CV moves damping the audio callback still adds it
+to FEEDBACK, as for destination 0; the resonator's block plays FEEDBACK at
+its knob value instead, so the paths without the resonator are unchanged.
 
 Its own limiter stages it before the mix: a full-scale sine
 tuned to the fundamental or the second mode, C3 to C7, peaks at -6.0 to
