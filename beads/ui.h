@@ -156,6 +156,11 @@ class Ui {
   inline PitchScale pitch_scale() const { return pitch_scale_; }
   inline bool random_intervals() const { return random_intervals_; }
   inline RandomIntervals intervals_mode() const { return intervals_mode_; }
+  inline uint8_t resonator() const { return resonator_; }
+  inline uint8_t resonator_material() const { return resonator_material_; }
+  inline uint8_t resonator_ring() const { return resonator_ring_; }
+  // The assignable CV moves the resonator's damping; not saved yet.
+  inline bool resonator_assigned() const { return resonator_assigned_; }
 
   // The saved engine, applied once the options page has closed.
   inline bool spectral() const { return spectral_; }
@@ -283,6 +288,11 @@ class Ui {
   };
   static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
   BankCue cue_;
+  // Last, so the audio callback's members keep their places.
+  volatile uint8_t resonator_;
+  volatile uint8_t resonator_material_;
+  volatile uint8_t resonator_ring_;
+  volatile bool resonator_assigned_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

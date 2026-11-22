@@ -191,13 +191,16 @@ for setting in ("Reverb character", "Frozen feedback", "Processor",
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
-assert len(values) == 12 and "Stereo width" not in values
+assert len(values["Resonator"]) == 3
+assert len(values["Resonator material"]) == 4
+assert len(values["Resonator ring time"]) == 4
+assert len(values) == 15 and "Stereo width" not in values
 # [A]+DRY/WET width keeps its meter on the guides.
 assert [indication(row) for row in WIDTH_ROWS] == [
     "green; steady", "green → yellow → red"
 ]
 page_numbers = sorted({row.split("\t")[0] for row in rows})
-assert page_numbers == ["1", "2", "3", "4"]
+assert page_numbers == ["1", "2", "3", "4", "5"]
 
 print("Options page map and TSV match firmware tables: PASS")
 
@@ -508,7 +511,11 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX "
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 42
+# Reserved IDs have a placeholder definition and no catalogue row.
+reserved = [row for row in exported if row.split("\t")[1] == "Reserved"]
+assert [int(row.split("\t")[0]) for row in reserved] == []
+exported = [row for row in exported if row not in reserved]
+assert len(catalog["features"]) == len(exported) == 49
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 manifest = json.loads(Path("beads/resources/features.json").read_text())
@@ -547,7 +554,7 @@ for row in rows:
 for setting, labels in shown.items():
     source = next(f for f in manifest["features"]
                   if f.get("label", f["name"]) == setting)
-    feature = catalog["features"][source["id"] - 1]
+    feature = next(f for f in catalog["features"] if f["id"] == source["id"])
     assert feature["values"][:len(labels)] == labels, setting
 print("Profile page catalogue: PASS")
 

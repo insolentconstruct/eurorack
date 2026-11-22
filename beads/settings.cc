@@ -82,8 +82,15 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   0,  // First page.
   0,  // Start quality.
   0,  // Gain knob.
-  0,  // Resonator.
+  24,  // Resonator.
   27,  // Rings polyphony.
+  25,  // Resonator material.
+  26,  // Resonator ring.
+  0,  // Resonator structure.
+  0,  // Resonator brightness.
+  0,  // Resonator damping.
+  0,  // Resonator position.
+  0,  // Resonator amount.
 };
 
 bool Settings::Init(bool recovery_mode) {

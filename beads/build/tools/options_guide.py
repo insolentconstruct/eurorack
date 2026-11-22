@@ -101,8 +101,8 @@ ATTRIBUTION = (
 )
 STEPS = [
     "Open: hold the CV-assign button [M] {hold}; all three mix LEDs pulse. Release.",
-    "Change page: tap [M]. Pages 1-4 pulse FEEDBACK, DRY/WET, REVERB, "
-    "then FEEDBACK and DRY/WET together.",
+    "Change page: tap [M]. Pages 1-5 pulse FEEDBACK, DRY/WET, REVERB, "
+    "FEEDBACK and DRY/WET, then FEEDBACK and REVERB.",
     "[A] shows each stored value in turn. Turn a mix knob (not a big "
     "knob) to change it.",
     "Close: hold [M] {hold} or press another button. On page 1 with Pitch "
@@ -114,12 +114,13 @@ NOTES = [
     "a tenth of its travel before it responds.",
 ]
 CUSTOM_PAGES = (
-    "Custom layouts can add pages 5-7: FEEDBACK and REVERB, DRY/WET and "
-    "REVERB, then all three. Taps skip empty pages."
+    "Custom layouts can add pages 6-7: DRY/WET and REVERB, then all "
+    "three. Taps skip empty pages."
 )
 PRINT_STEPS = [
     "Open: hold [M] {hold} (all mix LEDs pulse), release.",
-    "Tap [M] for pages 1-4: FEEDBACK, DRY/WET, REVERB, then FEEDBACK+DRY/WET.",
+    "Tap [M] for pages 1-5: FEEDBACK, DRY/WET, REVERB, FEEDBACK+DRY/WET, "
+    "then FEEDBACK+REVERB.",
     "[A] shows values; turn a mix knob to edit.",
     "Close: hold [M] {hold} or press another button; release before normal use. "
     "Page 1 Scale: SEED steps.",
@@ -133,6 +134,9 @@ SHORT = {
     "Width (wider →)": "wider →",
     "Beads (Stock)": "Beads",
     "Automatic (Stock)": "Auto",
+    "Off (stock)": "Off",
+    "After the grains": "After",
+    "Before the buffer": "Before",
 }
 # On the printable, with width's card on page 1: [A] gestures off the pages.
 PAGE_GESTURES = ("Manual gain",)
@@ -140,6 +144,7 @@ OFF_PAGES = "Off the pages: "
 # A line under a setting's card in the guides.
 CARD_NOTES = {
     "Processor": "Switching clears the recording.",
+    "Resonator": "SEED and hits strike it.",
     "Random pitch steps": "Relative to PITCH; scale follows.",
 }
 # Stereo width is set with [A]+DRY/WET, outside the pages.
@@ -175,7 +180,7 @@ def read_tsv(data):
         pages.setdefault(row["page"], {}).setdefault(row["knob"], []).append(
             row
         )
-    assert list(pages) == ["1", "2", "3", "4"]
+    assert list(pages) == ["1", "2", "3", "4", "5"]
     assert all(set(page) == set(KNOBS) for page in pages.values())
     return rows, pages
 
@@ -782,7 +787,7 @@ class Drawing:
 SVG_HEADER = """<svg xmlns="http://www.w3.org/2000/svg" {physical}
  viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">
 <title id="title">Drizzlet hidden options guide</title>
-<desc id="desc">Four pages of mix knob settings with quality LED [A] colour and blink
+<desc id="desc">Five pages of mix knob settings with quality LED [A] colour and blink
 indications. Full text version in OPTIONS.md.</desc>
 <metadata>Author: Insolent Construct</metadata>
 <rect width="100%" height="100%" fill="white"/>
@@ -868,6 +873,13 @@ def svg(pages, mobile=False):
     if mobile:
         physical = f'width="390" height="{height}"'
     else:
+        # Scaled to fit one Letter page, centred.
+        if 190 * height / width >= 253.9:
+            fitted = math.ceil(height * 190 / 253.9)
+            shift = (fitted - width) // 2
+            d.items.insert(0, f'<g transform="translate({shift} 0)">')
+            d.items.append("</g>")
+            width = fitted
         print_height = 190 * height / width
         physical = f'width="190mm" height="{print_height:.2f}mm"'
     assert (

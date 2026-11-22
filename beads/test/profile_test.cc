@@ -107,14 +107,14 @@ void TestOptionalPageSlots() {
   CHECK(embedded.Init(kProfileBlock));
   Profile fallback;
   fallback.Defaults();
-  // The factory layout stays on pages 1-4, which Beta 2 also accepts.
+  // The factory layout fills pages 1-5.
   for (int slot = 1; slot < kNumPageSlots; ++slot) {
-    CHECK((embedded.Page(slot) != FEATURE_NONE) == (slot <= 12));
+    CHECK((embedded.Page(slot) != FEATURE_NONE) == (slot <= 15));
     CHECK(fallback.Page(slot) == embedded.Page(slot));
   }
   CHECK(embedded.Page(1) == FEATURE_PITCH);
   uint8_t b[kProfileSize];
-  for (int slot = 13; slot <= kNumPageSlots; ++slot) {
+  for (int slot = 16; slot <= kNumPageSlots; ++slot) {
     Template(b);
     uint8_t* pitch = NULL;
     uint8_t* limiter = NULL;
@@ -354,7 +354,7 @@ void TestBetaProfileDefinitions() {
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    255, 255
+    255, 255, 255, 255, 255, 255, 255, 255, 255
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank and Rings' polyphony; older
@@ -364,22 +364,40 @@ void TestBetaProfileDefinitions() {
   CHECK(factory.Init(b));
   CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
   CHECK(!factory.entry(FEATURE_PLAITS_BANK).value);
+  // Move the bank's entry last, then drop it.
+  uint8_t* bank = b + 16;
+  while (bank[0] != FEATURE_PLAITS_BANK) {
+    bank += 6;
+  }
+  uint8_t last[6];
+  memcpy(last, b + 16 + 6 * (b[5] - 1), 6);
+  memcpy(b + 16 + 6 * (b[5] - 1), bank, 6);
+  memcpy(bank, last, 6);
+  CHECK(b[16 + 6 * (b[5] - 1)] == FEATURE_PLAITS_BANK);
+  --b[5];
+  b[6] -= 6;
+  Checksum(b);
+  CHECK(factory.Init(b));
+  CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
+  CHECK(factory.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
+  // Rings' polyphony too: moved last, dropped, it is still Adjustable at 0.
+  uint8_t* poly = b + 16;
+  while (poly[0] != FEATURE_RINGS_POLYPHONY) {
+    poly += 6;
+  }
   CHECK(factory.adjustable(FEATURE_RINGS_POLYPHONY));
   CHECK(!factory.entry(FEATURE_RINGS_POLYPHONY).value);
-  CHECK(b[16 + 6 * (b[5] - 2)] == FEATURE_PLAITS_BANK);
-  CHECK(b[16 + 6 * (b[5] - 1)] == FEATURE_RINGS_POLYPHONY);
-  for (int older = 0; older < 2; ++older) {
-    --b[5];
-    b[6] -= 6;
-    Checksum(b);
-    CHECK(factory.Init(b));
-    CHECK(factory.adjustable(FEATURE_PLAITS_BANK));
-    CHECK(factory.entry(FEATURE_PLAITS_BANK).feature == FEATURE_PLAITS_BANK);
-    CHECK(factory.adjustable(FEATURE_RINGS_POLYPHONY));
-    CHECK(factory.entry(FEATURE_RINGS_POLYPHONY).feature ==
-        FEATURE_RINGS_POLYPHONY);
-    CHECK(!factory.entry(FEATURE_RINGS_POLYPHONY).value);
-  }
+  memcpy(last, b + 16 + 6 * (b[5] - 1), 6);
+  memcpy(b + 16 + 6 * (b[5] - 1), poly, 6);
+  memcpy(poly, last, 6);
+  --b[5];
+  b[6] -= 6;
+  Checksum(b);
+  CHECK(factory.Init(b));
+  CHECK(factory.adjustable(FEATURE_RINGS_POLYPHONY));
+  CHECK(factory.entry(FEATURE_RINGS_POLYPHONY).feature ==
+      FEATURE_RINGS_POLYPHONY);
+  CHECK(!factory.entry(FEATURE_RINGS_POLYPHONY).value);
   for (int id = FEATURE_VERSION; id < FEATURE_LAST; ++id) {
     CHECK(kFeatureDefinitions[id].field == fields[id - FEATURE_VERSION]);
     for (int state = PROFILE_OFF; state <= PROFILE_ADJUSTABLE; ++state) {
@@ -395,9 +413,13 @@ void TestBetaProfileDefinitions() {
         Profile p;
         // Adjustable needs a page, or a saved field set by a gesture; the
         // Plaits bank and Rings' polyphony are only Adjustable.
+        // A full-byte value (no count) takes any byte; a reserved ID none.
         const bool stepped = id == FEATURE_PLAITS_BANK ||
             id == FEATURE_RINGS_POLYPHONY;
-        const bool valid = value < kFeatureDefinitions[id].values &&
+        const bool valid =
+            kFeatureDefinitions[id].field != kReservedField &&
+            (!kFeatureDefinitions[id].values ||
+            value < kFeatureDefinitions[id].values) &&
             (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page ||
                 kFeatureDefinitions[id].field != kNoField || stepped) &&
             (!stepped || state == PROFILE_ADJUSTABLE);

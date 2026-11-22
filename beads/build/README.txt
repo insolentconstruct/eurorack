@@ -213,11 +213,10 @@ Delay time: Crossfade keeps the delay time while DENSITY turns, then
 fades to the new one instead of bending the pitch; very short delays
 still glide, for flanging. Granular and both synths are unchanged.
 
-A resonator choice keeps stock behaviour by default and adds no panel
-gesture or options-page slot. Resonator: After the grains rings Rings'
-modal resonator on the grains; Before the buffer records the input
-through it, so the grains play the resonance. PITCH tunes it, Pitch
-scale snaps it and Attacks hits strike it. Spectral and both synths are
+A resonator choice keeps stock behaviour by default. Its placement,
+Material and Ring time are on options page 5. Hygrostat can also set
+exact structure, brightness, damping, pickup position and amount, which
+replace the page's values for that control. Spectral and both synths are
 unchanged.
 
 Plaits synth banks: FEEDBACK selects one of the eight models of the
@@ -236,9 +235,8 @@ Options page
 seconds with the mix knobs still, then release. Tap [M] to change pages.
 All three mix LEDs pulse while the entry hold continues; after release,
 the indicated page LEDs pulse. Reopening remembers the page until
-power-off; startup selects page 1. Custom layouts can add pages 5-7
-(FEEDBACK and REVERB, DRY/WET and REVERB, then all three); taps skip
-empty pages.
+power-off; startup selects page 1. Custom layouts can add pages 6-7
+(DRY/WET and REVERB, then all three); taps skip empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its
 knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more
@@ -250,6 +248,7 @@ Page / pulsing LED  FEEDBACK      DRY/WET           REVERB
 2 / DRY/WET         Frozen feedback  Delay mode      Reverb character
 3 / REVERB          Processor     Synth             Synth start
 4 / FEEDBACK and DRY/WET  LED brightness  SEED latch    Limiter
+5 / FEEDBACK and REVERB  Resonator  Resonator material  Resonator ring time
 
 Changes save about a second after turning stops. Wait before power-off.
 Hold [M] for three seconds or press another button to close; mix
@@ -353,6 +352,18 @@ Patching an input stops it once FREEZE is off. With an input patched,
 the same hold restarts automatic gain. The hold acts on release, and not
 at all if a knob or button was used while [A] was down.
 
+Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off
+(Stock), After the grains or Before the buffer, in thirds. DRY/WET picks
+its Material in quarters: Wood, String, Glass or Bell; REVERB its Ring
+time: Short, Medium, Long or Very long, each about four times longer.
+String and Medium are the defaults; page 5 saves like the other pages.
+PITCH tunes it and Pitch scale snaps it. Attacks hits strike it, and so
+does SEED: each press, and each rising gate; latched, each gate. In
+delay mode SEED stays the clock. Before the buffer, a strike while
+frozen is not heard. With the resonator on, tapping [M] after REVERB,
+width and diffusion makes the CV input move its damping, until power-off
+(not saved).
+
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
 1	FEEDBACK	FEEDBACK	Pitch scale	Off	green	steady
@@ -395,6 +406,17 @@ page	LED	knob	setting	value	colour	pulse
 4	FEEDBACK and DRY/WET	REVERB	Limiter	Stock	green	steady
 4	FEEDBACK and DRY/WET	REVERB	Limiter	Fast release	yellow	steady
 4	FEEDBACK and DRY/WET	REVERB	Limiter	Off	red	steady
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	Off (stock)	green	steady
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	After the grains	yellow	steady
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	Before the buffer	red	steady
+5	FEEDBACK and REVERB	DRY/WET	Resonator material	Wood	green	steady
+5	FEEDBACK and REVERB	DRY/WET	Resonator material	String	yellow	steady
+5	FEEDBACK and REVERB	DRY/WET	Resonator material	Glass	red	steady
+5	FEEDBACK and REVERB	DRY/WET	Resonator material	Bell	green	slow (0.98 Hz)
+5	FEEDBACK and REVERB	REVERB	Resonator ring time	Short	green	steady
+5	FEEDBACK and REVERB	REVERB	Resonator ring time	Medium	yellow	steady
+5	FEEDBACK and REVERB	REVERB	Resonator ring time	Long	red	steady
+5	FEEDBACK and REVERB	REVERB	Resonator ring time	Very long	green	slow (0.98 Hz)
 End options reference
 
 Plaits synth

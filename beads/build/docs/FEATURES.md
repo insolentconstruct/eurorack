@@ -81,7 +81,9 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 2–3 | Reserved, 0xFF |
 | 4–7 | The profile that last saved: its CRC-32, 0 for the built-in fallback |
 | 8–23 | One byte per saved option (below) |
-| 24–55 | Reserved, 0xFF |
+| 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
+| 27 | Rings polyphony |
+| 28–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
@@ -112,10 +114,12 @@ freezes each version's offsets.
 | 23 | TIME modulation (#141) | 22 |
 | 31 | Plaits bank (#190) | 23 |
 | 40 | Manual gain knob (#301) | The gain is State byte 5 |
+| 41 | Resonator (#88) | 24 |
 | 42 | Rings polyphony | 27 |
+| 43 | Resonator material (#88) | 25 |
+| 44 | Resonator ring time (#88) | 26 |
 
-Other features are not saved: they always take the profile's value. A build
-without Rings reads Synth value 2 as not set.
+Other features are not saved: they always take the profile's value. A build without Rings reads Synth value 2 as not set. Bytes 24–27 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
 
 Options-only changes (an options page, an [A] gesture, the Plaits bank) append
 a record and leave the settings sector alone; a change to both writes the
@@ -623,8 +627,8 @@ or saved choice; the audio path is unchanged.
 
 ### Resonator
 
-Hygrostat feature ID 41 chooses Off (stock) / After the grains / Before the
-buffer (#88). It adds Rings' modal resonator, 24 modes in stereo (odd modes
+Options page 5 (FEEDBACK and REVERB LEDs) holds Hygrostat feature ID 41,
+Off (stock) / After the grains / Before the buffer (#88), on FEEDBACK. It adds Rings' modal resonator, 24 modes in stereo (odd modes
 left, even modes right), computed in Plaits' batched form with its tuning
 and pickup position updated once per 0.25 ms block, so it is close to
 Rings' but not identical. After the grains, the grains strike it and its
@@ -633,20 +637,63 @@ unchanged. Before the buffer, the input strikes it and the input plus its
 resonance is recorded, so the grains play the resonance; the dry stays dry
 and the feedback loop is not resonated. PITCH and its CV tune it (C3 at
 noon), not PITCH's randomness; Pitch scale snaps it, and with Recent notes
-it plays the newest note sent to PITCH. Attacks hits also strike it; with
-Attacks Off only the sound does. While FREEZE is on, Snap and trigger hits
+it plays the newest note sent to PITCH. Attacks hits also strike it. While FREEZE is on, Snap and trigger hits
 still strike it but Snap hits do not, as they also leave no marks then.
-Structure, brightness, damping and pickup position are fixed (0.25, 0.5,
-0.5, 0.3). Its own limiter stages it before the mix: a full-scale sine
+
+SEED strikes it too, in every Attacks mode. A hit and SEED strike it the
+same way, as Rings' strum does: a pulse through a low-pass that follows
+pitch and brightness, at Rings' level. From silence String peaks near
+-8 dBFS from C2 to C5, Wood and Glass at -7 to -13 dBFS, and Bell, the
+darkest, near -21 dBFS. Unlatched, the button and the jack make one gate, as the grains
+see them, and each rising edge strikes once; a press while the jack is high,
+or a gate while the button is held, does not. Latched, each rising edge at
+the jack strikes it (Sync and Add too; Ignore has no jack), and the press
+that unlatches SEED does not. In delay mode SEED is the clock and strikes
+nothing. Combos that take SEED ([A]+SEED, [M]+SEED, options pages) never
+reach it. A hit and SEED in the same 0.25 ms block strike once, at SEED's
+level. Turning the resonator on with SEED held does not strike it. Before
+the buffer a strike while frozen is not heard: the resonance would only
+be recorded.
+
+Material (ID 43, DRY/WET, quarters) sets structure and brightness: Wood
+(0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They
+were chosen from renders at C2 to C5: on grain-like noise each stays within
+about 2 dB of String on average, Wood about 0.7 octave darker, Glass about
+0.75 octave brighter with stretched partials, Bell strongly stretched. Ring time (ID 44, REVERB,
+quarters) sets damping: Short 0.35, Medium 0.5, Long 0.65, Very long 0.8,
+each step ringing about four times longer (the fundamental about 0.6, 2.3,
+9 and 37 s at 48 kHz; Cold digital rings 1.5 times longer, the tapes twice).
+String and Medium are the fixed values of Beta 4's first resonator, so the
+factory sound is unchanged; both light yellow, second of four. Page 5 saves
+like the other pages, in options record bytes 24 (placement), 25
+(Material) and 26 (Ring time).
+
+Hygrostat can set exact values, IDs 45 to 49 (Fixed only, one byte):
+structure, brightness, damping and pickup position as byte / 256, and amount
+as byte / 128 (128 is unity). An exact value replaces the page's value for
+that control only; Material still sets whichever of structure and
+brightness is not exact, and the page still shows its own step. Hygrostat
+takes Material off the page when structure and brightness are both exact,
+and Ring time when damping is.
+
+With the resonator on, tapping [M] after REVERB (and width and diffusion,
+when they can be assigned) makes the CV input move its damping: FEEDBACK
+and REVERB pulse, and the CV adds to Ring time's or the exact damping,
+held between 0 and 1. The next tap returns to FEEDBACK. Turning the
+resonator off, or a synth starting, returns the CV to FEEDBACK. It is not
+saved yet: a power cycle starts at FEEDBACK. The controls are updated once
+a millisecond. While the CV moves damping the audio callback still adds it
+to FEEDBACK, as for destination 0; the resonator's block plays FEEDBACK at
+its knob value instead, so the paths without the resonator are unchanged.
+
+Its own limiter stages it before the mix: a full-scale sine
 tuned to the fundamental or the second mode, C3 to C7, peaks at -6.0 to
 -5.0 dBFS, and full-scale noise at -12.9 to -3.9 dBFS, at every rate.
 Spectral restarts it from silence; after the synths an old tail can
 resume. Granular and delay; spectral and both synths are unchanged. All 32
 grains still play: on the development
 board, 32 grains plus the resonator measured 77.1% at Bright digital, an
-estimated 88.9% on a module against the 90% limit then in force. Chosen at power-on, with
-no panel slot or saved byte. Its controls, a strike source with
-Attacks Off and any [A] gestures are still to be decided.
+estimated 88.9% on a module against the 90% limit then in force.
 
 ### [A] gestures in profiles
 

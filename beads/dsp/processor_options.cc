@@ -154,7 +154,8 @@ void Processor::ProcessOptions(
   const DelayController::Output* delay_taps = delay_mode ? taps : NULL;
 
   FloatFrame dry_signal[size];
-  const float feedback = mix_parameters.feedback;
+  const float feedback = resonator && resonator_controls_.hold_feedback
+      ? resonator_controls_.feedback : mix_parameters.feedback;
   float loop_feedback = feedback;
   if (unity) {
     // The larger of the block's start and end, as feedback lags a block.
@@ -174,8 +175,12 @@ void Processor::ProcessOptions(
       resonator_sample_rate_ = 0.0f;
     }
   } else {
-    // Hits strike the resonator; read before the grains take their mark.
-    const bool strike = resonator && (attack_trigger_ || AttackOnset());
+    // Hits, read before the grains take their mark, and SEED strike it;
+    // in delay mode SEED is the clock.
+    const bool seed = resonator &&
+        SeedStrike(seed_button_state, seed_input, size) && !delay_mode;
+    const bool strike = resonator &&
+        (seed || attack_trigger_ || AttackOnset());
     FloatFrame resonated[resonator ? size : 1];
     const FloatFrame* recorded = in;
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_INPUT)) {

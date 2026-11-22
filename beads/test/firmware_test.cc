@@ -1748,8 +1748,17 @@ void BuildProfile(uint8_t* block, const uint8_t* pairs, size_t count) {
     const uint8_t entry[] = {
       pairs[2 * i], PROFILE_FIXED, pairs[2 * i + 1], 0, 0, 0
     };
-    memcpy(block + 16 + 6 * block[5], entry, sizeof(entry));
-    ++block[5];
+    // A factory entry for the same feature is replaced.
+    uint8_t* target = block + 16 + 6 * block[5];
+    for (int j = 0; j < block[5]; ++j) {
+      if (block[16 + 6 * j] == pairs[2 * i]) {
+        target = block + 16 + 6 * j;
+      }
+    }
+    if (target == block + 16 + 6 * block[5]) {
+      ++block[5];
+    }
+    memcpy(target, entry, sizeof(entry));
   }
   const size_t bytes = 6 * block[5];
   block[6] = bytes & 255;
@@ -2334,8 +2343,10 @@ void TestPitchLawProfile() {
 void FlashPlaitsBankProfile(uint8_t bank) {
   uint8_t block[kProfileSize];
   BuildProfile(block, NULL, 0);
-  uint8_t* entry = block + 16 + 6 * (block[5] - 2);
-  CHECK(entry[0] == FEATURE_PLAITS_BANK);
+  uint8_t* entry = block + 16;
+  while (entry[0] != FEATURE_PLAITS_BANK) {
+    entry += 6;
+  }
   entry[2] = bank;
   const size_t bytes = 6 * block[5];
   const uint32_t crc = Profile::Crc32(block, 16 + bytes);
@@ -2638,6 +2649,231 @@ void TestResonatorProfile() {
   Rig r(false, false);
   r.Reboot(false);
   CHECK(processor.options_ == 0);
+}
+
+// Tap [A]: a short press, released at once.
+void TapAssign(Rig* r) {
+  test_down[SWITCH_ASSIGN] = true;
+  r->Tick(30, true);
+  test_down[SWITCH_ASSIGN] = false;
+  r->Tick(30, true);
+}
+
+bool ControlsEqual(const ResonatorControls& c, float structure,
+    float brightness, float damping, float position, float amount) {
+  return c.structure == structure && c.brightness == brightness &&
+      c.damping == damping && c.position == position && c.amount == amount;
+}
+
+// Page 5 moves the resonator live and saves; Hygrostat's exact values win.
+void TestResonatorPage() {
+  test_checker.Start("TestResonatorPage");
+  Rig r(false, false);
+  r.Settle();
+  const Profile& profile = settings.profile();
+  CHECK(profile.Page(13) == FEATURE_RESONATOR);
+  CHECK(profile.Page(14) == FEATURE_RESONATOR_MATERIAL);
+  CHECK(profile.Page(15) == FEATURE_RESONATOR_RING);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR) == RESONATOR_OFF);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR_MATERIAL) == 1);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR_RING) == 1);
+  CHECK(processor.options_ == 0);
+  CHECK(!processor.resonator_controls_set_);
+  const uint8_t flags[3] = {
+    0,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS,
+    Processor::OPTION_FLAG_RESONATOR_INPUT
+  };
+  for (int placement = 1; placement < 4; ++placement) {
+    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 3);
+    r.Tick(2, true);
+    CHECK(processor.options_ == flags[placement % 3]);
+  }
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  for (int material = 0; material < 4; ++material) {
+    for (int ring = 0; ring < 4; ++ring) {
+      settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, material);
+      settings.SetFeatureValue(FEATURE_RESONATOR_RING, ring);
+      r.Tick(2, true);
+      CHECK(ControlsEqual(processor.resonator_controls_,
+          kResonatorMaterials[material].structure,
+          kResonatorMaterials[material].brightness,
+          kResonatorRingTimes[ring], kResonatorPosition, 1.0f));
+    }
+  }
+  // Off, the controls are left alone.
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_OFF);
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 1);
+  r.Tick(2, true);
+  CHECK(processor.options_ == 0);
+  CHECK(processor.resonator_controls_.structure ==
+      kResonatorMaterials[3].structure);
+  // Saved: a power cycle brings it back, before the buffer from the start.
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER);
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
+  settings.SetFeatureValue(FEATURE_RESONATOR_RING, 0);
+  settings.SaveOptions();
+  r.Reboot(false);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR) == RESONATOR_BEFORE_BUFFER);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR_MATERIAL) == 3);
+  CHECK(settings.FeatureValue(FEATURE_RESONATOR_RING) == 0);
+  CHECK(processor.options_ == Processor::OPTION_FLAG_RESONATOR_INPUT);
+  r.Settle();
+  CHECK(ControlsEqual(processor.resonator_controls_,
+      kResonatorMaterials[3].structure, kResonatorMaterials[3].brightness,
+      kResonatorRingTimes[0], kResonatorPosition, 1.0f));
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_OFF);
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 1);
+  settings.SetFeatureValue(FEATURE_RESONATOR_RING, 1);
+  settings.SaveOptions();
+  // Exact values replace the curated ones; the others stay curated.
+  const uint8_t exact[] = {
+    FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS,
+    FEATURE_RESONATOR_STRUCTURE, 64,
+    FEATURE_RESONATOR_DAMPING, 10,
+    FEATURE_RESONATOR_POSITION, 255,
+    FEATURE_RESONATOR_AMOUNT, 32
+  };
+  BootWithProfile(&r, exact, 5);
+  CHECK(settings.profile().Page(13) == FEATURE_NONE);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_RESONATOR_GRAINS);
+  CHECK(ControlsEqual(processor.resonator_controls_, 0.25f,
+      kResonatorMaterials[1].brightness, 10.0f / 256.0f, 255.0f / 256.0f,
+      0.25f));
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
+  settings.SetFeatureValue(FEATURE_RESONATOR_RING, 3);
+  r.Tick(2, true);
+  CHECK(ControlsEqual(processor.resonator_controls_, 0.25f,
+      kResonatorMaterials[3].brightness, 10.0f / 256.0f, 255.0f / 256.0f,
+      0.25f));
+  const uint8_t bright[] = {
+    FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER,
+    FEATURE_RESONATOR_BRIGHTNESS, 0
+  };
+  BootWithProfile(&r, bright, 2);
+  r.Settle();
+  CHECK(ControlsEqual(processor.resonator_controls_,
+      kResonatorMaterials[1].structure, 0.0f, kResonatorRingTimes[1],
+      kResonatorPosition, 1.0f));
+}
+
+// [A] taps reach resonator damping after the other destinations, while the
+// resonator is on; the CV then moves damping and no mix knob.
+void TestResonatorDampingCv() {
+  test_checker.Start("TestResonatorDampingCv");
+  Rig r(false, false);
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  r.Settle();
+  // Off, the cycle is stock.
+  for (int tap = 0; tap < 4; ++tap) {
+    TapAssign(&r);
+    CHECK(settings.state().assignable_cv_destination == (tap + 1) % 3);
+    CHECK(!ui.resonator_assigned());
+  }
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  r.Tick(2, true);
+  TapAssign(&r);
+  CHECK(settings.state().assignable_cv_destination == 2);
+  TapAssign(&r);
+  CHECK(ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+  CHECK(!settings.width_assigned() && !settings.diffusion_assigned());
+  // The CV adds to Ring time's damping; FEEDBACK does not move.
+  float feedback[2];
+  for (int step = 0; step < 2; ++step) {
+    r.cv[CV_ADC_CHANNEL_ASSIGN] = step ? 20000 : 32768;
+    r.Tick(200, true);
+    const float cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+    float damping = kResonatorRingTimes[1] + cv;
+    CONSTRAIN(damping, 0.0f, 0.9995f);
+    CHECK(processor.resonator_controls_.damping == damping);
+    CHECK(!step || fabsf(damping - kResonatorRingTimes[1]) > 0.05f);
+    feedback[step] = processor.processor_digital_.feedback_;
+  }
+  CHECK(feedback[0] == feedback[1]);
+  // Held below the end of Rings' damping table.
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 0;
+  r.Tick(200, true);
+  CHECK(processor.resonator_controls_.damping == 0.9995f);
+  // The LEDs show page 5's: FEEDBACK and REVERB pulse, DRY/WET is dark.
+  bool lit = false;
+  for (int ms = 0; ms < 1100; ++ms) {
+    r.Tick(1, false);
+    const uint8_t* led = &ui.leds_.intensity_[LED_ASSIGN_1];
+    CHECK(led[Ui::MIX_PARAMETER_DRY_WET] == 0);
+    CHECK(led[Ui::MIX_PARAMETER_FEEDBACK] == led[Ui::MIX_PARAMETER_REVERB]);
+    lit = lit || led[Ui::MIX_PARAMETER_FEEDBACK] > 128;
+  }
+  CHECK(lit);
+  // Next tap: FEEDBACK again, and the CV moves it.
+  TapAssign(&r);
+  CHECK(!ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+  r.Tick(200, true);
+  CHECK(processor.processor_digital_.feedback_ != feedback[0]);
+  // The synths, where it does not run, return the CV to FEEDBACK.
+  TapAssign(&r);
+  TapAssign(&r);
+  TapAssign(&r);
+  CHECK(ui.resonator_assigned());
+  ui.set_synth_mode(true);
+  SysTick_Handler();
+  CHECK(!ui.resonator_assigned());
+  ui.set_synth_mode(false);
+  // Turning the resonator off returns the CV to FEEDBACK.
+  TapAssign(&r);
+  TapAssign(&r);
+  TapAssign(&r);
+  CHECK(ui.resonator_assigned());
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_OFF);
+  r.Tick(2, true);
+  CHECK(!ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+  // Not saved: a power cycle starts at FEEDBACK.
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  r.Tick(2, true);
+  TapAssign(&r);
+  TapAssign(&r);
+  TapAssign(&r);
+  CHECK(ui.resonator_assigned());
+  r.Reboot(false);
+  CHECK(!ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+}
+
+// Through the audio callback, Attacks Off: a SEED press strikes it; the
+// press that unlatches SEED at power-up does not.
+void TestResonatorSeedCallback() {
+  test_checker.Start("TestResonatorSeedCallback");
+  Rig r(false, false);
+  settings.set_attack_mode(ATTACK_MODE_OFF);
+  settings.SaveState();
+  const uint8_t entry[] = { FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS };
+  BootWithProfile(&r, entry, 1);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
+  r.audio = 0;
+  r.Settle();
+  CHECK(ui.seed_button_locked());
+  CHECK(ResonatorEnergy() == 0.0f);
+  for (int press = 0; press < 2; ++press) {
+    test_down[SWITCH_SEED] = true;
+    r.Tick(20, true);
+    test_down[SWITCH_SEED] = false;
+    r.Tick(20, true);
+    CHECK((ResonatorEnergy() > 0.0f) == bool(press));
+  }
+  // Patched and latched, each edge at the jack strikes it.
+  r.seed_patched = true;
+  BootWithProfile(&r, entry, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_RESONATOR_GRAINS);
+  CHECK(ui.seed_button_locked());
+  CHECK(ResonatorEnergy() == 0.0f);
+  test_seed_input = true;
+  r.Tick(20, true);
+  CHECK(ResonatorEnergy() > 0.0f);
+  test_seed_input = false;
 }
 
 // The factory profile with one feature's action slot moved, as a Hygrostat
@@ -3019,6 +3255,9 @@ int main() {
   TestGrainStealingProfile();
   TestDelayOptionsProfile();
   TestResonatorProfile();
+  TestResonatorPage();
+  TestResonatorDampingCv();
+  TestResonatorSeedCallback();
   TestHoldActionRestartsAutoGain();
   TestManualSynthStartNeedsGesture();
   TestSlowMediaGestures();

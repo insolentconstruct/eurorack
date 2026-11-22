@@ -1868,11 +1868,12 @@ void TestWidthGestureAndMeter() {
 
 void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
-  const ProfileFeature expected[4][3] = {
+  const ProfileFeature expected[5][3] = {
     { FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS },
     { FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB },
     { FEATURE_PROCESSOR, FEATURE_SYNTH, FEATURE_SYNTH_START },
-    { FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_LIMITER }
+    { FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_LIMITER },
+    { FEATURE_RESONATOR, FEATURE_RESONATOR_MATERIAL, FEATURE_RESONATOR_RING }
   };
   CHECK(kNumOptionPages == 7);
   // Pages 1-3 light one LED, then two together, then all three.
@@ -1880,13 +1881,13 @@ void TestOptionsTablesAndLifetime() {
   for (int page = 0; page < kNumOptionPages; ++page) {
     CHECK(kOptionPages[page].leds == masks[page]);
     for (int knob = 0; knob < 3; ++knob) {
-      CHECK((kOptionPages[page].knobs[knob] == FEATURE_NONE) == (page >= 4));
+      CHECK((kOptionPages[page].knobs[knob] == FEATURE_NONE) == (page >= 5));
     }
   }
   Rig r(false);
   r.Enter();
   r.Tick(100, true);  // Entry confirmation has ended.
-  for (int page = 0; page < 4; ++page) {
+  for (int page = 0; page < 5; ++page) {
     CHECK(r.ui.options_.page() == page);
     const int preview = 0;
     CHECK(r.ui.options_.preview_knob() == preview);
@@ -2252,6 +2253,8 @@ void TestOptionsPreview() {
   r.Tap();
   CHECK(r.ui.options_.page() == 3);
   CHECK(r.ui.options_.preview_knob() == 0);
+  r.Tap();
+  CHECK(r.ui.options_.page() == 4);
   r.Tap();
   CHECK(r.ui.options_.page() == 0);
   CHECK(r.ui.options_.preview_knob() == 0);
@@ -2977,8 +2980,8 @@ void TestOptionalPages() {
   locked.ui.LoadOptions();
   locked.Tick(40, true);
   locked.Enter();
-  for (int page = 0; page < 5; ++page) {
-    CHECK(locked.ui.options_.page() == page % 4);
+  for (int page = 0; page < 6; ++page) {
+    CHECK(locked.ui.options_.page() == page % 5);
     locked.Tap();
   }
 
@@ -3071,8 +3074,11 @@ void PlaitsBankProfile(uint8_t* b, int value) {
   for (size_t i = 0; i < kProfileSize; ++i) {
     b[i] = kProfileBlock[i];
   }
-  uint8_t* entry = b + 16 + 6 * (b[5] - 2);
-  CHECK(entry[0] == FEATURE_PLAITS_BANK && entry[1] == PROFILE_ADJUSTABLE);
+  uint8_t* entry = b + 16;
+  while (entry[0] != FEATURE_PLAITS_BANK) {
+    entry += 6;
+  }
+  CHECK(entry[1] == PROFILE_ADJUSTABLE);
   entry[2] = value;
   const size_t size = 16 + 6 * b[5];
   const uint32_t crc = Profile::Crc32(b, size);
@@ -3969,17 +3975,18 @@ void TestOptionsEntryChoices() {
     EntryProfile(b, 1, 0);
     ApplyCustomProfile(&r, b);
     r.Enter();
-    for (int page = 0; page < 5; ++page) {
+    // The factory layout has five pages.
+    for (int page = 0; page < 6; ++page) {
       if (page) {
         r.Tap();
       }
-      CHECK(r.ui.options_.page() == page % 4);
+      CHECK(r.ui.options_.page() == page % 5);
       CHECK(r.ui.options_.preview_knob() == -1);
       CHECK(r.ui.options_.indication().setting ==
-          kOptionPages[page % 4].knobs[0]);
+          kOptionPages[page % 5].knobs[0]);
       CHECK(stmlib::system_clock.milliseconds() -
           r.ui.options_.indication_time() <= 8);
-      CheckPageLeds(&r, page % 4);
+      CheckPageLeds(&r, page % 5);
     }
     // Knobs still take over and save.
     const uint32_t writes = test_writes;

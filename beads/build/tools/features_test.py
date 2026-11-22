@@ -96,7 +96,7 @@ print('Catalogue format 2, manifest digest and record bytes: PASS')
 DIGEST = '"manifest_sha256": "%s"' % catalogue['manifest_sha256']
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features']] == list(range(1, 43))
+assert [r['id'] for r in frozen['features']] == list(range(1, 50))
 assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
 faults = [
@@ -117,9 +117,15 @@ faults = [
       '{"name": "Resonator", "led": [255, 0, 0]}'),
   ('Frozen ID 42', features.MANIFEST,
       '"symbol": "RINGS_POLYPHONY"', '"symbol": "POLYPHONY"'),
+  # A gap is allowed only at a reserved ID.
+  ('without gaps', features.MANIFEST, '"id": 49,\n      "symbol"',
+      '"id": 51,\n      "symbol"'),
   ('stale', 'beads/profile.cc',
-      '{ 3, kNoField, false, false, false, false },  // Resonator.',
-      '{ 4, kNoField, false, false, false, false },  // Resonator.'),
+      '{ 3, kNoField, true, false, false, false },  // Resonator.',
+      '{ 4, kNoField, true, false, false, false },  // Resonator.'),
+  ('stale', 'beads/profile.cc',
+      '{ 3, kNoField, false, false, false, false },  // Rings polyphony.',
+      '{ 4, kNoField, false, false, false, false },  // Rings polyphony.'),
   ('stale', 'beads/profile.h',
       'FEATURE_RESONATOR = 41,', 'FEATURE_RESONATOR = 40,'),
   ('stale', 'beads/profile.cc',
@@ -134,7 +140,7 @@ faults = [
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
   ('stale', 'beads/options.h',
-      'kNumOptionValues = 10;', 'kNumOptionValues = 11;'),
+      'kNumOptionValues = 12;', 'kNumOptionValues = 13;'),
   ('stale', 'beads/options.h',
       'PAGE_VALUES_DELAY = 3,', 'PAGE_VALUES_DELAY = 4,'),
   ('stale', 'beads/options.cc',
@@ -159,7 +165,7 @@ faults = [
   ('stale', features.CATALOGUE,
       '"name": "Resonator",', '"name": "Rings resonator",'),
   # The options record: each version's layout is frozen.
-  ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 24,'),
+  ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 30,'),
   ('Record layout 1: ID 42', features.MANIFEST, '"saved": 27,',
       '"saved": 28,'),
   ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),

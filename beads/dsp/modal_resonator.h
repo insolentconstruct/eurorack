@@ -46,11 +46,23 @@ const int kNumResonatorModes = 24;
 const float kResonatorPeak = 0.5f;
 // Scaled down, a sharp mode stays under the limiter's detector clamp.
 const float kResonatorHeadroom = 1.0f / 16.0f;
-// Fixed structure and damping; Rings' lut_stiffness and lut_4_decades there.
+// The default object: a harmonic, medium-bright string.
 const float kResonatorStructure = 0.25f;
+const float kResonatorBrightness = 0.5f;
 const float kResonatorDamping = 0.5f;
-const float kResonatorStiffness = 0.0f;
-const float kResonatorDecades = 100.0f;
+const float kResonatorPosition = 0.3f;
+
+struct ResonatorMaterial {
+  float structure;
+  float brightness;
+};
+
+const int kNumResonatorMaterials = 4;
+const int kNumResonatorRingTimes = 4;
+
+// The options page's curated values; Hygrostat can set exact ones instead.
+extern const ResonatorMaterial kResonatorMaterials[kNumResonatorMaterials];
+extern const float kResonatorRingTimes[kNumResonatorRingTimes];
 
 class ModalResonator {
  public:
@@ -67,18 +79,36 @@ class ModalResonator {
     frequency_ = frequency;
   }
 
+  inline void set_structure(float structure) {
+    structure_ = structure;
+  }
+
   inline void set_brightness(float brightness) {
     brightness_ = brightness;
+  }
+
+  inline float brightness() const { return brightness_; }
+
+  inline void set_damping(float damping) {
+    damping_ = damping;
   }
 
   inline void set_position(float position) {
     position_ = position;
   }
 
+  // The resonance's level in the mix; 1 is unity.
+  inline void set_amount(float amount) {
+    amount_ = amount;
+  }
+
  private:
   float frequency_;
+  float structure_;
   float brightness_;
+  float damping_;
   float position_;
+  float amount_;
   Limiter limiter_;
 
   plaits::ResonatorSvf<plaits::kModeBatchSize> odd_[kNumResonatorModes / 8];
