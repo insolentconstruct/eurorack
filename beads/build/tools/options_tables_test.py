@@ -457,8 +457,7 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
     out = Path(directory)
     for name in ("test.wav", "combo.bin", "NOTICE.txt"):
         (out / name).write_bytes(b"fixture")
-    (out / "objects/beads").mkdir(parents=True)
-    combo_hex = out / "objects/beads/beads_bootloader_combo.hex"
+    combo_hex = out / "combo.hex"
     for wrong in (WRONG_CONTENT, WRONG_ADDRESS):
         combo_hex.write_text(wrong)
         try:
