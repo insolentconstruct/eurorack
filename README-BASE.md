@@ -7,12 +7,13 @@ Controls, gestures, settings layout and default sound follow that source; a
 copy of the calibration is also kept in bank 2 sector 6, which stock firmware
 leaves unused. Options that master compiles out stay compiled out.
 
-Tested on one 2021 module: installing by audio, playback, the quality button,
+The beads-tuneup-2026.11.20 build was tested on one 2021 module: installing by audio, playback, the quality button,
 delay mode and the one-frame output delay (clean audio up to about 97% of the
 block, no clicks in the historical crackle patch, rate-change clicks about as
 frequent as in beads-tuneup-2026.11.09). Input-patching checks reuse the
 previous build's results for unchanged code. Storage repair is covered by host
-tests, not a module test of this build.
+tests, not a module test of this build. Changes since that release (the
+calibration-mirror order and flash record reads below) are host-tested only.
 
 CPU, peak audio-callback load on that module (timing builds, heavy test
 patches):
@@ -29,7 +30,10 @@ Beads, DSP only; audio and buffer hashes match in all 24 scenarios):
 |---|---:|---:|
 | Vanilla source (GCC 4.9.3) | 99,511 | 82.9% |
 | GCC 9 and the first three optimizations | 90,529 | 75.4% |
-| This branch (with the integer Hermite read) | 82,911 | 69.1% |
+| beads-tuneup-2026.11.09 (with the integer Hermite read) | 82,911 | 69.1% |
+
+The reverb change in beads-tuneup-2026.11.20 saves a further 1,238 cycles on
+the same case (82,838 to 81,600 in its own run).
 
 Changes from master, one line per change:
 
@@ -47,6 +51,8 @@ Changes from master, one line per change:
 - **Behaviour fix:** settings saves check every flash operation and only write onto erased flash. A corrected ECC error left over from an earlier read made the HAL skip the sector erase, and the records were then written over the old ones, leaving a module that crashes at every start ([#149](https://github.com/insolentconstruct/eurorack/issues/149)).
 - **Behaviour fix:** bank 2 (settings and frozen buffer) is read with faults masked, so an uncorrectable ECC word no longer crashes the module at every start; a damaged frozen buffer is skipped ([#148](https://github.com/insolentconstruct/eurorack/issues/148)).
 - **Behaviour fix:** the calibration is copied to bank 2 sector 6 before each settings erase and restored from it when the stored one is lost or implausible, so a save interrupted by a power cut keeps the calibration; at worst the settings return to their defaults. Master instead resets the calibration to factory values and starts the factory test on a damaged calibration record, and resets everything when no settings follow it ([#148](https://github.com/insolentconstruct/eurorack/issues/148)).
+- **Behaviour fix:** a usable calibration copy in bank 2 is erased only while the settings sector holds a usable calibration, read back; otherwise the copy is first written to the settings sector, and left alone if that fails. Before, once a failed restore at power-up had left the settings sector blank, a recalibration erased the only copy, and a power cut during that save lost the calibration ([#317](https://github.com/insolentconstruct/eurorack/issues/317)).
+- Read flash records with a byte copy, so a record needs no word alignment and the reads follow C++ aliasing rules ([#315](https://github.com/insolentconstruct/eurorack/pull/315)).
 - **Behaviour fix:** with both copies of the calibration lost, the module plays on factory calibration and default settings, blinks all LEDs for 3 s at each power-up and writes nothing. SEED held at power-up repairs it (the [A] LED blinks green slowly with the three [M] LEDs lit: repaired, recalibrate; it blinks red fast: failed) and erases damaged frozen-buffer sectors. On a healthy module SEED at power-up resets the settings as in master ([#148](https://github.com/insolentconstruct/eurorack/issues/148)).
 - **Behaviour fix:** no flash erase or write starts while the 3.3 V supply is below the programmable voltage detector's level 6 (about 2.8 V); a save cut short is handled like a power cut. No option bytes change ([#175](https://github.com/insolentconstruct/eurorack/pull/175)).
 - Refuse to link an application that reaches bank 2 ([#155](https://github.com/insolentconstruct/eurorack/issues/155)).

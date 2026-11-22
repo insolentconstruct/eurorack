@@ -5,6 +5,12 @@ change, one line each, is in [README-BASE.md](../../README-BASE.md). Changes
 from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
+## Unreleased
+- Once a failed restore at power-up had left the settings sector blank, a recalibration erased the only copy of the calibration, and a power cut during that save lost it. A usable second copy is now erased only while the settings sector holds a usable calibration (#317).
+- Flash records are read with a byte copy, which needs no word alignment; storage only, no change to the sound (#315).
+- Notes: the 2026.11.20 entry below had the 48 kHz and 24 kHz clean edges swapped; corrected here and in OPTIMIZATIONS.md.
+- Host tests: the test build directory is created before its dependency files, which a parallel build could otherwise fail to write.
+
 ## beads-tuneup-2026.11.20
 - Audio output is one frame later (21 µs at 48 kHz, 31 µs at 32 kHz, 42 µs at 24 kHz). This addresses the likely cause of the historical left-channel click (#1): the audio callback can now run to about the full block instead of stopping a frame short. About 0.1% of the CPU. In uninterrupted playback it is otherwise identical; a quality, mono/stereo or synth change drops the one pending frame, inside the fade. Feedback loops through OUT and IN gain one frame of delay, and audio moves one frame against gates or triggers. On one module the audio stays clean up to 96.9%, 97.3% and 97.7% of the block at 48, 32 and 24 kHz (90.8%, 86.6% and 82.7% before), the historical crackle patch makes no clicks, and a comparison with beads-tuneup-2026.11.09 found no significant increase in the remaining rate-change click (it rules out only a large increase).
 - The reverb uses less CPU, with the same sound: about 1,200 fewer cycles per audio block in the wavetable synth and in the busiest granular case on a development board. On a module, the peak load of a heavy synth patch is now 81–82% (stock 85–86%).

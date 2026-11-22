@@ -95,14 +95,15 @@ values around the entire dump and the full expected sample count. Read SAI
 status before and after capture; pre-existing sticky underrun/overrun flags
 make a new occurrence inconclusive. The decoder checks ABI and histogram
 consistency; it cannot authenticate the running firmware or prove acquisition
-completion. Register the generated ELF, binary and decoder hashes in the bench
-BUILDS table and flash allow-list before a module session.
+completion. Record the generated ELF, binary and decoder hashes before a module
+session.
 
 Offline decoder tests: `python3 -m unittest discover -s beads/build/tools -p test_dwt.py`.
 `structural_dwt.py ROOT` expects `ROOT/release/beads/beads.{elf,bin}` and
 `ROOT/calibration/beads/beads.{elf,bin}`, plus an `oracle` directory alongside
-it from the qualified external oracle (`tools/oracle`, with sibling
-`tools/map`, `tools/recon` and `tools/official`). Run in that prepared offline
+it from a separate oracle tool set (`tools/oracle`, with sibling
+`tools/map`, `tools/recon` and `tools/official`), which is not in this
+repository. Run in that prepared offline
 environment. It tests callback brackets, reset acknowledgment, fixture fills,
 capture stop and flag-on/off audio equality. CYCCNT advances 1000 synthetic
 ticks per read; these are structural results, never CPU measurements. The

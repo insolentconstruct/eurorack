@@ -6,7 +6,7 @@ Mutable Instruments' April 2021 update had the same goal: it fixed a CPU overloa
 
 ## TL;DR
 
-On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These are development-board figures. On a 2021 module, peak audio-callback load (timing builds, heavy test patches) falls from 91% to 76% in granular mode and from 85–86% to 81–82% in the wavetable synth.
+On a development board with the same chip and clock as Beads (DSP only), the busiest stock block takes 82,911 of the 120,000 cycles available (69.1%). The vanilla source takes 99,511 (82.9%) on the same test: 16,600 fewer cycles, 13.8 points of headroom. The later reverb change saves a further 1,238 cycles on that case (82,838 to 81,600 in its own run). Audio and buffer hashes match in all 24 scenarios. The wavetable synth, which those scenarios do not run, takes 89,579 cycles in its busiest case instead of 96,404 (5.7 points). These are development-board figures. On a 2021 module, peak audio-callback load (timing builds, heavy test patches) falls from 91% to 76% in granular mode and from 85–86% to 81–82% in the wavetable synth.
 
 | Build | Cycles of 120,000 | Budget |
 |---|---:|---:|
@@ -180,7 +180,7 @@ These come from Mutable Instruments' code and tech notes ([STM32 miscellania](ht
 1. Specialize on configuration with template parameters: Clouds' grain renderer on channel count, quality and interpolation, stmlib's filter on its type, Warps on FIR templates. It is not always faster, as the freeze template shows.
 2. Look at the data format first. Mutable Instruments' own Beads gain was changing delay-line addresses from 47:16 to 21:10 fixed point, which avoids an int64-to-float conversion.
 3. Keep loop state in registers across the block; watch for state reloaded every sample, aliasing through `this`, and calls inside the sample loop.
-4. Judge the worst block, not the mean. Mutable Instruments toggle a pin around the block callback, design for 80 to 95% of the CPU, and treat 99% of the block as the ceiling. DSP-only, this branch is at about 69% here.
+4. Judge the worst block, not the mean. Mutable Instruments toggle a pin around the block callback, design for 80 to 95% of the CPU, and treat 99% of the block as the ceiling. DSP-only, this branch is at about 68% here.
 
 ### This branch's own rules
 
