@@ -536,10 +536,12 @@ void TestRingsSynthApp() {
   static uint16_t exact_reverb[32768];
   exact.Init(exact_reverb);
   exact.set_entries(&HostInit, &HostConfigure, &HostRender);
-  exact.InitVoices(exact_ram.bytes, CoreSize(), NULL, 0.0f);
+  exact.InitVoices(exact_ram.bytes, CoreSize(), NULL, 2.5f / 12.0f);
+  mix.feedback = 2.5f / 12.0f;
   mix.reverb_amount = 0.0f;
   float worst = 0.0f;
   float loudest = 0.0f;
+  float loudest_aux = 0.0f;
   for (int b = 0; b < 400; ++b) {
     exact.Render(b % 100 ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_ON,
                  NULL, freeze, Synth::RESOLUTION_16_BIT, density, p, mix,
@@ -550,9 +552,11 @@ void TestRingsSynthApp() {
       worst = max(worst, fabsf(out[i].l - a * kRingsGain));
       worst = max(worst, fabsf(out[i].r - c * kRingsGain));
       loudest = max(loudest, fabsf(out[i].l));
+      loudest_aux = max(loudest_aux, fabsf(c));
     }
   }
   CHECK(loudest > 0.05f && loudest < 0.9f);
+  CHECK(loudest_aux > 0.01f);
   CHECK(worst < 1e-6f);
 
   // Unbound: silence, never a call.
