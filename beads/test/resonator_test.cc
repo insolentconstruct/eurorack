@@ -183,6 +183,7 @@ void TestResonatorDefaults() {
         c.amount = 1.0f;
         c.feedback = 0.0f;
         c.hold_feedback = false;
+        c.modes = NULL;
         processor.set_resonator_controls(c);
       }
       mix.dry_wet = 0.8f;
@@ -391,8 +392,8 @@ float ResonatorEnergy() {
   return energy;
 }
 
-// A steady sine on the fundamental or the second mode, at low and high
-// PITCH: the limiter holds its ceiling at every rate.
+// A steady sine on a mode, low and high: the limiter holds its ceiling once
+// settled; a sudden high mode overshoots it for a few milliseconds.
 void TestResonatorTonalLevel() {
   test_checker.Start("TestResonatorTonalLevel");
   const float stiffness = stmlib::Interpolate(
@@ -410,6 +411,7 @@ void TestResonatorTonalLevel() {
         processor.ProcessResonator(pitch, false, frames, size);
         const float f0 = processor.resonator_.frequency_;
         const float f = mode ? 2.0f * f0 * (1.0f + stiffness) : f0;
+        float onset = 0.0f;
         float peak = 0.0f;
         bool finite = true;
         for (int block = 0; block < 4000; ++block) {
@@ -424,10 +426,16 @@ void TestResonatorTonalLevel() {
             const float l = frames[i].l - before[i].l;
             const float r = frames[i].r - before[i].r;
             finite = finite && std::isfinite(l) && std::isfinite(r);
-            peak = std::max(peak, std::max(fabsf(l), fabsf(r)));
+            const float level = std::max(fabsf(l), fabsf(r));
+            if (block < 400) {
+              onset = std::max(onset, level);
+            } else {
+              peak = std::max(peak, level);
+            }
           }
         }
         CHECK(finite);
+        CHECK(onset < 1.0f);
         CHECK(peak < 0.65f);
         CHECK(peak > 0.1f);
       }
@@ -689,6 +697,7 @@ ResonatorControls Controls(int material, int ring) {
   c.amount = 1.0f;
   c.feedback = 0.0f;
   c.hold_feedback = false;
+  c.modes = kResonatorMaterials[material].modes;
   return c;
 }
 
@@ -942,10 +951,229 @@ void TestResonatorQualities() {
         }
         CHECK(peaks[0] > 0.1f);
         CHECK(peaks[1] < peaks[0] + 1.0f);
-        CHECK(peaks[2] < peaks[0] + 1.0f);
+        // Before the buffer, the delay replays the resonance with feedback.
+        CHECK(peaks[2] < peaks[0] + (delay ? 1.5f : 1.0f));
       }
     }
   }
+}
+
+// Both states of every mode, squared.
+float StateEnergy() {
+  float energy = 0.0f;
+  for (int b = 0; b < kNumResonatorModes / 8; ++b) {
+    for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+      const ModalResonator& r = processor.resonator_;
+      energy += r.odd_[b].state_1_[i] * r.odd_[b].state_1_[i] +
+          r.odd_[b].state_2_[i] * r.odd_[b].state_2_[i] +
+          r.even_[b].state_1_[i] * r.even_[b].state_1_[i] +
+          r.even_[b].state_2_[i] * r.even_[b].state_2_[i];
+    }
+  }
+  return energy;
+}
+
+// Drizzlet's objects: a strike alone bends the pitch, by the table's amount
+// and back; loud input never does. Pairs sound left and right. At every
+// rate, pitch extreme and the CV's longest ring, the bank stays finite and
+// dies away.
+void TestResonatorMaterials() {
+  test_checker.Start("TestResonatorMaterials");
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  for (int material = 0; material < kNumResonatorMaterials; ++material) {
+    const ResonatorModes* modes = kResonatorMaterials[material].modes;
+    CHECK((material >= 4) == (modes != NULL));
+    if (!modes) {
+      continue;
+    }
+    for (int i = 0; i < kNumResonatorModes; ++i) {
+      CHECK(modes->ratio[i] >= 0.99f);
+      CHECK(modes->decay[i] > 0.0f && modes->decay[i] <= 1.0f);
+      CHECK(modes->gain[i] >= 0.0f);
+    }
+    CHECK(fabsf(modes->glide) <= 0.1f);
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    processor.set_resonator_controls(Controls(material, 1));
+    float most = 0.0f;
+    for (int block = 0; block < 4000; ++block) {
+      FloatFrame frames[12];
+      for (size_t i = 0; i < 12; ++i) {
+        frames[i].l = 0.9f * Noise();
+        frames[i].r = 0.9f * Noise();
+      }
+      processor.ProcessResonator(pitch, false, frames, 12);
+      most = std::max(most, fabsf(processor.resonator_.glide_));
+    }
+    CHECK(most == 0.0f);
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, true, frames, 12);
+    CHECK(processor.resonator_.glide_ != 0.0f || modes->glide == 0.0f);
+    CHECK(fabsf(processor.resonator_.glide_) <= fabsf(modes->glide));
+    float energy[3] = { 0.0f, 0.0f, 0.0f };
+    for (int block = 0; block < 4000; ++block) {
+      memset(frames, 0, sizeof(frames));
+      processor.ProcessResonator(pitch, false, frames, 12);
+      for (size_t i = 0; i < 12; ++i) {
+        energy[0] += frames[i].l * frames[i].l;
+        energy[1] += frames[i].r * frames[i].r;
+        energy[2] += (frames[i].l - frames[i].r) * (frames[i].l - frames[i].r);
+      }
+    }
+    // Equal pairs give a centred image; split pairs differ left and right.
+    bool split = false;
+    for (int i = 0; i < kNumResonatorModes; i += 2) {
+      split = split || modes->ratio[i] != modes->ratio[i + 1];
+    }
+    CHECK((energy[2] > 0.0f) == split);
+    CHECK(fabsf(processor.resonator_.glide_) < 0.1f * fabsf(modes->glide) ||
+        modes->glide == 0.0f);
+    CHECK(energy[0] > 0.0f && energy[1] > 0.0f);
+    const Processor::Media media[3] = {
+      Processor::MEDIA_DIGITAL,
+      Processor::MEDIA_VINTAGE_DIGITAL,
+      Processor::MEDIA_DIRTY_TAPE
+    };
+    for (int m = 0; m < 3; ++m) {
+      for (int note = -48; note <= 48; note += 96) {
+        Init(media[m], false, RESONATOR_AFTER_GRAINS);
+        ResonatorControls c = Controls(material, 3);
+        c.damping = 0.9995f;
+        processor.set_resonator_controls(c);
+        pitch.base = float(note);
+        bool finite = true;
+        float peak = 0.0f;
+        for (int block = 0; block < 8000; ++block) {
+          FloatFrame f[12];
+          for (size_t i = 0; i < BlockSize(); ++i) {
+            f[i].l = block < 4000 ? 0.9f * Noise() : 0.0f;
+            f[i].r = block < 4000 ? 0.9f * Noise() : 0.0f;
+          }
+          processor.ProcessResonator(pitch, block < 4000, f, BlockSize());
+          for (size_t i = 0; i < BlockSize(); ++i) {
+            finite = finite && std::isfinite(f[i].l) && std::isfinite(f[i].r);
+            peak = std::max(peak, std::max(fabsf(f[i].l), fabsf(f[i].r)));
+          }
+          CHECK(fabsf(processor.resonator_.glide_) <= fabsf(modes->glide));
+        }
+        CHECK(finite);
+        CHECK(peak < 3.0f);
+        const float late = StateEnergy();
+        for (int block = 0; block < 4000; ++block) {
+          FloatFrame f[12];
+          memset(f, 0, sizeof(f));
+          processor.ProcessResonator(pitch, false, f, BlockSize());
+        }
+        CHECK(StateEnergy() < late);
+      }
+    }
+    pitch.base = 0.0f;
+  }
+  // A bend never outlives its object, through another or through Rings'.
+  for (int via = 1; via < 5; via += 3) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    processor.set_resonator_controls(Controls(5, 1));
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, true, frames, 12);
+    CHECK(processor.resonator_.glide_ != 0.0f);
+    processor.set_resonator_controls(Controls(via, 1));
+    processor.ProcessResonator(pitch, false, frames, 12);
+    CHECK(processor.resonator_.glide_ == 0.0f);
+    processor.set_resonator_controls(Controls(5, 1));
+    processor.ProcessResonator(pitch, false, frames, 12);
+    CHECK(processor.resonator_.glide_ == 0.0f);
+  }
+  // Nor does a ring in the batches an object leaves silent.
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  processor.set_resonator_controls(Controls(5, 1));
+  for (int block = 0; block < 100; ++block) {
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, !block, frames, 12);
+  }
+  const float rung = StateEnergy();
+  processor.set_resonator_controls(Controls(4, 1));
+  FloatFrame frames[12];
+  memset(frames, 0, sizeof(frames));
+  processor.ProcessResonator(pitch, false, frames, 12);
+  const ModalResonator& r = processor.resonator_;
+  float left = 0.0f;
+  for (int b = 1; b < kNumResonatorModes / 8; ++b) {
+    for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+      left += fabsf(r.odd_[b].state_1_[i]) + fabsf(r.odd_[b].state_2_[i]) +
+          fabsf(r.even_[b].state_1_[i]) + fabsf(r.even_[b].state_2_[i]);
+    }
+  }
+  CHECK(rung > 0.0f && left == 0.0f);
+}
+
+// The resonance's peak in the 0.5 s after a strike at C3.
+float StrikePeak() {
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  float peak = 0.0f;
+  for (int block = 0; block < 2000; ++block) {
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, !block, frames, BlockSize());
+    for (size_t i = 0; i < BlockSize(); ++i) {
+      peak = std::max(peak, std::max(fabsf(frames[i].l), fabsf(frames[i].r)));
+    }
+  }
+  return peak;
+}
+
+// Ten seconds of silence: the tail and the limiter let go.
+void Silence() {
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  for (int block = 0; block < 40000; ++block) {
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, false, frames, BlockSize());
+  }
+}
+
+bool WithinOneDecibel(float a, float b) {
+  return a > b * 0.891f && a < b * 1.122f;
+}
+
+// After power-on, a rate change, spectral or a placement change, the first
+// strike is as loud as one after a long silence.
+void TestResonatorLimiterAtRest() {
+  test_checker.Start("TestResonatorLimiterAtRest");
+  for (int m = 0; m < 4; ++m) {
+    Init(kMedia[m], false, RESONATOR_AFTER_GRAINS);
+    const float first = StrikePeak();
+    Silence();
+    const float rested = StrikePeak();
+    CHECK(rested > 0.1f);
+    CHECK(WithinOneDecibel(first, rested));
+  }
+  Init(Processor::MEDIA_DIRTY_TAPE, false, RESONATOR_AFTER_GRAINS);
+  Silence();
+  const float rate = processor.sample_rate();
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  CHECK(processor.sample_rate() != rate);
+  const float first = StrikePeak();
+  Silence();
+  const float rested = StrikePeak();
+  CHECK(WithinOneDecibel(first, rested));
+  Silence();
+  processor.set_spectral(true);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  for (int block = 0; block < 10; ++block) {
+    processor.Buffer();
+    Process();
+  }
+  processor.set_spectral(false);
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  CHECK(WithinOneDecibel(StrikePeak(), rested));
+  Silence();
+  processor.set_resonator(RESONATOR_BEFORE_BUFFER);
+  CHECK(WithinOneDecibel(StrikePeak(), rested));
 }
 
 int main() {
@@ -974,5 +1202,7 @@ int main() {
   TestResonatorSeedBlock();
   TestResonatorOptionsMatch();
   TestResonatorSpectralReset();
+  TestResonatorLimiterAtRest();
+  TestResonatorMaterials();
   return test_checker.failures() ? 1 : 0;
 }

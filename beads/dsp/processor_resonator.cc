@@ -53,6 +53,7 @@ void Processor::ProcessResonator(
     resonator_.set_damping(resonator_controls_.damping);
     resonator_.set_position(resonator_controls_.position);
     resonator_.set_amount(resonator_controls_.amount);
+    resonator_.set_modes(resonator_controls_.modes);
   }
   // PITCH and its CV, not its randomness; Recent notes plays the newest.
   float note = pitch.base;
@@ -83,6 +84,7 @@ void Processor::ProcessResonator(
     strike_filter_.set_f_q<FREQUENCY_DIRTY>(cutoff, 1.5f);
     strike_pulse = 0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
     strike_sounding_ = true;
+    resonator_.Strike();
   }
   if (strike_sounding_) {
     float pulse[size];

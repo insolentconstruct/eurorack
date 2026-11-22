@@ -81,7 +81,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 1, kNoField, false, true, false, false },  // Gain knob.
   { 3, kNoField, true, false, false, false },  // Resonator.
   { 0, kReservedField, false, false, false, false },  // Reserved.
-  { 4, kNoField, true, false, false, false },  // Resonator material.
+  { 8, kNoField, true, false, false, false },  // Resonator material.
   { 4, kNoField, true, false, false, false },  // Resonator ring.
   { 0, kNoField, false, false, false, false },  // Resonator structure.
   { 0, kNoField, false, false, false, false },  // Resonator brightness.
