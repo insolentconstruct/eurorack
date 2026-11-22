@@ -42,7 +42,7 @@
     {"id": 40, "symbol": "GAIN_KNOB", "values": ["Not on a knob"]},
     {"id": 41, "symbol": "RESONATOR", "values": ["Off (stock)", "After the grains", "Before the buffer"]},
     {"id": 42, "symbol": "RINGS_POLYPHONY", "values": ["1", "2", "4"]},
-    {"id": 43, "symbol": "RESONATOR_MATERIAL", "values": ["Wood", "String", "Glass", "Bell"]},
+    {"id": 43, "symbol": "RESONATOR_MATERIAL", "values": ["Wood", "String", "Glass", "Bell", "Marimba", "Drum", "Bowl", "Gong"]},
     {"id": 44, "symbol": "RESONATOR_RING", "values": ["Short", "Medium", "Long", "Very long"]},
     {"id": 45, "symbol": "RESONATOR_STRUCTURE", "values": null},
     {"id": 46, "symbol": "RESONATOR_BRIGHTNESS", "values": null},

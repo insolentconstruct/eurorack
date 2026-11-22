@@ -161,6 +161,8 @@ class Ui {
   inline uint8_t resonator_ring() const { return resonator_ring_; }
   // The assignable CV moves the resonator's damping; not saved yet.
   inline bool resonator_assigned() const { return resonator_assigned_; }
+  inline uint8_t seed_latch() const { return seed_latch_; }
+  inline bool time_scan() const { return time_scan_; }
 
   // The saved engine, applied once the options page has closed.
   inline bool spectral() const { return spectral_; }
@@ -293,6 +295,8 @@ class Ui {
   volatile uint8_t resonator_material_;
   volatile uint8_t resonator_ring_;
   volatile bool resonator_assigned_;
+  volatile uint8_t seed_latch_;
+  volatile bool time_scan_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
