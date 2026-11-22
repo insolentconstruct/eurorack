@@ -1,0 +1,882 @@
+{
+ "elf_sha256": "d282b81c680299be24ccd24d177ef774212150c4e9e629400827614148dbbb2b",
+ "scenarios": [
+  {
+   "boot": 14589131,
+   "calls_sha256": "e7d3a4f4d2f8e788603bdb9250e6111672dab8693068a1c2afb54f27ffb00ba5",
+   "name": "steady",
+   "out_sha256": "e15bafc78595a8c84ccb6ea53cd88d951edf0cb3d73c34d56af2d859fc77563d",
+   "phases": {
+    "MonitorStateChange steady": [
+     50,
+     166,
+     166,
+     8300
+    ],
+    "Process steady": [
+     200,
+     12718,
+     12883,
+     2552133
+    ],
+    "Ui::Poll steady": [
+     50,
+     735,
+     737,
+     36772
+    ],
+    "audio steady": [
+     200,
+     12940,
+     13103,
+     2596333
+    ],
+    "main steady": [
+     50,
+     24227,
+     26262,
+     1275225
+    ],
+    "tick steady": [
+     50,
+     769,
+     771,
+     38472
+    ]
+   },
+   "total": 3910030
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "55737b00c21adf73f62b1e946b62cd86133c5211f7d9d0a9c861d19d968e9c28",
+   "name": "media",
+   "out_sha256": "291fc7c120457541156e3f4e3534caa1e8a3557851cf3eae82f40634c7d12257",
+   "phases": {
+    "MonitorStateChange blanking": [
+     498,
+     144,
+     144,
+     71712
+    ],
+    "MonitorStateChange fading": [
+     40,
+     166,
+     166,
+     6640
+    ],
+    "MonitorStateChange silent": [
+     4,
+     166,
+     3685288,
+     4905122
+    ],
+    "MonitorStateChange steady": [
+     103,
+     166,
+     166,
+     17098
+    ],
+    "Process blanking": [
+     2000,
+     1271,
+     1708,
+     2762034
+    ],
+    "Process fading": [
+     160,
+     12842,
+     15999,
+     2340962
+    ],
+    "Process silent": [
+     8,
+     1658,
+     16727,
+     43608
+    ],
+    "Process steady": [
+     412,
+     12718,
+     17582,
+     6326380
+    ],
+    "Ui::Poll blanking": [
+     498,
+     745,
+     747,
+     371334
+    ],
+    "Ui::Poll fading": [
+     40,
+     735,
+     739,
+     29460
+    ],
+    "Ui::Poll silent": [
+     4,
+     735,
+     747,
+     2964
+    ],
+    "Ui::Poll steady": [
+     103,
+     735,
+     739,
+     75961
+    ],
+    "audio blanking": [
+     2000,
+     1493,
+     1928,
+     3204034
+    ],
+    "audio fading": [
+     160,
+     13064,
+     16219,
+     2376322
+    ],
+    "audio silent": [
+     8,
+     1880,
+     16949,
+     45376
+    ],
+    "audio steady": [
+     412,
+     12940,
+     17802,
+     6417432
+    ],
+    "main blanking": [
+     498,
+     24110,
+     26357,
+     12816893
+    ],
+    "main fading": [
+     40,
+     24834,
+     26261,
+     1015788
+    ],
+    "main silent": [
+     4,
+     24839,
+     3710100,
+     5005365
+    ],
+    "main steady": [
+     103,
+     24227,
+     26320,
+     2664051
+    ],
+    "tick blanking": [
+     498,
+     779,
+     781,
+     388266
+    ],
+    "tick fading": [
+     40,
+     769,
+     773,
+     30820
+    ],
+    "tick silent": [
+     4,
+     769,
+     781,
+     3100
+    ],
+    "tick steady": [
+     103,
+     769,
+     773,
+     79463
+    ]
+   },
+   "total": 34046910
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "d06914fb4cca500477bf89a6000298c3303571b6f1740b3f3204dc6dd553f3b0",
+   "name": "clouds_style",
+   "out_sha256": "800ae4c7e52544988576b014c070435ad27671be96d35d68859c09ffc7269c93",
+   "phases": {
+    "MonitorStateChange fading": [
+     40,
+     166,
+     166,
+     6640
+    ],
+    "MonitorStateChange steady": [
+     25,
+     166,
+     166,
+     4150
+    ],
+    "Process fading": [
+     160,
+     12836,
+     14624,
+     2190896
+    ],
+    "Process silent": [
+     4,
+     12848,
+     58449,
+     147552
+    ],
+    "Process steady": [
+     96,
+     12718,
+     14462,
+     1286855
+    ],
+    "Ui::Poll fading": [
+     40,
+     735,
+     737,
+     29434
+    ],
+    "Ui::Poll steady": [
+     25,
+     735,
+     737,
+     18393
+    ],
+    "audio fading": [
+     160,
+     13058,
+     14844,
+     2226256
+    ],
+    "audio silent": [
+     4,
+     13070,
+     58669,
+     148436
+    ],
+    "audio steady": [
+     96,
+     12940,
+     14684,
+     1308071
+    ],
+    "main fading": [
+     40,
+     24297,
+     26261,
+     1015568
+    ],
+    "main steady": [
+     25,
+     24227,
+     26262,
+     633922
+    ],
+    "tick fading": [
+     40,
+     769,
+     771,
+     30794
+    ],
+    "tick steady": [
+     25,
+     769,
+     771,
+     19243
+    ]
+   },
+   "total": 5382290
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "be4a20fc2bb0680267d7b9416bf6719b7d4c22d41506e538d954d31914b7c9c8",
+   "name": "processor",
+   "out_sha256": "9166e68d8fdc421e0cff3b766eff88471a30cf7eb57e84d4224795ba60118ff2",
+   "phases": {
+    "MonitorStateChange blanking": [
+     498,
+     144,
+     144,
+     71712
+    ],
+    "MonitorStateChange fading": [
+     40,
+     166,
+     171,
+     6740
+    ],
+    "MonitorStateChange silent": [
+     4,
+     166,
+     2145710,
+     3365548
+    ],
+    "MonitorStateChange steady": [
+     103,
+     166,
+     171,
+     17108
+    ],
+    "Process blanking": [
+     2000,
+     1234,
+     1704,
+     2721034
+    ],
+    "Process fading": [
+     160,
+     9509,
+     15022,
+     1875978
+    ],
+    "Process silent": [
+     8,
+     1622,
+     16525,
+     36515
+    ],
+    "Process steady": [
+     412,
+     9386,
+     14899,
+     4990183
+    ],
+    "Ui::Poll blanking": [
+     498,
+     745,
+     747,
+     371336
+    ],
+    "Ui::Poll fading": [
+     40,
+     735,
+     739,
+     29460
+    ],
+    "Ui::Poll silent": [
+     4,
+     735,
+     747,
+     2964
+    ],
+    "Ui::Poll steady": [
+     103,
+     735,
+     739,
+     75959
+    ],
+    "audio blanking": [
+     2000,
+     1456,
+     1924,
+     3163034
+    ],
+    "audio fading": [
+     160,
+     9731,
+     15242,
+     1911338
+    ],
+    "audio silent": [
+     8,
+     1844,
+     16747,
+     38283
+    ],
+    "audio steady": [
+     412,
+     9608,
+     15119,
+     5081235
+    ],
+    "main blanking": [
+     498,
+     23950,
+     26321,
+     12819768
+    ],
+    "main fading": [
+     40,
+     23451,
+     1993466,
+     2981728
+    ],
+    "main silent": [
+     4,
+     25531,
+     2170476,
+     3464412
+    ],
+    "main steady": [
+     103,
+     24137,
+     1994849,
+     6597431
+    ],
+    "tick blanking": [
+     498,
+     779,
+     781,
+     388268
+    ],
+    "tick fading": [
+     40,
+     769,
+     773,
+     30820
+    ],
+    "tick silent": [
+     4,
+     769,
+     781,
+     3100
+    ],
+    "tick steady": [
+     103,
+     769,
+     773,
+     79461
+    ]
+   },
+   "total": 36558878
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "c466cbdda14379f873ad3053fd76cc77dbca6fbee3c63037034afa5baa4b7d10",
+   "name": "freeze_fade",
+   "out_sha256": "e557dec4a2a7edf3743be5f255530b7af302f34cfa77eb4298484dd559b061c3",
+   "phases": {
+    "MonitorStateChange blanking": [
+     249,
+     138,
+     144,
+     34368
+    ],
+    "MonitorStateChange fading": [
+     20,
+     138,
+     166,
+     3040
+    ],
+    "MonitorStateChange silent": [
+     2,
+     138,
+     3685288,
+     3685426
+    ],
+    "MonitorStateChange steady": [
+     279,
+     138,
+     166,
+     42926
+    ],
+    "Process blanking": [
+     1000,
+     1260,
+     1693,
+     1368077
+    ],
+    "Process fading": [
+     80,
+     12842,
+     15744,
+     1140707
+    ],
+    "Process silent": [
+     4,
+     1658,
+     16461,
+     21589
+    ],
+    "Process steady": [
+     1116,
+     12718,
+     17007,
+     16603834
+    ],
+    "Ui::Poll blanking": [
+     249,
+     718,
+     760,
+     185472
+    ],
+    "Ui::Poll fading": [
+     20,
+     692,
+     743,
+     14565
+    ],
+    "Ui::Poll silent": [
+     2,
+     692,
+     753,
+     1445
+    ],
+    "Ui::Poll steady": [
+     279,
+     702,
+     745,
+     204268
+    ],
+    "audio blanking": [
+     1000,
+     1482,
+     1913,
+     1589077
+    ],
+    "audio fading": [
+     80,
+     13064,
+     15964,
+     1158387
+    ],
+    "audio silent": [
+     4,
+     1880,
+     16683,
+     22473
+    ],
+    "audio steady": [
+     1116,
+     12940,
+     17229,
+     16850470
+    ],
+    "main blanking": [
+     249,
+     24094,
+     26299,
+     6403709
+    ],
+    "main fading": [
+     20,
+     24850,
+     26261,
+     510053
+    ],
+    "main silent": [
+     2,
+     25490,
+     3710100,
+     3735590
+    ],
+    "main steady": [
+     279,
+     23925,
+     26325,
+     7111170
+    ],
+    "tick blanking": [
+     249,
+     752,
+     794,
+     193938
+    ],
+    "tick fading": [
+     20,
+     726,
+     777,
+     15245
+    ],
+    "tick silent": [
+     2,
+     726,
+     787,
+     1513
+    ],
+    "tick steady": [
+     279,
+     736,
+     779,
+     213754
+    ]
+   },
+   "total": 37805379
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "827d3bf1e2283a781872f5d803eef2f9b88bcbc654872dff7b4826aa29c5f63e",
+   "name": "gestures",
+   "out_sha256": "8df295774cf64d1e7d2f18f5a876022385096a7f1e3029532e39e54e451adb90",
+   "phases": {
+    "MonitorStateChange steady": [
+     3852,
+     138,
+     166,
+     634112
+    ],
+    "Process steady": [
+     15408,
+     12288,
+     18307,
+     209830829
+    ],
+    "Ui::Poll steady": [
+     3852,
+     700,
+     791,
+     2895487
+    ],
+    "audio steady": [
+     15408,
+     12510,
+     18529,
+     213235997
+    ],
+    "main steady": [
+     3852,
+     22972,
+     29083,
+     99030725
+    ],
+    "tick steady": [
+     3852,
+     734,
+     825,
+     3026455
+    ]
+   },
+   "total": 315293177
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "c28ae38d7164776014552b80ffbff4176f5cbc575521bbc154e8556538bac1ec",
+   "name": "synth",
+   "out_sha256": "75ae3b085a69fdf72ea8e8826d578f6d69ee9b25f229bd8ddfd2a48e2369d398",
+   "phases": {
+    "MonitorStateChange blanking": [
+     498,
+     144,
+     145,
+     71898
+    ],
+    "MonitorStateChange fading": [
+     40,
+     159,
+     174,
+     6610
+    ],
+    "MonitorStateChange silent": [
+     4,
+     159,
+     1219503,
+     1430958
+    ],
+    "MonitorStateChange steady": [
+     10290,
+     166,
+     174,
+     1728627
+    ],
+    "MonitorStateChange synth": [
+     988,
+     159,
+     162,
+     157095
+    ],
+    "Process blanking": [
+     2000,
+     938,
+     1704,
+     2497946
+    ],
+    "Process fading": [
+     160,
+     12015,
+     15013,
+     2196423
+    ],
+    "Process silent": [
+     8,
+     1172,
+     16523,
+     39530
+    ],
+    "Process steady": [
+     1960,
+     12237,
+     14970,
+     25942704
+    ],
+    "Process synth": [
+     3952,
+     11405,
+     15051,
+     47275442
+    ],
+    "Ui::Poll blanking": [
+     498,
+     743,
+     749,
+     371634
+    ],
+    "Ui::Poll fading": [
+     40,
+     741,
+     743,
+     29680
+    ],
+    "Ui::Poll silent": [
+     4,
+     741,
+     749,
+     2976
+    ],
+    "Ui::Poll steady": [
+     10290,
+     735,
+     745,
+     7654496
+    ],
+    "Ui::Poll synth": [
+     988,
+     722,
+     763,
+     743067
+    ],
+    "audio blanking": [
+     2000,
+     1160,
+     1924,
+     2939946
+    ],
+    "audio fading": [
+     160,
+     12237,
+     15233,
+     2231783
+    ],
+    "audio silent": [
+     8,
+     1394,
+     16745,
+     41298
+    ],
+    "audio steady": [
+     1960,
+     12459,
+     15190,
+     26375864
+    ],
+    "audio synth": [
+     3952,
+     11627,
+     15273,
+     48148834
+    ],
+    "main blanking": [
+     498,
+     22340,
+     26318,
+     12690163
+    ],
+    "main fading": [
+     40,
+     24928,
+     26314,
+     1030029
+    ],
+    "main silent": [
+     4,
+     25619,
+     1244911,
+     1533979
+    ],
+    "main steady": [
+     10290,
+     22854,
+     26373,
+     264794275
+    ],
+    "main synth": [
+     988,
+     23395,
+     29563,
+     25256712
+    ],
+    "tick blanking": [
+     498,
+     777,
+     783,
+     388566
+    ],
+    "tick fading": [
+     40,
+     775,
+     777,
+     31040
+    ],
+    "tick silent": [
+     4,
+     775,
+     783,
+     3112
+    ],
+    "tick steady": [
+     10290,
+     769,
+     779,
+     8004356
+    ],
+    "tick synth": [
+     988,
+     756,
+     797,
+     776659
+    ]
+   },
+   "total": 394246616
+  },
+  {
+   "boot": 14589131,
+   "calls_sha256": "61cc8ff67dd79ff789f9b8ea7dc59ac16f6430099a2d9828868f1fa85187ca9d",
+   "name": "ui",
+   "out_sha256": "ec064760f9d5a1abba58a1d8668949f31af1de3b5f40424634f3d96df1a0e823",
+   "phases": {
+    "MonitorStateChange steady": [
+     5160,
+     138,
+     166,
+     852080
+    ],
+    "Process steady": [
+     20640,
+     12283,
+     14958,
+     263455704
+    ],
+    "Ui::Poll steady": [
+     5160,
+     692,
+     1010,
+     4244077
+    ],
+    "audio steady": [
+     20640,
+     12505,
+     15180,
+     268017144
+    ],
+    "main steady": [
+     5160,
+     22852,
+     26377,
+     132649954
+    ],
+    "tick steady": [
+     5160,
+     726,
+     1044,
+     4419517
+    ]
+   },
+   "total": 405086615
+  }
+ ],
+ "unicorn": "2.1.4"
+}
