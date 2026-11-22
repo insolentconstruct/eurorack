@@ -1,7 +1,7 @@
 # Testing
 
-This source contains 21 host programs, 355 named test sections, 2,988
-assertion sites and 683 deliberate fault patterns (Beta 2: 275, 2,199 and
+This source contains 21 host programs, 356 named test sections, 2,990
+assertion sites and 684 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
 detected all 484 faults across eight shards. Named sections and assertion sites
@@ -73,7 +73,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | mix | 10 | 49 |
 | options | 73 | 892 |
 | pitch_quantizer | 7 | 83 |
-| plaits_synth | 12 | 66 |
+| plaits_synth | 13 | 68 |
 | processor | 11 | 45 |
 | profile | 8 | 128 |
 | resonator | 12 | 56 |
@@ -81,12 +81,12 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | storage | 29 | 430 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **355** | **2,988** |
+| **Total** | **356** | **2,990** |
 
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (683 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (684 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 

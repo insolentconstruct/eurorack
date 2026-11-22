@@ -13,6 +13,11 @@ CC_FILES       = 		plaits_synth_test.cc \
 
 STUBS = beads/test/common_stubs
 HOST_FLAGS = -ffp-contract=off $(PLAITS_FLAGS)
+# Out-of-range float to integer conversions trap, as the other sanitizers.
+ifneq ($(HOST_SANITIZERS),0)
+HOST_FLAGS += -fsanitize=float-cast-overflow
+HOST_LDFLAGS += -fsanitize=float-cast-overflow
+endif
 include beads/test/host.mk
 
 # The test also builds and runs the engines with AUX, as Plaits renders them.
