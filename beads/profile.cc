@@ -860,7 +860,7 @@ bool Profile::Parse(const volatile uint8_t* b) {
     return false;
   }
   custom_bank_ = version == 2 && b[12];
-  identity_ = Read32(b + 16 + bytes) % kNumIdentities;
+  identity_ = Read32(b + 16 + bytes);
   scale_count_ = 0;
   if (!ParseScales(b + 16 + 6 * count, scale_count)) {
     return false;

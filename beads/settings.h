@@ -63,65 +63,33 @@ struct State {
   uint8_t frozen;
   uint8_t disable_autosave;
   uint8_t monophonic_mode;
-  uint8_t output_limiter_mode;
-  uint8_t self_play;
-  uint8_t pitch_scale;
-  uint8_t reverb_style;
-  uint8_t stereo_width;
-  uint8_t delay_mode;
-  uint8_t width_assigned;
-  uint8_t diffusion;
-  uint8_t frozen_feedback;
-  uint8_t attacks;
-  uint8_t engine;
-  uint8_t synth_engine;
-  uint8_t random_intervals;
-  uint8_t padding[1];
+  uint8_t padding[14];
   enum { tag = 0x54415453 };  // STAT
+};
+
+// Drizzlet's options, in the calibration mirror sector: one byte per saved
+// feature, at the offsets features.json gives for this version.
+struct OptionsRecord {
+  uint8_t version;
+  uint8_t cv_target;  // 0 none, 1 width, 2 diffusion.
+  uint8_t reserved[2];
+  uint32_t profile_identity;
+  uint8_t values[48];
+  enum { tag = 0x4C5A5244 };  // DRZL
 };
 
 struct StateLayoutAssertions {
   STATIC_ASSERT(sizeof(State) == 24, state_size);
-  STATIC_ASSERT(offsetof(State, media) == 0, state_media_offset);
-  STATIC_ASSERT(
-      offsetof(State, assignable_cv_destination) == 1,
-      state_assignable_cv_destination_offset);
-  STATIC_ASSERT(
-      offsetof(State, assignable_cv_amount) == 2,
-      state_assignable_cv_amount_offset);
-  STATIC_ASSERT(offsetof(State, gain) == 5, state_gain_offset);
-  STATIC_ASSERT(
-      offsetof(State, gate_output_mode) == 6, state_gate_output_mode_offset);
-  STATIC_ASSERT(offsetof(State, frozen) == 7, state_frozen_offset);
-  STATIC_ASSERT(
-      offsetof(State, disable_autosave) == 8, state_disable_autosave_offset);
   STATIC_ASSERT(
       offsetof(State, monophonic_mode) == 9, state_monophonic_mode_offset);
-  STATIC_ASSERT(
-      offsetof(State, output_limiter_mode) == 10,
-      state_output_limiter_mode_offset);
-  STATIC_ASSERT(offsetof(State, self_play) == 11, state_self_play_offset);
-  STATIC_ASSERT(offsetof(State, pitch_scale) == 12, state_pitch_scale_offset);
-  STATIC_ASSERT(offsetof(State, reverb_style) == 13, state_reverb_style_offset);
-  STATIC_ASSERT(offsetof(State, stereo_width) == 14, state_stereo_width_offset);
-  STATIC_ASSERT(offsetof(State, delay_mode) == 15, state_delay_mode_offset);
-  STATIC_ASSERT(
-      offsetof(State, width_assigned) == 16, state_width_assigned_offset);
-  STATIC_ASSERT(offsetof(State, diffusion) == 17, state_diffusion_offset);
-  STATIC_ASSERT(
-      offsetof(State, frozen_feedback) == 18, state_frozen_feedback_offset);
-  STATIC_ASSERT(offsetof(State, attacks) == 19, state_attacks_offset);
-  STATIC_ASSERT(offsetof(State, engine) == 20, state_engine_offset);
-  STATIC_ASSERT(
-      offsetof(State, synth_engine) == 21, state_synth_engine_offset);
-  STATIC_ASSERT(
-      offsetof(State, random_intervals) == 22, state_random_intervals_offset);
-  STATIC_ASSERT(offsetof(State, padding) == 23, state_padding_offset);
+  STATIC_ASSERT(offsetof(State, padding) == 10, state_padding_offset);
+  STATIC_ASSERT(sizeof(OptionsRecord) == 56, record_size);
+  STATIC_ASSERT(offsetof(OptionsRecord, values) == 8, record_values_offset);
 };
 
-const uint8_t kOptionTag = 0xa0;
-// Option nibbles packed two to a byte, in the free bytes of State.
-const int kNumPackedBytes = 10;
+const uint8_t kOptionsRecordVersion = 1;
+// Payload offset of each saved feature; 0 for one that isn't saved.
+extern const uint8_t kRecordOffsets[FEATURE_LAST];
 
 // SEED held at power-up on damaged storage.
 enum StorageRepair {
@@ -145,102 +113,82 @@ class Settings {
   void SavePersistentData();
   void SaveState();
 
-  // Unknown values, including stock firmware's zero, read as Stock.
+  // Saves only the options, if they changed.
+  void SaveOptions();
+
   inline OutputLimiterMode output_limiter_mode() const {
-    const uint8_t value = state_.output_limiter_mode;
-    return value == (kOptionTag + 1) ? OUTPUT_LIMITER_FAST
-        : value == (kOptionTag + 2) ? OUTPUT_LIMITER_OFF : OUTPUT_LIMITER_STOCK;
+    return OutputLimiterMode(values_[FEATURE_LIMITER]);
   }
 
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
-    state_.output_limiter_mode = mode == OUTPUT_LIMITER_FAST ? (kOptionTag + 1)
-        : mode == OUTPUT_LIMITER_OFF ? (kOptionTag + 2) : 0;
+    SetFeatureValue(FEATURE_LIMITER, mode);
   }
-  
+
   inline bool self_play_on_request() const {
-    return state_.self_play == (kOptionTag + 1);
+    return values_[FEATURE_SYNTH_START];
   }
 
   inline void set_self_play_on_request(bool on_request) {
-    state_.self_play = on_request ? (kOptionTag + 1) : 0;
+    values_[FEATURE_SYNTH_START] = on_request;
   }
 
-  inline bool spectral() const {
-    return state_.engine == (kOptionTag + 1);
-  }
+  inline bool spectral() const { return values_[FEATURE_PROCESSOR]; }
 
   inline void set_spectral(bool spectral) {
-    state_.engine = spectral ? (kOptionTag + 1) : 0;
+    values_[FEATURE_PROCESSOR] = spectral;
   }
 
-  inline bool clouds_style() const {
-    return state_.reverb_style == (kOptionTag + 2);
-  }
+  inline bool clouds_style() const { return values_[FEATURE_REVERB]; }
 
   inline void set_clouds_style(bool clouds) {
-    state_.reverb_style = clouds ? (kOptionTag + 2) : 0;
+    values_[FEATURE_REVERB] = clouds;
   }
 
   inline PitchScale pitch_scale() const {
-    const uint8_t value = state_.pitch_scale;
-    return value >= (kOptionTag + 1) && value <= (kOptionTag + kMaxPitchScaleId)
-        && profile_.HasScale(value - kOptionTag)
-        ? PitchScale(value - kOptionTag) : PITCH_SCALE_OFF;
+    return PitchScale(values_[FEATURE_PITCH]);
   }
 
   inline void set_pitch_scale(PitchScale scale) {
-    state_.pitch_scale = scale > PITCH_SCALE_OFF && scale <= kMaxPitchScaleId &&
-        profile_.HasScale(scale)
-        ? kOptionTag + scale : 0;
+    SetFeatureValue(FEATURE_PITCH, scale);
   }
 
   inline StereoWidth stereo_width() const {
-    return state_.stereo_width;
+    return values_[FEATURE_WIDTH];
   }
 
   inline void set_stereo_width(StereoWidth width) {
-    state_.stereo_width = width;
+    values_[FEATURE_WIDTH] = width;
     if (!width && width_assigned()) {
       set_width_assigned(false);
     }
   }
 
   inline DelayMode delay_mode() const {
-    const uint8_t value = state_.delay_mode;
-    return value == (kOptionTag + 1) ? DELAY_MODE_NEVER
-        : value == (kOptionTag + 2) ? DELAY_MODE_WIDE_DETENT : DELAY_MODE_AUTO;
+    return DelayMode(values_[FEATURE_DELAY]);
   }
 
   inline void set_delay_mode(DelayMode mode) {
-    state_.delay_mode = mode == DELAY_MODE_NEVER ? (kOptionTag + 1)
-        : mode == DELAY_MODE_WIDE_DETENT ? (kOptionTag + 2) : 0;
+    SetFeatureValue(FEATURE_DELAY, mode);
   }
 
-  inline bool plaits_synth() const {
-    return state_.synth_engine == (kOptionTag + 1);
-  }
+  inline bool plaits_synth() const { return values_[FEATURE_SYNTH]; }
 
   inline void set_plaits_synth(bool plaits) {
-    state_.synth_engine = plaits ? (kOptionTag + 1) : 0;
+    values_[FEATURE_SYNTH] = plaits;
   }
 
   inline RandomIntervals random_intervals() const {
-    const uint8_t value = state_.random_intervals;
-    return value == (kOptionTag + 1) ? RANDOM_INTERVALS_FIFTHS
-        : value == (kOptionTag + 2) ? RANDOM_INTERVALS_RECENT_NOTES
-        : RANDOM_INTERVALS_OFF;
+    return RandomIntervals(values_[FEATURE_INTERVALS]);
   }
 
   inline void set_random_intervals(RandomIntervals intervals) {
-    state_.random_intervals = intervals == RANDOM_INTERVALS_FIFTHS
-        ? (kOptionTag + 1) : intervals == RANDOM_INTERVALS_RECENT_NOTES
-        ? (kOptionTag + 2) : 0;
+    SetFeatureValue(FEATURE_INTERVALS, intervals);
   }
 
-  inline bool width_assigned() const { return state_.width_assigned == 1; }
+  inline bool width_assigned() const { return cv_target_ == 1; }
 
   inline void set_width_assigned(bool assigned) {
-    state_.width_assigned = assigned && profile_.adjustable(FEATURE_WIDTH) &&
+    cv_target_ = assigned && profile_.adjustable(FEATURE_WIDTH) &&
         stereo_width() ? 1 : 0;
     if (assigned) {
       state_.assignable_cv_destination = 0;
@@ -248,57 +196,52 @@ class Settings {
   }
 
   inline AttackMode attack_mode() const {
-    const uint8_t value = state_.attacks;
-    return value == (kOptionTag + 1) ? ATTACK_MODE_SNAP
-        : value == (kOptionTag + 2) ? ATTACK_MODE_SNAP_AND_TRIGGER
-        : ATTACK_MODE_OFF;
+    return AttackMode(values_[FEATURE_ATTACKS]);
   }
 
   inline void set_attack_mode(AttackMode mode) {
-    state_.attacks = mode == ATTACK_MODE_SNAP ? (kOptionTag + 1)
-        : mode == ATTACK_MODE_SNAP_AND_TRIGGER ? (kOptionTag + 2) : 0;
+    SetFeatureValue(FEATURE_ATTACKS, mode);
   }
 
-  inline bool evolving_feedback() const {
-    return state_.frozen_feedback == (kOptionTag + 1);
-  }
+  inline bool evolving_feedback() const { return values_[FEATURE_FROZEN]; }
 
   inline void set_evolving_feedback(bool evolving) {
-    state_.frozen_feedback = evolving ? (kOptionTag + 1) : 0;
+    values_[FEATURE_FROZEN] = evolving;
   }
 
   // Zero follows the reverb character: none with Stock, Beta 1's fixed
   // amount with Clouds-style. Other values are an amount set with [A]+REVERB.
-  inline bool diffusion_set() const { return state_.diffusion != 0; }
+  inline bool diffusion_set() const { return values_[FEATURE_DIFFUSION] != 0; }
 
   inline float diffusion() const {
     return diffusion_set()
-        ? float(state_.diffusion - 1) / 254.0f
+        ? float(values_[FEATURE_DIFFUSION] - 1) / 254.0f
         : (clouds_style() ? kCloudsDiffusion : 0.0f);
   }
 
   inline void set_diffusion(float amount) {
     CONSTRAIN(amount, 0.0f, 1.0f);
-    state_.diffusion = 1 + static_cast<uint8_t>(amount * 254.0f + 0.5f);
-    if (state_.diffusion == 1) {
+    values_[FEATURE_DIFFUSION] = 1 + static_cast<uint8_t>(
+        amount * 254.0f + 0.5f);
+    if (values_[FEATURE_DIFFUSION] == 1) {
       set_diffusion_assigned(false);
     }
   }
 
-  inline bool diffusion_assigned() const {
-    return state_.width_assigned == 2;
-  }
+  inline bool diffusion_assigned() const { return cv_target_ == 2; }
 
   // Only an amount set with [A]+REVERB can be modulated.
-  inline bool diffusion_assignable() const { return state_.diffusion > 1; }
+  inline bool diffusion_assignable() const {
+    return values_[FEATURE_DIFFUSION] > 1;
+  }
 
   inline void set_diffusion_assigned(bool assigned) {
     if (assigned && profile_.adjustable(FEATURE_DIFFUSION) &&
         diffusion_assignable()) {
-      state_.width_assigned = 2;
+      cv_target_ = 2;
       state_.assignable_cv_destination = 0;
     } else if (diffusion_assigned()) {
-      state_.width_assigned = 0;
+      cv_target_ = 0;
     }
   }
 
@@ -327,7 +270,11 @@ class Settings {
 
   inline StorageRepair repair() const { return repair_; }
 
-  uint8_t FeatureValue(ProfileFeature feature) const;
+  inline uint8_t FeatureValue(ProfileFeature feature) const {
+    return feature == FEATURE_MONOPHONIC
+        ? state_.monophonic_mode : values_[feature];
+  }
+
   void SetFeatureValue(ProfileFeature feature, uint8_t value);
 
   // Any LED feature on: Ui::Poll skips their code when none is.
@@ -335,9 +282,11 @@ class Settings {
 
  private:
   void NormalizeOptions();
-  // True when the saved settings come from another profile, or none.
-  bool LoadOptions();
-  void PackOptions();
+  // A record holding the profile's defaults; no value set.
+  void DefaultRecord(OptionsRecord* record) const;
+  void LoadOptions();
+  void PackRecord();
+  void PackState();
   void ApplyProfile();
   uint8_t DefaultGain() const;
   static bool CalibrationPlausible(
@@ -347,15 +296,20 @@ class Settings {
   PersistentData persistent_data_;
   PersistentData factory_;
   State state_;
+  // Read by the audio callback, next to state_ as its bytes were.
+  uint8_t cv_target_;
+  // Every feature's value in use but Monophonic's, which is in State.
+  uint8_t values_[FEATURE_LAST];
   State stored_state_;
+  OptionsRecord record_;
+  OptionsRecord stored_record_;
   Profile profile_;
   bool profile_locked_;
-  uint8_t packed_[kNumPackedBytes];
-  uint8_t profile_values_[FEATURE_LAST];
   bool led_features_;
   uint8_t dormant_destination_;
-  // Bank 2: the settings in sector 7, the calibration mirror in sector 6.
-  ChunkStorage<15, 14, PersistentData, State> chunk_storage_;
+  // Bank 2: the settings in sector 7, the calibration mirror and the
+  // options in sector 6.
+  ChunkStorage<15, 14, PersistentData, State, OptionsRecord> chunk_storage_;
   StorageRepair repair_;
   
   DISALLOW_COPY_AND_ASSIGN(Settings);
