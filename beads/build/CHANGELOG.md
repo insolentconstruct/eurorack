@@ -6,6 +6,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
 ## Unreleased
+- **Behaviour fix:** a calibration that doesn't complete is no longer used or saved. A rejected step, or leaving calibration with [A]+FREEZE, used to keep the offsets and pitch already measured, and the next settings rewrite saved them over the calibration. Now the run is measured separately and only a completed one replaces the calibration; a rejected step still blinks all LEDs. The vanilla source kept the partial calibration ([#346](https://github.com/insolentconstruct/eurorack/issues/346)).
 - **Behaviour change:** a recalibration more than 25% from the factory values is no longer saved. The stored calibration stays in use, in flash and in its copy, and all LEDs blink for about a second, as for a rejected calibration step. The vanilla source saved and used it.
 - Once a failed restore at power-up had left the settings sector blank, a recalibration erased the only copy of the calibration, and a power cut during that save lost it. A usable second copy is now erased only while the settings sector holds a usable calibration (#317).
 - Flash records are read with a byte copy, which needs no word alignment; storage only, no change to the sound (#315).

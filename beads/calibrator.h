@@ -29,6 +29,8 @@
 #ifndef BEADS_CALIBRATOR_H_
 #define BEADS_CALIBRATOR_H_
 
+#include <algorithm>
+
 #include "stmlib/stmlib.h"
 
 #include "beads/cv_reader.h"
@@ -80,7 +82,6 @@ class Calibrator {
       Settings* settings,
       CvReader* cv_reader,
       NormalizationDetector* normalization_detector) {
-    calibration_data_ = settings->mutable_persistent_data()->adc_calibration;
     cv_reader_ = cv_reader;
     normalization_detector_ = normalization_detector;
     calibrator_[0].Init();
@@ -88,7 +89,11 @@ class Calibrator {
     settings_ = settings;
   }
   
+  // A run measures into its own copy: the calibration in use and in flash
+  // changes only when Save takes a completed run.
   inline void Start() {
+    const AdcCalibrationData* c = settings_->persistent_data().adc_calibration;
+    std::copy(&c[0], &c[CV_ADC_CHANNEL_LAST], &calibration_data_[0]);
     normalization_detector_->Stop();
   }
   
@@ -118,14 +123,19 @@ class Calibrator {
     return true;
   }
   
-  inline void Save() {
-    settings_->SavePersistentData();
+  // False when the settings refuse the calibration.
+  inline bool Save() {
+    std::copy(
+        &calibration_data_[0],
+        &calibration_data_[CV_ADC_CHANNEL_LAST],
+        settings_->mutable_persistent_data()->adc_calibration);
+    return settings_->SavePersistentData();
   }
   
  private:
   CalibratorChannel calibrator_[2];
   
-  AdcCalibrationData* calibration_data_;
+  AdcCalibrationData calibration_data_[CV_ADC_CHANNEL_LAST];
   CvReader* cv_reader_;
   NormalizationDetector* normalization_detector_;
   Settings* settings_;
