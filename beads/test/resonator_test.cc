@@ -1222,6 +1222,13 @@ void TestResonatorChordVoices() {
   r.StrikeChord(strikes, 12);
   size_t offset = 0;
   CHECK(StruckVoice(strikes, &offset) == -1);
+  // Near a tuned voice, a quiet one is not taken.
+  r.StrikeVoice(1.0f, 0, strikes, 12);
+  memset(strikes, 0, sizeof(strikes));
+  r.StrikeVoice(1.01f, 0, strikes, 12);
+  CHECK(StruckVoice(strikes, &offset) == 0 && r.chord_ratio_[1] == 0.0f);
+  ChordSetup(1, 0);
+  memset(strikes, 0, sizeof(strikes));
   const float ratios[5] = { 1.0f, 1.5f, 2.0f, 1.01f, 3.0f };
   const int voices[5] = { 0, 1, 2, 0, 2 };
   for (int i = 0; i < 5; ++i) {
