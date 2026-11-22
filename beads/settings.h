@@ -105,6 +105,7 @@ class Settings {
       const PersistentData& factory);
 
   PersistentData persistent_data_;
+  PersistentData factory_;
   State state_;
   // Bank 2: the settings in sector 7, the calibration mirror in sector 6.
   ChunkStorage<15, 14, PersistentData, State> chunk_storage_;

@@ -235,6 +235,14 @@ cases = [
     '      // Keep the undefined words out of the cache.\n'
     '      Invalidate(address, size);',
     '      // Keep the undefined words out of the cache.'),
+  # Masked reads copy bytes: a word store needs an aligned destination.
+  ('TestReadIntoRecords', 'storage', 'beads/drivers/flash.h',
+    '      memcpy(bytes, &word, sizeof(word));',
+    '      *reinterpret_cast<uint32_t*>(bytes) = word;'),
+  # #317: a usable mirror is erased only with a usable calibration beside it.
+  ('TestMirrorOnlyCopy', 'storage', 'beads/settings_storage.h',
+    '    if (valid && Usable(mirror) && !SectorUsable(mirror)) {',
+    '    if (false) {'),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
     '    if (calibration != CHUNK_VALID) {\n      return STORAGE_CALIBRATION_LOST;',
     '    if (calibration == CHUNK_UNREADABLE) {\n      return STORAGE_CALIBRATION_LOST;'),
@@ -278,7 +286,7 @@ cases = [
     '        false) {\n'
     '      return true;'),
   ('TestMirrorWrites', 'storage', 'beads/settings_storage.h',
-    '        WriteChunk(MIRROR_BASE, persistent_data_) && \\',
+    '        WriteChunk(address, &data) && \\',
     '        true && \\'),
   ('TestRepair', 'storage', 'beads/settings_storage.h',
     '    locked_ = false;\n    RewriteSector();',
@@ -419,14 +427,19 @@ cases = [
   ('TestCodecRestartFade', 'firmware', 'beads/beads.cc',
     '    codec_fade = false;\n    return;',
     '    return;'),
-  ('TestSynthStopPreservesReverb', 'firmware', 'beads/beads.cc',
-    '      processor.Configure(media, mono);\n'
-    '      ConfigureAndStartCodec(false, mono_changed || synth_mode);',
-    '      processor.Configure(media, mono);\n'
-    '      if (synth_mode) {\n'
-    '        processor.ClearReverb();\n'
-    '      }\n'
-    '      ConfigureAndStartCodec(false, mono_changed || synth_mode);'),
+  # The firmware has no reverb clear: the mutation adds one, then calls it.
+  ('TestSynthStopPreservesReverb', 'firmware',
+    ('beads/dsp/processor.h', 'beads/beads.cc'),
+    ('  void WasteCPUCycles(size_t size) {',
+     '      processor.Configure(media, mono);\n'
+     '      ConfigureAndStartCodec(false, mono_changed || synth_mode);'),
+    ('  void ClearReverb() { reverb_.Clear(); }\n'
+     '  void WasteCPUCycles(size_t size) {',
+     '      processor.Configure(media, mono);\n'
+     '      if (synth_mode) {\n'
+     '        processor.ClearReverb();\n'
+     '      }\n'
+     '      ConfigureAndStartCodec(false, mono_changed || synth_mode);')),
   # #53: hold reset across clock changes and use Restart on rate changes.
   ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
     '  HAL_SAI_DMAResume(&sai_tx_);\n'
