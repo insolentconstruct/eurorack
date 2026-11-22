@@ -45,6 +45,8 @@ const size_t kProfileSize = 4096;
 const uint32_t kProfileMagic = 0x46505a44;
 const uint8_t kMaxProfileEntries = 82;
 const uint8_t kNoField = 255;
+// A feature ID kept for a feature not built yet: profiles may not use it.
+const uint8_t kReservedField = 254;
 // Changes only for incompatible profile meanings (SCALE-PROFILES.md).
 const uint32_t kProfileFormat = 1;
 // Page slot 0 is none; 1 to 21 are the options pages' knobs, in order.
@@ -121,6 +123,13 @@ enum ProfileFeature {
   FEATURE_START_QUALITY = 39,
   FEATURE_GAIN_KNOB = 40,
   FEATURE_RESONATOR = 41,
+  FEATURE_RESONATOR_MATERIAL = 43,
+  FEATURE_RESONATOR_RING = 44,
+  FEATURE_RESONATOR_STRUCTURE = 45,
+  FEATURE_RESONATOR_BRIGHTNESS = 46,
+  FEATURE_RESONATOR_DAMPING = 47,
+  FEATURE_RESONATOR_POSITION = 48,
+  FEATURE_RESONATOR_AMOUNT = 49,
   FEATURE_LAST
 };
 

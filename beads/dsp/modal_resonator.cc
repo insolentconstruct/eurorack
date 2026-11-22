@@ -35,10 +35,26 @@
 #include "stmlib/dsp/cosine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 
+#include "rings/resources.h"
+
 namespace beads {
 
 using namespace std;
 using namespace stmlib;
+
+/* extern */
+const ResonatorMaterial kResonatorMaterials[kNumResonatorMaterials] = {
+  { 0.5f, 0.3f },  // Wood: darker, mildly stretched.
+  { kResonatorStructure, kResonatorBrightness },  // String.
+  { 0.4f, 0.5f },  // Glass: stretched, brighter.
+  { 0.8f, 0.15f },  // Bell: strongly stretched, dark.
+};
+
+// Each step rings four times longer; 2.3 s at Medium, 48 kHz.
+/* extern */
+const float kResonatorRingTimes[kNumResonatorRingTimes] = {
+  0.35f, kResonatorDamping, 0.65f, 0.8f
+};
 
 void ModalResonator::Init(float sample_rate) {
   for (int i = 0; i < kNumResonatorModes / 8; ++i) {
@@ -46,8 +62,11 @@ void ModalResonator::Init(float sample_rate) {
     even_[i].Init();
   }
   set_frequency(220.0f / sample_rate);
-  set_brightness(0.5f);
-  set_position(0.3f);
+  set_structure(kResonatorStructure);
+  set_brightness(kResonatorBrightness);
+  set_damping(kResonatorDamping);
+  set_position(kResonatorPosition);
+  set_amount(1.0f);
   limiter_.Init(
       1.0f / (sample_rate * 0.5f), kResonatorPeak * kResonatorHeadroom);
 }
@@ -62,9 +81,10 @@ void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
     resonance[i].r = r[i] * kResonatorHeadroom;
   }
   limiter_.Process(resonance, size);
+  const float gain = amount_ * (1.0f / kResonatorHeadroom);
   for (size_t i = 0; i < size; ++i) {
-    frames[i].l += resonance[i].l * (1.0f / kResonatorHeadroom);
-    frames[i].r += resonance[i].r * (1.0f / kResonatorHeadroom);
+    frames[i].l += resonance[i].l * gain;
+    frames[i].r += resonance[i].r * gain;
   }
 }
 
@@ -77,18 +97,17 @@ void ModalResonator::Process(
   fill(&aux[0], &aux[size], 0.0f);
 
   // Rings' Resonator::ComputeFilters.
-  float stiffness = kResonatorStiffness;
+  float stiffness = Interpolate(rings::lut_stiffness, structure_, 256.0f);
   float harmonic = frequency_;
   float stretch_factor = 1.0f;
-  float q = 500.0f * kResonatorDecades;
-  float brightness_attenuation = 1.0f - kResonatorStructure;
+  float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);
+  float brightness_attenuation = 1.0f - structure_;
   brightness_attenuation *= brightness_attenuation;
   brightness_attenuation *= brightness_attenuation;
   brightness_attenuation *= brightness_attenuation;
   float brightness = brightness_ * (1.0f - 0.2f * brightness_attenuation);
   float q_loss = brightness * (2.0f - brightness) * 0.85f + 0.15f;
-  float q_loss_damping_rate =
-      kResonatorStructure * (2.0f - kResonatorStructure) * 0.1f;
+  float q_loss_damping_rate = structure_ * (2.0f - structure_) * 0.1f;
 
   CosineOscillator amplitudes;
   amplitudes.Init<COSINE_OSCILLATOR_APPROXIMATE>(position_);

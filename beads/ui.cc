@@ -120,6 +120,7 @@ void Ui::Init(
   seed_button_state_ = false;
   seed_button_locked_ = true;
   seed_led_state_ = false;
+  resonator_assigned_ = false;
   trim_flag_ = false;
   no_input_ = self_play_requested_ = false;
   synth_mode_ = false;
@@ -170,6 +171,9 @@ void Ui::LoadOptions() {
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
+  resonator_ = settings_->FeatureValue(FEATURE_RESONATOR);
+  resonator_material_ = settings_->FeatureValue(FEATURE_RESONATOR_MATERIAL);
+  resonator_ring_ = settings_->FeatureValue(FEATURE_RESONATOR_RING);
   // SEED starts latched, or unlatched when the profile asks.
   seed_button_locked_ = !settings_->FeatureValue(FEATURE_SEED_START);
 }
@@ -278,6 +282,7 @@ void Ui::Poll() {
         }
       } else if (switches_.pressed(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
+        resonator_assigned_ = false;
         state->assignable_cv_destination = 3;
         state->assignable_cv_amount[i] = p->hidden_parameter() * 256.0f;
       }
@@ -305,6 +310,19 @@ void Ui::Poll() {
   output_limiter_mode_ = previewing
       ? OutputLimiterMode(options_.Value(FEATURE_LIMITER))
       : settings_->output_limiter_mode();
+  resonator_ = previewing
+      ? options_.Value(FEATURE_RESONATOR)
+      : settings_->FeatureValue(FEATURE_RESONATOR);
+  resonator_material_ = previewing
+      ? options_.Value(FEATURE_RESONATOR_MATERIAL)
+      : settings_->FeatureValue(FEATURE_RESONATOR_MATERIAL);
+  resonator_ring_ = previewing
+      ? options_.Value(FEATURE_RESONATOR_RING)
+      : settings_->FeatureValue(FEATURE_RESONATOR_RING);
+  // Off, or in the synths, the CV goes back to FEEDBACK.
+  if (!resonator_ || synth_mode_) {
+    resonator_assigned_ = false;
+  }
   if (!previewing) {
     spectral_ = settings_->spectral();
   }
@@ -446,7 +464,11 @@ void Ui::UpdateLeds() {
               (seed_button_state_ || seed_led_state_) ? 255 : 0);
         }
         
-        if (settings_->width_assigned()) {
+        if (resonator_assigned_) {
+          // Page 5's LEDs, the resonator page.
+          leds_.set(Led(LED_ASSIGN_1 + MIX_PARAMETER_FEEDBACK), triangle);
+          leds_.set(Led(LED_ASSIGN_1 + MIX_PARAMETER_REVERB), triangle);
+        } else if (settings_->width_assigned()) {
           for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
             leds_.set(Led(LED_ASSIGN_1 + i), triangle);
           }
@@ -759,11 +781,17 @@ void Ui::OnSwitchReleased(const Event& e) {
         }
         if (!pot_touched) {
           State* state = settings_->mutable_state();
-          if (settings_->width_assigned()) {
+          // Resonator damping comes last, then FEEDBACK again.
+          if (resonator_assigned_) {
+            resonator_assigned_ = false;
+          } else if (settings_->width_assigned()) {
             settings_->set_width_assigned(false);
             settings_->set_diffusion_assigned(true);
+            resonator_assigned_ = !settings_->diffusion_assigned() &&
+                resonator_ != 0;
           } else if (settings_->diffusion_assigned()) {
             settings_->set_diffusion_assigned(false);
+            resonator_assigned_ = resonator_ != 0;
           } else if (state->assignable_cv_destination == 2 && stereo_width_ &&
                      settings_->profile().adjustable(FEATURE_WIDTH)) {
             settings_->set_width_assigned(true);
@@ -771,6 +799,9 @@ void Ui::OnSwitchReleased(const Event& e) {
                      settings_->diffusion_assignable() &&
                      settings_->profile().adjustable(FEATURE_DIFFUSION)) {
             settings_->set_diffusion_assigned(true);
+          } else if (state->assignable_cv_destination == 2 && resonator_) {
+            state->assignable_cv_destination = 0;
+            resonator_assigned_ = true;
           } else {
             state->assignable_cv_destination =
                 state->assignable_cv_destination == 3 ? 0

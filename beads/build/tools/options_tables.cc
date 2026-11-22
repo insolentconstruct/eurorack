@@ -82,6 +82,14 @@ const char* const kOptionNames[] = {
   "Start in quality",
   "Manual gain knob",
   "Resonator",
+  "Reserved",
+  "Resonator material",
+  "Resonator ring time",
+  "Resonator structure",
+  "Resonator brightness",
+  "Resonator damping",
+  "Resonator position",
+  "Resonator amount",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.
@@ -132,6 +140,17 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_SEED_LATCH, 3, "Add" },
   { beads::FEATURE_TIME_SCAN, 0, "Random" },
   { beads::FEATURE_TIME_SCAN, 1, "Scan" },
+  { beads::FEATURE_RESONATOR, 0, "Off (stock)" },
+  { beads::FEATURE_RESONATOR, 1, "After the grains" },
+  { beads::FEATURE_RESONATOR, 2, "Before the buffer" },
+  { beads::FEATURE_RESONATOR_MATERIAL, 0, "Wood" },
+  { beads::FEATURE_RESONATOR_MATERIAL, 1, "String" },
+  { beads::FEATURE_RESONATOR_MATERIAL, 2, "Glass" },
+  { beads::FEATURE_RESONATOR_MATERIAL, 3, "Bell" },
+  { beads::FEATURE_RESONATOR_RING, 0, "Short" },
+  { beads::FEATURE_RESONATOR_RING, 1, "Medium" },
+  { beads::FEATURE_RESONATOR_RING, 2, "Long" },
+  { beads::FEATURE_RESONATOR_RING, 3, "Very long" },
 };
 
 const char* ColorName(const beads::Leds::Color& color) {

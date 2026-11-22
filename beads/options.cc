@@ -46,7 +46,8 @@ const OptionPage kOptionPages[kNumOptionPages] = {
   { 2, { FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB } },
   { 4, { FEATURE_PROCESSOR, FEATURE_SYNTH, FEATURE_SYNTH_START } },
   { 3, { FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_LIMITER } },
-  { 5, { FEATURE_NONE, FEATURE_NONE, FEATURE_NONE } },
+  { 5, { FEATURE_RESONATOR, FEATURE_RESONATOR_MATERIAL,
+      FEATURE_RESONATOR_RING } },
   { 6, { FEATURE_NONE, FEATURE_NONE, FEATURE_NONE } },
   { 7, { FEATURE_NONE, FEATURE_NONE, FEATURE_NONE } }
 };
@@ -64,6 +65,9 @@ const ProfileFeature kPageFeatures[kNumPageFeatures] = {
   FEATURE_BRIGHTNESS,
   FEATURE_SEED_LATCH,
   FEATURE_TIME_SCAN,
+  FEATURE_RESONATOR,
+  FEATURE_RESONATOR_MATERIAL,
+  FEATURE_RESONATOR_RING,
 };
 const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // None.
@@ -107,7 +111,15 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // First page.
   PAGE_CONTROL_NONE,  // Start quality.
   PAGE_CONTROL_NONE,  // Gain knob.
-  PAGE_CONTROL_NONE,  // Resonator.
+  PAGE_CONTROL_ZONES,  // Resonator.
+  PAGE_CONTROL_NONE,  // Reserved.
+  PAGE_CONTROL_STEPS,  // Resonator material.
+  PAGE_CONTROL_STEPS,  // Resonator ring.
+  PAGE_CONTROL_NONE,  // Resonator structure.
+  PAGE_CONTROL_NONE,  // Resonator brightness.
+  PAGE_CONTROL_NONE,  // Resonator damping.
+  PAGE_CONTROL_NONE,  // Resonator position.
+  PAGE_CONTROL_NONE,  // Resonator amount.
 };
 const Leds::Color kOptionColors[kNumOptionColors] = {
   { 0, 255, 0 },
@@ -125,6 +137,8 @@ const OptionValue kOptionValues[] = {
   { FEATURE_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
   { FEATURE_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
   { FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { FEATURE_RESONATOR_MATERIAL, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { FEATURE_RESONATOR_RING, 3, { 0, 255, 0 }, PULSE_SLOW },
 };
 
 const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts] = {

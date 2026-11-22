@@ -31,6 +31,8 @@
 
 #include "stmlib/stmlib.h"
 
+#include "stmlib/dsp/filter.h"
+
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modal_resonator.h"
 #include "beads/dsp/modulated_parameter.h"
@@ -58,9 +60,8 @@ const size_t kDelayBufferSizeBits = 768 * 1000 * 8;
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
-// The grains' mono sum and an input hit strike the resonator.
+// The grains' mono sum excites the resonator.
 const float kResonatorInputGain = 0.5f;
-const float kResonatorStrike = 0.5f;
 // PITCH at noon tunes it to C3.
 const float kResonatorRootNote = 48.0f;
 
@@ -68,6 +69,17 @@ enum ResonatorPlacement {
   RESONATOR_OFF,
   RESONATOR_AFTER_GRAINS,
   RESONATOR_BEFORE_BUFFER
+};
+
+struct ResonatorControls {
+  float structure;
+  float brightness;
+  float damping;
+  float position;
+  float amount;
+  // While the CV moves damping, FEEDBACK is the knob alone.
+  float feedback;
+  bool hold_feedback;
 };
 
 class Processor {
@@ -122,11 +134,22 @@ class Processor {
   }
   // Rings' modal resonator on the grains, or on the input before the buffer.
   inline void set_resonator(int placement) {
-    SetOption(OPTION_FLAG_RESONATOR_GRAINS,
-        placement == RESONATOR_AFTER_GRAINS);
-    SetOption(OPTION_FLAG_RESONATOR_INPUT,
-        placement == RESONATOR_BEFORE_BUFFER);
+    // One store: the audio interrupt never sees both placements.
+    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
+        ? OPTION_FLAG_RESONATOR_GRAINS
+        : (placement == RESONATOR_BEFORE_BUFFER
+            ? OPTION_FLAG_RESONATOR_INPUT : 0);
     resonator_sample_rate_ = 0.0f;
+    options_ = (options_ &
+        ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
+    resonator_sample_rate_ = 0.0f;
+    // A SEED held while it starts does not strike it.
+    seed_gate_ = true;
+  }
+  // Set at the UI rate; until then the resonator keeps its defaults.
+  inline void set_resonator_controls(const ResonatorControls& controls) {
+    resonator_controls_ = controls;
+    resonator_controls_set_ = true;
   }
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
@@ -415,6 +438,11 @@ class Processor {
       size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
+  // A rising SEED, button and jack merged as the grains see them.
+  bool SeedStrike(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      size_t size);
   inline void AddAttackTrigger(TriggerGenerator::Output* triggers) {
     if (attack_trigger_) {
       triggers[0].trigger = true;
@@ -481,6 +509,12 @@ class Processor {
   ModalResonator resonator_;
   // It starts afresh at each new rate.
   float resonator_sample_rate_;
+  ResonatorControls resonator_controls_;
+  bool resonator_controls_set_;
+  bool seed_gate_;
+  // SEED's pulse, low-passed as Rings' strum, while it still sounds.
+  stmlib::Svf strike_filter_;
+  bool strike_sounding_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };
