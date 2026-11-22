@@ -2135,7 +2135,17 @@ cases = [
   ('TestLibraries', 'plaits_blob', 'beads/blob/plaits_libraries.cc',
     '    libraries[i] = Find(d->id);',
     '    libraries[0] = Find(d->id);'),
-
+  ('TestFadeIn', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
+    '      const float ramp = float(position) * kPlaitsBlobFadeStep;',
+    '      const float ramp = float(position + 1) * kPlaitsBlobFadeStep;'),
+  ('TestFadeIn', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
+    '      const float gain = ramp * ramp;',
+    '      const float gain = ramp;'),
+  ('TestFadeIn', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
+    '      aux[i] *= gain;\n', ''),
+  ('TestFadeIn', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
+    '    while (i < size && position < kPlaitsBlobFadeSize) {',
+    '    while (i < size) {'),
   # Modal resonator (resonator_test).
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
     'if (partial_frequency >= 0.49f) {', 'if (partial_frequency >= 0.6f) {'),

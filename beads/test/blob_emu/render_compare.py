@@ -72,6 +72,23 @@ SINE = 0x08021440
 POISON = struct.pack('<I', 0x7fa5a5a5)  # a NaN no engine writes
 SLOT_SIZE = 4352
 ARENA_SIZE = 16384
+# A rebuilt blob fades in over its first 48 samples on a squared ramp
+# (plaits_blob_engine.h).
+FADE_SIZE = 48
+
+
+def f32(x):
+  return struct.unpack('<f', struct.pack('<f', x))[0]
+
+
+FADE_STEP = f32(1.0 / FADE_SIZE)
+
+
+def faded(word, position):
+  """The compiled-in sample as the fade leaves it, rounded as the M7 does."""
+  y, = struct.unpack('<f', word)
+  ramp = f32(position * FADE_STEP)
+  return struct.pack('<f', y * f32(ramp * ramp))
 
 
 def symbols(path):
@@ -122,6 +139,7 @@ class Machine(object):
     self.base = base
     self.size = len(region)
     self.arena = None
+    self.fade = FADE_SIZE
 
   def call(self, name, *args):
     uc = self.uc
@@ -222,6 +240,7 @@ class Machine(object):
     self.uc.mem_write(arena, POISON * (ARENA_SIZE // 4))
     if self.call('harness_select_blob', model):
       raise RuntimeError('no blob for model %d' % model)
+    self.fade = 0
 
   def select_compiled(self, engine):
     self.call('harness_select_compiled', engine)
@@ -246,7 +265,9 @@ def drive(seed):
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
                    stats=None):
-  """Blob voice against compiled engine, block by block, from one seed."""
+  """Blob voice against compiled engine, block by block, from one seed.
+  Inside the blob's fade-in the expected sample is the compiled one times
+  the fade's gain; everywhere else it is the compiled sample itself."""
   differ = samples = 0
   for block, (trigger, note, harmonics, timbre, morph, accent) in enumerate(
       steps):
@@ -262,7 +283,12 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
         v, = struct.unpack_from('<f', x, i)
         if v != v or v in (float('inf'), float('-inf')):
           raise RuntimeError('non-finite output')
-        if x[i:i + 4] != y[i:i + 4]:
+        position = m.fade + i // 4
+        expected = faded(y[i:i + 4], position) if position < FADE_SIZE \
+            else y[i:i + 4]
+        if stats is not None and position < FADE_SIZE:
+          stats['fade_peak'] = max(stats.get('fade_peak', 0.0), abs(v))
+        if x[i:i + 4] != expected:
           differ += 1
           if stats is not None:
             w, = struct.unpack_from('<f', y, i)
@@ -272,6 +298,7 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
     if a_seed != b_seed:
       raise RuntimeError('the generator diverged')
     seed = a_seed
+    m.fade += BLOCK
   return differ, samples, seed
 
 
@@ -403,7 +430,8 @@ def main(argv):
                      'slot_cleared': cleared, 'max_difference':
                      stats.get('max', 0.0), 'compiled_peak':
                      stats.get('peak', 0.0), 'last_differing_block':
-                     stats.get('last_block')})
+                     stats.get('last_block'), 'fade_window_peak':
+                     stats.get('fade_peak', 0.0)})
       if not cleared:
         failures.append('switch %d->%d: poison left in the slot' % (
             first, second))
@@ -418,12 +446,14 @@ def main(argv):
       findings.append('model %d after %d: %d of %d samples differ from the '
                       'compiled-in engine, which keeps its state across a '
                       'switch (Reset only); largest difference %.3g, '
-                      'compiled peak %.3g, last differing block %d of %d' % (
+                      'compiled peak %.3g, last differing block %d of %d, '
+                      'peak inside the fade-in %.3g' % (
                           first, second, phases[2]['differ'],
                           phases[2]['samples'], phases[2]['max_difference'],
                           phases[2]['compiled_peak'],
                           phases[2]['last_differing_block'],
-                          len(sequence[200:])))
+                          len(sequence[200:]),
+                          phases[2]['fade_window_peak']))
 
   # Each comparison must see a difference: the note nudged by 0.01.
   m = machine()
