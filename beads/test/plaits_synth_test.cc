@@ -498,6 +498,55 @@ void TestFreezeSustains() {
   CHECK(energy < 1e-6);
 }
 
+// The drone ends as a note decays through the low-pass gate (#354): when
+// DENSITY leaves noon or SEED plays the next voice, the droning voice keeps
+// sounding, with no step larger than the drone's own.
+void TestDroneEndDecays() {
+  test_checker.Start("TestDroneEndDecays");
+  for (int ending = 0; ending < 2; ++ending) {
+    Reset();
+    Controls c;
+    // Two-op FM with no modulation: a sine through the LPG.
+    c.mix.feedback = ModelCentre(10);
+    c.mix.reverb_amount = 0.0f;
+    c.p.size.base = 0.0f;
+    c.seed = SEED_BUTTON_STATE_OFF;
+    FloatFrame out[kBlockSize];
+    float previous = 0.0f;
+    float drone_step = 0.0f;
+    for (int block = 0; block < 2000; ++block) {
+      Block(c, out);
+      for (size_t i = 0; i < kBlockSize; ++i) {
+        if (block >= 1000) {
+          drone_step = std::max(drone_step, fabsf(out[i].l - previous));
+        }
+        previous = out[i].l;
+      }
+    }
+    CHECK(synth.drone_ && synth.active_voice_ == 0);
+    if (ending) {
+      c.seed = SEED_BUTTON_STATE_ON;
+    } else {
+      c.density.base = 0.3f;
+    }
+    float end_step = 0.0f;
+    for (int block = 0; block < 8; ++block) {
+      Block(c, out);
+      c.seed = SEED_BUTTON_STATE_OFF;
+      for (size_t i = 0; i < kBlockSize; ++i) {
+        end_step = std::max(end_step, fabsf(out[i].l - previous));
+        previous = out[i].l;
+      }
+    }
+    CHECK(!synth.drone_);
+    const float gate = synth.voice_[0].lpg_envelope_.gain();
+    printf("Drone end by %s: step %.4f (drone %.4f), gate %.3f\n",
+        ending ? "SEED" : "DENSITY", end_step, drone_step, gate);
+    CHECK(end_step < 1.5f * drone_step);
+    CHECK(gate > 0.9f);
+  }
+}
+
 // Speech word banks as Mutable Instruments' synchronous Load decodes them:
 // frames, words, FNV-1a of the frames and word boundaries; then the blocks
 // the sliced load takes.
@@ -779,6 +828,7 @@ int main() {
   TestVoiceAllocation();
   TestBankDetents();
   TestFreezeSustains();
+  TestDroneEndDecays();
   TestEveryModelRenders();
   TestQuantizationBounds();
   return test_checker.failures() ? 1 : 0;

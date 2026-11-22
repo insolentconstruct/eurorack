@@ -42,6 +42,8 @@ class Codec {
     int32_t r;
   };
   enum Event { EVENT_NONE, EVENT_SEED, EVENT_FREEZE };
+  // Each call, for tests that check the order of transitions.
+  enum Call { CALL_START, CALL_RESTART, CALL_STOP, CALL_PAUSE, CALL_RESUME };
   typedef void (*FillBufferCallback)(
       const Event*, const Frame*, Frame*, size_t);
   bool Init() {
@@ -57,6 +59,7 @@ class Codec {
     callback_ = callback;
     running_ = true;
     ++starts_;
+    Observe(CALL_START);
     return true;
   }
   bool Restart(
@@ -70,6 +73,7 @@ class Codec {
     callback_ = callback;
     running_ = true;
     ++restarts_;
+    Observe(CALL_RESTART);
     return true;
   }
   // The HAL faults when the SAI is stopped before its first start.
@@ -77,9 +81,23 @@ class Codec {
     idle_stops_ += !running_;
     running_ = false;
     ++stops_;
+    Observe(CALL_STOP);
   }
-  void Pause() { callback_ = NULL; }
-  void Resume(FillBufferCallback callback) { callback_ = callback; }
+  void Pause() {
+    callback_ = NULL;
+    Observe(CALL_PAUSE);
+  }
+  void Resume(FillBufferCallback callback) {
+    callback_ = callback;
+    Observe(CALL_RESUME);
+  }
+  void Observe(Call call) {
+    if (observer_) {
+      observer_(call);
+    }
+  }
+  // Zero-initialized with the object; Init leaves it set.
+  void (*observer_)(Call call);
   int sample_rate_;
   size_t block_size_;
   FillBufferCallback callback_;

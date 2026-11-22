@@ -110,7 +110,8 @@ class Settings {
   inline const Profile& profile() const { return profile_; }
   inline bool profile_locked() const { return profile_locked_; }
 
-  // False when a calibration out of range was refused for the stored one.
+  // False when the calibration was refused: storage locked, or out of range
+  // and the stored one kept.
   bool SavePersistentData();
   void SaveState();
 

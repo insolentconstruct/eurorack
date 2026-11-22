@@ -191,7 +191,7 @@ for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
 assert len(values["Resonator"]) == 3
-assert len(values["Resonator material"]) == 4
+assert len(values["Resonator material"]) == 8
 assert len(values["Resonator ring time"]) == 4
 assert len(values) == 15 and "Stereo width" not in values
 # [A]+DRY/WET width keeps its meter on the guides.

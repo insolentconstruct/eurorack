@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <sys/mman.h>
 
 #include "beads/test/test_checker.h"
@@ -54,6 +55,31 @@ uint32_t test_writes = 0;
 #include "beads/test/firmware_shims.h"
 
 using namespace beads;
+
+// Every CV target the instrumented UI leaves between two of its calls.
+const Settings* watched_settings = NULL;
+uint32_t watched_targets = 0;
+
+extern "C" {
+
+void __cyg_profile_func_enter(void*, void*)
+    __attribute__((no_instrument_function));
+void __cyg_profile_func_exit(void*, void*)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_enter(void*, void*) {
+  if (watched_settings) {
+    watched_targets |= 1 << watched_settings->cv_target_;
+  }
+}
+
+void __cyg_profile_func_exit(void*, void*) {
+  if (watched_settings) {
+    watched_targets |= 1 << watched_settings->cv_target_;
+  }
+}
+
+}  // extern "C"
 
 // A dimmed quality LED channel (0 red, 1 green, 2 blue) at percent: red *
 // level^1.5; lit green and blue at the level plus 12 * (1 - level), rounded.
@@ -188,6 +214,42 @@ void TestTrimGesture() {
   CHECK(!page.ui.trim_flag_);
   CHECK(!page.ui.freeze_button_state_);
   CHECK(page.settings.state().media == page_media);
+}
+
+// An [A] knob edit is saved when an [A] gesture consumes the release.
+void TestAmountSavedByAction() {
+  test_checker.Start("TestAmountSavedByAction");
+  const Switch buttons[] = { SWITCH_FREEZE, SWITCH_SEED };
+  for (int b = 0; b < 2; ++b) {
+    for (int knob = 0; knob < 3; ++knob) {
+      Rig r(false);
+      const int before[] = {
+        r.settings.state().gain,
+        r.settings.stereo_width(),
+        r.settings.FeatureValue(FEATURE_DIFFUSION)
+      };
+      r.Down(SWITCH_MEDIA);
+      float* pots[] = { &r.feedback, &r.pot, &r.reverb };
+      *pots[knob] = 0.8f;
+      r.Tick(20, true);
+      r.Down(buttons[b]);
+      r.Up(buttons[b]);
+      r.Up(SWITCH_MEDIA);
+      CHECK(r.ui.ignore_release_[SWITCH_MEDIA]);
+      Settings loaded;
+      CHECK(loaded.Init(false));
+      CHECK(loaded.state().gain == r.settings.state().gain);
+      CHECK(loaded.stereo_width() == r.settings.stereo_width());
+      CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) ==
+          r.settings.FeatureValue(FEATURE_DIFFUSION));
+      const int after[] = {
+        r.settings.state().gain,
+        r.settings.stereo_width(),
+        r.settings.FeatureValue(FEATURE_DIFFUSION)
+      };
+      CHECK(after[knob] != before[knob]);
+    }
+  }
 }
 
 void TestMonophonicGesture() {
@@ -1722,6 +1784,36 @@ void TestDiffusionAssignCycle() {
   CHECK(r.settings.state().assignable_cv_destination == 3);
 }
 
+// [M] moves the CV from width to diffusion in one store: the audio interrupt
+// never sees the target cleared in between.
+void TestWidthToDiffusionTarget() {
+  test_checker.Start("TestWidthToDiffusionTarget");
+  Rig r(false);
+  r.settings.set_stereo_width(128);
+  r.settings.set_diffusion(0.4f);
+  r.settings.mutable_state()->assignable_cv_destination = 2;
+  r.Tick(20, true);
+  r.Tap();
+  CHECK(r.settings.width_assigned());
+  watched_settings = &r.settings;
+  watched_targets = 0;
+  r.Tap();
+  watched_settings = NULL;
+  CHECK(r.settings.diffusion_assigned());
+  CHECK(watched_targets == ((1 << 1) | (1 << 2)));
+  // Without a diffusion amount, width hands over to FEEDBACK as before.
+  Rig none(false);
+  none.settings.set_stereo_width(128);
+  none.settings.mutable_state()->assignable_cv_destination = 2;
+  none.Tick(20, true);
+  none.Tap();
+  CHECK(none.settings.width_assigned());
+  none.Tap();
+  CHECK(!none.settings.width_assigned());
+  CHECK(!none.settings.diffusion_assigned());
+  CHECK(none.settings.state().assignable_cv_destination == 0);
+}
+
 // [A]+DRY/WET sets the stereo width as Beads' [A]+FEEDBACK sets the gain:
 // fully CCW is stock, and the amount saves when [A] is released.
 void TestWidthGestureAndMeter() {
@@ -2262,6 +2354,26 @@ void TestPendingSeed() {
   CHECK(before.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   before.Tick(1001, true);
   CHECK(before.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+}
+
+// A brightness chosen just before the pages close holds until it is saved.
+void TestBrightnessHoldsAfterClose() {
+  test_checker.Start("TestBrightnessHoldsAfterClose");
+  Rig r(false);
+  r.EnterPage(3);
+  r.feedback = 0.9f;  // 33%.
+  r.Tick(40, true);
+  CHECK(r.ui.options_.Value(FEATURE_BRIGHTNESS) == 2);
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(!r.ui.options_.active());
+  r.ui.set_freeze_led_state(true);
+  for (int t = 0; t < 1100; ++t) {
+    r.Tick(1, true);
+    CHECK(r.ui.leds_.intensity_[LED_FREEZE] == 255 * 33 / 100);
+  }
+  CHECK(r.ui.options_.stage() == Options::STAGE_INACTIVE);
+  CHECK(r.settings.FeatureValue(FEATURE_BRIGHTNESS) == 2);
 }
 
 void TestPendingExitButtons() {
@@ -3914,6 +4026,256 @@ void TestOptionsEntryChoices() {
   CHECK(!memcmp(&saved[0], &saved[1], sizeof(OptionsRecord)));
 }
 
+// Characterization of the gestures before Drizzlet's resolution moves out of
+// Ui: each step's outcome, as one line of the Ui and settings state.
+std::string GestureState(Rig* r) {
+  const State& s = r->settings.state();
+  char line[128];
+  snprintf(line, sizeof(line),
+      "q%d g%d r%d o%d a%d m%d t%d f%d l%d s%d d%d b%d y%d p%d n%d k%d c%d",
+      s.media, s.gain, r->gain.restarts, s.gate_output_mode,
+      s.disable_autosave, r->ui.mode_, r->ui.trim_flag_,
+      r->ui.freeze_button_state_, r->ui.seed_button_locked_,
+      r->ui.seed_button_state_, s.assignable_cv_destination,
+      r->settings.FeatureValue(FEATURE_PLAITS_BANK),
+      r->ui.self_play_requested_, r->ui.options_.stage(),
+      r->ui.options_.page(), s.monophonic_mode,
+      r->calibration.starts);
+  return line;
+}
+
+// Steps: D or U and a switch (F, S, M, A; 8 ms each), K (FEEDBACK turned,
+// 50 ms) or T and milliseconds. Returns the state after each step.
+std::string RunGesture(Rig* r, const char* steps) {
+  std::string out;
+  const char* names = "FSMA";
+  while (*steps) {
+    const char op = *steps++;
+    if (op == 'K') {
+      // FEEDBACK turned to the other side of noon.
+      r->feedback = r->feedback > 0.5f ? 0.2f : 0.8f;
+      r->Tick(50, true);
+    } else if (op == 'T') {
+      r->Tick(atoi(steps), true);
+      while (*steps >= '0' && *steps <= '9') {
+        ++steps;
+      }
+    } else {
+      const Switch s = Switch(strchr(names, *steps++) - names);
+      if (op == 'D') {
+        r->Down(s);
+      } else {
+        r->Up(s);
+      }
+    }
+    while (*steps == ' ') {
+      ++steps;
+    }
+    out += GestureState(r);
+    out += '\n';
+  }
+  return out;
+}
+
+bool SameGesture(const char* name, const std::string& got,
+    const char* expected) {
+  if (got != expected) {
+    printf("Gesture %s:\n%s  expected:\n%s", name, got.c_str(), expected);
+    return false;
+  }
+  return true;
+}
+
+// The first hold, in ms from the registered press to the release, that a
+// release takes as a hold: after the tap boundary, the outcome changes.
+uint32_t HoldBoundary(Switch s, uint32_t from, uint32_t to,
+    std::string (*outcome)(Rig*)) {
+  std::string tap;
+  for (uint32_t held = from; held <= to; ++held) {
+    Rig r(false);
+    test_down[s] = true;
+    while (!r.ui.switches_.pressed(s)) {
+      r.Tick(1, true);
+    }
+    const uint32_t start = r.ui.press_time_[s];
+    while (stmlib::system_clock.milliseconds() - start < held) {
+      r.Tick(1, true);
+    }
+    r.Up(s);
+    r.Tick(20, true);
+    const std::string result = outcome(&r);
+    if (held == from) {
+      tap = result;
+    } else if (result != tap) {
+      printf("Hold boundary of switch %d: %u ms\n", s, held);
+      return held;
+    }
+  }
+  return 0;
+}
+
+std::string MediaOutcome(Rig* r) {
+  return GestureState(r);
+}
+
+std::string OptionsOutcome(Rig* r) {
+  return r->ui.options_.stage() == Options::STAGE_INACTIVE ? "closed" : "open";
+}
+
+void TestGestureCharacterization() {
+  test_checker.Start("TestGestureCharacterization");
+  // The [A] hold acts from a 1492 ms press: the release registers 8 ms
+  // later, at kSelfPlayHoldTime. ASSIGN opens options at kOptionsHoldTime.
+  CHECK(HoldBoundary(SWITCH_MEDIA, 1450, 1550, &MediaOutcome) == 1492);
+  CHECK(HoldBoundary(SWITCH_ASSIGN, 2950, 3050, &OptionsOutcome) == 3000);
+
+  struct Script {
+    const char* name;
+    int synth;  // 0 granular, 1 wavetable synth, 2 Plaits.
+    const char* steps;
+    const char* expected;
+  };
+  const Script scripts[] = {
+    { "tap", 0, "DM UM",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q2 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "hold", 0, "DM T3000 UM",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g0 r1 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "hold and knob", 0, "DM T200 K T200 UM",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g205 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g205 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g205 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "[A]+FREEZE", 0, "DM DF UF UM T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "[A]+SEED", 0, "DM DS US UM T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k1 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k1 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k1 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k1 c0\n" },
+    { "[A]+FREEZE slow", 0, "DM T2000 DF UF T100 UM T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "ASSIGN tap", 0, "DA UA",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d1 b0 y0 p0 n0 k0 c0\n" },
+    { "ASSIGN+SEED", 0, "DA DS US UA T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o1 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o1 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o1 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o1 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "ASSIGN+FREEZE", 0, "DA DF UF UA T1100",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a1 m5 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a1 m5 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a1 m5 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a1 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "ASSIGN+MEDIA", 0, "DA DM UM UA T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m1 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c1\n"
+        "q3 g100 r0 o0 a0 m1 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c1\n"
+        "q3 g100 r0 o0 a0 m1 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c1\n"
+        "q3 g100 r0 o0 a0 m1 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c1\n" },
+    { "SEED+FREEZE", 0, "DS DF UF US T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l0 s1 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "SEED hold", 0, "DS T4000 US",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l0 s1 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "ASSIGN almost to options", 0, "DA T2984 UA T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d1 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d1 b0 y0 p0 n0 k0 c0\n" },
+    { "options", 0, "DA T3000 UA T100 DA T3000 UA T200",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p1 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "options with FREEZE held", 0, "DA T3000 DF UA T100 UF T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p1 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "options with MEDIA held", 0, "DA T3000 DM UA T100 UM T20",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p1 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "options with a knob", 0, "DA T3000 UA K T100 DA T3000 UA T200",
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p1 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p2 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p3 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "synth [A]+FREEZE", 1, "DM DF UF UM T20",
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t1 f0 l1 s0 d0 b0 y0 p0 n0 k0 c0\n" },
+    { "Plaits [A]+FREEZE", 2, "DM DF UF UM T20 DM DF UF UM T600",
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b2 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b2 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b2 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b2 y0 p0 n0 k0 c0\n" },
+    { "Plaits slow [A]+FREEZE", 2, "DM T2000 DF UF UM T20",
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b0 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n"
+        "q3 g100 r0 o0 a0 m0 t0 f1 l1 s0 d0 b1 y0 p0 n0 k0 c0\n" },
+  };
+  for (size_t i = 0; i < sizeof(scripts) / sizeof(scripts[0]); ++i) {
+    Rig r(false);
+    r.settings.mutable_state()->gain = 100;
+    if (scripts[i].synth) {
+      PlaySynth(&r, true, scripts[i].synth == 2);
+    }
+    const std::string got = RunGesture(&r, scripts[i].steps);
+    CHECK(SameGesture(scripts[i].name, got, scripts[i].expected));
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -3923,6 +4285,7 @@ int main() {
   TestCommitPublication();
   TestPendingSeed();
   TestPendingExitButtons();
+  TestBrightnessHoldsAfterClose();
   TestOptionsTablesAndLifetime();
   TestOptionsKnobsAndSettling();
   TestOptionsSeed();
@@ -3937,6 +4300,7 @@ int main() {
   TestDiffusionGestureAndMeter();
   TestDiffusionStorage();
   TestDiffusionAssignCycle();
+  TestWidthToDiffusionTarget();
   TestPlaybackStorage();
   TestCloudsStorage();
   TestFrozenFeedbackStorage();
@@ -3952,6 +4316,7 @@ int main() {
   TestSelfPlayHold();
   TestTrimGesture();
   TestMonophonicGesture();
+  TestAmountSavedByAction();
   TestAudioPatchDetection();
   TestFrozenStateChangeGuard();
   TestGateOutputChordPersistence();
@@ -3993,5 +4358,6 @@ int main() {
   TestFeedbackAmountSlot();
   TestOptionsIdleTimeout();
   TestOptionsEntryChoices();
+  TestGestureCharacterization();
   return test_checker.failures() ? 1 : 0;
 }
