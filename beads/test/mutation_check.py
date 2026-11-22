@@ -2278,6 +2278,9 @@ cases = [
     'float amplitude = (side ? 0.5f : 1.0f) * pickup * *gain;'),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.cc',
     '  if (modes_) {\n    ProcessModes', '  if (false) {\n    ProcessModes'),
+  ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '    } else {\n      // A silent batch keeps no ring for a later object.\n'
+    '      odd->Init();\n', '    } else {\n'),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/processor_resonator.cc',
     '    resonator_.set_modes(resonator_controls_.modes);\n', ''),
   ('TestResonatorPage', 'firmware', 'beads/beads.cc',
