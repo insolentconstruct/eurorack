@@ -30,6 +30,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <vector>
 #include <new>
 #include <sys/mman.h>
@@ -3083,6 +3084,553 @@ void TestProcessorToggle() {
   FlashProfile(factory_profile);
 }
 
+// Characterization of the transitions and option fan-out before they move
+// out of beads.cc: exact block traces, codec call order and setter timing.
+
+// Blocks: P full, D fading, Z held silent, B blanking, U rising, - paused.
+// Codec calls: s start, R restart, x stop, p pause, r resume (* gain reset).
+struct TransitionTrace {
+  std::string blocks;
+  int calls;
+  int paused;
+  bool silent;
+};
+
+TransitionTrace* transition_trace = NULL;
+// A quarter second of 4 kHz blocks, as beads.cc's kBlockRate / 4.
+const int kBlankingBlocks = 1000;
+
+void ObserveCodec(Codec::Call call) {
+  if (!transition_trace) {
+    return;
+  }
+  extern volatile bool codec_fade;
+  extern float reverb_style_gain;
+  const char letters[] = "sRxpr";
+  transition_trace->blocks += ' ';
+  transition_trace->blocks += letters[call];
+  ++transition_trace->calls;
+  // What the pause and the restart frame: synth, engine, quality, mono.
+  const int configuration = synth_mode + 2 * processor.spectral() +
+      4 * processor.media() + 16 * processor.mono();
+  if (call == Codec::CALL_PAUSE) {
+    // Pauses only once faded: no block is cut at full level.
+    CHECK(reverb_style_gain == 0.0f);
+    transition_trace->paused = configuration;
+  } else if (call == Codec::CALL_RESUME || call == Codec::CALL_RESTART) {
+    // Reconfigured while paused, then blanking first.
+    CHECK(configuration != transition_trace->paused);
+    CHECK(codec_transition_frames == kBlankingBlocks);
+    CHECK(!codec_fade);
+    if (gain_control.gain_ == 1.0f && gain_control.peak_ == 0.5f &&
+        gain_control.time_ == 0) {
+      transition_trace->blocks += '*';
+    }
+  }
+  transition_trace->blocks += ' ';
+}
+
+void TraceBlock(Rig* r) {
+  extern float reverb_style_gain;
+  const float before = reverb_style_gain;
+  const int blanking = codec_transition_frames;
+  char letter = '-';
+  if (codec.callback_) {
+    r->Block();
+    bool silent = true;
+    for (size_t i = 0; i < codec.block_size_; ++i) {
+      silent = silent && !r->out[i].l && !r->out[i].r;
+    }
+    const float after = reverb_style_gain;
+    letter = blanking ? 'B' : (after < before ? 'D'
+        : (after > before ? 'U' : (after == 0.0f ? 'Z' : 'P')));
+    if (letter == 'B' || letter == 'Z') {
+      transition_trace->silent = transition_trace->silent && silent;
+    }
+  }
+  transition_trace->blocks += letter;
+}
+
+// Main loop, four callbacks and a SysTick per millisecond, as Rig::Tick.
+void TraceTick(Rig* r, int milliseconds) {
+  while (milliseconds--) {
+    MainLoopStep();
+    for (int i = 0; i < 4; ++i) {
+      TraceBlock(r);
+    }
+    SysTick_Handler();
+  }
+}
+
+// Runs of one block letter become "P12"; codec calls stay as they are.
+std::string Compress(const std::string& blocks) {
+  std::string out;
+  size_t i = 0;
+  while (i < blocks.size()) {
+    if (blocks[i] == ' ') {
+      ++i;
+      continue;
+    }
+    size_t j = i + 1;
+    if (strchr("PDZBU-", blocks[i])) {
+      while (j < blocks.size() && blocks[j] == blocks[i]) {
+        ++j;
+      }
+      char run[16];
+      snprintf(run, sizeof(run), "%c%d", blocks[i], int(j - i));
+      out += out.empty() ? "" : " ";
+      out += run;
+    } else {
+      while (j < blocks.size() && blocks[j] == '*') {
+        ++j;
+      }
+      out += out.empty() ? "" : " ";
+      out += blocks.substr(i, j - i);
+    }
+    i = j;
+  }
+  return out;
+}
+
+void StartTrace(TransitionTrace* trace) {
+  trace->blocks.clear();
+  trace->calls = 0;
+  trace->paused = -1;
+  trace->silent = true;
+  transition_trace = trace;
+  codec.observer_ = &ObserveCodec;
+}
+
+std::string EndTrace(TransitionTrace* trace, const char* name) {
+  transition_trace = NULL;
+  codec.observer_ = NULL;
+  const std::string compressed = Compress(trace->blocks);
+  printf("Trace %s: %s\n", name, compressed.c_str());
+  CHECK(trace->silent);
+  return compressed;
+}
+
+// Without the full-level runs at either end, whose length follows the
+// normalization probe's phase.
+std::string Core(const std::string& trace) {
+  size_t begin = trace[0] == 'P' ? trace.find(' ') + 1 : 0;
+  size_t end = trace.rfind(' ');
+  end = trace[end + 1] == 'P' ? end : trace.size();
+  return trace.substr(begin, end - begin);
+}
+
+bool SameTrace(const std::string& trace, const char* expected) {
+  if (trace != expected) {
+    printf("  expected: %s\n", expected);
+    return false;
+  }
+  return true;
+}
+
+// Settles until full level with no transition pending for 100 ms.
+void Quiet(Rig* r) {
+  extern volatile bool codec_fade;
+  extern float reverb_style_gain;
+  r->Settle();
+  int quiet = 0;
+  for (int i = 0; i < 5000 && quiet < 100; ++i) {
+    r->Tick(1, true);
+    quiet = reverb_style_gain == 1.0f && !codec_transition_frames &&
+        !codec_fade ? quiet + 1 : 0;
+  }
+  CHECK(quiet == 100);
+}
+
+// Fades, codec pause and restart order, synth entry and exit, quality and
+// rate changes, the reverb style and Processor changes, block by block.
+void TestTransitionTraces() {
+  test_checker.Start("TestTransitionTraces");
+  extern bool clouds_style;
+  TransitionTrace t;
+
+  // Quality at the same rate: fade, pause, resume, blanking, fade in.
+  {
+    Rig r(false, false);
+    r.audio = 0x10000000;
+    Quiet(&r);
+    CHECK(processor.media() == Processor::MEDIA_DIGITAL);
+    StartTrace(&t);
+    settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "quality"),
+        "D41 Z3 p r B1000 U41 P115"));
+    CHECK(processor.media() == Processor::MEDIA_CLEAN_TAPE);
+
+    // Another rate restarts the converter.
+    Quiet(&r);
+    StartTrace(&t);
+    settings.mutable_state()->media = Processor::MEDIA_VINTAGE_DIGITAL;
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "rate"),
+        "D41 Z3 p R B1000 U41 P115"));
+    CHECK(codec.sample_rate_ == 32000 && codec.block_size_ == 8);
+
+    // Mono: the gain control restarts too.
+    Quiet(&r);
+    StartTrace(&t);
+    r.right = false;
+    TraceTick(&r, 600);
+    CHECK(SameTrace(Core(EndTrace(&t, "mono")),
+        "D41 Z3 p r* B1000 U41"));
+    CHECK(processor.mono());
+
+    // FREEZE during the fade postpones the change and fades back in.
+    r.right = true;
+    Quiet(&r);
+    StartTrace(&t);
+    settings.mutable_state()->media = Processor::MEDIA_DIGITAL;
+    TraceTick(&r, 5);
+    test_freeze_input = true;
+    TraceTick(&r, 30);
+    CHECK(SameTrace(EndTrace(&t, "frozen fade"),
+        "D24 U24 P92"));
+    CHECK(processor.media() == Processor::MEDIA_VINTAGE_DIGITAL);
+    test_freeze_input = false;
+    Quiet(&r);
+    CHECK(processor.media() == Processor::MEDIA_DIGITAL);
+  }
+
+  // The reverb style switches in one silent block, with no codec call.
+  for (int synth = 0; synth < 2; ++synth) {
+    Rig r(false, synth != 0);
+    r.audio = 0x10000000;
+    if (synth) {
+      r.StartAutomatic();
+    }
+    Quiet(&r);
+    StartTrace(&t);
+    settings.set_clouds_style(true);
+    TraceTick(&r, 30);
+    CHECK(SameTrace(EndTrace(&t, synth ? "synth style" : "style"),
+        "P4 D41 Z1 U41 P33"));
+    CHECK(clouds_style && t.calls == 0);
+  }
+
+  // Granular to spectral and back.
+  {
+    Rig r(false, false);
+    r.audio = 0x10000000;
+    Quiet(&r);
+    StartTrace(&t);
+    settings.set_spectral(true);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "spectral"),
+        "P4 D41 Z3 p r B1000 U41 P111"));
+    CHECK(processor.spectral());
+    Quiet(&r);
+    StartTrace(&t);
+    settings.set_spectral(false);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "granular"),
+        "P4 D41 Z3 p r B1000 U41 P111"));
+    CHECK(!processor.spectral());
+  }
+
+  // A Processor change while frozen waits for FREEZE's release.
+  {
+    Rig r(false, false);
+    r.audio = 0x10000000;
+    Quiet(&r);
+    ui.set_freeze_button_state(true);
+    r.Tick(10, true);
+    StartTrace(&t);
+    settings.set_spectral(true);
+    TraceTick(&r, 20);
+    ui.set_freeze_button_state(false);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "frozen engine"),
+        "P80 D41 Z3 p r B1000 U41 P115"));
+    CHECK(processor.spectral());
+  }
+
+  // Synth entry 10 s after the inputs empty, and exit when a cable returns.
+  for (int plaits = 0; plaits < 2; ++plaits) {
+    Rig r(false, true);
+    settings.set_plaits_synth(plaits);
+    ui.LoadOptions();
+    Quiet(&r);
+    CHECK(!synth_mode);
+    synth_mode_start_time = 0;
+    RunMainLoop();
+    r.Advance(9990);
+    StartTrace(&t);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, plaits ? "plaits entry" : "synth entry"),
+        "P40 D41 Z3 p r* B1000 U41 P75"));
+    CHECK(synth_mode);
+    Quiet(&r);
+    PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 0;
+    StartTrace(&t);
+    r.left = true;
+    TraceTick(&r, 600);
+    CHECK(SameTrace(Core(EndTrace(&t, plaits ? "plaits exit" : "synth exit")),
+        "D41 Z3 p r* B1000 U41"));
+    CHECK(!synth_mode);
+  }
+
+  // Synth entry and exit on request: a MEDIA hold each way.
+  {
+    Rig r(true, true);
+    Quiet(&r);
+    StartTrace(&t);
+    r.HoldMedia(false);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "requested entry"),
+        "D41 Z3 p r* B1000 U41 P115"));
+    CHECK(synth_mode);
+    Quiet(&r);
+    StartTrace(&t);
+    r.HoldMedia(false);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "requested exit"),
+        "D41 Z3 p r* B1000 U41 P115"));
+    CHECK(!synth_mode);
+  }
+
+  // Synth to spectral: the engine change ends synth play.
+  {
+    Rig r(false, true);
+    r.StartAutomatic();
+    Quiet(&r);
+    StartTrace(&t);
+    settings.set_spectral(true);
+    TraceTick(&r, 300);
+    CHECK(SameTrace(EndTrace(&t, "synth to spectral"),
+        "P4 D41 Z3 p r* B1000 U41 P111"));
+    CHECK(!synth_mode && processor.spectral());
+  }
+}
+
+// The fade's level, block by block, on a dry signal.
+void TestTransitionFadeLevels() {
+  test_checker.Start("TestTransitionFadeLevels");
+  extern float reverb_style_gain;
+  Rig r(false, false);
+  r.audio = 0x20000000;
+  r.Settle();
+  r.Block();
+  const double steady = fabs(double(r.out[codec.block_size_ - 1].l));
+  CHECK(steady > 1.0e8);
+  settings.mutable_state()->media = Processor::MEDIA_CLEAN_TAPE;
+  MainLoopStep();
+  int fading = 0;
+  float gain = 1.0f;
+  while (reverb_style_gain > 0.0f && fading < 100) {
+    r.Block();
+    ++fading;
+    // The gain ramps across the block: one step in from the last block's.
+    const double first = fabs(double(r.out[0].l));
+    const double last = fabs(double(r.out[codec.block_size_ - 1].l));
+    const float ramp = gain + (reverb_style_gain - gain) / codec.block_size_;
+    CHECK(fabs(first - steady * ramp) < steady * 0.01);
+    CHECK(fabs(last - steady * reverb_style_gain) < steady * 0.01);
+    CHECK(reverb_style_gain == std::max(0.0f, gain - 0.025f));
+    gain = reverb_style_gain;
+  }
+  // 1 - 40 * 0.025 in float is just above zero: one more step.
+  CHECK(fading == 41);
+  MainLoopStep();
+  CHECK(codec_transition_frames == kBlankingBlocks);
+  for (int i = 0; i < kBlankingBlocks; ++i) {
+    r.Block();
+  }
+  int rising = 0;
+  gain = 0.0f;
+  while (reverb_style_gain < 1.0f && rising < 100) {
+    r.Block();
+    ++rising;
+    const float next = std::min(1.0f, gain + 0.025f);
+    const float ramp = gain + (next - gain) / codec.block_size_;
+    const double first = fabs(double(r.out[0].l));
+    const double last = fabs(double(r.out[codec.block_size_ - 1].l));
+    CHECK(reverb_style_gain == next);
+    CHECK(fabs(first - steady * ramp) < steady * 0.01);
+    CHECK(fabs(last - steady * next) < steady * 0.01);
+    gain = next;
+  }
+  CHECK(rising == 41);
+}
+
+// Each option's setter tick: main loop (frozen or blanking too), SysTick then
+// the next callback, or power-on only.
+void TestOptionFanOut() {
+  test_checker.Start("TestOptionFanOut");
+  Rig r(false, false);
+  r.Settle();
+
+  // Main loop: one pass applies them, even while frozen or blanking.
+  for (int pass = 0; pass < 3; ++pass) {
+    if (pass == 1) {
+      ui.set_freeze_button_state(true);
+    } else if (pass == 2) {
+      ui.set_freeze_button_state(false);
+      codec_transition_frames = 10;
+    }
+    for (int value = 1; value >= 0; --value) {
+      settings.SetFeatureValue(FEATURE_SEED_LATCH, value ? 2 : 0);
+      settings.SetFeatureValue(FEATURE_ATTENUATION, value);
+      settings.SetFeatureValue(FEATURE_TIME_SCAN, value);
+      settings.SetFeatureValue(FEATURE_SEED_LATCH_FADE, value);
+      settings.SetFeatureValue(FEATURE_PLAITS_BANK, value ? 2 : 0);
+      CHECK(seed_latch_mode == (value ? 0 : 2));
+      CHECK(gain_control.attenuation_ == !value);
+      CHECK(bool(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN) ==
+          !value);
+      CHECK((processor.delay_controller_.timing_gain_ !=
+          DelayController::TIMING_FADE_OFF) == !value);
+      CHECK(plaits_synth.first_model_ == (value ? 8 : 0));
+      MainLoopStep();
+      CHECK(seed_latch_mode == (value ? 2 : 0));
+      CHECK(gain_control.attenuation_ == bool(value));
+      CHECK(bool(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN) ==
+          bool(value));
+      CHECK((processor.delay_controller_.timing_gain_ !=
+          DelayController::TIMING_FADE_OFF) == bool(value));
+      // Bank 2 starts at model 0, bank 0 at model 8.
+      CHECK(plaits_synth.first_model_ == (value ? 0 : 8));
+    }
+  }
+  codec_transition_frames = 0;
+  r.Settle();
+
+  // Modulation display: only with the pitch notch or live assign shown.
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 20000;
+  r.Settle();
+  ui.assign_modulation_ = -9.0f;
+  MainLoopStep();
+  CHECK(ui.assign_modulation_ == -9.0f);
+  const ProfileFeature shown[] = { FEATURE_PITCH_NOTCH, FEATURE_LIVE_ASSIGN };
+  for (int i = 0; i < 2; ++i) {
+    settings.SetFeatureValue(shown[i], 1);
+    ui.assign_modulation_ = -9.0f;
+    MainLoopStep();
+    CHECK(ui.assign_modulation_ == cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
+    settings.SetFeatureValue(shown[i], 0);
+  }
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = false;
+  r.Settle();
+
+  // UI options: SysTick reads them, the next callback applies them.
+  DelayGranularPlayer& player =
+      processor.processor_digital_.granular_player_;
+  settings.set_output_limiter_mode(OUTPUT_LIMITER_FAST);
+  settings.set_pitch_scale(PitchScale(1));
+  settings.set_random_intervals(RandomIntervals(1));
+  settings.set_delay_mode(DELAY_MODE_NEVER);
+  settings.set_evolving_feedback(true);
+  settings.set_attack_mode(ATTACK_MODE_SNAP);
+  settings.set_stereo_width(StereoWidth(2));
+  settings.set_diffusion(0.5f);
+  // Diffusion is read from the settings in the callback; the rest wait for
+  // SysTick to publish them.
+  r.Block();
+  CHECK(processor.diffusion_ == settings.diffusion());
+  processor.set_diffusion(0.0f);
+  CHECK(processor.output_limiter_mode_ != OUTPUT_LIMITER_FAST);
+  CHECK(player.pitch_scale_ == PITCH_SCALE_OFF && !player.random_intervals_);
+  CHECK(processor.delay_mode_ == DELAY_MODE_AUTO);
+  CHECK(!processor.evolving_feedback_ && !player.width_enabled_);
+  CHECK(processor.attack_input()->mode() == ATTACK_MODE_OFF);
+  SysTick_Handler();
+  CHECK(processor.output_limiter_mode_ != OUTPUT_LIMITER_FAST);
+  CHECK(player.pitch_scale_ == PITCH_SCALE_OFF && !player.random_intervals_);
+  CHECK(processor.delay_mode_ == DELAY_MODE_AUTO);
+  CHECK(!processor.evolving_feedback_ && !player.width_enabled_);
+  CHECK(processor.attack_input()->mode() == ATTACK_MODE_OFF);
+  CHECK(processor.diffusion_ == 0.0f);
+  r.Block();
+  CHECK(processor.output_limiter_mode_ == OUTPUT_LIMITER_FAST);
+  CHECK(synth.output_limiter_mode_ == OUTPUT_LIMITER_FAST);
+  CHECK(player.pitch_scale_ == PitchScale(1) && player.random_intervals_);
+  CHECK(processor.delay_mode_ == DELAY_MODE_NEVER);
+  CHECK(processor.evolving_feedback_ && player.width_enabled_);
+  CHECK(processor.attack_input()->mode() == ATTACK_MODE_SNAP);
+  CHECK(processor.diffusion_ == settings.diffusion());
+  CHECK(processor.diffusion_ > 0.49f && processor.diffusion_ < 0.51f);
+
+  // Blanking and held-silent blocks return early: nothing reaches the DSP.
+  settings.set_pitch_scale(PitchScale(2));
+  codec_transition_frames = 2;
+  SysTick_Handler();
+  r.Block();
+  r.Block();
+  CHECK(player.pitch_scale_ == PitchScale(1));
+  r.Block();
+  CHECK(player.pitch_scale_ == PitchScale(2));
+  extern float reverb_style_gain;
+  settings.set_clouds_style(true);
+  SysTick_Handler();
+  for (int i = 0; i < 41; ++i) {
+    r.Block();
+  }
+  CHECK(reverb_style_gain == 0.0f);
+  settings.set_pitch_scale(PitchScale(1));
+  SysTick_Handler();
+  r.Block();  // Held silent: the style switches, nothing else is applied.
+  CHECK(player.pitch_scale_ == PitchScale(2));
+  r.Block();
+  CHECK(player.pitch_scale_ == PitchScale(1));
+  settings.set_clouds_style(false);
+  r.Settle();
+
+  // Resonator: SysTick previews the page and sets the controls, the main
+  // loop moves the placement; Material and Ring time only while it is on.
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
+  SysTick_Handler();
+  CHECK(!processor.resonator_controls_set_);
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  MainLoopStep();
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS));
+  SysTick_Handler();
+  CHECK(processor.resonator_controls_set_);
+  CHECK(processor.resonator_controls_.structure ==
+      kResonatorMaterials[3].structure);
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS));
+  MainLoopStep();
+  CHECK(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS);
+  settings.SetFeatureValue(FEATURE_RESONATOR_RING, 3);
+  SysTick_Handler();
+  CHECK(processor.resonator_controls_.damping == kResonatorRingTimes[3]);
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_OFF);
+  SysTick_Handler();
+  MainLoopStep();
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS));
+  r.Settle();
+
+  // Power-on choices: runtime changes wait for the next power-on.
+  const uint8_t boot[] = {
+    FEATURE_PITCH_LAW, 1, FEATURE_MIX_LAW, 1, FEATURE_REVERB_INPUT, 1,
+    FEATURE_GRAIN_STEALING, 1, FEATURE_UNITY_FEEDBACK, 1,
+    FEATURE_DELAY_CROSSFADE, 1
+  };
+  const size_t count = sizeof(boot) / 2;
+  for (size_t i = 0; i < count; ++i) {
+    settings.SetFeatureValue(ProfileFeature(boot[2 * i]), boot[2 * i + 1]);
+  }
+  const uint8_t options = processor.options_;
+  const PotChannel::Law law =
+      cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law_;
+  const int threshold = player.simple_scheduler_threshold_;
+  r.Settle();
+  CHECK(processor.options_ == options);
+  CHECK(cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law_ == law);
+  CHECK(player.simple_scheduler_threshold_ == threshold);
+  BootWithProfile(&r, boot, count);
+  CHECK(cv_reader.pot_channel_[POTS_ADC_CHANNEL_PITCH].law_ ==
+      PotChannel::LAW_DETUNE_SMOOTH);
+  CHECK(processor.options_ == (Processor::OPTION_FLAG_GENTLE_MIX |
+      Processor::OPTION_FLAG_REVERB_ON_GRAINS |
+      Processor::OPTION_FLAG_UNITY_FEEDBACK |
+      Processor::OPTION_FLAG_DELAY_CROSSFADE));
+  CHECK(player.simple_scheduler_threshold_ != threshold);
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -3140,5 +3688,8 @@ int main() {
   TestProcessorToggle();
   TestCalibrationStepOnRelease();
   TestRejectedCalibrationCue();
+  TestTransitionTraces();
+  TestTransitionFadeLevels();
+  TestOptionFanOut();
   return test_checker.failures() ? 1 : 0;
 }
