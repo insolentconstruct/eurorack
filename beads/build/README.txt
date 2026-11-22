@@ -357,15 +357,16 @@ so Pitch scale or Recent notes make it ring a chord. A grain strikes the
 voice at its pitch, or retunes the quietest voice once it has rung 40 dB
 down; until then it strikes the nearest voice. DRY/WET picks its
 Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl or
-Gong (a Drum strike bends down in pitch, a Gong strike up; Bowl and Gong
-beat between left and right); REVERB its Ring time: Short, Medium, Long
-or Very long, each about four times longer. String and Medium are the
-defaults; page 5 saves like the other pages. PITCH tunes it and Pitch
-scale snaps it. Attacks hits strike it, and so does SEED: each press,
-and each rising gate; latched, each gate. In delay mode SEED stays the
-clock. Before the buffer, a strike while frozen is not heard. With the
-resonator on, tapping [M] after REVERB, width and diffusion makes the CV
-input move its damping, until power-off (not saved).
+Gong (a Drum strike starts sharp and bends down, a Gong strike starts
+flat and bends up; Bowl and Gong beat between left and right); REVERB
+its Ring time: Short, Medium, Long or Very long, each about four times
+longer. String and Medium are the defaults; page 5 saves like the other
+pages. PITCH tunes it and Pitch scale snaps it. Attacks hits strike it,
+and so does SEED: each press, and each rising gate; latched, each gate.
+In delay mode SEED stays the clock. Before the buffer, a strike while
+frozen is not heard. With the resonator on, tapping [M] after REVERB,
+width and diffusion makes the CV input move its damping, until power-off
+(not saved).
 
 Options reference (TSV)
 page	LED	knob	setting	value	colour	pulse
