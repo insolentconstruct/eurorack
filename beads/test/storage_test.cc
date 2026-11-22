@@ -1080,7 +1080,9 @@ void TestSavedFeatures() {
     // Saved: the options a user changes, Monophonic aside (stock State).
     const bool page_5 = i == FEATURE_RESONATOR ||
         i == FEATURE_RESONATOR_MATERIAL || i == FEATURE_RESONATOR_RING;
-    CHECK(!kRecordOffsets[i] == (kFeatureDefinitions[i].field == kNoField &&
+    const bool unsaved = kFeatureDefinitions[i].field == kNoField ||
+        kFeatureDefinitions[i].field == kReservedField;
+    CHECK(!kRecordOffsets[i] == (unsaved &&
         i != FEATURE_WIDTH && i != FEATURE_DIFFUSION && !page_5));
   }
   uint8_t b[kProfileSize];
