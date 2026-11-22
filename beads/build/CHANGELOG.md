@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Options pages: LED brightness keeps the chosen level when the pages close before the save, instead of returning to the old level for up to a second (#355); SEED latch and TIME scan take effect while their knob turns, as the other page settings do (#356).
+- [M] moves the CV from stereo width to diffusion in one step, never passing through no target (#357). A manual gain, width or diffusion set with [A] is saved when an [A]+SEED or [A]+FREEZE gesture runs; stock's [A]+FREEZE skipped that save too (#358).
 - Plaits synth: ending the drone (DENSITY leaving noon, or a SEED note) no longer clicks (#354). The droning voice decays from full level through the low-pass gate, as a played note does; everything else plays bit for bit as before.
 - A calibration run that doesn't complete (a rejected step, or leaving it with [A]+FREEZE) no longer leaves what it measured in use, where the next settings rewrite saved it over the calibration; only a completed run replaces the calibration (#346). A recalibration that can't be saved because the profile failed to load blinks all LEDs, as a rejected one does (#347). A record slot in the calibration copy's sector that never programs no longer makes every save erase that sector: a failed compaction is not retried until the next power-up, and the options stay in RAM until a later write succeeds (#348).
 - A recalibration more than 25% from the factory values, which is not saved, now blinks all LEDs for about a second, as a rejected calibration step does, and the stored calibration stays in use.

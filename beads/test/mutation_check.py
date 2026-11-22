@@ -1546,7 +1546,7 @@ cases = [
     'values_[FEATURE_LIVE_ASSIGN] ||',
     ''),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
-    'if (led_features || options_.active()) {',
+    'if (led_features || previewing) {',
     'if (led_features) {'),
   ('TestTimeScan', 'processor', 'beads/dsp/time_scan.h',
     'position_ -= time->attenuverter * seconds * 0.25f;',
@@ -2495,8 +2495,8 @@ cases = [
     '      float_out[i] = float_out[i] * reverb_style_gain;'),
   # Option fan-out: each setter on its own tick, frozen or blanking.
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
-    '  seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);',
-    '  seed_latch_mode = ui.should_ignore_state_change() ? seed_latch_mode :\n      settings.FeatureValue(FEATURE_SEED_LATCH);'),
+    '  seed_latch_mode = ui.seed_latch();',
+    '  seed_latch_mode = ui.should_ignore_state_change() ? seed_latch_mode :\n      ui.seed_latch();'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
     '  plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));',
     '  plaits_synth.set_bank(codec_transition_frames ? 0 :\n      settings.FeatureValue(FEATURE_PLAITS_BANK));'),
@@ -2507,8 +2507,8 @@ cases = [
     '  if (codec_transition_frames) {\n    --codec_transition_frames;',
     '  processor.set_pitch_scale(ui.pitch_scale());\n  if (codec_transition_frames) {\n    --codec_transition_frames;'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
-    '  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));',
-    '  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));\n  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));'),
+    '  processor.set_time_scan(ui.time_scan());',
+    '  processor.set_time_scan(ui.time_scan());\n  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
     '    processor.set_delay_mode(ui.delay_mode());',
     '    processor.set_delay_mode(settings.delay_mode());'),
@@ -2537,6 +2537,37 @@ cases = [
   ('TestGestureCharacterization', 'options', 'beads/ui.cc',
     '      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);',
     '      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 2) % kNumPlaitsBanks);'),
+  # The chosen LED brightness holds until the page's batch is saved.
+  ('TestBrightnessHoldsAfterClose', 'options', 'beads/ui.cc',
+    'previewing = options_.stage() != Options::STAGE_INACTIVE;\n'
+    '  if (led_features',
+    'previewing = options_.active();\n  if (led_features'),
+  # SEED latch and TIME scan preview from the page.
+  ('TestPagePreviewSeedLatchAndTimeScan', 'firmware', 'beads/beads.cc',
+    '  seed_latch_mode = ui.seed_latch();',
+    '  seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);'),
+  ('TestPagePreviewSeedLatchAndTimeScan', 'firmware', 'beads/beads.cc',
+    '  processor.set_time_scan(ui.time_scan());',
+    '  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));'),
+  ('TestPagePreviewSeedLatchAndTimeScan', 'firmware', 'beads/ui.cc',
+    '  time_scan_ = previewing\n      ? options_.Value(FEATURE_TIME_SCAN)',
+    '  time_scan_ = false\n      ? options_.Value(FEATURE_TIME_SCAN)'),
+  # Width to diffusion in one store.
+  ('TestWidthToDiffusionTarget', 'options', 'beads/ui.cc',
+    '            settings_->set_diffusion_assigned(true);\n'
+    '            if (!settings_->diffusion_assigned()) {\n'
+    '              settings_->set_width_assigned(false);\n'
+    '              resonator_assigned_ = resonator_ != 0;\n'
+    '            }\n',
+    '            settings_->set_width_assigned(false);\n'
+    '            settings_->set_diffusion_assigned(true);\n'
+    '            resonator_assigned_ = !settings_->diffusion_assigned() &&\n'
+    '                resonator_ != 0;\n'),
+  # An [A] gesture saves the knob edit whose release it consumes.
+  ('TestAmountSavedByAction', 'options', 'beads/ui.cc',
+    '    if (pot_touched) {\n      settings_->SaveState();\n    }\n'
+    '    ignore_release_[SWITCH_MEDIA]',
+    '    ignore_release_[SWITCH_MEDIA]'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

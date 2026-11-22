@@ -676,10 +676,10 @@ bool FadedOut() {
 }
 
 void MonitorStateChange() {
-  seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
+  seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
-  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
+  processor.set_time_scan(ui.time_scan());
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   // The page moves the resonator; it restarts from silence.
