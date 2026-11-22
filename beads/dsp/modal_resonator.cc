@@ -512,6 +512,10 @@ void ModalResonator::ProcessModes(
           mode_f[0], mode_q[0], mode_a[0], in, out, size);
       even->Process<FILTER_MODE_BAND_PASS, true>(
           mode_f[1], mode_q[1], mode_a[1], in, aux, size);
+    } else {
+      // A silent batch keeps no ring for a later object.
+      odd->Init();
+      even->Init();
     }
     ++odd;
     ++even;

@@ -1089,6 +1089,28 @@ void TestResonatorMaterials() {
     processor.ProcessResonator(pitch, false, frames, 12);
     CHECK(processor.resonator_.glide_ == 0.0f);
   }
+  // Nor does a ring in the batches an object leaves silent.
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  processor.set_resonator_controls(Controls(5, 1));
+  for (int block = 0; block < 100; ++block) {
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, !block, frames, 12);
+  }
+  const float rung = StateEnergy();
+  processor.set_resonator_controls(Controls(4, 1));
+  FloatFrame frames[12];
+  memset(frames, 0, sizeof(frames));
+  processor.ProcessResonator(pitch, false, frames, 12);
+  const ModalResonator& r = processor.resonator_;
+  float left = 0.0f;
+  for (int b = 1; b < kNumResonatorModes / 8; ++b) {
+    for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+      left += fabsf(r.odd_[b].state_1_[i]) + fabsf(r.odd_[b].state_2_[i]) +
+          fabsf(r.even_[b].state_1_[i]) + fabsf(r.even_[b].state_2_[i]);
+    }
+  }
+  CHECK(rung > 0.0f && left == 0.0f);
 }
 
 // The resonance's peak in the 0.5 s after a strike at C3.
