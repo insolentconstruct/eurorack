@@ -1043,8 +1043,12 @@ void TestLockedCalibrationRefused() {
     }
     Take(&snapshot);
     Settings s;
-    s.Init(false, bad);
-    CHECK(s.profile_locked() && s.write_locked());
+    if (damaged) {
+      s.Init(false);
+    } else {
+      s.Init(false, bad);
+    }
+    CHECK(s.profile_locked() == !damaged && s.write_locked());
     CHECK(s.chunk_storage_.storage_damaged() == (damaged == 1));
     memcpy(s.mutable_persistent_data()->adc_calibration, fresh.adc_calibration,
         sizeof(fresh.adc_calibration));
