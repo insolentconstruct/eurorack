@@ -1098,7 +1098,7 @@ cases = [
     '  inline void Reset() {\n    Reset(false);'),
   ('TestPlaitsSynthSelection', 'firmware', 'beads/beads.cc',
     'if (synth_mode && ui.plaits_synth()) {',
-    'if (synth_mode && settings.state().synth_engine == 0) {'),
+    'if (synth_mode && !settings.plaits_synth()) {'),
   ('TestSynthEngineStorage', 'options', 'beads/settings.h',
     'inline bool plaits_synth() const { return values_[FEATURE_SYNTH]; }',
     'inline bool plaits_synth() const { return false; }'),
