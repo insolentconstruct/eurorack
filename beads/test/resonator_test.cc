@@ -181,6 +181,8 @@ void TestResonatorDefaults() {
         c.damping = kResonatorDamping;
         c.position = kResonatorPosition;
         c.amount = 1.0f;
+        c.feedback = 0.0f;
+        c.hold_feedback = false;
         processor.set_resonator_controls(c);
       }
       mix.dry_wet = 0.8f;
@@ -685,6 +687,8 @@ ResonatorControls Controls(int material, int ring) {
   c.damping = kResonatorRingTimes[ring];
   c.position = kResonatorPosition;
   c.amount = 1.0f;
+  c.feedback = 0.0f;
+  c.hold_feedback = false;
   return c;
 }
 
