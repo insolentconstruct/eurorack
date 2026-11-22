@@ -507,7 +507,11 @@ print("Release ZIPs include the generated guides and the combo HEX; wrong HEX re
 catalog = json.loads(Path("beads/build/profile-features.json").read_text())
 exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
-assert len(catalog["features"]) == len(exported) == 41
+# Reserved IDs have a placeholder definition and no catalogue row.
+reserved = [row for row in exported if row.split("\t")[1] == "Reserved"]
+assert [int(row.split("\t")[0]) for row in reserved] == [42]
+exported = [row for row in exported if row not in reserved]
+assert len(catalog["features"]) == len(exported) == 48
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 manifest = json.loads(Path("beads/resources/features.json").read_text())
@@ -544,7 +548,7 @@ for row in rows:
 for setting, labels in shown.items():
     source = next(f for f in manifest["features"]
                   if f.get("label", f["name"]) == setting)
-    feature = catalog["features"][source["id"] - 1]
+    feature = next(f for f in catalog["features"] if f["id"] == source["id"])
     assert feature["values"][:len(labels)] == labels, setting
 print("Profile page catalogue: PASS")
 

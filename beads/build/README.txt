@@ -234,9 +234,9 @@ Options page
 [A] is the quality button; [M] is CV assign. Hold [M] alone for three
 seconds with the mix knobs still, then release. Tap [M] to change pages.
 All three mix LEDs pulse while the entry hold continues; after release,
-the indicated page LEDs pulse. Reopening remembers the page until power-
-off; startup selects page 1. Custom layouts can add pages 6-7 (DRY/WET
-and REVERB, then all three); taps skip empty pages.
+the indicated page LEDs pulse. Reopening remembers the page until
+power-off; startup selects page 1. Custom layouts can add pages 6-7
+(DRY/WET and REVERB, then all three); taps skip empty pages.
 
 [A] previews each stored value in turn for about two seconds, with its
 knob LED steady. Turn a knob or tap SEED to end preview. Move a knob more

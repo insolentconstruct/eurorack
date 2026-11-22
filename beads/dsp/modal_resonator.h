@@ -87,6 +87,8 @@ class ModalResonator {
     brightness_ = brightness;
   }
 
+  inline float brightness() const { return brightness_; }
+
   inline void set_damping(float damping) {
     damping_ = damping;
   }

@@ -659,9 +659,11 @@ noon), not PITCH's randomness; Pitch scale snaps it, and with Recent notes
 it plays the newest note sent to PITCH. Attacks hits also strike it. While FREEZE is on, Snap and trigger hits
 still strike it but Snap hits do not, as they also leave no marks then.
 
-SEED strikes it too, in every Attacks mode, with a pulse scaled by the
-pitch so it peaks near -12 dBFS from C2 to C5 (a hit's pulse is 30 to 40 dB
-quieter). Unlatched, the button and the jack make one gate, as the grains
+SEED strikes it too, in every Attacks mode, as Rings' strum does: a pulse
+through a low-pass that follows pitch and brightness, 12 dB louder than
+Rings', so String peaks near -12 dBFS from C2 to C5 (a hit's single-sample
+pulse peaks 15 to 26 dB lower, with a click). Dark materials strike softer:
+Bell peaks near -26 dBFS. Unlatched, the button and the jack make one gate, as the grains
 see them, and each rising edge strikes once; a press while the jack is high,
 or a gate while the button is held, does not. Latched, each rising edge at
 the jack strikes it (Sync and Add too; Ignore has no jack), and the press
@@ -673,10 +675,10 @@ the buffer a strike while frozen is not heard: the resonance would only
 be recorded.
 
 Material (ID 43, DRY/WET, quarters) sets structure and brightness: Wood
-(0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.55), Bell (0.8, 0.15). They
+(0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They
 were chosen from renders at C2 to C5: on grain-like noise each stays within
 about 2 dB of String on average, Wood about 0.7 octave darker, Glass about
-an octave brighter, Bell strongly stretched. Ring time (ID 44, REVERB,
+0.75 octave brighter with stretched partials, Bell strongly stretched. Ring time (ID 44, REVERB,
 quarters) sets damping: Short 0.35, Medium 0.5, Long 0.65, Very long 0.8,
 each step ringing about four times longer (the fundamental about 0.6, 2.3,
 9 and 37 s at 48 kHz; Cold digital rings 1.5 times longer, the tapes twice).

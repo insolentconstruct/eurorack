@@ -31,6 +31,8 @@
 
 #include "stmlib/stmlib.h"
 
+#include "stmlib/dsp/filter.h"
+
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modal_resonator.h"
 #include "beads/dsp/modulated_parameter.h"
@@ -61,8 +63,8 @@ const float kDelayModeFadeTime = 0.75f;  // seconds
 // The grains' mono sum and an input hit strike the resonator.
 const float kResonatorInputGain = 0.5f;
 const float kResonatorStrike = 0.5f;
-// SEED's pulse over the fundamental's frequency peaks near -12 dBFS.
-const float kResonatorSeedStrike = 0.07f;
+// SEED's strike, Rings' strum made 12 dB louder: near -12 dBFS at any pitch.
+const float kResonatorSeedStrike = 4.0f;
 // PITCH at noon tunes it to C3.
 const float kResonatorRootNote = 48.0f;
 
@@ -507,6 +509,9 @@ class Processor {
   ResonatorControls resonator_controls_;
   bool resonator_controls_set_;
   bool seed_gate_;
+  // SEED's pulse, low-passed as Rings' strum, while it still sounds.
+  stmlib::Svf strike_filter_;
+  bool strike_sounding_;
   
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

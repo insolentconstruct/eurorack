@@ -825,20 +825,7 @@ def svg(pages, mobile=False):
                            CARD_NOTES[rows[0]["setting"]].lower(), 15,
                            "bold", COLOURS["red"], "end")
         y += 34
-        if not mobile and page == "5":
-            # The printable is full: page 5 as one text line per knob.
-            heights = []
-            for i, k in enumerate(KNOBS):
-                rows = knobs[k]
-                d.text(margin + i * 330, y, f"{k}: {rows[0]['setting']}", 17,
-                       "bold")
-                text = " / ".join(
-                    f"{SHORT.get(r['value'], r['value'])} ({indication(r)})"
-                    for r in rows
-                )
-                heights.append(d.lines(margin + i * 330, y + 24, text, 41) - y)
-            y += max(heights) + 5
-        elif mobile:
+        if mobile:
             for knob in KNOBS:
                 y += (
                     d.card(margin, y, width - 2 * margin, knobs[knob], True)

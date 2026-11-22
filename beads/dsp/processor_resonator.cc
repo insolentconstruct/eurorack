@@ -44,6 +44,8 @@ void Processor::ProcessResonator(
   const float sr = sample_rate();
   if (sr != resonator_sample_rate_) {
     resonator_.Init(sr);
+    strike_filter_.Init();
+    strike_sounding_ = false;
     resonator_sample_rate_ = sr;
   }
   if (resonator_controls_set_) {
@@ -73,11 +75,30 @@ void Processor::ProcessResonator(
   for (size_t i = 0; i < size; ++i) {
     excitation[i] = (frames[i].l + frames[i].r) * kResonatorInputGain;
   }
+  float strike_pulse = 0.0f;
   if (seed_strike) {
-    // Pitch-compensated, as Rings' strum, and louder than a hit.
-    excitation[0] += kResonatorSeedStrike / frequency;
+    // Rings' strum: a pulse through a low-pass that follows brightness.
+    const float brightness = resonator_.brightness();
+    const float cutoff = min(frequency * SemitonesToRatio(
+        (brightness * (2.0f - brightness) - 0.5f) * 96.0f), 0.499f);
+    strike_filter_.set_f_q<FREQUENCY_DIRTY>(cutoff, 1.5f);
+    strike_pulse = kResonatorSeedStrike * 0.25f *
+        SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
+    strike_sounding_ = true;
   } else if (strike) {
     excitation[0] += kResonatorStrike;
+  }
+  if (strike_sounding_) {
+    float pulse[size];
+    fill(&pulse[0], &pulse[size], 0.0f);
+    pulse[0] = strike_pulse;
+    strike_filter_.Process<FILTER_MODE_LOW_PASS>(pulse, pulse, size);
+    float level = 0.0f;
+    for (size_t i = 0; i < size; ++i) {
+      excitation[i] += pulse[i];
+      level = max(level, fabsf(pulse[i]));
+    }
+    strike_sounding_ = level > 1.0e-6f;
   }
   resonator_.Render(excitation, frames, size);
 }
