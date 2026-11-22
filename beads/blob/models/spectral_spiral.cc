@@ -22,36 +22,41 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-//
 // -----------------------------------------------------------------------------
 //
-// Phase Weave as a blob: init constructs its DSP object in the voice's state.
+// Spectral Spiral as a version 2 blob: init constructs its DSP object in the
+// voice's state. Its state exceeds version 1's 256-byte slot.
 
 #include <new>
 
 #include "stmlib/utils/buffer_allocator.h"
 
 #include "beads/blob/plaits_blob.h"
-#include "beads/blob/phase_weave_engine.h"
+#include "beads/blob/models/spectral_spiral_engine.h"
 
-using beads::PlaitsBlobHeader;
+using beads::PlaitsBlobHeader2;
 using beads::PlaitsBlobServices;
 using plaits::EngineParameters;
-using plaits::PhaseWeave;
+using plaits::SpectralSpiral;
 
-// Provisional catalogue ID; Palette's output gain.
-const uint32_t kModel = 36;
-const float kGain = 0.93f;
+// Permanent ID (profile-features.json); Palette's gains.
+const uint32_t kModel = 43;
+const float kOutGain = 0.891f;
+const float kAuxGain = 0.891f;
+const uint32_t kArenaSize = 0;
 
-extern "C" const PlaitsBlobHeader plaits_blob_header
+extern "C" const PlaitsBlobHeader2 plaits_blob_header
     __attribute__((section(".blob_header"), used)) = {
   beads::kPlaitsBlobMagic,
-  sizeof(PlaitsBlobHeader),
-  beads::kPlaitsBlobAbi,
-  beads::kPlaitsBlobServicesVersion,
+  sizeof(PlaitsBlobHeader2),
+  beads::kPlaitsBlobAbi2,
+  beads::kPlaitsBlobServicesVersion2,
+  beads::kPlaitsBlobKindModel,
   kModel,
+  1,
   0,  // The packer fills the size, entry and GOT fields.
-  sizeof(PhaseWeave),
+  sizeof(SpectralSpiral),
+  kArenaSize,
   0,
   0,
   0,
@@ -59,29 +64,34 @@ extern "C" const PlaitsBlobHeader plaits_blob_header
   0,
   0,
   0,
-  kGain,
-  kGain
+  0,
+  kOutGain,
+  kAuxGain,
+  { 0, 0, 0, 0 }
 };
 
-STATIC_ASSERT(sizeof(PhaseWeave) <= beads::kPlaitsBlobMaxStateSize, state);
-STATIC_ASSERT(__alignof__(PhaseWeave) <= beads::kPlaitsBlobStateAlignment,
+STATIC_ASSERT(sizeof(SpectralSpiral) <= beads::kPlaitsBlobMaxStateSize2,
+    state);
+STATIC_ASSERT(__alignof__(SpectralSpiral) <= beads::kPlaitsBlobStateAlignment,
     state_alignment);
 
 extern "C" void* plaits_blob_init(
     void* state,
     const PlaitsBlobServices* services,
     uint8_t* arena,
-    size_t arena_size) {
+    size_t arena_size,
+    void* const* libraries) {
   stmlib::BufferAllocator allocator(arena, arena_size);
-  PhaseWeave* phase_weave = new(state) PhaseWeave;
-  phase_weave->Init(&allocator);
-  return phase_weave;
+  SpectralSpiral* spectral_spiral = new(state) SpectralSpiral;
+  spectral_spiral->Init(&allocator);
+  return spectral_spiral;
 }
 
 extern "C" void plaits_blob_reset(
     void* object,
-    const PlaitsBlobServices* services) {
-  static_cast<PhaseWeave*>(object)->Reset();
+    const PlaitsBlobServices* services,
+    uint32_t argument) {
+  static_cast<SpectralSpiral*>(object)->Reset();
 }
 
 extern "C" void plaits_blob_render(
@@ -92,6 +102,6 @@ extern "C" void plaits_blob_render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  static_cast<PhaseWeave*>(object)->Render(
+  static_cast<SpectralSpiral*>(object)->Render(
       *parameters, out, aux, size, already_enveloped);
 }

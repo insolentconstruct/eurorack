@@ -9,7 +9,7 @@
 // OUT = weighted sum of four phase-offset harmonic-wave voices.
 // AUX = orthogonal pair-difference field emphasizing the rejected partials.
 
-#include "beads/blob/phase_weave_engine.h"
+#include "beads/blob/models/phase_weave_engine.h"
 
 #include <algorithm>
 #include <cmath>

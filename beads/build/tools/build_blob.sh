@@ -72,6 +72,7 @@ for base in 0x080c0000 0x080d0fe0 0x080e0020; do
   links+=("$base:$elf")
 done
 python3 beads/build/tools/blob_pack.py beads/blob/services_v1.ld \
+  beads/blob/services_v2.ld \
   "${TOOLCHAIN}arm-none-eabi-objdump" "$out/$name.bin" "${links[@]}"
 pins=$PWD/beads/blob/expected-blobs.sha256
 if grep -q "  $name.bin\$" "$pins"; then

@@ -40,13 +40,24 @@
 #include "plaits/dsp/fm/patch.h"
 #include "plaits/dsp/fx/low_pass_gate.h"
 
+#ifdef PLAITS_BLOBS
+#include "beads/blob/plaits_region.h"
+#endif  // PLAITS_BLOBS
+
 namespace beads {
 
 const int kNumPlaitsModels = 24;
 
 // A voice's engines and the RAM they take turns in. The engines stay out of
 // this header: Plaits' and Beads' resources.h define clashing macros.
+#ifdef PLAITS_BLOBS
+// Plus one blob slot, the largest state a version 2 blob may declare.
+const size_t kPlaitsVoiceRamSize = 29 * 1024;
+// Stock models served by blobs in development builds: Particle noise.
+const int kPlaitsParticleNoise = 18;
+#else
 const size_t kPlaitsVoiceRamSize = 28 * 1024;
+#endif  // PLAITS_BLOBS
 // Speech's five word banks, decoded once for all voices.
 const size_t kPlaitsSpeechRamSize = 36 * 1024;
 
@@ -94,7 +105,33 @@ class PlaitsVoice {
 
   inline int model() const { return model_; }
 
+#ifdef PLAITS_BLOBS
+  inline void set_region(const PlaitsRegion* region) { region_ = region; }
+
+  // A model this build plays: compiled in, or a checked blob in region.
+  static inline bool Available(int model, const PlaitsRegion& region) {
+    return (model < kNumPlaitsModels && model != kPlaitsParticleNoise) ||
+        region.has_blob(model);
+  }
+
+  // Plaits may play when every model of every bank is available.
+  static inline bool Playable(
+      const uint8_t* models,
+      size_t count,
+      const PlaitsRegion& region) {
+    bool playable = true;
+    for (size_t i = 0; i < count; ++i) {
+      playable = playable && Available(models[i], region);
+    }
+    return playable;
+  }
+#endif  // PLAITS_BLOBS
+
  private:
+#ifdef PLAITS_BLOBS
+  plaits::Engine* engine(int model);
+  const PlaitsRegion* region_;
+#endif  // PLAITS_BLOBS
   PlaitsEngines* engines_;
   const plaits::fm::Patch* fm_banks_;
   int model_;

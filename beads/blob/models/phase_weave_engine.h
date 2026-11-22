@@ -6,8 +6,8 @@
 // From Plaits Palette, ported to Mutable Instruments' engine interface: mono,
 // no FM input, and Palette's fourth macro fixed at its neutral 0.5.
 
-#ifndef BEADS_BLOB_PHASE_WEAVE_ENGINE_H_
-#define BEADS_BLOB_PHASE_WEAVE_ENGINE_H_
+#ifndef BEADS_BLOB_MODELS_PHASE_WEAVE_ENGINE_H_
+#define BEADS_BLOB_MODELS_PHASE_WEAVE_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
 
@@ -68,4 +68,4 @@ class PhaseWeaveEngine : public Engine {
 
 }  // namespace plaits
 
-#endif  // BEADS_BLOB_PHASE_WEAVE_ENGINE_H_
+#endif  // BEADS_BLOB_MODELS_PHASE_WEAVE_ENGINE_H_

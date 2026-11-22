@@ -25,9 +25,9 @@
 //
 // -----------------------------------------------------------------------------
 //
-// A firmware symbol that is not an export (the link fails).
+// A version 1 blob that draws from stmlib::Random, a version 2 export.
 
-// Expect: undefined reference to .stmlib::Random
+// Expect: GATE: .*GOT entry 0x20000000 is not a version 1 export
 
 #include "beads/test/blob_gate/common.h"
 

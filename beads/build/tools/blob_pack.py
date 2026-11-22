@@ -26,11 +26,13 @@
 #
 # Gate and pack one Plaits blob (beads/blob/plaits_blob.h).
 #
-#   blob_pack.py SERVICES_LD OBJDUMP OUT.bin BASE:ELF [BASE:ELF...]
+#   blob_pack.py SERVICES_V1_LD SERVICES_V2_LD OBJDUMP OUT.bin BASE:ELF...
 #
 # Each ELF is the same objects linked with beads/blob/blob.ld and
 # --emit-relocs at BASE. Every ELF must pass the gate (allowlists, not
 # blocklists) and pack to the same bytes; otherwise nothing is written.
+# Version 1 and 2 headers; a blob imports only its services version's
+# exports.
 
 import hashlib
 import json
@@ -40,8 +42,11 @@ import subprocess
 import sys
 import zlib
 
-HEADER_SIZE = 64
+HEADER_SIZES = {1: 64, 2: 96}
 MAGIC = 0x424d5a44
+MAX_STATE = {1: 256, 2: 4352}
+MAX_ARENA = 16384
+R_ARM_REL32 = 3
 MAX_ALIGNMENT = 32
 SHF_ALLOC = 2
 SHT_SYMTAB = 2
@@ -128,14 +133,26 @@ class Elf(object):
           (value, shndx, info))
     return symbols
 
+  def SymbolValue(self, index):
+    symtab = [s for s in self.sections if s[1] == SHT_SYMTAB][0]
+    return struct.unpack_from('<I', self.data, symtab[4] + index * 16 + 4)[0]
+
 
 def parse_services(path):
   exports = {}
   for line in open(path):
     m = re.match(r'^(PLAITS_BLOB_\w+)\s*=\s*(0x[0-9a-fA-F]+);', line)
-    if m:
+    if m and 'SERVICES' not in m.group(1):
       exports[m.group(1)] = int(m.group(2), 16)
   return exports
+
+
+def header_version(elf):
+  data = elf.Bytes(elf.Section('.blob'))
+  magic, size, abi, services = struct.unpack_from('<4I', data, 0)
+  if magic != MAGIC or HEADER_SIZES.get(abi) != size:
+    raise ValueError('the header is not first in .blob')
+  return abi, services
 
 
 def gate(elf, base, exports, objdump, path):
@@ -152,17 +169,25 @@ def gate(elf, base, exports, objdump, path):
       failures.append('section %s (flags 0x%x, %d B)' % (name, s[2], s[5]))
 
   symbols = elf.Symbols()
-  import_values = set(v for k, v in exports.items() if k not in (
-      'PLAITS_BLOB_SERVICES', 'PLAITS_BLOB_SERVICES_END'))
+  abi, services = header_version(elf)
+  if abi == 1 and services != 1:
+    failures.append('a version 1 header names services version %d' %
+                    services)
+  # Every export is a valid absolute symbol; only the blob's version imports.
+  all_values = set(v for e in exports.values() for v in e.values())
+  import_values = set(exports.get(services, {}).values())
+  if not import_values:
+    failures.append('services version %d is not known' % services)
   for name, entries in symbols.items():
     for value, shndx, info in entries:
       if shndx == SHN_UNDEF and name:
         failures.append('undefined symbol %s' % name)
       elif shndx == SHN_ABS and info & 0xf in (1, 2) and \
-          value not in import_values:
+          value not in all_values:
         failures.append('absolute symbol %s = 0x%08x' % (name, value))
 
   kinds = {}
+  data = elf.Bytes(blob)
   # --emit-relocs keeps every relocation; a blob may need none of its own.
   if not any(s[1] == SHT_REL for s in elf.sections):
     failures.append('no relocation sections: link with --emit-relocs')
@@ -176,10 +201,15 @@ def gate(elf, base, exports, objdump, path):
       kinds[label] = kinds.get(label, 0) + 1
       if kind not in ALLOWED_RELOCATIONS:
         failures.append('relocation %s at 0x%08x' % (label, offset))
+      elif kind == R_ARM_REL32:
+        # A text-relative literal: the symbol it names is inside the blob.
+        target = elf.SymbolValue(info >> 8)
+        if not base <= target < base + len(data):
+          failures.append('R_ARM_REL32 at 0x%08x names 0x%08x, outside '
+                          'the blob' % (offset, target))
 
   got = symbols['plaits_blob_got'][0][0]
   got_end = symbols['plaits_blob_got_end'][0][0]
-  data = elf.Bytes(blob)
   # The reserved words of a static link's .got.plt stay zero.
   reserved = symbols['plaits_blob_got_plt'][0][0]
   if any(data[reserved - base:got - base]):
@@ -189,7 +219,16 @@ def gate(elf, base, exports, objdump, path):
     value, = struct.unpack_from('<I', data, address - base)
     imports.append(value)
     if value not in import_values:
-      failures.append('GOT entry 0x%08x is not an export' % value)
+      failures.append('GOT entry 0x%08x is not a version %d export' % (
+          value, services))
+
+  # The declared RAM fits the slot and arena of the blob's ABI.
+  state, arena = struct.unpack_from('<2I', data, 24 if abi == 1 else 32)
+  if state > MAX_STATE.get(abi, 0):
+    failures.append('state of %d B is over the %d B slot' % (
+        state, MAX_STATE.get(abi, 0)))
+  if arena > MAX_ARENA:
+    failures.append('arena of %d B is over %d B' % (arena, MAX_ARENA))
 
   listing = subprocess.check_output(
       [objdump, '-d', '-j', '.blob', path]).decode()
@@ -199,38 +238,47 @@ def gate(elf, base, exports, objdump, path):
   return failures, kinds, imports
 
 
+# Header words the packer fills: size, the three entries, GOT offset and
+# size; by version.
+FILLED = {1: (5, 8, 9, 10, 11, 12), 2: (7, 10, 11, 12, 13, 14)}
+
+
 def pack(elf, base):
   symbols = elf.Symbols()
   data = bytearray(elf.Bytes(elf.Section('.blob')))
-  words = list(struct.unpack_from('<16I', data, 0))
-  if words[0] != MAGIC or words[1] != HEADER_SIZE:
-    raise ValueError('the header is not first in .blob')
+  abi, _ = header_version(elf)
+  count = HEADER_SIZES[abi] // 4
+  words = list(struct.unpack_from('<%dI' % count, data, 0))
   def entry(name):
     return symbols[name][0][0] - base
   got = symbols['plaits_blob_got'][0][0] - base
   got_end = symbols['plaits_blob_got_end'][0][0] - base
-  words[5] = len(data) + 4
-  words[8] = entry('plaits_blob_init')
-  words[9] = entry('plaits_blob_reset')
-  words[10] = entry('plaits_blob_render')
-  words[11] = got
-  words[12] = got_end - got
-  for offset in words[8:11]:
+  size, init, reset, render, got_offset, got_size = FILLED[abi]
+  words[size] = len(data) + 4
+  words[init] = entry('plaits_blob_init')
+  words[reset] = entry('plaits_blob_reset')
+  words[render] = entry('plaits_blob_render')
+  words[got_offset] = got
+  words[got_size] = got_end - got
+  for offset in (words[init], words[reset], words[render]):
     if not offset & 1:
       raise ValueError('an entry point is not Thumb code')
-  struct.pack_into('<13I', data, 0, *words[:13])
+  struct.pack_into('<%dI' % count, data, 0, *words)
   data += struct.pack('<I', zlib.crc32(bytes(data)) & 0xffffffff)
   return bytes(data)
 
 
 def main(argv):
-  exports = parse_services(argv[1])
-  objdump = argv[2]
-  out = argv[3]
+  v1 = parse_services(argv[1])
+  v2 = dict(v1)
+  v2.update(parse_services(argv[2]))
+  exports = {1: v1, 2: v2}
+  objdump = argv[3]
+  out = argv[4]
   failures = []
   packed = {}
   evidence = {'links': []}
-  for spec in argv[4:]:
+  for spec in argv[5:]:
     base_text, path = spec.split(':', 1)
     base = int(base_text, 16)
     elf = Elf(path)
@@ -258,15 +306,23 @@ def main(argv):
     return 1
   data = list(packed.values())[0]
   open(out, 'wb').write(data)
-  words = struct.unpack_from('<13I', data, 0)
+  abi = struct.unpack_from('<I', data, 8)[0]
+  words = struct.unpack_from('<%dI' % (HEADER_SIZES[abi] // 4), data, 0)
+  if abi == 1:
+    model, state, arena, entries, got = (
+        words[4], words[6], words[7], words[8:11], words[11:13])
+  else:
+    model, state, arena, entries, got = (
+        words[5], words[8], words[9], words[10:13], words[13:15])
   evidence.update({
+      'abi': abi,
       'size': len(data),
       'sha256': hashlib.sha256(data).hexdigest(),
-      'model': words[4],
-      'state_size': words[6],
-      'arena_size': words[7],
-      'entries': ['0x%x' % w for w in words[8:11]],
-      'got': ['0x%x' % words[11], words[12]]})
+      'model': model,
+      'state_size': state,
+      'arena_size': arena,
+      'entries': ['0x%x' % w for w in entries],
+      'got': ['0x%x' % got[0], got[1]]})
   json.dump(evidence, open(out + '.json', 'w'), indent=1, sort_keys=True)
   print('%s %d B sha256 %s' % (out, len(data), evidence['sha256']))
   return 0

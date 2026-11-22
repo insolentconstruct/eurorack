@@ -174,6 +174,10 @@ class Ui {
   
   inline void set_no_input(bool no_input) { no_input_ = no_input; }
   inline void set_synth_mode(bool synth_mode) { synth_mode_ = synth_mode; }
+#ifdef PLAITS_BLOBS
+  // Neither synth's region is intact: synth mode is silent.
+  inline void set_synth_fault(bool fault) { synth_fault_ = fault; }
+#endif  // PLAITS_BLOBS
   inline bool self_play_requested() const { return self_play_requested_; }
   inline void ClearSelfPlayRequest() { self_play_requested_ = false; }
 
@@ -218,6 +222,9 @@ class Ui {
   bool trim_flag_;
   bool no_input_;
   bool synth_mode_;
+#ifdef PLAITS_BLOBS
+  bool synth_fault_;
+#endif  // PLAITS_BLOBS
   bool self_play_requested_;
   bool freeze_button_state_;
   bool freeze_led_state_;
