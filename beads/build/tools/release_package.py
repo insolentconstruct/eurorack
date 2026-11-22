@@ -34,6 +34,9 @@ import tempfile
 import zipfile
 
 
+CATALOGUE = "profile-features.json"
+
+
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -63,8 +66,10 @@ def hex_image(path):
 
 def package(out, here, wav, wav_zip, combo, combo_hex, combo_zip):
     guides = ["OPTIONS.md", "options-guide.svg", "options-guide-mobile.svg"]
-    assets = [wav_zip, combo_zip, combo_hex, "NOTICE.txt"] + guides
+    assets = [wav_zip, combo_zip, combo_hex, "NOTICE.txt", CATALOGUE] + guides
     (out / "README.txt").write_bytes((here / "README.txt").read_bytes())
+    # Hygrostat's feature catalogue, as published with each build.
+    (out / CATALOGUE).write_bytes((here / CATALOGUE).read_bytes())
     for name in guides:
         (out / name).write_bytes((here / "docs" / name).read_bytes())
     write_zip(out / wav_zip, [wav, "README.txt", "NOTICE.txt"] + guides)

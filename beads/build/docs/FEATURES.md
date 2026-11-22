@@ -100,7 +100,7 @@ freezes each version's offsets.
 | 4 | Processor | 11 |
 | 5 | Limiter | 12 |
 | 6 | Frozen feedback | 13 |
-| 7 | Synth (2 Rings; a build without Rings reads 2 as not set) | 14 |
+| 7 | Synth | 14 |
 | 8 | Attacks | 15 |
 | 9 | Synth start | 16 |
 | 10 | Random pitch steps | 17 |
@@ -111,10 +111,11 @@ freezes each version's offsets.
 | 21 | SEED latch (#13) | 21 |
 | 23 | TIME modulation (#141) | 22 |
 | 31 | Plaits bank (#190) | 23 |
-| 42 | Rings polyphony | 27 |
 | 40 | Manual gain knob (#301) | The gain is State byte 5 |
+| 42 | Rings polyphony | 27 |
 
-Other features are not saved: they always take the profile's value.
+Other features are not saved: they always take the profile's value. A build
+without Rings reads Synth value 2 as not set.
 
 Options-only changes (an options page, an [A] gesture, the Plaits bank) append
 a record and leave the settings sector alone; a change to both writes the
@@ -314,7 +315,9 @@ choice can occupy any page slot (1–21). They have no amount, action,
 SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
 only, with no control placement. Omitted entries are Off. The default profile
 block is unchanged. The page-facing catalogue is
-`beads/build/profile-features.json`; costs are unknown until measured.
+`beads/build/profile-features.json`; costs are unknown until measured. Its
+format 2 adds the manifest's SHA-256, the record version, and each feature's
+record byte and factory entry; each release publishes it.
 
 Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
 when Adjustable or set via Hygrostat when Fixed. There is no power-on

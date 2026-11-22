@@ -1,0 +1,41 @@
+# Profiles the firmware's parser (profile_test) and Hygrostat's codec must
+# both accept or both refuse. One per line: accept or reject, a name, flags
+# (crc: a wrong checksum; format=N: another profile format), then after the
+# colon its entries, "id state value page amount action", comma-separated.
+accept empty :
+accept page-pitch : 1 2 3 1 0 0
+accept fixed-reverb : 2 1 1 0 0 0
+accept processor-on-seed : 4 2 0 7 0 1
+accept trim-fixed-on-freeze : 14 1 1 0 0 2
+accept width-on-dry-wet : 11 2 0 0 1 0
+accept diffusion-on-feedback-gain-fixed : 12 2 0 0 3 0, 40 1 0 0 0 0
+accept gain-on-reverb : 40 2 0 0 2 0
+accept synth-start-on-hold : 9 2 0 9 0 3
+accept synth-on-seed : 7 2 0 8 0 1
+accept plaits-bank-third : 31 2 2 0 0 0
+accept fixed-only-features : 30 1 1 0 0 0, 41 1 2 0 0 0, 39 1 4 0 0 0
+accept brightness-last-slot : 18 2 2 21 0 0
+accept saved-without-control : 23 2 1 0 0 0
+accept time-modulation-on-freeze : 23 2 0 0 0 2
+reject id-zero : 0 1 0 0 0 0
+reject unknown-id : 42 1 0 0 0 0
+reject repeated-id : 2 1 1 0 0 0, 2 1 0 0 0 0
+reject state-3 : 2 3 0 0 0 0
+reject value-out-of-range : 2 1 2 0 0 0
+reject page-slot-22 : 1 2 0 22 0 0
+reject page-while-fixed : 1 1 0 1 0 0
+reject page-without-page : 11 2 0 1 0 0
+reject page-slot-twice : 1 2 0 1 0 0, 2 2 0 1 0 0
+reject amount-4 : 11 2 0 0 4 0
+reject amount-without-amount : 1 2 0 1 1 0
+reject action-4 : 4 2 0 0 0 4
+reject action-while-fixed : 4 1 1 0 0 1
+reject adjustable-without-control : 30 2 1 0 0 0
+reject plaits-bank-fixed : 31 1 0 0 0 0
+reject synth-start-without-gesture : 9 2 0 9 0 0
+reject hold-without-synth-start : 13 2 0 0 0 3
+reject synth-on-freeze : 7 2 0 8 0 2
+reject feedback-amount-gain-off : 12 2 0 0 3 0
+reject pitch-scale-not-in-bank : 1 1 10 0 0 0
+reject bad-checksum crc : 2 1 1 0 0 0
+reject other-format format=2 : 2 1 1 0 0 0

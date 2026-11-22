@@ -26,8 +26,9 @@
 //
 // Profile parser boundaries and placement kinds.
 
-#include <cstring>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <vector>
 
 #include "beads/profile.h"
@@ -826,6 +827,62 @@ void TestFactoryProfileIsDefaults() {
   }
 }
 
+// Hygrostat's codec reads the same cases and must give the same answers.
+void TestSharedCases() {
+  test_checker.Start("TestSharedCases");
+  FILE* file = fopen("beads/test/profile_cases.txt", "r");
+  if (!CHECK(file)) {
+    return;
+  }
+  char line[512];
+  int cases[2] = { 0, 0 };
+  while (fgets(line, sizeof(line), file)) {
+    if (line[0] == '#') {
+      continue;
+    }
+    for (char* c = line; *c; ++c) {
+      if (*c == ',' || *c == '\n') {
+        *c = ' ';
+      }
+    }
+    const bool accept = !strncmp(line, "accept ", 7);
+    CHECK(accept || !strncmp(line, "reject ", 7));
+    const char* name = strtok(line + 7, " ");
+    bool corrupt = false;
+    uint32_t format = kProfileFormat;
+    char* t = strtok(NULL, " ");
+    for (; t && strcmp(t, ":"); t = strtok(NULL, " ")) {
+      corrupt = corrupt || !strcmp(t, "crc");
+      if (!strncmp(t, "format=", 7)) {
+        format = strtoul(t + 7, NULL, 10);
+      }
+    }
+    uint8_t b[kProfileSize];
+    Template(b);
+    memset(b + 16, 0xff, kProfileSize - 16);
+    size_t size = 0;
+    for (t = strtok(NULL, " "); t && size < 6 * 82; t = strtok(NULL, " ")) {
+      b[16 + size++] = atoi(t);
+    }
+    CHECK(size % 6 == 0);
+    b[5] = size / 6;
+    b[6] = size;
+    b[7] = size >> 8;
+    for (int i = 0; i < 4; ++i) {
+      b[8 + i] = format >> (8 * i);
+    }
+    Checksum(b);
+    b[16 + size] ^= corrupt ? 1 : 0;
+    Profile profile;
+    if (!CHECK(profile.Init(b) == accept)) {
+      printf("case %s\n", name);
+    }
+    ++cases[accept];
+  }
+  fclose(file);
+  CHECK(cases[0] >= 20 && cases[1] >= 15);
+}
+
 int main() {
   TestOptionalPageSlots();
   TestDefaultPageTwoAndExplicitLayouts();
@@ -837,6 +894,7 @@ int main() {
   TestRingsSynthProfiles();
   TestGainKnobSlot();
   TestFactoryProfileIsDefaults();
+  TestSharedCases();
   puts("Profile validation: PASS");
   return test_checker.failures() ? 1 : 0;
 }
