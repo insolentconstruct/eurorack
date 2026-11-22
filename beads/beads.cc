@@ -122,6 +122,9 @@ void UpdateResonator() {
   c.position = ResonatorValue(
       FEATURE_RESONATOR_POSITION, kResonatorPosition, 1.0f / 256.0f);
   c.amount = ResonatorValue(FEATURE_RESONATOR_AMOUNT, 1.0f, 1.0f / 128.0f);
+  // An exact structure is Rings' curve, even under a Drizzlet object.
+  c.modes = settings.profile().entry(FEATURE_RESONATOR_STRUCTURE).state ==
+      PROFILE_FIXED ? NULL : material.modes;
   processor.set_resonator_controls(c);
 }
 
