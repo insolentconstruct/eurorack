@@ -1248,6 +1248,13 @@ void TestFadeIn() {
   }
   CHECK(ramp);
   CHECK(out[kPlaitsBlobFadeSize - 1] > -2.0f);
+  // The table is the squared ramp, as the emulator computes it.
+  bool table = true;
+  for (size_t i = 0; i < kPlaitsBlobFadeSize; ++i) {
+    const float x = float(i) * kPlaitsBlobFadeStep;
+    table = table && kPlaitsBlobFadeGain[i] == x * x;
+  }
+  CHECK(table);
   // Past the window a block is left alone.
   float block[12];
   for (size_t i = 0; i < 12; ++i) {

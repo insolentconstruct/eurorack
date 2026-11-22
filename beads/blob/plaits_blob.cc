@@ -27,6 +27,7 @@
 // Precompiled Plaits models ("blobs"): the fixed binary interface and checks.
 
 #include "beads/blob/plaits_blob.h"
+#include "beads/blob/plaits_blob_engine.h"
 
 #include <cstring>
 
@@ -152,6 +153,21 @@ const uint8_t kPlaitsBlobExportDigests[kNumPlaitsBlobExports][
     0x53, 0x27, 0x74, 0x20, 0x7b, 0xc4, 0xbe, 0x8f,
     0xb9, 0x91, 0xc0, 0x23, 0x0f, 0x09, 0x04, 0xbf
   }
+};
+
+const float kPlaitsBlobFadeGain[kPlaitsBlobFadeSize] = {
+  0.0f, 0.00043402781f, 0.00173611124f, 0.00390625f,
+  0.00694444496f, 0.0108506959f, 0.015625f, 0.0212673638f,
+  0.0277777798f, 0.03515625f, 0.0434027836f, 0.0525173619f,
+  0.0625f, 0.0733506978f, 0.0850694552f, 0.09765625f,
+  0.111111119f, 0.125434041f, 0.140625f, 0.156684041f,
+  0.173611134f, 0.19140625f, 0.210069448f, 0.229600713f,
+  0.25f, 0.271267414f, 0.293402791f, 0.31640625f,
+  0.340277821f, 0.365017384f, 0.390625f, 0.417100757f,
+  0.444444478f, 0.47265625f, 0.501736164f, 0.531684041f,
+  0.5625f, 0.594184101f, 0.626736164f, 0.66015625f,
+  0.694444537f, 0.729600728f, 0.765625f, 0.802517414f,
+  0.840277791f, 0.87890625f, 0.918402851f, 0.958767414f
 };
 
 static uint32_t Read32(const uint8_t* p) {

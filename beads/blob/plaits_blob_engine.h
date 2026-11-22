@@ -44,6 +44,8 @@ namespace beads {
 // on a squared ramp, so a restart from zeroed filters never clicks.
 const size_t kPlaitsBlobFadeSize = 48;
 const float kPlaitsBlobFadeStep = 1.0f / float(kPlaitsBlobFadeSize);
+// (position * kPlaitsBlobFadeStep) squared, in single precision.
+extern const float kPlaitsBlobFadeGain[kPlaitsBlobFadeSize];
 
 class PlaitsBlobEngine : public plaits::Engine {
  public:
@@ -134,9 +136,7 @@ class PlaitsBlobEngine : public plaits::Engine {
   static size_t FadeIn(float* out, size_t size, size_t position) {
     size_t i = 0;
     while (i < size && position < kPlaitsBlobFadeSize) {
-      const float ramp = float(position) * kPlaitsBlobFadeStep;
-      const float gain = ramp * ramp;
-      out[i] *= gain;
+      out[i] *= kPlaitsBlobFadeGain[position];
       ++i;
       ++position;
     }
