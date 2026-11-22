@@ -47,6 +47,9 @@ AMOUNT_NAMES = ['AMOUNT_NONE', 'AMOUNT_DRY_WET', 'AMOUNT_REVERB',
     'AMOUNT_FEEDBACK']
 ACTION_NAMES = ['ACTION_NONE', 'ACTION_SEED', 'ACTION_FREEZE', 'ACTION_HOLD']
 PULSES = ['steady', 'slow', 'fast', 'double']
+PAGE_CONTROLS = ['none', 'halves', 'zones', 'steps', 'scale']
+# Values 0-2 of a page feature light these, steady, unless listed.
+OPTION_COLORS = [[0, 255, 0], [255, 255, 0], [255, 0, 0]]
 NOT_USED = 'Not used yet'
 
 # LED mask of each options page (bit 0 FEEDBACK, 1 DRY/WET, 2 REVERB).
@@ -74,6 +77,17 @@ def check_manifest(features):
     assert values is None or values, feature['symbol']
     for value in values or []:
       assert value.get('pulse', 'steady') in PULSES, feature['symbol']
+      assert feature['page'] or 'led' not in value, feature['symbol']
+    control = feature.get('page_control', 'none')
+    assert (control != 'none') == feature['page'], feature['symbol']
+    assert control in PAGE_CONTROLS, feature['symbol']
+    if control == 'halves':
+      assert len(values) == 2, 'Halves: %s' % feature['symbol']
+    if control == 'zones':
+      assert len(values) == 3, 'Zones: %s' % feature['symbol']
+    if feature['page']:
+      for value in values[:len(OPTION_COLORS)]:
+        assert 'led' in value, 'Page values 0-2 light: %s' % feature['symbol']
     factory = feature.get('factory')
     if factory:
       assert factory['state'] in feature['states'], feature['symbol']
@@ -106,6 +120,13 @@ def page_features(features):
 
 def indicated(feature):
   return [(i, v) for i, v in enumerate(feature['values'] or []) if 'led' in v]
+
+
+def listed(feature):
+  # Indications that differ from the shared colours.
+  return [(i, v) for i, v in indicated(feature)
+          if i >= len(OPTION_COLORS) or v['led'] != OPTION_COLORS[i] or
+          v.get('pulse', 'steady') != 'steady']
 
 
 def feature_enum(features):
@@ -181,38 +202,57 @@ def defaults(features):
   return lines
 
 
-def option_enum(features):
-  lines = ['  OPTION_RESERVED = 0,']
-  for f in page_features(features):
-    lines.append('  OPTION_%s = %d,' % (f['symbol'], f['id']))
-  lines.append('  OPTION_LAST,')
-  return lines
+def page_values(features):
+  return ['  PAGE_VALUES_%s = %d,' % (f['symbol'], len(f['values']))
+          for f in page_features(features)]
 
 
 def num_option_values(features):
-  count = 1 + sum(len(indicated(f)) for f in page_features(features))
+  count = 1 + sum(len(listed(f)) for f in page_features(features))
   return ['const size_t kNumOptionValues = %d;' % count]
 
 
 def option_pages(features):
-  knobs = [['OPTION_RESERVED'] * 3 for _ in PAGE_LEDS]
+  knobs = [['FEATURE_NONE'] * 3 for _ in PAGE_LEDS]
   for f in page_features(features):
     slot = f.get('factory', {}).get('page_slot', 0)
     if slot:
       page, knob = (slot - 1) // 3, (slot - 1) % 3
-      assert knobs[page][knob] == 'OPTION_RESERVED', 'Page slot %d' % slot
-      knobs[page][knob] = 'OPTION_' + f['symbol']
+      assert knobs[page][knob] == 'FEATURE_NONE', 'Page slot %d' % slot
+      knobs[page][knob] = 'FEATURE_' + f['symbol']
   lines = ['  { %d, { %s } },' % (leds, ', '.join(k))
            for leds, k in zip(PAGE_LEDS, knobs)]
   lines[-1] = lines[-1].rstrip(',')
   return lines
 
 
+def num_page_features(features):
+  return ['const int kNumPageFeatures = %d;' % len(page_features(features))]
+
+
+def page_feature_list(features):
+  return ['  FEATURE_%s,' % f['symbol'] for f in page_features(features)]
+
+
+def page_controls(features):
+  lines = ['  PAGE_CONTROL_NONE,  // None.']
+  for f in features:
+    lines.append('  PAGE_CONTROL_%s,  // %s' % (
+        f.get('page_control', 'none').upper(), label(f)))
+  return lines
+
+
+def option_colors():
+  lines = ['  { %d, %d, %d },' % tuple(c) for c in OPTION_COLORS]
+  lines[-1] = lines[-1].rstrip(',')
+  return lines
+
+
 def option_values(features):
-  lines = ['  { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },']
+  lines = ['  { FEATURE_NONE, 0, { 0, 0, 0 }, PULSE_STEADY },']
   for f in page_features(features):
-    for i, v in indicated(f):
-      lines.append('  { OPTION_%s, %d, { %d, %d, %d }, PULSE_%s },' % (
+    for i, v in listed(f):
+      lines.append('  { FEATURE_%s, %d, { %d, %d, %d }, PULSE_%s },' % (
           f['symbol'], i, v['led'][0], v['led'][1], v['led'][2],
           v.get('pulse', 'steady').upper()))
   return lines
@@ -224,9 +264,9 @@ def option_names(features):
 
 
 def value_names(features):
-  names = [NOT_USED] + [v['name'] for f in page_features(features)
-                        for _, v in indicated(f)]
-  return ['  %s,' % json.dumps(n) for n in names]
+  return ['  { beads::FEATURE_%s, %d, %s },' % (
+      f['symbol'], i, json.dumps(v['name']))
+      for f in page_features(features) for i, v in indicated(f)]
 
 
 def catalogue(manifest, page_slots):
@@ -287,6 +327,8 @@ def outputs(root):
   magic = header_constant(header, 'kProfileMagic')
   profile_format = header_constant(header, 'kProfileFormat')
   page_slots = header_constant(header, 'kNumPageSlots') - 1
+  options = (root / 'beads/options.h').read_text()
+  assert header_constant(options, 'kNumOptionColors') == len(OPTION_COLORS)
   block = profile_block(features, magic, profile_format)
   regions = [
     ('beads/profile.h', 'enum ProfileFeature {', '};',
@@ -299,18 +341,29 @@ def outputs(root):
         '};', block_lines(block)),
     ('beads/profile.cc', '  const ProfileEntry defaults[] = {', '  };',
         defaults(features)),
-    ('beads/options.h', 'enum OptionSetting {', '};', option_enum(features)),
+    ('beads/options.h', 'enum PageValues {', '};', page_values(features)),
     ('beads/options.h', 'const size_t kNumOptionValues = ', None,
         num_option_values(features)),
     ('beads/options.cc',
         'const OptionPage kOptionPages[kNumOptionPages] = {', '};',
         option_pages(features)),
+    ('beads/options.h', 'const int kNumPageFeatures = ', None,
+        num_page_features(features)),
+    ('beads/options.cc',
+        'const ProfileFeature kPageFeatures[kNumPageFeatures] = {', '};',
+        page_feature_list(features)),
+    ('beads/options.cc',
+        'const uint8_t kPageControls[FEATURE_LAST] = {', '};',
+        page_controls(features)),
+    ('beads/options.cc',
+        'const Leds::Color kOptionColors[kNumOptionColors] = {', '};',
+        option_colors()),
     ('beads/options.cc', 'const OptionValue kOptionValues[] = {', '};',
         option_values(features)),
     ('beads/build/tools/options_tables.cc',
         'const char* const kOptionNames[] = {', '};', option_names(features)),
     ('beads/build/tools/options_tables.cc',
-        'const char* const kValueNames[] = {', '};', value_names(features)),
+        'const NamedValue kValueNames[] = {', '};', value_names(features)),
   ]
   files = {}
   for path, start, end, lines in regions:

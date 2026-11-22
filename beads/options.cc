@@ -32,72 +32,122 @@
 
 namespace beads {
 
+// Previews are these enums' values; slots 1-21 are the pages' knobs.
+STATIC_ASSERT(PAGE_VALUES_PITCH == kMaxPitchScaleId + 1, pitch_values);
+STATIC_ASSERT(PAGE_VALUES_DELAY == DELAY_MODE_WIDE_DETENT + 1, delay_values);
+STATIC_ASSERT(PAGE_VALUES_LIMITER == OUTPUT_LIMITER_OFF + 1, limiter_values);
+STATIC_ASSERT(
+    PAGE_VALUES_ATTACKS == ATTACK_MODE_SNAP_AND_TRIGGER + 1, attack_values);
+STATIC_ASSERT(
+    PAGE_VALUES_INTERVALS == int(RANDOM_INTERVALS_LAST), interval_values);
+STATIC_ASSERT(
+    kNumPageSlots == 1 + kNumOptionPages * MIX_PARAMETER_LAST, page_slots);
+
 const OptionPage kOptionPages[kNumOptionPages] = {
-  { 1, { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS } },
-  { 2, { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB } },
-  { 4, { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START } },
-  { 3, { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER } },
-  { 5, { OPTION_RESERVED, OPTION_RESERVED, OPTION_RESERVED } },
-  { 6, { OPTION_RESERVED, OPTION_RESERVED, OPTION_RESERVED } },
-  { 7, { OPTION_RESERVED, OPTION_RESERVED, OPTION_RESERVED } }
+  { 1, { FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS } },
+  { 2, { FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB } },
+  { 4, { FEATURE_PROCESSOR, FEATURE_SYNTH, FEATURE_SYNTH_START } },
+  { 3, { FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_LIMITER } },
+  { 5, { FEATURE_NONE, FEATURE_NONE, FEATURE_NONE } },
+  { 6, { FEATURE_NONE, FEATURE_NONE, FEATURE_NONE } },
+  { 7, { FEATURE_NONE, FEATURE_NONE, FEATURE_NONE } }
+};
+const ProfileFeature kPageFeatures[kNumPageFeatures] = {
+  FEATURE_PITCH,
+  FEATURE_REVERB,
+  FEATURE_DELAY,
+  FEATURE_PROCESSOR,
+  FEATURE_LIMITER,
+  FEATURE_FROZEN,
+  FEATURE_SYNTH,
+  FEATURE_ATTACKS,
+  FEATURE_SYNTH_START,
+  FEATURE_INTERVALS,
+  FEATURE_BRIGHTNESS,
+  FEATURE_SEED_LATCH,
+  FEATURE_TIME_SCAN,
+};
+const uint8_t kPageControls[FEATURE_LAST] = {
+  PAGE_CONTROL_NONE,  // None.
+  PAGE_CONTROL_SCALE,  // Pitch.
+  PAGE_CONTROL_HALVES,  // Reverb.
+  PAGE_CONTROL_ZONES,  // Delay.
+  PAGE_CONTROL_HALVES,  // Processor.
+  PAGE_CONTROL_ZONES,  // Limiter.
+  PAGE_CONTROL_HALVES,  // Frozen.
+  PAGE_CONTROL_HALVES,  // Synth.
+  PAGE_CONTROL_ZONES,  // Attacks.
+  PAGE_CONTROL_HALVES,  // Synth start.
+  PAGE_CONTROL_ZONES,  // Intervals.
+  PAGE_CONTROL_NONE,  // Width.
+  PAGE_CONTROL_NONE,  // Diffusion.
+  PAGE_CONTROL_NONE,  // Monophonic.
+  PAGE_CONTROL_NONE,  // Trim.
+  PAGE_CONTROL_NONE,  // Version.
+  PAGE_CONTROL_NONE,  // Attenuation.
+  PAGE_CONTROL_NONE,  // Delay cue.
+  PAGE_CONTROL_STEPS,  // Brightness.
+  PAGE_CONTROL_NONE,  // Live assign.
+  PAGE_CONTROL_NONE,  // Save freeze.
+  PAGE_CONTROL_STEPS,  // Seed latch.
+  PAGE_CONTROL_NONE,  // Pitch notch.
+  PAGE_CONTROL_HALVES,  // Time scan.
+  PAGE_CONTROL_NONE,  // Synth tail.
+  PAGE_CONTROL_NONE,  // Idle timeout.
+  PAGE_CONTROL_NONE,  // Seed latch fade.
+  PAGE_CONTROL_NONE,  // Manual gain.
+  PAGE_CONTROL_NONE,  // Attack sensitivity.
+  PAGE_CONTROL_NONE,  // Seed start.
+  PAGE_CONTROL_NONE,  // Pitch law.
+  PAGE_CONTROL_NONE,  // Plaits bank.
+  PAGE_CONTROL_NONE,  // Mix law.
+  PAGE_CONTROL_NONE,  // Reverb input.
+  PAGE_CONTROL_NONE,  // Grain stealing.
+  PAGE_CONTROL_NONE,  // Unity feedback.
+  PAGE_CONTROL_NONE,  // Delay crossfade.
+  PAGE_CONTROL_NONE,  // Page preview.
+  PAGE_CONTROL_NONE,  // First page.
+  PAGE_CONTROL_NONE,  // Start quality.
+  PAGE_CONTROL_NONE,  // Gain knob.
+  PAGE_CONTROL_NONE,  // Resonator.
+};
+const Leds::Color kOptionColors[kNumOptionColors] = {
+  { 0, 255, 0 },
+  { 255, 255, 0 },
+  { 255, 0, 0 }
 };
 const OptionValue kOptionValues[] = {
-  { OPTION_RESERVED, 0, { 0, 0, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 2, { 255, 64, 32 }, PULSE_STEADY },
-  { OPTION_PITCH, 3, { 255, 160, 0 }, PULSE_STEADY },
-  { OPTION_PITCH, 4, { 32, 96, 255 }, PULSE_STEADY },
-  { OPTION_PITCH, 5, { 255, 160, 0 }, PULSE_SLOW },
-  { OPTION_PITCH, 6, { 32, 96, 255 }, PULSE_SLOW },
-  { OPTION_PITCH, 7, { 0, 220, 160 }, PULSE_STEADY },
-  { OPTION_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
-  { OPTION_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
-  { OPTION_REVERB, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_REVERB, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_DELAY, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_PROCESSOR, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_PROCESSOR, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_LIMITER, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_FROZEN, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_FROZEN, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_ATTACKS, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH_START, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SYNTH_START, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_INTERVALS, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_BRIGHTNESS, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_BRIGHTNESS, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_BRIGHTNESS, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SEED_LATCH, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_SEED_LATCH, 1, { 255, 255, 0 }, PULSE_STEADY },
-  { OPTION_SEED_LATCH, 2, { 255, 0, 0 }, PULSE_STEADY },
-  { OPTION_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
-  { OPTION_TIME_SCAN, 0, { 0, 255, 0 }, PULSE_STEADY },
-  { OPTION_TIME_SCAN, 1, { 255, 255, 0 }, PULSE_STEADY },
+  { FEATURE_NONE, 0, { 0, 0, 0 }, PULSE_STEADY },
+  { FEATURE_PITCH, 2, { 255, 64, 32 }, PULSE_STEADY },
+  { FEATURE_PITCH, 3, { 255, 160, 0 }, PULSE_STEADY },
+  { FEATURE_PITCH, 4, { 32, 96, 255 }, PULSE_STEADY },
+  { FEATURE_PITCH, 5, { 255, 160, 0 }, PULSE_SLOW },
+  { FEATURE_PITCH, 6, { 32, 96, 255 }, PULSE_SLOW },
+  { FEATURE_PITCH, 7, { 0, 220, 160 }, PULSE_STEADY },
+  { FEATURE_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
+  { FEATURE_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
+  { FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
 };
 
 const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts] = {
   0, 5000, 10000, 20000, 30000
 };
 
-const OptionValue& FindOptionValue(OptionSetting setting, int value) {
-  for (size_t i = 0; i < kNumOptionValues; ++i) {
+OptionValue FindOptionValue(ProfileFeature setting, int value) {
+  for (size_t i = 1; i < kNumOptionValues; ++i) {
     if (kOptionValues[i].setting == setting &&
         kOptionValues[i].value == value) {
       return kOptionValues[i];
     }
   }
-  return kOptionValues[0];
+  OptionValue shared = kOptionValues[0];
+  const FeatureDefinition& d = kFeatureDefinitions[setting];
+  if (d.page && value < kNumOptionColors && value < d.values) {
+    shared.setting = setting;
+    shared.value = value;
+    shared.color = kOptionColors[value];
+  }
+  return shared;
 }
 
 StereoWidth StereoWidthFromPot(float pot, StereoWidth current) {
@@ -124,21 +174,17 @@ void Options::Init() {
   for (int i = 0; i < kNumOptionPages; ++i) {
     pages_[i] = kOptionPages[i];
   }
-  selected_ = OPTION_PITCH;
+  selected_ = FEATURE_PITCH;
   preview_knob_ = -1;
   first_preview_knob_ = 0;
   first_page_ = false;
   preview_time_ = indication_time_ = 0;
   idle_timeout_ = idle_time_ = 0;
-  limiter_preview_ = OUTPUT_LIMITER_STOCK;
-  clouds_preview_ = evolving_preview_ = plaits_preview_ = false;
-  spectral_preview_ = manual_start_preview_ = false;
-  intervals_preview_ = RANDOM_INTERVALS_OFF;
-  attack_preview_ = ATTACK_MODE_OFF;
-  pitch_preview_ = PITCH_SCALE_OFF;
+  for (int i = 0; i < FEATURE_LAST; ++i) {
+    preview_[i] = 0;
+  }
   scale_ = PITCH_SCALE_FIFTHS;
   profile_ = NULL;
-  delay_preview_ = DELAY_MODE_AUTO;
   seed_held_ = false;
   seed_time_ = 0;
   seed_taps_ = 0;
@@ -162,13 +208,10 @@ void Options::Configure(const Profile& profile) {
   const ProfileEntry& first_page = profile.entry(FEATURE_FIRST_PAGE);
   first_page_ = first_page.state == PROFILE_FIXED && first_page.value;
   any_page_ = false;
-  for (int i = 0; i < OPTION_LAST; ++i) {
-    profile_preview_[i] = 0;
-  }
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < MIX_PARAMETER_LAST; ++knob) {
-      pages_[page].knobs[knob] = OptionSetting(
-          profile.Page(1 + page * MIX_PARAMETER_LAST + knob));
+      pages_[page].knobs[knob] = profile.Page(
+          1 + page * MIX_PARAMETER_LAST + knob);
     }
     any_page_ |= !PageEmpty(page);
   }
@@ -222,7 +265,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       }
       for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
         // As Clouds' blend knob: touched once 2% from the last touch.
-        if (pages_[page_].knobs[i] != OPTION_RESERVED &&
+        if (pages_[page_].knobs[i] != FEATURE_NONE &&
             fabsf(pots[i] - idle_pot_[i]) > kOptionsIdleMovement) {
           idle_pot_[i] = pots[i];
           idle_time_ = now;
@@ -289,8 +332,8 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
     ApplySeedTaps();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      const OptionSetting setting = pages_[page_].knobs[i];
-      if (setting == OPTION_RESERVED) {
+      const ProfileFeature setting = pages_[page_].knobs[i];
+      if (setting == FEATURE_NONE) {
         continue;
       }
 
@@ -315,102 +358,39 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
       const int before = Value(setting);
       UpdateZone(pot, &zone_[i]);
-      switch (setting) {
-        case OPTION_SEED_LATCH:
+      uint8_t* value = &preview_[setting];
+      switch (kPageControls[setting]) {
+        case PAGE_CONTROL_HALVES:
+          if (pot < kOptionsHalfLow) {
+            *value = 0;
+          }
+
+          if (pot > kOptionsHalfHigh) {
+            *value = 1;
+          }
+          break;
+        case PAGE_CONTROL_ZONES:
+          *value = zone_[i];
+          break;
+        case PAGE_CONTROL_STEPS:
           {
-            int value = profile_preview_[setting];
-            while (value < 3 &&
-                pot > float(value + 1) * 0.25f + kOptionsProfileZoneBand) {
-              ++value;
+            // Equal steps, each held a little past its edge.
+            const int last = kFeatureDefinitions[setting].values - 1;
+            const float steps = float(last + 1);
+            int step = *value;
+            while (step < last &&
+                pot > float(step + 1) / steps + kOptionsProfileZoneBand) {
+              ++step;
             }
-            while (value > 0 &&
-                pot < float(value) * 0.25f - kOptionsProfileZoneBand) {
-              --value;
+            while (step > 0 &&
+                pot < float(step) / steps - kOptionsProfileZoneBand) {
+              --step;
             }
-            profile_preview_[setting] = value;
+            *value = step;
           }
           break;
-        case OPTION_BRIGHTNESS:
-          {
-            int value = profile_preview_[setting];
-            while (value < 2 &&
-                pot > float(value + 1) / 3.0f + kOptionsProfileZoneBand) {
-              ++value;
-            }
-            while (value > 0 &&
-                pot < float(value) / 3.0f - kOptionsProfileZoneBand) {
-              --value;
-            }
-            profile_preview_[setting] = value;
-          }
-          break;
-        case OPTION_TIME_SCAN:
-          if (pot < kOptionsHalfLow) {
-            profile_preview_[setting] = 0;
-          }
-          if (pot > kOptionsHalfHigh) {
-            profile_preview_[setting] = 1;
-          }
-          break;
-        case OPTION_PITCH:
-          pitch_preview_ = zone_[i] == 2 ? scale_ : PitchScale(zone_[i]);
-          break;
-        case OPTION_REVERB:
-          if (pot < kOptionsHalfLow) {
-            clouds_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            clouds_preview_ = true;
-          }
-          break;
-        case OPTION_DELAY:
-          delay_preview_ = DelayMode(zone_[i]);
-          break;
-        case OPTION_PROCESSOR:
-          if (pot < kOptionsHalfLow) {
-            spectral_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            spectral_preview_ = true;
-          }
-          break;
-        case OPTION_INTERVALS:
-          intervals_preview_ = RandomIntervals(zone_[i]);
-          break;
-        case OPTION_SYNTH_START:
-          if (pot < kOptionsHalfLow) {
-            manual_start_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            manual_start_preview_ = true;
-          }
-          break;
-        case OPTION_LIMITER:
-          limiter_preview_ = OutputLimiterMode(zone_[i]);
-          break;
-        case OPTION_ATTACKS:
-          attack_preview_ = AttackMode(zone_[i]);
-          break;
-        case OPTION_FROZEN:
-          if (pot < kOptionsHalfLow) {
-            evolving_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            evolving_preview_ = true;
-          }
-          break;
-        case OPTION_SYNTH:
-          if (pot < kOptionsHalfLow) {
-            plaits_preview_ = false;
-          }
-
-          if (pot > kOptionsHalfHigh) {
-            plaits_preview_ = true;
-          }
+        case PAGE_CONTROL_SCALE:
+          *value = zone_[i] == 2 ? scale_ : PitchScale(zone_[i]);
           break;
         default:
           break;
@@ -448,21 +428,13 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
 
   if (eligible_ && assign &&
       uint32_t(now - press_time_) >= kOptionsHoldTime) {
-    for (int i = FEATURE_VERSION; i < OPTION_LAST; ++i) {
-      profile_preview_[i] = settings.FeatureValue(ProfileFeature(i));
+    for (int i = 0; i < kNumPageFeatures; ++i) {
+      const ProfileFeature f = kPageFeatures[i];
+      preview_[f] = settings.FeatureValue(f);
     }
-    limiter_preview_ = settings.output_limiter_mode();
-    spectral_preview_ = settings.spectral();
-    manual_start_preview_ = settings.self_play_on_request();
-    intervals_preview_ = settings.random_intervals();
-    clouds_preview_ = settings.clouds_style();
-    plaits_preview_ = settings.plaits_synth();
-    pitch_preview_ = settings.pitch_scale();
-    scale_ = settings.pitch_scale() >= PITCH_SCALE_FIFTHS
-        ? settings.pitch_scale() : settings.profile().FirstScale();
-    delay_preview_ = settings.delay_mode();
-    evolving_preview_ = settings.evolving_feedback();
-    attack_preview_ = settings.attack_mode();
+    const PitchScale pitch = PitchScale(preview_[FEATURE_PITCH]);
+    scale_ = pitch >= PITCH_SCALE_FIFTHS
+        ? pitch : settings.profile().FirstScale();
     if (first_page_) {
       page_ = 0;
       while (PageEmpty(page_)) {
@@ -475,51 +447,22 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
   }
 }
 
-int Options::Value(OptionSetting setting) const {
-  if (setting >= OPTION_BRIGHTNESS && setting < OPTION_LAST) {
-    return profile_preview_[setting];
-  }
-  switch (setting) {
-    case OPTION_PITCH:
-      return pitch_preview_;
-    case OPTION_REVERB:
-      return clouds_preview_;
-    case OPTION_DELAY:
-      return delay_preview_;
-    case OPTION_PROCESSOR:
-      return spectral_preview_;
-    case OPTION_SYNTH_START:
-      return manual_start_preview_;
-    case OPTION_INTERVALS:
-      return intervals_preview_;
-    case OPTION_LIMITER:
-      return limiter_preview_;
-    case OPTION_FROZEN:
-      return evolving_preview_;
-    case OPTION_SYNTH:
-      return plaits_preview_;
-    case OPTION_ATTACKS:
-      return attack_preview_;
-    default:
-      return 0;
-  }
-}
-
 const OptionValue& Options::indication() const {
   const int value = Value(selected_);
-  if (selected_ == OPTION_PITCH && profile_) {
+  if (selected_ == FEATURE_PITCH && profile_) {
     const PitchScaleDefinition* scale = profile_->FindScale(value);
     if (scale) {
-      pitch_indication_.setting = OPTION_PITCH;
-      pitch_indication_.value = value;
-      pitch_indication_.color.r = scale->color[0];
-      pitch_indication_.color.g = scale->color[1];
-      pitch_indication_.color.b = scale->color[2];
-      pitch_indication_.pulses = PulsePattern(scale->pulses);
-      return pitch_indication_;
+      indication_.setting = FEATURE_PITCH;
+      indication_.value = value;
+      indication_.color.r = scale->color[0];
+      indication_.color.g = scale->color[1];
+      indication_.color.b = scale->color[2];
+      indication_.pulses = PulsePattern(scale->pulses);
+      return indication_;
     }
   }
-  return FindOptionValue(selected_, value);
+  indication_ = FindOptionValue(selected_, value);
+  return indication_;
 }
 
 void Options::ApplySeedTaps() {
@@ -531,9 +474,9 @@ void Options::ApplySeedTaps() {
     scale_ = profile_ ? profile_->NextScale(scale_)
         : scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
             : PitchScale(scale_ + 1);
-    pitch_preview_ = scale_;
+    preview_[FEATURE_PITCH] = scale_;
     preview_knob_ = -1;
-    selected_ = OPTION_PITCH;
+    selected_ = FEATURE_PITCH;
     indication_time_ = seed_action_time_;
     dirty_ = true;
     last_action_ = seed_action_time_;
@@ -554,7 +497,7 @@ void Options::ResetPots(const float* pots) {
   }
 
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (pages_[page_].knobs[i] != OPTION_RESERVED) {
+    if (pages_[page_].knobs[i] != FEATURE_NONE) {
       selected_ = pages_[page_].knobs[i];
       break;
     }
@@ -566,7 +509,7 @@ void Options::ResetPots(const float* pots) {
 
 bool Options::PageEmpty(int page) const {
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (pages_[page].knobs[i] != OPTION_RESERVED) {
+    if (pages_[page].knobs[i] != FEATURE_NONE) {
       return false;
     }
   }
@@ -575,7 +518,7 @@ bool Options::PageEmpty(int page) const {
 
 bool Options::PageHasPitch() const {
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (pages_[page_].knobs[i] == OPTION_PITCH) {
+    if (pages_[page_].knobs[i] == FEATURE_PITCH) {
       return true;
     }
   }
@@ -588,7 +531,7 @@ void Options::StartPreview(uint32_t now, int knob) {
     return;
   }
   while (knob < MIX_PARAMETER_LAST &&
-         pages_[page_].knobs[knob] == OPTION_RESERVED) {
+         pages_[page_].knobs[knob] == FEATURE_NONE) {
     ++knob;
   }
 
@@ -596,7 +539,7 @@ void Options::StartPreview(uint32_t now, int knob) {
     // Back to the first setting, as before the preview.
     preview_knob_ = -1;
     knob = 0;
-    while (pages_[page_].knobs[knob] == OPTION_RESERVED) {
+    while (pages_[page_].knobs[knob] == FEATURE_NONE) {
       ++knob;
     }
   } else {
@@ -608,7 +551,7 @@ void Options::StartPreview(uint32_t now, int knob) {
   indication_time_ = now;
 }
 
-void Options::Select(uint32_t now, OptionSetting setting) {
+void Options::Select(uint32_t now, ProfileFeature setting) {
   if (setting != selected_) {
     selected_ = setting;
     indication_time_ = now;
