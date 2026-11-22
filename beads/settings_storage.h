@@ -141,6 +141,7 @@ class ChunkStorage {
     Protect(protect);
     recovering_ = false;
     mirror_checked_ = false;
+    compaction_failed_ = false;
 
     const StorageStatus status = Load(
         persistent_data, state_data, &next_state_chunk_index_);
@@ -301,15 +302,23 @@ class ChunkStorage {
   // Erases the mirror sector and copies the sector's calibration, as read
   // from flash, then the record. Stops unless that calibration is usable and
   // the one in use: a failed restore may have left it behind the mirror's.
+  // Once one fails, no other runs until the next power-up: a word that never
+  // programs would otherwise erase the sector at every save.
   bool CompactMirror() {
     PersistentData data;
     if (ReadChunk(chunk_address(0), &data) != CHUNK_VALID || !Usable(data) || \
         memcmp(&data, persistent_data_, sizeof(PersistentData)) || \
-        !WriteCalibration(mirror_sector_index, MIRROR_BASE, data)) {
+        compaction_failed_) {
       next_record_index_ = REWRITE_NEEDED;
       return false;
     }
-    return AppendFirstRecord();
+    compaction_failed_ = \
+        !WriteCalibration(mirror_sector_index, MIRROR_BASE, data) || \
+        !AppendFirstRecord();
+    if (compaction_failed_) {
+      next_record_index_ = REWRITE_NEEDED;
+    }
+    return !compaction_failed_;
   }
 
   // After the mirror sector is rewritten, the record goes back in slot 1.
@@ -421,6 +430,8 @@ class ChunkStorage {
   bool record_found_;
   // Both calibrations read equal since the last erase.
   bool mirror_checked_;
+  // A compaction failed since power-up; the record stays in RAM.
+  bool compaction_failed_;
   // Damaged storage found at power-up: nothing is erased or programmed
   // until a repair succeeds.
   bool locked_;
