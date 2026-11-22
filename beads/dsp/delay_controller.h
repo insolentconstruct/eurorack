@@ -75,8 +75,11 @@ class PlayHead {
   }
 
   static inline float Triangle(float phase, float pw) {
-    const float slope_up = 1.0f / pw;
-    const float slope_down = 1.0f / (1.0f - pw);
+    return Triangle(phase, pw, 1.0f / pw, 1.0f / (1.0f - pw));
+  }
+
+  static inline float Triangle(
+      float phase, float pw, float slope_up, float slope_down) {
     return phase < pw ? phase * slope_up : 1.0f - (phase - pw) * slope_down;
   }
 
@@ -127,6 +130,14 @@ class PlayHead {
   DISALLOW_COPY_AND_ASSIGN(PlayHead);
 };
 
+// One shape for all the taps of a sample, so its slopes are divided once.
+struct TapShape {
+  float amount;
+  float pw;
+  float slope_up;
+  float slope_down;
+};
+
 class TapEnvelope {
  public:
   TapEnvelope() { }
@@ -146,18 +157,27 @@ class TapEnvelope {
   
   inline float phase() const { return phase_; }
   
-  inline float Render(float shape) {
-    float envelope;
+  static inline void ComputeShape(float amount, TapShape* shape) {
     const float pw[6] = {
       0.0f, 0.001f, 0.01f, 0.5f, 0.75f, 0.999f
     };
-    if (shape < 0.2f) {
+    shape->amount = amount;
+    if (amount >= 0.2f) {
+      shape->pw = stmlib::Interpolate(pw, amount, 5.0f);
+      shape->slope_up = 1.0f / shape->pw;
+      shape->slope_down = 1.0f / (1.0f - shape->pw);
+    }
+  }
+
+  inline float Render(const TapShape& shape) {
+    float envelope;
+    if (shape.amount < 0.2f) {
       const float square = 1.0f;
-      const float triangle = PlayHead::Triangle(phase_, pw[1]);
-      envelope = square + (triangle - square) * shape * 5.0f;
+      const float triangle = PlayHead::Triangle(phase_, 0.001f);
+      envelope = square + (triangle - square) * shape.amount * 5.0f;
     } else {
       envelope = PlayHead::Triangle(
-          phase_, stmlib::Interpolate(pw, shape, 5.0f));
+          phase_, shape.pw, shape.slope_up, shape.slope_down);
     }
     phase_ += phase_increment_;
     if (phase_ >= 1.0f) {

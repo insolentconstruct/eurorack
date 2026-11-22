@@ -381,15 +381,64 @@ void TestDelayShapeEnvelope() {
   TapEnvelope envelope;
   envelope.Init();
   envelope.set_phase_increment(1.0f / 128.0f);
+  TapShape shape;
+  TapEnvelope::ComputeShape(0.0f, &shape);
   for (int n = 0; n < 256; ++n) {
-    CHECK(envelope.Render(0.0f) == 1.0f);
+    CHECK(envelope.Render(shape) == 1.0f);
   }
   CHECK(envelope.phase() == 0.0f);
+  TapEnvelope::ComputeShape(0.6f, &shape);
   for (int n = 0; n < 256; ++n) {
     const float phase = float(n % 128) / 128.0f;
     const float expected = phase < 0.5f ? phase * 2.0f : 2.0f - phase * 2.0f;
-    CHECK(fabsf(envelope.Render(0.6f) - expected) < 0.00001f);
+    CHECK(fabsf(envelope.Render(shape) - expected) < 0.00001f);
   }
+}
+
+// The stock per-tap envelope, which divided its slopes for every tap.
+float StockTapEnvelope(float phase, float shape) {
+  const float pw[6] = {
+    0.0f, 0.001f, 0.01f, 0.5f, 0.75f, 0.999f
+  };
+  const float width = shape < 0.2f
+      ? pw[1]
+      : stmlib::Interpolate(pw, shape, 5.0f);
+  const float slope_up = 1.0f / width;
+  const float slope_down = 1.0f / (1.0f - width);
+  const float triangle = phase < width
+      ? phase * slope_up
+      : 1.0f - (phase - width) * slope_down;
+  return shape < 0.2f ? 1.0f + (triangle - 1.0f) * shape * 5.0f : triangle;
+}
+
+void TestTapShapeMatchesStock() {
+  test_checker.Start("TestTapShapeMatchesStock");
+  const int kTaps = 8;
+  TapEnvelope envelope[kTaps];
+  float phase[kTaps];
+  for (int i = 0; i < kTaps; ++i) {
+    envelope[i].Init();
+    envelope[i].set_phase_increment(1.0f / float(37 + 61 * i));
+    phase[i] = 0.0f;
+  }
+  int mismatches = 0;
+  for (int n = 0; n <= 4096; ++n) {
+    const float amount = n == 4096 ? 0.2f : float(n) / 4096.0f;
+    TapShape shape;
+    TapEnvelope::ComputeShape(amount, &shape);
+    for (int i = 0; i < kTaps; ++i) {
+      const float expected = StockTapEnvelope(phase[i], amount);
+      const float actual = envelope[i].Render(shape);
+#ifdef __FP_FAST_FMAF
+      // A compiler that fuses may round the two spellings differently.
+      mismatches += !(fabsf(actual - expected) < 1.0e-6f);
+#else
+      mismatches += !(actual == expected);
+#endif  // __FP_FAST_FMAF
+      phase[i] = envelope[i].phase();
+    }
+  }
+  CHECK(mismatches == 0);
 }
 
 void TestDelayRandomModulation() {
@@ -487,6 +536,7 @@ int main() {
   TestSeedClockIntervalsAndCrossfade();
   TestTimeMultipliersAndCrossfade();
   TestDelayShapeEnvelope();
+  TestTapShapeMatchesStock();
   TestDelayRandomModulation();
   TestHermiteRawMatchesScaled();
   return test_checker.failures() ? 1 : 0;
