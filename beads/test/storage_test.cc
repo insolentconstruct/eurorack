@@ -418,9 +418,9 @@ void TestInterruptedRewrite() {
       CHECK(SameCalibration(loaded, new_calibration));
     }
     // A cut inside the mirror sector before its record is back resets the
-    // options; past it they come back from that sector. The record's second
-    // word holds only erased reserved bytes, so its first completes it.
-    CHECK(SameOptions(loaded, cut >= 1 && cut <= 5 ? defaults : saved));
+    // options; past it they come back from that sector. Page 5 sits in the
+    // record's second word, so both words complete it.
+    CHECK(SameOptions(loaded, cut >= 1 && cut <= 6 ? defaults : saved));
     // Whatever came back is stable.
     Settings again;
     CHECK(again.Init(false) && !again.write_locked());
@@ -464,7 +464,7 @@ void TestMirrorOnlyCopy() {
     CHECK(!loaded.write_locked());
     CHECK(SameCalibration(
         loaded, cut <= 12 ? old_calibration : new_calibration));
-    CHECK(SameOptions(loaded, cut >= 6 && cut <= 10 ? defaults : saved));
+    CHECK(SameOptions(loaded, cut >= 6 && cut <= 11 ? defaults : saved));
     Settings again;
     CHECK(again.Init(false) && !again.write_locked());
     CHECK(SameCalibration(again, loaded.persistent_data()));
@@ -914,7 +914,8 @@ void TestSupplyDrop() {
       CHECK(SameState(loaded, defaults));
       CHECK(SameCalibration(loaded, new_calibration));
     }
-    CHECK(SameOptions(loaded, drop <= 5 ? defaults : saved));
+    // Page 5 sits in the record's second word: both words complete it.
+    CHECK(SameOptions(loaded, drop <= 6 ? defaults : saved));
     // The interrupted save completes on the next one, the options with the
     // next save after it at the latest.
     s.SaveState();
@@ -1072,10 +1073,17 @@ void TestSavedFeatures() {
   CHECK(kRecordOffsets[FEATURE_TIME_SCAN] == 22);
   CHECK(kRecordOffsets[FEATURE_PLAITS_BANK] == 23);
   CHECK(!kRecordOffsets[FEATURE_MONOPHONIC]);
+  CHECK(kRecordOffsets[FEATURE_RESONATOR] == 24);
+  CHECK(kRecordOffsets[FEATURE_RESONATOR_MATERIAL] == 25);
+  CHECK(kRecordOffsets[FEATURE_RESONATOR_RING] == 26);
   for (int i = 1; i < FEATURE_LAST; ++i) {
     // Saved: the options a user changes, Monophonic aside (stock State).
-    CHECK(!kRecordOffsets[i] == (kFeatureDefinitions[i].field == kNoField &&
-        i != FEATURE_WIDTH && i != FEATURE_DIFFUSION));
+    const bool page_5 = i == FEATURE_RESONATOR ||
+        i == FEATURE_RESONATOR_MATERIAL || i == FEATURE_RESONATOR_RING;
+    const bool unsaved = kFeatureDefinitions[i].field == kNoField ||
+        kFeatureDefinitions[i].field == kReservedField;
+    CHECK(!kRecordOffsets[i] == (unsaved &&
+        i != FEATURE_WIDTH && i != FEATURE_DIFFUSION && !page_5));
   }
   uint8_t b[kProfileSize];
   ProfileTemplate(b);
@@ -1108,7 +1116,9 @@ void TestSavedFeatures() {
     CHECK(raw[11] == 1 && raw[12] == OUTPUT_LIMITER_OFF && raw[13] == 1);
     CHECK(raw[14] == 1 && raw[15] == ATTACK_MODE_SNAP_AND_TRIGGER);
     CHECK(raw[16] == 1 && raw[17] == RANDOM_INTERVALS_FIFTHS);
-    for (size_t i = 24; i < sizeof(OptionsRecord); ++i) {
+    // Page 5 at the factory values: Off, String, Medium.
+    CHECK(raw[24] == 0 && raw[25] == 1 && raw[26] == 1);
+    for (size_t i = 27; i < sizeof(OptionsRecord); ++i) {
       CHECK(raw[i] == 0xff);
     }
     for (size_t i = 0; i < sizeof(State().padding); ++i) {
@@ -1146,6 +1156,42 @@ void TestSavedFeatures() {
     CHECK(restored.Init(false, b));
     CHECK(restored.output_limiter_mode() == OUTPUT_LIMITER_FAST);
     CHECK(restored.clouds_style());
+  }
+}
+
+// Page 5 saves its three settings; exact values and the CV target do not.
+void TestResonatorSaved() {
+  test_checker.Start("TestResonatorSaved");
+  Wipe();
+  Settings s;
+  s.Init(false);
+  for (int placement = 0; placement < 3; ++placement) {
+    for (int value = 0; value < 4; ++value) {
+      s.SetFeatureValue(FEATURE_RESONATOR, placement);
+      s.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, value);
+      s.SetFeatureValue(FEATURE_RESONATOR_RING, 3 - value);
+      s.SaveOptions();
+      Settings loaded;
+      CHECK(loaded.Init(false));
+      CHECK(loaded.FeatureValue(FEATURE_RESONATOR) == placement);
+      CHECK(loaded.FeatureValue(FEATURE_RESONATOR_MATERIAL) == value);
+      CHECK(loaded.FeatureValue(FEATURE_RESONATOR_RING) == 3 - value);
+      const uint8_t* raw =
+          reinterpret_cast<const uint8_t*>(&loaded.stored_record_);
+      CHECK(raw[24] == placement && raw[25] == value && raw[26] == 3 - value);
+    }
+  }
+  // A byte past the values is not set: the profile's default.
+  const uint8_t bad[3] = { 4, 0x80, 0xff };
+  for (int i = 0; i < 3; ++i) {
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.record_);
+    bytes[24] = bytes[25] = bytes[26] = bad[i];
+    CHECK(s.chunk_storage_.SaveRecord());
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.FeatureValue(FEATURE_RESONATOR) == 0);
+    CHECK(loaded.FeatureValue(FEATURE_RESONATOR_MATERIAL) == 1);
+    CHECK(loaded.FeatureValue(FEATURE_RESONATOR_RING) == 1);
   }
 }
 
@@ -1189,7 +1235,8 @@ void TestSavedFeaturePairs() {
   uint8_t scale[kScaleRecordSize];
   memcpy(scale, block + 16 + 6 * block[5], sizeof(scale));
   for (int id = 1; id < FEATURE_LAST; ++id) {
-    if (kFeatureDefinitions[id].field == kNoField) {
+    if (kFeatureDefinitions[id].field == kNoField ||
+        kFeatureDefinitions[id].field == kReservedField) {
       continue;
     }
     features[count] = ProfileFeature(id);
@@ -1496,7 +1543,8 @@ void TestProfileDormantAmounts() {
     CHECK(saved[kRecordOffsets[FEATURE_BRIGHTNESS]] == 0);
     CHECK(saved[kRecordOffsets[FEATURE_SEED_LATCH]] == 0);
     CHECK(saved[2] == 0xff && saved[3] == 0xff);
-    for (size_t i = 24; i < sizeof(OptionsRecord); ++i) {
+    // Page 5 (bytes 24-26) is saved; the rest stays erased.
+    for (size_t i = 27; i < sizeof(OptionsRecord); ++i) {
       CHECK(saved[i] == 0xff);
     }
   }
@@ -1679,6 +1727,7 @@ int main() {
   TestProfileLocks();
   TestProfileSettings();
   TestSavedFeatures();
+  TestResonatorSaved();
   TestSavedFeaturePairs();
   TestPitchScale15();
   TestStockSettingsCarryOver();

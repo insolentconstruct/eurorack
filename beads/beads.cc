@@ -89,6 +89,41 @@ Synth synth;
 Ui ui;
 
 volatile bool ready = false;
+uint8_t resonator_placement;
+
+// The page's curated value, or the exact one Hygrostat fixed.
+float ResonatorValue(ProfileFeature feature, float curated, float scale) {
+  const ProfileEntry& e = settings.profile().entry(feature);
+  return e.state == PROFILE_FIXED ? float(e.value) * scale : curated;
+}
+
+void UpdateResonator() {
+  if (!ui.resonator()) {
+    return;
+  }
+  const ResonatorMaterial& material = kResonatorMaterials[
+      ui.resonator_material()];
+  ResonatorControls c;
+  c.structure = ResonatorValue(
+      FEATURE_RESONATOR_STRUCTURE, material.structure, 1.0f / 256.0f);
+  c.brightness = ResonatorValue(
+      FEATURE_RESONATOR_BRIGHTNESS, material.brightness, 1.0f / 256.0f);
+  c.damping = ResonatorValue(FEATURE_RESONATOR_DAMPING,
+      kResonatorRingTimes[ui.resonator_ring()], 1.0f / 256.0f);
+  // The CV also reaches FEEDBACK (destination 0): the resonator holds the knob.
+  c.feedback = ui.mix_parameter(Ui::MIX_PARAMETER_FEEDBACK) * 1.005f;
+  CONSTRAIN(c.feedback, 0.0f, 1.0f);
+  c.hold_feedback = ui.resonator_assigned();
+  if (ui.resonator_assigned()) {
+    c.damping += cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+    // Below the table's last entry, as Rings holds STRUCTURE.
+    CONSTRAIN(c.damping, 0.0f, 0.9995f);
+  }
+  c.position = ResonatorValue(
+      FEATURE_RESONATOR_POSITION, kResonatorPosition, 1.0f / 256.0f);
+  c.amount = ResonatorValue(FEATURE_RESONATOR_AMOUNT, 1.0f, 1.0f / 128.0f);
+  processor.set_resonator_controls(c);
+}
 
 // #define PROFILE_INTERRUPT
 
@@ -102,6 +137,7 @@ void SysTick_Handler() {
     return;
   }
   ui.Poll();
+  UpdateResonator();
   if (!skip_factory_test) {
     factory_test.Poll();
   }
@@ -601,7 +637,8 @@ void Init() {
   processor.set_unity_feedback(settings.FeatureValue(FEATURE_UNITY_FEEDBACK));
   processor.set_delay_crossfade(
       settings.FeatureValue(FEATURE_DELAY_CROSSFADE));
-  processor.set_resonator(settings.FeatureValue(FEATURE_RESONATOR));
+  resonator_placement = settings.FeatureValue(FEATURE_RESONATOR);
+  processor.set_resonator(resonator_placement);
   if (freshly_baked && !skip_factory_test) {
     factory_test.Start();
     ui.set_factory_test(true);
@@ -642,6 +679,11 @@ void MonitorStateChange() {
   processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
+  // The page moves the resonator; it restarts from silence.
+  if (ui.resonator() != resonator_placement) {
+    resonator_placement = ui.resonator();
+    processor.set_resonator(resonator_placement);
+  }
   ui.set_delay_active(processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
       settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {

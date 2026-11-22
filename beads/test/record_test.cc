@@ -86,8 +86,8 @@ void TestRecordJournal() {
     CHECK(wire.padding[i] == 0);
   }
   // Both changed, cut after one, two and three words: the record comes
-  // first, so a cut never leaves the new state with the old options. Its
-  // second word holds only erased reserved bytes: one word completes it.
+  // first, so a cut never leaves the new state with the old options. Page 5
+  // sits in its second word: after one word it is torn, the old one loads.
   for (int cut = 1; cut <= 3; ++cut) {
     const Saved before = Setup(kCalibration, 5);
     Settings both;
@@ -99,7 +99,8 @@ void TestRecordJournal() {
     TestFlashBudget() = -1;
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.pitch_scale() == PITCH_SCALE_MINOR);
+    CHECK(loaded.pitch_scale() == (cut >= 2
+        ? PITCH_SCALE_MINOR : PitchScale(before.values[FEATURE_PITCH])));
     CHECK(loaded.state().media == (cut == 3 ? 0 : before.state.media));
     CHECK(before.values[FEATURE_PITCH] != PITCH_SCALE_MINOR);
   }
@@ -277,7 +278,8 @@ void TestInterruptedCompaction() {
     CHECK(SameState(loaded, saved));
     if (cut == 0) {
       CHECK(SameOptions(loaded, saved));
-    } else if (cut < 6) {
+    } else if (cut < 7) {
+      // Page 5 sits in the record's second word: one word is a torn record.
       CHECK(SameOptions(loaded, defaults));
     } else {
       CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);

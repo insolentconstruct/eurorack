@@ -79,12 +79,20 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // First page.
   { 5, kNoField, false, false, false, false },  // Start quality.
   { 1, kNoField, false, true, false, false },  // Gain knob.
-  { 3, kNoField, false, false, false, false },  // Resonator.
+  { 3, kNoField, true, false, false, false },  // Resonator.
+  { 0, kReservedField, false, false, false, false },  // Reserved.
+  { 4, kNoField, true, false, false, false },  // Resonator material.
+  { 4, kNoField, true, false, false, false },  // Resonator ring.
+  { 0, kNoField, false, false, false, false },  // Resonator structure.
+  { 0, kNoField, false, false, false, false },  // Resonator brightness.
+  { 0, kNoField, false, false, false, false },  // Resonator damping.
+  { 0, kNoField, false, false, false, false },  // Resonator position.
+  { 0, kNoField, false, false, false, false },  // Resonator amount.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
     __attribute__((section(".profile"), used, aligned(32))) = {
-  0x44, 0x5a, 0x50, 0x46, 0x02, 0x11, 0x66, 0x00,
+  0x44, 0x5a, 0x50, 0x46, 0x02, 0x14, 0x78, 0x00,
   0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02,
   0x00, 0x06, 0x00, 0x00, 0x03, 0x02, 0x00, 0x05,
@@ -98,10 +106,10 @@ const volatile uint8_t kProfileBlock[kProfileSize]
   0x0d, 0x02, 0x00, 0x00, 0x00, 0x01, 0x0e, 0x01,
   0x01, 0x00, 0x00, 0x02, 0x12, 0x02, 0x00, 0x0a,
   0x00, 0x00, 0x15, 0x02, 0x00, 0x0b, 0x00, 0x00,
-  0x1f, 0x02, 0x00, 0x00, 0x00, 0x00, 0x27, 0x5a,
-  0x14, 0x94, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0x1f, 0x02, 0x00, 0x00, 0x00, 0x00, 0x29, 0x02,
+  0x00, 0x0d, 0x00, 0x00, 0x2b, 0x02, 0x01, 0x0e,
+  0x00, 0x00, 0x2c, 0x02, 0x01, 0x0f, 0x00, 0x00,
+  0x66, 0xe9, 0x0b, 0xaf, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -811,6 +819,12 @@ void Profile::Defaults() {
       AMOUNT_NONE, ACTION_NONE },  // Seed latch.
     { FEATURE_PLAITS_BANK, PROFILE_ADJUSTABLE, 0, 0,
       AMOUNT_NONE, ACTION_NONE },  // Plaits bank.
+    { FEATURE_RESONATOR, PROFILE_ADJUSTABLE, 0, 13,
+      AMOUNT_NONE, ACTION_NONE },  // Resonator.
+    { FEATURE_RESONATOR_MATERIAL, PROFILE_ADJUSTABLE, 1, 14,
+      AMOUNT_NONE, ACTION_NONE },  // Resonator material.
+    { FEATURE_RESONATOR_RING, PROFILE_ADJUSTABLE, 1, 15,
+      AMOUNT_NONE, ACTION_NONE },  // Resonator ring.
   };
   for (size_t i = 0; i < sizeof(defaults) / sizeof(defaults[0]); ++i) {
     entries_[defaults[i].feature] = defaults[i];
@@ -881,7 +895,8 @@ bool Profile::Parse(const volatile uint8_t* b) {
   for (size_t i = 0; i < count; ++i) {
     const volatile uint8_t* p = b + 16 + 6 * i;
     const uint8_t id = p[0];
-    if (!id || id >= FEATURE_LAST || seen[id]) {
+    if (!id || id >= FEATURE_LAST || seen[id] ||
+        kFeatureDefinitions[id].field == kReservedField) {
       return false;
     }
     seen[id] = true;

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "34bed003fd986d7c7e510db036d1b6ad9164f392134914491fe66b7e740922d3",
+  "manifest_sha256": "0f742b5a3f494f05afe481864006333f4d0f0deafc380dd7834c015a6dcab717",
   "record_version": 1,
   "features": [
     {
@@ -1373,6 +1373,239 @@
         "After the grains",
         "Before the buffer"
       ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "factory": [
+        41,
+        2,
+        0,
+        13,
+        0,
+        0
+      ],
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": 24
+    },
+    {
+      "id": 43,
+      "name": "Resonator material",
+      "values": [
+        "Wood",
+        "String",
+        "Glass",
+        "Bell"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 1,
+      "factory": [
+        43,
+        2,
+        1,
+        14,
+        0,
+        0
+      ],
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": 25
+    },
+    {
+      "id": 44,
+      "name": "Resonator ring time",
+      "values": [
+        "Short",
+        "Medium",
+        "Long",
+        "Very long"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 1,
+      "factory": [
+        44,
+        2,
+        1,
+        15,
+        0,
+        0
+      ],
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": 26
+    },
+    {
+      "id": 45,
+      "name": "Resonator structure",
+      "values": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 46,
+      "name": "Resonator brightness",
+      "values": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 47,
+      "name": "Resonator damping",
+      "values": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 48,
+      "name": "Resonator position",
+      "values": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 49,
+      "name": "Resonator amount",
+      "values": null,
       "states": [
         "Off",
         "Fixed"
