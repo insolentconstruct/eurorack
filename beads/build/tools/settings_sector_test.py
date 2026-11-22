@@ -38,6 +38,8 @@ CHECK = "./build/settings_sector_check"
 
 
 def calibration(seed):
+    """A module's own calibration, within 25% of the factory values."""
+    seed *= 0.4
     pairs = [(-2.0 + seed, 1.0), (-2.0, 1.0 + seed), (-120.0 + seed, 60.0),
              (-3.2, 1.6), (-3.2, 1.6 - seed), (-3.2, 1.6)]
     return b"".join(struct.pack("<ff", s, o) for s, o in pairs) + bytes(72)
@@ -62,6 +64,56 @@ def load(image, directory):
     fields = dict(line.split(" ", 1) for line in lines if line)
     return (fields["loaded"] == "1", bytes.fromhex(fields["calibration"]),
             bytes.fromhex(fields["settings"]))
+
+
+def mirror_dump(cali, records):
+    """A calibration copy sector: the calibration, then options records one after another."""
+    data = ss.chunk(ss.CALI, cali)
+    for r in records:
+        data += ss.chunk(ss.DRZL, r)
+    return data + b"\xff" * (ss.SECTOR_SIZE - len(data))
+
+
+def record(seed):
+    """An options record of layout version 1, its values within their counts."""
+    return bytes([1, 0, 255, 255]) + struct.pack("<I", 0) + \
+        bytes((seed + i) & 1 for i in range(16)) + b"\xff" * 32
+
+
+def load_both(settings_image, mirror_image, directory):
+    paths = []
+    for name, data in (("s15.bin", settings_image), ("s14.bin", mirror_image)):
+        path = Path(directory) / name
+        path.write_bytes(data)
+        paths.append(str(path))
+    lines = subprocess.check_output([CHECK] + paths, text=True).split("\n")
+    fields = dict(line.split(" ", 1) for line in lines if line)
+    return (fields["locked"] == "0", fields["record"] == "1",
+            bytes.fromhex(fields["calibration"]), bytes.fromhex(fields["settings"]),
+            bytes.fromhex(fields["options"]))
+
+
+def run_mirror(directory, cali_dump, settings_dump, options_dump, now_dump):
+    paths = {}
+    for name, data in (("cal", cali_dump), ("set", settings_dump),
+                       ("opt", options_dump), ("now", now_dump)):
+        if data is not None:
+            path = Path(directory) / (name + ".bin")
+            path.write_bytes(data)
+            paths[name] = str(path)
+    out = Path(directory) / "out.bin"
+    mirror = Path(directory) / "mirror.bin"
+    for path in (out, mirror):
+        if path.exists():
+            path.unlink()
+    command = [sys.executable, str(Path(__file__).parent / "settings_sector.py"),
+               "--calibration", paths["cal"], "--settings", paths["set"]]
+    if "opt" in paths:
+        command += ["--options", paths["opt"]]
+    if "now" in paths:
+        command += ["--now", paths["now"], "--mirror-out", str(mirror)]
+    result = subprocess.run(command + [str(out)], capture_output=True, text=True)
+    return result, out, mirror
 
 
 def run(directory, cali_dump, settings_dump):
@@ -127,5 +179,42 @@ with tempfile.TemporaryDirectory() as directory:
          "--settings", str(Path(directory) / "set.bin"), str(out)],
         capture_output=True, text=True)
     assert second.returncode == 1 and "exists" in second.stderr, second
+
+    # The calibration copy sector: the same calibration, then the latest options record, which
+    # this firmware loads with both images; with no options dump, none (the profile's defaults).
+    options_backup = mirror_dump(calibration(0.5), [record(1), record(2)])
+    assert ss.options(options_backup) == record(2)
+    assert ss.options(mirror_dump(calibration(0.5), [])) is None
+    torn = bytearray(mirror_dump(calibration(0.5), [record(1), record(2)]))
+    torn[ss.CALI_CHUNK + ss.OPTIONS_CHUNK + 12] ^= 1
+    assert ss.options(bytes(torn)) == record(1)
+    no_cali = bytearray(options_backup)
+    no_cali[8] ^= 1
+    assert ss.options(bytes(no_cali)) is None
+    for opt, expected in ((options_backup, record(2)), (None, None)):
+        result, out, mirror = run_mirror(directory, backup, backup, opt, now)
+        assert result.returncode == 0, result.stderr
+        assert len(mirror.read_bytes()) == ss.CALI_CHUNK + (ss.OPTIONS_CHUNK if expected else 0)
+        unlocked, found, cali, settings, options = load_both(
+            ss.erased(out.read_bytes()), ss.erased(mirror.read_bytes()), directory)
+        # Stock bytes 2-9 as saved (media and the CV destination are clamped), zero after.
+        assert unlocked and cali == calibration(0.5)
+        assert settings[2:10] == state(3)[2:10] and settings[10:] == bytes(14)
+        assert found == (expected is not None)
+        assert expected is None or options == expected
+        # A usable calibration in the settings sector now: the copy sector goes first.
+        assert result.stdout.index("write 1: " + str(mirror)) < result.stdout.index("write 2: ")
+    # No usable calibration in the settings sector now: it goes first, the copy untouched meanwhile.
+    for damaged in (b"\xff" * ss.SECTOR_SIZE, dump(bytes(120), [])):
+        result, out, mirror = run_mirror(directory, backup, backup, options_backup, damaged)
+        assert result.returncode == 0, result.stderr
+        assert "write 1: " + str(out) in result.stdout, result.stdout
+    # A calibration more than 25% from the factory values, an options dump without the copy image,
+    # or a copy image without the sector as it is now: refused, nothing written.
+    wild = dump(calibration(0.5)[:16] + struct.pack("<ff", -200.0, 60.0) + calibration(0.5)[24:],
+                [state(1)])
+    for args in ((wild, backup, options_backup, now), (backup, backup, options_backup, None)):
+        result, out, mirror = run_mirror(directory, *args)
+        assert result.returncode == 1 and not out.exists() and not mirror.exists(), result
 
 print("settings_sector_test: OK")

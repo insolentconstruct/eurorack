@@ -40,6 +40,51 @@ using namespace std;
 #define FIX_OUTLIER(destination, expected_value) if (fabsf(destination / expected_value - 1.0f) > 0.25f) { destination = expected_value; }
 #define FIX_OUTLIER_ABSOLUTE(destination, expected_value) if (fabsf(destination - expected_value) > 0.1f) { destination = expected_value; }
 
+const uint8_t kRecordOffsets[FEATURE_LAST] = {
+  0,  // None.
+  8,  // Pitch.
+  9,  // Reverb.
+  10,  // Delay.
+  11,  // Processor.
+  12,  // Limiter.
+  13,  // Frozen.
+  14,  // Synth.
+  15,  // Attacks.
+  16,  // Synth start.
+  17,  // Intervals.
+  18,  // Width.
+  19,  // Diffusion.
+  0,  // Monophonic.
+  0,  // Trim.
+  0,  // Version.
+  0,  // Attenuation.
+  0,  // Delay cue.
+  20,  // Brightness.
+  0,  // Live assign.
+  0,  // Save freeze.
+  21,  // Seed latch.
+  0,  // Pitch notch.
+  22,  // Time scan.
+  0,  // Synth tail.
+  0,  // Idle timeout.
+  0,  // Seed latch fade.
+  0,  // Manual gain.
+  0,  // Attack sensitivity.
+  0,  // Seed start.
+  0,  // Pitch law.
+  23,  // Plaits bank.
+  0,  // Mix law.
+  0,  // Reverb input.
+  0,  // Grain stealing.
+  0,  // Unity feedback.
+  0,  // Delay crossfade.
+  0,  // Page preview.
+  0,  // First page.
+  0,  // Start quality.
+  0,  // Gain knob.
+  0,  // Resonator.
+};
+
 bool Settings::Init(bool recovery_mode) {
   return Init(recovery_mode, kProfileBlock);
 }
@@ -75,20 +120,6 @@ bool Settings::Init(bool recovery_mode,
   state_.frozen = 0;
   state_.disable_autosave = 0;
   state_.monophonic_mode = 0;
-  state_.output_limiter_mode = 0;
-  state_.self_play = 0;
-  state_.pitch_scale = 0;
-  state_.reverb_style = 0;
-  state_.stereo_width = 0;
-  state_.delay_mode = 0;
-  state_.width_assigned = 0;
-  dormant_destination_ = 0;
-  state_.diffusion = 0;
-  state_.frozen_feedback = 0;
-  state_.attacks = 0;
-  state_.engine = 0;
-  state_.synth_engine = 0;
-  state_.random_intervals = 0;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   fill(
       &persistent_data_.padding[0],
@@ -96,41 +127,59 @@ bool Settings::Init(bool recovery_mode,
       0);
   factory_ = persistent_data_;
   const PersistentData& factory = factory_;
-  for (size_t i = 0; i < sizeof(packed_); ++i) {
-    packed_[i] = 0x9f;
-  }
-  fill(&profile_values_[0], &profile_values_[FEATURE_LAST], 0);
+  fill(&values_[0], &values_[FEATURE_LAST], 0);
+  cv_target_ = 0;
+  dormant_destination_ = 0;
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const ProfileEntry& e = profile_.entry(ProfileFeature(i));
     SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : e.value);
   }
   // 1 Bright digital to 4 Scorched cassette; 0 keeps the saved quality.
-  const uint8_t start_quality = profile_values_[FEATURE_START_QUALITY];
+  const uint8_t start_quality = values_[FEATURE_START_QUALITY];
   if (start_quality) {
     state_.media = 4 - start_quality;
   }
   stored_state_ = state_;
-  if (!profile_locked_) {
-    PackOptions();
-  }
   const State defaults = stored_state_;
+  OptionsRecord default_record;
+  DefaultRecord(&default_record);
+  record_ = default_record;
   repair_ = STORAGE_REPAIR_NONE;
   
   Flash::Init();  // Every write checks the supply from here on.
   chunk_storage_.set_calibration_check(&CalibrationPlausible, &factory_);
   StorageStatus status = chunk_storage_.Init(
-      &persistent_data_, &stored_state_, profile_locked_);
+      &persistent_data_, &stored_state_, &record_, profile_locked_);
+  // Another version's record, or none, gives the profile's defaults.
+  const bool record_valid = chunk_storage_.record_found() && \
+      record_.version == kOptionsRecordVersion;
+  if (!record_valid) {
+    record_ = default_record;
+  }
+  stored_record_ = record_;
+  if (!chunk_storage_.record_found()) {
+    stored_record_.version = 0;  // The first save writes one.
+  }
+  if (recovery_mode && !profile_locked_) {
+    record_ = default_record;  // SEED at power-up resets the options.
+  }
   
   // Restore the module's calibration before writing; keep loaded states.
-  // A worse calibration must never replace the mirror.
+  // A worse calibration must never replace the mirror, and a module's own
+  // calibration never reads as exactly the factory values.
   const bool lost = status == STORAGE_CALIBRATION_LOST;
-  const bool implausible = \
-      (status == STORAGE_OK || status == STORAGE_RESTORED) && \
+  const bool loaded = status == STORAGE_OK || status == STORAGE_RESTORED;
+  const bool implausible = loaded && \
       !CalibrationPlausible(persistent_data_, factory);
+  const bool factory_values = loaded && \
+      !memcmp(persistent_data_.adc_calibration, factory.adc_calibration,
+          sizeof(factory.adc_calibration));
   PersistentData mirror;
-  if ((lost || implausible) && \
+  if ((lost || implausible || factory_values) && \
       chunk_storage_.ReadMirror(&mirror) && \
-      CalibrationPlausible(mirror, factory)) {
+      CalibrationPlausible(mirror, factory) && \
+      (!factory_values || memcmp(mirror.adc_calibration,
+          factory.adc_calibration, sizeof(mirror.adc_calibration)))) {
     persistent_data_ = mirror;
     if (recovery_mode && !profile_locked_) {
       stored_state_ = defaults;
@@ -148,6 +197,7 @@ bool Settings::Init(bool recovery_mode,
     // unfrozen, in RAM only. Only SEED at power-up writes.
     chunk_storage_.Lock();
     stored_state_ = defaults;
+    record_ = default_record;
     persistent_data_ = factory;
     if (recovery_mode) {
       repair_ = chunk_storage_.Repair()
@@ -162,13 +212,18 @@ bool Settings::Init(bool recovery_mode,
   }
   // Sanitize settings read from flash.
   state_ = stored_state_;
-  const bool new_profile = LoadOptions();
-  state_.padding[0] = 0;
+  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
+  LoadOptions();
+  const bool new_profile = !record_valid || \
+      record_.profile_identity != profile_.identity();
   CONSTRAIN(state_.media, 0, 3);
   CONSTRAIN(state_.assignable_cv_destination, 0, 3);
 
   NormalizeOptions();
   ApplyProfile();
+  if (recovery_mode && !profile_locked_) {
+    SaveOptions();
+  }
   // A newly installed profile starts in its quality once; a frozen recording
   // returning from flash keeps the quality it was made in.
   const bool restores = state_.frozen && !state_.disable_autosave && \
@@ -205,132 +260,56 @@ void Settings::SavePersistentData() {
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],
       0);
-  PackOptions();
+  PackRecord();
+  PackState();
   chunk_storage_.SavePersistentData();
 }
 
 void Settings::NormalizeOptions() {
-  set_output_limiter_mode(output_limiter_mode());
-  set_self_play_on_request(self_play_on_request());
-  set_spectral(spectral());
-  set_clouds_style(clouds_style());
-  set_pitch_scale(pitch_scale());
-  set_stereo_width(stereo_width());
-  set_delay_mode(delay_mode());
-  set_evolving_feedback(evolving_feedback());
-  set_attack_mode(attack_mode());
-  set_plaits_synth(plaits_synth());
-  set_random_intervals(random_intervals());
   // One store, so the audio interrupt never sees the target cleared.
-  state_.width_assigned = width_assigned() && stereo_width() &&
+  cv_target_ = width_assigned() && stereo_width() &&
       profile_.adjustable(FEATURE_WIDTH) ? 1
       : (diffusion_assigned() && diffusion_assignable() &&
           profile_.adjustable(FEATURE_DIFFUSION) ? 2 : 0);
-  if (width_assigned() || diffusion_assigned()) {
+  if (cv_target_) {
     state_.assignable_cv_destination = 0;
   }
 }
 
+// The options first: a cut before the state leaves a pair stock reads.
 void Settings::SaveState() {
-  NormalizeOptions();
-  ApplyProfile();
-  PackOptions();
+  SaveOptions();
+  PackState();
   chunk_storage_.SaveState();
 }
 
-const uint8_t kFieldBytes[kNumPackedBytes] = {
-  10, 11, 12, 13, 15, 18, 19, 20, 21, 22
-};
-
-uint8_t Settings::FeatureValue(ProfileFeature feature) const {
-  if (feature >= FEATURE_VERSION) {
-    return profile_values_[feature];
-  }
-  switch (feature) {
-    case FEATURE_PITCH:
-      return pitch_scale();
-    case FEATURE_REVERB:
-      return clouds_style();
-    case FEATURE_DELAY:
-      return delay_mode();
-    case FEATURE_PROCESSOR:
-      return spectral();
-    case FEATURE_LIMITER:
-      return output_limiter_mode();
-    case FEATURE_FROZEN:
-      return evolving_feedback();
-    case FEATURE_SYNTH:
-      return plaits_synth();
-    case FEATURE_ATTACKS:
-      return attack_mode();
-    case FEATURE_SYNTH_START:
-      return self_play_on_request();
-    case FEATURE_INTERVALS:
-      return random_intervals();
-    case FEATURE_WIDTH:
-      return stereo_width();
-    case FEATURE_DIFFUSION:
-      return state_.diffusion;
-    case FEATURE_MONOPHONIC:
-      return state_.monophonic_mode;
-    default:
-      return 0;
+void Settings::SaveOptions() {
+  NormalizeOptions();
+  ApplyProfile();
+  PackRecord();
+  if ((chunk_storage_.record_pending() || \
+          memcmp(&record_, &stored_record_, sizeof(OptionsRecord))) && \
+      chunk_storage_.SaveRecord()) {
+    stored_record_ = record_;
   }
 }
 
 void Settings::SetFeatureValue(ProfileFeature feature, uint8_t value) {
-  if (feature >= FEATURE_VERSION) {
-    profile_values_[feature] = value;
-    led_features_ = profile_values_[FEATURE_VERSION] ||
-        profile_values_[FEATURE_DELAY_CUE] ||
-        profile_values_[FEATURE_BRIGHTNESS] ||
-        profile_values_[FEATURE_LIVE_ASSIGN] ||
-        profile_values_[FEATURE_PITCH_NOTCH];
+  const FeatureDefinition& d = kFeatureDefinitions[feature];
+  if (feature == FEATURE_MONOPHONIC) {
+    state_.monophonic_mode = value;  // Stock's byte, as stock reads it.
     return;
+  } else if (feature == FEATURE_PITCH) {
+    value = value <= kMaxPitchScaleId && profile_.HasScale(value) ? value : 0;
+  } else if (d.values && value >= d.values) {
+    value = 0;
   }
-  switch (feature) {
-    case FEATURE_PITCH:
-      set_pitch_scale(PitchScale(value));
-      break;
-    case FEATURE_REVERB:
-      set_clouds_style(value);
-      break;
-    case FEATURE_DELAY:
-      set_delay_mode(DelayMode(value));
-      break;
-    case FEATURE_PROCESSOR:
-      set_spectral(value);
-      break;
-    case FEATURE_LIMITER:
-      set_output_limiter_mode(OutputLimiterMode(value));
-      break;
-    case FEATURE_FROZEN:
-      set_evolving_feedback(value);
-      break;
-    case FEATURE_SYNTH:
-      set_plaits_synth(value);
-      break;
-    case FEATURE_ATTACKS:
-      set_attack_mode(AttackMode(value));
-      break;
-    case FEATURE_SYNTH_START:
-      set_self_play_on_request(value);
-      break;
-    case FEATURE_INTERVALS:
-      set_random_intervals(RandomIntervals(value));
-      break;
-    case FEATURE_WIDTH:
-      state_.stereo_width = value;
-      break;
-    case FEATURE_DIFFUSION:
-      state_.diffusion = value;
-      break;
-    case FEATURE_MONOPHONIC:
-      state_.monophonic_mode = value;
-      break;
-    default:
-      break;
-  }
+  values_[feature] = value;
+  led_features_ = values_[FEATURE_VERSION] ||
+      values_[FEATURE_DELAY_CUE] ||
+      values_[FEATURE_BRIGHTNESS] ||
+      values_[FEATURE_LIVE_ASSIGN] ||
+      values_[FEATURE_PITCH_NOTCH];
 }
 
 void Settings::ApplyProfile() {
@@ -345,116 +324,77 @@ void Settings::ApplyProfile() {
   }
 }
 
-bool Settings::LoadOptions() {
-  dormant_destination_ = stored_state_.width_assigned;
-  const uint8_t marker = stored_state_.padding[0];
-  if (marker != kSettingsFormat) {
-    dormant_destination_ = 0;
-    state_.width_assigned = 0;
-    // Full-byte dormant options also belong to the new profile.
-    stored_state_.stereo_width = profile_.entry(FEATURE_WIDTH).value;
-    stored_state_.diffusion = profile_.entry(FEATURE_DIFFUSION).value;
-  }
-  if (marker == kSettingsFormat) {
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&stored_state_);
-    for (int i = 0; i < kNumPackedBytes; ++i) {
-      packed_[i] = bytes[kFieldBytes[i]];
-      // Keep the downgrade invariant even after a damaged record.
-      if ((packed_[i] >> 4) > 9) {
-        packed_[i] = (packed_[i] & 15) | 0x90;
-      }
+void Settings::DefaultRecord(OptionsRecord* record) const {
+  memset(record, 0xff, sizeof(OptionsRecord));
+  record->version = kOptionsRecordVersion;
+  record->cv_target = 0;
+  record->profile_identity = profile_.identity();
+  // Full-byte options belong to the profile until they are set.
+  uint8_t* bytes = reinterpret_cast<uint8_t*>(record);
+  for (int i = 1; i < FEATURE_LAST; ++i) {
+    if (kRecordOffsets[i] && !kFeatureDefinitions[i].values) {
+      bytes[kRecordOffsets[i]] = profile_.entry(ProfileFeature(i)).value;
     }
   }
+}
+
+void Settings::LoadOptions() {
+  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&record_);
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const ProfileFeature feature = ProfileFeature(i);
-    const uint8_t field = kFeatureDefinitions[i].field;
+    const uint8_t offset = kRecordOffsets[i];
     uint8_t value = profile_.entry(feature).value;
-    // Monophonic mode belongs to stock State; all other options start fresh.
-    if (!marker && feature == FEATURE_MONOPHONIC) {
-      value = state_.monophonic_mode;
-    } else if (marker == kSettingsFormat) {
-      if (field != kNoField) {
-        const uint8_t saved = (packed_[field / 2] >> ((field & 1) * 4)) & 15;
-        if (feature == FEATURE_PITCH && saved == kPitchExtensionScale) {
-          const uint8_t extension =
-              (packed_[kPitchExtensionField / 2] >> 4) & 15;
-          if (extension == kPitchExtensionValue) {
-            value = kPitchExtensionScale;
-          }
+    if (feature == FEATURE_MONOPHONIC) {
+      value = state_.monophonic_mode;  // Stock State keeps it.
+    } else if (offset && (!kFeatureDefinitions[i].values ||
 #ifdef PLAITS_BLOBS
         // A saved bank past this profile's banks takes its start bank.
-        } else if (saved < profile_.Values(feature)) {
+        bytes[offset] < profile_.Values(feature))) {
 #else
-        } else if (saved < kFeatureDefinitions[i].values) {
+        bytes[offset] < kFeatureDefinitions[i].values)) {
 #endif  // PLAITS_BLOBS
-          value = saved;
-        }
-      } else if (feature < FEATURE_TRIM) {
-        value = FeatureValue(feature);
-      }
+      value = bytes[offset];  // A byte past the values is not set.
     }
     SetFeatureValue(feature, value);
   }
-  const uint8_t low = packed_[kIdentityField / 2] & 15;
-  const uint8_t high = packed_[kIdentityField / 2 + 1] & 15;
-  // High 15 never matches; low 15 must not alias the next row.
-  return marker != kSettingsFormat || low == 15 ||
-      high * 15 + low != profile_.identity();
+  cv_target_ = dormant_destination_ = record_.cv_target;
 }
 
-void Settings::PackOptions() {
+void Settings::PackRecord() {
+  uint8_t* bytes = reinterpret_cast<uint8_t*>(&record_);
+  for (int i = 1; i < FEATURE_LAST; ++i) {
+    const uint8_t offset = kRecordOffsets[i];
+    if (offset && profile_.adjustable(ProfileFeature(i))) {
+      bytes[offset] = FeatureValue(ProfileFeature(i));
+    }
+  }
+  record_.version = kOptionsRecordVersion;
+  record_.profile_identity = profile_.identity();
+  // Any new CV assignment replaces the dormant one.
+  if (cv_target_ || state_.assignable_cv_destination) {
+    dormant_destination_ = 0;
+  }
+  record_.cv_target = \
+      (dormant_destination_ == 1 && !profile_.adjustable(FEATURE_WIDTH)) ||
+      (dormant_destination_ == 2 && !profile_.adjustable(FEATURE_DIFFUSION))
+      ? dormant_destination_ : cv_target_;
+}
+
+// As stock writes it; a monophonic mode the profile fixes stays dormant.
+void Settings::PackState() {
   const uint8_t mono = stored_state_.monophonic_mode;
-  const uint8_t width = stored_state_.stereo_width;
-  const uint8_t diffusion = stored_state_.diffusion;
   stored_state_ = state_;
   if (!profile_.adjustable(FEATURE_MONOPHONIC)) {
     stored_state_.monophonic_mode = mono;
   }
-  if (!profile_.adjustable(FEATURE_WIDTH)) {
-    stored_state_.stereo_width = width;
-  }
-  if (!profile_.adjustable(FEATURE_DIFFUSION)) {
-    stored_state_.diffusion = diffusion;
-  }
-  for (int i = 1; i < FEATURE_LAST; ++i) {
-    const uint8_t field = kFeatureDefinitions[i].field;
-    if (field != kNoField && profile_.adjustable(ProfileFeature(i))) {
-      const uint8_t shift = (field & 1) * 4;
-      const uint8_t value = FeatureValue(ProfileFeature(i));
-      packed_[field / 2] = (packed_[field / 2] & ~(15 << shift)) |
-          (value << shift);
-      if (i == FEATURE_PITCH) {
-        const uint8_t extension = value == kPitchExtensionScale
-            ? kPitchExtensionValue : 0;
-        packed_[kPitchExtensionField / 2] =
-            (packed_[kPitchExtensionField / 2] & 15) | (extension << 4);
-      }
-    }
-  }
-  uint8_t* identity = &packed_[kIdentityField / 2];
-  identity[0] = (identity[0] & 0xf0) | (profile_.identity() % 15);
-  identity[1] = (identity[1] & 0xf0) | (profile_.identity() / 15);
-  uint8_t* bytes = reinterpret_cast<uint8_t*>(&stored_state_);
-  for (int i = 0; i < kNumPackedBytes; ++i) {
-    bytes[kFieldBytes[i]] = packed_[i];
-  }
-  // Any new CV assignment replaces the dormant one.
-  if (state_.width_assigned || state_.assignable_cv_destination) {
-    dormant_destination_ = 0;
-  }
-  if ((dormant_destination_ == 1 && !profile_.adjustable(FEATURE_WIDTH)) ||
-      (dormant_destination_ == 2 && !profile_.adjustable(FEATURE_DIFFUSION))) {
-    stored_state_.width_assigned = dormant_destination_;
-  }
-  stored_state_.padding[0] = kSettingsFormat;
 }
 
 // Blank gain starts automatic, or at unity manual gain.
 uint8_t Settings::DefaultGain() const {
-  if (!profile_values_[FEATURE_MANUAL_GAIN]) {
+  if (!values_[FEATURE_MANUAL_GAIN]) {
     return 0;
   }
-  return profile_values_[FEATURE_ATTENUATION] ? 128 : 1;
+  return values_[FEATURE_ATTENUATION] ? 128 : 1;
 }
 
 }  // namespace beads

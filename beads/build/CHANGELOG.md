@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Drizzlet's options move to their own record in flash sector 14, after the calibration copy; the settings sector is written exactly as stock writes it. Options saved by Beta 2 or 3 start from the profile's defaults after updating; calibration and stock settings are kept. Changing an option no longer writes the settings sector, and a recalibration keeps the options. SEED at power-up resets the options too.
+- Calibration safety: either flash copy of the calibration is erased only while the other holds a usable one, read back; a settings sector left at exactly the factory calibration takes the copy's calibration back.
 - The pitch notch cue lights [A] pure blue instead of green (#313), apart from every quality colour.
 - Optional Hygrostat Resonator (#88): Rings' modal resonator, 24 modes in stereo, after the grains or before the buffer; Off by default. PITCH tunes it with Pitch scale and Recent notes, Attacks hits strike it, and all 32 grains still play. Its controls are fixed for now.
 - Custom profiles can put a two-value setting on [A]+SEED or [A]+FREEZE (#301): Reverb character, Processor, Frozen feedback, Synth (on [A]+SEED only) or TIME modulation. The gesture flips and saves it, and [A] shows the new value's options colour. Processor clears the recording, as from its page. [A]+FREEZE still steps the Plaits bank in Plaits synth play.

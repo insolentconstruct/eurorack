@@ -119,6 +119,8 @@ struct TestFlashState {
   int supply_budget;
   // Erases and programs started while the supply was low.
   int low_supply_writes;
+  // Called after each erase or program, as a power cut could follow it.
+  void (*after_operation)();
 };
 
 
@@ -226,6 +228,9 @@ inline void TestFlashEndOperation() {
   TestFlashExpose(false);
   if (f.supply_budget > 0 && --f.supply_budget == 0) {
     f.supply_low = true;
+  }
+  if (f.after_operation) {
+    f.after_operation();
   }
 }
 

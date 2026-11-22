@@ -2767,7 +2767,7 @@ void TestProcessorToggle() {
       }
     }
     CHECK(settings.spectral() == spectral && ui.spectral() == spectral);
-    CHECK(test_writes == writes + 1);
+    CHECK(test_writes == writes + 2);  // One options record, no state.
     CHECK(!settings.state().monophonic_mode);
     for (int i = 0; i < 400 && processor.spectral() != spectral; ++i) {
       RunSquare(&r, 1);
