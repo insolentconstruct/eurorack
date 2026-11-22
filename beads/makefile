@@ -37,18 +37,24 @@ BOOTLOADER        = beads_bootloader
 UPLOAD_COMMAND  = upload_combo_jtag_erase_first_sector
 
 # Packages to build
+PLAITS_BLOBS  ?= 1
+ifeq ($(PLAITS_BLOBS),1)
+PLAITS_PACKAGES =
+else
+PLAITS_PACKAGES = plaits/dsp/chords \
+		plaits/dsp/engine \
+		plaits/dsp/engine2 \
+		plaits/dsp/fm \
+		plaits/dsp/physical_modelling \
+		plaits/dsp/speech
+endif
 TARGET         = beads
 PACKAGES       = beads \
 		beads/drivers \
 		beads/dsp \
 		beads/dsp/fx \
 		beads/dsp/pvoc \
-		plaits/dsp/chords \
-		plaits/dsp/engine \
-		plaits/dsp/engine2 \
-		plaits/dsp/fm \
-		plaits/dsp/physical_modelling \
-		plaits/dsp/speech \
+		$(PLAITS_PACKAGES) \
 		stmlib/dsp \
 		stmlib/utils \
 		stmlib/ui \
@@ -57,7 +63,8 @@ PACKAGES       = beads \
 		stmlib/third_party/STM/CMSIS/DSP_Lib/TransformFunctions
 RESOURCES      = beads/resources
 
-# Development builds with Plaits blobs (link-order.mk, PLAITS_BLOBS=1).
+# Plaits' models are blobs in a region after the app (beads/blob/ABI.md);
+# PLAITS_BLOBS=0 builds Plaits' engines in instead, as before.
 ifeq ($(PLAITS_BLOBS),1)
 PACKAGES      += beads/blob
 endif

@@ -27,8 +27,8 @@
 //
 // Emulator harness: the region reader, the libraries built as at synth entry,
 // a blob voice (one slot and arena, as PlaitsVoice) and the same engines
-// compiled in, sharing their own arena as PlaitsVoice's do; called by
-// render_compare.py under Unicorn's Cortex-M7.
+// compiled in, built in PlaitsVoice's order and sharing their own arena as
+// PlaitsVoice's do; called by render_compare.py under Unicorn's Cortex-M7.
 
 #include <new>
 
@@ -42,10 +42,30 @@
 #include "beads/blob/plaits_libraries.h"
 #include "beads/blob/plaits_region.h"
 #include "beads/test/blob_gate/test_sine.h"
+#include "plaits/dsp/engine/additive_engine.h"
+#include "plaits/dsp/engine/bass_drum_engine.h"
+#include "plaits/dsp/engine/chord_engine.h"
+#include "plaits/dsp/engine/fm_engine.h"
+#include "plaits/dsp/engine/grain_engine.h"
+#include "plaits/dsp/engine/hi_hat_engine.h"
+#include "plaits/dsp/engine/modal_engine.h"
+#include "plaits/dsp/engine/noise_engine.h"
 #include "plaits/dsp/engine/particle_engine.h"
+#include "plaits/dsp/engine/snare_drum_engine.h"
 #include "plaits/dsp/engine/speech_engine.h"
+#include "plaits/dsp/engine/string_engine.h"
+#include "plaits/dsp/engine/swarm_engine.h"
+#include "plaits/dsp/engine/virtual_analog_engine.h"
+#include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
+#include "plaits/dsp/engine2/chiptune_engine.h"
+#include "plaits/dsp/engine2/phase_distortion_engine.h"
+#include "plaits/dsp/engine2/six_op_engine.h"
+#include "plaits/dsp/engine2/string_machine_engine.h"
+#include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
+#include "plaits/dsp/engine2/wave_terrain_engine.h"
 #include "plaits/dsp/speech/lpc_speech_synth_words.h"
+#include "plaits/resources.h"
 
 using namespace beads;
 using namespace plaits;
@@ -78,10 +98,18 @@ class TestSineEngine : public Engine {
   DISALLOW_COPY_AND_ASSIGN(TestSineEngine);
 };
 
-const size_t kNumCompiled = 6;
+// The proof's Palette models and test sine, then the stock engines in
+// PlaitsVoice's registry order (the 6-op engine serves models 2-4).
+const size_t kFirstStock = 3;
+const size_t kNumStock = 22;
+const size_t kNumCompiled = kFirstStock + kNumStock;
+const size_t kSixOpSlot = kFirstStock + 2;
+const size_t kChiptuneSlot = kFirstStock + 5;
+const int kNumFmBanks = 3;
+const int kFmBankSize = 32;
 const size_t kArenaSize = 16384;
 const size_t kCanaryWords = 16;
-const size_t kMaxDigests = 16;
+const size_t kMaxDigests = 64;
 // As the development build: kPlaitsLibraryRamSize, and the first voice's RAM
 // as scratch (enough for a word bank).
 const size_t kLibraryRamSize = 64 * 1024;
@@ -93,14 +121,38 @@ static uint8_t phase_weave_storage[sizeof(PhaseWeaveEngine)]
     __attribute__((aligned(8)));
 static uint8_t sine_storage[sizeof(TestSineEngine)]
     __attribute__((aligned(8)));
-static uint8_t particle_storage[sizeof(ParticleEngine)]
-    __attribute__((aligned(8)));
 static uint8_t spectral_spiral_storage[sizeof(SpectralSpiralEngine)]
     __attribute__((aligned(8)));
-static uint8_t wavetable_storage[sizeof(WavetableEngine)]
-    __attribute__((aligned(8)));
-static uint8_t speech_storage[sizeof(SpeechEngine)]
-    __attribute__((aligned(8)));
+
+// The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
+struct StockEngines {
+  VirtualAnalogVCFEngine virtual_analog_vcf_engine;
+  PhaseDistortionEngine phase_distortion_engine;
+  SixOpEngine six_op_engine;
+  WaveTerrainEngine wave_terrain_engine;
+  StringMachineEngine string_machine_engine;
+  ChiptuneEngine chiptune_engine;
+  VirtualAnalogEngine virtual_analog_engine;
+  WaveshapingEngine waveshaping_engine;
+  FMEngine fm_engine;
+  GrainEngine grain_engine;
+  AdditiveEngine additive_engine;
+  WavetableEngine wavetable_engine;
+  ChordEngine chord_engine;
+  SpeechEngine speech_engine;
+  SwarmEngine swarm_engine;
+  NoiseEngine noise_engine;
+  ParticleEngine particle_engine;
+  StringEngine string_engine;
+  ModalEngine modal_engine;
+  BassDrumEngine bass_drum_engine;
+  SnareDrumEngine snare_drum_engine;
+  HiHatEngine hi_hat_engine;
+};
+static uint8_t stock_storage[sizeof(StockEngines)] __attribute__((aligned(8)));
+static uint8_t stock_arena[kArenaSize] __attribute__((aligned(8)));
+// PlaitsVoice::UnpackFmBanks' banks.
+static fm::Patch fm_banks[kNumFmBanks * kFmBankSize];
 static Engine* compiled[kNumCompiled];
 static uint8_t compiled_arena[kArenaSize] __attribute__((aligned(8)));
 // The compiled-in engines' decoded word banks (PlaitsVoice::DecodeSpeechBanks).
@@ -164,14 +216,38 @@ uint32_t harness_setup(
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
-  compiled[2] = new(particle_storage) ParticleEngine;
-  compiled[3] = new(spectral_spiral_storage) SpectralSpiralEngine;
-  compiled[4] = new(wavetable_storage) WavetableEngine;
-  compiled[5] = new(speech_storage) SpeechEngine;
-  for (size_t i = 0; i < kNumCompiled; ++i) {
+  compiled[2] = new(spectral_spiral_storage) SpectralSpiralEngine;
+  for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
     compiled[i]->Init(&allocator);
+  }
+  for (int i = 0; i < kNumFmBanks; ++i) {
+    for (int j = 0; j < kFmBankSize; ++j) {
+      fm_banks[i * kFmBankSize + j].Unpack(
+          fm_patches_table[i] + j * fm::Patch::SYX_SIZE);
+    }
+  }
+  StockEngines* e = new(stock_storage) StockEngines;
+  Engine* stock[kNumStock] = {
+    &e->virtual_analog_vcf_engine, &e->phase_distortion_engine,
+    &e->six_op_engine, &e->wave_terrain_engine, &e->string_machine_engine,
+    &e->chiptune_engine, &e->virtual_analog_engine, &e->waveshaping_engine,
+    &e->fm_engine, &e->grain_engine, &e->additive_engine,
+    &e->wavetable_engine, &e->chord_engine, &e->speech_engine,
+    &e->swarm_engine, &e->noise_engine, &e->particle_engine,
+    &e->string_engine, &e->modal_engine, &e->bass_drum_engine,
+    &e->snare_drum_engine, &e->hi_hat_engine
+  };
+  stmlib::BufferAllocator stock_allocator(stock_arena, kArenaSize);
+  for (size_t i = 0; i < kNumStock; ++i) {
+    // PlaitsVoice::Init builds the 6-op engine once per model it serves.
+    const int repeat = stock[i] == &e->six_op_engine ? 3 : 1;
+    for (int j = 0; j < repeat; ++j) {
+      stock_allocator.Free();
+      stock[i]->Init(&stock_allocator);
+    }
+    compiled[kFirstStock + i] = stock[i];
   }
   new(harness_blob_voice.engine) PlaitsBlobEngine;
   harness_slot = reinterpret_cast<uintptr_t>(blob_engine()->state());
@@ -192,9 +268,14 @@ uint32_t harness_setup(
 }
 
 // A voice switching to a compiled-in engine: Reset only, after the user data
-// PlaitsVoice loads (none).
-void harness_select_compiled(uint32_t engine) {
-  compiled[engine]->LoadUserData(NULL);
+// PlaitsVoice loads (none), or the 6-op bank of the model.
+void harness_select_compiled(uint32_t engine, uint32_t model) {
+  if (engine == kSixOpSlot) {
+    static_cast<SixOpEngine*>(compiled[engine])->LoadUnpackedBank(
+        &fm_banks[(model - 2) * kFmBankSize]);
+  } else {
+    compiled[engine]->LoadUserData(NULL);
+  }
   compiled[engine]->Reset();
 }
 
@@ -217,6 +298,13 @@ uint32_t harness_select_blob(uint32_t model) {
 uint32_t harness_render_compiled(uint32_t engine, uint32_t size,
     uint32_t seed) {
   bool already_enveloped = false;
+  if (engine == kChiptuneSlot) {
+    // As PlaitsVoice::Render sets it.
+    static_cast<ChiptuneEngine*>(compiled[engine])->set_envelope_shape(
+        harness_parameters.trigger & TRIGGER_UNPATCHED
+            ? ChiptuneEngine::NO_ENVELOPE
+            : 0.0f);
+  }
   stmlib::Random::Seed(seed);
   compiled[engine]->Render(
       harness_parameters, harness_out, harness_aux, size, &already_enveloped);

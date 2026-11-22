@@ -33,10 +33,8 @@ models=beads/blob/models
 bash beads/build/tools/build_blobs.sh "$out/blob"
 bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
   beads/test/blob_gate/pos_sine.cc
-blobs=("$out/blob/plaits_wavetables.bin" "$out/blob/speech_library.bin" \
-  "$out/blob/phase_weave.bin" "$out/blob/pos_sine.bin" \
-  "$out/blob/particle_noise.bin" "$out/blob/spectral_spiral.bin" \
-  "$out/blob/wavetable.bin" "$out/blob/speech.bin")
+# Every blob: the stock models and their libraries, the proof's models.
+blobs=("$out"/blob/*.bin)
 python3 beads/build/tools/blob_sections.py "$out/region.bin" 20261121 \
   --wave beads/resources.cc "${blobs[@]}"
 # The same with the models 0x2fe0 further from the libraries: with the
@@ -69,11 +67,16 @@ link() {
 }
 objects=()
 speech=plaits/dsp/speech
+physical=plaits/dsp/physical_modelling
+# The compiled-in references: every stock engine and its helpers.
 for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     beads/blob/plaits_region.cc beads/blob/plaits_libraries.cc \
     $models/phase_weave_engine.cc $models/spectral_spiral_engine.cc \
-    plaits/dsp/engine/particle_engine.cc plaits/dsp/engine/wavetable_engine.cc \
-    plaits/dsp/engine/speech_engine.cc $speech/naive_speech_synth.cc \
+    plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
+    plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
+    plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \
+    $physical/string.cc $physical/string_voice.cc \
+    $speech/naive_speech_synth.cc \
     $speech/sam_speech_synth.cc $speech/lpc_speech_synth.cc \
     $speech/lpc_speech_synth_controller.cc \
     $speech/lpc_speech_synth_phonemes.cc $speech/lpc_speech_synth_words.cc \

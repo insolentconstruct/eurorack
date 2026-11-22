@@ -4,6 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Plaits synth: all 24 models are installed in flash after the app, written by the same WAV (#194). They play bit for bit as before, except that a model fades in over its first 48 samples (1 ms) each time a voice switches to it, from a fresh start where it used to keep its old filters; Wave terrain's terrain 5 can differ for a few samples where Plaits reads past its wavetable. The WAV plays for about 9 minutes.
 - The pitch notch cue lights [A] pure blue instead of green (#313), apart from every quality colour.
 - Optional Hygrostat Resonator (#88): Rings' modal resonator, 24 modes in stereo, after the grains or before the buffer; Off by default. PITCH tunes it with Pitch scale and Recent notes, Attacks hits strike it, and all 32 grains still play. Its controls are fixed for now.
 - Custom profiles can put a two-value setting on [A]+SEED or [A]+FREEZE (#301): Reverb character, Processor, Frozen feedback, Synth (on [A]+SEED only) or TIME modulation. The gesture flips and saves it, and [A] shows the new value's options colour. Processor clears the recording, as from its page. [A]+FREEZE still steps the Plaits bank in Plaits synth play.

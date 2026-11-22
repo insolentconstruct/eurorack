@@ -47,6 +47,40 @@ build speech --library "$out/speech_library.bin" \
 for model in particle_noise spectral_spiral phase_weave; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
+# Stock models without libraries: Plaits' helpers and tables they use.
+physical=plaits/dsp/physical_modelling
+for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
+    two_op_fm granular_formant harmonic swarm filtered_noise bass_drum \
+    snare_drum hi_hats; do
+  build $model $blob/models/$model.cc $blob/models/${model}_engine.cc \
+    beads/plaits_resources.cc
+done
+build inharmonic_string $blob/models/inharmonic_string.cc \
+  $blob/models/inharmonic_string_engine.cc $physical/string_voice.cc \
+  $physical/string.cc beads/plaits_resources.cc
+build chord_bank_library $blob/libraries/chord_bank_library.cc \
+  plaits/dsp/chords/chord_bank.cc
+build six_op_library $blob/libraries/six_op_library.cc \
+  $blob/libraries/six_op_algorithms.cc beads/plaits_resources.cc
+chords=(--library "$out/chord_bank_library.bin")
+waves=(--library "$out/plaits_wavetables.bin")
+# The voices read the opcodes too, to know the modulators.
+build six_op_fm --library "$out/six_op_library.bin" $blob/models/six_op_fm.cc \
+  $blob/models/six_op_fm_engine.cc $blob/libraries/six_op_algorithms.cc \
+  plaits/dsp/fm/dx_units.cc beads/plaits_resources.cc
+build wave_terrain "${waves[@]}" $blob/models/wave_terrain.cc \
+  $blob/models/wave_terrain_engine.cc beads/plaits_resources.cc
+for model in string_machine chiptune; do
+  build $model "${chords[@]}" $blob/models/$model.cc \
+    $blob/models/${model}_engine.cc $blob/libraries/chord_bank_imports.cc \
+    beads/plaits_resources.cc
+done
+build chords "${waves[@]}" "${chords[@]}" $blob/models/chords.cc \
+  $blob/models/chords_engine.cc $blob/libraries/chord_bank_imports.cc \
+  beads/plaits_resources.cc
+build modal_resonator $blob/models/modal_resonator.cc \
+  $blob/models/modal_resonator_engine.cc $physical/modal_voice.cc \
+  $physical/resonator.cc beads/plaits_resources.cc
 # Each model's libraries are those profile-features.json lists for its ID.
 python3 - "$out" <<'PYCODE'
 import json, sys

@@ -64,7 +64,7 @@ jobs:
         run: bash beads/build/build.sh "$PWD/artifacts" --wav
       - name: Build the unchanged 4.9.3 golden app
         run: bash beads/build/golden.sh "$PWD/golden"
-      - name: Gate the proof model blobs, the services link and their negative controls
+      - name: Gate the model blobs, the services link and their negative controls
         run: |
           mkdir -p blob-out
           docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
@@ -75,12 +75,6 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/emu"
           "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
           "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/render_compare.py blob-out/emu
-      - name: Build the development app with blobs and its default region
-        run: |
-          mkdir -p blob-dev
-          docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
-            --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/blob-dev,dst=/out" drizzlet \
-            bash beads/build/tools/build_blobs_dev.sh /out
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: drizzlet-release-assets
@@ -92,6 +86,8 @@ jobs:
             artifacts/bootloader.bin
             artifacts/bootloader-padded.bin
             artifacts/combo.bin
+            artifacts/region.bin
+            artifacts/image.bin
             artifacts/drizzlet-*-combo.bin
             artifacts/drizzlet-*-combo.hex
             artifacts/NOTICE.txt
