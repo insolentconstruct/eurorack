@@ -579,7 +579,7 @@ The factory calibration was restored by debug probe after each saved run. Before
   block, PITCH +24 and 0, one code layout): Bright digital 77.1% worst block
   (+8.6 points), Cold digital 59.8% (+6.7), Scorched cassette 45.9% (+6.4),
   Sunny tape 57.0% (+8.3). With the +11.8 point module offset the estimate is
-  88.9% at Bright digital against the 90% limit, so all 32 grains play. 32
+  88.9% at Bright digital against the 90% limit then in force, so all 32 grains play. 32
   modes measured 78.6% (an estimated 90.4%) and would cost a grain, so the
   bank has 24 modes. Not measured on a module.
 
