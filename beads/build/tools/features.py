@@ -157,6 +157,7 @@ def check_docs(features, doc):
   for line in lines[begin:end]:
     feature_id, name, where = [c.strip() for c in line.strip('|').split('|')]
     f = by_id[int(feature_id)]
+    assert f['id'] not in rows, 'Saved data: ID %d twice' % f['id']
     assert re.sub(r' \(#\d+\)$', '', name) == f['name'], (
         'Saved data: ID %s name' % feature_id)
     rows[f['id']] = where

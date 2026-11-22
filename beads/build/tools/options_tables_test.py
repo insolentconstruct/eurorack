@@ -498,7 +498,8 @@ with tempfile.TemporaryDirectory(prefix="options-package-") as directory:
     assert "profile-features.json" in listed
     assert (out / "profile-features.json").read_bytes() == Path(
         "beads/build/profile-features.json").read_bytes()
-print("Release ZIPs include the generated guides and the combo HEX; wrong HEX rejected; the catalogue is a release asset: PASS")
+print("Release ZIPs include the generated guides and the combo HEX; wrong HEX "
+      "rejected; the catalogue is a release asset: PASS")
 
 
 # The profile page consumes permanent IDs and placements, never source enums.

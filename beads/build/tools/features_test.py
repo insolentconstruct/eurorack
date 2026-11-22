@@ -184,6 +184,9 @@ faults = [
   ('Saved data: ID 13 is not in the record', features.FEATURES_DOC,
       '| 13 | Monophonic grains | State byte 9 |',
       '| 13 | Monophonic grains | 24 |'),
+  ('Saved data: ID 2 twice', features.FEATURES_DOC,
+      '| 2 | Reverb character | 9 |',
+      '| 2 | Reverb character | 8 |\n| 2 | Reverb character | 9 |'),
   ('Saved data: ID 5 name', features.FEATURES_DOC,
       '| 5 | Limiter |', '| 5 | Soft clip |'),
   # Values may be appended after the frozen ones.
