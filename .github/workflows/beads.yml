@@ -91,6 +91,7 @@ jobs:
             artifacts/drizzlet-*-combo.bin
             artifacts/drizzlet-*-combo.hex
             artifacts/NOTICE.txt
+            artifacts/profile-features.json
             artifacts/OPTIONS.md
             artifacts/options-guide.svg
             artifacts/options-guide-mobile.svg

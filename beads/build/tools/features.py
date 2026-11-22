@@ -32,6 +32,7 @@
 # closing line, so the tables stay in the translation units that own them.
 # Run from the repository root: python3 beads/build/tools/features.py [--check]
 
+import hashlib
 import json
 import pathlib
 import re
@@ -41,6 +42,8 @@ import zlib
 MANIFEST = 'beads/resources/features.json'
 FROZEN = 'beads/resources/features-frozen.json'
 CATALOGUE = 'beads/build/profile-features.json'
+FEATURES_DOC = 'beads/build/docs/FEATURES.md'
+SAVED_TABLE = '| Feature ID | Feature | Saved in |'
 
 STATES = ['Off', 'Fixed', 'Adjustable']
 STATE_NAMES = ['PROFILE_OFF', 'PROFILE_FIXED', 'PROFILE_ADJUSTABLE']
@@ -142,6 +145,32 @@ def check_record(manifest, frozen):
           'Record layout %d: a full byte needs a new version' % version)
       assert offset > max(layout.values()), (
           'Record layout %d: append after the frozen bytes' % version)
+
+
+def check_docs(features, doc):
+  # FEATURES.md's "Saved data" table gives each saved feature its record byte.
+  lines = doc.split('\n')
+  begin = lines.index(SAVED_TABLE) + 2
+  end = lines.index('', begin)
+  by_id = dict((f['id'], f) for f in features)
+  rows = {}
+  for line in lines[begin:end]:
+    feature_id, name, where = [c.strip() for c in line.strip('|').split('|')]
+    f = by_id[int(feature_id)]
+    assert f['id'] not in rows, 'Saved data: ID %d twice' % f['id']
+    assert re.sub(r' \(#\d+\)$', '', name) == f['name'], (
+        'Saved data: ID %s name' % feature_id)
+    rows[f['id']] = where
+  for f in features:
+    where = rows.get(f['id'], '')
+    match = re.match(r'^(?:Record byte )?(\d+)(, full byte)?$', where)
+    if 'saved' in f:
+      assert match and int(match.group(1)) == f['saved'] and (
+          bool(match.group(2)) == (not f['values'])), (
+          'Saved data: ID %d' % f['id'])
+    else:
+      assert not match, 'Saved data: ID %d is not in the record' % f['id']
+  assert list(rows) == sorted(rows), 'Saved data: ID order'
 
 
 def page_features(features):
@@ -306,34 +335,32 @@ def value_names(features):
       for f in page_features(features) for i, v in indicated(f)]
 
 
-def catalogue(manifest, page_slots):
+def catalogue(manifest, digest, page_slots):
   rows = []
+  factory = dict((f['id'], e) for f, e in factory_entries(manifest['features']))
   for f in manifest['features']:
-    factory = f.get('factory', {'state': 'Off', 'value': 0})
-    values = [v['name'] for v in f['values']] if f['values'] else None
-    slots = {
+    default = f.get('factory', {'state': 'Off', 'value': 0})
+    rows.append({
+      'id': f['id'],
+      'name': f['name'],
+      'values': [v['name'] for v in f['values']] if f['values'] else None,
+      'states': f['states'],
       'page_slots': list(range(1, page_slots + 1)) if f['page'] else [],
       'amount_slots': list(range(1, len(AMOUNT_NAMES))) if f['amount'] else [],
       'actions': f['actions'],
-    }
-    # Format 1 keeps both of its historical row layouts byte for byte.
-    if 'issue' in f:
-      assert not f['stateless'], f['symbol']
-      row = [('id', f['id']), ('issue', f['issue']), ('name', f['name']),
-          ('values', values), ('field', f['field']),
-          ('states', f['states']), ('default_state', factory['state']),
-          ('default', factory['value'])] + list(slots.items()) + [
-          ('cpu_cost', None), ('touches_synth', f['touches_synth'])]
-    else:
-      row = [('id', f['id']), ('name', f['name']), ('values', values),
-          ('states', f['states'])] + list(slots.items()) + [
-          ('stateless', f['stateless']), ('default_state', factory['state']),
-          ('default', factory['value']),
-          ('touches_synth', f['touches_synth']), ('cpu_cost', None),
-          ('field', f['field'])]
-    rows.append(dict(row))
+      'stateless': f['stateless'],
+      'default_state': default['state'],
+      'default': default['value'],
+      'factory': factory.get(f['id']),
+      'touches_synth': f['touches_synth'],
+      'cpu_cost': None,
+      'saved': f.get('saved'),
+    })
+  # Format 2: one row layout; the record byte replaces format 1's field.
   data = {
-    'format': 1,
+    'format': 2,
+    'manifest_sha256': digest,
+    'record_version': manifest['record_version'],
     'features': rows,
     'plaits_models': manifest['plaits_models'],
     'plaits_libraries': manifest['plaits_libraries'],
@@ -356,12 +383,14 @@ def replace(text, start, end, lines, path):
 
 
 def outputs(root):
-  manifest = json.loads((root / MANIFEST).read_text())
+  manifest_bytes = (root / MANIFEST).read_bytes()
+  manifest = json.loads(manifest_bytes)
   features = manifest['features']
   check_manifest(features)
   frozen = json.loads((root / FROZEN).read_text())
   check_frozen(features, frozen)
   check_record(manifest, frozen)
+  check_docs(features, (root / FEATURES_DOC).read_text())
   header = (root / 'beads/profile.h').read_text()
   magic = header_constant(header, 'kProfileMagic')
   profile_format = header_constant(header, 'kProfileFormat')
@@ -414,7 +443,8 @@ def outputs(root):
   for path, start, end, lines in regions:
     text = files.get(path) or (root / path).read_text()
     files[path] = replace(text, start, end, lines, path)
-  files[CATALOGUE] = catalogue(manifest, page_slots)
+  files[CATALOGUE] = catalogue(
+      manifest, hashlib.sha256(manifest_bytes).hexdigest(), page_slots)
   return files
 
 
