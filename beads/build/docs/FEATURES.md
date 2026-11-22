@@ -313,7 +313,9 @@ choice can occupy any page slot (1–21). They have no amount, action,
 SEED-stepping or CV-assignment slot. All other new features allow Off or Fixed
 only, with no control placement. Omitted entries are Off. The default profile
 block is unchanged. The page-facing catalogue is
-`beads/build/profile-features.json`; costs are unknown until measured.
+`beads/build/profile-features.json`; costs are unknown until measured. Its
+format 2 adds the manifest's SHA-256, the record version, and each feature's
+record byte and factory entry; each release publishes it.
 
 Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
 when Adjustable or set via Hygrostat when Fixed. There is no power-on

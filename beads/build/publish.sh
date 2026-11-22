@@ -43,7 +43,7 @@ fi
 latest=true
 [[ $prerelease == false ]] || latest=false
 assets=("$dir/$tag-wav.zip" "$dir/$tag-combo.zip" "$dir/$tag-combo.hex"
-  "$dir/NOTICE.txt" "$dir/OPTIONS.md" "$dir/options-guide.svg" "$dir/options-guide-mobile.svg"
+  "$dir/NOTICE.txt" "$dir/profile-features.json" "$dir/OPTIONS.md" "$dir/options-guide.svg" "$dir/options-guide-mobile.svg"
   "$dir/SHA256SUMS")
 
 names() { for f in "$@"; do basename "$f"; done | sort; }
