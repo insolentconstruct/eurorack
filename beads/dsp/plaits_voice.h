@@ -151,6 +151,7 @@ class PlaitsVoice {
   int model_;
 
   bool sustain_;
+  bool unpatched_;
   float sustain_level_;
   float level_;
   plaits::LPGEnvelope lpg_envelope_;

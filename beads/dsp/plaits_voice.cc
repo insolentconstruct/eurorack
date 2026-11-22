@@ -148,6 +148,7 @@ void PlaitsVoice::Init(uint8_t* ram) {
   engines_ = new(ram) PlaitsEngines;
   model_ = -1;
   sustain_ = false;
+  unpatched_ = false;
   sustain_level_ = 0.0f;
   level_ = 0.0f;
   lpg_envelope_.Init();
@@ -212,6 +213,7 @@ void PlaitsVoice::Init(uint8_t* ram, const fm::Patch* fm_banks) {
   fm_banks_ = fm_banks;
   model_ = -1;
   sustain_ = false;
+  unpatched_ = false;
   sustain_level_ = 0.0f;
   level_ = 0.0f;
   lpg_envelope_.Init();
@@ -309,6 +311,9 @@ void PlaitsVoice::Render(
   }
 
   const bool lpg_bypass = already_enveloped || unpatched;
+  // A drone ends as a note at its peak, decaying through the gate.
+  const bool drone_end = unpatched_ && !lpg_bypass;
+  unpatched_ = unpatched;
 
   // Compute LPG parameters.
   if (!lpg_bypass) {
@@ -317,6 +322,11 @@ void PlaitsVoice::Render(
         SemitonesToRatio(-96.0f * decay);
     const float decay_tail = (20.0f * kBlockSize) / kSampleRate *
         SemitonesToRatio(-72.0f * decay + 12.0f * hf) - short_decay;
+    if (drone_end) {
+      // Fully open, with no decay yet.
+      lpg_envelope_.Trigger();
+      lpg_envelope_.ProcessPing(1.0f, 0.0f, 0.0f, hf);
+    }
 
     if (sustain) {
       lpg_envelope_.ProcessLP(sustain_level_, short_decay, decay_tail, hf);
@@ -334,6 +344,19 @@ void PlaitsVoice::Render(
   if (gain < 0.0f) {
     limiter_.Process(-gain, out, size);
     gain = 1.0f;
+  }
+  if (drone_end) {
+    // The open gate settles on the drone's level before it takes over.
+    float settle[kMaxBlockSize];
+    for (int pass = 0; pass < 2; ++pass) {
+      fill(&settle[0], &settle[size], out[0]);
+      lpg_.Process(
+          gain,
+          lpg_envelope_.frequency(),
+          lpg_envelope_.hf_bleed(),
+          settle,
+          size);
+    }
   }
   if (!lpg_bypass) {
     lpg_.Process(

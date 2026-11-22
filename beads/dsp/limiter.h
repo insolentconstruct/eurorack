@@ -59,6 +59,11 @@ class Limiter {
     max_peak_ = max_peak;
   }
 
+  // The detector at rest, as if after a long silence.
+  void Rest() {
+    peak_ = peak_lp_ = 0.0f;
+  }
+
   void Process(FloatFrame* in_out, size_t size) {
     while (size--) {
       const float peak = std::min(

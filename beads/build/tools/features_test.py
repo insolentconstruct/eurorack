@@ -141,7 +141,7 @@ faults = [
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
   ('stale', 'beads/options.h',
-      'kNumOptionValues = 12;', 'kNumOptionValues = 13;'),
+      'kNumOptionValues = 16;', 'kNumOptionValues = 17;'),
   ('stale', 'beads/options.h',
       'PAGE_VALUES_DELAY = 3,', 'PAGE_VALUES_DELAY = 4,'),
   ('stale', 'beads/options.cc',

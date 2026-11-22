@@ -272,8 +272,10 @@ bool Settings::SavePersistentData() {
   PackState();
   const PersistentData requested = persistent_data_;
   chunk_storage_.SavePersistentData();
-  // False when the calibration was out of range and the stored one kept.
-  return !memcmp(&requested, &persistent_data_, sizeof(PersistentData));
+  // False when nothing can be written, or the calibration was out of range
+  // and the stored one kept.
+  return !chunk_storage_.locked() && \
+      !memcmp(&requested, &persistent_data_, sizeof(PersistentData));
 }
 
 void Settings::NormalizeOptions() {

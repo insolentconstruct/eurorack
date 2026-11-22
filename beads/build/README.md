@@ -41,7 +41,7 @@ Synth selects Beads (Stock) or six Plaits voices. Triggers advance voices, retai
 
 Synth start selects Automatic (Stock), starting after ten seconds with both inputs unpatched, or Manual. With inputs unpatched and FREEZE off, hold [A] about a second and a half and release to start; repeat to stop. Patching an input stops it once FREEZE is off. With an input patched, the same hold restarts automatic gain. The hold acts on release, and not at all if a knob or button was used while [A] was down.
 
-Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off (Stock), After the grains or Before the buffer, in thirds. DRY/WET picks its Material in quarters: Wood, String, Glass or Bell; REVERB its Ring time: Short, Medium, Long or Very long, each about four times longer. String and Medium are the defaults; page 5 saves like the other pages. PITCH tunes it and Pitch scale snaps it. Attacks hits strike it, and so does SEED: each press, and each rising gate; latched, each gate. In delay mode SEED stays the clock. Before the buffer, a strike while frozen is not heard. With the resonator on, tapping [M] after REVERB, width and diffusion makes the CV input move its damping, until power-off (not saved).
+Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off (Stock), After the grains or Before the buffer, in thirds. DRY/WET picks its Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl or Gong (a Drum strike starts sharp and bends down, a Gong strike starts flat and bends up; Bowl and Gong beat between left and right); REVERB its Ring time: Short, Medium, Long or Very long, each about four times longer. String and Medium are the defaults; page 5 saves like the other pages. PITCH tunes it and Pitch scale snaps it. Attacks hits strike it, and so does SEED: each press, and each rising gate; latched, each gate. In delay mode SEED stays the clock. Before the buffer, a strike while frozen is not heard. With the resonator on, tapping [M] after REVERB, width and diffusion makes the CV input move its damping, until power-off (not saved).
 
 ## Plaits synth
 
@@ -148,7 +148,7 @@ Stock settings, Beta 2 settings and calibration carry over; options, width and d
 
 Hold SEED at power-on only to reset settings; valid calibration is kept.
 
-A recalibration more than 25% from the factory values is not saved: all LEDs blink for about a second, as for a rejected step, and the stored calibration stays in use.
+A recalibration more than 25% from the factory values, or one made while an invalid profile keeps settings from being saved, is not saved: all LEDs blink for about a second, as for a rejected step, and the stored calibration stays in use. A rejected or abandoned calibration run leaves the stored calibration in use.
 
 Damaged calibration restores automatically from its copy; damaged frozen buffers are skipped. If both calibration copies are lost, all LEDs blink fast for three seconds. It then uses factory calibration and defaults, saves nothing and restores no buffer.
 

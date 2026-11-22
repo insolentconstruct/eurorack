@@ -82,14 +82,4 @@ build modal_resonator $blob/models/modal_resonator.cc \
   $blob/models/modal_resonator_engine.cc $physical/modal_voice.cc \
   $physical/resonator.cc beads/plaits_resources.cc
 # Each model's libraries are those profile-features.json lists for its ID.
-python3 - "$out" <<'PYCODE'
-import json, sys
-models = dict((m['id'], m) for m in json.load(
-    open('beads/build/profile-features.json'))['plaits_models'])
-for name in ('wavetable', 'speech', 'particle_noise', 'spectral_spiral'):
-  blob = json.load(open('%s/%s.bin.json' % (sys.argv[1], name)))
-  listed = [d['id'] for d in blob['dependencies']]
-  if listed != models[blob['model']].get('libraries', []):
-    raise SystemExit('%s lists libraries %s, the catalogue %s' % (
-        name, listed, models[blob['model']]['libraries']))
-PYCODE
+python3 beads/build/tools/blob_libraries.py "$out"
