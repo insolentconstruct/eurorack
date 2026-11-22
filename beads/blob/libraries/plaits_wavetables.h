@@ -38,7 +38,7 @@ namespace beads {
 const uint32_t kPlaitsWavetablesLibrary = 1;
 
 enum PlaitsWavetablesExport {
-  PLAITS_WAVETABLES_WAVES,  // plaits::wav_integrated_waves, 25,344 samples
+  PLAITS_WAVETABLES_WAVES,  // plaits::wav_integrated_waves, 25,476 samples
   PLAITS_WAVETABLES_EXPORT_LAST
 };
 

@@ -24,11 +24,13 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits' StringEngine as a plain class for a blob, its code unchanged.
+// Plaits' StringEngine as a plain class for a blob, its code unchanged except
+// its strings, which clear their lines once per build.
 
 #ifndef BEADS_BLOB_MODELS_INHARMONIC_STRING_ENGINE_H_
 #define BEADS_BLOB_MODELS_INHARMONIC_STRING_ENGINE_H_
 
+#include "beads/blob/models/blob_string_voice.h"
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/engine/string_engine.h"
 #include "plaits/dsp/physical_modelling/string_voice.h"
@@ -49,7 +51,7 @@ class InharmonicString {
       bool* already_enveloped);
 
  private:
-  StringVoice voice_[kNumStrings];
+  BlobStringVoice voice_[kNumStrings];
 
   float f0_[kNumStrings];
   DelayLine<float, 16> f0_delay_;

@@ -66,14 +66,12 @@ PAIRS = dict([(36, 0), (37, 1), (43, 2)] + [
 # terrain, Wavetable and Chords (Plaits wavetables), String machine,
 # Chiptune and Chords (chord bank), Speech.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
-# Plaits' own reads outside a table, which the blob reads from other bytes:
-# reported, not failed. Wave terrain's terrain 5 (Plaits' third wavetable
-# bank) interpolates towards the wave after the last one, up to 260 bytes
-# past the end of wav_integrated_waves: in the app the next table, in the
-# library what follows it in the region.
-# Waived only at these (block, channel 0 OUT / 1 AUX, sample) positions.
-KNOWN = {5: ('terrain 5 reads past the end of the Plaits wavetables',
-             [(3770, c, i) for c in (0, 1) for i in (8, 9, 10, 11)] +
+# Plaits' own reads outside a table, which the blob reads from other bytes,
+# waived at these (block, channel 0 OUT / 1 AUX, sample) positions only:
+# Wave terrain's terrains 5-7 interpolate past the third wavetable bank, by
+# more than the guard row once the path overshoots.
+KNOWN = {5: ('terrain 5 reads past the Plaits wavetables\' guard row',
+             [(3770, c, i) for c in (0, 1) for i in (10, 11)] +
              [(3771, c, 0) for c in (0, 1)])}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [

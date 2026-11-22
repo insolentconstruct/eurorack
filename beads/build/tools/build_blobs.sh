@@ -56,8 +56,8 @@ for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
     beads/plaits_resources.cc
 done
 build inharmonic_string $blob/models/inharmonic_string.cc \
-  $blob/models/inharmonic_string_engine.cc $physical/string_voice.cc \
-  $physical/string.cc beads/plaits_resources.cc
+  $blob/models/inharmonic_string_engine.cc $blob/models/blob_string_voice.cc \
+  $blob/models/blob_string.cc beads/plaits_resources.cc
 build chord_bank_library $blob/libraries/chord_bank_library.cc \
   plaits/dsp/chords/chord_bank.cc
 build six_op_library $blob/libraries/six_op_library.cc \

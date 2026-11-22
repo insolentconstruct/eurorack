@@ -106,7 +106,7 @@ extern const int16_t wav_integrated_waves[];
 #define LUT_LPC_EXCITATION_PULSE 0
 #define LUT_LPC_EXCITATION_PULSE_SIZE 640
 #define WAV_INTEGRATED_WAVES 0
-#define WAV_INTEGRATED_WAVES_SIZE 25344
+#define WAV_INTEGRATED_WAVES_SIZE 25476
 
 }  // namespace plaits
 
