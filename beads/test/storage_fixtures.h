@@ -134,9 +134,16 @@ bool HoldsCalibration(uint32_t base, const PersistentData& data) {
       !memcmp(chunk + 8, data.adc_calibration, sizeof(data.adc_calibration));
 }
 
+PersistentData Factory();
+
+// Within 25% of the factory values, as the firmware checks it.
+bool Plausible(const PersistentData& data) {
+  return Settings::CalibrationPlausible(data, Factory());
+}
+
 // Calibration safety: after every erase or program, one of the two sectors
-// holds a valid copy of the calibration from before the operation, or of the
-// one it saves.
+// holds a valid, usable copy of the calibration from before the operation,
+// or of the one it saves.
 void CheckKept() {
   if (kept.armed &&
       !HoldsCalibration(kSector, kept.before) &&
@@ -148,7 +155,8 @@ void CheckKept() {
 }
 
 void Keep(const PersistentData& before, const PersistentData& after) {
-  kept.armed = true;
+  kept.armed = Plausible(before) && Plausible(after);
+  kept.lost = kept.armed ? 0 : 1;  // A fixture that can't be checked fails.
   kept.before = before;
   kept.after = after;
   TestFlash().after_operation = &CheckKept;

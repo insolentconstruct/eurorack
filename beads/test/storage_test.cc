@@ -175,11 +175,8 @@ void TestCalibrationFromMirror() {
   {
     PersistentData wild = calibration;
     wild.adc_calibration[CV_ADC_CHANNEL_PITCH].scale *= 1.5f;
-    Setup(wild, 1);
-    uint8_t chunk[kCalibrationChunk];
-    Peek(chunk, kSector, sizeof(chunk));
     const Saved saved = Setup(calibration, 5);
-    Poke(kSector, chunk, sizeof(chunk));
+    PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
     Settings s;
     CHECK(s.Init(false) && !s.write_locked());
     CHECK(SameCalibration(s, calibration));
@@ -187,7 +184,9 @@ void TestCalibrationFromMirror() {
     CHECK(SameOptions(s, saved));
     CHECK(StockLoads(calibration, saved.state));
     // Out of range in both copies: loaded as stock loads it.
-    Setup(wild, 5);
+    Setup(calibration, 5);
+    PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+    PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
     Take(&snapshot);
     Settings both;
     CHECK(both.Init(false) && !both.write_locked());
@@ -205,11 +204,8 @@ void TestRestoredCalibrationChoice() {
   PersistentData wild = calibration;
   wild.adc_calibration[CV_ADC_CHANNEL_PITCH].scale *= 1.5f;
   for (int unreadable = 0; unreadable < 2; ++unreadable) {
-    Setup(wild, 1);
-    uint8_t chunk[kCalibrationChunk];
-    Peek(chunk, kSector, sizeof(chunk));
     const Saved saved = Setup(calibration, 5);
-    Poke(kSector, chunk, sizeof(chunk));
+    PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
     if (unreadable) {
       TestFlashDamage(StateChunk(1));
     } else {
@@ -226,6 +222,7 @@ void TestRestoredCalibrationChoice() {
     static uint8_t now[kSectorSize];
     Peek(now, kMirror, kSectorSize);
     CHECK(!memcmp(now, mirror, kSectorSize));
+    uint8_t chunk[kCalibrationChunk];
     Peek(chunk, kSector, sizeof(chunk));
     CHECK(!memcmp(chunk, mirror, sizeof(chunk)));
     CHECK(StockLoads(calibration, defaults.state));
@@ -242,7 +239,11 @@ void TestCalibrationLost() {
     for (int damage = 0; damage < 2; ++damage) {
       PersistentData wild = calibration;
       wild.adc_calibration[CV_ADC_CHANNEL_SHAPE].scale *= 1.5f;
-      Setup(mirror == 2 ? wild : calibration, 5);
+      Setup(calibration, 5);
+      if (mirror == 2) {
+        PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+        PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
+      }
       if (damage == 0) {
         TestFlashDamage(kSector + 96);
       } else {
@@ -967,11 +968,8 @@ void TestProfileLocks() {
         if (storage == 7) {
           PersistentData wild = calibration;
           wild.adc_calibration[0].scale = 0.0f;
-          Setup(wild, 2);
-          uint8_t chunk[kCalibrationChunk];
-          Peek(chunk, kSector, sizeof(chunk));
           Setup(calibration, 2);
-          Poke(kSector, chunk, sizeof(chunk));
+          PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
         }
         Take(&snapshot);
         TestFlashFailures() = fail ? 1000 : 0;

@@ -484,6 +484,13 @@ template<
     typename RecordData>
 void ChunkStorage<sector_index, mirror_sector_index,
     PersistentData, StateData, RecordData>::RewriteSector() {
+  // A calibration out of range never replaces a usable one: that one stays.
+  PersistentData data;
+  if (!Usable(*persistent_data_) && \
+      ((ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data)) ||
+          (ReadChunk(MIRROR_BASE, &data) == CHUNK_VALID && Usable(data)))) {
+    *persistent_data_ = data;
+  }
   HAL_FLASH_Unlock();
   if (MirrorPersistentData() && \
       EraseSector(sector_index, FLASH_STORAGE_BASE) && \

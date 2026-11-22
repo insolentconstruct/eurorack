@@ -160,6 +160,9 @@ bool Settings::Init(bool recovery_mode,
   if (!chunk_storage_.record_found()) {
     stored_record_.version = 0;  // The first save writes one.
   }
+  if (recovery_mode && !profile_locked_) {
+    record_ = default_record;  // SEED at power-up resets the options.
+  }
   
   // Restore the module's calibration before writing; keep loaded states.
   // A worse calibration must never replace the mirror, and a module's own
@@ -180,7 +183,6 @@ bool Settings::Init(bool recovery_mode,
     persistent_data_ = mirror;
     if (recovery_mode && !profile_locked_) {
       stored_state_ = defaults;
-      record_ = default_record;
     }
     status = STORAGE_RESTORED;
   } else if (lost) {
@@ -205,7 +207,6 @@ bool Settings::Init(bool recovery_mode,
   } else {
     if (recovery_mode && status == STORAGE_OK && !profile_locked_) {
       stored_state_ = defaults;
-      record_ = default_record;
       chunk_storage_.Recover(&persistent_data_, &stored_state_);
     }
   }
@@ -221,7 +222,7 @@ bool Settings::Init(bool recovery_mode,
   NormalizeOptions();
   ApplyProfile();
   if (recovery_mode && !profile_locked_) {
-    SaveOptions();  // SEED at power-up resets the options too.
+    SaveOptions();
   }
   // A newly installed profile starts in its quality once; a frozen recording
   // returning from flash keeps the quality it was made in.

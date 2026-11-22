@@ -306,7 +306,9 @@ void TestCompactionGuards() {
     static uint8_t mirror[kSectorSize];
     if (fault == 4) {
       // Out of range in both copies, and in use.
-      Setup(wild, 5);
+      Setup(kCalibration, 5);
+      PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+      PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
       CHECK(s.Init(false) && SameCalibration(s, wild));
       const uint8_t junk[32] = { 0 };
       Poke(RecordChunk(s.chunk_storage_.next_record_index_), junk, 32);
@@ -453,6 +455,84 @@ void TestRecoveryResetsOptions() {
     Settings loaded;
     CHECK(loaded.Init(false) && SameOptions(loaded, defaults));
   }
+}
+
+// A calibration out of range never replaces a usable one: the save keeps
+// the stored calibration, in RAM too, and the states go on saving.
+void TestImplausibleSaveKept() {
+  test_checker.Start("TestImplausibleSaveKept");
+  PersistentData wild = kCalibration;
+  wild.adc_calibration[CV_ADC_CHANNEL_SIZE].offset *= 2.0f;
+  for (int cut = 0; cut <= 13; ++cut) {
+    Setup(kCalibration, 5);
+    Settings s;
+    CHECK(s.Init(false));
+    *s.mutable_persistent_data() = wild;
+    Keep(kCalibration, kCalibration);
+    TestFlashBudget() = cut;
+    s.SavePersistentData();
+    TestFlashBudget() = -1;
+    CHECK(Release());
+    CHECK(SameCalibration(s, kCalibration));
+    s.mutable_state()->gain = 33;
+    s.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false) && SameCalibration(loaded, kCalibration));
+    CHECK(loaded.state().gain == 33);
+  }
+}
+
+// SEED at power-up over a settings sector without states, blank or with the
+// calibration alone: the options reset too.
+void TestRecoveryRestoredStorage() {
+  test_checker.Start("TestRecoveryRestoredStorage");
+  const Saved defaults = Defaults();
+  for (int blank = 0; blank < 2; ++blank) {
+    Setup(kCalibration, 5);
+    Blank(blank ? kSector : StateChunk(1),
+        blank ? kSectorSize : kSectorSize - kCalibrationChunk);
+    Settings reset;
+    Keep(kCalibration, kCalibration);
+    CHECK(reset.Init(true));
+    CHECK(Release());
+    CHECK(SameOptions(reset, defaults) && SameCalibration(reset, kCalibration));
+    Settings loaded;
+    CHECK(loaded.Init(false) && SameOptions(loaded, defaults));
+  }
+}
+
+// The record refused after a mirror rewrite: the calibration save goes on,
+// and the next options save puts the record back.
+int refused_after = -1;
+
+void RefuseOnce() {
+  if (refused_after > 0 && --refused_after == 0) {
+    TestFlashFailures() = kFlashAttempts;  // Every retry of its first word.
+  }
+  CheckKept();
+}
+
+void TestRecordAppendRefused() {
+  test_checker.Start("TestRecordAppendRefused");
+  const PersistentData recalibrated = Calibration(-0.1f);
+  const Saved saved = Setup(kCalibration, 5);
+  Settings s;
+  CHECK(s.Init(false));
+  memcpy(s.mutable_persistent_data()->adc_calibration,
+      recalibrated.adc_calibration, sizeof(recalibrated.adc_calibration));
+  Keep(kCalibration, recalibrated);
+  TestFlash().after_operation = &RefuseOnce;
+  refused_after = 5;  // Mirror erase and calibration; its record refused.
+  s.SavePersistentData();
+  CHECK(Release());
+  CHECK(s.chunk_storage_.next_state_chunk_index_ == 2);
+  CHECK(s.chunk_storage_.record_pending());
+  CHECK(HoldsCalibration(kSector, recalibrated) && MirrorHolds(recalibrated));
+  s.SaveOptions();
+  CHECK(!s.chunk_storage_.record_pending());
+  Settings loaded;
+  CHECK(loaded.Init(false) && SameOptions(loaded, saved));
+  CHECK(SameCalibration(loaded, recalibrated));
 }
 
 // Saves refused for a low supply keep the options in RAM; the next save
@@ -822,6 +902,9 @@ int main() {
   TestFactoryCaliGuard();
   TestRule6ImplausibleSector15();
   TestRecoveryResetsOptions();
+  TestImplausibleSaveKept();
+  TestRecoveryRestoredStorage();
+  TestRecordAppendRefused();
   TestRecordLowSupply();
   TestGesturePersistence();
   TestEarlierFirmware();
