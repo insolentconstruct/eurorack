@@ -1,3 +1,4 @@
+// Copyright 2015 Emilie Gillet.
 // Copyright 2026 Insolent Construct.
 //
 // Author: Insolent Construct (insolentconstruct@gmail.com)
