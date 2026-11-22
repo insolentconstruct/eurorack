@@ -2731,6 +2731,62 @@ void TestCalibrationStepOnRelease() {
   CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
 }
 
+// Each channel's scale and offset, to within the CV filter's settling.
+bool SameCalibration(const PersistentData& a, const PersistentData& b) {
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    if (fabsf(a.adc_calibration[i].scale - b.adc_calibration[i].scale) >
+            1.0e-3f ||
+        fabsf(a.adc_calibration[i].offset - b.adc_calibration[i].offset) >
+            1.0e-3f) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// A recalibration out of range is not saved: the stored calibration stays,
+// in use too, and all LEDs blink as for a rejected step.
+void TestRejectedCalibrationCue() {
+  test_checker.Start("TestRejectedCalibrationCue");
+  for (int wild = 0; wild < 2; ++wild) {
+    Rig r(false, false);
+    // DENSITY CV reading 0.2 of the ADC: an offset near the factory one.
+    r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+    r.cv[CV_ADC_CHANNEL_DENSITY] = 13107;
+    r.Settle();
+    const PersistentData stored = settings.persistent_data();
+    // A DENSITY step whose scale passes, as a calibration with 1 V and 3 V.
+    const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
+    calibrator.calibrator_[1].Acquire(0, u + 0.2f, 0.2f);
+    PersistentData attempt = stored;
+    attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
+    attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+    if (wild) {
+      settings.mutable_persistent_data()->adc_calibration[
+          CV_ADC_CHANNEL_TIME].offset *= 3.0f;
+    }
+    CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
+    // The last event over a second ago, as after a slow flash rewrite.
+    for (int i = 0; i < 400 && ui.queue_.idle_time() <= 1500; ++i) {
+      r.Advance(10);
+    }
+    CHECK(ui.queue_.idle_time() > 1500);
+    ui.mode_ = Ui::MODE_CALIBRATION_4;
+    ui.NextCalibrationStep();
+    CHECK(ui.mode_ == (wild ? Ui::MODE_PANIC : Ui::MODE_NORMAL));
+    CHECK(SameCalibration(settings.persistent_data(), wild ? stored : attempt));
+    if (wild) {
+      r.Advance(500);
+      CHECK(ui.mode_ == Ui::MODE_PANIC);
+      r.Advance(1000);
+      CHECK(ui.mode_ == Ui::MODE_NORMAL);
+    }
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(SameCalibration(loaded.persistent_data(), wild ? stored : attempt));
+  }
+}
+
 // [A]+SEED as a Processor toggle takes the options page's path: it saves,
 // fades and swaps the engine both ways, clearing the recording for spectral.
 void TestProcessorToggle() {
@@ -2844,5 +2900,6 @@ int main() {
   TestEngineChangeWhileFrozen();
   TestProcessorToggle();
   TestCalibrationStepOnRelease();
+  TestRejectedCalibrationCue();
   return test_checker.failures() ? 1 : 0;
 }
