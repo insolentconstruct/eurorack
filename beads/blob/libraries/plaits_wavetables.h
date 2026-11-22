@@ -25,12 +25,23 @@
 //
 // -----------------------------------------------------------------------------
 //
-// A library call: memcpy is not an export (the link fails).
+// Plaits' integrated wavetables as a data library: its ID and exports.
 
-// Expect: undefined reference to .memcpy
+#ifndef BEADS_BLOB_LIBRARIES_PLAITS_WAVETABLES_H_
+#define BEADS_BLOB_LIBRARIES_PLAITS_WAVETABLES_H_
 
-#include "beads/test/blob_gate/common.h"
+#include "stmlib/stmlib.h"
 
-RENDER {
-  memcpy(out, aux, size * sizeof(float) + (p->trigger & 3));
-}
+namespace beads {
+
+// Permanent ID (profile-features.json).
+const uint32_t kPlaitsWavetablesLibrary = 1;
+
+enum PlaitsWavetablesExport {
+  PLAITS_WAVETABLES_WAVES,  // plaits::wav_integrated_waves, 25,344 samples
+  PLAITS_WAVETABLES_EXPORT_LAST
+};
+
+}  // namespace beads
+
+#endif  // BEADS_BLOB_LIBRARIES_PLAITS_WAVETABLES_H_

@@ -24,7 +24,8 @@
 
 	One blob: header, code and constants, then the imports, at blob_base
 	(--defsym). Imports resolve only to the services' fixed exports; anything
-	else in an output section other than .blob fails the gate.
+	else in an output section other than .blob (and a library's
+	.blob_exports) fails the gate.
 */
 
 INCLUDE beads/blob/services_v2.ld
@@ -42,7 +43,8 @@ _ZN6plaits18lut_ws_inverse_sinE = PLAITS_BLOB_LUT_WS_INVERSE_SIN;
 _ZN6plaits13lut_ws_linearE = PLAITS_BLOB_LUT_WS_LINEAR;
 _ZN6plaits11lut_ws_bumpE = PLAITS_BLOB_LUT_WS_BUMP;
 
-ENTRY(plaits_blob_render)
+/* No entry symbol: a library has no render. The header, entries and export
+   table are kept by name. */
 
 SECTIONS
 {
@@ -63,5 +65,7 @@ SECTIONS
 		*(.got)
 		plaits_blob_got_end = .;
 	}
+	/* A library's export table: absolute words the packer turns into offsets. */
+	.blob_exports : { KEEP(*(.blob_exports)) }
 	/DISCARD/ : { *(.comment) }
 }

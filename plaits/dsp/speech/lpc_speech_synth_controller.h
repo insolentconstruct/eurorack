@@ -115,10 +115,17 @@ class LPCSpeechSynthWordBank {
   void Decode(int bank, stmlib::BufferAllocator* allocator);
 
   // All word banks copy frames from these decoded banks instead of decoding.
+#ifdef PLAITS_BLOB
+  // A blob has no writable statics: each bank keeps the library's.
+  inline void set_decoded_banks(const LPCSpeechSynthWordBank* decoded_banks) {
+    decoded_banks_ = decoded_banks;
+  }
+#else
   static inline void set_decoded_banks(
       const LPCSpeechSynthWordBank* decoded_banks) {
     decoded_banks_ = decoded_banks;
   }
+#endif  // PLAITS_BLOB
   
   inline bool loading() const { return loading_bank_ != loaded_bank_; }
   inline int loading_bank() const { return loading_bank_; }
@@ -170,7 +177,11 @@ class LPCSpeechSynthWordBank {
   static const int8_t k8_lut_[8];
   static const int8_t k9_lut_[8];
 
+#ifdef PLAITS_BLOB
+  const LPCSpeechSynthWordBank* decoded_banks_;
+#else
   static const LPCSpeechSynthWordBank* decoded_banks_;
+#endif  // PLAITS_BLOB
 };
 
 class LPCSpeechSynthController {

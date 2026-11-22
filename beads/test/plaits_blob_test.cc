@@ -31,6 +31,8 @@
 #include <cstring>
 
 #include "beads/blob/plaits_blob.h"
+#include "beads/blob/plaits_blob_engine.h"
+#include "beads/blob/plaits_libraries.h"
 #include "beads/blob/plaits_region.h"
 #include "beads/dsp/plaits_voice.h"
 #include "beads/profile.h"
@@ -277,7 +279,8 @@ void TestRefusals() {
     { 1, 64, PLAITS_BLOB_ERROR_HEADER },
     { 3, kPlaitsBlobServicesVersion2 + 1, PLAITS_BLOB_ERROR_SERVICES },
     { 3, 0, PLAITS_BLOB_ERROR_SERVICES },
-    { 4, kPlaitsBlobKindLibrary, PLAITS_BLOB_ERROR_KIND },
+    { 4, kPlaitsBlobKindLibrary, PLAITS_BLOB_ERROR_HEADER },
+    { 4, 3, PLAITS_BLOB_ERROR_KIND },
     { 4, 0, PLAITS_BLOB_ERROR_KIND },
     { 5, 256, PLAITS_BLOB_ERROR_HEADER },
     { 6, 0, PLAITS_BLOB_ERROR_HEADER },
@@ -288,8 +291,9 @@ void TestRefusals() {
     { 9, kPlaitsBlobMaxArenaSize + 1, PLAITS_BLOB_ERROR_RAM },
     { 10, 0x41, PLAITS_BLOB_ERROR_LAYOUT },
     { 13, kGotOffset + 2, PLAITS_BLOB_ERROR_LAYOUT },
-    { 15, 128, PLAITS_BLOB_ERROR_LIBRARY },
-    { 16, 1, PLAITS_BLOB_ERROR_LIBRARY },
+    { 15, 128, PLAITS_BLOB_ERROR_LAYOUT },
+    { 16, 1, PLAITS_BLOB_ERROR_LAYOUT },
+    { 16, kMaxPlaitsBlobDependencies + 1, PLAITS_BLOB_ERROR_LAYOUT },
     { 20, 1, PLAITS_BLOB_ERROR_HEADER },
     { 23, 1, PLAITS_BLOB_ERROR_HEADER },
   };
@@ -412,7 +416,7 @@ const uint32_t kPlaitsOffset =
 const uint32_t kFirstBlob = 64;
 const uint32_t kSecondBlob = 320;
 const uint32_t kPlaitsSize = kSecondBlob + kBlobSize + 4;
-const uint32_t kFlashSize = kPlaitsOffset + kPlaitsSize + 512;
+const uint32_t kFlashSize = kPlaitsOffset + kPlaitsSize + 2048;
 
 uint8_t* flash;
 uint8_t blob_digests[2][kPlaitsBlobDigestSize];
@@ -740,7 +744,7 @@ void TestPlaitsTable() {
   } faults[] = {
     { -1, 5, kMaxPlaitsRegionBlobs + 1, PLAITS_BLOB_ERROR_TABLE },
     { -1, 5, 40, PLAITS_BLOB_ERROR_TABLE },
-    { 0, 0, kPlaitsBlobKindLibrary | 2 << 8, PLAITS_BLOB_ERROR_LIBRARY },
+    { 0, 0, kPlaitsBlobKindLibrary | 2 << 8, PLAITS_BLOB_ERROR_KIND },
     { 0, 0, 0 | 2 << 8, PLAITS_BLOB_ERROR_TABLE },
     { 0, 0, kPlaitsBlobKindModel | 2 << 8 | 1 << 16,
       PLAITS_BLOB_ERROR_TABLE },
@@ -807,6 +811,460 @@ void TestPlaitsTable() {
   CHECK(!plaits_region.blob(2));
 }
 
+// A version 2 blob with one ID and no imports: a model's entries, or a
+// library's RAM, scratch and two exports; then its dependencies. Returns its
+// size.
+const uint32_t kDependentGot = 200;
+const uint32_t kLibraryRam = 256;
+const uint32_t kLibraryScratch = 64;
+
+uint32_t MakeBlob(
+    uint8_t* b,
+    uint32_t kind,
+    uint32_t id,
+    const PlaitsBlobDependency* dependencies,
+    uint32_t num_dependencies,
+    uint8_t* digest) {
+  PlaitsBlobHeader2 h;
+  memset(&h, 0, sizeof(h));
+  h.magic = kPlaitsBlobMagic;
+  h.header_size = sizeof(h);
+  h.abi = kPlaitsBlobAbi2;
+  h.services_version = kPlaitsBlobServicesVersion2;
+  h.kind = kind;
+  h.first_id = id;
+  h.num_ids = 1;
+  h.got_offset = kDependentGot;
+  uint32_t next = kDependentGot;
+  if (kind == kPlaitsBlobKindLibrary) {
+    h.state_size = kLibraryRam;
+    h.arena_size = kLibraryScratch;
+    h.reset_offset = next;
+    h.render_offset = 2;
+    Write32(b + next, 0x61);
+    Write32(b + next + 4, 0x80);
+    next += 8;
+  } else {
+    h.state_size = 64;
+    h.init_offset = 0x61;
+    h.reset_offset = 0x79;
+    h.render_offset = 0x7d;
+    h.out_gain = 1.0f;
+  }
+  if (num_dependencies) {
+    h.dependencies_offset = next;
+    h.num_dependencies = num_dependencies;
+    memcpy(b + next, dependencies,
+        num_dependencies * sizeof(PlaitsBlobDependency));
+    next += num_dependencies * sizeof(PlaitsBlobDependency);
+  }
+  h.size = next + 4;
+  memcpy(b, &h, sizeof(h));
+  for (uint32_t i = sizeof(h); i < kDependentGot; ++i) {
+    b[i] = i * (id + kind);
+  }
+  Write32(b + h.size - 4, Profile::Crc32(b, h.size - 4));
+  PlaitsBlob::Sha256(b, h.size, digest);
+  return h.size;
+}
+
+PlaitsBlobDependency Needs(uint32_t id, const uint8_t* digest) {
+  PlaitsBlobDependency d;
+  d.id = id;
+  memcpy(d.digest, digest, sizeof(d.digest));
+  return d;
+}
+
+void TestLibraryRefusals() {
+  test_checker.Start("TestLibraryRefusals");
+  Services();
+  uint8_t* b = region + 64;
+  const Fault faults[] = {
+    { 6, 2, PLAITS_BLOB_ERROR_HEADER },
+    { 5, 0, PLAITS_BLOB_ERROR_HEADER },
+    { 17, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 18, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 19, 1, PLAITS_BLOB_ERROR_HEADER },
+    { 12, 0, PLAITS_BLOB_ERROR_LAYOUT },
+    { 12, kMaxPlaitsLibraryExports + 1, PLAITS_BLOB_ERROR_LAYOUT },
+    { 12, 3, PLAITS_BLOB_ERROR_LAYOUT },
+    { 11, kDependentGot - 4, PLAITS_BLOB_ERROR_LAYOUT },
+    { 11, kDependentGot + 2, PLAITS_BLOB_ERROR_LAYOUT },
+    { 13, kDependentGot + 4, PLAITS_BLOB_ERROR_LAYOUT },
+    { 10, 0x60, PLAITS_BLOB_ERROR_LAYOUT },
+    { 10, kDependentGot + 1, PLAITS_BLOB_ERROR_LAYOUT },
+    { 10, 0x61, PLAITS_BLOB_OK },
+    { 8, kPlaitsBlobMaxLibraryRamSize, PLAITS_BLOB_OK },
+    { 8, kPlaitsBlobMaxLibraryRamSize + 1, PLAITS_BLOB_ERROR_RAM },
+    { 9, kPlaitsBlobMaxArenaSize + 1, PLAITS_BLOB_ERROR_RAM },
+    { 16, 1, PLAITS_BLOB_ERROR_LAYOUT },
+    { 15, kDependentGot + 8, PLAITS_BLOB_ERROR_LAYOUT },
+  };
+  for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
+    memset(region, 0, sizeof(region));
+    const uint32_t size = MakeBlob(
+        b, kPlaitsBlobKindLibrary, 3, NULL, 0, digest);
+    Write32(b + 4 * faults[i].field, faults[i].value);
+    Seal(b, true, size);
+    const PlaitsBlobStatus status = Check(b);
+    if (status != faults[i].expected) {
+      printf("ERROR: library field %d = 0x%x gave %d\n",
+          faults[i].field, faults[i].value, status);
+    }
+    CHECK(status == faults[i].expected);
+  }
+
+  // Export offsets name code or constants: not the header, not the GOT.
+  const uint32_t exports[3] = { 0x20, kDependentGot, 0x60 };
+  const PlaitsBlobStatus expected[3] = {
+    PLAITS_BLOB_ERROR_LAYOUT, PLAITS_BLOB_ERROR_LAYOUT, PLAITS_BLOB_OK
+  };
+  for (int i = 0; i < 3; ++i) {
+    memset(region, 0, sizeof(region));
+    const uint32_t size = MakeBlob(
+        b, kPlaitsBlobKindLibrary, 3, NULL, 0, digest);
+    Write32(b + kDependentGot + 4, exports[i]);
+    Seal(b, true, size);
+    CHECK(Check(b) == expected[i]);
+  }
+
+  // A dependency list ends at the CRC and names libraries.
+  memset(region, 0, sizeof(region));
+  uint8_t other[kPlaitsBlobDigestSize];
+  memset(other, 7, sizeof(other));
+  PlaitsBlobDependency d = Needs(1, other);
+  uint32_t size = MakeBlob(b, kPlaitsBlobKindModel, 13, &d, 1, digest);
+  CHECK(size == kDependentGot + sizeof(d) + 4);
+  CHECK(Check(b) == PLAITS_BLOB_OK);
+  d.id = 0;
+  MakeBlob(b, kPlaitsBlobKindModel, 13, &d, 1, digest);
+  CHECK(Check(b) == PLAITS_BLOB_ERROR_LIBRARY);
+  d.id = 1;
+  size = MakeBlob(b, kPlaitsBlobKindModel, 13, &d, 1, digest);
+  Write32(b + 60, kDependentGot + 4);
+  Seal(b, true, size);
+  CHECK(Check(b) == PLAITS_BLOB_ERROR_LAYOUT);
+  // A version 1 header has no dependencies or libraries.
+  PlaitsBlobHeader* h1 = Build(b);
+  h1->state_size = 36;
+  Seal(b, true);
+  CHECK(Check(b) == PLAITS_BLOB_OK);
+}
+
+// A PLTS section of blobs at 32-byte offsets in table order; kinds[i] is the
+// entry's kind. Returns the directory entry.
+const size_t kMaxTestBlobs = kMaxPlaitsLibraries + 2;
+uint8_t test_digests[kMaxTestBlobs][kPlaitsBlobDigestSize];
+
+struct TestBlob {
+  uint32_t kind;
+  uint32_t id;
+  PlaitsBlobDependency dependencies[2];
+  uint32_t num_dependencies;
+};
+
+PlaitsDirectoryEntry WritePlaits(
+    const TestBlob* blobs,
+    size_t count,
+    const uint32_t* entry_kinds) {
+  uint8_t* p = flash + kPlaitsOffset;
+  memset(p, 0xff, kFlashSize - kPlaitsOffset);
+  uint32_t offset = 32 + 16 * count;
+  for (size_t i = 0; i < count; ++i) {
+    offset = (offset + 31) / 32 * 32;
+    const uint32_t size = MakeBlob(
+        p + offset, blobs[i].kind, blobs[i].id, blobs[i].dependencies,
+        blobs[i].num_dependencies, test_digests[i]);
+    const uint32_t kind = entry_kinds ? entry_kinds[i] : blobs[i].kind;
+    SetEntry(i, 0, kind | blobs[i].id << 8);
+    SetEntry(i, 1, offset);
+    SetEntry(i, 2, size);
+    SetEntry(i, 3, Read32(p + offset + size - 4));
+    offset += size;
+  }
+  const uint32_t size = offset + 4;
+  SectionHeader(p, kPlaitsSectionPlaits, size, count);
+  PlaitsDirectoryEntry e;
+  e.kind = kPlaitsSectionPlaits;
+  e.offset = kPlaitsOffset;
+  e.size = size;
+  e.crc = SealSection(p);
+  return e;
+}
+
+const size_t kTestLibraryRam = 2 * 1024;
+
+uint32_t ReadPlaits(
+    const TestBlob* blobs,
+    size_t count,
+    const uint32_t* entry_kinds = NULL,
+    size_t ram = kTestLibraryRam,
+    size_t scratch = kLibraryScratch) {
+  PlaitsDirectoryEntry e = WritePlaits(blobs, count, entry_kinds);
+  plaits_region.set_library_ram(ram, scratch);
+  plaits_region.Read(
+      flash, flash + kFlashSize, kRelease, &e, 1, defaults, 3,
+      &plaits_blob_services, test_digests, count);
+  return Status(PLAITS_SECTION_PLAITS);
+}
+
+uint32_t BlobStatus(size_t i) {
+  return plaits_region.identity().blob_status[i];
+}
+
+void TestDependencies() {
+  test_checker.Start("TestDependencies");
+  uint8_t lib1[kPlaitsBlobDigestSize];
+  uint8_t lib3[kPlaitsBlobDigestSize];
+  uint8_t scratch[256];
+  // Each library's own digest, as its dependents record it.
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 1, NULL, 0, lib1);
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 3, NULL, 0, lib3);
+
+  // A library, a model that needs it and one that does not.
+  TestBlob ok[3] = {
+    { kPlaitsBlobKindLibrary, 3, { }, 0 },
+    { kPlaitsBlobKindModel, 15, { Needs(3, lib3) }, 1 },
+    { kPlaitsBlobKindModel, 43, { }, 0 },
+  };
+  CHECK(ReadPlaits(ok, 3) == PLAITS_BLOB_OK);
+  CHECK(plaits_region.num_libraries() == 1);
+  CHECK(plaits_region.library_id(0) == 3);
+  CHECK(plaits_region.library(0) == flash + kPlaitsOffset + 96);
+  CHECK(!plaits_region.library(1));
+  CHECK(plaits_region.blob(15) && plaits_region.blob(43));
+  CHECK(!plaits_region.blob(3));
+
+  // Missing: the library is not in the section.
+  CHECK(ReadPlaits(ok + 1, 2) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_OK);
+  CHECK(!plaits_region.blob(15) && !plaits_region.blob(43));
+  CHECK(plaits_region.num_libraries() == 0);
+
+  // Wrong digest: built against another build of the library.
+  TestBlob wrong[2] = {
+    { kPlaitsBlobKindLibrary, 3, { }, 0 },
+    { kPlaitsBlobKindModel, 15, { Needs(3, lib1) }, 1 },
+  };
+  CHECK(ReadPlaits(wrong, 2) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_OK);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  // Another ID with the right digest is not the library either.
+  wrong[1].dependencies[0] = Needs(4, lib3);
+  CHECK(ReadPlaits(wrong, 2) == PLAITS_BLOB_ERROR_DEPENDENCY);
+
+  // Wrong version: a library for newer services is refused, then its users.
+  PlaitsDirectoryEntry e = WritePlaits(ok, 3, NULL);
+  uint8_t* library = flash + kPlaitsOffset + 96;
+  Write32(library + 12, kPlaitsBlobServicesVersion2 + 1);
+  const uint32_t library_size = Read32(library + 28);
+  Write32(library + library_size - 4,
+      Profile::Crc32(library, library_size - 4));
+  PlaitsBlob::Sha256(library, library_size, test_digests[0]);
+  SetEntry(0, 3, Read32(library + library_size - 4));
+  e.crc = SealSection(flash + kPlaitsOffset);
+  plaits_region.Read(
+      flash, flash + kFlashSize, kRelease, &e, 1, defaults, 3,
+      &plaits_blob_services, test_digests, 3);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_ERROR_SERVICES);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_SERVICES);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(2) == PLAITS_BLOB_OK);
+
+  // A library this firmware does not list fails; so do its users.
+  e = WritePlaits(ok, 3, NULL);
+  plaits_region.Read(
+      flash, flash + kFlashSize, kRelease, &e, 1, defaults, 3,
+      &plaits_blob_services, test_digests + 1, 2);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_DIGEST);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_DEPENDENCY);
+
+  // A chain: library 6 needs library 1, which comes first.
+  uint8_t lib6[kPlaitsBlobDigestSize];
+  PlaitsBlobDependency needs_1 = Needs(1, lib1);
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 6, &needs_1, 1, lib6);
+  TestBlob chain[4] = {
+    { kPlaitsBlobKindLibrary, 1, { }, 0 },
+    { kPlaitsBlobKindLibrary, 6, { Needs(1, lib1) }, 1 },
+    { kPlaitsBlobKindModel, 13, { Needs(1, lib1) }, 1 },
+    { kPlaitsBlobKindModel, 90, { Needs(6, lib6), Needs(1, lib1) }, 2 },
+  };
+  CHECK(ReadPlaits(chain, 4) == PLAITS_BLOB_OK);
+  CHECK(plaits_region.num_libraries() == 2);
+
+  // A cycle: library 2 needs library 5, listed after it, which needs 2.
+  uint8_t lib2[kPlaitsBlobDigestSize];
+  uint8_t lib5[kPlaitsBlobDigestSize];
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 2, NULL, 0, lib2);
+  PlaitsBlobDependency needs_2 = Needs(2, lib2);
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 5, &needs_2, 1, lib5);
+  TestBlob cycle[2] = {
+    { kPlaitsBlobKindLibrary, 2, { Needs(5, lib5) }, 1 },
+    { kPlaitsBlobKindLibrary, 5, { Needs(2, lib2) }, 1 },
+  };
+  CHECK(ReadPlaits(cycle, 2) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  // Nor a later library, even the right build of one.
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 5, NULL, 0, lib5);
+  TestBlob forward[2] = {
+    { kPlaitsBlobKindLibrary, 2, { Needs(5, lib5) }, 1 },
+    { kPlaitsBlobKindLibrary, 5, { }, 0 },
+  };
+  CHECK(ReadPlaits(forward, 2) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_OK);
+  // A library may not need itself.
+  TestBlob itself[1] = {
+    { kPlaitsBlobKindLibrary, 3, { Needs(3, lib3) }, 1 },
+  };
+  CHECK(ReadPlaits(itself, 1) == PLAITS_BLOB_ERROR_DEPENDENCY);
+
+  // Without its RAM: the records and each library's RAM, on 32 bytes.
+  const size_t need = PlaitsLibraryRamAlign(sizeof(PlaitsBlobLibrary)) +
+      kLibraryRam;
+  CHECK(ReadPlaits(ok, 3, NULL, need) == PLAITS_BLOB_OK);
+  CHECK(ReadPlaits(ok, 3, NULL, need - 1) == PLAITS_BLOB_ERROR_RAM);
+  CHECK(plaits_region.num_libraries() == 0);
+  CHECK(BlobStatus(0) == PLAITS_BLOB_ERROR_RAM);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_DEPENDENCY);
+  CHECK(ReadPlaits(ok, 3, NULL, 0) == PLAITS_BLOB_ERROR_RAM);
+  CHECK(ReadPlaits(ok, 3, NULL, need, kLibraryScratch - 1) ==
+      PLAITS_BLOB_ERROR_RAM);
+  // Two libraries: two records and both RAMs.
+  const size_t need_2 = PlaitsLibraryRamAlign(2 * sizeof(PlaitsBlobLibrary)) +
+      2 * kLibraryRam;
+  CHECK(ReadPlaits(chain, 4, NULL, need_2) == PLAITS_BLOB_OK);
+  CHECK(ReadPlaits(chain, 4, NULL, need_2 - 1) == PLAITS_BLOB_ERROR_RAM);
+
+  // Model IDs start again after the libraries.
+  TestBlob low[2] = {
+    { kPlaitsBlobKindLibrary, 3, { }, 0 },
+    { kPlaitsBlobKindModel, 2, { }, 0 },
+  };
+  CHECK(ReadPlaits(low, 2) == PLAITS_BLOB_OK);
+
+  // Libraries come first, have an ID, and number at most eight.
+  TestBlob late[2] = {
+    { kPlaitsBlobKindModel, 2, { }, 0 },
+    { kPlaitsBlobKindLibrary, 3, { }, 0 },
+  };
+  CHECK(ReadPlaits(late, 2) == PLAITS_BLOB_ERROR_TABLE);
+  TestBlob zero[1] = { { kPlaitsBlobKindLibrary, 0, { }, 0 } };
+  CHECK(ReadPlaits(zero, 1) == PLAITS_BLOB_ERROR_TABLE);
+  TestBlob many[kMaxPlaitsLibraries + 1];
+  for (size_t i = 0; i <= kMaxPlaitsLibraries; ++i) {
+    many[i].kind = kPlaitsBlobKindLibrary;
+    many[i].id = i + 1;
+    many[i].num_dependencies = 0;
+  }
+  CHECK(ReadPlaits(many, kMaxPlaitsLibraries, NULL, 8 * 1024) ==
+      PLAITS_BLOB_OK);
+  CHECK(ReadPlaits(many, kMaxPlaitsLibraries + 1, NULL, 8 * 1024) ==
+      PLAITS_BLOB_ERROR_TABLE);
+  // An entry's kind must be its blob's.
+  const uint32_t swapped[3] = {
+    kPlaitsBlobKindLibrary, kPlaitsBlobKindLibrary, kPlaitsBlobKindModel
+  };
+  CHECK(ReadPlaits(ok, 3, swapped) == PLAITS_BLOB_ERROR_KIND);
+  CHECK(BlobStatus(1) == PLAITS_BLOB_ERROR_KIND);
+  plaits_region.set_library_ram(0, 0);
+}
+
+void TestLibraries() {
+  test_checker.Start("TestLibraries");
+  uint8_t lib1[kPlaitsBlobDigestSize];
+  uint8_t lib6[kPlaitsBlobDigestSize];
+  uint8_t scratch[256];
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 1, NULL, 0, lib1);
+  PlaitsBlobDependency needs_1 = Needs(1, lib1);
+  MakeBlob(scratch, kPlaitsBlobKindLibrary, 6, &needs_1, 1, lib6);
+  TestBlob chain[3] = {
+    { kPlaitsBlobKindLibrary, 1, { }, 0 },
+    { kPlaitsBlobKindLibrary, 6, { Needs(1, lib1) }, 1 },
+    { kPlaitsBlobKindModel, 90, { Needs(6, lib6), Needs(1, lib1) }, 2 },
+  };
+  CHECK(ReadPlaits(chain, 3) == PLAITS_BLOB_OK);
+
+  // Records first, then each library's RAM, all cleared; exports are
+  // addresses in the blob.
+  static uint8_t ram[kTestLibraryRam];
+  memset(ram, 0xa5, sizeof(ram));
+  PlaitsLibraries libraries;
+  libraries.Init(
+      plaits_region, &plaits_blob_services, ram, sizeof(ram), scratch,
+      kLibraryScratch);
+  const PlaitsBlobLibrary* one = libraries.Find(1);
+  const PlaitsBlobLibrary* six = libraries.Find(6);
+  CHECK(one == reinterpret_cast<PlaitsBlobLibrary*>(ram));
+  CHECK(six == one + 1);
+  CHECK(!libraries.Find(2) && !libraries.Find(0));
+  CHECK(one->context == NULL && six->context == NULL);
+  CHECK(one->exports[0] == plaits_region.library(0) + 0x61);
+  CHECK(one->exports[1] == plaits_region.library(0) + 0x80);
+  CHECK(six->exports[1] == plaits_region.library(1) + 0x80);
+  const size_t used = PlaitsLibraryRamAlign(2 * sizeof(PlaitsBlobLibrary)) +
+      2 * kLibraryRam;
+  bool cleared = !one->exports[2] &&
+      !six->exports[kMaxPlaitsLibraryExports - 1];
+  for (size_t i = 2 * sizeof(PlaitsBlobLibrary); i < used; ++i) {
+    cleared = cleared && !ram[i];
+  }
+  CHECK(cleared);
+  CHECK(ram[used] == 0xa5);
+
+  // A dependent gets its libraries in its listed order.
+  const PlaitsBlobLibrary* resolved[kMaxPlaitsBlobDependencies];
+  libraries.Resolve(plaits_region.blob(90), resolved);
+  CHECK(resolved[0] == six && resolved[1] == one);
+
+  // RAM short of what the region accounted for: nothing past it is built.
+  libraries.Init(
+      plaits_region, &plaits_blob_services, ram, used - 1, scratch,
+      kLibraryScratch);
+  CHECK(libraries.Find(1) && !libraries.Find(6));
+}
+
+// A rebuilt blob's first 48 samples of OUT fade in on a squared ramp from 0,
+// in blocks of any size; nothing after them changes.
+void TestFadeIn() {
+  test_checker.Start("TestFadeIn");
+  const size_t n = kPlaitsBlobFadeSize + 12;
+  float out[n];
+  for (size_t i = 0; i < n; ++i) {
+    out[i] = -2.0f;
+  }
+  size_t position = PlaitsBlobEngine::FadeIn(out, 5, 0);
+  CHECK(position == 5);
+  position = PlaitsBlobEngine::FadeIn(out + 5, 24, position);
+  position = PlaitsBlobEngine::FadeIn(out + 29, n - 29, position);
+  CHECK(position == kPlaitsBlobFadeSize);
+  bool ramp = out[0] == 0.0f;
+  for (size_t i = 0; i < n; ++i) {
+    const float x = float(i) * kPlaitsBlobFadeStep;
+    const float gain = i < kPlaitsBlobFadeSize ? x * x : 1.0f;
+    ramp = ramp && out[i] == -2.0f * gain;
+  }
+  CHECK(ramp);
+  CHECK(out[kPlaitsBlobFadeSize - 1] > -2.0f);
+  // The table is the squared ramp, as the emulator computes it.
+  bool table = true;
+  for (size_t i = 0; i < kPlaitsBlobFadeSize; ++i) {
+    const float x = float(i) * kPlaitsBlobFadeStep;
+    table = table && kPlaitsBlobFadeGain[i] == x * x;
+  }
+  CHECK(table);
+  // Past the window a block is left alone.
+  float block[12];
+  for (size_t i = 0; i < 12; ++i) {
+    block[i] = 0.5f;
+  }
+  CHECK(PlaitsBlobEngine::FadeIn(block, 12, kPlaitsBlobFadeSize) ==
+      kPlaitsBlobFadeSize);
+  CHECK(block[0] == 0.5f && block[11] == 0.5f);
+}
+
 // A double ECC error reported after one section's read faults it alone.
 int flash_calls;
 int flash_failing_call;
@@ -854,7 +1312,7 @@ void TestPlayable() {
   BuildRegion();
   Read(directory, 3);
   const uint8_t compiled[16] = {
-    0, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 23
+    0, 1, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 19, 20, 23
   };
   const uint8_t stock[24] = {
     8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
@@ -862,8 +1320,10 @@ void TestPlayable() {
   };
   const uint8_t palette[8] = { 43, 2, 3, 4, 0, 1, 5, 6 };
   CHECK(PlaitsVoice::Playable(compiled, 16, plaits_region));
-  // Particle Noise (18) is a blob in development builds; this region has
-  // none, so the stock banks cannot play.
+  // Wavetable (13), Speech (15) and Particle Noise (18) are blobs in
+  // development builds; this region has none, so the stock banks cannot play.
+  CHECK(!PlaitsVoice::Available(13, plaits_region));
+  CHECK(!PlaitsVoice::Available(15, plaits_region));
   CHECK(!PlaitsVoice::Available(18, plaits_region));
   CHECK(!PlaitsVoice::Playable(stock, 24, plaits_region));
   CHECK(PlaitsVoice::Playable(palette, 8, plaits_region));
@@ -911,6 +1371,10 @@ int main() {
   TestSectionFaults();
   TestDirectory();
   TestPlaitsTable();
+  TestLibraryRefusals();
+  TestDependencies();
+  TestLibraries();
+  TestFadeIn();
   TestFlashErrors();
   TestPlayable();
   TestLocks();

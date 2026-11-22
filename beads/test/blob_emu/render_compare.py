@@ -27,7 +27,9 @@
 #
 # Render each blob and the same engine compiled in, under Unicorn's Cortex-M7,
 # and compare every OUT and AUX word and the shared generator's state. The
-# region (WAVE and PLTS sections) is copied into flash at two placements.
+# region (WAVE and PLTS sections) is copied into flash at two placements, and
+# again with the models moved away from the libraries they call: four
+# layouts of library and dependent.
 # Also: model-switch sequences with poisoned storage, a write guard around
 # the blob voice's slot and arena, and the reader's faults and synth locks.
 #
@@ -55,12 +57,14 @@ RELEASE = 20261121
 FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
 # Blob model: compiled-in engine (harness.cc's order).
-PAIRS = {36: 0, 37: 1, 18: 2, 43: 3}
+PAIRS = {36: 0, 37: 1, 18: 2, 43: 3, 13: 4, 15: 5}
+# Models that call libraries: Wavetable (Plaits wavetables), Speech.
+DEPENDENTS = (13, 15)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
           'TABLE', 'MODEL', 'KIND', 'LIBRARY', 'CONTENT', 'DIRECTORY',
-          'ECC']
+          'ECC', 'DEPENDENCY']
 LOCKS = ['AS_PROFILED', 'FORCE_BEADS', 'FORCE_PLAITS', 'SILENT']
 SECTIONS = ('WAVE', 'TERR', 'PLTS')
 KINDS = {'WAVE': 0x45564157, 'TERR': 0x52524554, 'PLTS': 0x53544c50}
@@ -68,6 +72,23 @@ SINE = 0x08021440
 POISON = struct.pack('<I', 0x7fa5a5a5)  # a NaN no engine writes
 SLOT_SIZE = 4352
 ARENA_SIZE = 16384
+# A rebuilt blob fades in over its first 48 samples on a squared ramp
+# (plaits_blob_engine.h).
+FADE_SIZE = 48
+
+
+def f32(x):
+  return struct.unpack('<f', struct.pack('<f', x))[0]
+
+
+FADE_STEP = f32(1.0 / FADE_SIZE)
+
+
+def faded(word, position):
+  """The compiled-in sample as the fade leaves it, rounded as the M7 does."""
+  y, = struct.unpack('<f', word)
+  ramp = f32(position * FADE_STEP)
+  return struct.pack('<f', y * f32(ramp * ramp))
 
 
 def symbols(path):
@@ -118,6 +139,7 @@ class Machine(object):
     self.base = base
     self.size = len(region)
     self.arena = None
+    self.fade = FADE_SIZE
 
   def call(self, name, *args):
     uc = self.uc
@@ -134,7 +156,10 @@ class Machine(object):
     return struct.unpack('<I', bytes(self.uc.mem_read(address, 4)))[0]
 
   def setup(self, layout, digests, directory=None, defaults=None,
-            release=RELEASE):
+            release=RELEASE, library_ram=None):
+    if library_ram is not None:
+      self.uc.mem_write(self.sym['harness_library_ram_size'],
+                        struct.pack('<I', library_ram))
     for i, d in enumerate(digests):
       self.uc.mem_write(self.sym['harness_digests'] + 32 * i, d)
     self.uc.mem_write(self.sym['harness_num_digests'],
@@ -167,9 +192,11 @@ class Machine(object):
       sections[name] = {'status': STATUS[status],
                         'address': '0x%08x' % address, 'size': size,
                         'crc': '0x%08x' % crc}
+    blobs = bytes(self.uc.mem_read(self.sym['harness_identity'] + 64,
+                                   words[15]))
     return {'release': words[0], 'services_status': STATUS[words[1]],
             'directory_status': STATUS[words[2]], 'sections': sections,
-            'num_blobs': words[15]}
+            'num_blobs': words[15], 'blob_status': [STATUS[b] for b in blobs]}
 
   def statuses(self):
     identity = self.identity()
@@ -213,6 +240,7 @@ class Machine(object):
     self.uc.mem_write(arena, POISON * (ARENA_SIZE // 4))
     if self.call('harness_select_blob', model):
       raise RuntimeError('no blob for model %d' % model)
+    self.fade = 0
 
   def select_compiled(self, engine):
     self.call('harness_select_compiled', engine)
@@ -237,7 +265,9 @@ def drive(seed):
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
                    stats=None):
-  """Blob voice against compiled engine, block by block, from one seed."""
+  """Blob voice against compiled engine, block by block, from one seed.
+  Inside the blob's fade-in the expected OUT sample is the compiled one
+  times the fade's gain; every other sample is the compiled sample itself."""
   differ = samples = 0
   for block, (trigger, note, harmonics, timbre, morph, accent) in enumerate(
       steps):
@@ -247,13 +277,18 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
         engine, (trigger, note + nudge) + p[2:], seed)
     if digest is not None:
       digest.update(a_out + a_aux)
-    for x, y in ((a_out, b_out), (a_aux, b_aux)):
+    for x, y, fades in ((a_out, b_out, True), (a_aux, b_aux, False)):
       for i in range(0, len(x), 4):
         samples += 1
         v, = struct.unpack_from('<f', x, i)
         if v != v or v in (float('inf'), float('-inf')):
           raise RuntimeError('non-finite output')
-        if x[i:i + 4] != y[i:i + 4]:
+        position = m.fade + i // 4 if fades else FADE_SIZE
+        expected = faded(y[i:i + 4], position) if position < FADE_SIZE \
+            else y[i:i + 4]
+        if stats is not None and position < FADE_SIZE:
+          stats['fade_peak'] = max(stats.get('fade_peak', 0.0), abs(v))
+        if x[i:i + 4] != expected:
           differ += 1
           if stats is not None:
             w, = struct.unpack_from('<f', y, i)
@@ -263,6 +298,7 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
     if a_seed != b_seed:
       raise RuntimeError('the generator diverged')
     seed = a_seed
+    m.fade += BLOCK
   return differ, samples, seed
 
 
@@ -298,9 +334,12 @@ def main(argv):
   sym = symbols(out + '/harness.nm')
   region = open(out + '/region.bin', 'rb').read()
   layout = json.load(open(out + '/region.bin.json'))
+  gap_region = open(out + '/region-gap.bin', 'rb').read()
+  gap_layout = json.load(open(out + '/region-gap.bin.json'))
   plts = [s for s in layout['sections'] if s['kind'] == 'PLTS'][0]
   wave = [s for s in layout['sections'] if s['kind'] == 'WAVE'][0]
-  blobs = {b['model']: b for b in plts['blobs']}
+  blobs = {b['model']: b for b in plts['blobs'] if 'model' in b}
+  libraries = [b for b in plts['blobs'] if 'library' in b]
   digests = [bytes.fromhex(b['sha256']) for b in plts['blobs']]
   steps = drive(1)
   results = {'unicorn': unicorn.__version__, 'blocks': len(steps),
@@ -318,28 +357,48 @@ def main(argv):
     slot = m.word(sym['harness_slot'])
     return slot + SLOT_SIZE + 64 - sym['harness_blob_voice']
 
-  for base in PLACEMENTS:
-    for fpscr in FPSCR:
-      m = machine(base, fpscr)
-      status = m.setup(layout, digests)
-      if status != 'OK':
-        failures.append('0x%08x: PLTS %s' % (base, status))
-        continue
-      m.arena = arena_of(m)
-      for model, engine in sorted(PAIRS.items()):
-        m.select_blob(model)
-        m.select_compiled(engine)
-        h = hashlib.sha256()
-        differ, samples, _ = compare_blocks(m, engine, steps, 0x21, digest=h)
-        run = {'base': '0x%08x' % base, 'fpscr': '0x%08x' % fpscr,
-               'model': model, 'differ': differ, 'samples': samples,
-               'sha256': h.hexdigest()}
-        results['runs'].append(run)
-        print('0x%08x fpscr 0x%08x model %d: %d of %d differ' % (
-            base, fpscr, model, differ, samples))
-        if differ:
-          failures.append('model %d differs at 0x%08x' % (model, base))
-      results['identity'] = m.identity()
+  def address(layout_, base, key, value):
+    p = [s for s in layout_['sections'] if s['kind'] == 'PLTS'][0]
+    entry = [b for b in p['blobs'] if b.get(key) == value][0]
+    return base + p['offset'] + entry['offset']
+
+  # Four layouts for the dependents: the region at two placements, with and
+  # without the gap between libraries and models. The others need no
+  # library: two placements.
+  for data, layout_, gap in ((region, layout, False),
+                             (gap_region, gap_layout, True)):
+    for base in PLACEMENTS:
+      for fpscr in FPSCR:
+        m = machine(base, fpscr, data)
+        status = m.setup(layout_, digests)
+        if status != 'OK':
+          failures.append('0x%08x: PLTS %s' % (base, status))
+          continue
+        m.arena = arena_of(m)
+        for model, engine in sorted(PAIRS.items()):
+          if gap and model not in DEPENDENTS:
+            continue
+          m.select_blob(model)
+          m.select_compiled(engine)
+          h = hashlib.sha256()
+          differ, samples, _ = compare_blocks(m, engine, steps, 0x21,
+                                              digest=h)
+          run = {'base': '0x%08x' % base, 'gap': gap,
+                 'fpscr': '0x%08x' % fpscr, 'model': model,
+                 'blob': '0x%08x' % address(layout_, base, 'model', model),
+                 'differ': differ, 'samples': samples,
+                 'sha256': h.hexdigest()}
+          if model in DEPENDENTS:
+            run['library'] = '0x%08x' % address(
+                layout_, base, 'library', 1 if model == 13 else 3)
+          results['runs'].append(run)
+          print('0x%08x%s fpscr 0x%08x model %d: %d of %d differ' % (
+              base, ' gap' if gap else '', fpscr, model, differ, samples))
+          if differ:
+            failures.append('model %d differs at 0x%08x%s' % (
+                model, base, ' gap' if gap else ''))
+        if not gap:
+          results['identity'] = m.identity()
 
   def state_of(model):
     info = blobs[model]
@@ -351,7 +410,8 @@ def main(argv):
   # in a poisoned slot and arena; compiled-in engines only Reset. Retained
   # state shows as differences after the return; they are reported.
   sequence = steps[:300]
-  for first, second in ((18, 43), (43, 18), (18, 36), (43, 36), (36, 18)):
+  for first, second in ((18, 43), (43, 18), (18, 36), (43, 36), (36, 18),
+                        (13, 15), (15, 13), (15, 18), (13, 43)):
     m = machine(PLACEMENTS[1])
     m.setup(layout, digests)
     m.arena = arena_of(m)
@@ -370,7 +430,8 @@ def main(argv):
                      'slot_cleared': cleared, 'max_difference':
                      stats.get('max', 0.0), 'compiled_peak':
                      stats.get('peak', 0.0), 'last_differing_block':
-                     stats.get('last_block')})
+                     stats.get('last_block'), 'fade_window_peak':
+                     stats.get('fade_peak', 0.0)})
       if not cleared:
         failures.append('switch %d->%d: poison left in the slot' % (
             first, second))
@@ -385,12 +446,14 @@ def main(argv):
       findings.append('model %d after %d: %d of %d samples differ from the '
                       'compiled-in engine, which keeps its state across a '
                       'switch (Reset only); largest difference %.3g, '
-                      'compiled peak %.3g, last differing block %d of %d' % (
+                      'compiled peak %.3g, last differing block %d of %d, '
+                      'peak inside the fade-in %.3g' % (
                           first, second, phases[2]['differ'],
                           phases[2]['samples'], phases[2]['max_difference'],
                           phases[2]['compiled_peak'],
                           phases[2]['last_differing_block'],
-                          len(sequence[200:])))
+                          len(sequence[200:]),
+                          phases[2]['fade_window_peak']))
 
   # Each comparison must see a difference: the note nudged by 0.01.
   m = machine()
@@ -550,6 +613,37 @@ def main(argv):
     print('fault: %s: %s' % (name, ' '.join(got)))
     if got != expected:
       failures.append('%s: %s, not %s' % (name, got, expected))
+  # Libraries: refused for their own reason, then every dependent with them.
+  names = [b.get('model', b.get('library')) for b in plts['blobs']]
+  kinds = ['library' if 'library' in b else 'model' for b in plts['blobs']]
+  speech_library = names.index(3)
+  library_cases = [
+      ('library RAM not given', {'library_ram': 0}, 'RAM',
+       {1: 'RAM', 3: 'RAM', 13: 'DEPENDENCY', 15: 'DEPENDENCY'}),
+      ('library RAM one byte short', {'library_ram': (
+          (len(libraries) * 68 + 31) // 32 * 32 + 36864 - 1)}, 'RAM',
+       {1: 'OK', 3: 'RAM', 13: 'OK', 15: 'DEPENDENCY'}),
+      ('speech library not listed', {'digests': digests[:speech_library] +
+                                     digests[speech_library + 1:]}, 'DIGEST',
+       {1: 'OK', 3: 'DIGEST', 13: 'OK', 15: 'DEPENDENCY'}),
+  ]
+  for name, options, expected, entries in library_cases:
+    m = machine(pbase)
+    m.setup(layout, options.get('digests', digests),
+            library_ram=options.get('library_ram'))
+    identity = m.identity()
+    got = identity['sections']['PLTS']['status']
+    by_id = dict(((k, n), st) for k, n, st in zip(
+        kinds, names, identity['blob_status']))
+    statuses = dict((n, by_id[('library' if n in (1, 3) else 'model', n)])
+                    for n in entries)
+    results['faults'].append({'case': name, 'plts': got,
+                              'entries': statuses})
+    print('fault: %s: PLTS %s, %s' % (name, got, ' '.join(
+        '%d %s' % x for x in sorted(statuses.items()))))
+    if got != expected or statuses != entries or m.lock() != 'FORCE_BEADS':
+      failures.append('%s: PLTS %s, %s' % (name, got, statuses))
+
   m = machine(pbase, patches=[(SINE + 100, b'\x5a')])
   m.setup(layout, digests)
   got = m.statuses()

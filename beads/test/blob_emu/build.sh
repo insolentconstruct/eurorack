@@ -30,18 +30,19 @@ set -euo pipefail
 out=${1:?usage: build.sh OUT}
 mkdir -p "$out/obj" "$out/negative"
 models=beads/blob/models
-bash beads/build/tools/build_blob.sh "$out/blob" phase_weave \
-  $models/phase_weave.cc $models/phase_weave_engine.cc
+bash beads/build/tools/build_blobs.sh "$out/blob"
 bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
   beads/test/blob_gate/pos_sine.cc
-bash beads/build/tools/build_blob.sh "$out/blob" particle_noise \
-  $models/particle_noise.cc $models/particle_noise_engine.cc
-bash beads/build/tools/build_blob.sh "$out/blob" spectral_spiral \
-  $models/spectral_spiral.cc $models/spectral_spiral_engine.cc
+blobs=("$out/blob/plaits_wavetables.bin" "$out/blob/speech_library.bin" \
+  "$out/blob/phase_weave.bin" "$out/blob/pos_sine.bin" \
+  "$out/blob/particle_noise.bin" "$out/blob/spectral_spiral.bin" \
+  "$out/blob/wavetable.bin" "$out/blob/speech.bin")
 python3 beads/build/tools/blob_sections.py "$out/region.bin" 20261121 \
-  --wave beads/resources.cc "$out/blob/phase_weave.bin" \
-  "$out/blob/pos_sine.bin" "$out/blob/particle_noise.bin" \
-  "$out/blob/spectral_spiral.bin"
+  --wave beads/resources.cc "${blobs[@]}"
+# The same with the models 0x2fe0 further from the libraries: with the
+# region's two placements, libraries and dependents each move independently.
+python3 beads/build/tools/blob_sections.py "$out/region-gap.bin" 20261121 \
+  --gap 0x2fe0 --wave beads/resources.cc "${blobs[@]}"
 
 unset MAKEFLAGS MFLAGS MAKELEVEL
 mkdir -p "$out/make/beads"
@@ -67,9 +68,15 @@ link() {
     "$@" -lm -lc -lgcc -o "$elf"
 }
 objects=()
+speech=plaits/dsp/speech
 for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
-    beads/blob/plaits_region.cc $models/phase_weave_engine.cc \
-    $models/spectral_spiral_engine.cc plaits/dsp/engine/particle_engine.cc \
+    beads/blob/plaits_region.cc beads/blob/plaits_libraries.cc \
+    $models/phase_weave_engine.cc $models/spectral_spiral_engine.cc \
+    plaits/dsp/engine/particle_engine.cc plaits/dsp/engine/wavetable_engine.cc \
+    plaits/dsp/engine/speech_engine.cc $speech/naive_speech_synth.cc \
+    $speech/sam_speech_synth.cc $speech/lpc_speech_synth.cc \
+    $speech/lpc_speech_synth_controller.cc \
+    $speech/lpc_speech_synth_phonemes.cc $speech/lpc_speech_synth_words.cc \
     beads/plaits_resources.cc beads/profile.cc beads/dsp/pitch_quantizer.cc \
     stmlib/utils/random.cc; do
   object="$out/obj/$(basename "${source%.*}").o"

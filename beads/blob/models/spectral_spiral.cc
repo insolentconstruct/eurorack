@@ -35,6 +35,7 @@
 #include "beads/blob/models/spectral_spiral_engine.h"
 
 using beads::PlaitsBlobHeader2;
+using beads::PlaitsBlobLibrary;
 using beads::PlaitsBlobServices;
 using plaits::EngineParameters;
 using plaits::SpectralSpiral;
@@ -80,7 +81,7 @@ extern "C" void* plaits_blob_init(
     const PlaitsBlobServices* services,
     uint8_t* arena,
     size_t arena_size,
-    void* const* libraries) {
+    const PlaitsBlobLibrary* const* libraries) {
   stmlib::BufferAllocator allocator(arena, arena_size);
   SpectralSpiral* spectral_spiral = new(state) SpectralSpiral;
   spectral_spiral->Init(&allocator);
