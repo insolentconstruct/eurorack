@@ -2267,6 +2267,8 @@ cases = [
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/processor_resonator.cc',
     '    resonator_.Strike();\n', ''),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.h',
+    '    if (modes != modes_) {\n      glide_ = 0.0f;\n    }\n', ''),
+  ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.h',
     'glide_ = modes_ ? modes_->glide : 0.0f;',
     'glide_ = modes_ ? 2.0f * modes_->glide : 0.0f;'),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.cc',

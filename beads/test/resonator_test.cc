@@ -1070,6 +1070,21 @@ void TestResonatorMaterials() {
     }
     pitch.base = 0.0f;
   }
+  // A bend never outlives its object, through another or through Rings'.
+  for (int via = 1; via < 5; via += 3) {
+    Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+    processor.set_resonator_controls(Controls(5, 1));
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonator(pitch, true, frames, 12);
+    CHECK(processor.resonator_.glide_ != 0.0f);
+    processor.set_resonator_controls(Controls(via, 1));
+    processor.ProcessResonator(pitch, false, frames, 12);
+    CHECK(processor.resonator_.glide_ == 0.0f);
+    processor.set_resonator_controls(Controls(5, 1));
+    processor.ProcessResonator(pitch, false, frames, 12);
+    CHECK(processor.resonator_.glide_ == 0.0f);
+  }
 }
 
 // The resonance's peak in the 0.5 s after a strike at C3.

@@ -114,6 +114,10 @@ class ModalResonator {
   }
 
   inline void set_modes(const ResonatorModes* modes) {
+    // Another object starts unbent.
+    if (modes != modes_) {
+      glide_ = 0.0f;
+    }
     modes_ = modes;
   }
 
