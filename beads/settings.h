@@ -75,7 +75,8 @@ class Settings {
   // False on a new module's blank storage: the factory test runs.
   bool Init(bool recovery_mode);
 
-  void SavePersistentData();
+  // False when a calibration out of range was refused for the stored one.
+  bool SavePersistentData();
   void SaveState();
   
   inline State* mutable_state() {

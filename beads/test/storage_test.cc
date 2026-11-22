@@ -145,10 +145,12 @@ bool SameState(const Settings& s, const State& state) {
 
 // A module in use: its calibration, then a few saves. Returns the last
 // state; the terminator is chunk saves + 2.
+// Written as stock writes it: a calibration out of range is saved too.
 State Setup(const PersistentData& calibration, int saves) {
   Wipe();
   Settings s;
   s.Init(false);
+  s.chunk_storage_.set_calibration_check(NULL, NULL);
   memcpy(s.mutable_persistent_data()->adc_calibration,
       calibration.adc_calibration, sizeof(calibration.adc_calibration));
   s.SavePersistentData();
@@ -901,6 +903,45 @@ void TestMirrorWrites() {
   CHECK(SameCalibration(restored, calibration));
 }
 
+// A recalibration in range is saved in both copies. One out of range is
+// refused: the stored calibration stays in RAM and in the settings sector,
+// the mirror is not written, and a damaged sector takes the mirror's.
+void TestOutOfRangeRecalibration() {
+  test_checker.Start("TestOutOfRangeRecalibration");
+  const PersistentData calibration = Calibration(0.1f);
+  const PersistentData recalibrated = Calibration(-0.05f);
+  PersistentData wild = recalibrated;
+  wild.adc_calibration[CV_ADC_CHANNEL_TIME].offset *= 3.0f;
+  for (int damaged = 0; damaged < 2; ++damaged) {
+    Setup(calibration, 5);
+    Settings s;
+    CHECK(s.Init(false));
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        recalibrated.adc_calibration, sizeof(recalibrated.adc_calibration));
+    CHECK(s.SavePersistentData());
+    CHECK(SameCalibration(s, recalibrated));
+    CHECK(MirrorHolds(recalibrated));
+    static uint8_t mirror[kSectorSize];
+    Peek(mirror, kMirror, kSectorSize);
+    const uint32_t erases = TestFlashErases();
+    if (damaged) {
+      TestFlashDamage(kSector);
+    }
+    memcpy(s.mutable_persistent_data()->adc_calibration,
+        wild.adc_calibration, sizeof(wild.adc_calibration));
+    CHECK(!s.SavePersistentData());
+    CHECK(SameCalibration(s, recalibrated));
+    CHECK(TestFlashErases() == erases + 1);
+    static uint8_t now[kSectorSize];
+    Peek(now, kMirror, kSectorSize);
+    CHECK(!memcmp(now, mirror, kSectorSize));
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(loaded, recalibrated));
+    CHECK(StockLoads(recalibrated, loaded.state()));
+  }
+}
+
 void TestLowSupply() {
   test_checker.Start("TestLowSupply");
   const PersistentData calibration = Calibration(0.1f);
@@ -1282,6 +1323,7 @@ int main() {
   TestRepairFailures();
   TestRepairPowerLoss();
   TestMirrorWrites();
+  TestOutOfRangeRecalibration();
   TestLowSupply();
   TestSupplyDrop();
   TestStaleErrorFlag();
