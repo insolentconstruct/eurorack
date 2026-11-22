@@ -1255,6 +1255,14 @@ cases = [
     '      // Keep the undefined words out of the cache.\n'
     '      Invalidate(address, size);',
     '      // Keep the undefined words out of the cache.'),
+  # Masked reads copy bytes: a word store needs an aligned destination.
+  ('TestReadIntoRecords', 'storage', 'beads/drivers/flash.h',
+    '      memcpy(bytes, &word, sizeof(word));',
+    '      *reinterpret_cast<uint32_t*>(bytes) = word;'),
+  # #317: a usable mirror is erased only with a usable calibration beside it.
+  ('TestMirrorOnlyCopy', 'storage', 'beads/settings_storage.h',
+    '    if (valid && Usable(mirror) && !SectorUsable(mirror)) {',
+    '    if (false) {'),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
     '    if (calibration != CHUNK_VALID) {\n      return STORAGE_CALIBRATION_LOST;',
     '    if (calibration == CHUNK_UNREADABLE) {\n      return STORAGE_CALIBRATION_LOST;'),
@@ -1301,7 +1309,7 @@ cases = [
     '        false) {\n'
     '      return true;'),
   ('TestMirrorWrites', 'storage', 'beads/settings_storage.h',
-    '        WriteChunk(MIRROR_BASE, persistent_data_) && \\',
+    '        WriteChunk(address, &data) && \\',
     '        true && \\'),
   ('TestRepair', 'storage', 'beads/settings_storage.h',
     '    locked_ = false;\n    recovering_ = true;\n    RewriteSector();',
@@ -2063,7 +2071,14 @@ cases = [
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
     'float harmonic = frequency_;', 'float harmonic = 1.5f * frequency_;'),
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
-    'float q = 500.0f * Interpolate', 'float q = 5000.0f * Interpolate'),
+    'float q = 500.0f * kResonatorDecades',
+    'float q = 5000.0f * kResonatorDecades'),
+  ('TestResonatorConstants', 'resonator', 'beads/dsp/modal_resonator.h',
+    'const float kResonatorDecades = 100.0f;',
+    'const float kResonatorDecades = 103.0f;'),
+  ('TestResonatorConstants', 'resonator', 'beads/dsp/modal_resonator.h',
+    'const float kResonatorStiffness = 0.0f;',
+    'const float kResonatorStiffness = -0.0f;'),
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
     'float amplitude = amplitudes.Next() * 0.125f;',
     'float amplitude = amplitudes.Next() * 0.0f;'),
@@ -2304,6 +2319,9 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
       elif name == 'TestQuantizationBounds':
         assert re.search(r'plaits_voice\.cc:\d+:\d+: runtime error: .* is '
             r'outside the range of representable values', failure), failure
+      elif name == 'TestReadIntoRecords':
+        assert re.search(r'flash\.h:\d+:\d+: runtime error: store to '
+            r'misaligned address', failure), failure
       elif name == 'TestClockIdleCounter':
         assert re.search(r'delay_clock\.cc:\d+:\d+: runtime error: '
             r'signed integer overflow', failure), failure
