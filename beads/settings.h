@@ -345,6 +345,7 @@ class Settings {
       const PersistentData& factory);
 
   PersistentData persistent_data_;
+  PersistentData factory_;
   State state_;
   State stored_state_;
   Profile profile_;

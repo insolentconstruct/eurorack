@@ -104,8 +104,22 @@ class ChunkStorage {
   };
 
  public:
-  ChunkStorage() { }
+  // Whether a calibration that passes its checks is also usable.
+  typedef bool (*CalibrationCheck)(
+      const PersistentData& data,
+      const PersistentData& reference);
+
+  ChunkStorage() : check_(NULL), reference_(NULL) { }
   ~ChunkStorage() { }
+
+  // Without a check, any calibration that passes its checks is usable.
+  void set_calibration_check(
+      CalibrationCheck check,
+      const PersistentData* reference) {
+    check_ = check;
+    reference_ = reference;
+  }
+
   // Initialize only a blank sector; otherwise load without writing.
   // The caller chooses calibration before any later write.
   StorageStatus Init(PersistentData* persistent_data, StateData* state_data) {
@@ -263,17 +277,47 @@ class ChunkStorage {
   }
 
   // Leaves a verified copy of the calibration about to be written in the
-  // mirror sector; only writes it if it is missing or different.
+  // mirror sector; only writes it if it is missing or different. A usable
+  // mirror is only erased while the sector holds a usable calibration: if
+  // it doesn't, the mirror's is copied there first (#317).
   bool MirrorPersistentData() {
     PersistentData mirror;
-    if (ReadChunk(MIRROR_BASE, &mirror) == CHUNK_VALID && \
+    const bool valid = ReadChunk(MIRROR_BASE, &mirror) == CHUNK_VALID;
+    if (valid && \
         !memcmp(&mirror, persistent_data_, sizeof(PersistentData))) {
       return true;
     }
-    return EraseSector(mirror_sector_index, MIRROR_BASE) && \
-        WriteChunk(MIRROR_BASE, persistent_data_) && \
-        ReadChunk(MIRROR_BASE, &mirror) == CHUNK_VALID && \
-        !memcmp(&mirror, persistent_data_, sizeof(PersistentData));
+    if (valid && Usable(mirror) && !SectorUsable(mirror)) {
+      return false;
+    }
+    return WriteCalibration(
+        mirror_sector_index, MIRROR_BASE, *persistent_data_);
+  }
+
+  // Erases a sector and leaves a verified copy of the calibration at its base.
+  bool WriteCalibration(
+      uint32_t index,
+      uint32_t address,
+      const PersistentData& data) {
+    PersistentData copy;
+    return EraseSector(index, address) && \
+        WriteChunk(address, &data) && \
+        ReadChunk(address, &copy) == CHUNK_VALID && \
+        !memcmp(&copy, &data, sizeof(PersistentData));
+  }
+
+  bool Usable(const PersistentData& data) const {
+    return !check_ || check_(data, *reference_);
+  }
+
+  // True once the sector holds a usable calibration, read back; if it
+  // doesn't, writes the mirror's there first.
+  bool SectorUsable(const PersistentData& mirror) {
+    PersistentData data;
+    if (ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data)) {
+      return true;
+    }
+    return WriteCalibration(sector_index, FLASH_STORAGE_BASE, mirror);
   }
 
   bool EraseSector(uint32_t index, uint32_t address) {
@@ -423,6 +467,8 @@ class ChunkStorage {
   bool locked_;
   bool protected_;
   bool recovering_;
+  CalibrationCheck check_;
+  const PersistentData* reference_;
 
   DISALLOW_COPY_AND_ASSIGN(ChunkStorage);
 };
