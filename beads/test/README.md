@@ -32,11 +32,10 @@ Keep overrides limited to the hardware or dependencies a suite touches.
 
 | Directory | Model |
 |---|---|
-| `stubs/` | Common switch pins, ADC channels, normalization, GPIO/settings flash and LED state |
+| `stubs/` | Common switch pins, ADC channels, normalization, GPIO and LED state; settings-sector flash with sticky error flags, refused or stuck operations and overwrite counting |
 | `backup_stubs/` | Processor fixture and flash with lock, failure, power-loss and partial erase injection |
 | `hardware_stubs/` | Processor/audio fixtures: codec, calibrator, gain and backup |
 | `firmware_stubs/` | Callback ADC/codec, inputs, system/debug/watchdog; sector-aware shared flash model |
-| `storage_stubs/` | Settings-sector flash with sticky error flags, refused or stuck operations and overwrite counting |
 | `delay_mode_stubs/` | Codec handle declarations |
 | `gain_stubs/` | Codec gain writes |
 | `codec_stubs/` | Ordered fake HAL for the real C++98 codec driver: reset, clocks, DMA, silence and callback attachment |
@@ -74,10 +73,10 @@ Every suite calls `InitTestFpu()` at startup. For a new suite, copy a short
 suite list. `SANITIZERS =` disables sanitizers only for mapped flash tests.
 Object/dependency files live under each target's own build directory.
 
-`codec.mk` builds the real driver against its own fake HAL. Its four tests
+`codec.mk` builds the real driver against its own fake HAL. Its five tests
 check reset held for 2048 old-rate frames, new clocks stable before reset
 release, silent TX and detached callback throughout, unchanged boot start,
-null callbacks and SAI initialization failures.
+null callbacks, SAI initialization failures and the one-frame output delay.
 
 List host suites without Docker or builds:
 
@@ -125,7 +124,7 @@ the named test, which must fail (`ERROR: TEST:` or a sanitizer report; a
 mutation that does not compile is an error). Survivors are listed and fail
 the run. `--patterns-only` checks, without building, that every replaced text
 occurs exactly once. The 112 cases cover #33, #57, #36, #56, #35, #149, #148,
-the low-supply guard (#175), the #53 fades, reset/clock sequencing and synth
+#317, flash record reads, the low-supply guard (#175), the #53 fades, reset/clock sequencing and synth
 reverb tail, the integer Hermite read, synth grain pairs and the local grain
 sum. Run it inside the image, from the repository root:
 
