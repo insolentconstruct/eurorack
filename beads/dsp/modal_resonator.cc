@@ -69,6 +69,8 @@ void ModalResonator::Init(float sample_rate) {
   set_amount(1.0f);
   limiter_.Init(
       1.0f / (sample_rate * 0.5f), kResonatorPeak * kResonatorHeadroom);
+  // Init leaves its peak 24 dB over the threshold.
+  limiter_.Rest();
 }
 
 void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
