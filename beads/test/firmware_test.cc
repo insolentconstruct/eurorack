@@ -3092,7 +3092,7 @@ void TestUnfinishedCalibrationKept() {
 }
 
 // #347: with the profile refused, nothing can be saved: a recalibration
-// shows the rejection blink, and the stored calibration loads again.
+// shows the rejection blink, and the stored calibration stays in use.
 void TestLockedCalibrationCue() {
   test_checker.Start("TestLockedCalibrationCue");
   Rig r(false, false);
@@ -3109,10 +3109,11 @@ void TestLockedCalibrationCue() {
   const PersistentData stored = settings.persistent_data();
   const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
   calibrator.Start();
-  calibrator.calibrator_[1].Acquire(0, u + 0.2f, 0.2f);
+  calibrator.calibrator_[1].Acquire(0, u + 0.19f, 0.2f);  // Not the stored.
   ui.mode_ = Ui::MODE_CALIBRATION_4;
   ui.NextCalibrationStep();
   CHECK(ui.mode_ == Ui::MODE_PANIC);
+  CHECK(SameCalibration(settings.persistent_data(), stored));
   Settings loaded;
   CHECK(loaded.Init(false));
   CHECK(SameCalibration(loaded.persistent_data(), stored));

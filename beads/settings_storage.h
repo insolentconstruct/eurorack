@@ -302,8 +302,7 @@ class ChunkStorage {
   // Erases the mirror sector and copies the sector's calibration, as read
   // from flash, then the record. Stops unless that calibration is usable and
   // the one in use: a failed restore may have left it behind the mirror's.
-  // Once one fails, no other runs until the next power-up: a word that never
-  // programs would otherwise erase the sector at every save.
+  // After one fails, none runs until power-up, or a stuck word erases per save.
   bool CompactMirror() {
     PersistentData data;
     if (ReadChunk(chunk_address(0), &data) != CHUNK_VALID || !Usable(data) || \

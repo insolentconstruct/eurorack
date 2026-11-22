@@ -2396,8 +2396,11 @@ cases = [
     '    std::copy(&c[0], &c[CV_ADC_CHANNEL_LAST], &calibration_data_[0]);\n',
     '    (void)c;\n'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/calibrator.h',
-    '    std::copy(\n        &calibration_data_[0],\n        &calibration_data_[CV_ADC_CHANNEL_LAST],\n        settings_->mutable_persistent_data()->adc_calibration);\n',
+    '    std::swap_ranges(\n        &calibration_data_[0], &calibration_data_[CV_ADC_CHANNEL_LAST], c);\n',
     ''),
+  ('TestLockedCalibrationCue', 'firmware', 'beads/calibrator.h',
+    '    if (!saved) {\n      std::copy(',
+    '    if (false) {\n      std::copy('),
   ('TestUnfinishedCalibrationKept', 'firmware', 'beads/calibrator.h',
     '        calibration_data_[i].offset = -calibration_data_[i].scale * \\',
     '        settings_->mutable_persistent_data()->adc_calibration[i].offset = '

@@ -123,13 +123,18 @@ class Calibrator {
     return true;
   }
   
-  // False when the settings refuse the calibration.
+  // False when the settings refuse the calibration: the previous one stays.
   inline bool Save() {
-    std::copy(
-        &calibration_data_[0],
-        &calibration_data_[CV_ADC_CHANNEL_LAST],
-        settings_->mutable_persistent_data()->adc_calibration);
-    return settings_->SavePersistentData();
+    AdcCalibrationData* c = \
+        settings_->mutable_persistent_data()->adc_calibration;
+    std::swap_ranges(
+        &calibration_data_[0], &calibration_data_[CV_ADC_CHANNEL_LAST], c);
+    const bool saved = settings_->SavePersistentData();
+    if (!saved) {
+      std::copy(
+          &calibration_data_[0], &calibration_data_[CV_ADC_CHANNEL_LAST], c);
+    }
+    return saved;
   }
   
  private:
