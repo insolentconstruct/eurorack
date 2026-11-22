@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// String machine emulation with filter and chorus: StringMachineEngine's code
-// as a plain class, the chord bank's methods called in the chord bank library.
+// Plaits' StringMachineEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/string_machine_engine.h"
 

@@ -71,7 +71,10 @@ DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
 # bank) interpolates towards the wave after the last one, up to 260 bytes
 # past the end of wav_integrated_waves: in the app the next table, in the
 # library what follows it in the region.
-KNOWN = {5: 'terrain 5 reads past the end of the Plaits wavetables'}
+# Waived only at these (block, channel 0 OUT / 1 AUX, sample) positions.
+KNOWN = {5: ('terrain 5 reads past the end of the Plaits wavetables',
+             [(3770, c, i) for c in (0, 1) for i in (8, 9, 10, 11)] +
+             [(3771, c, 0) for c in (0, 1)])}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (2, 3), (4, 2), (13, 43), (18, 36), (43, 18)]
@@ -261,6 +264,9 @@ class Machine(object):
   def select_compiled(self, engine, model):
     self.call('harness_select_compiled', engine, model)
 
+  def rebuild_compiled(self, engine, model):
+    self.call('harness_rebuild_compiled', engine, model)
+
 
 def drive(seed):
   """The parameter sequence: a grid with note-ons, then random blocks."""
@@ -281,6 +287,16 @@ def drive(seed):
   for _ in range(2000):
     steps.append((r.choice((0, 0, 0, 1)), r.uniform(0.0, 127.0),
                   r.random(), r.random(), r.random(), r.random()))
+  # Gates as the synth sends them: held notes (rising edge with HIGH, HIGH,
+  # then released), and unpatched (drone) blocks.
+  for i in range(24):
+    p = (r.uniform(24.0, 96.0), r.random(), r.random(), r.random(), 0.8)
+    for block in range(16):
+      trigger = 5 if block == 0 else 4 if block < 8 else 0
+      steps.append((trigger,) + p)
+  for i in range(32):
+    for block in range(8):
+      steps.append((2, 48.0 + i, i / 31.0, 0.5, block / 7.0, 0.8))
   return steps
 
 
@@ -312,9 +328,13 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
             else y[i:i + 4]
         if stats is not None and position < FADE_SIZE:
           stats['fade_peak'] = max(stats.get('fade_peak', 0.0), abs(v))
+        if stats is not None and fades:
+          stats['out_peak'] = max(stats.get('out_peak', 0.0), abs(v))
         if x[i:i + 4] != expected:
           differ += 1
           if stats is not None:
+            stats.setdefault('positions', []).append(
+                (block, 0 if fades else 1, i // 4))
             w, = struct.unpack_from('<f', y, i)
             stats['max'] = max(stats.get('max', 0.0), abs(v - w))
             stats['peak'] = max(stats.get('peak', 0.0), abs(w))
@@ -454,13 +474,15 @@ def identity_compare(model, base, fpscr, gap):
   m.select_blob(model)
   m.select_compiled(engine, model)
   h = hashlib.sha256()
-  before = m.word(RANDOM_STATE)
+  stats = {}
   differ, samples, _ = compare_blocks(m, engine, CTX['steps'], 0x21,
-                                      digest=h)
+                                      digest=h, stats=stats)
   run = {'base': '0x%08x' % base, 'gap': gap, 'fpscr': '0x%08x' % fpscr,
          'model': model,
          'blob': '0x%08x' % address(layout, base, 'model', model),
-         'differ': differ, 'samples': samples, 'sha256': h.hexdigest()}
+         'differ': differ, 'samples': samples, 'sha256': h.hexdigest(),
+         'out_peak': stats.get('out_peak', 0.0),
+         'positions': sorted(stats.get('positions', []))}
   libraries = dependencies(layout, model)
   if libraries:
     run['libraries'] = dict(
@@ -476,12 +498,17 @@ def switch_run(pair):
   slot and arena; compiled-in engines only Reset. Retained state shows as
   differences after the return; they are reported."""
   try:
-    return switch_compare(*pair)
+    run = switch_compare(pair[0], pair[1], False)
+    fresh = switch_compare(pair[0], pair[1], True)
+    run['fresh_differ'] = [p['differ'] for p in fresh['phases']]
+    return run
   except RuntimeError as e:
     return {'sequence': [pair[0], pair[1], pair[0]], 'error': str(e)}
 
 
-def switch_compare(first, second):
+def switch_compare(first, second, fresh):
+  """fresh: each selection compares with the compiled-in engine built afresh
+  (first selection after power-on), which a rebuilt blob must equal."""
   sequence = CTX['steps'][:300]
   m = machine(PLACEMENTS[1])
   m.setup(CTX['layout'], CTX['digests'])
@@ -492,14 +519,17 @@ def switch_compare(first, second):
                       (first, sequence[200:])):
     before = m.word(RANDOM_STATE)
     m.select_blob(model)
-    m.select_compiled(PAIRS[model], model)
+    if fresh:
+      m.rebuild_compiled(PAIRS[model], model)
+    else:
+      m.select_compiled(PAIRS[model], model)
     drew = m.word(RANDOM_STATE) != before
     slot = m.word(CTX['sym']['harness_slot'])
     cleared = POISON not in bytes(m.uc.mem_read(slot, state_of(model)))
     stats = {}
     # The return, or a second model of one compiled-in engine, meets the
     # state the compiled-in engine kept.
-    retained = bool(phases) and PAIRS[model] == PAIRS[first]
+    retained = not fresh and bool(phases) and PAIRS[model] == PAIRS[first]
     differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
                                            stats=stats, retained=retained)
     phases.append({'model': model, 'differ': differ, 'samples': samples,
@@ -549,11 +579,14 @@ def main(argv):
         run['base'], ' gap' if run['gap'] else '', run['fpscr'],
         run['model'], run['differ'], run['samples']))
     sys.stdout.flush()
-    if run['differ'] and run['model'] in KNOWN:
+    if not run['out_peak']:
+      failures.append('model %d: silent at %s' % (run['model'], run['base']))
+    known = KNOWN.get(run['model'])
+    if run['differ'] and known and run['positions'] == sorted(known[1]):
       findings.append('model %d: %d of %d samples differ at %s%s fpscr %s: '
                       '%s' % (run['model'], run['differ'], run['samples'],
                               run['base'], ' gap' if run['gap'] else '',
-                              run['fpscr'], KNOWN[run['model']]))
+                              run['fpscr'], known[0]))
     elif run['differ']:
       failures.append('model %d differs at %s%s' % (
           run['model'], run['base'], ' gap' if run['gap'] else ''))
@@ -565,6 +598,10 @@ def main(argv):
       continue
     phases = switch['phases']
     results['switches'].append(switch)
+    if any(switch['fresh_differ']):
+      failures.append('switch %d->%d: a rebuilt blob differs from the '
+                      'engine built afresh: %s' % (first, second,
+                                                   switch['fresh_differ']))
     print('switch %d -> %d -> %d: %s' % (first, second, first, ', '.join(
         '%d of %d differ' % (p['differ'], p['samples']) for p in phases)))
     if any(not p['slot_cleared'] for p in phases):

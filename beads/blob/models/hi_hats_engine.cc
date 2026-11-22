@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 808-style HH with two noise sources - one faithful to the original, the other
-// more metallic: HiHatEngine's code as a plain class.
+// Plaits' HiHatEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/hi_hats_engine.h"
 

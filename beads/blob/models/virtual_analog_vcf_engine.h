@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Virtual analog oscillator with VCF, as a plain class for a blob: Plaits'
-// VirtualAnalogVCFEngine (virtual_analog_vcf_engine.cc), its code unchanged,
-// without the virtual functions a blob cannot construct.
+// Plaits' VirtualAnalogVCFEngine as a plain class for a blob, its code
+// unchanged.
 
 #ifndef BEADS_BLOB_MODELS_VIRTUAL_ANALOG_VCF_ENGINE_H_
 #define BEADS_BLOB_MODELS_VIRTUAL_ANALOG_VCF_ENGINE_H_

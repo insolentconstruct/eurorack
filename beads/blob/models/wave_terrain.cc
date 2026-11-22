@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Wave Terrain as a version 2 blob: terrains 5-7 read the Plaits wavetables
-// library. reset does what the voice's LoadUserData(NULL) does for the
-// compiled-in engine (no user terrain), then its Reset.
+// Wave Terrain as a version 2 blob, terrains 5-7 reading the Plaits wavetables
+// library; reset loads no user terrain.
 
 #include <new>
 

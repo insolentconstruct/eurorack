@@ -30,6 +30,7 @@
 // compiled in, built in PlaitsVoice's order and sharing their own arena as
 // PlaitsVoice's do; called by render_compare.py under Unicorn's Cortex-M7.
 
+#include <algorithm>
 #include <new>
 
 #include "stmlib/utils/buffer_allocator.h"
@@ -205,14 +206,14 @@ static void DecodeSpeechBanks() {
   LPCSpeechSynthWordBank::set_decoded_banks(banks);
 }
 
-// Reads the region: from the directory, or the defaults when use_directory
-// is 0, then builds its libraries. Returns the PLTS status.
-uint32_t harness_setup(
-    const uint8_t* begin,
-    const uint8_t* end,
-    uint32_t release,
-    uint32_t use_directory) {
-  DecodeSpeechBanks();
+// Engines are built in zeroed storage and RAM, as at power-on.
+static void BuildProof() {
+  std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+  std::fill(&phase_weave_storage[0], &phase_weave_storage[sizeof(
+      phase_weave_storage)], 0);
+  std::fill(&sine_storage[0], &sine_storage[sizeof(sine_storage)], 0);
+  std::fill(&spectral_spiral_storage[0], &spectral_spiral_storage[sizeof(
+      spectral_spiral_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -222,12 +223,11 @@ uint32_t harness_setup(
     allocator.Free();
     compiled[i]->Init(&allocator);
   }
-  for (int i = 0; i < kNumFmBanks; ++i) {
-    for (int j = 0; j < kFmBankSize; ++j) {
-      fm_banks[i * kFmBankSize + j].Unpack(
-          fm_patches_table[i] + j * fm::Patch::SYX_SIZE);
-    }
-  }
+}
+
+static void BuildStock() {
+  std::fill(&stock_arena[0], &stock_arena[kArenaSize], 0);
+  std::fill(&stock_storage[0], &stock_storage[sizeof(stock_storage)], 0);
   StockEngines* e = new(stock_storage) StockEngines;
   Engine* stock[kNumStock] = {
     &e->virtual_analog_vcf_engine, &e->phase_distortion_engine,
@@ -249,6 +249,24 @@ uint32_t harness_setup(
     }
     compiled[kFirstStock + i] = stock[i];
   }
+}
+
+// Reads the region: from the directory, or the defaults when use_directory
+// is 0, then builds its libraries. Returns the PLTS status.
+uint32_t harness_setup(
+    const uint8_t* begin,
+    const uint8_t* end,
+    uint32_t release,
+    uint32_t use_directory) {
+  DecodeSpeechBanks();
+  for (int i = 0; i < kNumFmBanks; ++i) {
+    for (int j = 0; j < kFmBankSize; ++j) {
+      fm_banks[i * kFmBankSize + j].Unpack(
+          fm_patches_table[i] + j * fm::Patch::SYX_SIZE);
+    }
+  }
+  BuildProof();
+  BuildStock();
   new(harness_blob_voice.engine) PlaitsBlobEngine;
   harness_slot = reinterpret_cast<uintptr_t>(blob_engine()->state());
 
@@ -277,6 +295,17 @@ void harness_select_compiled(uint32_t engine, uint32_t model) {
     compiled[engine]->LoadUserData(NULL);
   }
   compiled[engine]->Reset();
+}
+
+// The engines built afresh, as at power-on, then one selected: the reference
+// for a rebuilt blob, which equals an engine's first selection.
+void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
+  if (engine < kFirstStock) {
+    BuildProof();
+  } else {
+    BuildStock();
+  }
+  harness_select_compiled(engine, model);
 }
 
 // A voice switching to a blob: bound, constructed in the zeroed slot and

@@ -24,11 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Chords: wavetable and divide-down organ/string machine, as a plain class for
-// a blob: Plaits' ChordEngine (chord_engine.cc), its code unchanged except that
-// the chord bank's methods run in the chord bank library and its waves come
-// from the Plaits wavetables library, without the virtual functions a blob
-// cannot construct.
+// Plaits' ChordEngine as a plain class for a blob, its code unchanged except
+// its chord bank calls and waves.
 
 #ifndef BEADS_BLOB_MODELS_CHORDS_ENGINE_H_
 #define BEADS_BLOB_MODELS_CHORDS_ENGINE_H_

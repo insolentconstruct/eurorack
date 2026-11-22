@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// DX7 voice, as plaits/dsp/fm/voice.h except that it plays IndexedAlgorithms
-// and runs each renderer by its index (RunRenderer) instead of through a
-// function pointer, which a blob cannot call.
+// DX7 voice: plaits/dsp/fm/voice.h playing IndexedAlgorithms, each renderer
+// run by index (RunRenderer).
 
 #ifndef BEADS_BLOB_MODELS_SIX_OP_VOICE_H_
 #define BEADS_BLOB_MODELS_SIX_OP_VOICE_H_

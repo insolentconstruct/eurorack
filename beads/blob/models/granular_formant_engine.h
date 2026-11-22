@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Windowed sine segments, as a plain class for a blob: Plaits' GrainEngine
-// (grain_engine.cc), its code unchanged, without the virtual functions a blob
-// cannot construct.
+// Plaits' GrainEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_GRANULAR_FORMANT_ENGINE_H_
 #define BEADS_BLOB_MODELS_GRANULAR_FORMANT_ENGINE_H_

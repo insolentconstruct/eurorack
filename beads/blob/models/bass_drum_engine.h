@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 808 and synthetic bass drum generators, as a plain class for a blob: Plaits'
-// BassDrumEngine (bass_drum_engine.cc), its code unchanged, without the virtual
-// functions a blob cannot construct.
+// Plaits' BassDrumEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_BASS_DRUM_ENGINE_H_
 #define BEADS_BLOB_MODELS_BASS_DRUM_ENGINE_H_

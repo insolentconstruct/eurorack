@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// A dependent's calls into the chord bank library. Each loads one export from
-// the library record and tail-calls it, the shape the gate accepts; their own
-// translation unit keeps them out of line.
+// A dependent's calls into the chord bank library, in the shape the gate
+// accepts.
 
 #include "beads/blob/libraries/chord_bank_library.h"
 

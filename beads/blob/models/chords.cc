@@ -24,8 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Chords as a version 2 blob: its waves come from the Plaits wavetables
-// library, its chord bank runs in the chord bank library.
+// Chords as a version 2 blob, with the Plaits wavetables and chord bank
+// libraries.
 
 #include <new>
 

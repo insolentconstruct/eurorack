@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 808 and synthetic snare drum generators: SnareDrumEngine's code as a plain
-// class.
+// Plaits' SnareDrumEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/snare_drum_engine.h"
 

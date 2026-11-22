@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits' 6-op FM banks and algorithms as a library. Its init unpacks the
-// banks, as PlaitsVoice::UnpackFmBanks does for the compiled-in engine, and
-// compiles the algorithms, as SixOpEngine::Init does for each engine.
+// Plaits' 6-op banks and algorithms as a library: init unpacks the banks and
+// compiles the algorithms.
 
 #include <new>
 

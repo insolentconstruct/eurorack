@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Virtual analog oscillator with VCF: VirtualAnalogVCFEngine's code as a plain
-// class.
+// Plaits' VirtualAnalogVCFEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/virtual_analog_vcf_engine.h"
 

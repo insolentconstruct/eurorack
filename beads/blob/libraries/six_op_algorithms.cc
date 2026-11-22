@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// FM Algorithms and how to render them: the opcodes and renderer specs of
-// plaits/dsp/fm/algorithms.cc for IndexedAlgorithms, which names a renderer by
-// its index in the table.
+// The opcodes and renderer specs of plaits/dsp/fm/algorithms.cc, for
+// IndexedAlgorithms.
 
 #include "beads/blob/libraries/six_op_algorithms.h"
 

@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits' chord bank as a library, used by Chords, String machine and
-// Chiptune: its exports run Plaits' ChordBank code unchanged. No init, no
-// RAM.
+// Plaits' chord bank as a library: its exports run ChordBank's code unchanged.
 
 #include "beads/blob/libraries/chord_bank_library.h"
 

@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// String machine emulation with filter and chorus, as a plain class for a blob:
-// Plaits' StringMachineEngine (string_machine_engine.cc), its code unchanged
-// except that the chord bank's methods run in the chord bank library, without
-// the virtual functions a blob cannot construct.
+// Plaits' StringMachineEngine as a plain class for a blob, its code unchanged
+// except its chord bank calls.
 
 #ifndef BEADS_BLOB_MODELS_STRING_MACHINE_ENGINE_H_
 #define BEADS_BLOB_MODELS_STRING_MACHINE_ENGINE_H_

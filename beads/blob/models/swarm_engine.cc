@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Swarm of sawtooths and sines: SwarmEngine's code as a plain class.
+// Plaits' SwarmEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/swarm_engine.h"
 

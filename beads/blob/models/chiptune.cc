@@ -24,8 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Chiptune as a version 2 blob: its chord bank runs in the chord bank library.
-// render sets the envelope shape as the voice does for the compiled-in engine.
+// Chiptune as a version 2 blob; render sets the envelope shape as the voice
+// did.
 
 #include <new>
 
@@ -105,12 +105,10 @@ extern "C" void plaits_blob_render(
     size_t size,
     bool* already_enveloped) {
   Chiptune* chiptune = static_cast<Chiptune*>(object);
-  // As the voice sets it for the compiled-in engine: Plaits' envelope, with
-  // the TIMBRE attenuverter at noon.
+  // As the voice set it: Plaits' envelope, TIMBRE attenuverter at noon.
   chiptune->set_envelope_shape(
       parameters->trigger & plaits::TRIGGER_UNPATCHED
           ? plaits::Chiptune::NO_ENVELOPE
           : 0.0f);
-  chiptune->Render(
-      *parameters, out, aux, size, already_enveloped);
+  chiptune->Render(*parameters, out, aux, size, already_enveloped);
 }

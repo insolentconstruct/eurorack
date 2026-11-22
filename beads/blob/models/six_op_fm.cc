@@ -24,9 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 6-op FM banks A, B and C (models 2-4) as one version 2 blob: its banks and
-// algorithms come from the 6-op library. reset loads the selected bank, as the
-// voice does for the compiled-in engine, then its Reset.
+// 6-op FM banks A, B and C (models 2-4) as one version 2 blob; reset loads the
+// selected bank.
 
 #include <new>
 

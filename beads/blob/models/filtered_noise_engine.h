@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Clocked noise processed by a multimode filter, as a plain class for a blob:
-// Plaits' NoiseEngine (noise_engine.cc), its code unchanged, without the
-// virtual functions a blob cannot construct.
+// Plaits' NoiseEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_FILTERED_NOISE_ENGINE_H_
 #define BEADS_BLOB_MODELS_FILTERED_NOISE_ENGINE_H_

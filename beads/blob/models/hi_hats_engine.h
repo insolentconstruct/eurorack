@@ -24,10 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 808-style HH with two noise sources - one faithful to the original, the other
-// more metallic, as a plain class for a blob: Plaits' HiHatEngine
-// (hi_hat_engine.cc), its code unchanged, without the virtual functions a blob
-// cannot construct.
+// Plaits' HiHatEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_HI_HATS_ENGINE_H_
 #define BEADS_BLOB_MODELS_HI_HATS_ENGINE_H_

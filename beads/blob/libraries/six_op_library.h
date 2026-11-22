@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits' 6-op FM banks and algorithms as a library: its ID, RAM, exports and
-// context. Its init unpacks the three banks and compiles the algorithms once
-// at synth entry; the 6-op model reads both from the context and keeps its
-// voices in its own state.
+// Plaits' 6-op banks and algorithms as a library: its ID, exports and context
+// (ABI.md).
 
 #ifndef BEADS_BLOB_LIBRARIES_SIX_OP_LIBRARY_H_
 #define BEADS_BLOB_LIBRARIES_SIX_OP_LIBRARY_H_

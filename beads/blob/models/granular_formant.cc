@@ -72,7 +72,8 @@ extern "C" const PlaitsBlobHeader2 plaits_blob_header
   { 0, 0, 0, 0 }
 };
 
-STATIC_ASSERT(sizeof(GranularFormant) <= beads::kPlaitsBlobMaxStateSize2, state);
+STATIC_ASSERT(sizeof(GranularFormant) <= beads::kPlaitsBlobMaxStateSize2,
+    state);
 STATIC_ASSERT(__alignof__(GranularFormant) <= beads::kPlaitsBlobStateAlignment,
     state_alignment);
 

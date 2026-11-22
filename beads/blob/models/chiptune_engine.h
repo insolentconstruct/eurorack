@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Chiptune waveforms with arpeggiator, as a plain class for a blob: Plaits'
-// ChiptuneEngine (chiptune_engine.cc), its code unchanged except that the chord
-// bank's methods run in the chord bank library, without the virtual functions a
-// blob cannot construct.
+// Plaits' ChiptuneEngine as a plain class for a blob, its code unchanged
+// except its chord bank calls.
 
 #ifndef BEADS_BLOB_MODELS_CHIPTUNE_ENGINE_H_
 #define BEADS_BLOB_MODELS_CHIPTUNE_ENGINE_H_

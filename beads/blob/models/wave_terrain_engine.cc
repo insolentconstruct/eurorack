@@ -24,14 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Wave terrain synthesis - a 2D function evaluated along an elliptical path of
-// adjustable center and excentricity. This implementation initially used
-// pre-computed terrains stored in flash memory, but even at a poor resolution
-// of 64x64 with 8-bit samples, this takes 4kb per terrain! It turned out that
-// directly evaluating the terrain function on the fly uses less flash, but is
-// also faster than bicubic interpolation of the terrain data:
-// WaveTerrainEngine's code as a plain class, terrains 5-7 reading the Plaits
-// wavetables library.
+// Plaits' WaveTerrainEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/wave_terrain_engine.h"
 

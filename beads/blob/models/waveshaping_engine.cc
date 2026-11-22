@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Slope -> Waveshaper -> Wavefolder: WaveshapingEngine's code as a plain class,
-// with the waveshapers' pointer table in the object.
+// Plaits' WaveshapingEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/waveshaping_engine.h"
 

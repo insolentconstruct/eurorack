@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Three voices of string synthesis, as a plain class for a blob: Plaits'
-// StringEngine (string_engine.cc), its code unchanged, without the virtual
-// functions a blob cannot construct.
+// Plaits' StringEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_INHARMONIC_STRING_ENGINE_H_
 #define BEADS_BLOB_MODELS_INHARMONIC_STRING_ENGINE_H_

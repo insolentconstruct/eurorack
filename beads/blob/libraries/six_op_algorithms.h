@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// FM Algorithms and how to render them, as plaits/dsp/fm/algorithms.h except
-// that a render call names its renderer by its index in renderers_ instead
-// of a function pointer: a blob holds no absolute pointers and makes no
-// indirect calls. RunRenderer (six_op_voice.h) calls it.
+// FM algorithms: plaits/dsp/fm/algorithms.h naming each renderer by its index
+// in renderers_, not a function pointer.
 
 #ifndef BEADS_BLOB_LIBRARIES_SIX_OP_ALGORITHMS_H_
 #define BEADS_BLOB_LIBRARIES_SIX_OP_ALGORITHMS_H_

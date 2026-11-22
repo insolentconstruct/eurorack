@@ -24,11 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 6-operator FM synth, as a plain class for a blob: Plaits' SixOpEngine
-// (six_op_engine.cc), its code unchanged except that the banks and the
-// compiled algorithms come from the 6-op library, the voices play
-// IndexedAlgorithms and Init clears the buffer the first block reads,
-// without the virtual functions a blob cannot construct.
+// Plaits' SixOpEngine as a plain class for a blob, its code unchanged except
+// its banks, algorithms and first block.
 
 #ifndef BEADS_BLOB_MODELS_SIX_OP_FM_ENGINE_H_
 #define BEADS_BLOB_MODELS_SIX_OP_FM_ENGINE_H_

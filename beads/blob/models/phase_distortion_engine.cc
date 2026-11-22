@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Phase distortion and phase modulation with an asymmetric triangle as the
-// modulator: PhaseDistortionEngine's code as a plain class.
+// Plaits' PhaseDistortionEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/phase_distortion_engine.h"
 

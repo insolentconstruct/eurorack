@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Phase distortion and phase modulation with an asymmetric triangle as the
-// modulator, as a plain class for a blob: Plaits' PhaseDistortionEngine
-// (phase_distortion_engine.cc), its code unchanged, without the virtual
-// functions a blob cannot construct.
+// Plaits' PhaseDistortionEngine as a plain class for a blob, its code
+// unchanged.
 
 #ifndef BEADS_BLOB_MODELS_PHASE_DISTORTION_ENGINE_H_
 #define BEADS_BLOB_MODELS_PHASE_DISTORTION_ENGINE_H_

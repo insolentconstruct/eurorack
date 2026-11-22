@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Additive synthesis with 24+8 partials: AdditiveEngine's code as a plain
-// class.
+// Plaits' AdditiveEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/harmonic_engine.h"
 

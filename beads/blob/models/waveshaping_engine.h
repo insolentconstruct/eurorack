@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Slope -> Waveshaper -> Wavefolder, as a plain class for a blob: Plaits'
-// WaveshapingEngine (waveshaping_engine.cc), its code unchanged except that
-// the waveshapers' pointer table is built in the object, without the virtual
-// functions a blob cannot construct.
+// Plaits' WaveshapingEngine as a plain class for a blob, its code unchanged
+// except its waveshaper table.
 
 #ifndef BEADS_BLOB_MODELS_WAVESHAPING_ENGINE_H_
 #define BEADS_BLOB_MODELS_WAVESHAPING_ENGINE_H_

@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// One voice of modal synthesis, as a plain class for a blob: Plaits'
-// ModalEngine (modal_engine.cc), its code unchanged, without the virtual
-// functions a blob cannot construct.
+// Plaits' ModalEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_MODAL_RESONATOR_ENGINE_H_
 #define BEADS_BLOB_MODELS_MODAL_RESONATOR_ENGINE_H_

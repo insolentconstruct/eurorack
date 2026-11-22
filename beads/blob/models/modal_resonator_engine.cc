@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// One voice of modal synthesis: ModalEngine's code as a plain class.
+// Plaits' ModalEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/modal_resonator_engine.h"
 

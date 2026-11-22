@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 2 variable shape oscillators with sync and crossfading: VirtualAnalogEngine's
-// code as a plain class.
+// Plaits' VirtualAnalogEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/virtual_analog_engine.h"
 

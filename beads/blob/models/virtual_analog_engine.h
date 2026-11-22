@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 2 variable shape oscillators with sync and crossfading, as a plain class for
-// a blob: Plaits' VirtualAnalogEngine (virtual_analog_engine.cc), its code
-// unchanged, without the virtual functions a blob cannot construct.
+// Plaits' VirtualAnalogEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_VIRTUAL_ANALOG_ENGINE_H_
 #define BEADS_BLOB_MODELS_VIRTUAL_ANALOG_ENGINE_H_

@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Three voices of string synthesis: StringEngine's code as a plain class.
+// Plaits' StringEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/inharmonic_string_engine.h"
 

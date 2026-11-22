@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 808 and synthetic bass drum generators: BassDrumEngine's code as a plain
-// class.
+// Plaits' BassDrumEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/bass_drum_engine.h"
 

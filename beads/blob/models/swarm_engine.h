@@ -24,9 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Swarm of sawtooths and sines, as a plain class for a blob: Plaits'
-// SwarmEngine (swarm_engine.cc), its code unchanged, without the virtual
-// functions a blob cannot construct.
+// Plaits' SwarmEngine as a plain class for a blob, its code unchanged.
 
 #ifndef BEADS_BLOB_MODELS_SWARM_ENGINE_H_
 #define BEADS_BLOB_MODELS_SWARM_ENGINE_H_

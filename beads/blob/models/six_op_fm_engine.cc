@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// 6-operator FM synth: SixOpEngine's code as a plain class, with the 6-op
-// library's banks and algorithms, and its staggered voices' buffer cleared.
+// Plaits' SixOpEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/six_op_fm_engine.h"
 
@@ -86,8 +85,8 @@ void SixOpFM::Init(
   }
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
   acc_buffer_ = allocator->Allocate<float>(kMaxBlockSize * kNumSixOpVoices);
-  // Render's first block reads it: a blob's arena holds what the last
-  // engine left.
+  // The first blocks read it before the voices write it; a blob's arena
+  // holds what the last engine left.
   fill(&acc_buffer_[0], &acc_buffer_[kMaxBlockSize * kNumSixOpVoices], 0.0f);
   patches_ = allocator->Allocate<fm::Patch>(kNumPatchesPerBank);
   bank_ = patches_;

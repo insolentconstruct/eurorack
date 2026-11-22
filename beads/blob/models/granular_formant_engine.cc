@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Windowed sine segments: GrainEngine's code as a plain class.
+// Plaits' GrainEngine's code as a plain class for a blob.
 
 #include <algorithm>
 

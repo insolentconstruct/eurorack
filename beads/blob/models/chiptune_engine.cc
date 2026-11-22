@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Chiptune waveforms with arpeggiator: ChiptuneEngine's code as a plain class,
-// the chord bank's methods called in the chord bank library.
+// Plaits' ChiptuneEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/chiptune_engine.h"
 

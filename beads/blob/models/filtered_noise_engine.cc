@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Clocked noise processed by a multimode filter: NoiseEngine's code as a plain
-// class.
+// Plaits' NoiseEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/filtered_noise_engine.h"
 

@@ -24,10 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits' chord bank as a library: its ID, exports and their signatures. A
-// dependent keeps its ChordBank in its own state and runs the library's code
-// on it through the plaits_blob_import_chord_bank_* calls
-// (chord_bank_imports.cc); the inline accessors stay in the dependent.
+// Plaits' chord bank as a library: its ID, exports and their signatures
+// (ABI.md).
 
 #ifndef BEADS_BLOB_LIBRARIES_CHORD_BANK_LIBRARY_H_
 #define BEADS_BLOB_LIBRARIES_CHORD_BANK_LIBRARY_H_

@@ -45,7 +45,8 @@ using plaits::Swarm;
 const uint32_t kModel = 16;
 const float kOutGain = -3.0f;
 const float kAuxGain = 1.0f;
-const uint32_t kArenaSize = plaits::kNumSwarmVoices * sizeof(plaits::SwarmVoice);
+const uint32_t kArenaSize =
+    plaits::kNumSwarmVoices * sizeof(plaits::SwarmVoice);
 
 extern "C" const PlaitsBlobHeader2 plaits_blob_header
     __attribute__((section(".blob_header"), used)) = {

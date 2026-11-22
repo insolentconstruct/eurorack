@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Classic 2-op FM, as found in Braids, Rings and Elements: FMEngine's code as a
-// plain class.
+// Plaits' FMEngine's code as a plain class for a blob.
 
 #include "beads/blob/models/two_op_fm_engine.h"
 
