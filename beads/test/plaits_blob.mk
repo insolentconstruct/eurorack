@@ -25,7 +25,8 @@
 # -----------------------------------------------------------------------------
 #
 TARGET = plaits_blob_test
-CC_FILES = plaits_blob_test.cc plaits_blob.cc plaits_region.cc profile.cc \
+CC_FILES = plaits_blob_test.cc plaits_blob.cc plaits_region.cc \
+	plaits_libraries.cc profile.cc \
 	plaits_resources.cc \
 	units.cc
 HOST_FLAGS = -DPLAITS_BLOBS

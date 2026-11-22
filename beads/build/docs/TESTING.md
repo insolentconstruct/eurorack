@@ -1,7 +1,7 @@
 # Testing
 
 This source contains 21 host programs, 356 named test sections, 2,990
-assertion sites and 684 deliberate fault patterns (Beta 2: 275, 2,199 and
+assertion sites and 714 deliberate fault patterns (Beta 2: 275, 2,199 and
 396). On `c9608d0`, [host CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309834)
 passed and [mutation CI](https://github.com/insolentconstruct/eurorack/actions/runs/43678309848)
 detected all 484 faults across eight shards. Named sections and assertion sites
@@ -86,7 +86,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
 
 From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (684 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
+injects recorded faults into newer tests, each required to fail (714 current patterns; Beta 2 had 396). It runs on GitHub Actions in 8 parallel shards (`--shard K/8`) for pull requests that change the firmware or tests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 
@@ -96,22 +96,39 @@ host-test jobs; the release app does not link them:
 - `plaits_blob.mk`: version 1 and 2 header refusals, services version 2
   (contents, the generator's address), `WAVE`/`TERR`/`PLTS` sections and their
   faults one at a time, the directory's layout, the `PLTS` table, all or none,
-  the default layout by digest, and the synth locks.
+  the default layout by digest, and the synth locks. Libraries: their header
+  and export table refusals; a missing library, a wrong digest, a library
+  refused for its own reason (newer services, not listed), a cycle, a later
+  or the same library, no RAM or scratch for it, libraries out of order or
+  more than eight; the synth-entry builder's records, cleared RAM, exports
+  and dependency order. A rebuilt blob's fade-in: its squared ramp on OUT in
+  blocks of any size, nothing changed after it.
 - `profile_blobs.mk` and `storage_blobs.mk`: version 3 profiles (bank table,
   directory, unknown IDs, counts, start bank) and the saved bank's fallback,
   built with `PLAITS_BLOBS`.
-- `blob_gate_test.sh`: two positive and sixteen negative blobs, each refused
-  for its named reason (`R_ARM_REL32` outside the blob, a version 1 blob
-  importing the generator or naming services version 2, a state over the
-  slot, its own generator state).
+- `blob_gate_test.sh`: five positive and twenty-seven negative blobs, each
+  refused for its named reason (`R_ARM_REL32` outside the blob, a version 1
+  blob importing the generator or naming services version 2, a state over the
+  slot, its own generator state; a library call outside an import, an import
+  of another shape or loading from another register, a branch into an
+  import, two local imports of one name, imports or a dependency count
+  without libraries, export tables on a model, missing or naming the
+  services, libc beyond `memcpy`, `memmove` and `memset`, a fixed pointer
+  into the blob).
 - `blob_emu/render_compare.py`: every OUT and AUX word and the generator's
-  state of Particle Noise, Spectral Spiral, Phase Weave and a test sine as
-  blobs against the same classes compiled in (Particle Noise against Plaits'
-  own `ParticleEngine`), at two placements and two FPSCR modes; switch
-  sequences with the slot and arena poisoned; writes from blob code outside
-  its slot, arena, stack and outputs; canaries; section faults and the lock
-  for every `WAVE`/`PLTS` outcome. Differences after a return to a model
-  that kept state compiled in are reported as findings.
+  state of Particle Noise, Spectral Spiral, Phase Weave, a test sine,
+  Wavetable and Speech as blobs against the same classes compiled in
+  (Particle Noise, Wavetable and Speech against Plaits' own engines), at two
+  placements and two FPSCR modes; Wavetable and Speech also with their
+  libraries placed apart (four layouts); the libraries built in the emulator
+  as at synth entry; switch sequences with the slot and arena poisoned;
+  writes from blob or library code outside the slot, arena, stack and
+  outputs (a library's shared RAM included); canaries; section and library
+  faults and the lock for every `WAVE`/`PLTS` outcome. A blob's first 48
+  OUT samples after each build must equal the compiled-in samples times the
+  fade-in, bit for bit, and every other OUT and AUX sample must equal them. Differences
+  after a return to a model that kept state compiled in are reported as
+  findings.
 - `build_blobs_dev.sh`: the development app with `PLAITS_BLOBS=1`, its
   default region, and `plaits_catalog.cc` regenerated and compared.
 

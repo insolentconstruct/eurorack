@@ -74,9 +74,13 @@ struct PlaitsEngines {
   FMEngine fm_engine;
   GrainEngine grain_engine;
   AdditiveEngine additive_engine;
+#ifndef PLAITS_BLOBS
   WavetableEngine wavetable_engine;
+#endif  // PLAITS_BLOBS
   ChordEngine chord_engine;
+#ifndef PLAITS_BLOBS
   SpeechEngine speech_engine;
+#endif  // PLAITS_BLOBS
 
   SwarmEngine swarm_engine;
   NoiseEngine noise_engine;
@@ -122,6 +126,15 @@ STATIC_ASSERT(
     kPlaitsVoiceRamSize % kPlaitsRamAlignment == 0 &&
     kPlaitsSpeechRamSize % kPlaitsRamAlignment == 0,
     plaits_regions_alignment);
+#ifdef PLAITS_BLOBS
+// The libraries follow the voices: records, then each library's RAM on 32
+// bytes, then the 6-op banks, all on the same boundary.
+STATIC_ASSERT(
+    kPlaitsLibraryRamAlignment % kPlaitsRamAlignment == 0 &&
+    kPlaitsLibraryRamSize % kPlaitsLibraryRamAlignment == 0 &&
+    __alignof__(PlaitsBlobLibrary) <= kPlaitsRamAlignment,
+    plaits_library_alignment);
+#endif  // PLAITS_BLOBS
 
 // Plaits' default LPG colour.
 const float kLpgColour = 0.5f;
@@ -160,14 +173,20 @@ void PlaitsVoice::Init(uint8_t* ram, const fm::Patch* fm_banks) {
   r.RegisterInstance(&e.fm_engine, false, 0.6f, 0.6f);
   r.RegisterInstance(&e.grain_engine, false, 0.7f, 0.6f);
   r.RegisterInstance(&e.additive_engine, false, 0.8f, 0.8f);
+#ifdef PLAITS_BLOBS
+  // Blobs set their gains; engine() never returns these entries.
+  r.RegisterInstance(&e.blob_engine, false, 0.6f, 0.6f);
+  r.RegisterInstance(&e.chord_engine, false, 0.8f, 0.8f);
+  r.RegisterInstance(&e.blob_engine, false, -0.7f, 0.8f);
+#else
   r.RegisterInstance(&e.wavetable_engine, false, 0.6f, 0.6f);
   r.RegisterInstance(&e.chord_engine, false, 0.8f, 0.8f);
   r.RegisterInstance(&e.speech_engine, false, -0.7f, 0.8f);
+#endif  // PLAITS_BLOBS
 
   r.RegisterInstance(&e.swarm_engine, false, -3.0f, 1.0f);
   r.RegisterInstance(&e.noise_engine, false, -1.0f, -1.0f);
 #ifdef PLAITS_BLOBS
-  // Its blob sets the gains; engine() never returns this entry.
   r.RegisterInstance(&e.blob_engine, false, -2.0f, 1.0f);
 #else
   r.RegisterInstance(&e.particle_engine, false, -2.0f, 1.0f);
@@ -224,7 +243,8 @@ void PlaitsVoice::Render(
     // A blob is built in its zeroed slot on every switch.
     if (e == &engines_->blob_engine) {
       engines_->blob_engine.Bind(
-          region_->blob(patch.model), &plaits_blob_services, patch.model);
+          region_->blob(patch.model), &plaits_blob_services, patch.model,
+          libraries_);
       BufferAllocator allocator(
           reinterpret_cast<uint8_t*>(engines_) + sizeof(PlaitsEngines),
           kEngineRamSize);
@@ -328,7 +348,7 @@ void PlaitsVoice::Render(
 STATIC_ASSERT(sizeof(SixOpEngine) <= kPlaitsBlobMaxStateSize2, six_op_slot);
 
 Engine* PlaitsVoice::engine(int model) {
-  if (model < kNumPlaitsModels && model != kPlaitsParticleNoise) {
+  if (CompiledIn(model)) {
     return engines_->registry.get(model);
   }
   return region_ && region_->has_blob(model) ? &engines_->blob_engine : NULL;

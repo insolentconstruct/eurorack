@@ -26,13 +26,15 @@
 #
 # Gate and pack one Plaits blob (beads/blob/plaits_blob.h).
 #
-#   blob_pack.py SERVICES_V1_LD SERVICES_V2_LD OBJDUMP OUT.bin BASE:ELF...
+#   blob_pack.py SERVICES_V1_LD SERVICES_V2_LD OBJDUMP OUT.bin
+#       [--library LIBRARY.bin]... BASE:ELF...
 #
 # Each ELF is the same objects linked with beads/blob/blob.ld and
 # --emit-relocs at BASE. Every ELF must pass the gate (allowlists, not
 # blocklists) and pack to the same bytes; otherwise nothing is written.
 # Version 1 and 2 headers; a blob imports only its services version's
-# exports.
+# exports. A library's export table becomes offsets after the GOT; each
+# --library becomes a dependency record (ID and SHA-256) before the CRC.
 
 import hashlib
 import json
@@ -46,6 +48,12 @@ HEADER_SIZES = {1: 64, 2: 96}
 MAGIC = 0x424d5a44
 MAX_STATE = {1: 256, 2: 4352}
 MAX_ARENA = 16384
+KIND_MODEL = 1
+KIND_LIBRARY = 2
+MAX_LIBRARY_RAM = 65536
+MAX_EXPORTS = 16
+MAX_DEPENDENCIES = 4
+R_ARM_ABS32 = 2
 R_ARM_REL32 = 3
 MAX_ALIGNMENT = 32
 SHF_ALLOC = 2
@@ -73,7 +81,19 @@ ALLOWED_RELOCATIONS = {
 # Non-allocated sections that never reach the blob's bytes.
 ALLOWED_INFO = re.compile(
     r'^(|\.symtab|\.strtab|\.shstrtab|\.ARM\.attributes|\.rel\.blob|'
-    r'(\.rel)?\.debug\w*)$')
+    r'\.rel\.blob_exports|(\.rel)?\.debug\w*)$')
+
+# A call to a library: a function named plaits_blob_import_* that loads an
+# export from the library record in r0 (PlaitsBlobLibrary) and tail-calls
+# it. The gate's one exception to "no branch through a register".
+IMPORT = 'plaits_blob_import_'
+IMPORT_LOAD = re.compile(r'^ldr(\.w)?$')
+IMPORT_OPERANDS = re.compile(r'^(r[0-9]|r1[0-2]|ip), \[r0, #(\d+)\]')
+FUNCTION = re.compile(r'^([0-9a-f]+) <([^>]+)>:$')
+
+# The libc functions a blob may copy in: no state, no errno.
+LIBC = ('memcpy', 'memmove', 'memset')
+ARCHIVE_MEMBER = re.compile(r'^(\S+\.a)\((\S+)\)$')
 
 # Branches through a register other than a return (virtual calls, function
 # pointers), with any condition. TBB and TBH stay: their tables are relative.
@@ -130,7 +150,7 @@ class Elf(object):
       name, value, size, info, other, shndx = struct.unpack_from(
           '<IIIBBH', self.data, symtab[4] + i * 16)
       symbols.setdefault(self.String(strtab[4], name), []).append(
-          (value, shndx, info))
+          (value, shndx, info, size))
     return symbols
 
   def SymbolValue(self, index):
@@ -152,24 +172,123 @@ def header_version(elf):
   magic, size, abi, services = struct.unpack_from('<4I', data, 0)
   if magic != MAGIC or HEADER_SIZES.get(abi) != size:
     raise ValueError('the header is not first in .blob')
-  return abi, services
+  kind = struct.unpack_from('<I', data, 16)[0] if abi == 2 else KIND_MODEL
+  return abi, services, kind
 
 
-def gate(elf, base, exports, objdump, path):
+def check_archives(map_path, failures):
+  """Archive members only for the allowed libc functions, as the link map
+  records why each was included."""
+  lines = open(map_path).read().split('\n')
+  try:
+    start = lines.index('Archive member included to satisfy reference by '
+                        'file (symbol)')
+  except ValueError:
+    return
+  for i in range(start + 1, len(lines)):
+    if lines[i].startswith(('Discarded', 'Memory', 'Allocating')):
+      break
+    m = ARCHIVE_MEMBER.match(lines[i].strip())
+    if not m:
+      continue
+    reason = lines[i + 1].strip() if i + 1 < len(lines) else ''
+    symbol = re.search(r'\((\w+)\)$', reason)
+    if not m.group(1).endswith('/libc.a') or not symbol or \
+        symbol.group(1) not in LIBC:
+      failures.append('archive member %s for %s' % (
+          m.group(2), symbol.group(1) if symbol else reason))
+
+
+def library_record(path):
+  """A dependency on the library blob at path: its ID and SHA-256."""
+  data = open(path, 'rb').read()
+  magic, size, abi, _, kind, library = struct.unpack_from('<6I', data, 0)
+  if magic != MAGIC or abi != 2 or size != 96 or kind != KIND_LIBRARY or \
+      not 0 < library < 256:
+    raise ValueError('%s is not a library blob' % path)
+  return struct.pack('<I', library) + hashlib.sha256(data).digest()
+
+
+def check_imports(listing, failures):
+  """Import functions keep their exact shape and are entered only at their
+  start; returns how many there are."""
+  # By address: two local functions may share a name.
+  functions = {}
+  name = None
+  for line in listing.splitlines():
+    m = FUNCTION.match(line.strip())
+    if m:
+      name = m.group(1), m.group(2)
+      functions[name] = []
+      continue
+    fields = line.split('\t')
+    if name is None or len(fields) < 3 or \
+        not fields[0].strip().endswith(':'):
+      continue
+    functions[name].append((fields[2].strip(),
+                            fields[3].strip() if len(fields) > 3 else ''))
+    target = re.search(r'<(%s\w*)\+0x[0-9a-f]+>' % IMPORT, line)
+    if target:
+      failures.append('a branch into the middle of %s' % target.group(1))
+  count = 0
+  for (_, name), code in sorted(functions.items()):
+    if not name.startswith(IMPORT):
+      continue
+    count += 1
+    # Zero padding after the tail call is never reached.
+    while code and code[-1] == ('movs', 'r0, r0'):
+      code.pop()
+    if not import_shape(code):
+      failures.append('import %s is not one load from the library record '
+                      'in r0 and a tail call: %s' % (name, code))
+  return count
+
+
+def import_shape(code):
+  """ldr rX, [r0, #k]; bx rX. With arguments on the stack GCC 9 borrows a
+  register: push {rX}; ldr rX, [r0, #k]; mov ip, rX; ldr.w rX, [sp], #4;
+  bx ip."""
+  if len(code) == 5:
+    saved = re.match(r'^\{(r[4-9]|r1[01])\}$', code[0][1])
+    if code[0][0] != 'push' or not saved:
+      return False
+    register = saved.group(1)
+    if code[2] != ('mov', 'ip, ' + register) or \
+        code[3] != ('ldr.w', register + ', [sp], #4') or \
+        code[4] != ('bx', 'ip'):
+      return False
+    load, call = code[1], ('bx', register)
+  elif len(code) == 2:
+    load, call = code
+  else:
+    return False
+  operands = IMPORT_OPERANDS.match(load[1])
+  if not operands or not IMPORT_LOAD.match(load[0]) or \
+      (len(code) == 2 and call != ('bx', operands.group(1))) or \
+      (len(code) == 5 and operands.group(1) != call[1]):
+    return False
+  offset = int(operands.group(2))
+  return 4 <= offset < 4 + 4 * MAX_EXPORTS and offset % 4 == 0
+
+
+def gate(elf, base, exports, objdump, path, num_libraries):
   failures = []
   blob = elf.Section('.blob')
+  abi, services, kind = header_version(elf)
+  library = kind == KIND_LIBRARY
   if blob[3] != base:
     failures.append('.blob at 0x%08x, not 0x%08x' % (blob[3], base))
   if blob[8] > MAX_ALIGNMENT:
     failures.append('.blob needs %d-byte alignment' % blob[8])
   for name, s in zip(elf.names, elf.sections):
-    if name == '.blob':
+    if name == '.blob' or (library and name == '.blob_exports'):
       continue
     if s[2] & SHF_ALLOC or not ALLOWED_INFO.match(name):
       failures.append('section %s (flags 0x%x, %d B)' % (name, s[2], s[5]))
+  if kind not in (KIND_MODEL, KIND_LIBRARY):
+    failures.append('kind %d is neither a model nor a library' % kind)
 
   symbols = elf.Symbols()
-  abi, services = header_version(elf)
   if abi == 1 and services != 1:
     failures.append('a version 1 header names services version %d' %
                     services)
@@ -179,7 +298,7 @@ def gate(elf, base, exports, objdump, path):
   if not import_values:
     failures.append('services version %d is not known' % services)
   for name, entries in symbols.items():
-    for value, shndx, info in entries:
+    for value, shndx, info, _ in entries:
       if shndx == SHN_UNDEF and name:
         failures.append('undefined symbol %s' % name)
       elif shndx == SHN_ABS and info & 0xf in (1, 2) and \
@@ -194,6 +313,7 @@ def gate(elf, base, exports, objdump, path):
   for name, s in zip(elf.names, elf.sections):
     if s[1] != SHT_REL or name != '.rel.blob':
       continue
+    # Relocations the linker applied inside .blob.
     for i in range(s[5] // 8):
       offset, info = struct.unpack_from('<II', elf.data, s[4] + i * 8)
       kind = info & 0xff
@@ -222,45 +342,123 @@ def gate(elf, base, exports, objdump, path):
       failures.append('GOT entry 0x%08x is not a version %d export' % (
           value, services))
 
-  # The declared RAM fits the slot and arena of the blob's ABI.
+  # The declared RAM fits the slot and arena of the blob's ABI; a library's
+  # RAM and scratch, what the synth can give.
   state, arena = struct.unpack_from('<2I', data, 24 if abi == 1 else 32)
-  if state > MAX_STATE.get(abi, 0):
+  max_state = MAX_LIBRARY_RAM if library else MAX_STATE.get(abi, 0)
+  if state > max_state:
     failures.append('state of %d B is over the %d B slot' % (
-        state, MAX_STATE.get(abi, 0)))
+        state, max_state))
   if arena > MAX_ARENA:
     failures.append('arena of %d B is over %d B' % (arena, MAX_ARENA))
 
+  # A library's export table: one absolute word per export, naming code or
+  # constants inside the blob.
+  table = []
+  if library:
+    table = library_exports(elf, base, got, failures)
+  elif '.blob_exports' in elf.names:
+    failures.append('a model has an export table')
+  # Exported data tables (waveforms) may hold any values; the pointer check
+  # below skips them.
+  data_ranges = [(value - base, value - base + size)
+                 for entries in symbols.values()
+                 for value, shndx, info, size in entries
+                 if info & 0xf == 1 and size and value - base in table]
+
+  # The source names how many libraries it needs; the build gives them.
+  dependencies = struct.unpack_from('<I', data, 64)[0] if abi == 2 else 0
+  if dependencies != num_libraries or dependencies > MAX_DEPENDENCIES:
+    failures.append('the header lists %d libraries, the build gives %d' % (
+        dependencies, num_libraries))
+
+  check_archives(path + '.map', failures)
+
   listing = subprocess.check_output(
       [objdump, '-d', '-j', '.blob', path]).decode()
+  name = None
   for line in listing.splitlines():
-    if indirect(line):
+    m = FUNCTION.match(line.strip())
+    if m:
+      name = m.group(2)
+    elif indirect(line) and not (name or '').startswith(IMPORT):
       failures.append('indirect branch: ' + line.strip())
-  return failures, kinds, imports
+  if check_imports(listing, failures) and not dependencies:
+    failures.append('library imports without a library to call')
+  return failures, kinds, imports, table, data_ranges
+
+
+def library_exports(elf, base, got, failures):
+  table = []
+  if '.blob_exports' not in elf.names:
+    failures.append('a library without an export table')
+    return table
+  section = elf.Section('.blob_exports')
+  words = elf.Bytes(section)
+  relocated = {}
+  for name, s in zip(elf.names, elf.sections):
+    if s[1] == SHT_REL and name == '.rel.blob_exports':
+      for i in range(s[5] // 8):
+        offset, info = struct.unpack_from('<II', elf.data, s[4] + i * 8)
+        if info & 0xff != R_ARM_ABS32:
+          failures.append('export relocation type %d' % (info & 0xff))
+        relocated[offset - section[3]] = relocated.get(
+            offset - section[3], 0) + 1
+  count = len(words) // 4
+  if not 1 <= count <= MAX_EXPORTS or len(words) % 4:
+    failures.append('%d B of exports: 1 to %d words' % (len(words),
+                                                        MAX_EXPORTS))
+  header = HEADER_SIZES[2]
+  for i in range(count):
+    value, = struct.unpack_from('<I', words, 4 * i)
+    if relocated.get(4 * i) != 1:
+      failures.append('export %d is not one absolute address' % i)
+    if not base + header <= value < got:
+      failures.append('export %d at 0x%08x is outside the code' % (i, value))
+    table.append(value - base)
+  return table
 
 
 # Header words the packer fills: size, the three entries, GOT offset and
-# size; by version.
+# size; by version. A library's reset and render words hold its export
+# table's offset and count.
 FILLED = {1: (5, 8, 9, 10, 11, 12), 2: (7, 10, 11, 12, 13, 14)}
+DEPENDENCIES_OFFSET = 15
 
 
-def pack(elf, base):
+def pack(elf, base, table, records):
   symbols = elf.Symbols()
   data = bytearray(elf.Bytes(elf.Section('.blob')))
-  abi, _ = header_version(elf)
+  abi, _, kind = header_version(elf)
   count = HEADER_SIZES[abi] // 4
   words = list(struct.unpack_from('<%dI' % count, data, 0))
   def entry(name):
     return symbols[name][0][0] - base
   got = symbols['plaits_blob_got'][0][0] - base
   got_end = symbols['plaits_blob_got_end'][0][0] - base
+  if got_end != len(data):
+    raise ValueError('the GOT does not end .blob')
   size, init, reset, render, got_offset, got_size = FILLED[abi]
+  # Code, the GOT, a library's exports, the dependencies, the CRC.
+  data += b''.join(struct.pack('<I', offset) for offset in table)
+  if records:
+    words[DEPENDENCIES_OFFSET] = len(data)
+    data += b''.join(records)
   words[size] = len(data) + 4
-  words[init] = entry('plaits_blob_init')
-  words[reset] = entry('plaits_blob_reset')
-  words[render] = entry('plaits_blob_render')
+  if kind == KIND_LIBRARY:
+    words[init] = entry('plaits_blob_init') if \
+        'plaits_blob_init' in symbols else 0
+    words[reset] = got_end
+    words[render] = len(table)
+    entries = (words[init],) if words[init] else ()
+  else:
+    words[init] = entry('plaits_blob_init')
+    words[reset] = entry('plaits_blob_reset')
+    words[render] = entry('plaits_blob_render')
+    entries = (words[init], words[reset], words[render])
   words[got_offset] = got
   words[got_size] = got_end - got
-  for offset in (words[init], words[reset], words[render]):
+  for offset in entries:
     if not offset & 1:
       raise ValueError('an entry point is not Thumb code')
   struct.pack_into('<%dI' % count, data, 0, *words)
@@ -275,30 +473,45 @@ def main(argv):
   exports = {1: v1, 2: v2}
   objdump = argv[3]
   out = argv[4]
+  rest = argv[5:]
+  libraries = []
+  while rest and rest[0] == '--library':
+    libraries.append(rest[1])
+    rest = rest[2:]
+  records = [library_record(p) for p in libraries]
   failures = []
   packed = {}
-  evidence = {'links': []}
-  for spec in argv[5:]:
+  inside = set()
+  evidence = {'links': [], 'dependencies': [
+      {'id': struct.unpack_from('<I', r)[0], 'sha256': r[4:].hex()}
+      for r in records]}
+  for spec in rest:
     base_text, path = spec.split(':', 1)
     base = int(base_text, 16)
     elf = Elf(path)
-    f, kinds, imports = gate(elf, base, exports, objdump, path)
+    f, kinds, imports, table, data_ranges = gate(
+        elf, base, exports, objdump, path, len(records))
     failures += ['%s: %s' % (path, x) for x in f]
-    data = pack(elf, base)
+    if f:
+      continue
+    data = pack(elf, base, table, records)
     packed[base] = data
-    # A secondary check: a word equal to an address inside the blob.
-    inside = [o for o in range(0, len(data) - 3, 2)
-        if base <= struct.unpack_from('<I', data, o)[0] < base + len(data)]
-    if inside:
-      failures.append('%s: blob addresses at offsets %s' % (path, inside[:8]))
+    # A secondary check: a word equal to an address inside the blob, outside
+    # exported data tables.
+    inside |= set(
+        o for o in range(0, len(data) - 3, 2)
+        if base <= struct.unpack_from('<I', data, o)[0] < base + len(data) and
+        not any(lo <= o < hi for lo, hi in data_ranges))
     evidence['links'].append({
         'base': '0x%08x' % base,
         'sha256': hashlib.sha256(data).hexdigest(),
         'relocations': kinds,
         'imports': ['0x%08x' % v for v in imports]})
-  if len(set(packed.values())) != 1:
+  if inside:
+    failures.append('blob addresses at offsets %s' % sorted(inside)[:8])
+  if not failures and len(set(packed.values())) != 1:
     failures.append('the packed bytes differ between bases')
-  if len(packed) < 3:
+  if not failures and len(packed) < 3:
     failures.append('link at three bases at least')
   for f in failures:
     print('GATE: ' + f, file=sys.stderr)
@@ -314,6 +527,8 @@ def main(argv):
   else:
     model, state, arena, entries, got = (
         words[5], words[8], words[9], words[10:13], words[13:15])
+  evidence['kind'] = 'library' if abi == 2 and words[4] == KIND_LIBRARY \
+      else 'model'
   evidence.update({
       'abi': abi,
       'size': len(data),

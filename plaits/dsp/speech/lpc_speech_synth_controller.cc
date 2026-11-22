@@ -77,8 +77,10 @@ const uint8_t BitStream::reverse_lut_[256] = {
   0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
 };
 
+#ifndef PLAITS_BLOB
 /* static */
 const LPCSpeechSynthWordBank* LPCSpeechSynthWordBank::decoded_banks_ = NULL;
+#endif  // PLAITS_BLOB
 
 /* static */
 const uint8_t LPCSpeechSynthWordBank::energy_lut_[16] = {

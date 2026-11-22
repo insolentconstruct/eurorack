@@ -507,6 +507,7 @@ bool FlashEccOk() {
 void ReadPlaitsRegion() {
   const Profile& profile = settings.profile();
   plaits_region.set_flash_check(&FlashEccOk);
+  plaits_region.set_library_ram(kPlaitsLibraryRamSize, kPlaitsVoiceRamSize);
   SCB_DisableDCache();
   SCB->CCR |= SCB_CCR_BFHFNMIGN_Msk;
   __DSB();

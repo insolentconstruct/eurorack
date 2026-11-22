@@ -27,11 +27,15 @@
 #
 # Lay out a region (beads/blob/plaits_region.h): WAVE, TERR and PLTS sections
 # in that order, each on a 32-byte flash word, with a 32-byte header and a
-# trailing CRC-32. PLTS holds one entry per blob, then the blobs verbatim at
-# 32-byte aligned offsets. Hygrostat's writer must produce the same bytes.
+# trailing CRC-32. PLTS holds one entry per blob (libraries by ID, then
+# models by ID), then the blobs verbatim at 32-byte aligned offsets.
+# Hygrostat's writer must produce the same bytes.
 #
 #   blob_sections.py OUT.bin RELEASE [--wave beads/resources.cc]
-#       [--terrain GRIDS.bin] [BLOB.bin...]
+#       [--terrain GRIDS.bin] [--gap BYTES] [BLOB.bin...]
+#
+# --gap (emulator layouts only) leaves that much erased space before the
+# first model.
 #
 # OUT.bin.json lists each section's offset, size, CRC and SHA-256: the
 # profile directory's entries, or a release's default layout.
@@ -56,6 +60,8 @@ MAX_BLOBS = 128
 HEADER_SIZES = {1: 64, 2: 96}
 BLOB_MAGIC = 0x424d5a44
 KIND_MODEL = 1
+KIND_LIBRARY = 2
+MAX_LIBRARIES = 8
 
 
 def align(n):
@@ -93,9 +99,14 @@ def section(kind, release, count, payload):
   return data + struct.pack('<I', zlib.crc32(data) & 0xffffffff)
 
 
+def blob_kind(blob):
+  abi = struct.unpack_from('<I', blob, 8)[0]
+  return struct.unpack_from('<I', blob, 16)[0] if abi == 2 else KIND_MODEL
+
+
 def blob_ids(blob):
-  """The model IDs a blob serves; refuses what the firmware would refuse
-  before reading the blob's code."""
+  """The model IDs a blob serves, or its library ID; refuses what the
+  firmware would refuse before reading the blob's code."""
   magic, header_size, abi = struct.unpack_from('<3I', blob, 0)
   if magic != BLOB_MAGIC or header_size != HEADER_SIZES.get(abi):
     raise ValueError('not a blob')
@@ -104,8 +115,9 @@ def blob_ids(blob):
     count = 1
   else:
     kind, first, count, size = struct.unpack_from('<4I', blob, 16)
-    if kind != KIND_MODEL:
-      raise ValueError('only model blobs until libraries arrive')
+    if kind not in (KIND_MODEL, KIND_LIBRARY) or \
+        (kind == KIND_LIBRARY and (count != 1 or not first)):
+      raise ValueError('neither a model nor a library')
   if size != len(blob) or size % 4 or size < header_size + 4:
     raise ValueError('a blob\'s size word does not match its file')
   if zlib.crc32(blob[:-4]) & 0xffffffff != struct.unpack_from(
@@ -116,18 +128,29 @@ def blob_ids(blob):
   return range(first, first + count)
 
 
-def plaits(release, blobs):
+def plaits(release, blobs, gap=0):
+  """The PLTS section; gap (a test layout) is added before the first
+  model."""
   if len(blobs) > MAX_BLOBS:
     raise ValueError('more than %d blobs' % MAX_BLOBS)
-  blobs = sorted(blobs, key=lambda b: blob_ids(b)[0])
-  served = [i for b in blobs for i in blob_ids(b)]
-  if len(served) != len(set(served)):
-    raise ValueError('two blobs serve the same model ID')
+  blobs = sorted(blobs, key=lambda b: (blob_kind(b) != KIND_LIBRARY,
+                                       blob_ids(b)[0]))
+  libraries = [blob_ids(b)[0] for b in blobs
+               if blob_kind(b) == KIND_LIBRARY]
+  served = [i for b in blobs if blob_kind(b) == KIND_MODEL
+            for i in blob_ids(b)]
+  if len(served) != len(set(served)) or \
+      len(libraries) != len(set(libraries)):
+    raise ValueError('two blobs serve the same ID')
+  if len(libraries) > MAX_LIBRARIES:
+    raise ValueError('more than %d libraries' % MAX_LIBRARIES)
   offset = 32 + 16 * len(blobs)
   entries = []
-  for blob in blobs:
+  for i, blob in enumerate(blobs):
+    if i == len(libraries):
+      offset += gap
     offset = align(offset)
-    entries.append((KIND_MODEL, blob_ids(blob)[0], offset, len(blob),
+    entries.append((blob_kind(blob), blob_ids(blob)[0], offset, len(blob),
                     struct.unpack_from('<I', blob, len(blob) - 4)[0]))
     offset += len(blob)
   payload = bytearray(b'\xff' * (offset - 32))
@@ -136,9 +159,9 @@ def plaits(release, blobs):
                      size, crc)
     payload[start - 32:start - 32 + size] = blobs[i]
   return section('PLTS', release, len(blobs), bytes(payload)), [
-      {'model': m, 'offset': o, 'size': s,
-       'sha256': hashlib.sha256(blobs[i]).hexdigest()}
-      for i, (_, m, o, s, _) in enumerate(entries)]
+      dict({'library' if k == KIND_LIBRARY else 'model': m},
+           offset=o, size=s, sha256=hashlib.sha256(blobs[i]).hexdigest())
+      for i, (k, m, o, s, _) in enumerate(entries)]
 
 
 def main(argv):
@@ -147,6 +170,7 @@ def main(argv):
   parser.add_argument('release', type=lambda x: int(x, 0))
   parser.add_argument('--wave')
   parser.add_argument('--terrain')
+  parser.add_argument('--gap', type=lambda x: int(x, 0), default=0)
   parser.add_argument('blobs', nargs='*')
   args = parser.parse_intermixed_args(argv[1:])
   if not 0 < args.release < 1 << 32:
@@ -168,7 +192,8 @@ def main(argv):
                      None))
   if args.blobs:
     data, listed = plaits(args.release,
-                          [open(p, 'rb').read() for p in args.blobs])
+                          [open(p, 'rb').read() for p in args.blobs],
+                          args.gap)
     sections.append(('PLTS', data, listed))
 
   region = bytearray()
