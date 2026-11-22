@@ -2219,8 +2219,10 @@ void TestPitchLawProfile() {
 void FlashPlaitsBankProfile(uint8_t bank) {
   uint8_t block[kProfileSize];
   BuildProfile(block, NULL, 0);
-  uint8_t* entry = block + 16 + 6 * (block[5] - 1);
-  CHECK(entry[0] == FEATURE_PLAITS_BANK);
+  uint8_t* entry = block + 16;
+  while (entry[0] != FEATURE_PLAITS_BANK) {
+    entry += 6;
+  }
   entry[2] = bank;
   const size_t bytes = 6 * block[5];
   const uint32_t crc = Profile::Crc32(block, 16 + bytes);
@@ -2718,9 +2720,10 @@ void TestResonatorSeedCallback() {
     CHECK((ResonatorEnergy() > 0.0f) == bool(press));
   }
   // Patched and latched, each edge at the jack strikes it.
-  r.Reboot(false);
   r.seed_patched = true;
+  BootWithProfile(&r, entry, 1);
   r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_RESONATOR_GRAINS);
   CHECK(ui.seed_button_locked());
   CHECK(ResonatorEnergy() == 0.0f);
   test_seed_input = true;

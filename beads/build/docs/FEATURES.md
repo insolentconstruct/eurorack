@@ -660,10 +660,11 @@ it plays the newest note sent to PITCH. Attacks hits also strike it. While FREEZ
 still strike it but Snap hits do not, as they also leave no marks then.
 
 SEED strikes it too, in every Attacks mode, as Rings' strum does: a pulse
-through a low-pass that follows pitch and brightness, 12 dB louder than
-Rings', so String peaks near -12 dBFS from C2 to C5 (a hit's single-sample
-pulse peaks 15 to 26 dB lower, with a click). Dark materials strike softer:
-Bell peaks near -26 dBFS. Unlatched, the button and the jack make one gate, as the grains
+through a low-pass that follows pitch and brightness, at Rings' level. From
+silence String peaks near -8 dBFS from C2 to C5, Wood and Glass at -7 to
+-13 dBFS, and Bell, the darkest, near -21 dBFS. A hit's single-sample pulse
+peaks 4 to 19 dB lower than String's strike, higher pitches louder, with a
+click. Unlatched, the button and the jack make one gate, as the grains
 see them, and each rising edge strikes once; a press while the jack is high,
 or a gate while the button is held, does not. Latched, each rising edge at
 the jack strikes it (Sync and Add too; Ignore has no jack), and the press

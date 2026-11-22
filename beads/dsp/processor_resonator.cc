@@ -82,8 +82,7 @@ void Processor::ProcessResonator(
     const float cutoff = min(frequency * SemitonesToRatio(
         (brightness * (2.0f - brightness) - 0.5f) * 96.0f), 0.499f);
     strike_filter_.set_f_q<FREQUENCY_DIRTY>(cutoff, 1.5f);
-    strike_pulse = kResonatorSeedStrike * 0.25f *
-        SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
+    strike_pulse = 0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
     strike_sounding_ = true;
   } else if (strike) {
     excitation[0] += kResonatorStrike;

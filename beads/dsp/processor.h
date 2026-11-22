@@ -63,8 +63,6 @@ const float kDelayModeFadeTime = 0.75f;  // seconds
 // The grains' mono sum and an input hit strike the resonator.
 const float kResonatorInputGain = 0.5f;
 const float kResonatorStrike = 0.5f;
-// SEED's strike, Rings' strum made 12 dB louder: near -12 dBFS at any pitch.
-const float kResonatorSeedStrike = 4.0f;
 // PITCH at noon tunes it to C3.
 const float kResonatorRootNote = 48.0f;
 
