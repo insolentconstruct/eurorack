@@ -2541,7 +2541,7 @@ bool ControlsEqual(const ResonatorControls& c, float structure,
       c.damping == damping && c.position == position && c.amount == amount;
 }
 
-// Page 5 moves the resonator live, unsaved; Hygrostat's exact values win.
+// Page 5 moves the resonator live and saves; Hygrostat's exact values win.
 void TestResonatorPage() {
   test_checker.Start("TestResonatorPage");
   Rig r(false, false);

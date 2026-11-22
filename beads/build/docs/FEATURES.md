@@ -81,7 +81,8 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 2–3 | Reserved, 0xFF |
 | 4–7 | The profile that last saved: its CRC-32, 0 for the built-in fallback |
 | 8–23 | One byte per saved option (below) |
-| 24–55 | Reserved, 0xFF |
+| 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
+| 27–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
