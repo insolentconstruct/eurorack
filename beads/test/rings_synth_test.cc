@@ -515,7 +515,8 @@ void TestRingsSynthApp() {
     }
   }
   CHECK(configure_calls == 3);
-  CHECK(CoreTarget(core).core == RINGS_CORE_PART && CoreTarget(core).model == 1);
+  CHECK(CoreTarget(core).core == RINGS_CORE_PART);
+  CHECK(CoreTarget(core).model == 1);
 
   // Polyphony 4 through feature 42's value.
   synth.set_polyphony(4);
@@ -527,6 +528,32 @@ void TestRingsSynthApp() {
   CHECK(synth.configure_pending());
   synth.Configure();
   CHECK(CoreTarget(core).polyphony == 4);
+
+  // Rings' own output, quantized, times one gain: no other change while
+  // the limiters idle (a fresh synth, no reverb, width off: Rings' pair).
+  Ram exact_ram(0);
+  RingsSynth exact;
+  static uint16_t exact_reverb[32768];
+  exact.Init(exact_reverb);
+  exact.set_entries(&HostInit, &HostConfigure, &HostRender);
+  exact.InitVoices(exact_ram.bytes, CoreSize(), NULL, 0.0f);
+  mix.reverb_amount = 0.0f;
+  float worst = 0.0f;
+  float loudest = 0.0f;
+  for (int b = 0; b < 400; ++b) {
+    exact.Render(b % 100 ? SEED_BUTTON_STATE_OFF : SEED_BUTTON_STATE_ON,
+                 NULL, freeze, Synth::RESOLUTION_16_BIT, density, p, mix,
+                 out, kRingsBlockSize);
+    for (size_t i = 0; i < kRingsBlockSize && b >= 10; ++i) {
+      const float a = float(int32_t(last_out[i] * 65536.0f)) / 65536.0f;
+      const float c = float(int32_t(last_aux[i] * 65536.0f)) / 65536.0f;
+      worst = max(worst, fabsf(out[i].l - a * kRingsGain));
+      worst = max(worst, fabsf(out[i].r - c * kRingsGain));
+      loudest = max(loudest, fabsf(out[i].l));
+    }
+  }
+  CHECK(loudest > 0.05f && loudest < 0.9f);
+  CHECK(worst < 1e-6f);
 
   // Unbound: silence, never a call.
   RingsSynth unbound;

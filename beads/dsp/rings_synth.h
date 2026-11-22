@@ -50,6 +50,9 @@ const float kRingsLowestNote = 12.0f + 66.67f - 84.26f;
 const float kRingsHighestNote = 72.0f + 66.67f;
 // Rings' STRUCTURE range (cv_scaler.cc).
 const float kRingsMaxStructure = 0.9995f;
+// Rings' out and aux into Beads: its median peak and RMS then fall within
+// about 1 dB of the Plaits synth's (whose voices are scaled to 10 Vpp).
+const float kRingsGain = 1.12f;
 // A FEEDBACK zone or polyphony is applied once held this many blocks
 // (30 ms), so a sweep reconfigures once.
 const int kRingsSettleBlocks = 120;

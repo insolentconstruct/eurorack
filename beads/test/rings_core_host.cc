@@ -29,6 +29,7 @@
 #include "beads/test/rings_core_host.h"
 
 #include <cstdio>
+#include <algorithm>
 #include <new>
 
 #include "beads/blob/synths/rings_synth_core.h"
@@ -39,6 +40,8 @@ using namespace rings;
 
 uint32_t configure_calls;
 uint32_t render_calls;
+float last_out[kRingsBlockSize];
+float last_aux[kRingsBlockSize];
 
 void* HostInit(uint8_t* ram, size_t ram_size, const PlaitsBlobServices* s) {
   RingsSynthCore* core = new(ram) RingsSynthCore;
@@ -57,6 +60,8 @@ void HostRender(void* context, RingsSynthControls* controls, float* out,
                 float* aux, size_t size) {
   ++render_calls;
   static_cast<RingsSynthCore*>(context)->Render(controls, out, aux, size);
+  std::copy(&out[0], &out[size], &last_out[0]);
+  std::copy(&aux[0], &aux[size], &last_aux[0]);
 }
 
 size_t CoreSize() {

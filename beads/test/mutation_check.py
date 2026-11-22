@@ -2482,6 +2482,9 @@ cases = [
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
     '  playing_synth = playing;\n  if (codec_running) {\n    codec.Resume',
     '  if (codec_running) {\n    codec.Resume'),
+  ('TestRingsSynthApp', 'rings_synth', 'beads/dsp/rings_synth.cc',
+    '    const float b = float(int32_t(r[i] * scale_up)) * scale_down * kRingsGain;',
+    '    const float b = float(int32_t(r[i] * scale_up)) * scale_down;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

@@ -215,8 +215,8 @@ void RingsSynth::Render(
   const float scale_down = 1.0f / scale_up;
   const float side_gain = width_enabled_ ? stereo_width_ : 1.0f;
   for (size_t i = 0; i < size; ++i) {
-    const float a = float(int32_t(l[i] * scale_up)) * scale_down;
-    const float b = float(int32_t(r[i] * scale_up)) * scale_down;
+    const float a = float(int32_t(l[i] * scale_up)) * scale_down * kRingsGain;
+    const float b = float(int32_t(r[i] * scale_up)) * scale_down * kRingsGain;
     const float mid = 0.5f * (a + b);
     const float side = 0.5f * (a - b) * side_gain;
     out[i].l = mid + side;

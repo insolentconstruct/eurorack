@@ -37,6 +37,9 @@ namespace beads {
 // The blob's entries on the host; configure and render are counted.
 extern uint32_t configure_calls;
 extern uint32_t render_calls;
+// The core's last block, before the app's quality, gain and chain.
+extern float last_out[kRingsBlockSize];
+extern float last_aux[kRingsBlockSize];
 void* HostInit(uint8_t* ram, size_t ram_size, const PlaitsBlobServices* s);
 bool HostConfigure(void* context, const RingsSynthTarget* target,
                    const RingsSynthControls* controls, bool entry);
