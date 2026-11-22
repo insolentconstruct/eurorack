@@ -279,7 +279,7 @@ void Processor::MixDryWet(
   stmlib::ParameterInterpolator dry_modulation(&dry_, dry, size);
   stmlib::ParameterInterpolator wet_modulation(&wet_, wet, size);
   for (size_t i = 0; i < size; ++i) {
-    out[i] = dry_modulation.Next() * dry_signal[i] + \
+    out[i] = dry_modulation.Next() * dry_signal[i] +
         wet_modulation.Next() * out[i];
   }
   // Wow and flutter simulation.
