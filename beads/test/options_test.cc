@@ -3093,6 +3093,7 @@ void PlaySynth(Rig* r, bool synth_mode, bool plaits) {
   r->settings.set_synth(plaits ? SYNTH_PLAITS : SYNTH_BEADS);
   r->ui.set_no_input(synth_mode);
   r->ui.set_synth_mode(synth_mode);
+  r->ui.set_playing_synth(plaits ? SYNTH_PLAITS : SYNTH_BEADS);
   r->Down(SWITCH_FREEZE);
   r->Up(SWITCH_FREEZE);
   CHECK(r->ui.freeze_button_state_);
@@ -3234,7 +3235,7 @@ void TestRingsPolyphonyGesture() {
     CHECK(r.settings.profile().adjustable(FEATURE_RINGS_POLYPHONY));
     PlaySynth(&r, true, false);
     r.settings.set_synth(SYNTH_RINGS);
-    r.ui.set_rings_playing(true);
+    r.ui.set_playing_synth(SYNTH_RINGS);
     r.Tick(1, true);
     CHECK(r.ui.synth() == SYNTH_RINGS);
     const uint8_t media = r.settings.state().media;
@@ -3265,7 +3266,7 @@ void TestRingsPolyphonyGesture() {
     const Leds::Color quality = r.ui.media_palette_[media];
     CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
     // Rings not playing (a fallback plays): buffer trim, no step.
-    r.ui.set_rings_playing(false);
+    r.ui.set_playing_synth(SYNTH_BEADS);
     r.Down(SWITCH_MEDIA);
     r.Down(SWITCH_FREEZE);
     CHECK(r.ui.trim_flag_);
@@ -3290,7 +3291,7 @@ void TestRingsPolyphonyGesture() {
     CHECK(r.settings.profile().adjustable(FEATURE_RINGS_POLYPHONY));
     r.settings.set_self_play_on_request(true);
     PlaySynth(&r, true, false);
-    r.ui.set_rings_playing(true);
+    r.ui.set_playing_synth(SYNTH_RINGS);
     r.Down(SWITCH_MEDIA);
     r.Down(SWITCH_FREEZE);
     CHECK(r.ui.self_play_requested());

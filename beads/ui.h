@@ -185,8 +185,8 @@ class Ui {
     playable_synths_ = playable;
     options_.set_playable_synths(playable);
   }
-  // [A]+FREEZE steps Rings' polyphony while it plays.
-  inline void set_rings_playing(bool playing) { rings_playing_ = playing; }
+  // The SynthEngine playing, fallbacks included: [A]+FREEZE follows it.
+  inline void set_playing_synth(uint8_t synth) { playing_synth_ = synth; }
   // No playable synth: synth mode is silent.
   inline void set_synth_fault(bool fault) { synth_fault_ = fault; }
   inline bool self_play_requested() const { return self_play_requested_; }
@@ -235,7 +235,7 @@ class Ui {
   bool no_input_;
   bool synth_mode_;
   uint8_t playable_synths_;
-  bool rings_playing_;
+  uint8_t playing_synth_;
   bool synth_fault_;
   bool self_play_requested_;
   bool freeze_button_state_;

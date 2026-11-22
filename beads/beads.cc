@@ -678,6 +678,7 @@ void Init() {
 #endif  // PLAITS_BLOBS
   ui.set_playable_synths(playable_synths);
   playing_synth = EffectiveSynth(ui.synth(), playable_synths);
+  ui.set_playing_synth(playing_synth);
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
@@ -728,6 +729,7 @@ void SwapPaused(SynthEngine owner, SynthEngine playing) {
     TakeBank0(owner);
   }
   playing_synth = playing;
+  ui.set_playing_synth(playing);
   if (codec_running) {
     codec.Resume(&Process);
   }
@@ -773,7 +775,6 @@ void MonitorStateChange() {
       kRingsPolyphonies[settings.FeatureValue(FEATURE_RINGS_POLYPHONY)]);
   const SynthEngine wanted = EffectiveSynth(ui.synth(), playable_synths);
   ui.set_synth_fault(wanted == SYNTH_SILENT);
-  ui.set_rings_playing(synth_mode && playing_synth == SYNTH_RINGS);
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
@@ -794,6 +795,7 @@ void MonitorStateChange() {
       return;
     }
     playing_synth = wanted;
+    ui.set_playing_synth(wanted);
   }
   // A settled zone or polyphony change reconfigures Rings off the interrupt.
   if (synth_mode && playing_synth == SYNTH_RINGS &&
