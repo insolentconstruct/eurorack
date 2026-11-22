@@ -94,7 +94,8 @@ bool Settings::Init(bool recovery_mode,
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],
       0);
-  const PersistentData factory = persistent_data_;
+  factory_ = persistent_data_;
+  const PersistentData& factory = factory_;
   for (size_t i = 0; i < sizeof(packed_); ++i) {
     packed_[i] = 0x9f;
   }
@@ -116,6 +117,7 @@ bool Settings::Init(bool recovery_mode,
   repair_ = STORAGE_REPAIR_NONE;
   
   Flash::Init();  // Every write checks the supply from here on.
+  chunk_storage_.set_calibration_check(&CalibrationPlausible, &factory_);
   StorageStatus status = chunk_storage_.Init(
       &persistent_data_, &stored_state_, profile_locked_);
   
