@@ -52,6 +52,12 @@ cases = [
   ('TestHermiteRawMatchesScaled', 'delay', 'beads/dsp/delay_line.h',
     'result.l = result.r = i ? odd : even;',
     'result.l = result.r = even;'),
+  ('TestTapShapeMatchesStock', 'delay', 'beads/dsp/delay_controller.h',
+    'shape->slope_down = 1.0f / (1.0f - shape->pw);',
+    'shape->slope_down = 1.0f / shape->pw;'),
+  ('TestTapShapeMatchesStock', 'delay', 'beads/dsp/delay_controller.h',
+    'phase_, shape.pw, shape.slope_up, shape.slope_down);',
+    'phase_, shape.pw, shape.slope_down, shape.slope_up);'),
   ('TestClockIdleCounter', 'delay', 'beads/dsp/delay_clock.cc',
     '  if (next_interval_ >= max_interval_) {\n'
     '    next_interval_ = max_interval_;\n'
