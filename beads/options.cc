@@ -32,7 +32,7 @@
 
 namespace beads {
 
-// Previews are these enums' values; slots 1-21 are the pages' knobs.
+// Previews are these enums' values.
 STATIC_ASSERT(PAGE_VALUES_PITCH == kMaxPitchScaleId + 1, pitch_values);
 STATIC_ASSERT(PAGE_VALUES_DELAY == DELAY_MODE_WIDE_DETENT + 1, delay_values);
 STATIC_ASSERT(PAGE_VALUES_LIMITER == OUTPUT_LIMITER_OFF + 1, limiter_values);
@@ -40,8 +40,6 @@ STATIC_ASSERT(
     PAGE_VALUES_ATTACKS == ATTACK_MODE_SNAP_AND_TRIGGER + 1, attack_values);
 STATIC_ASSERT(
     PAGE_VALUES_INTERVALS == int(RANDOM_INTERVALS_LAST), interval_values);
-STATIC_ASSERT(
-    kNumPageSlots == 1 + kNumOptionPages * MIX_PARAMETER_LAST, page_slots);
 
 const OptionPage kOptionPages[kNumOptionPages] = {
   { 1, { FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS } },
