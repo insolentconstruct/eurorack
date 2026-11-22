@@ -42,10 +42,10 @@ all: $(TARGET)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(BUILD_DIR)%.o: %.cc
+$(BUILD_DIR)%.o: %.cc | $(BUILD_DIR)
 	g++ -c $(HOST_FLAGS) $(EXTRA_FLAGS) $< -o $@
 
-$(BUILD_DIR)%.d: %.cc
+$(BUILD_DIR)%.d: %.cc | $(BUILD_DIR)
 	g++ -MM -MP $(HOST_FLAGS) $(EXTRA_FLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 $(TARGET): $(OBJS)
@@ -54,7 +54,7 @@ $(TARGET): $(OBJS)
 depends: $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)
 
-$(DEP_FILE): $(BUILD_DIR) $(DEPS)
+$(DEP_FILE): $(DEPS) | $(BUILD_DIR)
 	cat $(DEPS) > $(DEP_FILE)
 
 .PHONY: test depends
