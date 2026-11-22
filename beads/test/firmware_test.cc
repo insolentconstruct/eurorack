@@ -3012,9 +3012,10 @@ void TestRejectedCalibrationCue() {
     PersistentData attempt = stored;
     attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
     attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+    // The run's values stay in the calibrator until it completes.
+    calibrator.Start();
     if (wild) {
-      settings.mutable_persistent_data()->adc_calibration[
-          CV_ADC_CHANNEL_TIME].offset *= 3.0f;
+      calibrator.calibration_data_[CV_ADC_CHANNEL_TIME].offset *= 3.0f;
     }
     CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
     // The last event over a second ago, as after a slow flash rewrite.
@@ -3036,6 +3037,131 @@ void TestRejectedCalibrationCue() {
     CHECK(loaded.Init(false));
     CHECK(SameCalibration(loaded.persistent_data(), wild ? stored : attempt));
   }
+}
+
+// A button, or a chord with the first held, pressed and released.
+void Press(Rig* r, int first, int second) {
+  test_down[first] = true;
+  r->Advance(20);
+  test_down[second] = true;
+  r->Advance(20);
+  test_down[first] = test_down[second] = false;
+  r->Advance(20);
+}
+
+// The next save rewrites the settings sector, as when it is full.
+void RewriteOnNextSave() {
+  settings.chunk_storage_.next_state_chunk_index_ = 0xffff;
+  settings.SaveState();
+}
+
+// #346: a run that doesn't complete changes nothing, in use or in flash,
+// though the sector is rewritten during it: a step rejected after the
+// offsets, or after the pitch, or the run left by the autosave chord.
+void TestUnfinishedCalibrationKept() {
+  test_checker.Start("TestUnfinishedCalibrationKept");
+  for (int exit = 0; exit < 3; ++exit) {
+    Rig r(false, false);
+    // Cables left in TIME, PITCH and DENSITY.
+    r.cv_patched[CV_ADC_CHANNEL_TIME] = true;
+    r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+    r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+    r.cv[CV_ADC_CHANNEL_TIME] = 20000;
+    r.cv[CV_ADC_CHANNEL_PITCH] = 40000;
+    r.cv[CV_ADC_CHANNEL_DENSITY] = 13107;
+    r.Settle();
+    const PersistentData stored = settings.persistent_data();
+    Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+    CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+    Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+    CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
+    CHECK(fabsf(calibrator.calibration_data_[CV_ADC_CHANNEL_TIME].offset -
+        stored.adc_calibration[CV_ADC_CHANNEL_TIME].offset) > 0.1f);
+    RewriteOnNextSave();
+    if (exit == 0) {
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);  // PITCH unchanged: rejected.
+    } else if (exit == 1) {
+      r.cv[CV_ADC_CHANNEL_PITCH] -= 13107;  // 2 V higher: accepted.
+      r.Settle();
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_3);
+      CHECK(fabsf(calibrator.calibration_data_[CV_ADC_CHANNEL_PITCH].offset -
+          stored.adc_calibration[CV_ADC_CHANNEL_PITCH].offset) > 1.0f);
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_4);
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);  // DENSITY unchanged: rejected.
+    } else {
+      Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+      CHECK(ui.mode_ == Ui::MODE_DISPLAY_AUTOSAVE);
+    }
+    CHECK(exit == 2 || ui.mode_ == Ui::MODE_PANIC);
+    CHECK(SameCalibration(settings.persistent_data(), stored));
+    RewriteOnNextSave();
+    Settings loaded;
+    PersistentData mirror;
+    CHECK(loaded.Init(false));
+    CHECK(SameCalibration(loaded.persistent_data(), stored));
+    CHECK(loaded.chunk_storage_.ReadMirror(&mirror));
+    CHECK(SameCalibration(mirror, stored));
+  }
+}
+
+// The factory test may repeat its last step: the completed run stays in the
+// calibrator, so the repeat saves the same offsets and pitch again.
+void TestFactoryCalibrationRepeat() {
+  test_checker.Start("TestFactoryCalibrationRepeat");
+  Rig r(false, false);
+  // Readings that give a calibration within 25% of the factory one.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    r.cv_patched[i] = true;
+    r.cv[i] = 30000;
+  }
+  r.cv[CV_ADC_CHANNEL_PITCH] = 28000;
+  r.cv[CV_ADC_CHANNEL_DENSITY] = 22938;
+  r.Settle();
+  const PersistentData stored = settings.persistent_data();
+  CHECK(factory_test.Calibrate(3) && factory_test.Calibrate(4));
+  r.cv[CV_ADC_CHANNEL_PITCH] -= 13107;
+  r.Settle();
+  CHECK(factory_test.Calibrate(5) && factory_test.Calibrate(6));
+  r.cv[CV_ADC_CHANNEL_DENSITY] -= 13107;
+  r.Settle();
+  CHECK(factory_test.Calibrate(7));
+  const PersistentData measured = settings.persistent_data();
+  CHECK(!SameCalibration(measured, stored));
+  CHECK(factory_test.Calibrate(7));
+  CHECK(SameCalibration(settings.persistent_data(), measured));
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(SameCalibration(loaded.persistent_data(), measured));
+}
+
+// #347: with the profile refused, nothing can be saved: a recalibration
+// shows the rejection blink, and the stored calibration stays in use.
+void TestLockedCalibrationCue() {
+  test_checker.Start("TestLockedCalibrationCue");
+  Rig r(false, false);
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  block[0] ^= 0xff;
+  FlashProfile(block);
+  r.Reboot(false);
+  FlashProfile(factory_profile);
+  CHECK(settings.profile_locked() && settings.write_locked());
+  r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+  r.cv[CV_ADC_CHANNEL_DENSITY] = 13107;
+  r.Settle();
+  const PersistentData stored = settings.persistent_data();
+  const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
+  calibrator.Start();
+  calibrator.calibrator_[1].Acquire(0, u + 0.19f, 0.2f);  // Not the stored.
+  ui.mode_ = Ui::MODE_CALIBRATION_4;
+  ui.NextCalibrationStep();
+  CHECK(ui.mode_ == Ui::MODE_PANIC);
+  CHECK(SameCalibration(settings.persistent_data(), stored));
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(SameCalibration(loaded.persistent_data(), stored));
 }
 
 // [A]+SEED as a Processor toggle takes the options page's path: it saves,
@@ -3702,6 +3828,9 @@ int main() {
   TestProcessorToggle();
   TestCalibrationStepOnRelease();
   TestRejectedCalibrationCue();
+  TestUnfinishedCalibrationKept();
+  TestLockedCalibrationCue();
+  TestFactoryCalibrationRepeat();
   TestTransitionTraces();
   TestTransitionFadeLevels();
   TestOptionFanOut();

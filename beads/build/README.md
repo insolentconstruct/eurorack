@@ -148,7 +148,7 @@ Stock settings, Beta 2 settings and calibration carry over; options, width and d
 
 Hold SEED at power-on only to reset settings; valid calibration is kept.
 
-A recalibration more than 25% from the factory values is not saved: all LEDs blink for about a second, as for a rejected step, and the stored calibration stays in use.
+A recalibration more than 25% from the factory values, or one made while an invalid profile keeps settings from being saved, is not saved: all LEDs blink for about a second, as for a rejected step, and the stored calibration stays in use. A rejected or abandoned calibration run leaves the stored calibration in use.
 
 Damaged calibration restores automatically from its copy; damaged frozen buffers are skipped. If both calibration copies are lost, all LEDs blink fast for three seconds. It then uses factory calibration and defaults, saves nothing and restores no buffer.
 

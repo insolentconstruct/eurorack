@@ -890,6 +890,73 @@ void TestRecordsInMirrorSector() {
   }
 }
 
+// A word of slot 1 that never programs: after each erase it fails again.
+void StuckSlot() {
+  const uint32_t address = RecordChunk(1);
+  if (!TestFlashDamaged(address, address + 32)) {
+    TestFlashDamage(address);
+  }
+}
+
+void StuckSlotKept() {
+  StuckSlot();
+  CheckKept();
+}
+
+// #348: the compaction that finds a stuck slot runs once per power-up, not
+// at every save. The options stay in RAM, the calibration in both sectors,
+// and a cut at any step of that compaction keeps it.
+void TestStuckRecordSlot() {
+  test_checker.Start("TestStuckRecordSlot");
+  Setup(kCalibration, 5);
+  Settings s;
+  CHECK(s.Init(false));
+  for (int power_up = 0; power_up < 2; ++power_up) {
+    Keep(kCalibration, kCalibration);
+    TestFlash().after_operation = &StuckSlotKept;
+    s.chunk_storage_.next_record_index_ = 0xffff;  // The next save compacts.
+    const PitchScale scale = power_up ? PITCH_SCALE_PELOG : PITCH_SCALE_MINOR;
+    s.set_pitch_scale(scale);
+    const uint32_t erases = TestFlashErases();
+    for (int i = 0; i < 20; ++i) {
+      s.mutable_state()->media = i & 3;
+      s.SaveState();
+    }
+    CHECK(TestFlashErases() == erases + 1);
+    CHECK(s.chunk_storage_.record_pending());
+    CHECK(s.pitch_scale() == scale);
+    CHECK(Release());
+    CHECK(HoldsCalibration(kSector, kCalibration));
+    CHECK(MirrorHolds(kCalibration));
+    TestFlash().after_operation = &StuckSlot;
+    CHECK(s.Init(false) && !s.write_locked());
+    CHECK(SameCalibration(s, kCalibration));
+    CHECK(s.state().media == 3);
+  }
+  TestFlash().after_operation = NULL;
+  TestFlashRepairAll();
+  for (int cut = 0; cut <= 6; ++cut) {
+    Setup(kCalibration, 5);
+    Settings t;
+    CHECK(t.Init(false));
+    Keep(kCalibration, kCalibration);
+    TestFlash().after_operation = &StuckSlotKept;
+    t.chunk_storage_.next_record_index_ = 0xffff;
+    t.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+    TestFlashBudget() = cut;
+    t.SaveOptions();
+    TestFlashBudget() = -1;
+    CHECK(Release());
+    TestFlashRepairAll();
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(loaded, kCalibration));
+    Settings again;
+    CHECK(again.Init(false) && !again.write_locked());
+    CHECK(SameCalibration(again, kCalibration));
+  }
+}
+
 int main() {
   if (!CHECK(MapBank2())) {
     return 1;
@@ -913,6 +980,7 @@ int main() {
   TestNoForeignTagInSector15();
   TestStockForeignInSector15();
   TestRecordsInMirrorSector();
+  TestStuckRecordSlot();
   test_checker.Start("main");
   CHECK(TestFlash().violations == 0);
   CHECK(TestFlash().wide_sectors == 0);

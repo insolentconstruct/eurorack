@@ -1027,6 +1027,40 @@ void TestProfileLocks() {
   }
 }
 
+// #347: with writes locked by a refused profile or by damage, a
+// recalibration reports its refusal, nothing is written, and the stored
+// calibration loads again.
+void TestLockedCalibrationRefused() {
+  test_checker.Start("TestLockedCalibrationRefused");
+  const PersistentData calibration = Calibration(0.07f);
+  const PersistentData fresh = Calibration(0.03f);
+  uint8_t bad[kProfileSize];
+  memset(bad, 0, sizeof(bad));
+  for (int damaged = 0; damaged < 2; ++damaged) {
+    Setup(calibration, 5);
+    if (damaged) {
+      LoseCalibration(0);
+    }
+    Take(&snapshot);
+    Settings s;
+    if (damaged) {
+      s.Init(false);
+    } else {
+      s.Init(false, bad);
+    }
+    CHECK(s.profile_locked() == !damaged && s.write_locked());
+    CHECK(s.chunk_storage_.storage_damaged() == (damaged == 1));
+    memcpy(s.mutable_persistent_data()->adc_calibration, fresh.adc_calibration,
+        sizeof(fresh.adc_calibration));
+    CHECK(!s.SavePersistentData());
+    CHECK(Unchanged(snapshot));
+    if (!damaged) {
+      Settings loaded;
+      CHECK(loaded.Init(false) && SameCalibration(loaded, calibration));
+    }
+  }
+}
+
 void TestProfileSettings() {
   test_checker.Start("TestProfileSettings");
   uint8_t b[kProfileSize];
@@ -1727,6 +1761,7 @@ int main() {
   TestLowSupply();
   TestSupplyDrop();
   TestProfileLocks();
+  TestLockedCalibrationRefused();
   TestProfileSettings();
   TestSavedFeatures();
   TestResonatorSaved();
