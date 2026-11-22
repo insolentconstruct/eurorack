@@ -55,7 +55,7 @@ CPPFLAGS=$($M --eval 'q: ; @echo $(CPPFLAGS)' q)
 TOOLCHAIN=$($M --eval 'q: ; @echo $(TOOLCHAIN_BIN)' q)
 compile() {
   # shellcheck disable=SC2086
-  "${TOOLCHAIN}arm-none-eabi-g++" -c $CCFLAGS $CPPFLAGS "$1" -o "$2"
+  "${TOOLCHAIN}arm-none-eabi-g++" -c $CCFLAGS $CPPFLAGS "$1" -o "$2" "${@:3}"
 }
 link() {
   local elf=$1
@@ -83,7 +83,12 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     beads/plaits_resources.cc beads/profile.cc beads/dsp/pitch_quantizer.cc \
     stmlib/utils/random.cc; do
   object="$out/obj/$(basename "${source%.*}").o"
-  compile "$source" "$object"
+  if [ "$source" = plaits/dsp/engine2/wave_terrain_engine.cc ]; then
+    # Counts the lookups that leave the bank, where the blob clamps.
+    compile "$source" "$object" -include beads/test/blob_emu/terrain_probe.h
+  else
+    compile "$source" "$object"
+  fi
   objects+=("$object")
 done
 compile stmlib/dsp/units.cc "$out/obj/units.o"

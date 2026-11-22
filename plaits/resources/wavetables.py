@@ -298,10 +298,7 @@ for wave in all_waves:
   x -= x.mean()
   x = list(numpy.round(x * (4 * 32768.0 / WAVETABLE_SIZE)).astype(int))
   data += list(x[-n-4:])
-
-# Guard row: Wave terrain interpolates up to one wave past the last one.
-data += data[-WAVETABLE_SIZE-4:]
-
+  
 wavetables.append(('integrated_waves', data))
 
 # import base64

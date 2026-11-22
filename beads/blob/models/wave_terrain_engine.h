@@ -25,7 +25,7 @@
 // -----------------------------------------------------------------------------
 //
 // Plaits' WaveTerrainEngine as a plain class for a blob, its code unchanged
-// except terrains 5-7's waves.
+// except terrains 5-7's waves and their coordinates, clamped to the bank.
 
 #ifndef BEADS_BLOB_MODELS_WAVE_TERRAIN_ENGINE_H_
 #define BEADS_BLOB_MODELS_WAVE_TERRAIN_ENGINE_H_

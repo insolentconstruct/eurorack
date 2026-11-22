@@ -24,7 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Plaits' WaveTerrainEngine's code as a plain class for a blob.
+// Plaits' WaveTerrainEngine's code as a plain class for a blob, with terrains
+// 5-7 reading inside their bank.
 
 #include "beads/blob/models/wave_terrain_engine.h"
 
@@ -101,8 +102,12 @@ inline float TerrainLookupWT(
   const int table_size = 128;
   const int table_size_full = table_size + 4;  // Includes 4 wrapped samples
   const int num_waves = 64;
-  const float sample = (y + 1.0f) * 0.5f * float(table_size);
-  const float wt = (x + 1.0f) * 0.5f * float(num_waves - 1);
+  float sample = (y + 1.0f) * 0.5f * float(table_size);
+  float wt = (x + 1.0f) * 0.5f * float(num_waves - 1);
+  // The path can overshoot the terrain; stay inside the bank and its waves
+  // (vmaxnm and vminnm: half the cost of CONSTRAIN's compares here).
+  sample = fminf(fmaxf(sample, 0.0f), float(table_size));
+  wt = fminf(fmaxf(wt, 0.0f), 62.9999f);
 
   const int16_t* waves = integrated_waves + \
       bank * num_waves * table_size_full;

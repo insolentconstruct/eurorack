@@ -2173,6 +2173,16 @@ cases = [
     '      RenderOperators<3, 2, true>(', '      RenderOperators<2, 1, true>('),
   ('TestRunRenderer', 'six_op_blob', 'beads/blob/models/six_op_voice.h',
     '      RenderOperators<2, 0, false>(', '      RenderOperators<2, 0, true>('),
+  # The Wave terrain blob's clamped lookup (wave_terrain_blob_test).
+  ('TestOvershoot', 'wave_terrain_blob', 'beads/blob/models/wave_terrain_engine.cc',
+    '  sample = fminf(fmaxf(sample, 0.0f), float(table_size));',
+    '  sample = fminf(fmaxf(sample, -64.0f), float(table_size) + 64.0f);'),
+  ('TestOvershoot', 'wave_terrain_blob', 'beads/blob/models/wave_terrain_engine.cc',
+    '  wt = fminf(fmaxf(wt, 0.0f), 62.9999f);',
+    '  wt = fminf(fmaxf(wt, -16.0f), 78.0f);'),
+  ('TestInside', 'wave_terrain_blob', 'beads/blob/models/wave_terrain_engine.cc',
+    '  wt = fminf(fmaxf(wt, 0.0f), 62.9999f);',
+    '  wt = fminf(fmaxf(wt, 0.0f), 62.0f);'),
   # Modal resonator (resonator_test).
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
     'if (partial_frequency >= 0.49f) {', 'if (partial_frequency >= 0.6f) {'),

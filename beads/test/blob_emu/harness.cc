@@ -185,6 +185,8 @@ uint32_t harness_num_defaults;
 PlaitsRegionIdentity harness_identity;
 uint32_t harness_lock;
 uintptr_t harness_slot;
+// Wave terrain lookups past the bank, counted by terrain_probe.h.
+uint32_t harness_terrain_overshoot;
 float harness_out[kMaxBlockSize];
 float harness_aux[kMaxBlockSize];
 EngineParameters harness_parameters;

@@ -66,13 +66,11 @@ PAIRS = dict([(36, 0), (37, 1), (43, 2)] + [
 # terrain, Wavetable and Chords (Plaits wavetables), String machine,
 # Chiptune and Chords (chord bank), Speech.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
-# Plaits' own reads outside a table, which the blob reads from other bytes,
-# waived at these (block, channel 0 OUT / 1 AUX, sample) positions only:
-# Wave terrain's terrains 5-7 interpolate past the third wavetable bank, by
-# more than the guard row once the path overshoots.
-KNOWN = {5: ('terrain 5 reads past the Plaits wavetables\' guard row',
-             [(3770, c, i) for c in (0, 1) for i in (10, 11)] +
-             [(3771, c, 0) for c in (0, 1)])}
+# Models whose blob clamps where Plaits read outside a table: they may
+# differ only in blocks where the compiled-in engine's lookups left the table
+# (counted by terrain_probe.h). Wave terrain's terrains 5-7 clamp their wave
+# and sample positions to the bank.
+KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (2, 3), (4, 2), (13, 43), (18, 36), (43, 18)]
@@ -245,7 +243,10 @@ class Machine(object):
 
   def render_compiled(self, engine, p, seed):
     self.parameters(p)
+    counter = self.sym['harness_terrain_overshoot']
+    self.uc.mem_write(counter, b'\0\0\0\0')
     state = self.call('harness_render_compiled', engine, BLOCK, seed)
+    self.overshoot = self.word(counter)
     return self.outputs('engine %d' % engine) + (state,)
 
   def select_blob(self, model):
@@ -310,6 +311,8 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
     a_out, a_aux, a_seed = m.render_blob(p, seed)
     b_out, b_aux, b_seed = m.render_compiled(
         engine, (trigger, note + nudge) + p[2:], seed)
+    if stats is not None and m.overshoot:
+      stats.setdefault('overshoot_blocks', []).append(block)
     if digest is not None:
       digest.update(a_out + a_aux)
     for x, y, fades in ((a_out, b_out, True), (a_aux, b_aux, False)):
@@ -483,7 +486,8 @@ def identity_compare(model, base, fpscr, gap):
          'blob': '0x%08x' % address(layout, base, 'model', model),
          'differ': differ, 'samples': samples, 'sha256': h.hexdigest(),
          'out_peak': stats.get('out_peak', 0.0),
-         'positions': sorted(stats.get('positions', []))}
+         'positions': sorted(stats.get('positions', [])),
+         'overshoot_blocks': stats.get('overshoot_blocks', [])}
   libraries = dependencies(layout, model)
   if libraries:
     run['libraries'] = dict(
@@ -583,12 +587,16 @@ def main(argv):
     if not run['out_peak']:
       failures.append('model %d: silent at %s' % (run['model'], run['base']))
     known = KNOWN.get(run['model'])
-    if run['differ'] and known and run['differ'] == len(known[1]) and \
-        run['positions'] == sorted(known[1]):
+    overshoot = set(run['overshoot_blocks'])
+    if run['differ'] and known and overshoot and all(
+        p[0] in overshoot for p in run['positions']):
       findings.append('model %d: %d of %d samples differ at %s%s fpscr %s: '
                       '%s' % (run['model'], run['differ'], run['samples'],
                               run['base'], ' gap' if run['gap'] else '',
-                              run['fpscr'], known[0]))
+                              run['fpscr'], known) + ' (%d of %d '
+                      'blocks with lookups past the bank differ)' % (
+                          len(set(p[0] for p in run['positions'])),
+                          len(overshoot)))
     elif run['differ']:
       failures.append('model %d differs at %s%s' % (
           run['model'], run['base'], ' gap' if run['gap'] else ''))
