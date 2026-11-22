@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Guarded options page transitions.
+// Guarded options page transitions; tables come from resources/features.json.
 
 #include "beads/options.h"
 

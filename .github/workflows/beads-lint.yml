@@ -98,6 +98,8 @@ jobs:
           persist-credentials: false
       - name: Initialize stmlib
         run: git submodule update --init stmlib
+      - name: Check the generated feature tables and frozen IDs
+        run: make -f beads/build/tools/features.mk test
       - name: Check exported tables and generated guides
         run: make -j"$(nproc)" -f beads/build/tools/options_tables.mk test
       - name: Check the settings sector tool

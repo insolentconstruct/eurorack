@@ -760,6 +760,22 @@ void TestGainKnobSlot() {
   }
 }
 
+// The embedded factory profile and the fallback hold the same entries.
+void TestFactoryProfileIsDefaults() {
+  test_checker.Start("TestFactoryProfileIsDefaults");
+  Profile factory;
+  CHECK(factory.Init(kProfileBlock));
+  Profile fallback;
+  fallback.Defaults();
+  for (int i = FEATURE_PITCH; i < FEATURE_LAST; ++i) {
+    const ProfileFeature feature = ProfileFeature(i);
+    if (!CHECK(!memcmp(&factory.entry(feature), &fallback.entry(feature),
+        sizeof(ProfileEntry)))) {
+      printf("feature %d\n", i);
+    }
+  }
+}
+
 int main() {
   TestOptionalPageSlots();
   TestDefaultPageTwoAndExplicitLayouts();
@@ -769,6 +785,7 @@ int main() {
   TestBetaProfileDefinitions();
   TestBeta3Profiles();
   TestGainKnobSlot();
+  TestFactoryProfileIsDefaults();
   puts("Profile validation: PASS");
   return test_checker.failures() ? 1 : 0;
 }

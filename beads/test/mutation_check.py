@@ -163,8 +163,16 @@ cases = [
     '            processor.ClearReverb();',
     'if (false) {\n            processor.ClearReverb();'),
   ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
-    '{ 2, kNoField, false, false, false, false },  // Synth reverb tail.',
-    '{ 2, 0, false, false, false, false },  // Synth reverb tail.'),
+    '{ 2, kNoField, false, false, false, false },  // Synth tail.',
+    '{ 2, 0, false, false, false, false },  // Synth tail.'),
+  ('TestFactoryProfileIsDefaults', 'profile', 'beads/profile.cc',
+    '{ FEATURE_TRIM, PROFILE_FIXED, 1, 0,',
+    '{ FEATURE_TRIM, PROFILE_FIXED, 0, 0,'),
+  ('TestFactoryProfileIsDefaults', 'profile', 'beads/profile.cc',
+    '      AMOUNT_NONE, ACTION_NONE },  // Seed latch.',
+    '      AMOUNT_NONE, ACTION_NONE },  // Seed latch.\n'
+    '    { FEATURE_ATTENUATION, PROFILE_FIXED, 1, 0, AMOUNT_NONE, '
+    'ACTION_NONE },'),
   ('TestCustomPitchRatioLimits', 'pitch_quantizer',
     'beads/dsp/randomized_parameter.h',
     'return stmlib::SemitonesToRatioSafe(pitch);', 'return 1.0f;'),

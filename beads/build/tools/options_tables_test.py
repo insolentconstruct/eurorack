@@ -507,12 +507,18 @@ exported = subprocess.check_output(["build/options_tables", "--profile"],
 assert len(catalog["features"]) == len(exported) == 41
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
-for feature, row in zip(catalog["features"], exported):
-    identity, name, count, field, page, amount, action, stateless = (
-        int(x) if x.isdigit() else x for x in row.split("\t"))
-    assert feature["id"] == identity
-    if identity in (1, 10):
-        assert feature["name"] == name
+manifest = json.loads(Path("beads/resources/features.json").read_text())
+states = ["Off", "Fixed", "Adjustable"]
+for feature, row, source in zip(catalog["features"], exported,
+                                manifest["features"]):
+    (identity, name, count, field, page, amount, action, stateless, state,
+     default) = (int(x) if x.isdigit() else x for x in row.split("\t"))
+    assert feature["id"] == identity == source["id"]
+    assert feature["name"] == source["name"]
+    assert name == source.get("label", source["name"]), identity
+    # The firmware's fallback defaults are the catalogue's.
+    assert (feature["default_state"], feature["default"]) == (
+        states[state], default), identity
     assert len(feature["values"] or []) == count
     assert feature["field"] == (None if field == 255 else field)
     assert feature["page_slots"] == (list(range(1, 22)) if page else [])
@@ -526,10 +532,17 @@ for feature, row in zip(catalog["features"], exported):
     gesture = identity == 31 and field == 14 and not page
     assert ("Adjustable" in feature["states"]) == bool(
         page or amount or action or gesture)
-    if identity in (18, 21, 31):
-        assert feature["default_state"] == "Adjustable" and feature["default"] == 0
-    elif identity >= 15:
-        assert feature["default_state"] == "Off" and feature["default"] == 0
+# Every value label the firmware shows on a page is the catalogue's.
+shown = {}
+for row in rows:
+    _, _, _, setting, value, _, _ = row.split("\t")
+    if setting != "Not used yet":
+        shown.setdefault(setting, []).append(value)
+for setting, labels in shown.items():
+    source = next(f for f in manifest["features"]
+                  if f.get("label", f["name"]) == setting)
+    feature = catalog["features"][source["id"] - 1]
+    assert feature["values"][:len(labels)] == labels, setting
 print("Profile page catalogue: PASS")
 
 

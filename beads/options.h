@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Guarded options page.
+// Guarded options page; tables come from resources/features.json.
 
 #ifndef BEADS_OPTIONS_H_
 #define BEADS_OPTIONS_H_
@@ -48,17 +48,17 @@ enum { MIX_PARAMETER_LAST = 3 };
 const int kNumOptionPages = 7;
 
 enum OptionSetting {
-  OPTION_RESERVED,
-  OPTION_PITCH,
-  OPTION_REVERB,
-  OPTION_DELAY,
-  OPTION_PROCESSOR,
-  OPTION_LIMITER,
-  OPTION_FROZEN,
-  OPTION_SYNTH,
-  OPTION_ATTACKS,
-  OPTION_SYNTH_START,
-  OPTION_INTERVALS,
+  OPTION_RESERVED = 0,
+  OPTION_PITCH = 1,
+  OPTION_REVERB = 2,
+  OPTION_DELAY = 3,
+  OPTION_PROCESSOR = 4,
+  OPTION_LIMITER = 5,
+  OPTION_FROZEN = 6,
+  OPTION_SYNTH = 7,
+  OPTION_ATTACKS = 8,
+  OPTION_SYNTH_START = 9,
+  OPTION_INTERVALS = 10,
   OPTION_BRIGHTNESS = 18,
   OPTION_SEED_LATCH = 21,
   OPTION_TIME_SCAN = 23,

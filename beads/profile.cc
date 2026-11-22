@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Profile validation. Byte reads also support patched flash images.
+// Profile validation. Byte reads support patched images; see features.json.
 
 #include "beads/profile.h"
 
@@ -52,12 +52,12 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Attenuation.
   { 2, kNoField, false, false, false, false },  // Delay cue.
   { 3, 10, true, false, false, false },  // Brightness.
-  { 2, kNoField, false, false, false, false },  // Live assignment.
+  { 2, kNoField, false, false, false, false },  // Live assign.
   { 2, kNoField, false, false, false, false },  // Save freeze.
   { 4, 11, true, false, false, false },  // Seed latch.
   { 2, kNoField, false, false, false, false },  // Pitch notch.
   { 2, 12, true, false, true, false },  // Time scan.
-  { 2, kNoField, false, false, false, false },  // Synth reverb tail.
+  { 2, kNoField, false, false, false, false },  // Synth tail.
   { 5, kNoField, false, false, false, false },  // Idle timeout.
   { 2, kNoField, false, false, false, false },  // Seed latch fade.
   { 2, kNoField, false, false, false, false },  // Manual gain.
@@ -808,7 +808,7 @@ void Profile::Defaults() {
     { FEATURE_BRIGHTNESS, PROFILE_ADJUSTABLE, 0, 10,
       AMOUNT_NONE, ACTION_NONE },  // Brightness.
     { FEATURE_SEED_LATCH, PROFILE_ADJUSTABLE, 0, 11,
-      AMOUNT_NONE, ACTION_NONE },  // SEED latch.
+      AMOUNT_NONE, ACTION_NONE },  // Seed latch.
     { FEATURE_PLAITS_BANK, PROFILE_ADJUSTABLE, 0, 0,
       AMOUNT_NONE, ACTION_NONE },  // Plaits bank.
   };

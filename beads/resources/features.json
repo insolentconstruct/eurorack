@@ -1,0 +1,1586 @@
+{
+  "features": [
+    {
+      "id": 1,
+      "symbol": "PITCH",
+      "name": "Pitch scale",
+      "values": [
+        {"name": "Off", "led": [0, 255, 0]},
+        {"name": "Chromatic", "led": [255, 255, 0]},
+        {"name": "Fifths", "led": [255, 64, 32]},
+        {"name": "Major", "led": [255, 160, 0]},
+        {"name": "Minor", "led": [32, 96, 255]},
+        {"name": "Pentatonic major", "led": [255, 160, 0], "pulse": "slow"},
+        {"name": "Pentatonic minor", "led": [32, 96, 255], "pulse": "slow"},
+        {"name": "Pelog", "led": [0, 220, 160]},
+        {"name": "Raag Bhairav", "led": [160, 48, 255]},
+        {"name": "Raag Shri", "led": [255, 32, 144], "pulse": "double"},
+        {"name": "User scale 10"},
+        {"name": "User scale 11"},
+        {"name": "User scale 12"},
+        {"name": "User scale 13"},
+        {"name": "User scale 14"},
+        {"name": "User scale 15"}
+      ],
+      "field": 0,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 1,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 2,
+      "symbol": "REVERB",
+      "name": "Reverb character",
+      "values": [
+        {"name": "Stock", "led": [0, 255, 0]},
+        {"name": "Clouds-style", "led": [255, 255, 0]}
+      ],
+      "field": 1,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [1, 2],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 6,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 3,
+      "symbol": "DELAY",
+      "name": "Delay mode",
+      "values": [
+        {"name": "Auto (Stock)", "led": [0, 255, 0]},
+        {"name": "Disabled", "led": [255, 255, 0]},
+        {"name": "Wide/smooth filter", "led": [255, 0, 0]}
+      ],
+      "field": 2,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 5,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 4,
+      "symbol": "PROCESSOR",
+      "name": "Processor",
+      "values": [
+        {"name": "Granular (Stock)", "led": [0, 255, 0]},
+        {"name": "Spectral", "led": [255, 255, 0]}
+      ],
+      "field": 3,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [1, 2],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 7,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 5,
+      "symbol": "LIMITER",
+      "name": "Limiter",
+      "values": [
+        {"name": "Stock", "led": [0, 255, 0]},
+        {"name": "Fast release", "led": [255, 255, 0]},
+        {"name": "Off", "led": [255, 0, 0]}
+      ],
+      "field": 4,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 12,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 6,
+      "symbol": "FROZEN",
+      "name": "Frozen feedback",
+      "values": [
+        {"name": "Stock", "led": [0, 255, 0]},
+        {"name": "Evolving", "led": [255, 255, 0]}
+      ],
+      "field": 5,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [1, 2],
+      "stateless": false,
+      "touches_synth": false,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 4,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 7,
+      "symbol": "SYNTH",
+      "name": "Synth",
+      "values": [
+        {"name": "Beads (Stock)", "led": [0, 255, 0]},
+        {"name": "Plaits", "led": [255, 255, 0]}
+      ],
+      "field": 6,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [1],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 8,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 8,
+      "symbol": "ATTACKS",
+      "name": "Attacks",
+      "values": [
+        {"name": "Off", "led": [0, 255, 0]},
+        {"name": "Snap", "led": [255, 255, 0]},
+        {"name": "Snap and trigger", "led": [255, 0, 0]}
+      ],
+      "field": 7,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 3,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 9,
+      "symbol": "SYNTH_START",
+      "name": "Synth start",
+      "values": [
+        {"name": "Automatic (Stock)", "led": [0, 255, 0]},
+        {"name": "Manual", "led": [255, 255, 0]}
+      ],
+      "field": 8,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [1, 2, 3],
+      "stateless": true,
+      "touches_synth": false,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 9,
+        "amount_slot": 0,
+        "action": 3
+      }
+    },
+    {
+      "id": 10,
+      "symbol": "INTERVALS",
+      "name": "Random pitch steps",
+      "values": [
+        {"name": "Free (Stock)", "led": [0, 255, 0]},
+        {"name": "Fifths and octaves", "led": [255, 255, 0]},
+        {"name": "Recent notes", "led": [255, 0, 0]}
+      ],
+      "field": 9,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 2,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 11,
+      "symbol": "WIDTH",
+      "name": "Stereo width",
+      "values": null,
+      "field": null,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": false,
+      "amount": true,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 0,
+        "amount_slot": 1,
+        "action": 0
+      }
+    },
+    {
+      "id": 12,
+      "symbol": "DIFFUSION",
+      "name": "Diffusion",
+      "values": null,
+      "field": null,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": false,
+      "amount": true,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 0,
+        "amount_slot": 2,
+        "action": 0
+      }
+    },
+    {
+      "id": 13,
+      "symbol": "MONOPHONIC",
+      "name": "Monophonic grains",
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": false,
+      "amount": false,
+      "actions": [1, 2, 3],
+      "stateless": false,
+      "touches_synth": false,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 0,
+        "amount_slot": 0,
+        "action": 1
+      }
+    },
+    {
+      "id": 14,
+      "symbol": "TRIM",
+      "name": "Buffer trim",
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": false,
+      "amount": false,
+      "actions": [1, 2, 3],
+      "stateless": true,
+      "touches_synth": false,
+      "factory": {
+        "state": "Fixed",
+        "value": 1,
+        "page_slot": 0,
+        "amount_slot": 0,
+        "action": 2
+      }
+    },
+    {
+      "id": 15,
+      "symbol": "VERSION",
+      "name": "Version at boot",
+      "issue": 54,
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 16,
+      "symbol": "ATTENUATION",
+      "name": "Input attenuation",
+      "issue": 44,
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 17,
+      "symbol": "DELAY_CUE",
+      "name": "Delay indication",
+      "label": "Delay cue",
+      "issue": 42,
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 18,
+      "symbol": "BRIGHTNESS",
+      "name": "LED brightness",
+      "issue": 40,
+      "values": [
+        {"name": "100%", "led": [0, 255, 0]},
+        {"name": "66%", "led": [255, 255, 0]},
+        {"name": "33%", "led": [255, 0, 0]}
+      ],
+      "field": 10,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 10,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 19,
+      "symbol": "LIVE_ASSIGN",
+      "name": "Live assignment LEDs",
+      "label": "Live assignment",
+      "issue": 27,
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 20,
+      "symbol": "SAVE_FREEZE",
+      "name": "FREEZE during saves",
+      "label": "Save FREEZE",
+      "issue": 25,
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 21,
+      "symbol": "SEED_LATCH",
+      "name": "SEED latch",
+      "issue": 13,
+      "values": [
+        {"name": "Off", "led": [0, 255, 0]},
+        {"name": "Ignore", "led": [255, 255, 0]},
+        {"name": "Sync", "led": [255, 0, 0]},
+        {"name": "Add", "led": [0, 255, 0], "pulse": "slow"}
+      ],
+      "field": 11,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 11,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 22,
+      "symbol": "PITCH_NOTCH",
+      "name": "Pitch notch indication",
+      "label": "Pitch notch",
+      "issue": 7,
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 23,
+      "symbol": "TIME_SCAN",
+      "name": "TIME modulation",
+      "label": "TIME scan",
+      "issue": 141,
+      "values": [
+        {"name": "Random", "led": [0, 255, 0]},
+        {"name": "Scan", "led": [255, 255, 0]}
+      ],
+      "field": 12,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": true,
+      "amount": false,
+      "actions": [1, 2],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 24,
+      "symbol": "SYNTH_TAIL",
+      "name": "Synth reverb tail",
+      "issue": 192,
+      "values": [{"name": "Keep (stock)"}, {"name": "Clear"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 25,
+      "symbol": "IDLE_TIMEOUT",
+      "name": "Options page idle timeout",
+      "issue": 202,
+      "values": [
+        {"name": "Off (stay open)"},
+        {"name": "5 s"},
+        {"name": "10 s"},
+        {"name": "20 s"},
+        {"name": "30 s"}
+      ],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 26,
+      "symbol": "SEED_LATCH_FADE",
+      "name": "Delay SEED latch fade",
+      "issue": 183,
+      "values": [{"name": "Switch at once (stock)"}, {"name": "Fade"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 27,
+      "symbol": "MANUAL_GAIN",
+      "name": "Input gain at power-on",
+      "issue": 19,
+      "values": [{"name": "Automatic (stock)"}, {"name": "Manual"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 28,
+      "symbol": "ATTACK_SENSITIVITY",
+      "name": "Attack sensitivity",
+      "issue": 58,
+      "values": [
+        {"name": "Normal (default)"},
+        {"name": "Low"},
+        {"name": "High"}
+      ],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 29,
+      "symbol": "SEED_START",
+      "name": "SEED at power-on",
+      "issue": 41,
+      "values": [{"name": "Latched (stock)"}, {"name": "Unlatched"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 30,
+      "symbol": "PITCH_LAW",
+      "name": "PITCH knob",
+      "issue": 43,
+      "values": [{"name": "Notches (stock)"}, {"name": "Smooth"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 31,
+      "symbol": "PLAITS_BANK",
+      "name": "Plaits bank",
+      "issue": 190,
+      "values": [{"name": "Green"}, {"name": "Red"}, {"name": "Yellow"}],
+      "values_from": "banks",
+      "field": 14,
+      "states": ["Adjustable"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 0,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 32,
+      "symbol": "MIX_LAW",
+      "name": "Mix law",
+      "issue": 21,
+      "values": [{"name": "Stock"}, {"name": "Gentle"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 33,
+      "symbol": "REVERB_INPUT",
+      "name": "Reverb input",
+      "issue": 20,
+      "values": [{"name": "Mix (stock)"}, {"name": "Grains"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 34,
+      "symbol": "GRAIN_STEALING",
+      "name": "Grain stealing",
+      "issue": 237,
+      "values": [{"name": "2021/2024 (default)"}, {"name": "2026"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
+    },
+    {
+      "id": 35,
+      "symbol": "UNITY_FEEDBACK",
+      "name": "Delay feedback",
+      "issue": 10,
+      "values": [{"name": "Stock"}, {"name": "Unity notch"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 36,
+      "symbol": "DELAY_CROSSFADE",
+      "name": "Delay time",
+      "issue": 30,
+      "values": [{"name": "Glide (stock)"}, {"name": "Crossfade"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 37,
+      "symbol": "PAGE_PREVIEW",
+      "name": "Options page preview",
+      "issue": 285,
+      "values": [
+        {"name": "Each knob in turn"},
+        {"name": "First setting only"}
+      ],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 38,
+      "symbol": "FIRST_PAGE",
+      "name": "Options page on opening",
+      "issue": 285,
+      "values": [{"name": "Last used"}, {"name": "First page"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 39,
+      "symbol": "START_QUALITY",
+      "name": "Start in quality",
+      "issue": 287,
+      "values": [
+        {"name": "Keep current"},
+        {"name": "Bright digital"},
+        {"name": "Cold digital"},
+        {"name": "Sunny tape"},
+        {"name": "Scorched cassette"}
+      ],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 40,
+      "symbol": "GAIN_KNOB",
+      "name": "Manual gain knob",
+      "issue": 301,
+      "values": [{"name": "Not on a knob"}],
+      "field": null,
+      "states": ["Off", "Fixed", "Adjustable"],
+      "page": false,
+      "amount": true,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    },
+    {
+      "id": 41,
+      "symbol": "RESONATOR",
+      "name": "Resonator",
+      "issue": 88,
+      "values": [
+        {"name": "Off (stock)"},
+        {"name": "After the grains"},
+        {"name": "Before the buffer"}
+      ],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
+    }
+  ],
+  "plaits_models": [
+    {
+      "id": 0,
+      "name": "VA + VCF",
+      "palette": "virtual-analog-vcf",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 1,
+      "name": "Phase Distortion",
+      "palette": "phase-distortion",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 2,
+      "name": "6-Op FM Bank A",
+      "palette": "dx7-bank-a",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [4]
+    },
+    {
+      "id": 3,
+      "name": "6-Op FM Bank B",
+      "palette": "dx7-bank-b",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [4]
+    },
+    {
+      "id": 4,
+      "name": "6-Op FM Bank C",
+      "palette": "dx7-bank-c",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [4]
+    },
+    {
+      "id": 5,
+      "name": "Wave Terrain",
+      "palette": "wave-terrain",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [1]
+    },
+    {
+      "id": 6,
+      "name": "String Machine",
+      "palette": "string-machine",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 7,
+      "name": "Chiptune",
+      "palette": "chiptune",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 8,
+      "name": "Virtual Analog",
+      "palette": "virtual-analog",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 9,
+      "name": "Waveshaping",
+      "palette": "waveshaping",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 10,
+      "name": "Two-op FM",
+      "palette": "two-op-fm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 11,
+      "name": "Granular Formant",
+      "palette": "granular-formant",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 12,
+      "name": "Harmonic Oscillator",
+      "palette": "harmonic",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 13,
+      "name": "Wavetable",
+      "palette": "wavetable",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [1]
+    },
+    {
+      "id": 14,
+      "name": "Chords",
+      "palette": "chords",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [1, 2]
+    },
+    {
+      "id": 15,
+      "name": "Speech",
+      "palette": "speech",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [3]
+    },
+    {
+      "id": 16,
+      "name": "Swarm",
+      "palette": "swarm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 17,
+      "name": "Filtered Noise",
+      "palette": "filtered-noise",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 18,
+      "name": "Particle Noise",
+      "palette": "particle-noise",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 19,
+      "name": "Inharmonic String",
+      "palette": "inharmonic-string",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 20,
+      "name": "Modal Resonator",
+      "palette": "modal-resonator",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 21,
+      "name": "Analog Bass Drum",
+      "palette": "analog-bass-drum",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 22,
+      "name": "Analog Snare",
+      "palette": "analog-snare",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 23,
+      "name": "Analog Hi-hat",
+      "palette": "analog-hi-hat",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 28,
+      "name": "Natural Speech",
+      "palette": "natural-speech",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "notice": "Voice data rendered with Kokoro-82M (Apache-2.0), voice af_heart.",
+      "libraries": []
+    },
+    {
+      "id": 29,
+      "name": "Glisson",
+      "palette": "glisson",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 30,
+      "name": "GENDY",
+      "palette": "gendy",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 31,
+      "name": "Scanned",
+      "palette": "scanned",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 32,
+      "name": "Pulsar",
+      "palette": "pulsar",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 33,
+      "name": "Loopback",
+      "palette": "loopback",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 34,
+      "name": "Lockstep",
+      "palette": "lockstep",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 35,
+      "name": "Tapfield",
+      "palette": "tapfield",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 36,
+      "name": "Phase Weave",
+      "palette": "phase-weave",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 37,
+      "name": "Sideband Bank",
+      "palette": "sideband-bank",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 38,
+      "name": "Attractor",
+      "palette": "attractor",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 39,
+      "name": "Undertow",
+      "palette": "undertow",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 40,
+      "name": "Reed Pipe",
+      "palette": "reed-pipe",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 41,
+      "name": "Phase Flock",
+      "palette": "phase-flock",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 42,
+      "name": "Rulefield",
+      "palette": "rulefield",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 43,
+      "name": "Spectral Spiral",
+      "palette": "spectral-spiral",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 44,
+      "name": "Z Filter",
+      "palette": "z-filter",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 45,
+      "name": "Toy",
+      "palette": "toy",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 46,
+      "name": "CSaw",
+      "palette": "csaw",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 47,
+      "name": "Ring Mod",
+      "palette": "ring-mod",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 48,
+      "name": "Fold",
+      "palette": "fold",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 49,
+      "name": "Buzz",
+      "palette": "buzz",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 50,
+      "name": "Dual Sync",
+      "palette": "dual-sync",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 51,
+      "name": "Granular Cloud",
+      "palette": "granular-cloud",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 52,
+      "name": "Morph",
+      "palette": "morph",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 53,
+      "name": "Noise Bank",
+      "palette": "noise-bank",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 54,
+      "name": "Particle Burst",
+      "palette": "particle-burst",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 55,
+      "name": "Saw Square",
+      "palette": "saw-square",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 56,
+      "name": "Saw Swarm",
+      "palette": "saw-swarm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 57,
+      "name": "Vowel",
+      "palette": "vowel",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 58,
+      "name": "Harmonics",
+      "palette": "harmonics",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 59,
+      "name": "VOSIM",
+      "palette": "vosim",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 60,
+      "name": "Plucked",
+      "palette": "plucked",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 61,
+      "name": "Blown",
+      "palette": "blown",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 62,
+      "name": "Struck Bell",
+      "palette": "struck-bell",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 63,
+      "name": "Struck Drum",
+      "palette": "struck-drum",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 64,
+      "name": "Kick",
+      "palette": "kick",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 65,
+      "name": "Snare",
+      "palette": "snare",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 66,
+      "name": "Cymbal",
+      "palette": "cymbal",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 67,
+      "name": "Wave Scan",
+      "palette": "wave-scan",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 68,
+      "name": "Wave Paraphonic",
+      "palette": "wave-paraphonic",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [1, 2]
+    },
+    {
+      "id": 69,
+      "name": "Fluted",
+      "palette": "fluted",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 70,
+      "name": "Question Mark",
+      "palette": "question-mark",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 71,
+      "name": "Virtual Analog Variant",
+      "palette": "virtual-analog-variant",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 72,
+      "name": "Bowed",
+      "palette": "bowed",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 73,
+      "name": "Sub Osc",
+      "palette": "sub-oscillator",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 74,
+      "name": "Digital Modulation",
+      "palette": "digital-modulation",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 75,
+      "name": "Saw Comb",
+      "palette": "saw-comb",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 76,
+      "name": "Vowel FOF",
+      "palette": "vowel-fof",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 77,
+      "name": "Raw FM",
+      "palette": "raw-fm",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 78,
+      "name": "Triple",
+      "palette": "triple",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 79,
+      "name": "Bytebeat",
+      "palette": "bytebeat",
+      "credit": "Tim Churches",
+      "licence": "MIT",
+      "notice": "Expressions from Tim Churches' Bees-in-the-Trees (MIT), credited there to their authors.",
+      "libraries": []
+    },
+    {
+      "id": 80,
+      "name": "Diatonic Chord",
+      "palette": "diatonic-chord",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [5]
+    },
+    {
+      "id": 81,
+      "name": "Scale Stack",
+      "palette": "scale-stack",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [5]
+    },
+    {
+      "id": 82,
+      "name": "Wavetable Diatonic Chord",
+      "palette": "wavetable-chord",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [1, 5, 6]
+    },
+    {
+      "id": 83,
+      "name": "Wavetable Scale Stack",
+      "palette": "wavetable-scale-stack",
+      "credit": "Tom Burns",
+      "licence": "MIT",
+      "libraries": [1, 5, 6]
+    },
+    {
+      "id": 84,
+      "name": "Shakers",
+      "palette": "shakers",
+      "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "licence": "MIT",
+      "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
+      "libraries": []
+    },
+    {
+      "id": 85,
+      "name": "Brass",
+      "palette": "brass",
+      "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "licence": "MIT",
+      "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
+      "libraries": []
+    },
+    {
+      "id": 86,
+      "name": "Helix",
+      "palette": "helix",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 87,
+      "name": "Skins",
+      "palette": "skins",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 88,
+      "name": "Circuit Zaps",
+      "palette": "circuit-zaps",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 89,
+      "name": "Metalwork",
+      "palette": "metalwork",
+      "credit": "Lyle Mills",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 90,
+      "name": "Analog Clap",
+      "palette": "clap",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 91,
+      "name": "Analog Percussion",
+      "palette": "analog-percussion",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 92,
+      "name": "Freshets Formant",
+      "palette": "freshets-formant",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 93,
+      "name": "BubbleTime",
+      "palette": "bubbletime",
+      "credit": "Combust",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 94,
+      "name": "ZxPhase48k",
+      "palette": "zxphase48k",
+      "credit": "Combust",
+      "licence": "MIT",
+      "libraries": []
+    },
+    {
+      "id": 95,
+      "name": "ZxPulse48k",
+      "palette": "zxpulse48k",
+      "credit": "Combust",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 96,
+      "name": "Acid",
+      "palette": "acid",
+      "credit": "Dylan Bolink",
+      "licence": "MIT",
+      "notice": "Parts from Open303, Copyright 2009 Robin Schmidt (MIT).",
+      "libraries": []
+    },
+    {
+      "id": 97,
+      "name": "Supersaw Chords",
+      "palette": "chords-supersaw",
+      "credit": "Dirk Hoppmann",
+      "licence": "MIT",
+      "libraries": [2]
+    },
+    {
+      "id": 98,
+      "name": "Speech Sounds",
+      "palette": "formant-speech",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [3]
+    },
+    {
+      "id": 99,
+      "name": "LPC Words",
+      "palette": "lpc-speech",
+      "credit": "Mutable Instruments",
+      "licence": "MIT",
+      "libraries": [3]
+    }
+  ],
+  "plaits_libraries": [
+    {
+      "id": 1,
+      "name": "plaits-wavetables",
+      "kind": "data",
+      "contents": "Plaits' integrated wavetables"
+    },
+    {
+      "id": 2,
+      "name": "chord-bank",
+      "kind": "code",
+      "contents": "Plaits' chord bank"
+    },
+    {
+      "id": 3,
+      "name": "speech",
+      "kind": "code",
+      "contents": "Plaits' speech synths and word banks"
+    },
+    {
+      "id": 4,
+      "name": "six-op",
+      "kind": "code",
+      "contents": "6-op FM: algorithms, DX units and patch banks"
+    },
+    {
+      "id": 5,
+      "name": "scale-voices",
+      "kind": "code",
+      "contents": "Palette's scale-voice renderers"
+    },
+    {
+      "id": 6,
+      "name": "scale-wavetable-voices",
+      "kind": "code",
+      "contents": "Palette's wavetable scale-voice renderers"
+    }
+  ],
+  "catalogue_copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js."
+}
