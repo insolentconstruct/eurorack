@@ -2133,19 +2133,22 @@ void TestOptionsZonesAndSaveBatch() {
 
 void TestOptionsPalette() {
   test_checker.Start("TestOptionsPalette");
-  // Every indicated value, shared colours included.
+  // Every page value lights, shared colours included; pitch up to Raag Shri.
   OptionValue values[64];
   size_t count = 0;
-  for (int f = 0; f < FEATURE_LAST; ++f) {
-    for (int value = 0; value < kFeatureDefinitions[f].values; ++value) {
-      const OptionValue v = FindOptionValue(ProfileFeature(f), value);
-      if (v.setting != FEATURE_NONE) {
-        CHECK(count < 64);
-        values[count++] = v;
-      }
+  for (int i = 0; i < kNumPageFeatures; ++i) {
+    const ProfileFeature f = kPageFeatures[i];
+    const int n = f == FEATURE_PITCH
+        ? int(PITCH_SCALE_LAST) : int(kFeatureDefinitions[f].values);
+    for (int value = 0; value < n && count < 64; ++value) {
+      const OptionValue v = FindOptionValue(f, value);
+      CHECK(v.setting == f && v.value == value);
+      values[count++] = v;
     }
   }
   CHECK(count > kNumOptionValues);
+  CHECK(FindOptionValue(FEATURE_PITCH, PITCH_SCALE_LAST).setting ==
+      FEATURE_NONE);
   // Only page values light, and only the values a feature has.
   CHECK(FindOptionValue(FEATURE_REVERB, 2).setting == FEATURE_NONE);
   CHECK(FindOptionValue(FEATURE_ATTACK_SENSITIVITY, 0).setting ==
