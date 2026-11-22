@@ -24,7 +24,7 @@
 #
 # -----------------------------------------------------------------------------
 #
-# Gate and pack one Plaits blob (beads/blob/plaits_blob.h).
+# Gate and pack one Plaits or synth blob (beads/blob/plaits_blob.h).
 #
 #   blob_pack.py SERVICES_V1_LD SERVICES_V2_LD OBJDUMP OUT.bin
 #       [--library LIBRARY.bin]... BASE:ELF...
@@ -50,7 +50,9 @@ MAX_STATE = {1: 256, 2: 4352}
 MAX_ARENA = 16384
 KIND_MODEL = 1
 KIND_LIBRARY = 2
+KIND_SYNTH = 3
 MAX_LIBRARY_RAM = 65536
+MAX_SYNTH_RAM = 262144
 MAX_EXPORTS = 16
 MAX_DEPENDENCIES = 4
 R_ARM_ABS32 = 2
@@ -276,6 +278,7 @@ def gate(elf, base, exports, objdump, path, num_libraries):
   blob = elf.Section('.blob')
   abi, services, kind = header_version(elf)
   library = kind == KIND_LIBRARY
+  synth = kind == KIND_SYNTH
   if blob[3] != base:
     failures.append('.blob at 0x%08x, not 0x%08x' % (blob[3], base))
   if blob[8] > MAX_ALIGNMENT:
@@ -285,8 +288,8 @@ def gate(elf, base, exports, objdump, path, num_libraries):
       continue
     if s[2] & SHF_ALLOC or not ALLOWED_INFO.match(name):
       failures.append('section %s (flags 0x%x, %d B)' % (name, s[2], s[5]))
-  if kind not in (KIND_MODEL, KIND_LIBRARY):
-    failures.append('kind %d is neither a model nor a library' % kind)
+  if kind not in (KIND_MODEL, KIND_LIBRARY, KIND_SYNTH):
+    failures.append('kind %d is not a model, library or synth' % kind)
 
   symbols = elf.Symbols()
   if abi == 1 and services != 1:
@@ -345,12 +348,18 @@ def gate(elf, base, exports, objdump, path, num_libraries):
   # The declared RAM fits the slot and arena of the blob's ABI; a library's
   # RAM and scratch, what the synth can give.
   state, arena = struct.unpack_from('<2I', data, 24 if abi == 1 else 32)
-  max_state = MAX_LIBRARY_RAM if library else MAX_STATE.get(abi, 0)
+  max_state = MAX_LIBRARY_RAM if library else \
+      MAX_SYNTH_RAM if synth else MAX_STATE.get(abi, 0)
   if state > max_state:
     failures.append('state of %d B is over the %d B slot' % (
         state, max_state))
-  if arena > MAX_ARENA:
+  if synth and arena:
+    failures.append('a synth declares %d B of arena' % arena)
+  elif arena > MAX_ARENA:
     failures.append('arena of %d B is over %d B' % (arena, MAX_ARENA))
+  # A synth names its control block and block size, which the app matches.
+  if synth and not all(struct.unpack_from('<2I', data, 72)):
+    failures.append('a synth without its control block or block size')
 
   # A library's export table: one absolute word per export, naming code or
   # constants inside the blob.
@@ -365,12 +374,22 @@ def gate(elf, base, exports, objdump, path, num_libraries):
                  for entries in symbols.values()
                  for value, shndx, info, size in entries
                  if info & 0xf == 1 and size and value - base in table]
+  # Thumb code, from the assembler's mapping symbols ($t up to the next $d
+  # or $t): an address can only be data, and instruction pairs such as
+  # ubfx's 0x080e can look like one in a large blob.
+  marks = sorted((value - base, name) for name in ('$t', '$d')
+                 for value, _, _, _ in symbols.get(name, []))
+  code_ranges = [(offset, marks[i + 1][0] if i + 1 < len(marks)
+                  else len(data))
+                 for i, (offset, name) in enumerate(marks) if name == '$t']
 
   # The source names how many libraries it needs; the build gives them.
   dependencies = struct.unpack_from('<I', data, 64)[0] if abi == 2 else 0
   if dependencies != num_libraries or dependencies > MAX_DEPENDENCIES:
     failures.append('the header lists %d libraries, the build gives %d' % (
         dependencies, num_libraries))
+  if synth and dependencies:
+    failures.append('a synth lists libraries')
 
   check_archives(path + '.map', failures)
 
@@ -385,7 +404,7 @@ def gate(elf, base, exports, objdump, path, num_libraries):
       failures.append('indirect branch: ' + line.strip())
   if check_imports(listing, failures) and not dependencies:
     failures.append('library imports without a library to call')
-  return failures, kinds, imports, table, data_ranges
+  return failures, kinds, imports, table, data_ranges, code_ranges
 
 
 def library_exports(elf, base, got, failures):
@@ -452,8 +471,10 @@ def pack(elf, base, table, records):
     words[render] = len(table)
     entries = (words[init],) if words[init] else ()
   else:
+    # A synth's configure takes the model's reset word.
     words[init] = entry('plaits_blob_init')
-    words[reset] = entry('plaits_blob_reset')
+    words[reset] = entry('plaits_blob_configure' if kind == KIND_SYNTH
+                         else 'plaits_blob_reset')
     words[render] = entry('plaits_blob_render')
     entries = (words[init], words[reset], words[render])
   words[got_offset] = got
@@ -489,7 +510,7 @@ def main(argv):
     base_text, path = spec.split(':', 1)
     base = int(base_text, 16)
     elf = Elf(path)
-    f, kinds, imports, table, data_ranges = gate(
+    f, kinds, imports, table, data_ranges, code_ranges = gate(
         elf, base, exports, objdump, path, len(records))
     failures += ['%s: %s' % (path, x) for x in f]
     if f:
@@ -501,7 +522,8 @@ def main(argv):
     inside |= set(
         o for o in range(0, len(data) - 3, 2)
         if base <= struct.unpack_from('<I', data, o)[0] < base + len(data) and
-        not any(lo <= o < hi for lo, hi in data_ranges))
+        not any(lo <= o < hi for lo, hi in data_ranges) and
+        not any(lo <= o and o + 4 <= hi for lo, hi in code_ranges))
     evidence['links'].append({
         'base': '0x%08x' % base,
         'sha256': hashlib.sha256(data).hexdigest(),
@@ -527,8 +549,8 @@ def main(argv):
   else:
     model, state, arena, entries, got = (
         words[5], words[8], words[9], words[10:13], words[13:15])
-  evidence['kind'] = 'library' if abi == 2 and words[4] == KIND_LIBRARY \
-      else 'model'
+  evidence['kind'] = {KIND_LIBRARY: 'library', KIND_SYNTH: 'synth'}.get(
+      words[4] if abi == 2 else KIND_MODEL, 'model')
   evidence.update({
       'abi': abi,
       'size': len(data),

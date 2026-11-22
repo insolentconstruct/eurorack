@@ -10,6 +10,8 @@ import sys
 diff = subprocess.check_output([
     "git", "diff", "--no-ext-diff", "--no-color", "--unified=0",
     os.environ["BASE"], "HEAD", "--", ":(glob)beads/**/*.h", ":(glob)beads/**/*.cc",
+    # newlib's sources, copied verbatim for the blobs.
+    ":(exclude)beads/blob/libm/**",
 ], text=True)
 in_hunk = False
 bad = False

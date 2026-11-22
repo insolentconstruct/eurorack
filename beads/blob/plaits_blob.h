@@ -55,6 +55,7 @@ const size_t kPlaitsBlobMaxArenaSize = 16384;
 const size_t kPlaitsBlobDigestSize = 32;
 const uint32_t kPlaitsBlobKindModel = 1;
 const uint32_t kPlaitsBlobKindLibrary = 2;
+const uint32_t kPlaitsBlobKindSynth = 3;
 const uint32_t kNumPlaitsModelIds = 256;
 // A library's exports, the libraries a blob needs, and the libraries one
 // region may hold.
@@ -62,6 +63,8 @@ const size_t kMaxPlaitsLibraryExports = 16;
 const size_t kMaxPlaitsBlobDependencies = 4;
 const size_t kMaxPlaitsLibraries = 8;
 const size_t kPlaitsBlobMaxLibraryRamSize = 65536;
+// A synth's RAM, lent from delay bank 0 while it plays.
+const size_t kPlaitsBlobMaxSynthRamSize = 256 * 1024;
 
 enum PlaitsBlobFlags {
   PLAITS_BLOB_FLAG_ENVELOPED = 1
@@ -136,6 +139,32 @@ struct PlaitsBlobLibraryHeader {
   uint32_t dependencies_offset;
   uint32_t num_dependencies;
   uint32_t zero[3];
+  uint32_t reserved[4];
+};
+
+// The same 24 words for a synth: one ID, its RAM (zeroed before init), three
+// entries, and the control block and block size the app must match.
+struct PlaitsBlobSynthHeader {
+  uint32_t magic;
+  uint32_t header_size;
+  uint32_t abi;
+  uint32_t services_version;
+  uint32_t kind;
+  uint32_t id;
+  uint32_t num_ids;
+  uint32_t size;
+  uint32_t ram_size;
+  uint32_t zero_0;
+  uint32_t init_offset;
+  uint32_t configure_offset;
+  uint32_t render_offset;
+  uint32_t got_offset;
+  uint32_t got_size;
+  uint32_t dependencies_offset;
+  uint32_t num_dependencies;
+  uint32_t flags;
+  uint32_t controls_size;
+  uint32_t block_size;
   uint32_t reserved[4];
 };
 
@@ -301,6 +330,7 @@ class PlaitsBlob {
 STATIC_ASSERT(sizeof(PlaitsBlobHeader) == 64, plaits_blob_header);
 STATIC_ASSERT(sizeof(PlaitsBlobHeader2) == 96, plaits_blob_header_2);
 STATIC_ASSERT(sizeof(PlaitsBlobLibraryHeader) == 96, plaits_blob_library);
+STATIC_ASSERT(sizeof(PlaitsBlobSynthHeader) == 96, plaits_blob_synth);
 STATIC_ASSERT(sizeof(PlaitsBlobDependency) == 36, plaits_blob_dependency);
 // On the target the table fits the 64 bytes before the first export.
 STATIC_ASSERT(16 + 4 * kNumPlaitsBlobExports <= 64, plaits_blob_services);

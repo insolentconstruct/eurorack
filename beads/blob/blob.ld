@@ -55,6 +55,7 @@ SECTIONS
 		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.blob_header))
 		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_init))
 		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_reset))
+		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_configure))
 		KEEP(INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text.plaits_blob_render))
 		INPUT_SECTION_FLAGS(!SHF_WRITE) *(.text .text.*)
 		INPUT_SECTION_FLAGS(!SHF_WRITE) *(.rodata .rodata.*)

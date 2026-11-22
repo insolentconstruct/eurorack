@@ -38,7 +38,16 @@ namespace rings {
   
 static const float kSampleRate = 48000.0f;
 const float a3 = 440.0f / kSampleRate;
-const size_t kMaxBlockSize = 24;
+#ifndef RINGS_BLOCK_SIZE
+#define RINGS_BLOCK_SIZE 24
+#endif  // RINGS_BLOCK_SIZE
+const size_t kMaxBlockSize = RINGS_BLOCK_SIZE;
+
+#ifdef RINGS_BLOB
+#define RINGS_TABLE const
+#else
+#define RINGS_TABLE
+#endif  // RINGS_BLOB
 
 }  // namespace rings
 

@@ -5,7 +5,7 @@ on:
     branches: ['**']
     tags: ['drizzlet-*']
   pull_request:
-    paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
+    paths: ['beads/**', 'clouds/**', 'plaits/**', 'rings/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
 permissions:
   contents: read
 concurrency:
@@ -75,6 +75,14 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/emu"
           "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
           "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/render_compare.py blob-out/emu
+      - name: Check the Rings synth's source against vanilla Rings, gate its blob, build the references
+        run: |
+          mkdir -p rings-out
+          docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
+            --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/rings-out,dst=/out" drizzlet \
+            bash -c 'python3 beads/build/tools/rings_vanilla.py self-test --cpp arm-none-eabi-g++ && bash beads/test/rings_emu/build.sh /out'
+      - name: Compare the Rings synth blob with vanilla Rings under the Cortex-M7 emulator
+        run: '"$RUNNER_TEMP/emu/bin/python" beads/test/rings_emu/rings_compare.py rings-out'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: drizzlet-release-assets
