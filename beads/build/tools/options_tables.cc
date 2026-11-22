@@ -84,49 +84,54 @@ const char* const kOptionNames[] = {
   "Resonator",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
-const char* const kValueNames[] = {
-  "Not used yet",
-  "Off",
-  "Chromatic",
-  "Fifths",
-  "Major",
-  "Minor",
-  "Pentatonic major",
-  "Pentatonic minor",
-  "Pelog",
-  "Raag Bhairav",
-  "Raag Shri",
-  "Stock",
-  "Clouds-style",
-  "Auto (Stock)",
-  "Disabled",
-  "Wide/smooth filter",
-  "Granular (Stock)",
-  "Spectral",
-  "Stock",
-  "Fast release",
-  "Off",
-  "Stock",
-  "Evolving",
-  "Beads (Stock)",
-  "Plaits",
-  "Off",
-  "Snap",
-  "Snap and trigger",
-  "Automatic (Stock)",
-  "Manual",
-  "Free (Stock)",
-  "Fifths and octaves",
-  "Recent notes",
-  "100%",
-  "66%",
-  "33%",
-  "Off",
-  "Ignore",
-  "Sync",
-  "Add",
-  "Random",
-  "Scan",
+// Each indicated page value, in page order.
+struct NamedValue {
+  beads::ProfileFeature feature;
+  uint8_t value;
+  const char* name;
+};
+const NamedValue kValueNames[] = {
+  { beads::FEATURE_PITCH, 0, "Off" },
+  { beads::FEATURE_PITCH, 1, "Chromatic" },
+  { beads::FEATURE_PITCH, 2, "Fifths" },
+  { beads::FEATURE_PITCH, 3, "Major" },
+  { beads::FEATURE_PITCH, 4, "Minor" },
+  { beads::FEATURE_PITCH, 5, "Pentatonic major" },
+  { beads::FEATURE_PITCH, 6, "Pentatonic minor" },
+  { beads::FEATURE_PITCH, 7, "Pelog" },
+  { beads::FEATURE_PITCH, 8, "Raag Bhairav" },
+  { beads::FEATURE_PITCH, 9, "Raag Shri" },
+  { beads::FEATURE_REVERB, 0, "Stock" },
+  { beads::FEATURE_REVERB, 1, "Clouds-style" },
+  { beads::FEATURE_DELAY, 0, "Auto (Stock)" },
+  { beads::FEATURE_DELAY, 1, "Disabled" },
+  { beads::FEATURE_DELAY, 2, "Wide/smooth filter" },
+  { beads::FEATURE_PROCESSOR, 0, "Granular (Stock)" },
+  { beads::FEATURE_PROCESSOR, 1, "Spectral" },
+  { beads::FEATURE_LIMITER, 0, "Stock" },
+  { beads::FEATURE_LIMITER, 1, "Fast release" },
+  { beads::FEATURE_LIMITER, 2, "Off" },
+  { beads::FEATURE_FROZEN, 0, "Stock" },
+  { beads::FEATURE_FROZEN, 1, "Evolving" },
+  { beads::FEATURE_SYNTH, 0, "Beads (Stock)" },
+  { beads::FEATURE_SYNTH, 1, "Plaits" },
+  { beads::FEATURE_ATTACKS, 0, "Off" },
+  { beads::FEATURE_ATTACKS, 1, "Snap" },
+  { beads::FEATURE_ATTACKS, 2, "Snap and trigger" },
+  { beads::FEATURE_SYNTH_START, 0, "Automatic (Stock)" },
+  { beads::FEATURE_SYNTH_START, 1, "Manual" },
+  { beads::FEATURE_INTERVALS, 0, "Free (Stock)" },
+  { beads::FEATURE_INTERVALS, 1, "Fifths and octaves" },
+  { beads::FEATURE_INTERVALS, 2, "Recent notes" },
+  { beads::FEATURE_BRIGHTNESS, 0, "100%" },
+  { beads::FEATURE_BRIGHTNESS, 1, "66%" },
+  { beads::FEATURE_BRIGHTNESS, 2, "33%" },
+  { beads::FEATURE_SEED_LATCH, 0, "Off" },
+  { beads::FEATURE_SEED_LATCH, 1, "Ignore" },
+  { beads::FEATURE_SEED_LATCH, 2, "Sync" },
+  { beads::FEATURE_SEED_LATCH, 3, "Add" },
+  { beads::FEATURE_TIME_SCAN, 0, "Random" },
+  { beads::FEATURE_TIME_SCAN, 1, "Scan" },
 };
 
 const char* ColorName(const beads::Leds::Color& color) {
@@ -175,15 +180,17 @@ int main(int argc, char** argv) {
   puts("page\tLED\tknob\tsetting\tvalue\tcolour\tpulse");
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
-      const OptionSetting setting = kOptionPages[page].knobs[knob];
-      if (setting == OPTION_RESERVED) {
+      const ProfileFeature setting = kOptionPages[page].knobs[knob];
+      if (setting == FEATURE_NONE) {
         continue;
       }
-      for (size_t i = 0; i < kNumOptionValues; ++i) {
-        const OptionValue& value = kOptionValues[i];
-        if (value.setting != setting) {
+      for (size_t i = 0; i < sizeof(kValueNames) / sizeof(kValueNames[0]);
+           ++i) {
+        if (kValueNames[i].feature != setting) {
           continue;
         }
+        const OptionValue value = FindOptionValue(
+            setting, kValueNames[i].value);
         char pulse[64];
         if (!value.pulses) {
           snprintf(pulse, sizeof(pulse), "steady");
@@ -198,7 +205,7 @@ int main(int argc, char** argv) {
         }
         printf("%d\t%s\t%s\t%s\t%s\t%s\t%s\n", page + 1,
             kPageNames[kOptionPages[page].leds], kOptionKnobNames[knob],
-            kOptionNames[setting], kValueNames[i],
+            kOptionNames[setting], kValueNames[i].name,
             ColorName(value.color), pulse);
       }
     }

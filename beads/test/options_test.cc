@@ -1085,14 +1085,14 @@ void TestSynthEngineStorage() {
   r.EnterPage(2);
   r.pot = .9f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.plaits_preview() && r.ui.plaits_synth());
+  CHECK(r.ui.options_.Value(FEATURE_SYNTH) && r.ui.plaits_synth());
   CHECK(!r.settings.plaits_synth());
   r.pot = .5f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.plaits_preview());
+  CHECK(r.ui.options_.Value(FEATURE_SYNTH));
   r.pot = .46f;
   r.Tick(1, true);
-  CHECK(!r.ui.options_.plaits_preview() && !r.ui.plaits_synth());
+  CHECK(!r.ui.options_.Value(FEATURE_SYNTH) && !r.ui.plaits_synth());
   r.pot = .54f;
   r.Tick(1001, true);
   CHECK(r.settings.plaits_synth());
@@ -1162,7 +1162,7 @@ void TestEngineOption() {
     const bool was_spectral = r.settings.spectral();
     r.EnterPage(2);
     CHECK(r.ui.options_.page() == 2);
-    CHECK(r.ui.options_.spectral_preview() == was_spectral);
+    CHECK(r.ui.options_.Value(FEATURE_PROCESSOR) == was_spectral);
     r.feedback = target ? 0.05f : 0.95f;
     r.Tick(50, true);
     for (int step = 0; step < 20; ++step) {
@@ -1170,9 +1170,9 @@ void TestEngineOption() {
       r.feedback = from + (positions[target] - from) * (step + 1) / 20.0f;
       r.Tick(10, true);
     }
-    CHECK(r.ui.options_.spectral_preview() == bool(target));
+    CHECK(r.ui.options_.Value(FEATURE_PROCESSOR) == bool(target));
     const OptionValue& v = r.ui.options_.indication();
-    CHECK(v.setting == OPTION_PROCESSOR && v.value == target);
+    CHECK(v.setting == FEATURE_PROCESSOR && v.value == target);
     CHECK(v.color.r == (target ? 255 : 0) && v.color.g == 255);
     CHECK(v.color.b == 0 && v.pulses == PULSE_STEADY);
     r.Tick(1100, true);
@@ -1233,16 +1233,16 @@ void TestIntervalsOption() {
     r.settings.set_random_intervals(from);
     r.ui.LoadOptions();
     r.Enter();
-    CHECK(r.ui.options_.intervals_preview() == from);
+    CHECK(r.ui.options_.Value(FEATURE_INTERVALS) == from);
     r.pot = positions[from];
     r.Tick(50, true);
     r.pot = positions[target];
     r.Tick(50, true);
-    CHECK(r.ui.options_.intervals_preview() == target);
+    CHECK(r.ui.options_.Value(FEATURE_INTERVALS) == target);
     CHECK(r.ui.intervals_mode() == target);
     CHECK(r.ui.random_intervals() == (target != 0));
     const OptionValue& v = r.ui.options_.indication();
-    CHECK(v.setting == OPTION_INTERVALS && v.value == target);
+    CHECK(v.setting == FEATURE_INTERVALS && v.value == target);
     CHECK(v.color.r == red[target] && v.color.g == green[target]);
     r.Tick(1100, true);
     CHECK(r.settings.random_intervals() == target);
@@ -1264,14 +1264,14 @@ void TestSynthStartOption() {
     r.settings.set_self_play_on_request(!target);
     r.ui.LoadOptions();
     r.EnterPage(2);
-    CHECK(r.ui.options_.manual_start_preview() == !target);
+    CHECK(r.ui.options_.Value(FEATURE_SYNTH_START) == !target);
     r.reverb = target ? 0.05f : 0.95f;
     r.Tick(50, true);
     r.reverb = target ? 0.85f : 0.15f;
     r.Tick(50, true);
-    CHECK(r.ui.options_.manual_start_preview() == bool(target));
+    CHECK(r.ui.options_.Value(FEATURE_SYNTH_START) == bool(target));
     const OptionValue& v = r.ui.options_.indication();
-    CHECK(v.setting == OPTION_SYNTH_START && v.value == target);
+    CHECK(v.setting == FEATURE_SYNTH_START && v.value == target);
     r.Tick(1100, true);
     CHECK(r.settings.self_play_on_request() == bool(target));
     CHECK(r.settings.spectral());
@@ -1349,7 +1349,7 @@ void TestSettingsRollover() {
     r.settings.SaveState();
     const PersistentData old_calibration = r.settings.persistent_data();
     r.EnterPage(1);
-    CHECK(!r.ui.options_.clouds_preview());
+    CHECK(!r.ui.options_.Value(FEATURE_REVERB));
     // Real settled saves: the REVERB knob alone flips the style each time.
     const uint32_t erases = TestFlashErases();
     for (int i = 0; i < 2; ++i) {
@@ -1877,7 +1877,7 @@ void TestWidthGestureAndMeter() {
   r.Enter();
   for (int page = 0; page < kNumOptionPages; ++page) {
     for (int knob = 0; knob < 3; ++knob) {
-      CHECK(kOptionPages[page].knobs[knob] != OPTION_RESERVED ||
+      CHECK(kOptionPages[page].knobs[knob] != FEATURE_NONE ||
           page == 0 || page >= 3);
     }
   }
@@ -1888,11 +1888,11 @@ void TestWidthGestureAndMeter() {
 
 void TestOptionsTablesAndLifetime() {
   test_checker.Start("TestOptionsTablesAndLifetime");
-  const OptionSetting expected[4][3] = {
-    { OPTION_PITCH, OPTION_INTERVALS, OPTION_ATTACKS },
-    { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB },
-    { OPTION_PROCESSOR, OPTION_SYNTH, OPTION_SYNTH_START },
-    { OPTION_BRIGHTNESS, OPTION_SEED_LATCH, OPTION_LIMITER }
+  const ProfileFeature expected[4][3] = {
+    { FEATURE_PITCH, FEATURE_INTERVALS, FEATURE_ATTACKS },
+    { FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB },
+    { FEATURE_PROCESSOR, FEATURE_SYNTH, FEATURE_SYNTH_START },
+    { FEATURE_BRIGHTNESS, FEATURE_SEED_LATCH, FEATURE_LIMITER }
   };
   CHECK(kNumOptionPages == 7);
   // Pages 1-3 light one LED, then two together, then all three.
@@ -1900,7 +1900,7 @@ void TestOptionsTablesAndLifetime() {
   for (int page = 0; page < kNumOptionPages; ++page) {
     CHECK(kOptionPages[page].leds == masks[page]);
     for (int knob = 0; knob < 3; ++knob) {
-      CHECK((kOptionPages[page].knobs[knob] == OPTION_RESERVED) == (page >= 4));
+      CHECK((kOptionPages[page].knobs[knob] == FEATURE_NONE) == (page >= 4));
     }
   }
   Rig r(false);
@@ -1953,7 +1953,7 @@ void TestOptionsKnobsAndSettling() {
         r.Tap();
       }
       float* pot = knob == 0 ? &r.feedback : knob == 1 ? &r.pot : &r.reverb;
-      const OptionSetting setting = kOptionPages[page].knobs[knob];
+      const ProfileFeature setting = kOptionPages[page].knobs[knob];
       const State state = r.settings.state();
       const uint32_t writes = test_writes;
       *pot = 0.59f;
@@ -1962,7 +1962,7 @@ void TestOptionsKnobsAndSettling() {
       CHECK(test_writes == writes);
       *pot = 0.9f;
       r.Tick(100, true);
-      if (setting == OPTION_RESERVED) {
+      if (setting == FEATURE_NONE) {
         CHECK(!r.ui.options_.qualified_[knob]);
         CHECK(!memcmp(&state, &r.settings.state(), sizeof(state)));
         r.Tick(2000, true);
@@ -1981,18 +1981,18 @@ void TestOptionsKnobsAndSettling() {
       r.Tick(2, true);
       CHECK(test_writes == writes + 1);
       CHECK(r.ui.options_.stage() == Options::STAGE_EDITING);
-      CHECK(r.ui.options_.Value(setting) == (setting == OPTION_PITCH
-          ? int(r.settings.pitch_scale()) : setting == OPTION_DELAY
-          ? int(r.settings.delay_mode()) : setting == OPTION_REVERB
-          ? r.settings.clouds_style() : setting == OPTION_PROCESSOR
-          ? r.settings.spectral() : setting == OPTION_SYNTH_START
-          ? r.settings.self_play_on_request() : setting == OPTION_INTERVALS
-          ? int(r.settings.random_intervals()) : setting == OPTION_FROZEN
-          ? r.settings.evolving_feedback() : setting == OPTION_SYNTH
-          ? r.settings.plaits_synth() : setting == OPTION_ATTACKS
-          ? int(r.settings.attack_mode()) : setting == OPTION_BRIGHTNESS
+      CHECK(r.ui.options_.Value(setting) == (setting == FEATURE_PITCH
+          ? int(r.settings.pitch_scale()) : setting == FEATURE_DELAY
+          ? int(r.settings.delay_mode()) : setting == FEATURE_REVERB
+          ? r.settings.clouds_style() : setting == FEATURE_PROCESSOR
+          ? r.settings.spectral() : setting == FEATURE_SYNTH_START
+          ? r.settings.self_play_on_request() : setting == FEATURE_INTERVALS
+          ? int(r.settings.random_intervals()) : setting == FEATURE_FROZEN
+          ? r.settings.evolving_feedback() : setting == FEATURE_SYNTH
+          ? r.settings.plaits_synth() : setting == FEATURE_ATTACKS
+          ? int(r.settings.attack_mode()) : setting == FEATURE_BRIGHTNESS
           ? r.settings.FeatureValue(FEATURE_BRIGHTNESS)
-          : setting == OPTION_SEED_LATCH
+          : setting == FEATURE_SEED_LATCH
           ? r.settings.FeatureValue(FEATURE_SEED_LATCH)
           : int(r.settings.output_limiter_mode())));
       r.Tick(5000, true);
@@ -2027,13 +2027,13 @@ void TestOptionsSeed() {
   saved.Enter();
   saved.Down(SWITCH_SEED);
   saved.Up(SWITCH_SEED);
-  CHECK(saved.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(saved.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   CHECK(!saved.ui.options_.qualified_[0]);
   Rig r(false);
   r.Enter();
   r.feedback = .9f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   const bool seed_state = r.ui.seed_button_state_;
   const bool seed_locked = r.ui.seed_button_locked_;
   for (int i = 0; i < 8; ++i) {
@@ -2046,14 +2046,14 @@ void TestOptionsSeed() {
     r.ui.DoEvents();
     CHECK(r.ui.seed_button_state_ == seed_state);
     CHECK(r.ui.seed_button_locked_ == seed_locked);
-    CHECK(r.ui.options_.pitch_preview() ==
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) ==
         PitchScale(PITCH_SCALE_FIFTHS + (i + 1) % 8));
     CHECK(r.ui.options_.active());
   }
   r.Down(SWITCH_SEED);
   r.Tick(600, true);
   r.Up(SWITCH_SEED);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   r.Tick(1001, true);
   CHECK(r.settings.pitch_scale() == PITCH_SCALE_FIFTHS);
 }
@@ -2065,28 +2065,28 @@ void TestOptionsZonesAndSaveBatch() {
   // Pitch thirds, including hysteresis around both boundaries.
   r.feedback = .1f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
   r.feedback = .35f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
   r.feedback = .38f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_CHROMATIC);
   r.feedback = .68f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_CHROMATIC);
   r.feedback = .71f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   r.feedback = .65f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   r.feedback = .62f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_CHROMATIC);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_CHROMATIC);
   r.feedback = .29f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_OFF);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
   // Halves retain a value inside the midpoint dead band; two knobs
   // settle in one batch.
   {
@@ -2096,10 +2096,10 @@ void TestOptionsZonesAndSaveBatch() {
     halves.Tick(1, true);
     halves.reverb = .5f;
     halves.Tick(1, true);
-    CHECK(halves.ui.options_.clouds_preview());
+    CHECK(halves.ui.options_.Value(FEATURE_REVERB));
     halves.reverb = .46f;
     halves.Tick(1, true);
-    CHECK(!halves.ui.options_.clouds_preview());
+    CHECK(!halves.ui.options_.Value(FEATURE_REVERB));
     halves.reverb = .54f;
     halves.Tick(1, true);
     const uint32_t writes = test_writes;
@@ -2118,7 +2118,7 @@ void TestOptionsZonesAndSaveBatch() {
   CHECK(r.ui.options_.commit_requested());
   r.feedback = .1f;
   r.Tick(2000, false);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   // Exit remains responsive even if main is delayed by a flash operation.
   test_down[SWITCH_MEDIA] = true;
   r.Tick(8, false);
@@ -2133,20 +2133,40 @@ void TestOptionsZonesAndSaveBatch() {
 
 void TestOptionsPalette() {
   test_checker.Start("TestOptionsPalette");
-  for (size_t i = 1; i < kNumOptionValues; ++i) {
-    const OptionValue& v = kOptionValues[i];
+  // Every page value lights, shared colours included; pitch up to Raag Shri.
+  OptionValue values[64];
+  size_t count = 0;
+  for (int i = 0; i < kNumPageFeatures; ++i) {
+    const ProfileFeature f = kPageFeatures[i];
+    const int n = f == FEATURE_PITCH
+        ? int(PITCH_SCALE_LAST) : int(kFeatureDefinitions[f].values);
+    for (int value = 0; value < n && count < 64; ++value) {
+      const OptionValue v = FindOptionValue(f, value);
+      CHECK(v.setting == f && v.value == value);
+      values[count++] = v;
+    }
+  }
+  CHECK(count > kNumOptionValues);
+  CHECK(FindOptionValue(FEATURE_PITCH, PITCH_SCALE_LAST).setting ==
+      FEATURE_NONE);
+  // Only page values light, and only the values a feature has.
+  CHECK(FindOptionValue(FEATURE_REVERB, 2).setting == FEATURE_NONE);
+  CHECK(FindOptionValue(FEATURE_ATTACK_SENSITIVITY, 0).setting ==
+      FEATURE_NONE);
+  for (size_t i = 0; i < count; ++i) {
+    const OptionValue& v = values[i];
     CHECK(v.color.r || v.color.g || v.color.b);
     if (v.value == 0) {
       CHECK(v.color.r == 0 && v.color.g == 255 &&
           v.color.b == 0 && v.pulses == 0);
     }
-    if (v.setting != OPTION_PITCH) {
+    if (v.setting != FEATURE_PITCH) {
       CHECK(v.color.b == 0);
       CHECK((v.color.r == 0 && v.color.g == 255) ||
           (v.color.r == 255 && (v.color.g == 0 || v.color.g == 255)));
     }
-    for (size_t j = i + 1; j < kNumOptionValues; ++j) {
-      const OptionValue& w = kOptionValues[j];
+    for (size_t j = i + 1; j < count; ++j) {
+      const OptionValue& w = values[j];
       if (v.setting == w.setting) {
         CHECK(v.color.r != w.color.r || v.color.g != w.color.g ||
             v.color.b != w.color.b || v.pulses != w.pulses);
@@ -2156,52 +2176,11 @@ void TestOptionsPalette() {
   // Renderer consumes the table at every phase of its pulse period.
   Rig r(false);
   r.Enter();
-  for (size_t i = 1; i < kNumOptionValues; ++i) {
-    const OptionValue& v = kOptionValues[i];
+  for (size_t i = 0; i < count; ++i) {
+    const OptionValue& v = values[i];
     r.ui.options_.selected_ = v.setting;
-    switch (v.setting) {
-      case OPTION_BRIGHTNESS:
-      case OPTION_SEED_LATCH:
-      case OPTION_TIME_SCAN:
-        r.ui.options_.profile_preview_[v.setting] = v.value;
-        break;
-      case OPTION_PITCH:
-        r.ui.options_.pitch_preview_ = PitchScale(v.value);
-        break;
-      case OPTION_REVERB:
-        r.ui.options_.clouds_preview_ = v.value;
-        break;
-      case OPTION_DELAY:
-        r.ui.options_.delay_preview_ = DelayMode(v.value);
-        break;
-      case OPTION_PROCESSOR:
-        r.ui.options_.spectral_preview_ = v.value;
-        break;
-      case OPTION_SYNTH_START:
-        r.ui.options_.manual_start_preview_ = v.value;
-        break;
-      case OPTION_INTERVALS:
-        r.ui.options_.intervals_preview_ = RandomIntervals(v.value);
-        break;
-      case OPTION_SYNTH:
-        r.ui.options_.plaits_preview_ = v.value;
-        break;
-      case OPTION_LIMITER:
-        r.ui.options_.limiter_preview_ = OutputLimiterMode(v.value);
-        break;
-      case OPTION_FROZEN:
-        r.ui.options_.evolving_preview_ = v.value;
-        break;
-      case OPTION_ATTACKS:
-        r.ui.options_.attack_preview_ = AttackMode(v.value);
-        break;
-      default:
-        break;
-    }
+    r.ui.options_.preview_[v.setting] = v.value;
     const OptionValue& indication = r.ui.options_.indication();
-    if (v.setting != OPTION_PITCH || v.value < PITCH_SCALE_FIFTHS) {
-      CHECK(&indication == &v);
-    }
     CHECK(indication.setting == v.setting && indication.value == v.value);
     CHECK(indication.color.r == v.color.r && indication.color.g == v.color.g &&
         indication.color.b == v.color.b && indication.pulses == v.pulses);
@@ -2216,7 +2195,7 @@ void TestOptionsPalette() {
           (v.pulses == 1 && now % 1024 < 512) ||
           (v.pulses == 2 && now % 256 < 128) ||
           (v.pulses == 3 && (phase < 128 || (phase >= 256 && phase < 384)));
-      const uint8_t level = r.ui.options_.Value(OPTION_BRIGHTNESS);
+      const uint8_t level = r.ui.options_.Value(FEATURE_BRIGHTNESS);
       const int percent = level == 0 ? 100 : level == 1 ? 66 : 33;
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
           (lit ? DimmedMedia(0, v.color.r, percent) : 0));
@@ -2274,7 +2253,9 @@ void TestOptionsPreview() {
   r.settings.set_evolving_feedback(false);
   r.ui.LoadOptions();
   r.EnterPage(1);
-  const OptionSetting order[3] = { OPTION_FROZEN, OPTION_DELAY, OPTION_REVERB };
+  const ProfileFeature order[3] = {
+    FEATURE_FROZEN, FEATURE_DELAY, FEATURE_REVERB
+  };
   const int values[3] = { 0, DELAY_MODE_WIDE_DETENT, 1 };
   for (int knob = 0; knob < 3; ++knob) {
     CHECK(r.ui.options_.preview_knob() == knob);
@@ -2285,7 +2266,7 @@ void TestOptionsPreview() {
     r.Tick(2048 - 1, true);
   }
   CHECK(r.ui.options_.preview_knob() == -1);
-  CHECK(r.ui.options_.indication().setting == OPTION_FROZEN);
+  CHECK(r.ui.options_.indication().setting == FEATURE_FROZEN);
   // Page four previews brightness, latch and limiter; a knob ends preview.
   r.Tap();
   r.Tap();
@@ -2299,7 +2280,7 @@ void TestOptionsPreview() {
   r.reverb = .9f;
   r.Tick(1, true);
   CHECK(r.ui.options_.preview_knob() == -1);
-  CHECK(r.ui.options_.indication().setting == OPTION_ATTACKS);
+  CHECK(r.ui.options_.indication().setting == FEATURE_ATTACKS);
   const uint32_t writes = test_writes;
   r.Tick(1100, true);
   CHECK(test_writes == writes + 1);
@@ -2347,10 +2328,10 @@ void TestPendingSeed() {
     }
     test_down[SWITCH_SEED] = false;
     r.Tick(20, false);
-    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
     r.ui.DoEvents();
     r.Tick(1, true);
-    CHECK(r.ui.options_.pitch_preview() ==
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) ==
         (hold ? PITCH_SCALE_FIFTHS : PITCH_SCALE_MAJOR));
     r.Tick(1001, true);
     CHECK(r.settings.pitch_scale() ==
@@ -2370,7 +2351,7 @@ void TestPendingSeed() {
   before.Tick(620, false);
   before.ui.DoEvents();
   before.Tick(1, true);
-  CHECK(before.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(before.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   before.Tick(1001, true);
   CHECK(before.settings.pitch_scale() == PITCH_SCALE_MAJOR);
 }
@@ -2617,7 +2598,7 @@ void TestOptionsIdleTimeout() {
     r.Up(SWITCH_SEED);
     CHECK(Idle(&r, 4900));
     CHECK(!Idle(&r, 120));
-    CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_FIFTHS);
+    CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_FIFTHS);
   }
   {
     Rig r(false);
@@ -2780,7 +2761,7 @@ void TestCustomScalePersistenceAndLeds() {
   r.Enter();
   r.Down(SWITCH_SEED);
   r.Up(SWITCH_SEED);
-  CHECK(r.ui.options_.pitch_preview() == PITCH_SCALE_MAJOR);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
   const OptionValue& indication = r.ui.options_.indication();
   CHECK(indication.value == 3 && indication.color.r == 17);
   CHECK(indication.color.g == 83 && indication.color.b == 199);
@@ -2822,10 +2803,10 @@ void TestProfilePages() {
       r.Enter();
       CHECK(r.ui.options_.page() == (slot - 1) / 3);
       CHECK(r.ui.options_.preview_knob() == (slot - 1) % 3);
-      CHECK(r.ui.options_.selected_ == OptionSetting(id));
+      CHECK(r.ui.options_.selected_ == ProfileFeature(id));
       r.Tap();
       CHECK(r.ui.options_.page() == (slot - 1) / 3);
-      r.ui.options_.pitch_preview_ = PITCH_SCALE_FIFTHS;
+      r.ui.options_.preview_[FEATURE_PITCH] = PITCH_SCALE_FIFTHS;
       CHECK(r.ui.options_.seed_allowed() == (id == FEATURE_PITCH));
     }
   }
@@ -2905,8 +2886,8 @@ void TestOptionalPages() {
   r.Enter();
   const int order[] = { 0, 4, 6, 0, 4 };
   const int knob[] = { 0, 1, 2, 0, 1 };
-  const OptionSetting setting[] = {
-    OPTION_PITCH, OPTION_DELAY, OPTION_LIMITER, OPTION_PITCH, OPTION_DELAY
+  const ProfileFeature setting[] = {
+    FEATURE_PITCH, FEATURE_DELAY, FEATURE_LIMITER, FEATURE_PITCH, FEATURE_DELAY
   };
   for (int i = 0; i < 5; ++i) {
     if (i) {
@@ -2961,9 +2942,9 @@ void TestOptionalPages() {
     { FEATURE_BRIGHTNESS, 19 }, { FEATURE_SEED_LATCH, 20 },
     { FEATURE_TIME_SCAN, 21 }, { FEATURE_SYNTH_START, 11 }
   };
-  const OptionSetting first[] = {
-    OPTION_PITCH, OPTION_REVERB, OPTION_DELAY, OPTION_PROCESSOR,
-    OPTION_FROZEN, OPTION_ATTACKS, OPTION_BRIGHTNESS
+  const ProfileFeature first[] = {
+    FEATURE_PITCH, FEATURE_REVERB, FEATURE_DELAY, FEATURE_PROCESSOR,
+    FEATURE_FROZEN, FEATURE_ATTACKS, FEATURE_BRIGHTNESS
   };
   Rig all(false);
   PagesProfile(b, full, 13);
@@ -3377,8 +3358,8 @@ void TestProfileToggles() {
         CHECK(r.settings.FeatureValue(feature) == value);
         CHECK(SawToggleValue(&r, feature) == bool(value));
         CHECK(test_writes == writes + 1);
-        const OptionValue& cue = FindOptionValue(OptionSetting(feature), value);
-        CHECK(cue.setting == OptionSetting(feature) && cue.value == value);
+        const OptionValue& cue = FindOptionValue(feature, value);
+        CHECK(cue.setting == feature && cue.value == value);
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == cue.color.r);
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == cue.color.g);
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == cue.color.b);
@@ -3749,7 +3730,7 @@ void TestBetaOptionsLeds() {
     preview.Tick(40, true);
     CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) ==
           (i ? preview_values[i - 1] : 0));
-    CHECK(preview.ui.options_.Value(OPTION_BRIGHTNESS) == level);
+    CHECK(preview.ui.options_.Value(FEATURE_BRIGHTNESS) == level);
     CHECK(preview.ui.leds_.intensity_[LED_ASSIGN_1] ==
           255 * percentages[level] / 100);
     preview.Tick(1002, true);
@@ -3809,7 +3790,7 @@ void TestBetaOptionPages() {
         }
         r.Tick(40, true);
         if (f == 0) {
-          CHECK(r.ui.options_.Value(OPTION_BRIGHTNESS) == value);
+          CHECK(r.ui.options_.Value(FEATURE_BRIGHTNESS) == value);
           const int percent[] = { 100, 66, 33 };
           CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
               DimmedMedia(0, value ? 255 : 0, percent[value]));
@@ -3918,7 +3899,7 @@ void TestOptionsEntryChoices() {
     const AttackMode mode = r.settings.attack_mode();
     r.reverb = 0.9f;
     r.Tick(1, true);
-    CHECK(r.ui.options_.indication().setting == OPTION_ATTACKS);
+    CHECK(r.ui.options_.indication().setting == FEATURE_ATTACKS);
     r.Tick(1100, true);
     CHECK(test_writes == writes + 1);
     CHECK(r.settings.attack_mode() != mode);
@@ -3955,7 +3936,7 @@ void TestOptionsEntryChoices() {
     CHECK(r.ui.options_.stage() == Options::STAGE_WAIT_RELEASE);
     CHECK(r.ui.options_.page() == 0);
     CHECK(r.ui.options_flash_page_ == 0);
-    CHECK(r.ui.options_.indication().setting == OPTION_PITCH);
+    CHECK(r.ui.options_.indication().setting == FEATURE_PITCH);
     r.Up(SWITCH_ASSIGN);
     CHECK(r.ui.options_.page() == 0);
     CHECK(r.ui.options_.preview_knob() == 0);
@@ -3991,11 +3972,11 @@ void TestOptionsEntryChoices() {
     r.Enter();
     CHECK(r.ui.options_.page() == 4);
     CHECK(r.ui.options_.preview_knob() == -1);
-    CHECK(r.ui.options_.indication().setting == OPTION_DELAY);
+    CHECK(r.ui.options_.indication().setting == FEATURE_DELAY);
     CheckPageLeds(&r, 4);
     r.Tap();
     CHECK(r.ui.options_.page() == 6);
-    CHECK(r.ui.options_.indication().setting == OPTION_LIMITER);
+    CHECK(r.ui.options_.indication().setting == FEATURE_LIMITER);
     Close(&r);
     r.Enter();
     CHECK(r.ui.options_.page() == 4);

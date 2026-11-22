@@ -286,23 +286,25 @@ void Ui::Poll() {
   
   const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
   clouds_style_ = previewing
-      ? options_.clouds_preview() : settings_->clouds_style();
+      ? options_.Value(FEATURE_REVERB) : settings_->clouds_style();
   plaits_synth_ = previewing
-      ? options_.plaits_preview() : settings_->plaits_synth();
+      ? options_.Value(FEATURE_SYNTH) : settings_->plaits_synth();
   delay_mode_ = previewing
-      ? options_.delay_preview() : settings_->delay_mode();
+      ? DelayMode(options_.Value(FEATURE_DELAY)) : settings_->delay_mode();
   evolving_feedback_ = previewing
-      ? options_.evolving_preview() : settings_->evolving_feedback();
+      ? options_.Value(FEATURE_FROZEN) : settings_->evolving_feedback();
   attack_mode_ = previewing
-      ? options_.attack_preview() : settings_->attack_mode();
+      ? AttackMode(options_.Value(FEATURE_ATTACKS)) : settings_->attack_mode();
   stereo_width_ = settings_->stereo_width();
   pitch_scale_ = previewing
-      ? options_.pitch_preview() : settings_->pitch_scale();
+      ? PitchScale(options_.Value(FEATURE_PITCH)) : settings_->pitch_scale();
   intervals_mode_ = previewing
-      ? options_.intervals_preview() : settings_->random_intervals();
+      ? RandomIntervals(options_.Value(FEATURE_INTERVALS))
+      : settings_->random_intervals();
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   output_limiter_mode_ = previewing
-      ? options_.limiter_preview() : settings_->output_limiter_mode();
+      ? OutputLimiterMode(options_.Value(FEATURE_LIMITER))
+      : settings_->output_limiter_mode();
   if (!previewing) {
     spectral_ = settings_->spectral();
   }
@@ -549,7 +551,7 @@ void Ui::UpdateLeds() {
   }
   if (led_features || options_.active()) {
     const uint8_t level = options_.active()
-        ? options_.Value(OPTION_BRIGHTNESS)
+        ? options_.Value(FEATURE_BRIGHTNESS)
         : settings_->FeatureValue(FEATURE_BRIGHTNESS);
     leds_.Scale(level);
   }
@@ -791,38 +793,17 @@ void Ui::set_delay_active(bool active) {
 
 void Ui::DoEvents() {
   if (options_.commit_requested()) {
-    bool profile_changed = false;
-    for (int i = FEATURE_VERSION; i < FEATURE_LAST; ++i) {
-      const ProfileFeature f = ProfileFeature(i);
+    bool changed = false;
+    for (int i = 0; i < kNumPageFeatures; ++i) {
+      const ProfileFeature f = kPageFeatures[i];
       // Pages commit their settings; a gesture saves the Plaits bank.
-      if (kFeatureDefinitions[i].page && settings_->profile().adjustable(f) &&
-          options_.Value(OptionSetting(i)) != settings_->FeatureValue(f)) {
-        settings_->SetFeatureValue(f, options_.Value(OptionSetting(i)));
-        profile_changed = true;
+      if (settings_->profile().adjustable(f) &&
+          options_.Value(f) != settings_->FeatureValue(f)) {
+        settings_->SetFeatureValue(f, options_.Value(f));
+        changed = true;
       }
     }
-    if (profile_changed ||
-        options_.limiter_preview() != settings_->output_limiter_mode() ||
-        options_.spectral_preview() != settings_->spectral() ||
-        options_.manual_start_preview() !=
-            settings_->self_play_on_request() ||
-        options_.clouds_preview() != settings_->clouds_style() ||
-        options_.plaits_preview() != settings_->plaits_synth() ||
-        options_.pitch_preview() != settings_->pitch_scale() ||
-        options_.delay_preview() != settings_->delay_mode() ||
-        options_.evolving_preview() != settings_->evolving_feedback() ||
-        options_.attack_preview() != settings_->attack_mode() ||
-        options_.intervals_preview() != settings_->random_intervals()) {
-      settings_->set_output_limiter_mode(options_.limiter_preview());
-      settings_->set_spectral(options_.spectral_preview());
-      settings_->set_self_play_on_request(options_.manual_start_preview());
-      settings_->set_clouds_style(options_.clouds_preview());
-      settings_->set_plaits_synth(options_.plaits_preview());
-      settings_->set_pitch_scale(options_.pitch_preview());
-      settings_->set_delay_mode(options_.delay_preview());
-      settings_->set_evolving_feedback(options_.evolving_preview());
-      settings_->set_attack_mode(options_.attack_preview());
-      settings_->set_random_intervals(options_.intervals_preview());
+    if (changed) {
       settings_->SaveState();
       FlashOptionsPage();
     }
@@ -915,7 +896,7 @@ bool Ui::DoAction(uint8_t slot) {
     const uint8_t value = !settings_->FeatureValue(feature);
     settings_->SetFeatureValue(feature, value);
     settings_->SaveState();
-    const OptionValue& cue = FindOptionValue(OptionSetting(feature), value);
+    const OptionValue cue = FindOptionValue(feature, value);
     cue_.color = cue.color;
     cue_.pulses = cue.pulses;
     cue_time_ = system_clock.milliseconds();
