@@ -142,6 +142,7 @@ class GranularProcessor {
       TriggerGenerator::Output trigger;
       trigger.trigger = i == 0;
       trigger.fractional_sample = 0.0f;
+      trigger.regularity = 1.0f;
       
       dummy_granular_player_.Render(&stereo_delay_line_, trigger, p, &out);
     }
