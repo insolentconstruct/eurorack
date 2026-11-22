@@ -25,10 +25,10 @@ all:  beads_test
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(BUILD_DIR)%.o: %.cc
+$(BUILD_DIR)%.o: %.cc | $(BUILD_DIR)
 	g++ -c -DTEST -Os -g -Wall -Werror -Wno-unused-local-typedef -I. $< -o $@
 
-$(BUILD_DIR)%.d: %.cc
+$(BUILD_DIR)%.d: %.cc | $(BUILD_DIR)
 	g++ -MM -DTEST -I. $< -MF $@ -MT $(@:.d=.o)
 
 beads_test:  $(OBJS)
@@ -37,7 +37,7 @@ beads_test:  $(OBJS)
 depends:  $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)
 
-$(DEP_FILE):  $(BUILD_DIR) $(DEPS)
+$(DEP_FILE):  $(DEPS) | $(BUILD_DIR)
 	cat $(DEPS) > $(DEP_FILE)
 
 include $(DEP_FILE)
