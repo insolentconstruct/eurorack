@@ -2260,6 +2260,8 @@ cases = [
     '            ? OPTION_FLAG_RESONATOR_INPUT : OPTION_FLAG_RESONATOR_GRAINS);'),
   ('TestResonatorSpectralReset', 'resonator', 'beads/dsp/processor_options.cc',
     '      resonator_sample_rate_ = 0.0f;\n', ''),
+  ('TestResonatorLimiterAtRest', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '  limiter_.Rest();\n', ''),
   ('TestResonatorOptionsMatch', 'resonator', 'beads/dsp/processor_options.cc',
     'const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&',
     'const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !resonator &&\n'
