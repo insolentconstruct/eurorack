@@ -349,7 +349,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   codec_transition_frames = kBlockRate / 4;
   codec_fade = false;
   if (sr == codec_sample_rate) {
-    // Same clocks: the converter played silence while paused (#53).
+    // Same clocks: the converter played silence while paused.
     codec.Resume(&Process);
     return;
   }
@@ -429,7 +429,7 @@ void Init() {
   }
 }
 
-// Codec restarts fade the output out first (#53): true once it is silent.
+// Codec restarts fade the output out first: true once it is silent.
 bool FadedOut() {
   // Before the first start there is no audio to fade.
   codec_fade = codec_sample_rate != 0;
