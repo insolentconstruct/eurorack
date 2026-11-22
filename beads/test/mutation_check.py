@@ -2272,7 +2272,7 @@ cases = [
     ''),
   ('TestBlankSector', 'storage', 'beads/settings_storage.h',
     '    if (ReadChunk(MIRROR_BASE, &mirror) != CHUNK_VALID) {\n      return false;\n    }\n    uint16_t index = 1;',
-    '    uint16_t index = 1;'),
+    '    (void)mirror;\n    uint16_t index = 1;'),
   ('TestSupplyDrop', 'storage', 'beads/settings.cc',
     '  if ((chunk_storage_.record_pending() || \\',
     '  if ((false || \\'),
