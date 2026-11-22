@@ -46,6 +46,11 @@ const int kNumResonatorModes = 24;
 const float kResonatorPeak = 0.5f;
 // Scaled down, a sharp mode stays under the limiter's detector clamp.
 const float kResonatorHeadroom = 1.0f / 16.0f;
+// Fixed structure and damping; Rings' lut_stiffness and lut_4_decades there.
+const float kResonatorStructure = 0.25f;
+const float kResonatorDamping = 0.5f;
+const float kResonatorStiffness = 0.0f;
+const float kResonatorDecades = 100.0f;
 
 class ModalResonator {
  public:
@@ -62,16 +67,8 @@ class ModalResonator {
     frequency_ = frequency;
   }
 
-  inline void set_structure(float structure) {
-    structure_ = structure;
-  }
-
   inline void set_brightness(float brightness) {
     brightness_ = brightness;
-  }
-
-  inline void set_damping(float damping) {
-    damping_ = damping;
   }
 
   inline void set_position(float position) {
@@ -80,9 +77,7 @@ class ModalResonator {
 
  private:
   float frequency_;
-  float structure_;
   float brightness_;
-  float damping_;
   float position_;
   Limiter limiter_;
 

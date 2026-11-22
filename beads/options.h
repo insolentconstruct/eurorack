@@ -107,7 +107,7 @@ enum PulsePattern {
 
 struct OptionValue {
   OptionSetting setting;
-  int value;
+  uint8_t value;
   Leds::Color color;
   PulsePattern pulses;
 };

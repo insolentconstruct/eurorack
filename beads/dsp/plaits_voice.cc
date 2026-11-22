@@ -114,6 +114,27 @@ const size_t kEngineRamSize = 16384;
 STATIC_ASSERT(
     sizeof(PlaitsEngines) + kEngineRamSize <= kPlaitsVoiceRamSize,
     plaits_voice_ram);
+// The engines' shared RAM follows them, aligned as their own members.
+STATIC_ASSERT(
+    __alignof__(PlaitsEngines) <= kPlaitsRamAlignment,
+    plaits_engines_alignment);
+STATIC_ASSERT(
+    __alignof__(LPCSpeechSynthWordBank) <= kPlaitsRamAlignment &&
+    __alignof__(fm::Patch) <= kPlaitsRamAlignment,
+    plaits_banks_alignment);
+STATIC_ASSERT(
+    kPlaitsVoiceRamSize % kPlaitsRamAlignment == 0 &&
+    kPlaitsSpeechRamSize % kPlaitsRamAlignment == 0,
+    plaits_regions_alignment);
+#ifdef PLAITS_BLOBS
+// The libraries follow the voices: records, then each library's RAM on 32
+// bytes, then the 6-op banks, all on the same boundary.
+STATIC_ASSERT(
+    kPlaitsLibraryRamAlignment % kPlaitsRamAlignment == 0 &&
+    kPlaitsLibraryRamSize % kPlaitsLibraryRamAlignment == 0 &&
+    __alignof__(PlaitsBlobLibrary) <= kPlaitsRamAlignment,
+    plaits_library_alignment);
+#endif  // PLAITS_BLOBS
 
 // Plaits' default LPG colour.
 const float kLpgColour = 0.5f;
@@ -273,11 +294,12 @@ void PlaitsVoice::Render(
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out, engines_->aux, size, &already_enveloped);
 
-  // Resolution, as for the wavetable synth grains.
+  // Resolution, as for the wavetable synth grains; engine output stays far
+  // below 2^(31 - bit_shift), as Plaits' own int32_t conversion assumes.
   const float scale_up = float(1 << bit_shift);
   const float scale_down = 1.0f / scale_up;
   for (size_t i = 0; i < size; ++i) {
-    out[i] = float(int(out[i] * scale_up)) * scale_down;
+    out[i] = float(int32_t(out[i] * scale_up)) * scale_down;
   }
 
   const bool lpg_bypass = already_enveloped || unpatched;
