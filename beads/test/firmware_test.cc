@@ -2469,14 +2469,15 @@ float ResonatorEnergy() {
 // The resonator is a power-on profile choice; both synths are unchanged.
 void TestResonatorProfile() {
   test_checker.Start("TestResonatorProfile");
-  const uint8_t expected[3] = {
+  const uint8_t expected[4] = {
     0,
     Processor::OPTION_FLAG_RESONATOR_GRAINS,
-    Processor::OPTION_FLAG_RESONATOR_INPUT
+    Processor::OPTION_FLAG_RESONATOR_INPUT,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS
   };
   for (int engine = 0; engine < 3; ++engine) {
-    uint64_t hashes[3];
-    for (int placement = 0; placement < 3; ++placement) {
+    uint64_t hashes[4];
+    for (int placement = 0; placement < 4; ++placement) {
       Rig r(false, engine > 0);
       settings.set_plaits_synth(engine == 2);
       settings.SaveState();
@@ -2487,6 +2488,7 @@ void TestResonatorProfile() {
         r.Reboot(false);
       }
       CHECK(processor.options_ == expected[placement]);
+      CHECK(processor.resonator_chord_ == (placement == RESONATOR_CHORD));
       Random::Seed(1);
       if (engine) {
         r.StartAutomatic();
@@ -2499,11 +2501,13 @@ void TestResonatorProfile() {
     if (engine) {
       CHECK(hashes[1] == hashes[0]);
       CHECK(hashes[2] == hashes[0]);
+      CHECK(hashes[3] == hashes[0]);
     }
   }
   // Through the audio callback: the input rings it before the buffer, and
-  // a Snap and trigger hit strikes it after the silent grains.
-  for (int placement = 1; placement < 3; ++placement) {
+  // a Snap and trigger hit strikes it after the silent grains; as a chord,
+  // the hit's own grain strikes the first voice.
+  for (int placement = 1; placement < 4; ++placement) {
     Rig r(false, false);
     settings.set_plaits_synth(false);
     settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
@@ -2512,7 +2516,7 @@ void TestResonatorProfile() {
     BootWithProfile(&r, entry, 1);
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 32768;
     // Quiet input, as for Hit(); before the buffer it would ring on it.
-    r.audio = placement == RESONATOR_AFTER_GRAINS ? 0x1000000 : 0;
+    r.audio = placement != RESONATOR_BEFORE_BUFFER ? 0x1000000 : 0;
     r.Settle();
     r.Tick(300, true);
     CHECK(ResonatorEnergy() == 0.0f);
@@ -2558,15 +2562,17 @@ void TestResonatorPage() {
   CHECK(settings.FeatureValue(FEATURE_RESONATOR_RING) == 1);
   CHECK(processor.options_ == 0);
   CHECK(!processor.resonator_controls_set_);
-  const uint8_t flags[3] = {
+  const uint8_t flags[4] = {
     0,
     Processor::OPTION_FLAG_RESONATOR_GRAINS,
-    Processor::OPTION_FLAG_RESONATOR_INPUT
+    Processor::OPTION_FLAG_RESONATOR_INPUT,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS
   };
-  for (int placement = 1; placement < 4; ++placement) {
-    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 3);
+  for (int placement = 1; placement < 6; ++placement) {
+    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 4);
     r.Tick(2, true);
-    CHECK(processor.options_ == flags[placement % 3]);
+    CHECK(processor.options_ == flags[placement % 4]);
+    CHECK(processor.resonator_chord_ == (placement % 4 == RESONATOR_CHORD));
   }
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
   for (int material = 0; material < kNumResonatorMaterials; ++material) {

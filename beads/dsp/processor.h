@@ -68,7 +68,9 @@ const float kResonatorRootNote = 48.0f;
 enum ResonatorPlacement {
   RESONATOR_OFF,
   RESONATOR_AFTER_GRAINS,
-  RESONATOR_BEFORE_BUFFER
+  RESONATOR_BEFORE_BUFFER,
+  // After the grains, each grain striking one voice of a chord.
+  RESONATOR_CHORD
 };
 
 struct ResonatorControls {
@@ -81,6 +83,7 @@ struct ResonatorControls {
   float feedback;
   bool hold_feedback;
   const ResonatorModes* modes;
+  float chord_gain;
 };
 
 class Processor {
@@ -136,11 +139,13 @@ class Processor {
   // Rings' modal resonator on the grains, or on the input before the buffer.
   inline void set_resonator(int placement) {
     // One store: the audio interrupt never sees both placements.
-    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
+    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS ||
+        placement == RESONATOR_CHORD
         ? OPTION_FLAG_RESONATOR_GRAINS
         : (placement == RESONATOR_BEFORE_BUFFER
             ? OPTION_FLAG_RESONATOR_INPUT : 0);
     resonator_sample_rate_ = 0.0f;
+    resonator_chord_ = placement == RESONATOR_CHORD;
     options_ = (options_ &
         ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
     resonator_sample_rate_ = 0.0f;
@@ -431,11 +436,26 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  // The page's controls, once the UI has set them.
+  void ApplyResonatorControls();
   // Struck by input hits, tuned by PITCH; adds its resonance to the frames.
   void ProcessResonator(
       const RandomizedParameter& pitch,
       bool strike,
       FloatFrame* frames,
+      size_t size);
+  // Each grain started in the block strikes one voice of the chord.
+  void ProcessChord(
+      bool strike,
+      const TriggerGenerator::Output* triggers,
+      FloatFrame* frames,
+      size_t size);
+  template<typename GrainSource>
+  void StrikeChord(
+      const GrainSource& source,
+      const TriggerGenerator::Output* triggers,
+      float gain,
+      float* strikes,
       size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
@@ -512,6 +532,9 @@ class Processor {
   float resonator_sample_rate_;
   ResonatorControls resonator_controls_;
   bool resonator_controls_set_;
+  bool resonator_chord_;
+  // The grains' level, which a grain's strike in a chord follows.
+  float grain_level_;
   bool seed_gate_;
   // SEED's pulse, low-passed as Rings' strum, while it still sounds.
   stmlib::Svf strike_filter_;

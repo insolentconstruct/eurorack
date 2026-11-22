@@ -615,7 +615,8 @@ or saved choice; the audio path is unchanged.
 ### Resonator
 
 Options page 5 (FEEDBACK and REVERB LEDs) holds Hygrostat feature ID 41,
-Off (stock) / After the grains / Before the buffer (#88), on FEEDBACK. It adds Rings' modal resonator, 24 modes in stereo (odd modes
+Off (stock) / After the grains / Before the buffer / Chord (#88), on FEEDBACK
+in quarters. It adds Rings' modal resonator, 24 modes in stereo (odd modes
 left, even modes right), computed in Plaits' batched form with its tuning
 and pickup position updated once per 0.25 ms block, so it is close to
 Rings' but not identical. After the grains, the grains strike it and its
@@ -641,6 +642,35 @@ reach it. A hit and SEED in the same 0.25 ms block strike once, at SEED's
 level. Turning the resonator on with SEED held does not strike it. Before
 the buffer a strike while frozen is not heard: the resonance would only
 be recorded.
+
+Chord (value 3) sits after the grains, but the grains' audio does not
+excite it: each grain that starts strikes one of three voices, each a batch
+of eight of the Material's 24 modes (its first four left/right pairs),
+tuned to that grain's own pitch over C3. Each trigger of the grains marks
+its strike's sample; the grain it started, found by how far its envelope
+has played, gives the pitch (its playback speed, to 1/1024), in every
+quality. Delay mode's idle grains are never read.
+Pitch scale and Recent notes, which already snap the grains, therefore
+tune the voices; with neither, voices take the grains' free pitches.
+A grain within half a semitone of a voice strikes it as tuned. Otherwise
+the quietest voice is retuned to the grain, but only once a bound on its
+fundamental, from the filter's own poles, is 41 dB under its own loudest
+(1 dB more than the 40 dB rule, for strikes that partly cancelled; about 0.4, 1.6, 6 and 25 s after a single strike at the four Ring times;
+a grain that strikes silently does not hold a voice); until then the grain strikes
+the nearest voice, so no ringing tail is bent. Each strike is Rings' strum: its level
+follows the voice's pitch, and its low-pass is folded into the mode
+levels, so one voice's strike is within 0.2 dB of the same eight modes
+struck by SEED. For Wood, String, Glass, Bell, Marimba and Bowl eight
+modes sound within 0.2 dB and 1.3% centroid of all 24; Drum and Gong
+spread their energy over all 24, so a chord voice is 6.5 and 9 dB
+quieter and darker than their full bank. A grain's strike is then scaled
+by the grains' recent level (RMS, held for half a second) and by a gain per
+Material, so a chord follows the input's loudness and sits near After the
+grains' level: on 72 test clouds (nine clouds, eight Materials) 65 are
+within 2 dB of it and all within 2.7 dB, where an unscaled chord was up to
+8 dB louder. SEED and hits strike every voice already tuned, at Rings'
+level. A Drum or Gong strike bends only the voice struck. Off and the other
+placements are unchanged.
 
 Material (ID 43, DRY/WET, eighths) sets structure and brightness: Wood
 (0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They
