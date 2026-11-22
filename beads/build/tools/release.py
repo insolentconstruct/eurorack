@@ -58,9 +58,10 @@ def decoded_ok(stats, payload, expected):
 
 
 def proof(out):
-    app = (out / 'app.bin').read_bytes()
+    # The app and its region, as the WAV writes them.
+    app = (out / 'image.bin').read_bytes()
     if not 0 < len(app) <= APP_MAX_SIZE:
-        raise ValueError('unexpected application size')
+        raise ValueError('unexpected image size')
     payload_size = -(-len(app) // BLOCK_SIZE) * BLOCK_SIZE
     expected = app + b'\xff' * (payload_size - len(app))
     wav_sha = sha(out / WAV)

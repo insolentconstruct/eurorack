@@ -70,8 +70,8 @@ def package(out, here, wav, wav_zip, combo, combo_hex, combo_zip):
     write_zip(out / wav_zip, [wav, "README.txt", "NOTICE.txt"] + guides)
     # Combo image, named after the release.
     (out / combo).write_bytes((out / "combo.bin").read_bytes())
-    # stmlib's merged combo HEX; it carries the 0x08000000 address.
-    (out / combo_hex).write_bytes((out / "objects/beads/beads_bootloader_combo.hex").read_bytes())
+    # The combo image with its region as HEX, at the 0x08000000 address.
+    (out / combo_hex).write_bytes((out / "combo.hex").read_bytes())
     if hex_image(out / combo_hex) != ("08000000", (out / combo).read_bytes()):
         raise ValueError("combo HEX does not program the combo image at 0x08000000")
     write_zip(out / combo_zip, [combo, combo_hex, "README.txt", "NOTICE.txt"] + guides)

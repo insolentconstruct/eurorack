@@ -49,7 +49,7 @@ const float kPlaitsRootNote = 48.0f - 0.0429f;
 // while the synth plays.
 #ifdef PLAITS_BLOBS
 const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize +
-    kPlaitsLibraryRamSize + kPlaitsFmBanksRamSize;
+    kPlaitsLibraryRamSize;
 #else
 const size_t kPlaitsSynthRamSize = kNumPlaitsVoices * kPlaitsVoiceRamSize +
     kPlaitsSpeechRamSize + kPlaitsFmBanksRamSize;
