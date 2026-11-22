@@ -2153,6 +2153,10 @@ cases = [
     '  wt = fminf(fmaxf(wt, 0.0f), 62.9999f);',
     '  wt = fminf(fmaxf(wt, 0.0f), 62.0f);'),
   # Modal resonator (resonator_test).
+  ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
+    '    if (!id || id >= FEATURE_LAST || seen[id] ||\n'
+    '        kFeatureDefinitions[id].field == kReservedField) {',
+    '    if (!id || id >= FEATURE_LAST || seen[id]) {'),
   ('TestResonatorSaved', 'storage', 'beads/settings.cc',
     '  25,  // Resonator material.', '  0,  // Resonator material.'),
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',

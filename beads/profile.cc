@@ -80,7 +80,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 5, kNoField, false, false, false, false },  // Start quality.
   { 1, kNoField, false, true, false, false },  // Gain knob.
   { 3, kNoField, true, false, false, false },  // Resonator.
-  { 1, kNoField, false, false, false, false },  // Reserved.
+  { 0, kReservedField, false, false, false, false },  // Reserved.
   { 4, kNoField, true, false, false, false },  // Resonator material.
   { 4, kNoField, true, false, false, false },  // Resonator ring.
   { 0, kNoField, false, false, false, false },  // Resonator structure.
@@ -895,7 +895,8 @@ bool Profile::Parse(const volatile uint8_t* b) {
   for (size_t i = 0; i < count; ++i) {
     const volatile uint8_t* p = b + 16 + 6 * i;
     const uint8_t id = p[0];
-    if (!id || id >= FEATURE_LAST || seen[id]) {
+    if (!id || id >= FEATURE_LAST || seen[id] ||
+        kFeatureDefinitions[id].field == kReservedField) {
       return false;
     }
     seen[id] = true;

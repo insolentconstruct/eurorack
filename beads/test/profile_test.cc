@@ -354,7 +354,7 @@ void TestBetaProfileDefinitions() {
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    255, 255, 255, 255, 255, 255, 255, 255, 255
+    255, kReservedField, 255, 255, 255, 255, 255, 255, 255
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank; older profiles imply it.
@@ -394,8 +394,10 @@ void TestBetaProfileDefinitions() {
         Profile p;
         // Adjustable needs a page, or a saved field set by a gesture; the
         // Plaits bank is only Adjustable.
-        // A full-byte value (no count) takes any byte.
-        const bool valid = (!kFeatureDefinitions[id].values ||
+        // A full-byte value (no count) takes any byte; a reserved ID none.
+        const bool valid =
+            kFeatureDefinitions[id].field != kReservedField &&
+            (!kFeatureDefinitions[id].values ||
             value < kFeatureDefinitions[id].values) &&
             (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page ||
                 kFeatureDefinitions[id].field != kNoField) &&

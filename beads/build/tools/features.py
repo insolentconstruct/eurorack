@@ -220,8 +220,8 @@ def definitions(features, reserved):
   lines = ['  { 0, kNoField, false, false, false, false },  // None.']
   for f in by_id(features, reserved):
     if f is None:
-      # A reserved ID parses only as Off or Fixed at 0, and does nothing.
-      lines.append('  { 1, kNoField, false, false, false, false },'
+      # A reserved ID is refused in profiles, as an unknown one is.
+      lines.append('  { 0, kReservedField, false, false, false, false },'
           '  // Reserved.')
       continue
     count = len(f['values']) if f['values'] else 0

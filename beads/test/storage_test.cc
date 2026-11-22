@@ -1233,7 +1233,8 @@ void TestSavedFeaturePairs() {
   uint8_t scale[kScaleRecordSize];
   memcpy(scale, block + 16 + 6 * block[5], sizeof(scale));
   for (int id = 1; id < FEATURE_LAST; ++id) {
-    if (kFeatureDefinitions[id].field == kNoField) {
+    if (kFeatureDefinitions[id].field == kNoField ||
+        kFeatureDefinitions[id].field == kReservedField) {
       continue;
     }
     features[count] = ProfileFeature(id);

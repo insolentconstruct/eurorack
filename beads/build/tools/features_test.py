@@ -125,7 +125,7 @@ faults = [
       '{ 3, kNoField, true, false, false, false },  // Resonator.',
       '{ 4, kNoField, true, false, false, false },  // Resonator.'),
   ('stale', 'beads/profile.cc',
-      '{ 1, kNoField, false, false, false, false },  // Reserved.',
+      '{ 0, kReservedField, false, false, false, false },  // Reserved.',
       '{ 0, kNoField, false, false, false, false },  // Reserved.'),
   ('stale', 'beads/profile.h',
       'FEATURE_RESONATOR = 41,', 'FEATURE_RESONATOR = 40,'),
