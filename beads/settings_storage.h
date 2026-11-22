@@ -257,7 +257,7 @@ class ChunkStorage {
   // Leaves a verified copy of the calibration about to be written in the
   // mirror sector; only writes it if it is missing or different. A usable
   // mirror is only erased while the sector holds a usable calibration: if
-  // it doesn't, the mirror's is copied there first (#317).
+  // it doesn't, the mirror's is copied there first.
   bool MirrorPersistentData() {
     PersistentData mirror;
     const bool valid = ReadChunk(MIRROR_BASE, &mirror) == CHUNK_VALID;
