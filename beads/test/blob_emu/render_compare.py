@@ -318,7 +318,10 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
       for i in range(0, len(x), 4):
         samples += 1
         if not fades and x[i:i + 4] == POISON:
-          differ += y[i:i + 4] != POISON
+          if y[i:i + 4] != POISON:
+            differ += 1
+            if stats is not None:
+              stats.setdefault('positions', []).append((block, 1, i // 4))
           continue
         v, = struct.unpack_from('<f', x, i)
         if v != v or v in (float('inf'), float('-inf')):
@@ -582,7 +585,8 @@ def main(argv):
     if not run['out_peak']:
       failures.append('model %d: silent at %s' % (run['model'], run['base']))
     known = KNOWN.get(run['model'])
-    if run['differ'] and known and run['positions'] == sorted(known[1]):
+    if run['differ'] and known and run['differ'] == len(known[1]) and \
+        run['positions'] == sorted(known[1]):
       findings.append('model %d: %d of %d samples differ at %s%s fpscr %s: '
                       '%s' % (run['model'], run['differ'], run['samples'],
                               run['base'], ' gap' if run['gap'] else '',
