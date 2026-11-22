@@ -2142,7 +2142,7 @@ cases = [
     '      const float gain = ramp * ramp;',
     '      const float gain = ramp;'),
   ('TestFadeIn', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
-    '      aux[i] *= gain;\n', ''),
+    '      out[i] *= gain;', '      out[i] *= 1.0f + 0.0f * gain;'),
   ('TestFadeIn', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
     '    while (i < size && position < kPlaitsBlobFadeSize) {',
     '    while (i < size) {'),

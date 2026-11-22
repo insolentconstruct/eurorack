@@ -40,8 +40,8 @@
 namespace beads {
 
 // A blob is rebuilt on every switch, where a compiled-in engine keeps its
-// state: its first two Plaits blocks fade in on a squared ramp, so a restart
-// from zeroed filters (a differentiator's first step) never clicks.
+// state: its first two Plaits blocks of OUT (the voice plays no AUX) fade in
+// on a squared ramp, so a restart from zeroed filters never clicks.
 const size_t kPlaitsBlobFadeSize = 48;
 const float kPlaitsBlobFadeStep = 1.0f / float(kPlaitsBlobFadeSize);
 
@@ -125,19 +125,18 @@ class PlaitsBlobEngine : public plaits::Engine {
     (*render_)(
         object_, services_, &parameters, out, aux, size, already_enveloped);
     if (fade_ < kPlaitsBlobFadeSize) {
-      fade_ = FadeIn(out, aux, size, fade_);
+      fade_ = FadeIn(out, size, fade_);
     }
   }
 
   // Scales a block from sample position of the fade-in, a squared ramp from
   // 0; returns the position after it.
-  static size_t FadeIn(float* out, float* aux, size_t size, size_t position) {
+  static size_t FadeIn(float* out, size_t size, size_t position) {
     size_t i = 0;
     while (i < size && position < kPlaitsBlobFadeSize) {
       const float ramp = float(position) * kPlaitsBlobFadeStep;
       const float gain = ramp * ramp;
       out[i] *= gain;
-      aux[i] *= gain;
       ++i;
       ++position;
     }

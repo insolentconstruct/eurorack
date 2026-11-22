@@ -101,8 +101,8 @@ host-test jobs; the release app does not link them:
   refused for its own reason (newer services, not listed), a cycle, a later
   or the same library, no RAM or scratch for it, libraries out of order or
   more than eight; the synth-entry builder's records, cleared RAM, exports
-  and dependency order. A rebuilt blob's fade-in: its squared ramp on OUT and
-  AUX in blocks of any size, nothing changed after it.
+  and dependency order. A rebuilt blob's fade-in: its squared ramp on OUT in
+  blocks of any size, nothing changed after it.
 - `profile_blobs.mk` and `storage_blobs.mk`: version 3 profiles (bank table,
   directory, unknown IDs, counts, start bank) and the saved bank's fallback,
   built with `PLAITS_BLOBS`.
@@ -125,8 +125,8 @@ host-test jobs; the release app does not link them:
   writes from blob or library code outside the slot, arena, stack and
   outputs (a library's shared RAM included); canaries; section and library
   faults and the lock for every `WAVE`/`PLTS` outcome. A blob's first 48
-  samples after each build must equal the compiled-in samples times the
-  fade-in, bit for bit, and every later sample must equal them. Differences
+  OUT samples after each build must equal the compiled-in samples times the
+  fade-in, bit for bit, and every other OUT and AUX sample must equal them. Differences
   after a return to a model that kept state compiled in are reported as
   findings.
 - `build_blobs_dev.sh`: the development app with `PLAITS_BLOBS=1`, its

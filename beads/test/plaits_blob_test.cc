@@ -1226,40 +1226,36 @@ void TestLibraries() {
   CHECK(libraries.Find(1) && !libraries.Find(6));
 }
 
-// A rebuilt blob's first 48 samples fade in on a squared ramp from 0, on OUT
-// and AUX,
+// A rebuilt blob's first 48 samples of OUT fade in on a squared ramp from 0,
 // in blocks of any size; nothing after them changes.
 void TestFadeIn() {
   test_checker.Start("TestFadeIn");
   const size_t n = kPlaitsBlobFadeSize + 12;
   float out[n];
-  float aux[n];
   for (size_t i = 0; i < n; ++i) {
-    out[i] = 1.0f;
-    aux[i] = -2.0f;
+    out[i] = -2.0f;
   }
-  size_t position = PlaitsBlobEngine::FadeIn(out, aux, 5, 0);
+  size_t position = PlaitsBlobEngine::FadeIn(out, 5, 0);
   CHECK(position == 5);
-  position = PlaitsBlobEngine::FadeIn(out + 5, aux + 5, 24, position);
-  position = PlaitsBlobEngine::FadeIn(out + 29, aux + 29, n - 29, position);
+  position = PlaitsBlobEngine::FadeIn(out + 5, 24, position);
+  position = PlaitsBlobEngine::FadeIn(out + 29, n - 29, position);
   CHECK(position == kPlaitsBlobFadeSize);
-  bool ramp = out[0] == 0.0f && aux[0] == 0.0f;
+  bool ramp = out[0] == 0.0f;
   for (size_t i = 0; i < n; ++i) {
     const float x = float(i) * kPlaitsBlobFadeStep;
     const float gain = i < kPlaitsBlobFadeSize ? x * x : 1.0f;
-    ramp = ramp && out[i] == gain && aux[i] == -2.0f * gain;
+    ramp = ramp && out[i] == -2.0f * gain;
   }
   CHECK(ramp);
-  CHECK(out[kPlaitsBlobFadeSize - 1] < 1.0f);
+  CHECK(out[kPlaitsBlobFadeSize - 1] > -2.0f);
   // Past the window a block is left alone.
   float block[12];
-  float block_aux[12];
   for (size_t i = 0; i < 12; ++i) {
-    block[i] = block_aux[i] = 0.5f;
+    block[i] = 0.5f;
   }
-  CHECK(PlaitsBlobEngine::FadeIn(block, block_aux, 12, kPlaitsBlobFadeSize) ==
+  CHECK(PlaitsBlobEngine::FadeIn(block, 12, kPlaitsBlobFadeSize) ==
       kPlaitsBlobFadeSize);
-  CHECK(block[0] == 0.5f && block_aux[11] == 0.5f);
+  CHECK(block[0] == 0.5f && block[11] == 0.5f);
 }
 
 // A double ECC error reported after one section's read faults it alone.

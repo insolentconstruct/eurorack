@@ -266,8 +266,8 @@ def drive(seed):
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
                    stats=None):
   """Blob voice against compiled engine, block by block, from one seed.
-  Inside the blob's fade-in the expected sample is the compiled one times
-  the fade's gain; everywhere else it is the compiled sample itself."""
+  Inside the blob's fade-in the expected OUT sample is the compiled one
+  times the fade's gain; every other sample is the compiled sample itself."""
   differ = samples = 0
   for block, (trigger, note, harmonics, timbre, morph, accent) in enumerate(
       steps):
@@ -277,13 +277,13 @@ def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
         engine, (trigger, note + nudge) + p[2:], seed)
     if digest is not None:
       digest.update(a_out + a_aux)
-    for x, y in ((a_out, b_out), (a_aux, b_aux)):
+    for x, y, fades in ((a_out, b_out, True), (a_aux, b_aux, False)):
       for i in range(0, len(x), 4):
         samples += 1
         v, = struct.unpack_from('<f', x, i)
         if v != v or v in (float('inf'), float('-inf')):
           raise RuntimeError('non-finite output')
-        position = m.fade + i // 4
+        position = m.fade + i // 4 if fades else FADE_SIZE
         expected = faded(y[i:i + 4], position) if position < FADE_SIZE \
             else y[i:i + 4]
         if stats is not None and position < FADE_SIZE:
