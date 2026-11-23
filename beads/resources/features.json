@@ -1782,9 +1782,13 @@
       "id": 93,
       "name": "BubbleTime",
       "palette": "bubbletime",
+      "family": "Experimental",
+      "blob_size": 12292,
+      "state_size": 760,
+      "arena_size": 0,
       "credit": "Combust",
       "licence": "MIT",
-      "libraries": [2]
+      "libraries": []
     },
     {
       "id": 94,

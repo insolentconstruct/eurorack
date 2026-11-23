@@ -102,6 +102,10 @@ build analog_percussion $blob/models/analog_percussion.cc \
 build saw_swarm $blob/models/saw_swarm.cc \
   $blob/models/saw_swarm_engine.cc \
   beads/plaits_resources.cc
+build bubbletime $blob/models/bubbletime.cc \
+  $blob/models/bubbletime_engine.cc \
+  $blob/models/palette_chord_bank.cc \
+  beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

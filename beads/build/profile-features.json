@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "9bd8d7ecfeff133d608a96d76cd8de28611927f93ba806420cf5013df56fd96d",
+  "manifest_sha256": "766f8376813affa0ccab9c9f26ff0705b4c807594dd6fbb541b5c8db8cd5e90f",
   "record_version": 1,
   "features": [
     {
@@ -2512,11 +2512,13 @@
       "id": 93,
       "name": "BubbleTime",
       "palette": "bubbletime",
+      "family": "Experimental",
+      "blob_size": 12292,
+      "state_size": 760,
+      "arena_size": 0,
       "credit": "Combust",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 94,
