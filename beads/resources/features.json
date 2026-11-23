@@ -1515,7 +1515,11 @@
       "id": 59,
       "name": "VOSIM",
       "palette": "vosim",
-      "credit": "Mutable Instruments",
+      "family": "Formant",
+      "blob_size": 4600,
+      "state_size": 204,
+      "arena_size": 0,
+      "credit": "Mutable Instruments, Lyle Mills",
       "licence": "MIT",
       "libraries": []
     },

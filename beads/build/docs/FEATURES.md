@@ -469,6 +469,8 @@ Polyphony and FEEDBACK changes also apply while FREEZE sustains Rings.
 
 ### Plaits bank
 
+Palette VOSIM starts fresh on each selection, with 4 ms of silence while its initial DC estimate is prepared.
+
 Plaits synth mode always plays one bank of eight models, in Plaits' own
 groups (#190): green is its first bank (virtual analog to speech, models
 9–16), red the second (swarm to hi-hat, 17–24), yellow the eight models

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "2200e54099212e9965ffbe9ce0aeb2c48d8688f61f52ec1a8a9c5597a5a6d78f",
+  "manifest_sha256": "fb35f045092dd6eae750cbff221d996397ee4a46a27fc843d1ca6f2afd8ce6e8",
   "record_version": 1,
   "features": [
     {
@@ -2230,7 +2230,11 @@
       "id": 59,
       "name": "VOSIM",
       "palette": "vosim",
-      "credit": "Mutable Instruments",
+      "family": "Formant",
+      "blob_size": 4600,
+      "state_size": 204,
+      "arena_size": 0,
+      "credit": "Mutable Instruments, Lyle Mills",
       "licence": "MIT",
       "libraries": []
     },

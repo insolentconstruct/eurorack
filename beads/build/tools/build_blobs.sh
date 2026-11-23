@@ -54,7 +54,7 @@ build speech --library "$out/speech_library.bin" \
 for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned \
     loopback lockstep tapfield attractor rulefield z_filter csaw \
-    ring_mod saw_square harmonics sub_oscillator digital_modulation; do
+    ring_mod saw_square harmonics sub_oscillator digital_modulation vosim; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
 build toy $blob/models/toy.cc \
