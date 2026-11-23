@@ -62,9 +62,9 @@ RANDOM_STATE = 0x20000000
 # The 6-op engine serves models 2-4.
 PAIRS = dict([
     (36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6),
-    (39, 7), (41, 8), (31, 9), (70, 10), (78, 11), (77, 12), (49, 13),
-    (62, 14), (96, 15)] + [
-    (m, 16 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (39, 7), (41, 8), (31, 9), (70, 10), (78, 11), (77, 12), (45, 13),
+    (49, 14), (62, 15), (96, 16)] + [
+    (m, 17 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -75,7 +75,7 @@ KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32),
     (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (70, 31), (78, 70),
-    (77, 78), (49, 77), (62, 49), (96, 62)]
+    (77, 78), (45, 77), (49, 45), (62, 49), (96, 62)]
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -303,6 +303,14 @@ def drive(seed):
     for block in range(8):
       steps.append((2, 48.0 + i, i / 31.0, 0.5, block / 7.0, 0.8))
   return steps
+
+
+def note_control(model, steps):
+  if model in (45,):
+    # Integer ramps and delay lines need sustained excitation and pitch travel.
+    return ([(1 if i == 0 else 0, 60.0, 0.5, 0.5, 0.5, 0.8)
+             for i in range(512)], 12.0)
+  return steps[:200], 0.01
 
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
@@ -726,17 +734,19 @@ def main(argv):
   pool.close()
   pool.join()
 
-  # Each comparison must see a difference: the note nudged by 0.01.
+  # Each comparison must detect its pitch change.
   m = machine()
   m.setup(layout, digests)
   m.arena = arena_of(m)
   for model, engine in sorted(PAIRS.items()):
     m.select_blob(model)
     m.select_compiled(engine, model)
-    differ, samples, _ = compare_blocks(m, engine, steps[:200], 0x21,
-                                        nudge=0.01)
+    control_steps, nudge = note_control(model, steps)
+    differ, samples, _ = compare_blocks(m, engine, control_steps, 0x21,
+                                        nudge=nudge)
     results['controls'].append({'case': 'note nudged, model %d' % model,
-                                'differ': differ, 'samples': samples})
+                                'differ': differ, 'samples': samples,
+                                'semitones': nudge})
     print('control: note nudged, model %d: %d of %d differ' % (
         model, differ, samples))
     if not differ:

@@ -53,6 +53,8 @@ build buzz $blob/models/buzz.cc \
   $blob/models/buzz_engine.cc beads/plaits_resources.cc
 build struck_bell $blob/models/struck_bell.cc \
   $blob/models/struck_bell_engine.cc beads/plaits_resources.cc
+build toy $blob/models/toy.cc \
+  $blob/models/toy_engine.cc beads/plaits_resources.cc
 build question_mark $blob/models/question_mark.cc \
   $blob/models/question_mark_engine.cc beads/plaits_resources.cc
 build raw_fm $blob/models/raw_fm.cc \

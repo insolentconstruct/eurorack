@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "be3cb1b5abd189c11e399715e8161b956805ad15ec7f1b5e40572183b952d666",
+  "manifest_sha256": "bfc37265f6327fbb1f2edcfaa2347ba3161be5718a40f6be20ffb147dec377d9",
   "record_version": 1,
   "features": [
     {
@@ -2038,6 +2038,10 @@
       "id": 45,
       "name": "Toy",
       "palette": "toy",
+      "family": "Bitwise",
+      "blob_size": 1528,
+      "state_size": 48,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

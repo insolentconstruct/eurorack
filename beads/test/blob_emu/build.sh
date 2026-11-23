@@ -117,6 +117,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/question_mark_engine.cc \
     $models/triple_engine.cc \
     $models/raw_fm_engine.cc \
+    $models/toy_engine.cc \
     $models/buzz_engine.cc \
     $models/struck_bell_engine.cc \
     $models/acid_engine.cc \
