@@ -414,7 +414,9 @@ def main(argv):
     if not r['differ']:
       failures.append('block %d: the perturbed gain changed nothing' %
                       r['block'])
-  guards = [(block, s) for block in (12, 24) for s in (36, 37, 38, 39)]
+  # Every scenario at Beads' block size; the changes also at Rings' own.
+  guards = [(12, s) for s in range(NUM_SCENARIOS)] + \
+      [(24, s) for s in (36, 37, 38, 39)]
   for r in pool.imap(work, [('guard', g) for g in guards]):
     if 'error' in r:
       failures.append(r['error'])

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "487b0f5b72bba35e37b9a498982b9dc8cfd45fed5aa5cae434783e47480e55de",
+  "manifest_sha256": "033a4a335f1f0530dc622a35e5ab518ba9ca6059585cea3f10e7c1b4f5c3bc61",
   "record_version": 1,
   "features": [
     {
@@ -1455,7 +1455,11 @@
         "Wood",
         "String",
         "Glass",
-        "Bell"
+        "Bell",
+        "Marimba",
+        "Drum",
+        "Bowl",
+        "Gong"
       ],
       "states": [
         "Off",

@@ -1454,6 +1454,24 @@ void TestRingsSynthOwnership() {
   CHECK(CoreTarget(delay_buffer_1).polyphony == 4);
   CHECK(configure_in_audio == 0);
 
+  // FREEZE sustains Rings; polyphony and FEEDBACK changes still apply.
+  ui.set_freeze_button_state(true);
+  r.Tick(20, true);
+  CHECK(ui.should_ignore_state_change());
+  settings.SetFeatureValue(FEATURE_RINGS_POLYPHONY, 0);
+  r.Tick(300, true);
+  CHECK(CoreTarget(delay_buffer_1).polyphony == 1);
+  // The unpatched ASSIGN input's probe would move FEEDBACK between zones.
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 0;
+  r.Tick(1000, true);
+  CHECK(CoreTarget(delay_buffer_1).core == RINGS_CORE_PART);
+  CHECK(ui.should_ignore_state_change());
+  CHECK(configure_in_audio == 0);
+  CHECK(codec.callback_ == &Process);
+  ui.set_freeze_button_state(false);
+  r.Tick(20, true);
+
   // Without Rings, a Rings selection plays Beads' synth, never silence.
   playable_synths = SynthMask(true, true, false);
   ui.set_playable_synths(playable_synths);
@@ -1982,6 +2000,7 @@ void TestSeedLatchPatched() {
   ui.seed_button_locked_ = true;
   for (int mode = 0; mode < 4; ++mode) {
     settings.SetFeatureValue(FEATURE_SEED_LATCH, mode);
+    SysTick_Handler();  // The UI publishes the page's or the saved value.
     MonitorStateChange();
     CHECK(seed_latch_mode == mode);
     // Feed actual callback edges, checking the generator selected by the
@@ -2042,6 +2061,7 @@ void TestSeedLatchPatched() {
   r.seed_patched = false;
   r.Settle();
   settings.SetFeatureValue(FEATURE_SEED_LATCH, 3);
+  SysTick_Handler();
   MonitorStateChange();
   CHECK(normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED));
   settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
@@ -2759,7 +2779,7 @@ void TestResonatorPage() {
     CHECK(processor.options_ == flags[placement % 3]);
   }
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
-  for (int material = 0; material < 4; ++material) {
+  for (int material = 0; material < kNumResonatorMaterials; ++material) {
     for (int ring = 0; ring < 4; ++ring) {
       settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, material);
       settings.SetFeatureValue(FEATURE_RESONATOR_RING, ring);
@@ -2768,6 +2788,8 @@ void TestResonatorPage() {
           kResonatorMaterials[material].structure,
           kResonatorMaterials[material].brightness,
           kResonatorRingTimes[ring], kResonatorPosition, 1.0f));
+      CHECK(processor.resonator_controls_.modes ==
+          kResonatorMaterials[material].modes);
     }
   }
   // Off, the controls are left alone.
@@ -2775,8 +2797,8 @@ void TestResonatorPage() {
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 1);
   r.Tick(2, true);
   CHECK(processor.options_ == 0);
-  CHECK(processor.resonator_controls_.structure ==
-      kResonatorMaterials[3].structure);
+  CHECK(processor.resonator_controls_.modes ==
+      kResonatorMaterials[kNumResonatorMaterials - 1].modes);
   // Saved: a power cycle brings it back, before the buffer from the start.
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER);
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
@@ -2816,6 +2838,13 @@ void TestResonatorPage() {
   CHECK(ControlsEqual(processor.resonator_controls_, 0.25f,
       kResonatorMaterials[3].brightness, 10.0f / 256.0f, 255.0f / 256.0f,
       0.25f));
+  // An exact structure is Rings' curve under Drizzlet's objects too.
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 5);
+  r.Tick(2, true);
+  CHECK(processor.resonator_controls_.structure == 0.25f);
+  CHECK(processor.resonator_controls_.brightness ==
+      kResonatorMaterials[5].brightness);
+  CHECK(processor.resonator_controls_.modes == NULL);
   const uint8_t bright[] = {
     FEATURE_RESONATOR, RESONATOR_BEFORE_BUFFER,
     FEATURE_RESONATOR_BRIGHTNESS, 0
@@ -2825,6 +2854,11 @@ void TestResonatorPage() {
   CHECK(ControlsEqual(processor.resonator_controls_,
       kResonatorMaterials[1].structure, 0.0f, kResonatorRingTimes[1],
       kResonatorPosition, 1.0f));
+  // An exact brightness keeps the object's modes.
+  settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 5);
+  r.Tick(2, true);
+  CHECK(processor.resonator_controls_.brightness == 0.0f);
+  CHECK(processor.resonator_controls_.modes == kResonatorMaterials[5].modes);
 }
 
 // [A] taps reach resonator damping after the other destinations, while the
@@ -3190,9 +3224,10 @@ void TestRejectedCalibrationCue() {
     PersistentData attempt = stored;
     attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
     attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+    // The run's values stay in the calibrator until it completes.
+    calibrator.Start();
     if (wild) {
-      settings.mutable_persistent_data()->adc_calibration[
-          CV_ADC_CHANNEL_TIME].offset *= 3.0f;
+      calibrator.calibration_data_[CV_ADC_CHANNEL_TIME].offset *= 3.0f;
     }
     CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
     // The last event over a second ago, as after a slow flash rewrite.
@@ -3214,6 +3249,131 @@ void TestRejectedCalibrationCue() {
     CHECK(loaded.Init(false));
     CHECK(SameCalibration(loaded.persistent_data(), wild ? stored : attempt));
   }
+}
+
+// A button, or a chord with the first held, pressed and released.
+void Press(Rig* r, int first, int second) {
+  test_down[first] = true;
+  r->Advance(20);
+  test_down[second] = true;
+  r->Advance(20);
+  test_down[first] = test_down[second] = false;
+  r->Advance(20);
+}
+
+// The next save rewrites the settings sector, as when it is full.
+void RewriteOnNextSave() {
+  settings.chunk_storage_.next_state_chunk_index_ = 0xffff;
+  settings.SaveState();
+}
+
+// #346: a run that doesn't complete changes nothing, in use or in flash,
+// though the sector is rewritten during it: a step rejected after the
+// offsets, or after the pitch, or the run left by the autosave chord.
+void TestUnfinishedCalibrationKept() {
+  test_checker.Start("TestUnfinishedCalibrationKept");
+  for (int exit = 0; exit < 3; ++exit) {
+    Rig r(false, false);
+    // Cables left in TIME, PITCH and DENSITY.
+    r.cv_patched[CV_ADC_CHANNEL_TIME] = true;
+    r.cv_patched[CV_ADC_CHANNEL_PITCH] = true;
+    r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+    r.cv[CV_ADC_CHANNEL_TIME] = 20000;
+    r.cv[CV_ADC_CHANNEL_PITCH] = 40000;
+    r.cv[CV_ADC_CHANNEL_DENSITY] = 13107;
+    r.Settle();
+    const PersistentData stored = settings.persistent_data();
+    Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+    CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+    Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+    CHECK(ui.mode_ == Ui::MODE_CALIBRATION_2);
+    CHECK(fabsf(calibrator.calibration_data_[CV_ADC_CHANNEL_TIME].offset -
+        stored.adc_calibration[CV_ADC_CHANNEL_TIME].offset) > 0.1f);
+    RewriteOnNextSave();
+    if (exit == 0) {
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);  // PITCH unchanged: rejected.
+    } else if (exit == 1) {
+      r.cv[CV_ADC_CHANNEL_PITCH] -= 13107;  // 2 V higher: accepted.
+      r.Settle();
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_3);
+      CHECK(fabsf(calibrator.calibration_data_[CV_ADC_CHANNEL_PITCH].offset -
+          stored.adc_calibration[CV_ADC_CHANNEL_PITCH].offset) > 1.0f);
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_4);
+      Press(&r, SWITCH_MEDIA, SWITCH_MEDIA);  // DENSITY unchanged: rejected.
+    } else {
+      Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+      CHECK(ui.mode_ == Ui::MODE_DISPLAY_AUTOSAVE);
+    }
+    CHECK(exit == 2 || ui.mode_ == Ui::MODE_PANIC);
+    CHECK(SameCalibration(settings.persistent_data(), stored));
+    RewriteOnNextSave();
+    Settings loaded;
+    PersistentData mirror;
+    CHECK(loaded.Init(false));
+    CHECK(SameCalibration(loaded.persistent_data(), stored));
+    CHECK(loaded.chunk_storage_.ReadMirror(&mirror));
+    CHECK(SameCalibration(mirror, stored));
+  }
+}
+
+// The factory test may repeat its last step: the completed run stays in the
+// calibrator, so the repeat saves the same offsets and pitch again.
+void TestFactoryCalibrationRepeat() {
+  test_checker.Start("TestFactoryCalibrationRepeat");
+  Rig r(false, false);
+  // Readings that give a calibration within 25% of the factory one.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    r.cv_patched[i] = true;
+    r.cv[i] = 30000;
+  }
+  r.cv[CV_ADC_CHANNEL_PITCH] = 28000;
+  r.cv[CV_ADC_CHANNEL_DENSITY] = 22938;
+  r.Settle();
+  const PersistentData stored = settings.persistent_data();
+  CHECK(factory_test.Calibrate(3) && factory_test.Calibrate(4));
+  r.cv[CV_ADC_CHANNEL_PITCH] -= 13107;
+  r.Settle();
+  CHECK(factory_test.Calibrate(5) && factory_test.Calibrate(6));
+  r.cv[CV_ADC_CHANNEL_DENSITY] -= 13107;
+  r.Settle();
+  CHECK(factory_test.Calibrate(7));
+  const PersistentData measured = settings.persistent_data();
+  CHECK(!SameCalibration(measured, stored));
+  CHECK(factory_test.Calibrate(7));
+  CHECK(SameCalibration(settings.persistent_data(), measured));
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(SameCalibration(loaded.persistent_data(), measured));
+}
+
+// #347: with the profile refused, nothing can be saved: a recalibration
+// shows the rejection blink, and the stored calibration stays in use.
+void TestLockedCalibrationCue() {
+  test_checker.Start("TestLockedCalibrationCue");
+  Rig r(false, false);
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  block[0] ^= 0xff;
+  FlashProfile(block);
+  r.Reboot(false);
+  FlashProfile(factory_profile);
+  CHECK(settings.profile_locked() && settings.write_locked());
+  r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+  r.cv[CV_ADC_CHANNEL_DENSITY] = 13107;
+  r.Settle();
+  const PersistentData stored = settings.persistent_data();
+  const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
+  calibrator.Start();
+  calibrator.calibrator_[1].Acquire(0, u + 0.19f, 0.2f);  // Not the stored.
+  ui.mode_ = Ui::MODE_CALIBRATION_4;
+  ui.NextCalibrationStep();
+  CHECK(ui.mode_ == Ui::MODE_PANIC);
+  CHECK(SameCalibration(settings.persistent_data(), stored));
+  Settings loaded;
+  CHECK(loaded.Init(false));
+  CHECK(SameCalibration(loaded.persistent_data(), stored));
 }
 
 // [A]+SEED as a Processor toggle takes the options page's path: it saves,
@@ -3655,7 +3815,8 @@ void TestOptionFanOut() {
   Rig r(false, false);
   r.Settle();
 
-  // Main loop: one pass applies them, even while frozen or blanking.
+  // Main loop: one pass applies them, even while frozen or blanking. SEED
+  // latch and TIME scan come from the page, which SysTick publishes first.
   for (int pass = 0; pass < 3; ++pass) {
     if (pass == 1) {
       ui.set_freeze_button_state(true);
@@ -3676,6 +3837,10 @@ void TestOptionFanOut() {
       CHECK((processor.delay_controller_.timing_gain_ !=
           DelayController::TIMING_FADE_OFF) == !value);
       CHECK(plaits_synth.first_model_ == (value ? 8 : 0));
+      SysTick_Handler();
+      CHECK(seed_latch_mode == (value ? 0 : 2));
+      CHECK(bool(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN) ==
+          !value);
       MainLoopStep();
       CHECK(seed_latch_mode == (value ? 2 : 0));
       CHECK(gain_control.attenuation_ == bool(value));
@@ -3823,6 +3988,72 @@ void TestOptionFanOut() {
   CHECK(player.simple_scheduler_threshold_ != threshold);
 }
 
+// Opens the options pages with [M] held 3 s, then taps to a page.
+void OpenOptionsPage(Rig* r, int page) {
+  test_down[SWITCH_ASSIGN] = true;
+  r->Tick(3010, true);
+  test_down[SWITCH_ASSIGN] = false;
+  r->Tick(20, true);
+  while (page--) {
+    test_down[SWITCH_ASSIGN] = true;
+    r->Tick(20, true);
+    test_down[SWITCH_ASSIGN] = false;
+    r->Tick(20, true);
+  }
+  CHECK(ui.options_.stage() == Options::STAGE_EDITING);
+}
+
+// SEED latch and TIME scan follow their page while it is open, as the other
+// page settings do; the page's save then keeps them.
+void TestPagePreviewSeedLatchAndTimeScan() {
+  test_checker.Start("TestPagePreviewSeedLatchAndTimeScan");
+  Rig r(false, false);
+  r.Settle();
+  CHECK(seed_latch_mode == 0);
+  // Page 4, DRY/WET fully clockwise: Add.
+  OpenOptionsPage(&r, 3);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
+  r.Tick(100, true);
+  CHECK(ui.options_.Value(FEATURE_SEED_LATCH) == 3);
+  CHECK(settings.FeatureValue(FEATURE_SEED_LATCH) == 0);
+  CHECK(seed_latch_mode == 3);
+  r.Tick(1100, true);
+  CHECK(settings.FeatureValue(FEATURE_SEED_LATCH) == 3);
+  CHECK(seed_latch_mode == 3);
+
+  // TIME scan on page 6, FEEDBACK, in a profile.
+  uint8_t block[kProfileSize];
+  const uint8_t scan[] = { FEATURE_TIME_SCAN, 0 };
+  BuildProfile(block, scan, 1);
+  uint8_t* entry = block + 16 + 6 * (block[5] - 1);
+  CHECK(entry[0] == FEATURE_TIME_SCAN);
+  entry[1] = PROFILE_ADJUSTABLE;
+  entry[3] = 16;
+  const size_t size = 16 + 6 * block[5];
+  const uint32_t crc = Profile::Crc32(block, size);
+  for (size_t i = 0; i < 4; ++i) {
+    block[size + i] = crc >> (8 * i);
+  }
+  FlashProfile(block);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  r.Reboot(false);
+  FlashProfile(factory_profile);
+  r.Settle();
+  CHECK(settings.profile().Page(16) == FEATURE_TIME_SCAN);
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN));
+  OpenOptionsPage(&r, 5);
+  CHECK(ui.options_.page() == 5);
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 65535;
+  r.Tick(100, true);
+  CHECK(ui.options_.Value(FEATURE_TIME_SCAN) == 1);
+  CHECK(settings.FeatureValue(FEATURE_TIME_SCAN) == 0);
+  CHECK(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN);
+  r.Tick(1100, true);
+  CHECK(settings.FeatureValue(FEATURE_TIME_SCAN) == 1);
+  CHECK(processor.options_ & Processor::OPTION_FLAG_TIME_SCAN);
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 0;
+}
+
 int main() {
   setbuf(stdout, NULL);
   void* flash = mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
@@ -3882,8 +4113,12 @@ int main() {
   TestProcessorToggle();
   TestCalibrationStepOnRelease();
   TestRejectedCalibrationCue();
+  TestUnfinishedCalibrationKept();
+  TestLockedCalibrationCue();
+  TestFactoryCalibrationRepeat();
   TestTransitionTraces();
   TestTransitionFadeLevels();
   TestOptionFanOut();
+  TestPagePreviewSeedLatchAndTimeScan();
   return test_checker.failures() ? 1 : 0;
 }

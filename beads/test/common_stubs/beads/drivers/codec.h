@@ -100,9 +100,9 @@ class Codec {
       observer_(call);
     }
   }
-  void (*on_resume_)();
-  // Zero-initialized with the object; Init leaves it set.
+  // Zero-initialized with the object; Init leaves them set.
   void (*observer_)(Call call);
+  void (*on_resume_)();
   int sample_rate_;
   size_t block_size_;
   FillBufferCallback callback_;

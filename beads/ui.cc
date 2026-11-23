@@ -178,6 +178,8 @@ void Ui::LoadOptions() {
   resonator_ = settings_->FeatureValue(FEATURE_RESONATOR);
   resonator_material_ = settings_->FeatureValue(FEATURE_RESONATOR_MATERIAL);
   resonator_ring_ = settings_->FeatureValue(FEATURE_RESONATOR_RING);
+  seed_latch_ = settings_->FeatureValue(FEATURE_SEED_LATCH);
+  time_scan_ = settings_->FeatureValue(FEATURE_TIME_SCAN);
   // SEED starts latched, or unlatched when the profile asks.
   seed_button_locked_ = !settings_->FeatureValue(FEATURE_SEED_START);
 }
@@ -322,6 +324,12 @@ void Ui::Poll() {
   resonator_ring_ = previewing
       ? options_.Value(FEATURE_RESONATOR_RING)
       : settings_->FeatureValue(FEATURE_RESONATOR_RING);
+  seed_latch_ = previewing
+      ? options_.Value(FEATURE_SEED_LATCH)
+      : settings_->FeatureValue(FEATURE_SEED_LATCH);
+  time_scan_ = previewing
+      ? options_.Value(FEATURE_TIME_SCAN)
+      : settings_->FeatureValue(FEATURE_TIME_SCAN);
   // Off, or in the synths, the CV goes back to FEEDBACK.
   if (!resonator_ || synth_mode_) {
     resonator_assigned_ = false;
@@ -572,8 +580,10 @@ void Ui::UpdateLeds() {
       leds_.set(LED_VU_METER, gain_control_->vu_meter());
     }
   }
-  if (led_features || options_.active()) {
-    const uint8_t level = options_.active()
+  // The chosen level holds until the page's batch is saved.
+  const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
+  if (led_features || previewing) {
+    const uint8_t level = previewing
         ? options_.Value(FEATURE_BRIGHTNESS)
         : settings_->FeatureValue(FEATURE_BRIGHTNESS);
     leds_.Scale(level);
@@ -630,9 +640,18 @@ void Ui::OnSwitchPressed(const Event& e) {
 
   if (switches_.pressed(SWITCH_MEDIA) &&
       (e.control_id == SWITCH_SEED || e.control_id == SWITCH_FREEZE)) {
+    bool pot_touched = false;
+    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
+      pot_touched = pot_touched || \
+          assignable_cv_pot_[i].editing_hidden_parameter();
+    }
     DoAction(e.control_id == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
+    }
+    // The [A] release that saves the knob's edit is consumed here.
+    if (pot_touched) {
+      settings_->SaveState();
     }
     ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;
     return;
@@ -707,8 +726,8 @@ void Ui::NextCalibrationStep() {
       mode_ = calibrator_->Calibrate(CV_ADC_CHANNEL_DENSITY, 1, 0.6f)
           ? MODE_NORMAL
           : MODE_PANIC;
-      // An out-of-range calibration isn't saved: the same rejection blink.
-      if (mode_ == MODE_NORMAL && !settings_->SavePersistentData()) {
+      // A calibration refused by the settings: the same rejection blink.
+      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {
         mode_ = MODE_PANIC;
         queue_.Touch();  // A full second of it after the save's erase.
       }
@@ -786,10 +805,12 @@ void Ui::OnSwitchReleased(const Event& e) {
           if (resonator_assigned_) {
             resonator_assigned_ = false;
           } else if (settings_->width_assigned()) {
-            settings_->set_width_assigned(false);
+            // One store moves the target from width to diffusion.
             settings_->set_diffusion_assigned(true);
-            resonator_assigned_ = !settings_->diffusion_assigned() &&
-                resonator_ != 0;
+            if (!settings_->diffusion_assigned()) {
+              settings_->set_width_assigned(false);
+              resonator_assigned_ = resonator_ != 0;
+            }
           } else if (settings_->diffusion_assigned()) {
             settings_->set_diffusion_assigned(false);
             resonator_assigned_ = resonator_ != 0;

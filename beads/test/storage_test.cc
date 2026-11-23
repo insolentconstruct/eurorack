@@ -1028,6 +1028,40 @@ void TestProfileLocks() {
   }
 }
 
+// #347: with writes locked by a refused profile or by damage, a
+// recalibration reports its refusal, nothing is written, and the stored
+// calibration loads again.
+void TestLockedCalibrationRefused() {
+  test_checker.Start("TestLockedCalibrationRefused");
+  const PersistentData calibration = Calibration(0.07f);
+  const PersistentData fresh = Calibration(0.03f);
+  uint8_t bad[kProfileSize];
+  memset(bad, 0, sizeof(bad));
+  for (int damaged = 0; damaged < 2; ++damaged) {
+    Setup(calibration, 5);
+    if (damaged) {
+      LoseCalibration(0);
+    }
+    Take(&snapshot);
+    Settings s;
+    if (damaged) {
+      s.Init(false);
+    } else {
+      s.Init(false, bad);
+    }
+    CHECK(s.profile_locked() == !damaged && s.write_locked());
+    CHECK(s.chunk_storage_.storage_damaged() == (damaged == 1));
+    memcpy(s.mutable_persistent_data()->adc_calibration, fresh.adc_calibration,
+        sizeof(fresh.adc_calibration));
+    CHECK(!s.SavePersistentData());
+    CHECK(Unchanged(snapshot));
+    if (!damaged) {
+      Settings loaded;
+      CHECK(loaded.Init(false) && SameCalibration(loaded, calibration));
+    }
+  }
+}
+
 void TestProfileSettings() {
   test_checker.Start("TestProfileSettings");
   uint8_t b[kProfileSize];
@@ -1226,26 +1260,28 @@ void TestResonatorSaved() {
   Settings s;
   s.Init(false);
   for (int placement = 0; placement < 3; ++placement) {
-    for (int value = 0; value < 4; ++value) {
+    for (int value = 0; value < 8; ++value) {
       s.SetFeatureValue(FEATURE_RESONATOR, placement);
       s.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, value);
-      s.SetFeatureValue(FEATURE_RESONATOR_RING, 3 - value);
+      s.SetFeatureValue(FEATURE_RESONATOR_RING, 3 - value % 4);
       s.SaveOptions();
       Settings loaded;
       CHECK(loaded.Init(false));
       CHECK(loaded.FeatureValue(FEATURE_RESONATOR) == placement);
       CHECK(loaded.FeatureValue(FEATURE_RESONATOR_MATERIAL) == value);
-      CHECK(loaded.FeatureValue(FEATURE_RESONATOR_RING) == 3 - value);
+      CHECK(loaded.FeatureValue(FEATURE_RESONATOR_RING) == 3 - value % 4);
       const uint8_t* raw =
           reinterpret_cast<const uint8_t*>(&loaded.stored_record_);
-      CHECK(raw[24] == placement && raw[25] == value && raw[26] == 3 - value);
+      CHECK(raw[24] == placement && raw[25] == value &&
+          raw[26] == 3 - value % 4);
     }
   }
   // A byte past the values is not set: the profile's default.
-  const uint8_t bad[3] = { 4, 0x80, 0xff };
+  const uint8_t bad[3][2] = { { 4, 8 }, { 0x80, 0x80 }, { 0xff, 0xff } };
   for (int i = 0; i < 3; ++i) {
     uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.record_);
-    bytes[24] = bytes[25] = bytes[26] = bad[i];
+    bytes[24] = bytes[26] = bad[i][0];
+    bytes[25] = bad[i][1];
     CHECK(s.chunk_storage_.SaveRecord());
     Settings loaded;
     CHECK(loaded.Init(false));
@@ -1786,6 +1822,7 @@ int main() {
   TestLowSupply();
   TestSupplyDrop();
   TestProfileLocks();
+  TestLockedCalibrationRefused();
   TestProfileSettings();
   TestSavedFeatures();
   TestRingsSettings();

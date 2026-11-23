@@ -11,3 +11,6 @@ HOST_SANITIZERS = 0
 HOST_FLAGS = -DSTM32H7XX -ffp-contract=off -Wno-int-to-pointer-cast \
 	-funsigned-char
 include beads/test/host.mk
+# Each call boundary in the UI, inlined settings calls included, reaches a
+# hook in the test: where the audio interrupt could read a half-made change.
+$(BUILD_DIR)ui.o: EXTRA_FLAGS += -finstrument-functions

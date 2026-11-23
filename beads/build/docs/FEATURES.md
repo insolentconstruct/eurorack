@@ -464,6 +464,7 @@ synths. A saved synth that is not installed stays saved; another one plays
 until it is back. While Rings plays, [A]+FREEZE steps its polyphony (ID 42,
 record byte 27): one, two, then four voices, shown green, yellow and red
 as on Rings, and saved. A profile's Synth start on [A]+FREEZE keeps it.
+Polyphony and FEEDBACK changes also apply while FREEZE sustains Rings.
 
 ### Plaits bank
 
@@ -655,16 +656,38 @@ level. Turning the resonator on with SEED held does not strike it. Before
 the buffer a strike while frozen is not heard: the resonance would only
 be recorded.
 
-Material (ID 43, DRY/WET, quarters) sets structure and brightness: Wood
+Material (ID 43, DRY/WET, eighths) sets structure and brightness: Wood
 (0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They
 were chosen from renders at C2 to C5: on grain-like noise each stays within
 about 2 dB of String on average, Wood about 0.7 octave darker, Glass about
-0.75 octave brighter with stretched partials, Bell strongly stretched. Ring time (ID 44, REVERB,
+0.75 octave brighter with stretched partials, Bell strongly stretched.
+
+Marimba, Drum, Bowl and Gong (values 4 to 7) are Drizzlet's own objects,
+which Rings' stiffness curve can't make. Each has its own table of 12 mode
+pairs, one mode of a pair on the left and one on the right, with each mode's
+ring time relative to the fundamental's and its level; structure is unused
+and brightness shapes only the strike. Marimba is a tuned bar (partials 1,
+4 and 10, the upper ones dying 3 to 8 times faster; both sides alike, so
+centred). Drum is a membrane (partials 1, 1.59, 2.14, 2.30...); a strike
+raises its pitch 165 cents, falling back with a 0.125 s time constant.
+Bowl is a bowl or wine glass (1, 2.83, 5.40, 8.74...) whose pairs sit 0.8%
+apart, so each partial beats between left and right (0.5 Hz at C2, 4 Hz at
+C5). Gong is a free plate (1, 1.73, 2.33, 3.91...) with beating pairs; a
+strike lowers its pitch 107 cents, rising back with a 0.33 s time
+constant. Only a strike (SEED or a hit) bends the pitch, never the input's
+or the resonance's level, and each glide is held within its table's amount.
+On grain-like noise each is within 1.1 dB of String on average and within
+2.4 dB at any note from C2 to C5; strikes peak within 3.2 dB of String's and
+under the limiter's ceiling. Each table's ring times are at most the
+fundamental's, so no mode rings longer than Rings' own. An exact structure
+from Hygrostat selects Rings' curve instead of the object's table.
+
+Ring time (ID 44, REVERB,
 quarters) sets damping: Short 0.35, Medium 0.5, Long 0.65, Very long 0.8,
 each step ringing about four times longer (the fundamental about 0.6, 2.3,
 9 and 37 s at 48 kHz; Cold digital rings 1.5 times longer, the tapes twice).
 String and Medium are the fixed values of Beta 4's first resonator, so the
-factory sound is unchanged; both light yellow, second of four. Page 5 saves
+factory sound is unchanged; both light yellow, second on their pages. Page 5 saves
 like the other pages, in options record bytes 24 (placement), 25
 (Material) and 26 (Ring time).
 

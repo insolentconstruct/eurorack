@@ -23,14 +23,42 @@
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
 # Build the emulator harness, the blobs and their region (WAVE, PLTS and
-# RNGS), in the build image from the Drizzlet root; then the services link's
-# negative controls.
+# RNGS), in the build image from the Drizzlet root, with the library check's
+# negative controls; then the services link's.
 #   beads/test/blob_emu/build.sh OUT
 set -euo pipefail
 out=${1:?usage: build.sh OUT}
 mkdir -p "$out/obj" "$out/negative"
 models=beads/blob/models
 bash beads/build/tools/build_blobs.sh "$out/blob"
+# The library check's controls: each wrong catalogue entry must be refused,
+# 6-op FM's later IDs included.
+for control in '3:=six_op_fm lists' '14:1=chords lists' '14:2,1=chords lists' \
+    '8:1=virtual_analog lists' 'library:2=library chord_bank_library has ID'; do
+  wrong=${control%%=*}
+  python3 - "$wrong" "$out/negative/catalogue.json" <<'PYCODE'
+import json, sys
+model, ids = sys.argv[1].split(':')
+catalogue = json.load(open('beads/build/profile-features.json'))
+if model == 'library':
+  catalogue['plaits_libraries'] = [l for l in catalogue['plaits_libraries']
+                                   if l['id'] != int(ids)]
+for m in catalogue['plaits_models']:
+  if str(m['id']) == model:
+    m['libraries'] = [int(i) for i in ids.split(',') if i]
+json.dump(catalogue, open(sys.argv[2], 'w'))
+PYCODE
+  if python3 beads/build/tools/blob_libraries.py "$out/blob" \
+      "$out/negative/catalogue.json" 2> "$out/negative/catalogue.log"; then
+    echo "ERROR: libraries $wrong: the check accepted it"
+    exit 1
+  elif ! grep -q "^LIBRARIES: ${control#*=}" "$out/negative/catalogue.log"; then
+    echo "ERROR: libraries $wrong: refused, but not for the expected reason"
+    cat "$out/negative/catalogue.log"
+    exit 1
+  fi
+  echo "libraries $wrong: refused: $(head -n1 "$out/negative/catalogue.log")"
+done
 bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
   beads/test/blob_gate/pos_sine.cc
 # Every blob: the stock models and their libraries, the proof's models, the

@@ -131,6 +131,9 @@ void UpdateResonator() {
   c.position = ResonatorValue(
       FEATURE_RESONATOR_POSITION, kResonatorPosition, 1.0f / 256.0f);
   c.amount = ResonatorValue(FEATURE_RESONATOR_AMOUNT, 1.0f, 1.0f / 128.0f);
+  // An exact structure is Rings' curve, even under a Drizzlet object.
+  c.modes = settings.profile().entry(FEATURE_RESONATOR_STRUCTURE).state ==
+      PROFILE_FIXED ? NULL : material.modes;
   processor.set_resonator_controls(c);
 }
 
@@ -744,10 +747,10 @@ bool FadedOut() {
 }
 
 void MonitorStateChange() {
-  seed_latch_mode = settings.FeatureValue(FEATURE_SEED_LATCH);
+  seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
-  processor.set_time_scan(settings.FeatureValue(FEATURE_TIME_SCAN));
+  processor.set_time_scan(ui.time_scan());
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   // The page moves the resonator; it restarts from silence.
@@ -775,6 +778,16 @@ void MonitorStateChange() {
       kRingsPolyphonies[settings.FeatureValue(FEATURE_RINGS_POLYPHONY)]);
   const SynthEngine wanted = EffectiveSynth(ui.synth(), playable_synths);
   ui.set_synth_fault(wanted == SYNTH_SILENT);
+  // A settled zone or polyphony change reconfigures Rings off the interrupt,
+  // also while FREEZE sustains it.
+  if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&
+      rings_synth.configure_pending() && !codec_transition_frames &&
+      !ui.calibrating_or_testing()) {
+    if (FadedOut()) {
+      SwapPaused(SYNTH_SILENT, playing_synth);
+    }
+    return;
+  }
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
@@ -796,15 +809,6 @@ void MonitorStateChange() {
     }
     playing_synth = wanted;
     ui.set_playing_synth(wanted);
-  }
-  // A settled zone or polyphony change reconfigures Rings off the interrupt.
-  if (synth_mode && playing_synth == SYNTH_RINGS &&
-      rings_synth.configure_pending()) {
-    if (!FadedOut()) {
-      return;
-    }
-    SwapPaused(SYNTH_SILENT, playing_synth);
-    return;
   }
 
   // Once faded out, swap the engine. This clears the recording; a frozen
