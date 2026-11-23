@@ -143,6 +143,8 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_RESONATOR, 0, "Off (stock)" },
   { beads::FEATURE_RESONATOR, 1, "After the grains" },
   { beads::FEATURE_RESONATOR, 2, "Before the buffer" },
+  { beads::FEATURE_RESONATOR, 3, "Chord" },
+  { beads::FEATURE_RESONATOR, 4, "In the feedback" },
   { beads::FEATURE_RESONATOR_MATERIAL, 0, "Wood" },
   { beads::FEATURE_RESONATOR_MATERIAL, 1, "String" },
   { beads::FEATURE_RESONATOR_MATERIAL, 2, "Glass" },

@@ -788,13 +788,15 @@
       "values": [
         {"name": "Off (stock)", "led": [0, 255, 0]},
         {"name": "After the grains", "led": [255, 255, 0]},
-        {"name": "Before the buffer", "led": [255, 0, 0]}
+        {"name": "Before the buffer", "led": [255, 0, 0]},
+        {"name": "Chord", "led": [0, 255, 0], "pulse": "slow"},
+        {"name": "In the feedback", "led": [255, 255, 0], "pulse": "slow"}
       ],
       "field": null,
       "saved": 24,
       "states": ["Off", "Fixed", "Adjustable"],
       "page": true,
-      "page_control": "zones",
+      "page_control": "steps",
       "amount": false,
       "actions": [],
       "stateless": false,

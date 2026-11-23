@@ -350,9 +350,14 @@ the same hold restarts automatic gain. The hold acts on release, and not
 at all if a knob or button was used while [A] was down.
 
 Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off
-(Stock), After the grains or Before the buffer, in thirds. DRY/WET picks
-its Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl
-or Gong (a Drum strike starts sharp and bends down, a Gong strike starts
+(Stock), After the grains, Before the buffer, Chord or In the feedback,
+in fifths. Chord comes with its own change and plays as After the grains
+until then. In the feedback is After the grains whose resonance is also
+recorded: FEEDBACK sends half its loop through the resonator, so each
+pass rings the modes again, while the level stays near After the
+grains'. Where After the grains dies away, so does it. DRY/WET picks its
+Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl or
+Gong (a Drum strike starts sharp and bends down, a Gong strike starts
 flat and bends up; Bowl and Gong beat between left and right); REVERB
 its Ring time: Short, Medium, Long or Very long, each about four times
 longer. String and Medium are the defaults; page 5 saves like the other
@@ -407,6 +412,8 @@ page	LED	knob	setting	value	colour	pulse
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Off (stock)	green	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	After the grains	yellow	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Before the buffer	red	steady
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	Chord	green	slow (0.98 Hz)
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	In the feedback	yellow	slow (0.98 Hz)
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Wood	green	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	String	yellow	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Glass	red	steady

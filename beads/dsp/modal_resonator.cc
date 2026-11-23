@@ -34,6 +34,7 @@
 
 #include "stmlib/dsp/cosine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
+#include "stmlib/dsp/filter.h"
 
 #include "rings/resources.h"
 
@@ -173,6 +174,7 @@ void ModalResonator::Init(float sample_rate) {
       1.0f / (sample_rate * 0.5f), kResonatorPeak * kResonatorHeadroom);
   // Init leaves its peak 24 dB over the threshold.
   limiter_.Rest();
+  peak_gain_ = 0.0f;
 }
 
 void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
@@ -190,6 +192,29 @@ void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
     frames[i].l += resonance[i].l * gain;
     frames[i].r += resonance[i].r * gain;
   }
+}
+
+float ModalResonator::LoopGain(const ResonatorBound& bound, size_t size) {
+  // A mode's Q is 1 + f r q d. A strike's glide only falls, so f is taken at
+  // its top: the glide's start, or no glide.
+  const float glide = modes_ ? max(modes_->glide, 0.0f) : 0.0f;
+  const float f = frequency_ * (1.0f + glide);
+  const float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);
+  const float gain = min(
+      bound.peak + f * q * bound.peak_slope + bound.spill,
+      bound.sum + f * q * bound.sum_slope) * kResonatorBoundMargin;
+  // What a change of tuning leaves ringing falls no faster than the
+  // slowest mode, from its poles: |z|^2 = 1 - 2y, y = g r / (1 + g r + g^2).
+  const float lowest = min(f * bound.lowest_ratio, 0.49f);
+  const float g = OnePole::tan<FREQUENCY_FAST>(lowest);
+  const float r = 1.0f / (1.0f + lowest * q * bound.largest_decay);
+  const float y = g * r / (1.0f + g * r + g * g);
+  peak_gain_ = max(gain, peak_gain_ / (1.0f + y * float(size)));
+  // Only for the object it was worked out for; Amount scales the mix only.
+  const bool known = bound.structure == structure_ &&
+      bound.brightness == brightness_ && bound.position == position_ &&
+      bound.modes == modes_ && amount_ > 0.0f && peak_gain_ > 0.0f;
+  return known ? 1.0f / (amount_ * peak_gain_) : 0.0f;
 }
 
 void ModalResonator::Process(
@@ -318,6 +343,98 @@ void ModalResonator::ProcessModes(
     ++odd;
     ++even;
   }
+}
+
+/* static */
+void ModalResonator::Bound(
+    float structure,
+    float brightness,
+    float position,
+    const ResonatorModes* modes,
+    ResonatorBound* bound) {
+  // Each mode's ratio, |level| and Q factor as Process sets them, before any
+  // is cut at Nyquist; one list per side.
+  float ratio[2][kNumResonatorModes / 2];
+  float level[2][kNumResonatorModes / 2];
+  float decay[2][kNumResonatorModes / 2];
+  CosineOscillator amplitudes;
+  amplitudes.Init<COSINE_OSCILLATOR_APPROXIMATE>(position);
+  if (modes) {
+    for (int i = 0; i < kNumResonatorModes / 2; ++i) {
+      const float pickup = amplitudes.Next() * 0.125f;
+      for (int side = 0; side < 2; ++side) {
+        ratio[side][i] = modes->ratio[2 * i + side];
+        level[side][i] = fabsf(pickup * modes->gain[2 * i + side]);
+        decay[side][i] = modes->decay[2 * i + side];
+      }
+    }
+  } else {
+    // Rings' Resonator::ComputeFilters, with q = 1.
+    float stiffness = Interpolate(rings::lut_stiffness, structure, 256.0f);
+    float stretch_factor = 1.0f;
+    float q = 1.0f;
+    float brightness_attenuation = 1.0f - structure;
+    brightness_attenuation *= brightness_attenuation;
+    brightness_attenuation *= brightness_attenuation;
+    brightness_attenuation *= brightness_attenuation;
+    const float b = brightness * (1.0f - 0.2f * brightness_attenuation);
+    float q_loss = b * (2.0f - b) * 0.85f + 0.15f;
+    const float q_loss_damping_rate = structure * (2.0f - structure) * 0.1f;
+    for (int i = 0; i < kNumResonatorModes; ++i) {
+      ratio[i & 1][i >> 1] = float(i + 1) * stretch_factor;
+      level[i & 1][i >> 1] = fabsf(amplitudes.Next() * 0.125f);
+      decay[i & 1][i >> 1] = q;
+      stretch_factor += stiffness;
+      if (stiffness < 0.0f) {
+        stiffness *= 0.93f;
+      } else {
+        stiffness *= 0.98f;
+      }
+      q_loss += q_loss_damping_rate * (1.0f - q_loss);
+      q *= q_loss;
+    }
+  }
+  bound->peak = bound->peak_slope = bound->sum = bound->sum_slope = 0.0f;
+  bound->spill = 0.0f;
+  bound->lowest_ratio = ratio[0][0];
+  bound->largest_decay = 0.0f;
+  for (int side = 0; side < 2; ++side) {
+    float sum = 0.0f;
+    float sum_slope = 0.0f;
+    for (int k = 0; k < kNumResonatorModes / 2; ++k) {
+      if (level[side][k] == 0.0f) {
+        continue;
+      }
+      const float slope = level[side][k] * ratio[side][k] * decay[side][k];
+      bound->peak = max(bound->peak, level[side][k]);
+      bound->peak_slope = max(bound->peak_slope, slope);
+      sum += level[side][k];
+      sum_slope += slope;
+      bound->lowest_ratio = min(bound->lowest_ratio, ratio[side][k]);
+      bound->largest_decay = max(bound->largest_decay, decay[side][k]);
+      // Off its peak mode j adds at most a / |x - 1 / x|, x its distance;
+      // nearer mode k than j, that is sqrt(r) / |r - 1|, r = f_k / f_j.
+      float spill = 0.0f;
+      for (int j = 0; j < kNumResonatorModes / 2; ++j) {
+        if (j == k || level[side][j] == 0.0f) {
+          continue;
+        }
+        const float r = ratio[side][k] / ratio[side][j];
+        const float distance = fabsf(r - 1.0f);
+        // Two modes on one pitch: the sum of all peaks bounds it instead.
+        spill += distance < 1.0e-4f
+            ? kResonatorNoSpill
+            : level[side][j] * Sqrt(r) / distance;
+      }
+      bound->spill = max(bound->spill, spill);
+    }
+    bound->sum = max(bound->sum, sum);
+    bound->sum_slope = max(bound->sum_slope, sum_slope);
+  }
+  bound->structure = structure;
+  bound->brightness = brightness;
+  bound->position = position;
+  bound->modes = modes;
 }
 
 }  // namespace beads

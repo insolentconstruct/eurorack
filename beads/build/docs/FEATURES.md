@@ -615,7 +615,9 @@ or saved choice; the audio path is unchanged.
 ### Resonator
 
 Options page 5 (FEEDBACK and REVERB LEDs) holds Hygrostat feature ID 41,
-Off (stock) / After the grains / Before the buffer (#88), on FEEDBACK. It adds Rings' modal resonator, 24 modes in stereo (odd modes
+Off (stock) / After the grains / Before the buffer / Chord / In the feedback
+(#88), on FEEDBACK in fifths. Chord (value 3) is reserved for its own change
+and plays as After the grains until it lands. It adds Rings' modal resonator, 24 modes in stereo (odd modes
 left, even modes right), computed in Plaits' batched form with its tuning
 and pickup position updated once per 0.25 ms block, so it is close to
 Rings' but not identical. After the grains, the grains strike it and its
@@ -641,6 +643,40 @@ reach it. A hit and SEED in the same 0.25 ms block strike once, at SEED's
 level. Turning the resonator on with SEED held does not strike it. Before
 the buffer a strike while frozen is not heard: the resonance would only
 be recorded.
+
+In the feedback (value 4) is After the grains, and the grains' feedback
+loop goes half through the resonator: the grains keep FEEDBACK x sqrt(1/2)
+of their own loop (half its gain, as the gain goes with FEEDBACK squared),
+and the resonance of the previous 0.25 ms block is added to the recording
+at the other half of the grains' loop gain (3 x FEEDBACK squared, 1.5 in
+delay mode), with the tape qualities' soft clip input gain taken out. While
+FEEDBACK moves, the resonance takes the lower of the block's two ends and
+the soft clip's gain the higher. On its way the resonance goes through the
+grains' own feedback high-pass (40 Hz, 10 Hz in the unity delay loop) and
+their low-pass, with the same time constant at the resonator's rate, so
+these pass no more of it than of the grains' feedback at any frequency the
+recording keeps (within 0.01 dB). It is divided by a bound on the bank's
+peak gain at any frequency: the largest mode peak (|level| x Q, from this
+block's damping and pitch, a Drum strike's glide included) plus the most
+the other modes add near it (|level| x sqrt(r) / |r - 1| for frequency
+ratio r), or the sum of all peaks where that is smaller. The parts that
+depend on the object are worked out off the audio path when it changes, and
+used only for the object they name. For fixed controls the loop's gain is
+then never above the grains' own feedback's at any frequency; on 720
+frequency responses (eight Materials, struck, four Ring times and both ends
+of damping, C0 to C8, three rates) none was above the bound. This bounds
+the gain, not the phase, and when damping, pitch or the object change the
+bound falls no faster than the lowest mode decays; how the loop behaves is
+therefore measured rather than proven. The loop's level is never set from
+its own output, so brightness and damping still shape it. Over 60 s of
+silence after 10 s of input, in every quality, granular and delay, every
+Material and Ring time, frozen or not and FEEDBACK from 0 to full, it never
+sustained where After the grains dies away, and peaked lower than After the
+grains (4,096 runs each); so too with damping and PITCH's CV jumping,
+Limiter Off, unity delay feedback and Evolving. At FEEDBACK 0 it is After
+the grains exactly; at 0.3 and 0.5 its output stays within 2 dB of After
+the grains' on the same renders. Frozen, nothing is recorded and it is
+After the grains. The recording's own input limiter is still the ceiling.
 
 Material (ID 43, DRY/WET, eighths) sets structure and brightness: Wood
 (0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They

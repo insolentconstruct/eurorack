@@ -111,7 +111,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // First page.
   PAGE_CONTROL_NONE,  // Start quality.
   PAGE_CONTROL_NONE,  // Gain knob.
-  PAGE_CONTROL_ZONES,  // Resonator.
+  PAGE_CONTROL_STEPS,  // Resonator.
   PAGE_CONTROL_NONE,  // Reserved.
   PAGE_CONTROL_STEPS,  // Resonator material.
   PAGE_CONTROL_STEPS,  // Resonator ring.
@@ -137,6 +137,8 @@ const OptionValue kOptionValues[] = {
   { FEATURE_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
   { FEATURE_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
   { FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { FEATURE_RESONATOR, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { FEATURE_RESONATOR, 4, { 255, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 3, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 4, { 255, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 5, { 255, 0, 0 }, PULSE_SLOW },

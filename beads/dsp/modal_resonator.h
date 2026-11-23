@@ -68,6 +68,28 @@ struct ResonatorMaterial {
   const ResonatorModes* modes;  // NULL: Rings' stiffness curve.
 };
 
+// What bounds the bank's gain, for the feedback path: per side, each mode's
+// |level| a, ratio r over the fundamental and Q factor d over the base Q.
+// Worked out off the audio path for the object it names.
+struct ResonatorBound {
+  float structure;
+  float brightness;
+  float position;
+  const ResonatorModes* modes;
+  float peak;  // Largest a, and a x r x d.
+  float peak_slope;
+  float sum;  // Sum of a, and of a x r x d.
+  float sum_slope;
+  float spill;  // The most the other modes add off a mode's peak.
+  float lowest_ratio;  // With the largest d: the slowest decay.
+  float largest_decay;
+};
+
+// Two modes of a side on one pitch: no spill bound, the sum of peaks holds.
+const float kResonatorNoSpill = 1.0e9f;
+// Outward rounding of the bound.
+const float kResonatorBoundMargin = 1.001f;
+
 const int kNumResonatorMaterials = 8;
 const int kNumResonatorRingTimes = 4;
 
@@ -85,6 +107,17 @@ class ModalResonator {
   void Process(const float* in, float* out, float* aux, size_t size);
   // Adds the limited stereo resonance to the frames.
   void Render(const float* in, FloatFrame* frames, size_t size);
+  // What turns a block's rendered resonance into the loop's copy: 1 over
+  // Amount and a bound on the bank's gain, so the copy's gain is at most 1
+  // at every frequency; 0 for an object other than the bound's.
+  float LoopGain(const ResonatorBound& bound, size_t size);
+  // The object's bound, worked out off the audio path.
+  static void Bound(
+      float structure,
+      float brightness,
+      float position,
+      const ResonatorModes* modes,
+      ResonatorBound* bound);
 
   inline void set_frequency(float frequency) {
     frequency_ = frequency;
@@ -99,6 +132,9 @@ class ModalResonator {
   }
 
   inline float brightness() const { return brightness_; }
+  inline float structure() const { return structure_; }
+  inline float position() const { return position_; }
+  inline const ResonatorModes* modes() const { return modes_; }
 
   inline void set_damping(float damping) {
     damping_ = damping;
@@ -141,6 +177,8 @@ class ModalResonator {
 
   plaits::ResonatorSvf<plaits::kModeBatchSize> odd_[kNumResonatorModes / 8];
   plaits::ResonatorSvf<plaits::kModeBatchSize> even_[kNumResonatorModes / 8];
+  // The loop's bound: it rises at once and falls as the slowest mode decays.
+  float peak_gain_;
 
   DISALLOW_COPY_AND_ASSIGN(ModalResonator);
 };
