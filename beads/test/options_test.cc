@@ -4462,6 +4462,42 @@ void TestGestureCharacterization() {
   }
 }
 
+void TestSynthFaultCue() {
+  test_checker.Start("TestSynthFaultCue");
+  Rig r(false);
+  r.settings.values_[FEATURE_BRIGHTNESS] = 0;
+  const State state = r.settings.state();
+  const uint32_t writes = test_writes;
+  for (int synth = 0; synth < 2; ++synth) {
+    r.ui.set_synth_mode(synth);
+    for (int i = 0; i < 750; ++i) {
+      r.ui.set_synth_fault(false);
+      CHECK(!r.ui.synth_fault_);
+      r.ui.UpdateLeds();
+      uint8_t normal[3];
+      for (int j = 0; j < 3; ++j) {
+        normal[j] = r.ui.leds_.intensity_[LED_ASSIGN_1 + j];
+      }
+      r.ui.set_synth_fault(true);
+      r.ui.UpdateLeds();
+      const bool on = stmlib::system_clock.milliseconds() % 250 < 125;
+      for (int j = 0; j < 3; ++j) {
+        CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + j] ==
+            (synth ? (on ? 255 : 0) : normal[j]));
+      }
+      r.ui.set_synth_fault(false);
+      CHECK(!r.ui.synth_fault_);
+      r.ui.UpdateLeds();
+      for (int j = 0; j < 3; ++j) {
+        CHECK(r.ui.leds_.intensity_[LED_ASSIGN_1 + j] == normal[j]);
+      }
+      stmlib::system_clock.Tick();
+    }
+  }
+  CHECK(!memcmp(&state, &r.settings.state(), sizeof(state)));
+  CHECK(test_writes == writes);
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
@@ -4535,6 +4571,7 @@ int main() {
   TestOptionalPages();
   TestCustomScalePersistenceAndLeds();
   TestDefaultLedIdentity();
+  TestSynthFaultCue();
   TestBetaOptionsLeds();
   TestBetaOptionPages();
   TestProfileActions();
