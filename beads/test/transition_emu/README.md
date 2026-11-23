@@ -27,3 +27,31 @@ the main loop and tick only. Phase labels (steady, fading, silent, blanking,
 synth) come from the firmware's globals and are informative; `--compare`
 checks the per-call counts, silence and output hashes.
 `baseline-fd5a17a.json` is the `--summary` of that release ELF.
+
+`region_boots.py ELF REGION.bin OUT.json` checks the section-fault table in
+`beads/blob/ABI.md`. It inserts a terrain grid and a version 3 profile with
+Wave Terrain in every bank slot, then initializes valid saved records. Each
+fault case boots normally with SEED released, a nondefault saved State, and
+each saved Synth selection. WAVE and PLTS independently take five forms:
+valid, corrupt CRC, bad magic, interrupted payload, and erased section.
+TERR takes the same faults separately; a final case cuts the installation
+inside PLTS. `--shard N/TOTAL` divides the boots between bounded workers.
+The harness observes the synth timer starting, advances both clocks over the
+idle ten seconds, then runs audio to settle and asserts synth mode before
+recording. The idle interval does not test periodic UI or autosave timing.
+Instruction counting stays enabled in the normal transition emulator; fault
+boots use a native ten-second timeout for each call instead.
+
+Checks cover the playable mask, selected and effective synth, output silence,
+assignment LED timer registers across a full blink period, unchanged profile
+and saved storage bytes, no writes to either flash area, unchanged runtime
+State and Synth choice, and equal plugged-input granular output hashes.
+Failed TERR renders are compared with erased TERR using the same terrain
+model. Host `wave_terrain_grid.mk` separately compares stock terrains with
+Plaits. These are software checks; they do not qualify physical flash or LEDs.
+
+The cue follows Mutable Instruments' bootloader `UI_STATE_ERROR`, which
+blinks every LED (`beads/bootloader/bootloader.cc`, upstream commit
+`d8f473915232af74347762b6365202bfd26f73f6`, `UpdateLeds`). Its assignment-LED
+pattern and 250 ms period match the existing `Ui::MODE_REPAIR_FAILED` cue;
+the exact period is Drizzlet's recovery convention.

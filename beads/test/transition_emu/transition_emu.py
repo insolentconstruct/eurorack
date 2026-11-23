@@ -195,7 +195,7 @@ class Machine(object):
         self.entries[found[0]] = name
     self.frames = []
     self.inner = []
-    uc.hook_add(unicorn.UC_HOOK_BLOCK, self.on_block)
+    self.block_hook = uc.hook_add(unicorn.UC_HOOK_BLOCK, self.on_block)
     tick = image.address('HAL_GetTick')
     uc.hook_add(unicorn.UC_HOOK_CODE, self.on_get_tick, begin=tick, end=tick)
     uc.hook_add(unicorn.UC_HOOK_MEM_UNMAPPED, self.on_unmapped)

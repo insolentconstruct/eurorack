@@ -58,19 +58,15 @@ REGION_END = 0x08100000
 RELEASE = 20261121
 FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
-# Blob model: compiled-in engine (harness.cc's order): the proof's Palette
-# models and test sine, then the stock engines in PlaitsVoice's order, the
-# 6-op engine serving models 2-4.
+# Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
+# The 6-op engine serves models 2-4.
 PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9)] + [
     (m, 10 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
-# Models that call libraries (profile-features.json): 6-op FM (6-op), Wave
-# terrain, Wavetable and Chords (Plaits wavetables), String machine,
-# Chiptune and Chords (chord bank), Speech.
+# Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
+# Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
-# Models whose blob clamps where Plaits read outside a table: they may
-# differ only in blocks where the compiled-in engine's lookups left the table
-# (counted by terrain_probe.h). Wave terrain's terrains 5-7 clamp their wave
-# and sample positions to the bank.
+# Clamped blobs may differ only where terrain_probe.h counts out-of-range
+# lookups; Wave terrain 5-7 clamp wave and sample positions to the bank.
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
@@ -624,9 +620,8 @@ def main(argv):
   findings = []
   pool = multiprocessing.Pool(jobs, load, (out,))
 
-  # Four layouts for the dependents: the region at two placements, with and
-  # without the gap between libraries and models. The others need no
-  # library: two placements.
+  # Dependents use two placements, each with and without a library/model gap.
+  # Independent models use two placements.
   runs = [(model, base, fpscr, gap) for gap in (False, True)
           for base in PLACEMENTS for fpscr in FPSCR
           for model in sorted(PAIRS) if not gap or model in DEPENDENTS]

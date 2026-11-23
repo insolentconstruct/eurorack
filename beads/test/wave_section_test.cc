@@ -81,9 +81,8 @@ const int16_t* ReadWaves(const PlaitsDirectoryEntry& e) {
   return region.waves();
 }
 
-// Every bank (FEEDBACK), wave position (TIME), pitch, size and shape, seeded
-// grains and the drone (dry_wet 0: the drone alone, 1: the grains alone): a
-// hash of the output's bits.
+// Hash output bits across banks, wave positions, pitch, size and shape,
+// with seeded grains and drone: dry_wet 0 is drone only, 1 is grains only.
 uint32_t Render(const int16_t* waves, float dry_wet, size_t* nonzero) {
   integrated_waves = waves;
   static uint16_t reverb_buffer[32768];
