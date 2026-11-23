@@ -309,7 +309,7 @@ DETAILS = [
     "sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make "
     "DENSITY crossfade to a new delay time instead of bending the pitch "
     "([Delay time](FEATURES.md#delay-time)).",
-    "A Hygrostat profile can add Rings' modal resonator after the grains or "
+    "Resonator, on page 5, places Rings' modal resonator after the grains or "
     "before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it "
     "and Attacks hits strike it.",
     "Frozen feedback Evolving runs frozen grains, or frozen delay slices in "
