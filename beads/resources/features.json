@@ -1451,9 +1451,13 @@
       "id": 60,
       "name": "Plucked",
       "palette": "plucked",
+      "family": "Physical",
+      "blob_size": 4040,
+      "state_size": 176,
+      "arena_size": 12288,
       "credit": "Mutable Instruments",
       "licence": "MIT",
-      "libraries": [2]
+      "libraries": []
     },
     {
       "id": 61,

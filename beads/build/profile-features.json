@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "529db6ceac475851bc57a7cb3315ce20ffa9980d0bbaab42cdf50c3a4481c142",
+  "manifest_sha256": "d75e989b716c5bccf3a3ea5699c31a1377dfbaa37377b00992aebd53e40c2848",
   "record_version": 1,
   "features": [
     {
@@ -2166,11 +2166,13 @@
       "id": 60,
       "name": "Plucked",
       "palette": "plucked",
+      "family": "Physical",
+      "blob_size": 4040,
+      "state_size": 176,
+      "arena_size": 12288,
       "credit": "Mutable Instruments",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 61,
