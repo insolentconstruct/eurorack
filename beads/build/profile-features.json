@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "43c9a758aaa8d6906d9f3eeb1b98cb5035f39d5f2faa31b0c3f42e29d5946091",
+  "manifest_sha256": "0eed19436ea1ed242c31ac4a0b4c95eb9f0692cc7277d180a86e46ae1a1e0253",
   "record_version": 1,
   "features": [
     {
@@ -2204,6 +2204,10 @@
       "id": 65,
       "name": "Snare",
       "palette": "snare",
+      "family": "Drums",
+      "blob_size": 4892,
+      "state_size": 108,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

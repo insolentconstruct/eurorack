@@ -1487,6 +1487,10 @@
       "id": 65,
       "name": "Snare",
       "palette": "snare",
+      "family": "Drums",
+      "blob_size": 4892,
+      "state_size": 108,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
