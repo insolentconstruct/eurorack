@@ -782,6 +782,11 @@ void MonitorStateChange() {
   if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&
       rings_synth.configure_pending() && !codec_transition_frames &&
       !ui.calibrating_or_testing()) {
+    // FREEZE still drops what the state-change guard below drops.
+    if (ui.should_ignore_state_change()) {
+      synth_mode_start_time = 0;
+      ui.ClearSelfPlayRequest();
+    }
     if (FadedOut()) {
       SwapPaused(SYNTH_SILENT, playing_synth);
     }
