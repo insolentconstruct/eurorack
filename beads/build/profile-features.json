@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "6bf1de654c5e105cbc98860a2aed819b1c55bea68eeb3035dc2ab14fa054ff89",
+  "manifest_sha256": "2a9a8317caa193227bf2f8cd28333b34804543655b787b69b576a4a1e1472867",
   "record_version": 1,
   "features": [
     {
@@ -2070,6 +2070,10 @@
       "id": 49,
       "name": "Buzz",
       "palette": "buzz",
+      "family": "Digital",
+      "blob_size": 9980,
+      "state_size": 32,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

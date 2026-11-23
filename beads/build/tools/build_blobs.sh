@@ -49,6 +49,8 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
+build buzz $blob/models/buzz.cc \
+  $blob/models/buzz_engine.cc beads/plaits_resources.cc
 build question_mark $blob/models/question_mark.cc \
   $blob/models/question_mark_engine.cc beads/plaits_resources.cc
 build raw_fm $blob/models/raw_fm.cc \
