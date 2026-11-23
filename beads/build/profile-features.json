@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "175644f1016ff98a719193d87491fc86c942ff260c5cc54bf894035b5224b0fb",
+  "manifest_sha256": "a1aa6bd0a14c8f880df9ef0262b42a8f86f02949b650283a9d20896fb73cef96",
   "record_version": 1,
   "features": [
     {
@@ -1982,6 +1982,10 @@
       "id": 38,
       "name": "Attractor",
       "palette": "attractor",
+      "family": "Chaos",
+      "blob_size": 1508,
+      "state_size": 28,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
