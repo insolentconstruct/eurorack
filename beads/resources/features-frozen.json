@@ -48,7 +48,8 @@
     {"id": 46, "symbol": "RESONATOR_BRIGHTNESS", "values": null},
     {"id": 47, "symbol": "RESONATOR_DAMPING", "values": null},
     {"id": 48, "symbol": "RESONATOR_POSITION", "values": null},
-    {"id": 49, "symbol": "RESONATOR_AMOUNT", "values": null}
+    {"id": 49, "symbol": "RESONATOR_AMOUNT", "values": null},
+    {"id": 50, "symbol": "SYNTH_LEVEL", "values": ["Stock", "Half", "Quarter", "Eighth"]}
   ],
   "records": [
     {"version": 1, "saved": [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13], [7, 14], [8, 15], [9, 16], [10, 17], [11, 18], [12, 19], [18, 20], [21, 21], [23, 22], [31, 23], [41, 24], [43, 25], [44, 26], [42, 27]]}

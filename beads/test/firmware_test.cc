@@ -98,6 +98,8 @@ extern GateFlags previous_seed;
 extern uint8_t seed_latch_mode;
 void Init();
 void MonitorStateChange();
+void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control);
+void SwapPaused(SynthEngine owner, SynthEngine playing);
 void Process(const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
 extern "C" void SysTick_Handler();
 
@@ -1903,6 +1905,63 @@ void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
 void FixedFeatureProfile(ProfileFeature feature) {
   const uint8_t pair[] = { uint8_t(feature), 1 };
   FixedFeaturesProfile(pair, 1);
+}
+
+// The level changes only the synth's final audio, leaving gates and input gain.
+std::vector<int32_t> SynthLevelOutput(int level, bool gate) {
+  Rig r(false, false);
+  const uint8_t pair[] = { FEATURE_SYNTH_LEVEL, uint8_t(level) };
+  BootWithProfile(&r, pair, 1);
+  PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
+  PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 0;
+  r.Settle();
+  settings.mutable_state()->gate_output_mode = gate;
+  const int input_gain = settings.state().gain;
+  Random::Seed(0x21);
+  ConfigureAndStartCodec(true, false);
+  CHECK((codec.callback_ == &Process) == (level == 0));
+  std::vector<int32_t> samples;
+  for (int block = 0; block < 1200; ++block) {
+    r.Block();
+    if (block >= 1100) {
+      for (size_t i = 0; i < codec.block_size_; ++i) {
+        samples.push_back(r.out[i].l);
+        samples.push_back(r.out[i].r);
+      }
+    }
+  }
+  CHECK(settings.state().gain == input_gain);
+  SwapPaused(bank_owner, playing_synth);
+  CHECK((codec.callback_ == &Process) == (level == 0));
+  ConfigureAndStartCodec(false, false);
+  CHECK(codec.callback_ == &Process);
+  return samples;
+}
+
+void TestSynthLevel() {
+  test_checker.Start("TestSynthLevel");
+  for (int gate = 0; gate < 2; ++gate) {
+    const std::vector<int32_t> stock = SynthLevelOutput(0, gate);
+    bool audible = false;
+    bool has_gate = false;
+    for (size_t i = 0; i < stock.size(); i += 2) {
+      audible |= stock[i] != 0;
+      has_gate |= stock[i + 1] != 0;
+    }
+    CHECK(audible);
+    CHECK(!gate || has_gate);
+    for (int level = 1; level < 4; ++level) {
+      const std::vector<int32_t> trimmed = SynthLevelOutput(level, gate);
+      CHECK(trimmed.size() == stock.size());
+      const int divisor = 1 << level;
+      bool matches = trimmed.size() == stock.size();
+      for (size_t i = 0; i < stock.size() && matches; i += 2) {
+        matches = trimmed[i] == stock[i] / divisor &&
+            trimmed[i + 1] == stock[i + 1] / (gate ? 1 : divisor);
+      }
+      CHECK(matches);
+    }
+  }
 }
 
 // Tail handling is a profile choice; the codec transition remains the same.
@@ -4098,6 +4157,7 @@ int main() {
   TestSpectralEngine();
   TestCodecRestartFade();
   TestCodecKeepsClocks();
+  TestSynthLevel();
   TestSynthStopClearsReverb();
   TestPitchNotchLaw();
   TestSeedLatchPatched();

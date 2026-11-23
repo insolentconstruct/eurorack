@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "9c22e36bfb88e3b92742b6769da5df03d8e593236a350e6704b96bbe1391b12c",
+  "manifest_sha256": "2299346a5ef0e179db576541bd2f8c50d43e111268b48041d1def4b087797b48",
   "record_version": 1,
   "features": [
     {
@@ -1653,6 +1653,30 @@
       "default": 0,
       "factory": null,
       "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 50,
+      "name": "Synth output level",
+      "values": [
+        "Stock",
+        "Half",
+        "Quarter",
+        "Eighth"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
       "saved": null
     }

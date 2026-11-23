@@ -40,6 +40,9 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
+  ('TestSynthLevel', 'firmware', 'beads/beads.cc',
+    'const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);',
+    'const int32_t divisor = 1;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
     'if (new_profile && start_quality && !restores) {',
     'if ((new_profile || true) && start_quality && !restores) {'),
@@ -1899,9 +1902,9 @@ cases = [
   ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
     '    out_buffer_[0] = out_buffer_[block_size_];', ''),
   ('TestCodecKeepsClocks', 'firmware', 'beads/beads.cc',
-    '    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);',
+    '    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, callback);',
     '    codec.Stop();\n'
-    '    codec.Start(sr, sr / kBlockRate, &Process);'),
+    '    codec.Start(sr, sr / kBlockRate, callback);'),
   ('TestProfileToggles', 'options', 'beads/ui.cc',
     '    settings_->SetFeatureValue(feature, value);\n    settings_->SaveOptions();\n    const OptionValue cue',
     '    settings_->SetFeatureValue(feature, value);\n    const OptionValue cue'),

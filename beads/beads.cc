@@ -513,6 +513,26 @@ void Process(
   }
 }
 
+// Selected only for synth profiles with an output trim.
+void ProcessSynthLevel(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  Process(events, in, out, size);
+  const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
+  if (settings.state().gate_output_mode) {
+    for (size_t i = 0; i < size; ++i) {
+      out[i].l /= divisor;
+    }
+  } else {
+    for (size_t i = 0; i < size; ++i) {
+      out[i].l /= divisor;
+      out[i].r /= divisor;
+    }
+  }
+}
+
 // Codec paused: one synth at a time owns delay bank 0, built from zero.
 void TakeBank0(SynthEngine owner) {
   if (owner == SYNTH_RINGS) {
@@ -554,15 +574,17 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 
   codec_transition_frames = kBlockRate / 4;
   codec_fade = false;
+  const Codec::FillBufferCallback callback = new_synth_mode &&
+      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
   if (codec_running && sr == codec_sample_rate) {
     // Same clocks: the converter played silence while paused (#53).
-    codec.Resume(&Process);
+    codec.Resume(callback);
     return;
   }
   if (codec_sample_rate) {
-    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);
+    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, callback);
   } else {
-    codec.Start(sr, sr / kBlockRate, &Process);
+    codec.Start(sr, sr / kBlockRate, callback);
   }
   codec_running = true;
   codec_sample_rate = sr;
@@ -687,7 +709,8 @@ void SwapPaused(SynthEngine owner, SynthEngine playing) {
   playing_synth = playing;
   ui.set_playing_synth(playing);
   if (codec_running) {
-    codec.Resume(&Process);
+    codec.Resume(synth_mode && settings.FeatureValue(FEATURE_SYNTH_LEVEL)
+        ? &ProcessSynthLevel : &Process);
   }
   codec_fade = false;
 }

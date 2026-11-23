@@ -115,6 +115,8 @@ Clouds-style changes the reverb character and, until a diffusion amount is set w
 
 A Hygrostat profile can make DRY/WET bring the grains in more gently ([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); fully dry then has no reverb.
 
+A Hygrostat profile can trim synth audio to half, quarter or eighth level, keeping input gain and OUT R triggers unchanged ([Synth output level](FEATURES.md#synth-output-level)). There is no panel gesture.
+
 Grain stealing follows the 2021 and 2024 firmware by default; a Hygrostat profile can choose the 2026 source's instead ([Grain stealing](FEATURES.md#grain-stealing)).
 
 In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make DENSITY crossfade to a new delay time instead of bending the pitch ([Delay time](FEATURES.md#delay-time)).

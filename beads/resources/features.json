@@ -959,6 +959,36 @@
       "actions": [],
       "stateless": false,
       "touches_synth": false
+    },
+    {
+      "id": 50,
+      "symbol": "SYNTH_LEVEL",
+      "name": "Synth output level",
+      "issue": 51,
+      "values": [
+        {
+          "name": "Stock"
+        },
+        {
+          "name": "Half"
+        },
+        {
+          "name": "Quarter"
+        },
+        {
+          "name": "Eighth"
+        }
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
     }
   ],
   "plaits_models": [

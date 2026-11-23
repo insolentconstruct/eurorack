@@ -505,6 +505,17 @@ green. A blank or stock settings sector, a SEED power-on reset or a saved
 value the firmware doesn't know starts on the profile's bank. More banks,
 such as Plaits Palette models (#194), would add values to this ID.
 
+### Synth output level
+
+Hygrostat feature ID 50 chooses Stock / Half / Quarter / Eighth (#51),
+reducing both synth audio outputs by 0, 6.02, 12.04 or 18.06 dB. This is a
+final output trim, after the synth's own effects and limiting; it does not
+change the saved input gain, grain levels, feedback or reverb tails. When
+OUT R carries triggers, its level stays stock. It applies to Beads, Plaits
+and Rings synths; granular, delay and spectral output stay stock. Chosen at
+power-on, Fixed only, with no panel slot or saved byte. Off and omitted
+entries keep the original audio callback.
+
 ### Mix law
 
 Hygrostat feature ID 32 chooses Stock / Gentle (#21). Stock DRY/WET brings
