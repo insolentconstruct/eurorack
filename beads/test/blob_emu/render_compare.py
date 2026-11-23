@@ -402,6 +402,8 @@ def load(out):
   # The synth's digest last: the cases below drop PLTS entries by index.
   CTX['digests'] = [bytes.fromhex(b['sha256'])
                     for b in plts['blobs'] + rngs['blobs']]
+  CTX['terr_region'] = open(out + '/region-terr.bin', 'rb').read()
+  CTX['terr_layout'] = json.load(open(out + '/region-terr.bin.json'))
   CTX['steps'] = drive(1)
 
 
@@ -506,6 +508,52 @@ def identity_compare(model, base, fpscr, gap):
   return run
 
 
+def terrain_run(job):
+  """One TERR grid, and the compiled engine without its user data."""
+  base, fpscr = job
+  run = {'model': 5, 'base': '0x%08x' % base,
+         'fpscr': '0x%08x' % fpscr}
+  try:
+    layout = CTX['terr_layout']
+    terr = [s for s in layout['sections'] if s['kind'] == 'TERR'][0]
+    steps = CTX['steps']
+    run['grid_blocks'] = sum(min(1.05 * p[2], 1.0) * 7.9999 >= 7
+                             for p in steps)
+    if not run['grid_blocks']:
+      raise RuntimeError('drive never reaches the user grid')
+    for user_data in (True, False):
+      m = machine(base, fpscr, CTX['terr_region'])
+      status = m.setup(layout, CTX['digests'])
+      identity = m.identity()
+      count = m.word(m.sym['harness_num_terrains'])
+      if status != 'OK' or identity['sections']['TERR']['status'] != 'OK' \
+          or count != 1:
+        raise RuntimeError('TERR setup: %s, %s, count %d' % (
+            status, identity['sections']['TERR']['status'], count))
+      m.arena = arena_of(m)
+      if user_data:
+        m.uc.mem_write(m.sym['harness_user_data'], struct.pack(
+            '<I', base + terr['offset'] + 32))
+      m.select_blob(5)
+      m.select_compiled(PAIRS[5], 5)
+      stats = {}
+      differ, samples, _ = compare_blocks(m, PAIRS[5], steps, 0x21,
+                                          stats=stats)
+      if user_data:
+        run.update({'identity': identity, 'num_terrains': count,
+                    'differ': differ, 'samples': samples,
+                    'out_peak': stats.get('out_peak', 0.0),
+                    'positions': stats.get('positions', []),
+                    'overshoot_blocks': stats.get('overshoot_blocks', [])})
+      else:
+        run['null_differ'] = differ
+        run['null_samples'] = samples
+    return run
+  except RuntimeError as e:
+    run['error'] = str(e)
+    return run
+
+
 def switch_run(pair):
   """A -> B -> A: the blob voice constructs on every switch in a poisoned
   slot and arena; compiled-in engines only Reset. Retained state shows as
@@ -571,7 +619,7 @@ def main(argv):
   steps = CTX['steps']
   results = {'unicorn': unicorn.__version__, 'blocks': len(steps),
              'block_size': BLOCK, 'runs': [], 'switches': [], 'controls': [],
-             'faults': [], 'locks': []}
+             'faults': [], 'locks': [], 'terrain': []}
   failures = []
   findings = []
   pool = multiprocessing.Pool(jobs, load, (out,))
@@ -609,6 +657,34 @@ def main(argv):
     elif run['differ']:
       failures.append('model %d differs at %s%s' % (
           run['model'], run['base'], ' gap' if run['gap'] else ''))
+
+  terrain = [(base, fpscr) for base in PLACEMENTS for fpscr in FPSCR]
+  for run in pool.imap(terrain_run, terrain):
+    results['terrain'].append(run)
+    label = 'terrain %s fpscr %s model 5' % (run['base'], run['fpscr'])
+    if 'error' in run:
+      print('%s: %s' % (label, run['error']))
+      failures.append('%s: %s' % (label, run['error']))
+      continue
+    print('%s: %d of %d differ, NULL %d of %d differ' % (
+        label, run['differ'], run['samples'], run['null_differ'],
+        run['null_samples']))
+    sys.stdout.flush()
+    if not run['out_peak']:
+      failures.append('%s: silent' % label)
+    if not run['null_differ']:
+      failures.append('%s: NULL user data compared equal' % label)
+    overshoot = set(run['overshoot_blocks'])
+    if run['differ'] and overshoot and all(
+        p[0] in overshoot for p in run['positions']):
+      findings.append('%s: %d of %d samples differ: %s; user grid '
+                      'coordinates clamped (%d of %d blocks with lookups '
+                      'past the bank differ)' % (
+                          label, run['differ'], run['samples'], KNOWN[5],
+                          len(set(p[0] for p in run['positions'])),
+                          len(overshoot)))
+    elif run['differ']:
+      failures.append('%s differs outside overshoot blocks' % label)
 
   for switch in pool.imap(switch_run, SWITCHES):
     first, second = switch['sequence'][:2]

@@ -36,9 +36,10 @@ extern "C" uint32_t harness_terrain_overshoot;
 
 inline void HarnessTerrainCheck(const char* name, float value) {
   const bool sample = name[0] == 's' && name[1] == 'a';
+  const bool grid = (name[0] == 'x' || name[0] == 'y') && !name[1];
   const bool wt = name[0] == 'w' && name[1] == 't';
   if ((sample && (value < 0.0f || value > 128.0f)) ||
-      (wt && (value < 0.0f || value > 62.9999f))) {
+      ((wt || grid) && (value < 0.0f || value > 62.9999f))) {
     ++harness_terrain_overshoot;
   }
 }
