@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "50c7a56aa4b89abd55ba94f9ef9e8824227614c0130daf3d8299ef00f32e621a",
+  "manifest_sha256": "552a70e67be3aaf1e572c2fa1dcbf2baacb370ac7dd37fccd2993dfc7bbd6e92",
   "record_version": 1,
   "features": [
     {
@@ -1973,6 +1973,10 @@
       "id": 39,
       "name": "Undertow",
       "palette": "undertow",
+      "family": "Subharmonic",
+      "blob_size": 4696,
+      "state_size": 160,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
