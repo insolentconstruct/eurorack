@@ -1418,6 +1418,7 @@ void TestResonatorBound() {
   ResonatorControls c = Controls(4, 1);
   c.modes = &twins;
   CHECK(BoundOf(c).spill >= kResonatorNoSpill);
+  CHECK(BoundOf(c).spill < 2.0f * kResonatorNoSpill);
 }
 
 // SysTick publishes the bound to the slot the audio is not reading; the
@@ -1709,6 +1710,8 @@ void TestResonatorFeedback() {
     uint64_t after[2];
     uint64_t loop[2];
     RunLoop(kMedia[m], RESONATOR_AFTER_GRAINS, 0.0f, &after[0], &after[1]);
+    // After the grains keeps nothing for the loop.
+    CHECK(processor.resonator_.peak_gain_ == 0.0f);
     RunLoop(kMedia[m], RESONATOR_FEEDBACK, 0.0f, &loop[0], &loop[1]);
     CHECK(processor.options_ == (Processor::OPTION_FLAG_RESONATOR_GRAINS |
         Processor::OPTION_FLAG_RESONATOR_INPUT));

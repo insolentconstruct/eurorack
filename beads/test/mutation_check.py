@@ -2414,7 +2414,7 @@ cases = [
   ('TestResonatorFeedback', 'resonator', 'beads/dsp/processor_options.cc',
     '        ProcessResonatorLoop(parameters.pitch, strike, out, size);',
     '        ProcessResonator(parameters.pitch, strike, out, size);'),
-  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
+  ('TestResonatorFeedback', 'resonator', 'beads/dsp/processor_options.cc',
     '      if (options_ & OPTION_FLAG_RESONATOR_INPUT) {\n'
     '        ProcessResonatorLoop(',
     '      if (true) {\n'
