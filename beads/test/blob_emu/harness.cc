@@ -45,6 +45,18 @@
 #include "beads/blob/models/undertow_engine.h"
 #include "beads/blob/models/phase_flock_engine.h"
 #include "beads/blob/models/scanned_engine.h"
+#include "beads/blob/models/loopback_engine.h"
+#include "beads/blob/models/lockstep_engine.h"
+#include "beads/blob/models/tapfield_engine.h"
+#include "beads/blob/models/attractor_engine.h"
+#include "beads/blob/models/rulefield_engine.h"
+#include "beads/blob/models/z_filter_engine.h"
+#include "beads/blob/models/csaw_engine.h"
+#include "beads/blob/models/ring_mod_engine.h"
+#include "beads/blob/models/saw_square_engine.h"
+#include "beads/blob/models/harmonics_engine.h"
+#include "beads/blob/models/sub_oscillator_engine.h"
+#include "beads/blob/models/digital_modulation_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -108,7 +120,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 10;
+const size_t kFirstStock = 22;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -151,6 +163,42 @@ static uint8_t phase_flock_storage[sizeof(PhaseFlockEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t scanned_storage[sizeof(ScannedEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t loopback_storage[sizeof(LoopbackEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t lockstep_storage[sizeof(LockstepEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t tapfield_storage[sizeof(TapfieldEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t attractor_storage[sizeof(AttractorEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t rulefield_storage[sizeof(RulefieldEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t z_filter_storage[sizeof(ZFilterEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t csaw_storage[sizeof(CSawEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t ring_mod_storage[sizeof(RingModEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t saw_square_storage[sizeof(SawSquareEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t harmonics_storage[sizeof(HarmonicsEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t sub_oscillator_storage[sizeof(SubOscillatorEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t digital_modulation_storage[sizeof(DigitalModulationEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -260,6 +308,30 @@ static void BuildProof() {
       &phase_flock_storage[sizeof(phase_flock_storage)], 0);
   std::fill(&scanned_storage[0],
       &scanned_storage[sizeof(scanned_storage)], 0);
+  std::fill(&loopback_storage[0],
+      &loopback_storage[sizeof(loopback_storage)], 0);
+  std::fill(&lockstep_storage[0],
+      &lockstep_storage[sizeof(lockstep_storage)], 0);
+  std::fill(&tapfield_storage[0],
+      &tapfield_storage[sizeof(tapfield_storage)], 0);
+  std::fill(&attractor_storage[0],
+      &attractor_storage[sizeof(attractor_storage)], 0);
+  std::fill(&rulefield_storage[0],
+      &rulefield_storage[sizeof(rulefield_storage)], 0);
+  std::fill(&z_filter_storage[0],
+      &z_filter_storage[sizeof(z_filter_storage)], 0);
+  std::fill(&csaw_storage[0],
+      &csaw_storage[sizeof(csaw_storage)], 0);
+  std::fill(&ring_mod_storage[0],
+      &ring_mod_storage[sizeof(ring_mod_storage)], 0);
+  std::fill(&saw_square_storage[0],
+      &saw_square_storage[sizeof(saw_square_storage)], 0);
+  std::fill(&harmonics_storage[0],
+      &harmonics_storage[sizeof(harmonics_storage)], 0);
+  std::fill(&sub_oscillator_storage[0],
+      &sub_oscillator_storage[sizeof(sub_oscillator_storage)], 0);
+  std::fill(&digital_modulation_storage[0],
+      &digital_modulation_storage[sizeof(digital_modulation_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -271,6 +343,18 @@ static void BuildProof() {
   compiled[7] = new(undertow_storage) UndertowEngine;
   compiled[8] = new(phase_flock_storage) PhaseFlockEngine;
   compiled[9] = new(scanned_storage) ScannedEngine;
+  compiled[10] = new(loopback_storage) LoopbackEngine;
+  compiled[11] = new(lockstep_storage) LockstepEngine;
+  compiled[12] = new(tapfield_storage) TapfieldEngine;
+  compiled[13] = new(attractor_storage) AttractorEngine;
+  compiled[14] = new(rulefield_storage) RulefieldEngine;
+  compiled[15] = new(z_filter_storage) ZFilterEngine;
+  compiled[16] = new(csaw_storage) CSawEngine;
+  compiled[17] = new(ring_mod_storage) RingModEngine;
+  compiled[18] = new(saw_square_storage) SawSquareEngine;
+  compiled[19] = new(harmonics_storage) HarmonicsEngine;
+  compiled[20] = new(sub_oscillator_storage) SubOscillatorEngine;
+  compiled[21] = new(digital_modulation_storage) DigitalModulationEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

@@ -114,6 +114,18 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/pulsar_engine.cc $models/glisson_engine.cc $models/reed_pipe_engine.cc \
     $models/sideband_engine.cc $models/undertow_engine.cc $models/phase_flock_engine.cc \
     $models/scanned_engine.cc \
+    $models/loopback_engine.cc \
+    $models/lockstep_engine.cc \
+    $models/tapfield_engine.cc \
+    $models/attractor_engine.cc \
+    $models/rulefield_engine.cc \
+    $models/z_filter_engine.cc \
+    $models/csaw_engine.cc \
+    $models/ring_mod_engine.cc \
+    $models/saw_square_engine.cc \
+    $models/harmonics_engine.cc \
+    $models/sub_oscillator_engine.cc \
+    $models/digital_modulation_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

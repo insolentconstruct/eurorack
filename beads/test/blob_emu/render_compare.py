@@ -60,8 +60,13 @@ FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
-PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9)] + [
-    (m, 10 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+PAIRS = dict([
+    (36, 0), (254, 1), (43, 2), (32, 3), (29, 4),
+    (40, 5), (37, 6), (39, 7), (41, 8), (31, 9),
+    (33, 10), (34, 11), (35, 12), (38, 13), (42, 14),
+    (44, 15), (46, 16), (47, 17), (55, 18), (58, 19),
+    (73, 20), (74, 21)] + [
+    (m, 22 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -70,7 +75,15 @@ DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
-    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32), (40, 29), (37, 40), (39, 37), (41, 39), (31, 41)]
+    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18),
+    (32, 36), (29, 32), (40, 29), (37, 40), (39, 37),
+    (41, 39), (31, 41), (33, 31), (34, 33), (35, 34),
+    (38, 35), (42, 38), (44, 42), (46, 44), (47, 46),
+    (55, 47), (58, 55), (73, 58), (74, 73)]
+# Tapfield needs a held note: low notes retrigger before its register clocks.
+NOTE_CONTROL_STEPS = {35: [
+    (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
+    for block in range(200)]}
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -728,8 +741,9 @@ def main(argv):
   for model, engine in sorted(PAIRS.items()):
     m.select_blob(model)
     m.select_compiled(engine, model)
-    differ, samples, _ = compare_blocks(m, engine, steps[:200], 0x21,
-                                        nudge=0.01)
+    differ, samples, _ = compare_blocks(
+        m, engine, NOTE_CONTROL_STEPS.get(model, steps[:200]), 0x21,
+        nudge=0.01)
     results['controls'].append({'case': 'note nudged, model %d' % model,
                                 'differ': differ, 'samples': samples})
     print('control: note nudged, model %d: %d of %d differ' % (
