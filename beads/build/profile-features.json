@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "9c22e36bfb88e3b92742b6769da5df03d8e593236a350e6704b96bbe1391b12c",
+  "manifest_sha256": "c8884afb49fa5ea2c005ffe4bc91412ddfa45f3d808a975d2ea5e982706a4c9b",
   "record_version": 1,
   "features": [
     {
@@ -2126,6 +2126,10 @@
       "id": 51,
       "name": "Granular Cloud",
       "palette": "granular-cloud",
+      "family": "Granular",
+      "blob_size": 3200,
+      "state_size": 80,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

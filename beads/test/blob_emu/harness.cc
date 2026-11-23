@@ -66,6 +66,7 @@
 #include "beads/blob/models/triple_engine.h"
 #include "beads/blob/models/bytebeat_engine.h"
 #include "beads/blob/models/acid_engine.h"
+#include "beads/blob/models/granular_cloud_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -129,7 +130,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 31;
+const size_t kFirstStock = 32;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -232,6 +233,9 @@ static uint8_t bytebeat_storage[sizeof(BytebeatEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t acid_storage[sizeof(AcidEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t granular_cloud_storage[sizeof(GranularCloudEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t sine_storage[sizeof(TestSineEngine)]
@@ -387,6 +391,8 @@ static void BuildProof() {
       &bytebeat_storage[sizeof(bytebeat_storage)], 0);
   std::fill(&acid_storage[0],
       &acid_storage[sizeof(acid_storage)], 0);
+  std::fill(&granular_cloud_storage[0],
+      &granular_cloud_storage[sizeof(granular_cloud_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(glisson_storage) GlissonEngine;
   compiled[1] = new(scanned_storage) ScannedEngine;
@@ -418,7 +424,8 @@ static void BuildProof() {
   compiled[27] = new(triple_storage) TripleEngine;
   compiled[28] = new(bytebeat_storage) BytebeatEngine;
   compiled[29] = new(acid_storage) AcidEngine;
-  compiled[30] = new(sine_storage) TestSineEngine;
+  compiled[30] = new(granular_cloud_storage) GranularCloudEngine;
+  compiled[31] = new(sine_storage) TestSineEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
@@ -504,7 +511,14 @@ void harness_select_compiled(uint32_t engine, uint32_t model) {
 // The engines built afresh, as at power-on, then one selected: the reference
 // for a rebuilt blob, which equals an engine's first selection.
 void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
-  if (engine < kFirstStock) {
+  if (engine == 30) {
+    std::fill(&granular_cloud_storage[0],
+        &granular_cloud_storage[sizeof(granular_cloud_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(granular_cloud_storage) GranularCloudEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine < kFirstStock) {
     BuildProof();
   } else {
     BuildStock();

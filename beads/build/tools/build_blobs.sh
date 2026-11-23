@@ -69,6 +69,8 @@ build bytebeat $blob/models/bytebeat.cc \
   $blob/models/bytebeat_engine.cc beads/plaits_resources.cc
 build acid $blob/models/acid.cc \
   $blob/models/acid_engine.cc beads/plaits_resources.cc
+build granular_cloud $blob/models/granular_cloud.cc \
+  $blob/models/granular_cloud_engine.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

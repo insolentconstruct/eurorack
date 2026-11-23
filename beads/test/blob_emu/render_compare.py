@@ -91,8 +91,9 @@ PAIRS = dict([
     (78, 27),
     (79, 28),
     (96, 29),
-    (254, 30)] + [
-    (m, 31 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (51, 30),
+    (254, 31)] + [
+    (m, 32 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -133,7 +134,10 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (77, 78),
     (78, 70),
     (79, 72),
+    (51, 47),
     (96, 79)]
+# These models restart on selection, including a return from another model.
+FRESH_START_MODELS = {51}
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
@@ -651,7 +655,8 @@ def switch_compare(first, second, fresh):
                       (first, sequence[200:])):
     before = m.word(RANDOM_STATE)
     m.select_blob(model)
-    if fresh:
+    restart = fresh or model in FRESH_START_MODELS
+    if restart:
       m.rebuild_compiled(PAIRS[model], model)
     else:
       m.select_compiled(PAIRS[model], model)
@@ -661,10 +666,11 @@ def switch_compare(first, second, fresh):
     stats = {}
     # The return, or a second model of one compiled-in engine, meets the
     # state the compiled-in engine kept.
-    retained = not fresh and bool(phases) and PAIRS[model] == PAIRS[first]
+    retained = not restart and bool(phases) and PAIRS[model] == PAIRS[first]
     differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
                                            stats=stats, retained=retained)
     phases.append({'model': model, 'differ': differ, 'samples': samples,
+                   'fresh_start': model in FRESH_START_MODELS,
                    'slot_cleared': cleared, 'switch_drew': drew,
                    'max_difference': stats.get('max', 0.0),
                    'compiled_peak': stats.get('peak', 0.0),
@@ -782,7 +788,9 @@ def main(argv):
           first, second))
     for i in (1, 2) if shared else (2,):
       p = phases[i]
-      if p['differ']:
+      if p['differ'] and p['fresh_start']:
+        failures.append('model %d: fresh-start return differs' % p['model'])
+      elif p['differ']:
         findings.append('model %d after %d: %d of %d samples differ from '
                         'the compiled-in engine, which keeps its state '
                         'across a switch (Reset only); largest difference '
