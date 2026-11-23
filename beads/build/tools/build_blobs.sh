@@ -55,6 +55,8 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
+build fold $blob/models/fold.cc $blob/models/fold_engine.cc \
+  beads/plaits_resources.cc
 build kick $blob/models/kick.cc $blob/models/kick_engine.cc \
   $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
   $libm/libgcc/convert.S

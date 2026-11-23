@@ -1347,6 +1347,10 @@
       "id": 48,
       "name": "Fold",
       "palette": "fold",
+      "family": "Waveshaping",
+      "blob_size": 3752,
+      "state_size": 44,
+      "arena_size": 2056,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
