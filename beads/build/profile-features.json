@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "b9bdf0dc939651879a9eddd8d9f0c1f4e6b8907f623c1b8c461de7eb59851bc1",
+  "manifest_sha256": "d890a4103684d9150f126dc4e009410dc80f5729616de101da4e3a8d803e468f",
   "record_version": 1,
   "features": [
     {
@@ -2146,6 +2146,10 @@
       "id": 55,
       "name": "Saw Square",
       "palette": "saw-square",
+      "family": "Subtractive",
+      "blob_size": 1668,
+      "state_size": 56,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
