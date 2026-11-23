@@ -1002,7 +1002,7 @@ cases = [
     '    (void)(StereoWidthFromPot('),
   ('TestWidthGestureAndMeter', 'options', 'beads/gesture_controller.h',
     '    return amount_feature_[i] != FEATURE_NONE;',
-    '    return i == MIX_PARAMETER_FEEDBACK;'),
+    '    return i == 0;'),
   ('TestProfileAmounts', 'options', 'beads/gesture_controller.h',
     '    return amount_feature_[i] != FEATURE_NONE;',
     '    return true;'),
@@ -1968,7 +1968,7 @@ cases = [
   ('TestFeedbackAmountSlot', 'options', 'beads/gesture_controller.cc',
     '  if (feature == FEATURE_GAIN_KNOB) {\n'
     '    state->gain',
-    '  if (i == MIX_PARAMETER_FEEDBACK) {\n'
+    '  if (i == Ui::MIX_PARAMETER_FEEDBACK) {\n'
     '    state->gain'),
 
   # Plaits blob ABI 2 and the region's sections (plaits_blob_test).
