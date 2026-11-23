@@ -25,7 +25,7 @@
 // -----------------------------------------------------------------------------
 //
 // Wave Terrain as a version 2 blob, terrains 5-7 reading the Plaits wavetables
-// library; reset loads no user terrain.
+// library, then TERR's grids after the eight stock terrains.
 
 #include <new>
 
@@ -38,6 +38,7 @@
 using beads::PlaitsBlobHeader2;
 using beads::PlaitsBlobLibrary;
 using beads::PlaitsBlobServices;
+using beads::PlaitsBlobTerrains;
 using plaits::EngineParameters;
 using plaits::WaveTerrain;
 
@@ -67,7 +68,7 @@ extern "C" const PlaitsBlobHeader2 plaits_blob_header
   0,
   0,
   1,  // The Plaits wavetables library.
-  0,
+  beads::PLAITS_BLOB_FLAG_TERRAINS,
   kOutGain,
   kAuxGain,
   { 0, 0, 0, 0 }
@@ -89,6 +90,10 @@ extern "C" void* plaits_blob_init(
       static_cast<const int16_t*>(
           libraries[0]->exports[beads::PLAITS_WAVETABLES_WAVES]),
       &allocator);
+  // TERR's record follows the one dependency; no grids when it is faulted.
+  const PlaitsBlobTerrains* terrains =
+      static_cast<const PlaitsBlobTerrains*>(libraries[1]->context);
+  wave_terrain->LoadUserData(terrains->grids, terrains->count);
   return wave_terrain;
 }
 
@@ -96,9 +101,7 @@ extern "C" void plaits_blob_reset(
     void* object,
     const PlaitsBlobServices* services,
     uint32_t argument) {
-  WaveTerrain* wave_terrain = static_cast<WaveTerrain*>(object);
-  wave_terrain->LoadUserData(NULL);
-  wave_terrain->Reset();
+  static_cast<WaveTerrain*>(object)->Reset();
 }
 
 extern "C" void plaits_blob_render(
