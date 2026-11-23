@@ -666,8 +666,9 @@ then never above the grains' own feedback's at any frequency; on 720
 frequency responses (eight Materials, struck, four Ring times and both ends
 of damping, C0 to C8, three rates) none was above the bound. This bounds
 the gain, not the phase, and when damping, pitch or the object change the
-bound falls no faster than the lowest mode decays; how the loop behaves is
-therefore measured rather than proven. The loop's level is never set from
+bound falls no faster than its slowest sounding mode decays at the current
+tuning (checked against every mode's poles, every semitone C0 to C8); how
+the loop behaves is therefore measured rather than proven. The loop's level is never set from
 its own output, so brightness and damping still shape it. Over 60 s of
 silence after 10 s of input, in every quality, granular and delay, every
 Material and Ring time, frozen or not and FEEDBACK from 0 to full, it never
