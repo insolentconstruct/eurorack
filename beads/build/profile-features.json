@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "d75e989b716c5bccf3a3ea5699c31a1377dfbaa37377b00992aebd53e40c2848",
+  "manifest_sha256": "924c6bbe6af5d742e2f7e360a773845eff2a49f245813a44fae27aade00d70d2",
   "record_version": 1,
   "features": [
     {
@@ -2178,6 +2178,10 @@
       "id": 61,
       "name": "Blown",
       "palette": "blown",
+      "family": "Physical",
+      "blob_size": 3860,
+      "state_size": 316,
+      "arena_size": 8192,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

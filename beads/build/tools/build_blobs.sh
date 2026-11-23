@@ -56,6 +56,9 @@ build plucked $blob/models/plucked.cc \
   $blob/models/plucked_engine.cc \
   $blob/models/palette_chord_bank.cc \
   beads/plaits_resources.cc
+build blown $blob/models/blown.cc \
+  $blob/models/blown_engine.cc \
+  beads/plaits_resources.cc
 build struck_drum $blob/models/struck_drum.cc \
   $blob/models/struck_drum_engine.cc \
   beads/plaits_resources.cc
