@@ -41,7 +41,7 @@ OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES))
 DEPS           = $(OBJS:.o=.d)
 DEP_FILE       = $(BUILD_DIR)depends.mk
 FLAGS          = -DTEST -DSTM32H7XX -Ibeads/test/recovery_stubs -I. \
-		-Wno-int-to-pointer-cast -ffp-contract=off
+		-Wno-int-to-pointer-cast -ffp-contract=off -funsigned-char
 
 all:  recovery_test
 

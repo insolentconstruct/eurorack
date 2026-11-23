@@ -39,7 +39,8 @@ namespace beads {
 using namespace std;
 
 // stmlib::ChunkStorage's layout: chunks of 32-byte flash words, each starting
-// with this header; the calibration first, then the states.
+// with this header; the calibration first, then the states. The mirror holds
+// the calibration, then Drizzlet's options.
 struct ChunkHeader {
   uint32_t tag;
   uint16_t size;
@@ -47,13 +48,10 @@ struct ChunkHeader {
 };
 
 const size_t kFlashWordSize = 32;
-const uint32_t kSettingsStart = \
-    kBank2Start + kSettingsSector * kBank2SectorSize;
 const size_t kCalibrationChunkSize = (sizeof(ChunkHeader) +
     sizeof(PersistentData) + kFlashWordSize - 1) & ~(kFlashWordSize - 1);
-// The first state follows the calibration; the rest of the sector is blank.
-const size_t kFreeStart = kCalibrationChunkSize + ((sizeof(ChunkHeader) +
-    sizeof(State) + kFlashWordSize - 1) & ~(kFlashWordSize - 1));
+const size_t kStateChunkSize = (sizeof(ChunkHeader) +
+    sizeof(State) + kFlashWordSize - 1) & ~(kFlashWordSize - 1);
 const size_t kMaxChunkSize = sizeof(ChunkHeader) + sizeof(PersistentData);
 const size_t kBlankCheckWords = 64;
 
@@ -62,12 +60,13 @@ struct ChunkLayoutAssertions {
   STATIC_ASSERT(sizeof(PersistentData) % 4 == 0, calibration_size);
   STATIC_ASSERT(sizeof(State) % 4 == 0, state_size);
   STATIC_ASSERT(sizeof(State) <= sizeof(PersistentData), state_fits);
+  STATIC_ASSERT(kMaxChunkSize == kCalibrationChunkSize, calibration_words);
 };
 
-// As in stmlib's ChunkStorage.
+// As in stmlib's ChunkStorage, with the bytes unsigned as on the module.
 static uint16_t Checksum(const void* data, size_t size) {
   uint16_t sum = 0;
-  const char* bytes = static_cast<const char*>(data);
+  const uint8_t* bytes = static_cast<const uint8_t*>(data);
   while (size--) {
     sum += *bytes++;
   }
@@ -78,37 +77,79 @@ static void ClearErrors() {
   __HAL_FLASH_CLEAR_FLAG_BANK2(FLASH_FLAG_ALL_ERRORS_BANK2);
 }
 
+static uint32_t SectorStart(uint32_t sector) {
+  return kBank2Start + sector * kBank2SectorSize;
+}
+
 RecoveryResult SettingsRecovery::Run() {
+  // PVD level 6: 2.69-2.83 V falling.
+  MODIFY_REG(PWR->CR1, PWR_CR1_PLS, PWR_CR1_PLS_LEV6);
+  SET_BIT(PWR->CR1, PWR_CR1_PVDEN);
+
+  PersistentData settings;
+  PersistentData mirror;
+  const bool settings_usable = Usable(kSettingsSector, &settings);
+  const bool mirror_usable = Usable(kMirrorSector, &mirror);
+
+  // As the firmware chooses: the settings sector's, unless it holds the
+  // factory values and the mirror a calibration of its own.
+  const bool use_mirror = mirror_usable && (!settings_usable || \
+      (IsFactory(settings) && !IsFactory(mirror)));
+  LoadDefaults(&persistent_data_, &state_);
+  if (use_mirror || settings_usable) {
+    const PersistentData& kept = use_mirror ? mirror : settings;
+    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+      persistent_data_.adc_calibration[i] = kept.adc_calibration[i];
+    }
+  }
+
   bool success = true;
   for (uint32_t s = kFirstBufferSector; s <= kLastBufferSector; ++s) {
     success = EraseSector(s) && success;
   }
 
-  PersistentData calibration;
-  const bool keep = ReadCalibration(&calibration) && IsPlausible(calibration);
-  if (!EraseSector(kSettingsSector)) {
+  // The sector holding the calibration kept is rewritten last. With none,
+  // the mirror goes first, as in the firmware.
+  const bool bootstrap = !settings_usable && !mirror_usable;
+  const uint32_t first = use_mirror ? kSettingsSector : kMirrorSector;
+  const uint32_t second = use_mirror ? kMirrorSector : kSettingsSector;
+  if (!RewriteSector(first, second, bootstrap) || \
+      !RewriteSector(second, first, false) || \
+      !success) {
     return RECOVERY_FAILED;
   }
+  return IsFactory(persistent_data_)
+      ? RECOVERY_CALIBRATION_RESET
+      : RECOVERY_CALIBRATION_KEPT;
+}
 
-  LoadDefaults(&persistent_data_, &state_);
-  if (keep) {
-    for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
-      persistent_data_.adc_calibration[i] = calibration.adc_calibration[i];
-    }
-  }
-  // On the blank sector, stmlib finds no chunk and writes both, erasing
-  // the sector again as the module firmware does (bank 2 sector 7, given as
-  // 15: the sector number field is three bits wide).
-  ClearErrors();
-  chunk_storage_.Init(&persistent_data_, &state_);
-  if (!success || !Verify()) {
-    return RECOVERY_FAILED;
-  }
-  return keep ? RECOVERY_CALIBRATION_KEPT : RECOVERY_CALIBRATION_RESET;
+bool SettingsRecovery::RewriteSector(
+    uint32_t sector,
+    uint32_t other,
+    bool bootstrap) {
+  // No retry: a second erase could hit the only copy just written.
+  const uint32_t start = SectorStart(sector);
+  PersistentData data;
+  return (bootstrap || Usable(other, &data)) && \
+      EraseSector(sector) && \
+      WriteChunk(
+          start,
+          PersistentData::tag,
+          &persistent_data_,
+          sizeof(PersistentData)) && \
+      (sector != kSettingsSector || WriteChunk(
+          start + kCalibrationChunkSize,
+          State::tag,
+          &state_,
+          sizeof(State))) && \
+      Verify(sector);
 }
 
 bool SettingsRecovery::EraseSector(uint32_t sector) {
   for (int attempt = 0; attempt < 2; ++attempt) {
+    if (SupplyLow()) {
+      return false;
+    }
     HAL_FLASH_Unlock();
     ClearErrors();
     FLASH_EraseInitTypeDef erase_params;
@@ -121,12 +162,53 @@ bool SettingsRecovery::EraseSector(uint32_t sector) {
     const bool erased = \
         HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK;
     HAL_FLASH_Lock();
-    if (erased && \
-        IsBlank(kBank2Start + sector * kBank2SectorSize, kBank2SectorSize)) {
+    if (erased && IsBlank(SectorStart(sector), kBank2SectorSize)) {
       return true;
     }
   }
   return false;
+}
+
+bool SettingsRecovery::WriteChunk(
+    uint32_t address,
+    uint32_t tag,
+    const void* data,
+    size_t size) {
+  uint8_t chunk[kMaxChunkSize];
+  ChunkHeader h;
+  h.tag = tag;
+  h.size = size;
+  h.checksum = Checksum(data, size);
+  const size_t chunk_size = sizeof(ChunkHeader) + size;
+  fill(&chunk[0], &chunk[kMaxChunkSize], 0xff);
+  memcpy(&chunk[0], &h, sizeof(ChunkHeader));
+  memcpy(&chunk[sizeof(ChunkHeader)], data, size);
+  for (size_t offset = 0; offset < chunk_size; offset += kFlashWordSize) {
+    uint32_t words[kFlashWordSize / 4];
+    memcpy(words, &chunk[offset], kFlashWordSize);
+    if (!ProgramWord(address + offset, words)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SettingsRecovery::ProgramWord(uint32_t address, const uint32_t* words) {
+  // A word is programmed once, onto erased flash (RM0433 4.3.9).
+  if (!IsBlank(address, kFlashWordSize) || SupplyLow()) {
+    return false;
+  }
+  HAL_FLASH_Unlock();
+  ClearErrors();
+  const bool programmed = HAL_FLASH_Program(
+      FLASH_TYPEPROGRAM_FLASHWORD,
+      address,
+      (uint64_t)(&words[0])) == HAL_OK;
+  HAL_FLASH_Lock();
+  uint32_t written[kFlashWordSize / 4];
+  return programmed && \
+      ReadMasked(address, written, kFlashWordSize) && \
+      !memcmp(written, words, kFlashWordSize);
 }
 
 bool SettingsRecovery::ReadMasked(
@@ -174,8 +256,9 @@ bool SettingsRecovery::IsBlank(uint32_t address, size_t size) {
   return true;
 }
 
-bool SettingsRecovery::ReadCalibration(PersistentData* data) {
-  return ReadChunk(0, data, PersistentData::tag, sizeof(PersistentData));
+bool SettingsRecovery::ReadCalibration(uint32_t sector, PersistentData* data) {
+  return ReadChunk(
+      SectorStart(sector), data, PersistentData::tag, sizeof(PersistentData));
 }
 
 bool SettingsRecovery::IsPlausible(const PersistentData& data) const {
@@ -194,23 +277,43 @@ bool SettingsRecovery::IsPlausible(const PersistentData& data) const {
   return true;
 }
 
-bool SettingsRecovery::Verify() {
-  PersistentData data;
+bool SettingsRecovery::Usable(uint32_t sector, PersistentData* data) {
+  return ReadCalibration(sector, data) && IsPlausible(*data);
+}
+
+/* static */
+bool SettingsRecovery::IsFactory(const PersistentData& data) {
+  PersistentData defaults;
   State state;
-  if (!ReadCalibration(&data) || \
-      memcmp(&data, &persistent_data_, sizeof(PersistentData)) || \
-      !ReadChunk(kCalibrationChunkSize, &state, State::tag, sizeof(State)) || \
-      memcmp(&state, &state_, sizeof(State)) || \
-      !IsBlank(
-          kSettingsStart + kFreeStart,
-          kBank2SectorSize - kFreeStart)) {
+  LoadDefaults(&defaults, &state);
+  return !memcmp(
+      data.adc_calibration,
+      defaults.adc_calibration,
+      sizeof(defaults.adc_calibration));
+}
+
+/* static */
+bool SettingsRecovery::SupplyLow() {
+  return READ_BIT(PWR->CSR1, PWR_CSR1_PVDO);
+}
+
+bool SettingsRecovery::Verify(uint32_t sector) {
+  const uint32_t start = SectorStart(sector);
+  size_t used = kCalibrationChunkSize;
+  PersistentData data;
+  if (!ReadChunk(start, &data, PersistentData::tag, sizeof(PersistentData)) || \
+      memcmp(&data, &persistent_data_, sizeof(PersistentData))) {
     return false;
   }
-  // The sector reads back clean, so the firmware's loader may read it too.
-  stmlib::ChunkStorage<15, PersistentData, State> check;
-  return check.Init(&data, &state) && \
-      !memcmp(&data, &persistent_data_, sizeof(PersistentData)) && \
-      !memcmp(&state, &state_, sizeof(State));
+  if (sector == kSettingsSector) {
+    State state;
+    if (!ReadChunk(start + used, &state, State::tag, sizeof(State)) || \
+        memcmp(&state, &state_, sizeof(State))) {
+      return false;
+    }
+    used += kStateChunkSize;
+  }
+  return IsBlank(start + used, kBank2SectorSize - used);
 }
 
 /* static */
@@ -247,13 +350,13 @@ void SettingsRecovery::LoadDefaults(PersistentData* data, State* state) {
 }
 
 bool SettingsRecovery::ReadChunk(
-    size_t offset,
+    uint32_t address,
     void* data,
     uint32_t tag,
     size_t size) {
   uint32_t words[kMaxChunkSize / 4];
   const size_t chunk_size = sizeof(ChunkHeader) + size;
-  if (!ReadMasked(kSettingsStart + offset, words, chunk_size)) {
+  if (!ReadMasked(address, words, chunk_size)) {
     return false;
   }
   ChunkHeader h;

@@ -44,6 +44,14 @@ struct FLASH_EraseInitTypeDef {
 struct SCB_Type {
   uint32_t CCR;
 };
+// PVDO reads set while the supply is low, once the PVD is on at level 6.
+struct TestPvdStatus {
+  operator uint32_t() const;
+};
+struct PWR_TypeDef {
+  uint32_t CR1;
+  TestPvdStatus CSR1;
+};
 extern SCB_Type test_scb;
 extern bool test_locked;
 extern bool test_ecc_error;  // Every masked read hits a double ECC error.
@@ -59,7 +67,34 @@ extern int test_silent_erases;  // Erases that report success, erasing nothing.
 extern int test_erase_calls;
 extern uint32_t test_erased;  // Bit mask of the sector numbers erased.
 extern int test_programs;
+extern PWR_TypeDef test_pwr;
+extern bool test_supply_low;
+extern int test_low_supply_writes;  // Erases and programs started while low.
+struct TestPowerCut { };
+extern int test_cut_at;
+extern int test_cut_model;
+extern int test_operations;
+extern int test_low_after;
+extern int test_sector_programs[8];
+extern int test_damage_programs;
+void TestErase(uint32_t address, size_t size);
+void TestProgram(uint32_t address, uint64_t source);
+void TestProtect();
 #define SCB (&test_scb)
+#define PWR (&test_pwr)
+#define PWR_CR1_PLS 0x000000e0U
+#define PWR_CR1_PLS_LEV6 0x000000c0U
+#define PWR_CR1_PVDEN 0x00000010U
+#define PWR_CSR1_PVDO 0x00000010U
+#define SET_BIT(REG, BIT) ((REG) |= (BIT))
+#define READ_BIT(REG, BIT) ((REG) & (BIT))
+#define MODIFY_REG(REG, CLEARMASK, SETMASK) \
+    ((REG) = (((REG) & ~(CLEARMASK)) | (SETMASK)))
+inline TestPvdStatus::operator uint32_t() const {
+  const bool enabled = (test_pwr.CR1 & PWR_CR1_PVDEN) && \
+      (test_pwr.CR1 & PWR_CR1_PLS) == PWR_CR1_PLS_LEV6;
+  return enabled && test_supply_low ? PWR_CSR1_PVDO : 0;
+}
 #define SCB_CCR_BFHFNMIGN_Msk (1UL << 8)
 #define FLASH_FLAG_SNECCERR_BANK2 (1UL << 25)
 #define FLASH_FLAG_DBECCERR_BANK2 (1UL << 26)
@@ -79,6 +114,7 @@ inline void HAL_FLASH_Unlock() { test_locked = false; }
 inline void HAL_FLASH_Lock() { test_locked = true; }
 inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
   ++test_erase_calls;
+  test_low_supply_writes += test_supply_low;
   if (TestPendingError() || test_locked || e->Banks != 2 || \
       e->NbSectors != 1 || e->Sector > 15) {
     return 1;
@@ -95,8 +131,7 @@ inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
   }
   test_erased |= 1 << e->Sector;
   // SNB is three bits wide: stmlib's sector 15 is bank 2 sector 7.
-  memset(reinterpret_cast<void*>(0x08100000 + (e->Sector & 7) * 0x20000),
-      255, 0x20000);
+  TestErase(0x08100000 + (e->Sector & 7) * 0x20000, 0x20000);
   return 0;
 }
 inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
@@ -104,6 +139,8 @@ inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
     return 1;
   }
   ++test_programs;
+  ++test_sector_programs[(address - 0x08100000) / 0x20000];
+  test_low_supply_writes += test_supply_low;
   if (test_fail_programs) {
     --test_fail_programs;
     return 1;
@@ -112,11 +149,7 @@ inline int HAL_FLASH_Program(int, uint32_t address, uint64_t source) {
     --test_silent_programs;
     return 0;
   }
-  uint8_t* dst = reinterpret_cast<uint8_t*>(uintptr_t(address));
-  const uint8_t* src = reinterpret_cast<const uint8_t*>(uintptr_t(source));
-  for (int i = 0; i < 32; ++i) {
-    dst[i] &= src[i];
-  }
+  TestProgram(address, source);
   return 0;
 }
 // Reads made with bus faults masked raise the error flag.
@@ -127,7 +160,12 @@ inline void __DSB() {
   }
 }
 inline void __ISB() { }
-inline void __set_FAULTMASK(uint32_t mask) { test_faultmask = mask; }
+inline void __set_FAULTMASK(uint32_t mask) {
+  test_faultmask = mask;
+  if (!mask) {
+    TestProtect();
+  }
+}
 #define HAL_OK 0
 #define FLASH_TYPEERASE_SECTORS 0
 #define FLASH_BANK_1 1
