@@ -128,12 +128,6 @@ PAIRS = dict([
     (99, 64),
     (254, 65)] + [
     (m, 66 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
-    (36, 0), (254, 1), (43, 2), (32, 3), (29, 4),
-    (40, 5), (37, 6), (39, 7), (41, 8), (31, 9),
-    (33, 10), (34, 11), (35, 12), (38, 13), (42, 14),
-    (44, 15), (46, 16), (47, 17), (55, 18), (58, 19),
-    (73, 20), (74, 21), (59, 22)] + [
-    (m, 23 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83, 98, 99)
@@ -153,6 +147,7 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (33, 31),
     (34, 33),
     (35, 34),
+    (36, 43),
     (37, 40),
     (38, 35),
     (39, 37),
@@ -746,7 +741,7 @@ def switch_run(pair):
                or (p['model'] == pair[0] and not p['out_peak'])
                for p in policy['phases']):
           raise RuntimeError('fresh-reselection policy violated')
-      run['fresh_policy'] = policy_runs
+      fresh['fresh_policy'] = policy_runs
       fresh['fresh_differ'] = run['fresh_differ']
       fresh['retained_differ'] = [p['differ'] for p in run['phases']]
       fresh['return_policy'] = 'fresh'

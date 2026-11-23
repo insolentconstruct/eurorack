@@ -374,6 +374,8 @@ static uint8_t speech_sounds_storage[sizeof(SpeechSoundsEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t lpc_words_storage[sizeof(LPCWordsEngine)]
+    __attribute__((aligned(8)));
+
 static uint8_t vosim_storage[sizeof(VosimEngine)]
     __attribute__((aligned(8)));
 
