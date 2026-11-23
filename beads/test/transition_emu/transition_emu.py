@@ -129,12 +129,18 @@ class Image(object):
         thumb = 1 if kind == 'STT_FUNC' else 0
         self.sym.setdefault(s.name, s['st_value'] & ~thumb)
     self.offsets = self.member_offsets(elf)
+    if 'transition' in self.sym:
+      for label in LABELS[:-1]:
+        self.sym[label] = self.sym['transition'] + \
+            self.offsets['EngineTransition'][label + '_']
 
   def member_offsets(self, elf):
     found = {}
     members = dict(MEMBERS)
     if any('GestureController' in name for name in self.sym):
       members['GestureController'] = ('trim_flag_',)
+    if 'transition' in self.sym:
+      members['EngineTransition'] = tuple(n + '_' for n in LABELS[:-1])
     for cu in elf.get_dwarf_info().iter_CUs():
       top = cu.get_top_DIE()
       name = top.attributes.get('DW_AT_name')
