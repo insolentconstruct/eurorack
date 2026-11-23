@@ -194,21 +194,28 @@ void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
   }
 }
 
+// A mode's decay at f, Q = 1 + f k: |z|^2 = 1 - 2y; it rises once, then falls.
+inline float ModeDecay(float f, float k) {
+  f = min(f, 0.49f);
+  const float g = OnePole::tan<FREQUENCY_FAST>(f);
+  const float r = 1.0f / (1.0f + f * k);
+  return g * r / (1.0f + g * r + g * g);
+}
+
 float ModalResonator::LoopGain(const ResonatorBound& bound, size_t size) {
-  // A mode's Q is 1 + f r q d. A strike's glide only falls, so f is taken at
-  // its top: the glide's start, or no glide.
-  const float glide = modes_ ? max(modes_->glide, 0.0f) : 0.0f;
-  const float f = frequency_ * (1.0f + glide);
+  // A mode's Q is 1 + f r q d; a strike's glide falls to 0 from either side.
+  const float glide = modes_ ? modes_->glide : 0.0f;
+  const float f = frequency_ * (1.0f + max(glide, 0.0f));
   const float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);
   const float gain = min(
       bound.peak + f * q * bound.peak_slope + bound.spill,
       bound.sum + f * q * bound.sum_slope) * kResonatorBoundMargin;
-  // What a change of tuning leaves ringing falls no faster than the
-  // slowest mode, from its poles: |z|^2 = 1 - 2y, y = g r / (1 + g r + g^2).
-  const float lowest = min(f * bound.lowest_ratio, 0.49f);
-  const float g = OnePole::tan<FREQUENCY_FAST>(lowest);
-  const float r = 1.0f / (1.0f + lowest * q * bound.largest_decay);
-  const float y = g * r / (1.0f + g * r + g * g);
+  // What a change of tuning leaves ringing falls no faster than the slowest
+  // mode, at the lowest or the highest mode's frequency.
+  const float k = q * bound.largest_decay;
+  const float y = min(
+      ModeDecay(frequency_ * (1.0f + min(glide, 0.0f)) * bound.lowest_ratio, k),
+      ModeDecay(f * bound.highest_ratio, k));
   peak_gain_ = max(gain, peak_gain_ / (1.0f + y * float(size)));
   // Only for the object it was worked out for; Amount scales the mix only.
   const bool known = bound.structure == structure_ &&
@@ -396,7 +403,7 @@ void ModalResonator::Bound(
   }
   bound->peak = bound->peak_slope = bound->sum = bound->sum_slope = 0.0f;
   bound->spill = 0.0f;
-  bound->lowest_ratio = ratio[0][0];
+  bound->lowest_ratio = bound->highest_ratio = ratio[0][0];
   bound->largest_decay = 0.0f;
   for (int side = 0; side < 2; ++side) {
     float sum = 0.0f;
@@ -411,6 +418,7 @@ void ModalResonator::Bound(
       sum += level[side][k];
       sum_slope += slope;
       bound->lowest_ratio = min(bound->lowest_ratio, ratio[side][k]);
+      bound->highest_ratio = max(bound->highest_ratio, ratio[side][k]);
       bound->largest_decay = max(bound->largest_decay, decay[side][k]);
       // Off its peak mode j adds at most a / |x - 1 / x|, x its distance;
       // nearer mode k than j, that is sqrt(r) / |r - 1|, r = f_k / f_j.

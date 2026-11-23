@@ -1334,6 +1334,51 @@ void TestResonatorLoopBound() {
   }
 }
 
+// The bound falls no faster than any sounding mode decays, at rest or struck,
+// every Material and Ring time, damping's ends, C0 to C8, three rates.
+void TestResonatorLoopRelease() {
+  test_checker.Start("TestResonatorLoopRelease");
+  static ModalResonator bank;
+  const float rates[3] = { 48000.0f, 32000.0f, 24000.0f };
+  const float dampings[6] = {
+    0.0f, kResonatorRingTimes[0], kResonatorRingTimes[1],
+    kResonatorRingTimes[2], kResonatorRingTimes[3], 0.9995f
+  };
+  for (int r = 0; r < 3; ++r) {
+    const size_t size = size_t(rates[r] / 4000.0f);
+    for (int m = 0; m < kNumResonatorMaterials; ++m) {
+      for (int d = 0; d < 6; ++d) {
+        for (int note = 12; note <= 108; ++note) {
+          ResonatorControls c = Controls(m, 1);
+          c.damping = dampings[d];
+          for (int struck = 0; struck < 2; ++struck) {
+            SetUpBank(&bank, c, rates[r], note);
+            if (struck) {
+              bank.Strike();
+            }
+            bank.peak_gain_ = 1.0e30f;
+            bank.LoopGain(BoundOf(c), size);
+            const double kept = bank.peak_gain_ / 1.0e30;
+            Mode modes[2][kNumResonatorModes / 2];
+            BankModes(c, bank.frequency_ * (1.0f + bank.glide_), modes);
+            for (int side = 0; side < 2; ++side) {
+              for (int k = 0; k < kNumResonatorModes / 2; ++k) {
+                const Mode& mode = modes[side][k];
+                if (mode.a == 0.0f) {
+                  continue;
+                }
+                const double g = OnePole::tan<FREQUENCY_FAST>(mode.f);
+                const double y = g / mode.q / (1.0 + g / mode.q + g * g);
+                CHECK(kept >= pow(1.0 - 2.0 * y, 0.5 * size) * (1.0 - 1.0e-5));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // The bound's parts for every Material, and the cases it must not miss.
 void TestResonatorBound() {
   test_checker.Start("TestResonatorBound");
@@ -1344,6 +1389,7 @@ void TestResonatorBound() {
     CHECK(b.peak > 0.0f && b.peak_slope > 0.0f);
     CHECK(b.sum >= b.peak && b.sum_slope >= b.peak_slope);
     CHECK(b.lowest_ratio > 0.9f && b.lowest_ratio <= 1.0f);
+    CHECK(b.highest_ratio > 2.0f * b.lowest_ratio);
     CHECK(b.largest_decay == 1.0f);
     CHECK(b.structure == c.structure && b.brightness == c.brightness);
     CHECK(b.position == c.position && b.modes == c.modes);
@@ -1532,9 +1578,8 @@ void TestResonatorLoopFilters() {
   }
 }
 
-// The loop's copy goes through the grains' feedback filters at the
-// resonator's rate, in every quality and at both cutoffs: replayed here.
-// Only Sunny tape's grains run at half the rate; Scorched runs at 24 kHz.
+// The loop copy, replayed through the grains' feedback filters at both
+// cutoffs; only Sunny tape's grains run at half the rate.
 void TestResonatorLoopChain() {
   test_checker.Start("TestResonatorLoopChain");
   const float low_pass[4] = { 0.999f, 0.9f, 1.0f - sqrtf(0.1f), 0.75f };
@@ -1580,9 +1625,8 @@ void TestResonatorLoopChain() {
   }
 }
 
-// The last block's resonance goes into the recording at the grains' own
-// loop gain, with the tapes' soft clip gain taken out; while FEEDBACK
-// moves, at the lower end for the resonance and the higher for the clip.
+// The resonance is recorded at the grains' loop gain without the tapes' clip
+// gain; FEEDBACK moving, the lower end for one, the higher for the other.
 void TestResonatorLoopGain() {
   test_checker.Start("TestResonatorLoopGain");
   const float soft_limit[4] = { 0.0f, 1.3f, 1.3f, 1.75f };
@@ -1688,9 +1732,8 @@ void TestResonatorFeedback() {
       0.6f * kResonatorLoopDry) < 1.0e-6f);
 }
 
-// Where After the grains dies away, so does the loop: delay mode at
-// FEEDBACK 0.9, Bright digital, Marimba Short, 1 s of noise then 15 s of
-// silence; there it ran away when the resonance was added in full.
+// Where After the grains dies away, so does the loop (delay, FEEDBACK 0.9,
+// Bright, Marimba Short): the full resonance had run away there.
 void TestResonatorFeedbackDecays() {
   test_checker.Start("TestResonatorFeedbackDecays");
   double after = 0.0;
@@ -1759,6 +1802,7 @@ int main() {
   TestResonatorLimiterAtRest();
   TestResonatorMaterials();
   TestResonatorLoopBound();
+  TestResonatorLoopRelease();
   TestResonatorBound();
   TestResonatorBoundPublished();
   TestResonatorLoopRender();

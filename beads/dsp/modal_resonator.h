@@ -68,9 +68,8 @@ struct ResonatorMaterial {
   const ResonatorModes* modes;  // NULL: Rings' stiffness curve.
 };
 
-// What bounds the bank's gain, for the feedback path: per side, each mode's
-// |level| a, ratio r over the fundamental and Q factor d over the base Q.
-// Worked out off the audio path for the object it names.
+// Per side, each mode's |level| a, ratio r and Q factor d over the base Q,
+// for the feedback path's bound; worked out off the audio path.
 struct ResonatorBound {
   float structure;
   float brightness;
@@ -82,6 +81,7 @@ struct ResonatorBound {
   float sum_slope;
   float spill;  // The most the other modes add off a mode's peak.
   float lowest_ratio;  // With the largest d: the slowest decay.
+  float highest_ratio;
   float largest_decay;
 };
 
@@ -107,9 +107,8 @@ class ModalResonator {
   void Process(const float* in, float* out, float* aux, size_t size);
   // Adds the limited stereo resonance to the frames.
   void Render(const float* in, FloatFrame* frames, size_t size);
-  // What turns a block's rendered resonance into the loop's copy: 1 over
-  // Amount and a bound on the bank's gain, so the copy's gain is at most 1
-  // at every frequency; 0 for an object other than the bound's.
+  // 1 over Amount and the bank's gain bound: the loop copy's gain is at most
+  // 1 at every frequency; 0 for an object other than the bound's.
   float LoopGain(const ResonatorBound& bound, size_t size);
   // The object's bound, worked out off the audio path.
   static void Bound(
