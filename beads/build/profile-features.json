@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4672e1ea354a8705320b3cad23576631a720975f06351d233b5f30ce3d6783dd",
+  "manifest_sha256": "8292ccfe69995cb16890bafe51e62eb2118a08626042ed11b6dc5cd937318de1",
   "record_version": 1,
   "features": [
     {
@@ -2050,6 +2050,10 @@
       "id": 44,
       "name": "Z Filter",
       "palette": "z-filter",
+      "family": "Subtractive",
+      "blob_size": 1788,
+      "state_size": 56,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
