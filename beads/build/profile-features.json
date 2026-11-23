@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "a2747cda5b6ecb9790ba3f719f7fff37e91617b8b9a7cdf0450c34dc9dbfe4dc",
+  "manifest_sha256": "a43687146e8cea180d29cb30392e621a542526a67241e86d0916cd239bcf239e",
   "record_version": 1,
   "features": [
     {
@@ -2295,6 +2295,10 @@
       "id": 75,
       "name": "Saw Comb",
       "palette": "saw-comb",
+      "family": "Feedback",
+      "blob_size": 3468,
+      "state_size": 56,
+      "arena_size": 8192,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
