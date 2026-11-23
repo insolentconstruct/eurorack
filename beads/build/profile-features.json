@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "766f8376813affa0ccab9c9f26ff0705b4c807594dd6fbb541b5c8db8cd5e90f",
+  "manifest_sha256": "0f78a05187e05ff10a4e0a2b40863ee3023f6ec1020a17bf245ca94e50fd9b4d",
   "record_version": 1,
   "features": [
     {
@@ -2551,11 +2551,13 @@
       "id": 97,
       "name": "Supersaw Chords",
       "palette": "chords-supersaw",
+      "family": "Polyphonic",
+      "blob_size": 3996,
+      "state_size": 268,
+      "arena_size": 0,
       "credit": "Dirk Hoppmann",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 98,

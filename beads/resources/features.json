@@ -1819,9 +1819,13 @@
       "id": 97,
       "name": "Supersaw Chords",
       "palette": "chords-supersaw",
+      "family": "Polyphonic",
+      "blob_size": 3996,
+      "state_size": 268,
+      "arena_size": 0,
       "credit": "Dirk Hoppmann",
       "licence": "MIT",
-      "libraries": [2]
+      "libraries": []
     },
     {
       "id": 98,

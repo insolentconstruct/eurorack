@@ -46,6 +46,7 @@
 #include "beads/blob/models/phase_flock_engine.h"
 #include "beads/blob/models/scanned_engine.h"
 #include "beads/blob/models/gendy_engine.h"
+#include "beads/blob/models/chords_supersaw_engine.h"
 #include "beads/blob/models/bubbletime_engine.h"
 #include "beads/blob/models/saw_swarm_engine.h"
 #include "beads/blob/models/dual_sync_engine.h"
@@ -127,7 +128,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 29;
+const size_t kFirstStock = 30;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -227,6 +228,9 @@ static uint8_t saw_swarm_storage[sizeof(SawSwarmEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t bubbletime_storage[sizeof(BubbleTimeEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t chords_supersaw_storage[sizeof(ChordsSupersawEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -373,6 +377,8 @@ static void BuildProof() {
       &saw_swarm_storage[sizeof(saw_swarm_storage)], 0);
   std::fill(&bubbletime_storage[0],
       &bubbletime_storage[sizeof(bubbletime_storage)], 0);
+  std::fill(&chords_supersaw_storage[0],
+      &chords_supersaw_storage[sizeof(chords_supersaw_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -403,6 +409,7 @@ static void BuildProof() {
   compiled[26] = new(shakers_storage) ShakersEngine;
   compiled[27] = new(saw_swarm_storage) SawSwarmEngine;
   compiled[28] = new(bubbletime_storage) BubbleTimeEngine;
+  compiled[29] = new(chords_supersaw_storage) ChordsSupersawEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

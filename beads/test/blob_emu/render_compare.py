@@ -64,8 +64,8 @@ PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6),
     (39, 7), (41, 8), (31, 9), (30, 10), (50, 22), (52, 23), (54, 11),
     (57, 24), (60, 13), (61, 14), (63, 12), (69, 15), (84, 26), (85, 16),
     (86, 25), (87, 17), (88, 18), (89, 19), (90, 20), (91, 21), (56, 27),
-    (93, 28)] + [
-    (m, 29 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (93, 28), (97, 29)] + [
+    (m, 30 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -78,9 +78,9 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (30, 31), (50, 30),
     (52, 30), (54, 30), (57, 30), (60, 30), (61, 30), (63, 30), (69, 30),
     (84, 30), (85, 30), (86, 30), (87, 30), (88, 30), (89, 30), (90, 30),
-    (91, 30), (56, 30), (93, 30)]
+    (91, 30), (56, 30), (93, 30), (97, 30)]
 # These models restart from fresh state on reselection.
-FRESH_ON_RESELECT = (56, 93)
+FRESH_ON_RESELECT = (56, 93, 97)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
