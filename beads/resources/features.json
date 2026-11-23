@@ -1726,6 +1726,10 @@
       "id": 90,
       "name": "Analog Clap",
       "palette": "clap",
+      "family": "Drums",
+      "blob_size": 3208,
+      "state_size": 200,
+      "arena_size": 0,
       "credit": "Dylan Bolink",
       "licence": "MIT",
       "libraries": []

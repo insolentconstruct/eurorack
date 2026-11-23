@@ -55,6 +55,7 @@
 #include "beads/blob/models/skins_engine.h"
 #include "beads/blob/models/circuit_zaps_engine.h"
 #include "beads/blob/models/metalwork_engine.h"
+#include "beads/blob/models/clap_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -118,7 +119,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 20;
+const size_t kFirstStock = 21;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -191,6 +192,9 @@ static uint8_t circuit_zaps_storage[sizeof(CircuitZapsEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t metalwork_storage[sizeof(MetalworkEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t clap_storage[sizeof(ClapEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -319,6 +323,8 @@ static void BuildProof() {
       &circuit_zaps_storage[sizeof(circuit_zaps_storage)], 0);
   std::fill(&metalwork_storage[0],
       &metalwork_storage[sizeof(metalwork_storage)], 0);
+  std::fill(&clap_storage[0],
+      &clap_storage[sizeof(clap_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -340,6 +346,7 @@ static void BuildProof() {
   compiled[17] = new(skins_storage) SkinsEngine;
   compiled[18] = new(circuit_zaps_storage) CircuitZapsEngine;
   compiled[19] = new(metalwork_storage) MetalworkEngine;
+  compiled[20] = new(clap_storage) ClapEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
