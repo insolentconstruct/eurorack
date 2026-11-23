@@ -106,7 +106,7 @@ class SettingsRecovery {
  private:
   // Erases the sector while the other one holds a usable calibration (or,
   // with bootstrap, while none does), writes the calibration (and in the
-  // settings sector, the state) and reads it all back. Retries once.
+  // settings sector, the state) and reads it all back.
   bool RewriteSector(uint32_t sector, uint32_t other, bool bootstrap);
   bool WriteChunk(
       uint32_t address,

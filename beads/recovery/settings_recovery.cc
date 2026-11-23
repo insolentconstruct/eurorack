@@ -127,28 +127,22 @@ bool SettingsRecovery::RewriteSector(
     uint32_t sector,
     uint32_t other,
     bool bootstrap) {
+  // No retry: a second erase could hit the only copy just written.
   const uint32_t start = SectorStart(sector);
-  for (int attempt = 0; attempt < 2; ++attempt) {
-    PersistentData data;
-    if (!bootstrap && !Usable(other, &data)) {
-      return false;
-    }
-    if (EraseSector(sector) && \
-        WriteChunk(
-            start,
-            PersistentData::tag,
-            &persistent_data_,
-            sizeof(PersistentData)) && \
-        (sector != kSettingsSector || WriteChunk(
-            start + kCalibrationChunkSize,
-            State::tag,
-            &state_,
-            sizeof(State))) && \
-        Verify(sector)) {
-      return true;
-    }
-  }
-  return false;
+  PersistentData data;
+  return (bootstrap || Usable(other, &data)) && \
+      EraseSector(sector) && \
+      WriteChunk(
+          start,
+          PersistentData::tag,
+          &persistent_data_,
+          sizeof(PersistentData)) && \
+      (sector != kSettingsSector || WriteChunk(
+          start + kCalibrationChunkSize,
+          State::tag,
+          &state_,
+          sizeof(State))) && \
+      Verify(sector);
 }
 
 bool SettingsRecovery::EraseSector(uint32_t sector) {
