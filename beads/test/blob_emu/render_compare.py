@@ -61,12 +61,38 @@ RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
 PAIRS = dict([
-    (36, 0), (254, 1), (43, 2), (32, 3), (29, 4),
-    (40, 5), (37, 6), (39, 7), (41, 8), (31, 9),
-    (33, 10), (34, 11), (35, 12), (38, 13), (42, 14),
-    (44, 15), (46, 16), (47, 17), (55, 18), (58, 19),
-    (73, 20), (74, 21)] + [
-    (m, 22 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (29, 0),
+    (31, 1),
+    (32, 2),
+    (33, 3),
+    (34, 4),
+    (35, 5),
+    (36, 6),
+    (37, 7),
+    (38, 8),
+    (39, 9),
+    (40, 10),
+    (41, 11),
+    (42, 12),
+    (43, 13),
+    (44, 14),
+    (45, 15),
+    (46, 16),
+    (47, 17),
+    (49, 18),
+    (55, 19),
+    (58, 20),
+    (62, 21),
+    (70, 22),
+    (72, 23),
+    (73, 24),
+    (74, 25),
+    (77, 26),
+    (78, 27),
+    (79, 28),
+    (96, 29),
+    (254, 30)] + [
+    (m, 31 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -75,11 +101,39 @@ DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
-    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18),
-    (32, 36), (29, 32), (40, 29), (37, 40), (39, 37),
-    (41, 39), (31, 41), (33, 31), (34, 33), (35, 34),
-    (38, 35), (42, 38), (44, 42), (46, 44), (47, 46),
-    (55, 47), (58, 55), (73, 58), (74, 73)]
+    (2, 3),
+    (4, 2),
+    (13, 43),
+    (18, 36),
+    (29, 32),
+    (31, 41),
+    (32, 36),
+    (33, 31),
+    (34, 33),
+    (35, 34),
+    (37, 40),
+    (38, 35),
+    (39, 37),
+    (40, 29),
+    (41, 39),
+    (42, 38),
+    (43, 18),
+    (44, 42),
+    (45, 77),
+    (46, 44),
+    (47, 46),
+    (49, 45),
+    (55, 47),
+    (58, 55),
+    (62, 49),
+    (70, 31),
+    (72, 62),
+    (73, 58),
+    (74, 73),
+    (77, 78),
+    (78, 70),
+    (79, 72),
+    (96, 79)]
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
@@ -311,6 +365,14 @@ def drive(seed):
     for block in range(8):
       steps.append((2, 48.0 + i, i / 31.0, 0.5, block / 7.0, 0.8))
   return steps
+
+
+def note_control(model, steps):
+  if model in (45, 72, 79):
+    # Integer ramps and delay lines need sustained excitation and pitch travel.
+    return ([(1 if i == 0 else 0, 60.0, 0.5, 0.5, 0.5, 0.8)
+             for i in range(512)], 12.0)
+  return NOTE_CONTROL_STEPS.get(model, steps[:200]), 0.01
 
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
@@ -734,18 +796,19 @@ def main(argv):
   pool.close()
   pool.join()
 
-  # Each comparison must see a difference: the note nudged by 0.01.
+  # Each comparison must detect its pitch change.
   m = machine()
   m.setup(layout, digests)
   m.arena = arena_of(m)
   for model, engine in sorted(PAIRS.items()):
     m.select_blob(model)
     m.select_compiled(engine, model)
-    differ, samples, _ = compare_blocks(
-        m, engine, NOTE_CONTROL_STEPS.get(model, steps[:200]), 0x21,
-        nudge=0.01)
+    control_steps, nudge = note_control(model, steps)
+    differ, samples, _ = compare_blocks(m, engine, control_steps, 0x21,
+                                        nudge=nudge)
     results['controls'].append({'case': 'note nudged, model %d' % model,
-                                'differ': differ, 'samples': samples})
+                                'differ': differ, 'samples': samples,
+                                'semitones': nudge})
     print('control: note nudged, model %d: %d of %d differ' % (
         model, differ, samples))
     if not differ:

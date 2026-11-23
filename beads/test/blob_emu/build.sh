@@ -114,6 +114,16 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/pulsar_engine.cc $models/glisson_engine.cc $models/reed_pipe_engine.cc \
     $models/sideband_engine.cc $models/undertow_engine.cc $models/phase_flock_engine.cc \
     $models/scanned_engine.cc \
+    $models/question_mark_engine.cc \
+    $models/triple_engine.cc \
+    $models/raw_fm_engine.cc \
+    $models/toy_engine.cc \
+    $models/buzz_engine.cc \
+    $models/struck_bell_engine.cc \
+    $models/bowed_engine.cc \
+    $models/bytebeat_engine.cc \
+    $models/acid_engine.cc \
+    $models/triple_engine_data.cc \
     $models/loopback_engine.cc \
     $models/lockstep_engine.cc \
     $models/tapfield_engine.cc \
