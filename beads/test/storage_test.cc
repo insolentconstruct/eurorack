@@ -375,6 +375,53 @@ void TestRestoredCalibrationChoice() {
   }
 }
 
+// Stock rewrites a blank or invalid calibration with the factory values; a
+// module's own is never exactly those, so the mirror's comes back.
+void TestFactoryCalibrationGuard() {
+  test_checker.Start("TestFactoryCalibrationGuard");
+  const State defaults = Defaults();
+  const PersistentData calibration = Calibration(0.1f);
+  uint8_t factory[kCalibrationChunk];  // Defaults() leaves a new sector.
+  Peek(factory, kSector, sizeof(factory));
+  // With states after it, and with none (the stock rewrite cut short).
+  for (int states = 0; states < 2; ++states) {
+    const State saved = Setup(calibration, 5);
+    Poke(kSector, factory, sizeof(factory));
+    if (!states) {
+      static uint8_t blank[kSectorSize];
+      memset(blank, 255, sizeof(blank));
+      Poke(StateChunk(1), blank, kSectorSize - kCalibrationChunk);
+    }
+    static uint8_t mirror[kSectorSize];
+    Peek(mirror, kMirror, kSectorSize);
+    Settings s;
+    CHECK(s.Init(false) && !s.write_locked());
+    CHECK(SameCalibration(s, calibration));
+    CHECK(SameState(s, states ? saved : defaults));
+    static uint8_t now[kSectorSize];
+    Peek(now, kMirror, kSectorSize);
+    CHECK(!memcmp(now, mirror, kSectorSize));
+    CHECK(StockLoads(calibration, states ? saved : defaults));
+  }
+  // Factory values in both, as on a new or repaired module, or with no
+  // mirror: kept, and nothing written at each boot.
+  for (int mirror = 0; mirror < 2; ++mirror) {
+    Wipe();
+    Settings fresh;
+    fresh.Init(false);
+    if (mirror) {
+      static uint8_t blank[kSectorSize];
+      memset(blank, 255, sizeof(blank));
+      Poke(kMirror, blank, kSectorSize);
+    }
+    Take(&snapshot);
+    Settings again;
+    CHECK(again.Init(false) && !again.write_locked());
+    CHECK(SameCalibration(again, Factory()));
+    CHECK(Unchanged(snapshot));
+  }
+}
+
 void TestCalibrationLost() {
   test_checker.Start("TestCalibrationLost");
   const State defaults = Defaults();
@@ -1311,6 +1358,7 @@ int main() {
   TestReadIntoRecords();
   TestCalibrationFromMirror();
   TestRestoredCalibrationChoice();
+  TestFactoryCalibrationGuard();
   TestCalibrationLost();
   TestStateTerminator();
   TestInterruptedAppend();

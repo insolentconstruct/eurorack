@@ -10,6 +10,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 - **Behaviour change:** a recalibration more than 25% from the factory values is no longer saved. The stored calibration stays in use, in flash and in its copy, and all LEDs blink for about a second, as for a rejected calibration step. The vanilla source saved and used it.
 - The delay uses less CPU, with the same sound: the taps' SHAPE envelope is computed once per sample instead of once per tap. Not yet measured on a development board.
 - Once a failed restore at power-up had left the settings sector blank, a recalibration erased the only copy of the calibration, and a power cut during that save lost it. A usable second copy is now erased only while the settings sector holds a usable calibration (#317).
+- When an interrupted save leaves the calibration record blank or invalid, stock firmware rewrites the settings sector with the factory calibration; back on this firmware, the next settings rewrite then replaced the second copy, the module's own calibration, with those values. Exact factory values in the settings sector now give way to a different usable copy at power-up (#370).
 - Flash records are read with a byte copy, which needs no word alignment; storage only, no change to the sound (#315).
 - Notes: the 2026.11.20 entry below had the 48 kHz and 24 kHz clean edges swapped; corrected here and in OPTIMIZATIONS.md.
 - Host tests: the test build directory is created before its dependency files, which a parallel build could otherwise fail to write.
