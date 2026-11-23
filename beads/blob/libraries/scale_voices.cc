@@ -1,6 +1,7 @@
 // Copyright 2012 Emilie Gillet.
 // Copyright 2018 Tom Burns.
 // Copyright 2026 Lyle Mills.
+// Copyright 2026 Insolent Construct.
 // SPDX-License-Identifier: MIT
 //
 // Shared scale-degree machinery for the two Braids Renaissance ports.
