@@ -101,6 +101,8 @@ INNER = (('_Z7Process', 'Process'),
 # Globals used only to label phases; a candidate may lack them.
 LABELS = ('codec_transition_frames', 'reverb_style_gain',
           'reverb_style_previous_gain', 'synth_mode')
+# Compatibility names for tools reading state moved into the transition.
+TRANSITION_MEMBERS = LABELS[:-1] + ('playing_synth',)
 
 
 def thumb_length(halfword):
@@ -130,7 +132,7 @@ class Image(object):
         self.sym.setdefault(s.name, s['st_value'] & ~thumb)
     self.offsets = self.member_offsets(elf)
     if 'transition' in self.sym:
-      for label in LABELS[:-1]:
+      for label in TRANSITION_MEMBERS:
         self.sym[label] = self.sym['transition'] + \
             self.offsets['EngineTransition'][label + '_']
 
@@ -140,7 +142,7 @@ class Image(object):
     if any('GestureController' in name for name in self.sym):
       members['GestureController'] = ('trim_flag_',)
     if 'transition' in self.sym:
-      members['EngineTransition'] = tuple(n + '_' for n in LABELS[:-1])
+      members['EngineTransition'] = tuple(n + '_' for n in TRANSITION_MEMBERS)
     for cu in elf.get_dwarf_info().iter_CUs():
       top = cu.get_top_DIE()
       name = top.attributes.get('DW_AT_name')
