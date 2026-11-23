@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "66a813e5356f68a8b532a273021617e7ad057f238ac3f7b2cb4c518bf905b26a",
+  "manifest_sha256": "2200e54099212e9965ffbe9ce0aeb2c48d8688f61f52ec1a8a9c5597a5a6d78f",
   "record_version": 1,
   "features": [
     {
@@ -2102,6 +2102,10 @@
       "id": 48,
       "name": "Fold",
       "palette": "fold",
+      "family": "Waveshaping",
+      "blob_size": 3752,
+      "state_size": 44,
+      "arena_size": 2056,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2154,6 +2158,10 @@
       "id": 53,
       "name": "Noise Bank",
       "palette": "noise-bank",
+      "family": "Noise",
+      "blob_size": 9812,
+      "state_size": 348,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2278,6 +2286,10 @@
       "id": 64,
       "name": "Kick",
       "palette": "kick",
+      "family": "Drums",
+      "blob_size": 3392,
+      "state_size": 52,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2286,6 +2298,10 @@
       "id": 65,
       "name": "Snare",
       "palette": "snare",
+      "family": "Drums",
+      "blob_size": 4892,
+      "state_size": 108,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2294,6 +2310,10 @@
       "id": 66,
       "name": "Cymbal",
       "palette": "cymbal",
+      "family": "Drums",
+      "blob_size": 3800,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2310,11 +2330,14 @@
       "id": 68,
       "name": "Wave Paraphonic",
       "palette": "wave-paraphonic",
+      "family": "Polyphonic",
+      "blob_size": 3576,
+      "state_size": 80,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": [
-        1,
-        2
+        1
       ]
     },
     {
@@ -2389,6 +2412,10 @@
       "id": 75,
       "name": "Saw Comb",
       "palette": "saw-comb",
+      "family": "Feedback",
+      "blob_size": 3468,
+      "state_size": 56,
+      "arena_size": 8192,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2442,6 +2469,10 @@
       "id": 80,
       "name": "Diatonic Chord",
       "palette": "diatonic-chord",
+      "family": "Polyphonic",
+      "blob_size": 668,
+      "state_size": 68,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [
@@ -2452,6 +2483,10 @@
       "id": 81,
       "name": "Scale Stack",
       "palette": "scale-stack",
+      "family": "Polyphonic",
+      "blob_size": 492,
+      "state_size": 68,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [
@@ -2462,6 +2497,10 @@
       "id": 82,
       "name": "Wavetable Diatonic Chord",
       "palette": "wavetable-chord",
+      "family": "Polyphonic",
+      "blob_size": 744,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [
@@ -2474,6 +2513,10 @@
       "id": 83,
       "name": "Wavetable Scale Stack",
       "palette": "wavetable-scale-stack",
+      "family": "Polyphonic",
+      "blob_size": 568,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [
@@ -2584,6 +2627,10 @@
       "id": 92,
       "name": "Freshets Formant",
       "palette": "freshets-formant",
+      "family": "Formant",
+      "blob_size": 3740,
+      "state_size": 84,
+      "arena_size": 0,
       "credit": "Dylan Bolink",
       "licence": "MIT",
       "libraries": []
@@ -2647,6 +2694,10 @@
       "id": 98,
       "name": "Speech Sounds",
       "palette": "formant-speech",
+      "family": "Vocal",
+      "blob_size": 4948,
+      "state_size": 352,
+      "arena_size": 192,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": [
@@ -2657,6 +2708,10 @@
       "id": 99,
       "name": "LPC Words",
       "palette": "lpc-speech",
+      "family": "Vocal",
+      "blob_size": 6336,
+      "state_size": 244,
+      "arena_size": 14464,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": [

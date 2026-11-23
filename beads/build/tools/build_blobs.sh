@@ -29,12 +29,18 @@
 set -euo pipefail
 out=${1:?usage: build_blobs.sh OUT}
 blob=beads/blob
+libm=$blob/libm
 speech=plaits/dsp/speech
 build() {
   bash beads/build/tools/build_blob.sh "$out" "$@"
 }
 build plaits_wavetables $blob/libraries/plaits_wavetables.cc \
   beads/plaits_resources.cc
+build scale_voices_library $blob/libraries/scale_voices_library.cc \
+  $blob/libraries/scale_voices.cc
+build wavetable_scale_voices_library --library "$out/plaits_wavetables.bin" \
+  $blob/libraries/wavetable_scale_voices_library.cc \
+  $blob/libraries/wavetable_scale_voices.cc
 build speech_library $blob/libraries/speech_library.cc \
   $speech/naive_speech_synth.cc $speech/sam_speech_synth.cc \
   $speech/lpc_speech_synth.cc $speech/lpc_speech_synth_controller.cc \
@@ -131,6 +137,58 @@ build chords_supersaw $blob/models/chords_supersaw.cc \
   $blob/models/chords_supersaw_engine.cc \
   $blob/models/palette_chord_bank.cc \
   beads/plaits_resources.cc
+build fold $blob/models/fold.cc $blob/models/fold_engine.cc \
+  beads/plaits_resources.cc
+build noise_bank $blob/models/noise_bank.cc $blob/models/noise_bank_engine.cc \
+  $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
+  $libm/libgcc/convert.S
+build kick $blob/models/kick.cc $blob/models/kick_engine.cc \
+  $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
+  $libm/libgcc/convert.S
+build snare $blob/models/snare.cc $blob/models/snare_engine.cc \
+  $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
+  $libm/libgcc/convert.S
+build cymbal $blob/models/cymbal.cc $blob/models/cymbal_engine.cc \
+  $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
+  $libm/libgcc/convert.S
+build wave_paraphonic --library "$out/plaits_wavetables.bin" \
+  $blob/models/wave_paraphonic.cc $blob/models/wave_paraphonic_engine.cc
+build saw_comb $blob/models/saw_comb.cc $blob/models/saw_comb_engine.cc \
+  $libm/sf_tanh.c $libm/sf_expm1.c $libm/math_errf_no_errno.c
+build diatonic_chord --library "$out/scale_voices_library.bin" \
+  $blob/models/diatonic_chord.cc $blob/models/diatonic_chord_engine.cc \
+  $blob/libraries/scale_voices_imports.cc
+build scale_stack --library "$out/scale_voices_library.bin" \
+  $blob/models/scale_stack.cc $blob/models/scale_stack_engine.cc \
+  $blob/libraries/scale_voices_imports.cc
+build wavetable_chord --library "$out/plaits_wavetables.bin" \
+  --library "$out/scale_voices_library.bin" \
+  --library "$out/wavetable_scale_voices_library.bin" \
+  $blob/models/wavetable_chord.cc $blob/models/wavetable_chord_engine.cc \
+  $blob/libraries/scale_voices_imports.cc \
+  $blob/libraries/wavetable_scale_voices_imports.cc
+build wavetable_scale_stack --library "$out/plaits_wavetables.bin" \
+  --library "$out/scale_voices_library.bin" \
+  --library "$out/wavetable_scale_voices_library.bin" \
+  $blob/models/wavetable_scale_stack.cc $blob/models/wavetable_scale_stack_engine.cc \
+  $blob/libraries/scale_voices_imports.cc \
+  $blob/libraries/wavetable_scale_voices_imports.cc
+build freshets_formant $blob/models/freshets_formant.cc \
+  $blob/models/freshets_formant_engine.cc beads/plaits_resources.cc
+build speech_sounds --library "$out/speech_library.bin" \
+  $blob/models/speech_sounds.cc \
+  $blob/models/speech_sounds_engine.cc \
+  $blob/models/speech_sounds_controller.cc \
+  $blob/models/speech_sounds_lpc.cc \
+  $blob/models/speech_sounds_phonemes.cc \
+  $blob/libraries/speech_imports.cc beads/plaits_resources.cc
+build lpc_words --library "$out/speech_library.bin" \
+  $blob/models/lpc_words.cc \
+  $blob/models/lpc_words_engine.cc \
+  $blob/models/lpc_words_controller.cc \
+  $blob/models/lpc_words_synth.cc \
+  $blob/models/lpc_words_word_bank.cc \
+  $blob/libraries/speech_imports.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

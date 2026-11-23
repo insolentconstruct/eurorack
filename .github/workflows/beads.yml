@@ -69,12 +69,13 @@ jobs:
           mkdir -p blob-out
           docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
             --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/blob-out,dst=/out" drizzlet \
-            bash -c 'bash beads/test/blob_emu/build.sh /out/emu && bash beads/build/tools/blob_gate_test.sh /out/negative'
+            bash -c 'bash beads/test/blob_emu/build.sh /out/emu && bash beads/build/tools/blob_gate_test.sh /out/negative && bash beads/test/libm_blob_emu/build.sh /out/libm'
       - name: Compare blob and compiled-in renders under the Cortex-M7 emulator
         run: |
           python3 -m venv "$RUNNER_TEMP/emu"
           "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
           "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/render_compare.py blob-out/emu
+          "$RUNNER_TEMP/emu/bin/python" beads/test/libm_blob_emu/compare.py blob-out/libm
       - name: Check the Rings synth's source against vanilla Rings, gate its blob, build the references
         run: |
           mkdir -p rings-out

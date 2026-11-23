@@ -80,42 +80,56 @@ PAIRS = dict([
     (45, 16),
     (46, 17),
     (47, 18),
-    (49, 19),
-    (50, 20),
-    (52, 21),
-    (54, 22),
-    (55, 23),
-    (56, 24),
-    (57, 25),
-    (58, 26),
-    (60, 27),
-    (61, 28),
-    (62, 29),
-    (63, 30),
-    (69, 31),
-    (70, 32),
-    (72, 33),
-    (73, 34),
-    (74, 35),
-    (77, 36),
-    (78, 37),
-    (79, 38),
-    (84, 39),
-    (85, 40),
-    (86, 41),
-    (87, 42),
-    (88, 43),
-    (89, 44),
-    (90, 45),
-    (91, 46),
-    (93, 47),
-    (96, 48),
-    (97, 49),
-    (254, 50)] + [
-    (m, 51 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (48, 19),
+    (49, 20),
+    (50, 21),
+    (52, 22),
+    (53, 23),
+    (54, 24),
+    (55, 25),
+    (56, 26),
+    (57, 27),
+    (58, 28),
+    (60, 29),
+    (61, 30),
+    (62, 31),
+    (63, 32),
+    (64, 33),
+    (65, 34),
+    (66, 35),
+    (68, 36),
+    (69, 37),
+    (70, 38),
+    (72, 39),
+    (73, 40),
+    (74, 41),
+    (75, 42),
+    (77, 43),
+    (78, 44),
+    (79, 45),
+    (80, 46),
+    (81, 47),
+    (82, 48),
+    (83, 49),
+    (84, 50),
+    (85, 51),
+    (86, 52),
+    (87, 53),
+    (88, 54),
+    (89, 55),
+    (90, 56),
+    (91, 57),
+    (92, 58),
+    (93, 59),
+    (96, 60),
+    (97, 61),
+    (98, 62),
+    (99, 63),
+    (254, 64)] + [
+    (m, 65 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
-DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
+DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83, 98, 99)
 # Clamped blobs may differ only where terrain_probe.h counts out-of-range
 # lookups; Wave terrain 5-7 clamp wave and sample positions to the bank.
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
@@ -143,9 +157,11 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (45, 77),
     (46, 44),
     (47, 46),
+    (48, 64),
     (49, 45),
     (50, 30),
     (52, 30),
+    (53, 64),
     (54, 30),
     (55, 47),
     (56, 30),
@@ -155,14 +171,23 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (61, 30),
     (62, 49),
     (63, 30),
+    (64, 31),
+    (65, 64),
+    (66, 64),
+    (68, 64),
     (69, 30),
     (70, 31),
     (72, 62),
     (73, 58),
     (74, 73),
+    (75, 64),
     (77, 78),
     (78, 70),
     (79, 72),
+    (80, 64),
+    (81, 64),
+    (82, 64),
+    (83, 64),
     (84, 30),
     (85, 30),
     (86, 30),
@@ -171,14 +196,17 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (89, 30),
     (90, 30),
     (91, 30),
+    (92, 64),
     (93, 30),
     (96, 79),
-    (97, 30)]
+    (97, 30),
+    (98, 64),
+    (99, 64)]
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
-FRESH_ON_RESELECT = (56, 93, 97)
+FRESH_ON_RESELECT = (53, 56, 92, 93, 97, 98, 99)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -711,6 +739,10 @@ def switch_run(pair):
                for p in policy['phases']):
           raise RuntimeError('fresh-reselection policy violated')
       run['fresh_policy'] = policy_runs
+      fresh['fresh_differ'] = run['fresh_differ']
+      fresh['retained_differ'] = [p['differ'] for p in run['phases']]
+      fresh['return_policy'] = 'fresh'
+      return fresh
     return run
   except RuntimeError as e:
     return {'sequence': [pair[0], pair[1], pair[0]], 'error': str(e)}
@@ -736,6 +768,13 @@ def switch_compare(first, second, fresh, base, fpscr):
             for block in range(7000)]
     returned = [(2, 72.0, 0.8, 0.9, 0.75, 0.8)] * 1024
     parts = ((first, held), (second, sequence[100:200]), (first, returned))
+  if first == 53:
+    # The return lies inside the hysteresis band after warming branch 1.
+    warm = [(5 if i == 0 else 4, 60.0, 0.5, 0.7, 0.5, 0.8)
+            for i in range(64)]
+    back = [(5 if i == 0 else 4, 60.0, 1.0 / 3.0, 0.7, 0.5, 0.8)
+            for i in range(512)]
+    parts = ((first, warm), (second, sequence[100:200]), (first, back))
   for model, part in parts:
     before = m.word(RANDOM_STATE)
     if model == 56:
@@ -859,6 +898,12 @@ def main(argv):
         p['model'] == first and not p['out_peak'] for p in phases):
       failures.append('model %d: silent switch fixture' % first)
     results['switches'].append(switch)
+    if first in FRESH_ON_RESELECT:
+      if switch.get('return_policy') != 'fresh' or phases[2]['differ']:
+        failures.append('model %d: return must equal a fresh engine' % first)
+      if not switch.get('retained_differ', [0, 0, 0])[2]:
+        failures.append('model %d: warm reference did not exercise retained '
+                        'state' % first)
     if any(switch['fresh_differ']):
       failures.append('switch %d->%d: a rebuilt blob differs from the '
                       'engine built afresh: %s' % (first, second,
@@ -1111,12 +1156,18 @@ def main(argv):
   needed = align(len(libraries) * 68) + sum(align(ram_of(i))
                                             for i in library_ids)
   last_with_ram = [i for i in library_ids if ram_of(i)][-1]
+  # No budget refuses the records too; library 6 first loses dependency 1.
+  no_ram = expect(library_ids, 'RAM')
+  if 6 in library_ids:
+    no_ram[('library', 6)] = 'DEPENDENCY'
+  # Later zero-state libraries still exceed the cumulative reservation.
+  short_ram = library_ids[library_ids.index(last_with_ram):]
   speech_library = names.index(3)
   library_cases = [
       ('library RAM not given', {'library_ram': 0}, 'RAM',
-       expect(library_ids, 'RAM')),
+       no_ram),
       ('library RAM one byte short', {'library_ram': needed - 1}, 'RAM',
-       expect([last_with_ram], 'RAM')),
+       expect(short_ram, 'RAM')),
       ('speech library not listed', {'digests': digests[:speech_library] +
                                      digests[speech_library + 1:]}, 'DIGEST',
        expect([3], 'DIGEST')),

@@ -157,6 +157,27 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/saw_swarm_engine.cc \
     $models/bubbletime_engine.cc \
     $models/chords_supersaw_engine.cc \
+    $models/kick_engine.cc \
+    $models/snare_engine.cc \
+    $models/cymbal_engine.cc \
+    $models/saw_comb_engine.cc \
+    $models/wave_paraphonic_engine.cc \
+    $models/wavetable_chord_engine.cc \
+    beads/blob/libraries/scale_voices.cc \
+    beads/blob/libraries/wavetable_scale_voices.cc \
+    $models/fold_engine.cc \
+    $models/wavetable_scale_stack_engine.cc \
+    $models/diatonic_chord_engine.cc \
+    $models/scale_stack_engine.cc \
+    $models/noise_bank_engine.cc \
+    $models/freshets_formant_engine.cc \
+    $models/speech_sounds_engine.cc \
+    $models/speech_sounds_controller.cc \
+    $models/speech_sounds_lpc.cc \
+    $models/speech_sounds_phonemes.cc \
+    $models/lpc_words_engine.cc \
+    $models/lpc_words_controller.cc \
+    $models/lpc_words_synth.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \
