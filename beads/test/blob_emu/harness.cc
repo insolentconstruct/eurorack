@@ -49,6 +49,7 @@
 #include "beads/blob/models/triple_engine.h"
 #include "beads/blob/models/raw_fm_engine.h"
 #include "beads/blob/models/buzz_engine.h"
+#include "beads/blob/models/struck_bell_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -112,7 +113,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 14;
+const size_t kFirstStock = 15;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -167,6 +168,9 @@ static uint8_t raw_fm_storage[sizeof(RawFmEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t buzz_storage[sizeof(BuzzEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t struck_bell_storage[sizeof(StruckBellEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -284,6 +288,8 @@ static void BuildProof() {
       &raw_fm_storage[sizeof(raw_fm_storage)], 0);
   std::fill(&buzz_storage[0],
       &buzz_storage[sizeof(buzz_storage)], 0);
+  std::fill(&struck_bell_storage[0],
+      &struck_bell_storage[sizeof(struck_bell_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -299,6 +305,7 @@ static void BuildProof() {
   compiled[11] = new(triple_storage) TripleEngine;
   compiled[12] = new(raw_fm_storage) RawFmEngine;
   compiled[13] = new(buzz_storage) BuzzEngine;
+  compiled[14] = new(struck_bell_storage) StruckBellEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
