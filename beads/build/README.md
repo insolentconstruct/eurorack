@@ -142,7 +142,7 @@ Plaits synth banks: FEEDBACK selects one of the eight models of the current bank
 
 ## Saved data
 
-Stock settings, Beta 2 settings and calibration carry over; options, width and diffusion from Beta 1 and earlier reset to profile defaults. Frozen buffers remain stock-compatible. Disable monophonic grains before downgrading. Stock clears Drizzlet options when saving and loads trimmed buffers full-length; earlier Drizzlet reads new settings as stock.
+Stock settings and calibration carry over; Drizzlet options, width and diffusion from earlier releases, Beta 2 and 3 included, reset to profile defaults. Frozen buffers remain stock-compatible. Disable monophonic grains before downgrading. Stock ignores Drizzlet options and loads trimmed buffers full-length; earlier Drizzlet reads new settings as stock.
 
 ## Reset and recovery
 
