@@ -119,7 +119,7 @@ Grain stealing follows the 2021 and 2024 firmware by default; a Hygrostat profil
 
 In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make DENSITY crossfade to a new delay time instead of bending the pitch ([Delay time](FEATURES.md#delay-time)).
 
-A Hygrostat profile can add Rings' modal resonator after the grains or before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it and Attacks hits strike it.
+Resonator, on page 5, places Rings' modal resonator after the grains or before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it and Attacks hits strike it.
 
 Frozen feedback Evolving runs frozen grains, or frozen delay slices in delay mode, through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
