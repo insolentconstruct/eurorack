@@ -49,6 +49,7 @@
 #include "beads/blob/models/lockstep_engine.h"
 #include "beads/blob/models/tapfield_engine.h"
 #include "beads/blob/models/attractor_engine.h"
+#include "beads/blob/models/rulefield_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -112,7 +113,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 14;
+const size_t kFirstStock = 15;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -167,6 +168,9 @@ static uint8_t tapfield_storage[sizeof(TapfieldEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t attractor_storage[sizeof(AttractorEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t rulefield_storage[sizeof(RulefieldEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -284,6 +288,8 @@ static void BuildProof() {
       &tapfield_storage[sizeof(tapfield_storage)], 0);
   std::fill(&attractor_storage[0],
       &attractor_storage[sizeof(attractor_storage)], 0);
+  std::fill(&rulefield_storage[0],
+      &rulefield_storage[sizeof(rulefield_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -299,6 +305,7 @@ static void BuildProof() {
   compiled[11] = new(lockstep_storage) LockstepEngine;
   compiled[12] = new(tapfield_storage) TapfieldEngine;
   compiled[13] = new(attractor_storage) AttractorEngine;
+  compiled[14] = new(rulefield_storage) RulefieldEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
