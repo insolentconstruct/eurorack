@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "f93a7167e5f06376303b19512ec02aa03a2c0e363c0661ecb37900c8e7de1298",
+  "manifest_sha256": "5054293aaa67cac72e35cea62f1af732095e613a85936b47c8123b394816fba8",
   "record_version": 1,
   "features": [
     {
@@ -2402,6 +2402,10 @@
       "id": 84,
       "name": "Shakers",
       "palette": "shakers",
+      "family": "Percussion",
+      "blob_size": 9216,
+      "state_size": 296,
+      "arena_size": 0,
       "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
       "licence": "MIT",
       "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
