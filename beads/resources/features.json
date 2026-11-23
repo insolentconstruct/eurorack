@@ -1238,6 +1238,10 @@
       "id": 37,
       "name": "Sideband Bank",
       "palette": "sideband-bank",
+      "family": "Additive",
+      "blob_size": 2756,
+      "state_size": 8,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
