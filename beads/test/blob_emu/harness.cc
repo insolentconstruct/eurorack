@@ -57,6 +57,7 @@
 #include "beads/blob/models/diatonic_chord_engine.h"
 #include "beads/blob/models/scale_stack_engine.h"
 #include "beads/blob/models/noise_bank_engine.h"
+#include "beads/blob/models/freshets_formant_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -120,7 +121,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 21;
+const size_t kFirstStock = 22;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -196,6 +197,9 @@ static uint8_t scale_stack_storage[sizeof(ScaleStackEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t noise_bank_storage[sizeof(NoiseBankEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t freshets_formant_storage[sizeof(FreshetsFormantEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -322,6 +326,8 @@ static void BuildProof() {
       &scale_stack_storage[sizeof(scale_stack_storage)], 0);
   std::fill(&noise_bank_storage[0], &noise_bank_storage[sizeof(
       noise_bank_storage)], 0);
+  std::fill(&freshets_formant_storage[0], &freshets_formant_storage[sizeof(
+      freshets_formant_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -344,6 +350,7 @@ static void BuildProof() {
   compiled[18] = new(diatonic_chord_storage) DiatonicChordEngine;
   compiled[19] = new(scale_stack_storage) ScaleStackEngine;
   compiled[20] = new(noise_bank_storage) NoiseBankEngine;
+  compiled[21] = new(freshets_formant_storage) FreshetsFormantEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

@@ -91,6 +91,8 @@ build wavetable_scale_stack --library "$out/plaits_wavetables.bin" \
   $blob/models/wavetable_scale_stack.cc $blob/models/wavetable_scale_stack_engine.cc \
   $blob/libraries/scale_voices_imports.cc \
   $blob/libraries/wavetable_scale_voices_imports.cc
+build freshets_formant $blob/models/freshets_formant.cc \
+  $blob/models/freshets_formant_engine.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

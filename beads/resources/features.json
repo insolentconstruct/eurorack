@@ -1746,6 +1746,10 @@
       "id": 92,
       "name": "Freshets Formant",
       "palette": "freshets-formant",
+      "family": "Formant",
+      "blob_size": 3740,
+      "state_size": 84,
+      "arena_size": 0,
       "credit": "Dylan Bolink",
       "licence": "MIT",
       "libraries": []
