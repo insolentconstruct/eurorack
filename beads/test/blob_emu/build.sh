@@ -111,6 +111,7 @@ physical=plaits/dsp/physical_modelling
 for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     beads/blob/plaits_region.cc beads/blob/plaits_libraries.cc \
     $models/phase_weave_engine.cc $models/spectral_spiral_engine.cc \
+    $models/pulsar_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \
