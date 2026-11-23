@@ -49,6 +49,9 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned gendy; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
+build dual_sync $blob/models/dual_sync.cc \
+  $blob/models/dual_sync_engine.cc \
+  beads/plaits_resources.cc
 build particle_burst $blob/models/particle_burst.cc \
   $blob/models/particle_burst_engine.cc \
   beads/plaits_resources.cc
