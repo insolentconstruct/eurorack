@@ -116,6 +116,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/scanned_engine.cc \
     $models/question_mark_engine.cc \
     $models/triple_engine.cc \
+    $models/raw_fm_engine.cc \
     $models/triple_engine_data.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \

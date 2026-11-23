@@ -1583,6 +1583,10 @@
       "id": 77,
       "name": "Raw FM",
       "palette": "raw-fm",
+      "family": "FM",
+      "blob_size": 1328,
+      "state_size": 12,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
