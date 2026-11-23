@@ -82,17 +82,21 @@ bool Settings::Init(bool recovery_mode) {
   chunk_storage_.set_calibration_check(&CalibrationPlausible, &factory_);
   StorageStatus status = chunk_storage_.Init(&persistent_data_, &state_);
   
-  // A lost or implausible calibration comes back from the mirror, the
-  // module's own calibration, with the states that loaded. Chosen before
-  // anything is written, so a worse calibration never replaces the mirror.
+  // A lost, implausible or exactly factory calibration comes back from the
+  // mirror with the loaded states, before anything is written.
   const bool lost = status == STORAGE_CALIBRATION_LOST;
-  const bool implausible = \
-      (status == STORAGE_OK || status == STORAGE_RESTORED) && \
+  const bool loaded = status == STORAGE_OK || status == STORAGE_RESTORED;
+  const bool implausible = loaded && \
       !CalibrationPlausible(persistent_data_, factory);
+  const bool factory_values = loaded && \
+      !memcmp(persistent_data_.adc_calibration, factory.adc_calibration,
+          sizeof(factory.adc_calibration));
   PersistentData mirror;
-  if ((lost || implausible) && \
+  if ((lost || implausible || factory_values) && \
       chunk_storage_.ReadMirror(&mirror) && \
-      CalibrationPlausible(mirror, factory)) {
+      CalibrationPlausible(mirror, factory) && \
+      (!factory_values || memcmp(mirror.adc_calibration,
+          factory.adc_calibration, sizeof(mirror.adc_calibration)))) {
     persistent_data_ = mirror;
     if (recovery_mode) {
       state_ = defaults;
