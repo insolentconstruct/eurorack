@@ -935,12 +935,18 @@ def main(argv):
   needed = align(len(libraries) * 68) + sum(align(ram_of(i))
                                             for i in library_ids)
   last_with_ram = [i for i in library_ids if ram_of(i)][-1]
+  # No budget refuses the records too; library 6 first loses dependency 1.
+  no_ram = expect(library_ids, 'RAM')
+  if 6 in library_ids:
+    no_ram[('library', 6)] = 'DEPENDENCY'
+  # Later zero-state libraries still exceed the cumulative reservation.
+  short_ram = library_ids[library_ids.index(last_with_ram):]
   speech_library = names.index(3)
   library_cases = [
       ('library RAM not given', {'library_ram': 0}, 'RAM',
-       expect(library_ids, 'RAM')),
+       no_ram),
       ('library RAM one byte short', {'library_ram': needed - 1}, 'RAM',
-       expect([last_with_ram], 'RAM')),
+       expect(short_ram, 'RAM')),
       ('speech library not listed', {'digests': digests[:speech_library] +
                                      digests[speech_library + 1:]}, 'DIGEST',
        expect([3], 'DIGEST')),
