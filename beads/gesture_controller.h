@@ -78,9 +78,9 @@ class GestureController {
 
   Ui* ui_;
   Settings* settings_;
-  ProfileFeature amount_feature_[MIX_PARAMETER_LAST];
   BankCue cue_;
   uint32_t cue_time_;
+  ProfileFeature amount_feature_[MIX_PARAMETER_LAST];
   bool trim_flag_;
   bool self_play_requested_;
   static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
