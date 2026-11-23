@@ -184,8 +184,14 @@ void Processor::ProcessOptions(
     FloatFrame resonated[resonator ? size : 1];
     const FloatFrame* recorded = in;
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_INPUT)) {
-      copy(&in[0], &in[size], &resonated[0]);
-      ProcessResonator(parameters.pitch, strike, resonated, size);
+      // Both flags: in the feedback.
+      if (options_ & OPTION_FLAG_RESONATOR_GRAINS) {
+        loop_feedback = RecordResonance(
+            loop_feedback, delay_mode, in, resonated, size);
+      } else {
+        copy(&in[0], &in[size], &resonated[0]);
+        ProcessResonator(parameters.pitch, strike, resonated, size);
+      }
       recorded = resonated;
     }
     switch (media_) {
@@ -208,7 +214,11 @@ void Processor::ProcessOptions(
     }
     QuantizeDrySignal(in, dry_signal, size);
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
-      ProcessResonator(parameters.pitch, strike, out, size);
+      if (options_ & OPTION_FLAG_RESONATOR_INPUT) {
+        ProcessResonatorLoop(parameters.pitch, strike, out, size);
+      } else {
+        ProcessResonator(parameters.pitch, strike, out, size);
+      }
     }
     if (evolving_feedback_ || !feedback_diffuser_.idle()) {
       feedback_diffuser_.Process(

@@ -36,6 +36,8 @@
 
 #define private public
 #include "beads/dsp/processor.h"
+#include "stmlib/dsp/cosine_oscillator.h"
+#include "stmlib/dsp/filter.h"
 #undef private
 #include "beads/test/test_checker.h"
 
@@ -1174,6 +1176,613 @@ void TestResonatorLimiterAtRest() {
   CHECK(WithinOneDecibel(StrikePeak(), rested));
 }
 
+// An object with every mode silent.
+ResonatorModes kSilentModes;
+
+// The bank's modes, rebuilt from Process's own rules for the bound test:
+// frequency, Q and level, per side; levels are 0 past Nyquist.
+struct Mode {
+  float f;
+  float q;
+  float a;
+};
+
+void BankModes(const ResonatorControls& c, float frequency,
+    Mode modes[2][kNumResonatorModes / 2]) {
+  const float q = 500.0f * Interpolate(rings::lut_4_decades, c.damping, 256.0f);
+  CosineOscillator amplitudes;
+  amplitudes.Init<COSINE_OSCILLATOR_APPROXIMATE>(c.position);
+  if (c.modes) {
+    for (int i = 0; i < kNumResonatorModes / 2; ++i) {
+      const float pickup = amplitudes.Next() * 0.125f;
+      for (int side = 0; side < 2; ++side) {
+        const int e = 2 * i + side;
+        Mode& m = modes[side][i];
+        m.f = frequency * c.modes->ratio[e];
+        m.a = m.f >= 0.49f ? 0.0f : pickup * c.modes->gain[e];
+        m.f = std::min(m.f, 0.49f);
+        m.q = 1.0f + m.f * q * c.modes->decay[e];
+      }
+    }
+    return;
+  }
+  float stiffness = Interpolate(rings::lut_stiffness, c.structure, 256.0f);
+  float stretch = 1.0f;
+  float mode_q = q;
+  float attenuation = 1.0f - c.structure;
+  attenuation *= attenuation;
+  attenuation *= attenuation;
+  attenuation *= attenuation;
+  const float b = c.brightness * (1.0f - 0.2f * attenuation);
+  float q_loss = b * (2.0f - b) * 0.85f + 0.15f;
+  const float rate = c.structure * (2.0f - c.structure) * 0.1f;
+  for (int i = 0; i < kNumResonatorModes; ++i) {
+    Mode& m = modes[i & 1][i >> 1];
+    m.f = frequency * float(i + 1) * stretch;
+    m.a = amplitudes.Next() * 0.125f;
+    if (m.f >= 0.49f) {
+      m.f = 0.49f;
+      m.a = 0.0f;
+    }
+    m.q = 1.0f + m.f * mode_q;
+    stretch += stiffness;
+    stiffness *= stiffness < 0.0f ? 0.93f : 0.98f;
+    q_loss += rate * (1.0f - q_loss);
+    mode_q *= q_loss;
+  }
+}
+
+// |H| of one side at w (radians per sample): TPT band-passes, as Plaits'
+// ResonatorSvf, each u / (u^2 + u / Q + 1) with u = j tan(w / 2) / g.
+double SideGain(const Mode* modes, double w) {
+  double re = 0.0;
+  double im = 0.0;
+  const double t = tan(0.5 * w);
+  for (int i = 0; i < kNumResonatorModes / 2; ++i) {
+    if (modes[i].a == 0.0f) {
+      continue;
+    }
+    const double g = OnePole::tan<FREQUENCY_FAST>(modes[i].f);
+    const double u = t / g;
+    // u j / (1 - u^2 + j u / Q)
+    const double dr = 1.0 - u * u;
+    const double di = u / modes[i].q;
+    const double d = dr * dr + di * di;
+    re += modes[i].a * (u * di) / d;
+    im += modes[i].a * (u * dr) / d;
+  }
+  return sqrt(re * re + im * im);
+}
+
+// The largest |H| of either side, around every mode's peak and between.
+double BankGain(Mode modes[2][kNumResonatorModes / 2]) {
+  double sup = 0.0;
+  for (int side = 0; side < 2; ++side) {
+    for (int i = 0; i < kNumResonatorModes / 2; ++i) {
+      const Mode& m = modes[side][i];
+      if (m.a == 0.0f) {
+        continue;
+      }
+      // The peak is at tan(w / 2) = g; look within four bandwidths of it.
+      const double g = OnePole::tan<FREQUENCY_FAST>(m.f);
+      for (int k = -64; k <= 64; ++k) {
+        const double t = g * (1.0 + double(k) / (16.0 * m.q));
+        if (t > 0.0) {
+          sup = std::max(sup, SideGain(modes[side], 2.0 * atan(t)));
+        }
+      }
+    }
+    for (int k = 1; k < 2000; ++k) {
+      const double w = M_PI * pow(1.0e-4, 1.0 - double(k) / 2000.0);
+      sup = std::max(sup, SideGain(modes[side], w));
+    }
+  }
+  return sup;
+}
+
+ResonatorBound BoundOf(const ResonatorControls& c) {
+  ResonatorBound b;
+  ModalResonator::Bound(c.structure, c.brightness, c.position, c.modes, &b);
+  return b;
+}
+
+// The bank as the loop sees it, at a note and rate.
+void SetUpBank(ModalResonator* bank, const ResonatorControls& c, float rate,
+    int note) {
+  bank->Init(rate);
+  bank->set_structure(c.structure);
+  bank->set_brightness(c.brightness);
+  bank->set_damping(c.damping);
+  bank->set_position(c.position);
+  bank->set_modes(c.modes);
+  bank->set_frequency(SemitonesToRatio(float(note) - 69.0f) * 440.0f / rate);
+}
+
+// The loop's bound is never under the bank's gain at any frequency: every
+// Material, struck, Ring time and damping's ends, C0 to C8, three rates.
+void TestResonatorLoopBound() {
+  test_checker.Start("TestResonatorLoopBound");
+  static ModalResonator bank;
+  const float rates[3] = { 48000.0f, 32000.0f, 24000.0f };
+  const float dampings[6] = {
+    0.0f, kResonatorRingTimes[0], kResonatorRingTimes[1],
+    kResonatorRingTimes[2], kResonatorRingTimes[3], 0.9995f
+  };
+  for (int r = 0; r < 3; ++r) {
+    for (int m = 0; m < kNumResonatorMaterials; ++m) {
+      for (int d = 0; d < 6; ++d) {
+        for (int note = 12; note <= 108; note += 24) {
+          ResonatorControls c = Controls(m, 1);
+          c.damping = dampings[d];
+          SetUpBank(&bank, c, rates[r], note);
+          // Drum and Gong just struck: at the start of their glide.
+          bank.Strike();
+          bank.LoopGain(BoundOf(c), 12);
+          Mode modes[2][kNumResonatorModes / 2];
+          BankModes(c, bank.frequency_ * (1.0f + bank.glide_), modes);
+          const double sup = BankGain(modes);
+          CHECK(sup <= bank.peak_gain_);
+          // Close to it where the modes stand apart.
+          if (note == 60 && d >= 2 && d <= 4) {
+            CHECK(sup >= bank.peak_gain_ * 0.5);
+          }
+        }
+      }
+    }
+  }
+}
+
+// The bound falls no faster than any sounding mode decays, at rest or struck,
+// every Material and Ring time, damping's ends, C0 to C8, three rates.
+void TestResonatorLoopRelease() {
+  test_checker.Start("TestResonatorLoopRelease");
+  static ModalResonator bank;
+  const float rates[3] = { 48000.0f, 32000.0f, 24000.0f };
+  const float dampings[6] = {
+    0.0f, kResonatorRingTimes[0], kResonatorRingTimes[1],
+    kResonatorRingTimes[2], kResonatorRingTimes[3], 0.9995f
+  };
+  for (int r = 0; r < 3; ++r) {
+    const size_t size = size_t(rates[r] / 4000.0f);
+    for (int m = 0; m < kNumResonatorMaterials; ++m) {
+      for (int d = 0; d < 6; ++d) {
+        for (int note = 12; note <= 108; ++note) {
+          ResonatorControls c = Controls(m, 1);
+          c.damping = dampings[d];
+          for (int struck = 0; struck < 2; ++struck) {
+            SetUpBank(&bank, c, rates[r], note);
+            if (struck) {
+              bank.Strike();
+            }
+            bank.peak_gain_ = 1.0e30f;
+            bank.LoopGain(BoundOf(c), size);
+            const double kept = bank.peak_gain_ / 1.0e30;
+            Mode modes[2][kNumResonatorModes / 2];
+            BankModes(c, bank.frequency_ * (1.0f + bank.glide_), modes);
+            for (int side = 0; side < 2; ++side) {
+              for (int k = 0; k < kNumResonatorModes / 2; ++k) {
+                const Mode& mode = modes[side][k];
+                if (mode.a == 0.0f) {
+                  continue;
+                }
+                const double g = OnePole::tan<FREQUENCY_FAST>(mode.f);
+                const double y = g / mode.q / (1.0 + g / mode.q + g * g);
+                CHECK(kept >= pow(1.0 - 2.0 * y, 0.5 * size) * (1.0 - 1.0e-5));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// The bound's parts for every Material, and the cases it must not miss.
+void TestResonatorBound() {
+  test_checker.Start("TestResonatorBound");
+  for (int m = 0; m < kNumResonatorMaterials; ++m) {
+    const ResonatorControls c = Controls(m, 1);
+    const ResonatorBound b = BoundOf(c);
+    CHECK(b.spill > 0.1f && b.spill < 20.0f);
+    CHECK(b.peak > 0.0f && b.peak_slope > 0.0f);
+    CHECK(b.sum >= b.peak && b.sum_slope >= b.peak_slope);
+    CHECK(b.lowest_ratio > 0.9f && b.lowest_ratio <= 1.0f);
+    CHECK(b.highest_ratio > 2.0f * b.lowest_ratio);
+    CHECK(b.largest_decay == 1.0f);
+    CHECK(b.structure == c.structure && b.brightness == c.brightness);
+    CHECK(b.position == c.position && b.modes == c.modes);
+  }
+  // Marimba's silent entries sit on its fundamental and are skipped.
+  CHECK(BoundOf(Controls(4, 1)).spill < 1.0f);
+  // Two modes an octave apart on one side: each adds sqrt(2) times its level
+  // off the other's peak.
+  static ResonatorModes octave;
+  memset(&octave, 0, sizeof(octave));
+  octave.ratio[0] = 1.0f;
+  octave.ratio[2] = 2.0f;
+  octave.gain[0] = octave.gain[2] = 1.0f;
+  CosineOscillator pickup;
+  pickup.Init<COSINE_OSCILLATOR_APPROXIMATE>(kResonatorPosition);
+  const float first = fabsf(pickup.Next() * 0.125f);
+  const float second = fabsf(pickup.Next() * 0.125f);
+  ResonatorControls pair = Controls(4, 1);
+  pair.modes = &octave;
+  const float expected = std::max(first, second) * sqrtf(2.0f);
+  CHECK(fabsf(BoundOf(pair).spill - expected) < 1.0e-6f);
+  // Two modes of a side on one pitch: no spill bound.
+  static ResonatorModes twins;
+  twins = *kResonatorMaterials[4].modes;
+  twins.gain[8] = 1.0f;
+  ResonatorControls c = Controls(4, 1);
+  c.modes = &twins;
+  CHECK(BoundOf(c).spill >= kResonatorNoSpill);
+  CHECK(BoundOf(c).spill < 2.0f * kResonatorNoSpill);
+}
+
+// SysTick publishes the bound to the slot the audio is not reading; the
+// loop only runs on the object the bound names.
+void TestResonatorBoundPublished() {
+  test_checker.Start("TestResonatorBoundPublished");
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_FEEDBACK);
+  ResonatorControls c = Controls(1, 1);
+  processor.set_resonator_controls(c);
+  const uint8_t first = processor.resonator_bound_;
+  const ResonatorBound& string = processor.resonator_bounds_[first];
+  CHECK(string.modes == NULL && string.structure == c.structure);
+  // Damping alone leaves it.
+  c.damping = 0.8f;
+  processor.set_resonator_controls(c);
+  CHECK(processor.resonator_bound_ == first);
+  processor.set_resonator_controls(Controls(4, 1));
+  CHECK(processor.resonator_bound_ != first);
+  CHECK(processor.resonator_bounds_[processor.resonator_bound_].modes ==
+      kResonatorMaterials[4].modes);
+  CHECK(processor.resonator_bounds_[first].modes == NULL);
+  // Brightness and position also name the object.
+  c = Controls(1, 1);
+  processor.set_resonator_controls(c);
+  const uint8_t slot = processor.resonator_bound_;
+  c.brightness = 0.9f;
+  processor.set_resonator_controls(c);
+  CHECK(processor.resonator_bound_ != slot);
+  c.position = 0.6f;
+  processor.set_resonator_controls(c);
+  CHECK(processor.resonator_bound_ == slot);
+  CHECK(processor.resonator_bounds_[slot].position == 0.6f);
+  // Controls the audio read before SysTick moved the bound on: no loop.
+  static ModalResonator bank;
+  SetUpBank(&bank, Controls(1, 1), 48000.0f, 48);
+  const ResonatorBound other = BoundOf(Controls(4, 1));
+  float in[12];
+  for (size_t i = 0; i < 12; ++i) {
+    in[i] = 0.3f * Noise();
+  }
+  CHECK(bank.LoopGain(other, 12) == 0.0f);
+  for (int field = 0; field < 3; ++field) {
+    ResonatorControls moved = Controls(1, 1);
+    float* value[3] = { &moved.structure, &moved.brightness, &moved.position };
+    *value[field] += 0.1f;
+    CHECK(bank.LoopGain(BoundOf(moved), 12) == 0.0f);
+  }
+  CHECK(bank.LoopGain(BoundOf(Controls(1, 1)), 12) > 0.0f);
+  (void) in;
+}
+
+// The loop's copy is the block's resonance over Amount and the bound; the
+// bound falls no faster than the slowest mode decays.
+void TestResonatorLoopRender() {
+  test_checker.Start("TestResonatorLoopRender");
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_FEEDBACK);
+  ResonatorControls c = Controls(1, 1);
+  c.amount = 0.5f;
+  processor.set_resonator_controls(c);
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  // The grains' feedback filters at Bright digital, replayed.
+  Svf high_pass[2];
+  for (int channel = 0; channel < 2; ++channel) {
+    high_pass[channel].Init();
+    high_pass[channel].set_f_q<FREQUENCY_FAST>(40.0f / 48000.0f, 0.5f);
+  }
+  FloatFrame low_pass;
+  low_pass = 0.0f;
+  float previous = 0.0f;
+  float before = 0.0f;
+  for (int block = 0; block < 400; ++block) {
+    // Damping drops halfway: the bound may only fall slowly.
+    if (block == 200) {
+      c.damping = 0.0f;
+      processor.set_resonator_controls(c);
+    }
+    FloatFrame frames[12];
+    for (size_t i = 0; i < 12; ++i) {
+      frames[i].l = 0.2f * Noise();
+      frames[i].r = 0.2f * Noise();
+    }
+    FloatFrame grains[12];
+    memcpy(grains, frames, sizeof(frames));
+    processor.ProcessResonatorLoop(pitch, !block, frames, 12);
+    const float peak = processor.resonator_.peak_gain_;
+    CHECK(peak > 0.0f);
+    const float gain = 1.0f / (0.5f * peak);
+    for (size_t i = 0; i < 12; ++i) {
+      const FloatFrame resonance = (frames[i] - grains[i]) * gain;
+      ONE_POLE(low_pass.l, high_pass[0].Process<FILTER_MODE_HIGH_PASS>(
+          resonance.l), 0.999f);
+      ONE_POLE(low_pass.r, high_pass[1].Process<FILTER_MODE_HIGH_PASS>(
+          resonance.r), 0.999f);
+      const FloatFrame loop = processor.resonator_loop_frames_[i];
+      CHECK(fabsf(loop.l - low_pass.l) <=
+          1.0e-5f * fabsf(low_pass.l) + 1.0e-9f);
+      CHECK(fabsf(loop.r - low_pass.r) <=
+          1.0e-5f * fabsf(low_pass.r) + 1.0e-9f);
+    }
+    // The modes left ringing decay about 4% a block at the new damping.
+    if (block == 200) {
+      before = previous;
+      CHECK(peak > previous * 0.95f);
+    }
+    previous = peak;
+  }
+  // Ten seconds on, it has fallen to the new bound.
+  for (int block = 0; block < 40000; ++block) {
+    FloatFrame frames[12];
+    memset(frames, 0, sizeof(frames));
+    processor.ProcessResonatorLoop(pitch, false, frames, 12);
+  }
+  CHECK(processor.resonator_.peak_gain_ < before * 0.25f);
+  // A silent bank sends nothing, nor do the filters, cleared at the rate.
+  c.modes = &kSilentModes;
+  processor.set_resonator_controls(c);
+  FloatFrame frames[12];
+  memset(frames, 0, sizeof(frames));
+  processor.resonator_sample_rate_ = 0.0f;
+  processor.ProcessResonatorLoop(pitch, false, frames, 12);
+  CHECK(processor.resonator_.peak_gain_ == 0.0f);
+  for (size_t i = 0; i < 12; ++i) {
+    CHECK(processor.resonator_loop_frames_[i].l == 0.0f);
+    CHECK(processor.resonator_loop_frames_[i].r == 0.0f);
+  }
+}
+
+// |H| of a TPT high-pass at cutoff f (cycles per sample), and of a one-pole
+// low-pass y += c (x - y), at w radians per sample.
+double HighPassGain(float f, double w) {
+  const double u = tan(0.5 * w) / OnePole::tan<FREQUENCY_FAST>(f);
+  return u * u / sqrt((1.0 - u * u) * (1.0 - u * u) + 4.0 * u * u);
+}
+
+double LowPassGain(double c, double w) {
+  const double p = 1.0 - c;
+  return c / sqrt(1.0 - 2.0 * p * cos(w) + p * p);
+}
+
+// Through its filters the loop passes no more than the grains' own feedback
+// does, at any frequency the recording keeps, in every quality.
+void TestResonatorLoopFilters() {
+  test_checker.Start("TestResonatorLoopFilters");
+  const float low_pass[4] = { 0.999f, 0.9f, 0.9f, 0.75f };
+  for (int m = 0; m < 4; ++m) {
+    Init(kMedia[m], false, RESONATOR_FEEDBACK);
+    const double sr = processor.sample_rate();
+    const double ratio = processor.ratio();
+    const double grains = sr / ratio;
+    const double pole = 1.0 - low_pass[m];
+    const double loop = 1.0 - (ratio == 2.0 ? sqrt(pole) : pole);
+    for (int cutoff = 10; cutoff <= 40; cutoff += 30) {
+      for (int k = 0; k <= 400; ++k) {
+        const double f = 1.0 * pow(0.49 * grains, double(k) / 400.0);
+        const double w = 2.0 * M_PI * f;
+        const double dry = HighPassGain(cutoff / grains, w / grains) *
+            LowPassGain(low_pass[m], w / grains);
+        const double wet = HighPassGain(cutoff / sr, w / sr) *
+            LowPassGain(loop, w / sr);
+        CHECK(wet <= dry * 1.002);
+      }
+    }
+  }
+}
+
+// The loop copy, replayed through the grains' feedback filters at both
+// cutoffs; only Sunny tape's grains run at half the rate.
+void TestResonatorLoopChain() {
+  test_checker.Start("TestResonatorLoopChain");
+  const float low_pass[4] = { 0.999f, 0.9f, 1.0f - sqrtf(0.1f), 0.75f };
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  for (int m = 0; m < 4; ++m) {
+    for (int unity = 0; unity < 2; ++unity) {
+      Init(kMedia[m], false, RESONATOR_FEEDBACK);
+      processor.set_resonator_controls(Controls(1, 1));
+      processor.SetFeedbackCutoff(unity);
+      // Left from another quality: the rate change clears it.
+      processor.resonator_loop_low_pass_ = 1.0f;
+      const float sr = processor.sample_rate();
+      const size_t size = BlockSize();
+      Svf high_pass[2];
+      for (int channel = 0; channel < 2; ++channel) {
+        high_pass[channel].Init();
+        high_pass[channel].set_f_q<FREQUENCY_FAST>(
+            (unity ? 10.0f : 40.0f) / sr, 0.5f);
+      }
+      FloatFrame lp;
+      lp = 0.0f;
+      for (int block = 0; block < 200; ++block) {
+        FloatFrame frames[12];
+        for (size_t i = 0; i < size; ++i) {
+          frames[i].l = 0.2f * Noise();
+          frames[i].r = 0.2f * Noise();
+        }
+        FloatFrame grains[12];
+        memcpy(grains, frames, sizeof(frames));
+        processor.ProcessResonatorLoop(pitch, !block, frames, size);
+        const float gain = 1.0f / processor.resonator_.peak_gain_;
+        for (size_t i = 0; i < size; ++i) {
+          const FloatFrame resonance = (frames[i] - grains[i]) * gain;
+          ONE_POLE(lp.l, high_pass[0].Process<FILTER_MODE_HIGH_PASS>(
+              resonance.l), low_pass[m]);
+          ONE_POLE(lp.r, high_pass[1].Process<FILTER_MODE_HIGH_PASS>(
+              resonance.r), low_pass[m]);
+          const FloatFrame loop = processor.resonator_loop_frames_[i];
+          CHECK(fabsf(loop.l - lp.l) <= 1.0e-5f * fabsf(lp.l) + 1.0e-9f);
+          CHECK(fabsf(loop.r - lp.r) <= 1.0e-5f * fabsf(lp.r) + 1.0e-9f);
+        }
+      }
+    }
+  }
+}
+
+// The resonance is recorded at the grains' loop gain without the tapes' clip
+// gain; FEEDBACK moving, the lower end for one, the higher for the other.
+void TestResonatorLoopGain() {
+  test_checker.Start("TestResonatorLoopGain");
+  const float soft_limit[4] = { 0.0f, 1.3f, 1.3f, 1.75f };
+  for (int m = 0; m < 4; ++m) {
+    for (int delay = 0; delay < 2; ++delay) {
+      Init(kMedia[m], false, RESONATOR_FEEDBACK);
+      const float sr = processor.sample_rate();
+      const size_t size = BlockSize();
+      FloatFrame in[12];
+      FloatFrame recorded[12];
+      for (size_t i = 0; i < size; ++i) {
+        in[i].l = 0.1f * float(i);
+        in[i].r = -0.05f * float(i);
+        processor.resonator_loop_frames_[i].l = 0.5f;
+        processor.resonator_loop_frames_[i].r = -0.25f;
+      }
+      // Nothing for an unset object, or at another rate.
+      processor.resonator_loop_feedback_ = 0.6f;
+      processor.resonator_sample_rate_ = sr;
+      processor.RecordResonance(0.6f, delay, in, recorded, size);
+      CHECK(!memcmp(in, recorded, sizeof(FloatFrame) * size));
+      processor.set_resonator_controls(Controls(1, 1));
+      processor.resonator_sample_rate_ = 0.0f;
+      processor.RecordResonance(0.6f, delay, in, recorded, size);
+      CHECK(!memcmp(in, recorded, sizeof(FloatFrame) * size));
+      processor.resonator_sample_rate_ = sr;
+      // FEEDBACK rising from 0.6 to 0.8, then steady at 0.8.
+      for (int pass = 0; pass < 2; ++pass) {
+        const float dry = processor.RecordResonance(
+            0.8f, delay, in, recorded, size);
+        CHECK(dry == 0.8f * kResonatorLoopDry);
+        const float lower = pass ? 0.8f : 0.6f;
+        float gain = kResonatorLoopShare * (delay ? 1.5f : 3.0f) *
+            lower * lower;
+        if (soft_limit[m]) {
+          gain /= 1.0f + (soft_limit[m] - 1.0f) * dry;
+        }
+        for (size_t i = 0; i < size; ++i) {
+          CHECK(fabsf(recorded[i].l - (in[i].l + 0.5f * gain)) < 1.0e-6f);
+          CHECK(fabsf(recorded[i].r - (in[i].r - 0.25f * gain)) < 1.0e-6f);
+        }
+      }
+      // Falling, the clip's gain is the higher end's.
+      processor.RecordResonance(0.4f, delay, in, recorded, size);
+      float gain = kResonatorLoopShare * (delay ? 1.5f : 3.0f) * 0.16f;
+      if (soft_limit[m]) {
+        gain /= 1.0f + (soft_limit[m] - 1.0f) * 0.8f * kResonatorLoopDry;
+      }
+      CHECK(fabsf(recorded[0].l - (in[0].l + 0.5f * gain)) < 1.0e-6f);
+    }
+  }
+}
+
+// Output and recording over 0.5 s of a sine.
+void RunLoop(Processor::Media media, int placement, float feedback,
+    uint64_t* out_hash, uint64_t* recording_hash) {
+  Init(media, false, placement);
+  processor.set_resonator_controls(Controls(1, 1));
+  mix.dry_wet = 1.0f;
+  mix.feedback = feedback;
+  uint64_t hash = 14695981039346656037ull;
+  for (int block = 0; block < 2000; ++block) {
+    FillSine(block, 0.3f);
+    Process();
+    hash = Hash(hash, output, BlockSize());
+  }
+  *out_hash = hash;
+  uint64_t recording = 14695981039346656037ull;
+  const uint8_t* bytes = &banks[0][0];
+  for (size_t i = 0; i < sizeof(banks); ++i) {
+    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  }
+  *recording_hash = recording;
+}
+
+// In the feedback: After the grains at FEEDBACK 0; with FEEDBACK, the
+// grains keep half their loop and the resonance is recorded.
+void TestResonatorFeedback() {
+  test_checker.Start("TestResonatorFeedback");
+  for (int m = 0; m < 4; ++m) {
+    uint64_t after[2];
+    uint64_t loop[2];
+    RunLoop(kMedia[m], RESONATOR_AFTER_GRAINS, 0.0f, &after[0], &after[1]);
+    // After the grains keeps nothing for the loop.
+    CHECK(processor.resonator_.peak_gain_ == 0.0f);
+    RunLoop(kMedia[m], RESONATOR_FEEDBACK, 0.0f, &loop[0], &loop[1]);
+    CHECK(processor.options_ == (Processor::OPTION_FLAG_RESONATOR_GRAINS |
+        Processor::OPTION_FLAG_RESONATOR_INPUT));
+    CHECK(loop[0] == after[0]);
+    CHECK(loop[1] == after[1]);
+    // Without the resonance it would be After the grains at the dry half.
+    RunLoop(kMedia[m], RESONATOR_AFTER_GRAINS, 0.6f * kResonatorLoopDry,
+        &after[0], &after[1]);
+    RunLoop(kMedia[m], RESONATOR_FEEDBACK, 0.6f, &loop[0], &loop[1]);
+    CHECK(loop[1] != after[1]);
+    CHECK(processor.resonator_.peak_gain_ > 0.0f);
+  }
+  // The dry half reaches the grains.
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_FEEDBACK);
+  processor.set_resonator_controls(Controls(1, 1));
+  mix.feedback = 0.6f;
+  for (int block = 0; block < 10; ++block) {
+    Process();
+  }
+  CHECK(fabsf(processor.processor_digital_.feedback_ -
+      0.6f * kResonatorLoopDry) < 1.0e-6f);
+}
+
+// Where After the grains dies away, so does the loop (delay, FEEDBACK 0.9,
+// Bright, Marimba Short): the full resonance had run away there.
+void TestResonatorFeedbackDecays() {
+  test_checker.Start("TestResonatorFeedbackDecays");
+  double after = 0.0;
+  for (int pass = 0; pass < 2; ++pass) {
+    Init(Processor::MEDIA_DIGITAL, false,
+        pass ? RESONATOR_FEEDBACK : RESONATOR_AFTER_GRAINS);
+    processor.set_resonator_controls(Controls(4, 0));
+    parameters.time.base = 0.3f;
+    parameters.size.base = 1.0f;
+    mix.dry_wet = 1.0f;
+    mix.reverb_amount = 0.0f;
+    mix.feedback = 0.9f;
+    float peak = 0.0f;
+    double energy = 0.0;
+    for (int block = 0; block < 16 * 4000; ++block) {
+      for (size_t i = 0; i < 12; ++i) {
+        const float s = block < 4000 ? 0.3f * Noise() : 0.0f;
+        input[i].l = input[i].r = s;
+      }
+      Process();
+      for (size_t i = 0; i < 12; ++i) {
+        peak = std::max(peak, std::max(fabsf(output[i].l),
+            fabsf(output[i].r)));
+        if (block >= 15 * 4000) {
+          energy += output[i].l * output[i].l + output[i].r * output[i].r;
+        }
+      }
+    }
+    CHECK(processor.delay_active());
+    CHECK(peak > 0.1f && peak < 2.0f);
+    if (pass) {
+      // No louder than After the grains' tail, + 6 dB.
+      CHECK(energy <= after * 4.0 + 1.0e-12);
+    } else {
+      after = energy;
+    }
+  }
+}
+
 int main() {
   // Match the firmware FPU setup in drivers/system.cc.
 #if defined(__SSE__)
@@ -1202,5 +1811,15 @@ int main() {
   TestResonatorSpectralReset();
   TestResonatorLimiterAtRest();
   TestResonatorMaterials();
+  TestResonatorLoopBound();
+  TestResonatorLoopRelease();
+  TestResonatorBound();
+  TestResonatorBoundPublished();
+  TestResonatorLoopRender();
+  TestResonatorLoopFilters();
+  TestResonatorLoopChain();
+  TestResonatorLoopGain();
+  TestResonatorFeedback();
+  TestResonatorFeedbackDecays();
   return test_checker.failures() ? 1 : 0;
 }

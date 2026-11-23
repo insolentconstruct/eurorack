@@ -68,8 +68,17 @@ const float kResonatorRootNote = 48.0f;
 enum ResonatorPlacement {
   RESONATOR_OFF,
   RESONATOR_AFTER_GRAINS,
-  RESONATOR_BEFORE_BUFFER
+  RESONATOR_BEFORE_BUFFER,
+  // After the grains, and FEEDBACK records its resonance.
+  RESONATOR_FEEDBACK
 };
+
+// 48 kHz at the 4 kHz block rate.
+const size_t kResonatorMaxBlockSize = 12;
+// In the feedback, the resonance takes half the grains' loop gain and the
+// grains keep the other half: FEEDBACK x sqrt(1/2), as gain goes squared.
+const float kResonatorLoopShare = 0.5f;
+const float kResonatorLoopDry = 0.70710678f;
 
 struct ResonatorControls {
   float structure;
@@ -135,12 +144,17 @@ class Processor {
   }
   // Rings' modal resonator on the grains, or on the input before the buffer.
   inline void set_resonator(int placement) {
-    // One store: the audio interrupt never sees both placements.
+    // One store: the audio interrupt never sees both placements. In the
+    // feedback takes both flags: it records the resonance, and renders it.
     const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
         ? OPTION_FLAG_RESONATOR_GRAINS
         : (placement == RESONATOR_BEFORE_BUFFER
-            ? OPTION_FLAG_RESONATOR_INPUT : 0);
+            ? OPTION_FLAG_RESONATOR_INPUT
+            : (placement == RESONATOR_FEEDBACK
+                ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
+                : 0));
     resonator_sample_rate_ = 0.0f;
+    resonator_loop_feedback_ = 0.0f;
     options_ = (options_ &
         ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
     resonator_sample_rate_ = 0.0f;
@@ -148,10 +162,7 @@ class Processor {
     seed_gate_ = true;
   }
   // Set at the UI rate; until then the resonator keeps its defaults.
-  inline void set_resonator_controls(const ResonatorControls& controls) {
-    resonator_controls_ = controls;
-    resonator_controls_set_ = true;
-  }
+  void set_resonator_controls(const ResonatorControls& controls);
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {
     delay_controller_.set_timing_fade(enabled);
@@ -437,6 +448,20 @@ class Processor {
       bool strike,
       FloatFrame* frames,
       size_t size);
+  // The same, and keeps it over the bank's bound for the next recording.
+  void ProcessResonatorLoop(
+      const RandomizedParameter& pitch,
+      bool strike,
+      FloatFrame* frames,
+      size_t size);
+  // The last block's resonance into the recording, at the grains' loop gain;
+  // returns the feedback left to the grains.
+  float RecordResonance(
+      float feedback,
+      bool delay_mode,
+      const FloatFrame* in,
+      FloatFrame* recorded,
+      size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
   // A rising SEED, button and jack merged as the grains see them.
@@ -512,6 +537,17 @@ class Processor {
   float resonator_sample_rate_;
   ResonatorControls resonator_controls_;
   bool resonator_controls_set_;
+  // In the feedback, the resonance kept for the next block, and the grains'
+  // feedback filters it goes through, as the grains' own feedback does.
+  FloatFrame resonator_loop_frames_[kResonatorMaxBlockSize];
+  stmlib::Svf resonator_loop_high_pass_[2];
+  FloatFrame resonator_loop_low_pass_;
+  // The bank's bound for the latest object, written to the slot the audio
+  // interrupt is not reading, then published by its index.
+  ResonatorBound resonator_bounds_[2];
+  volatile uint8_t resonator_bound_;
+  // FEEDBACK at the last block, for the loop's gain while it moves.
+  float resonator_loop_feedback_;
   bool seed_gate_;
   // SEED's pulse, low-passed as Rings' strum, while it still sounds.
   stmlib::Svf strike_filter_;

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "fa4b674c993c1b04850d2d8dba1fd815448f5f2e2b54f52718ca1c3322723bd8",
+  "manifest_sha256": "030b50f80ce048f00be549c0dfb79f584ed8bb50a72533325c779c0202ea3715",
   "record_version": 1,
   "features": [
     {
@@ -1372,7 +1372,8 @@
       "values": [
         "Off (stock)",
         "After the grains",
-        "Before the buffer"
+        "Before the buffer",
+        "In the feedback"
       ],
       "states": [
         "Off",
