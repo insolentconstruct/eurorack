@@ -137,6 +137,8 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/sub_oscillator_engine.cc \
     $models/digital_modulation_engine.cc \
     $models/granular_cloud_engine.cc \
+    $models/vowel_fof_engine.cc \
+    $models/vowel_fof_data.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

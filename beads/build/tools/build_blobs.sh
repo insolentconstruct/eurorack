@@ -71,6 +71,8 @@ build acid $blob/models/acid.cc \
   $blob/models/acid_engine.cc beads/plaits_resources.cc
 build granular_cloud $blob/models/granular_cloud.cc \
   $blob/models/granular_cloud_engine.cc
+build vowel_fof $blob/models/vowel_fof.cc \
+  $blob/models/vowel_fof_engine.cc $blob/models/vowel_fof_data.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

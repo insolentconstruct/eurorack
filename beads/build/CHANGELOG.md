@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Palette blob models gain Vowel FOF; each selection starts its synthesis state afresh.
+
 - Palette blob models gain Granular Cloud; each selection starts its grains and random stream afresh.
 
 - [A]+FREEZE follows the synth that actually plays, a fallback included: Plaits steps its bank, Rings its polyphony, and Beads' synth or silence run the profile's [A]+FREEZE action (Buffer trim by default) (#353). The saved Synth choice never changes.
