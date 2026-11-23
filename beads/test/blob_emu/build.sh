@@ -60,7 +60,7 @@ PYCODE
   echo "libraries $wrong: refused: $(head -n1 "$out/negative/catalogue.log")"
 done
 bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
-  beads/test/blob_gate/pos_sine.cc
+  -DTEST_SINE_MODEL=254 beads/test/blob_gate/pos_sine.cc
 # Every blob: the stock models and their libraries, the proof's models, the
 # Rings synth (RNGS).
 blobs=("$out"/blob/*.bin)
@@ -111,6 +111,9 @@ physical=plaits/dsp/physical_modelling
 for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     beads/blob/plaits_region.cc beads/blob/plaits_libraries.cc \
     $models/phase_weave_engine.cc $models/spectral_spiral_engine.cc \
+    $models/pulsar_engine.cc $models/glisson_engine.cc $models/reed_pipe_engine.cc \
+    $models/sideband_engine.cc $models/undertow_engine.cc $models/phase_flock_engine.cc \
+    $models/scanned_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

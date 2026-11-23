@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "033a4a335f1f0530dc622a35e5ab518ba9ca6059585cea3f10e7c1b4f5c3bc61",
+  "manifest_sha256": "fa4b674c993c1b04850d2d8dba1fd815448f5f2e2b54f52718ca1c3322723bd8",
   "record_version": 1,
   "features": [
     {
@@ -1881,6 +1881,10 @@
       "id": 29,
       "name": "Glisson",
       "palette": "glisson",
+      "family": "Granular",
+      "blob_size": 2416,
+      "state_size": 128,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1897,6 +1901,10 @@
       "id": 31,
       "name": "Scanned",
       "palette": "scanned",
+      "family": "Physical",
+      "blob_size": 3808,
+      "state_size": 404,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1905,6 +1913,10 @@
       "id": 32,
       "name": "Pulsar",
       "palette": "pulsar",
+      "family": "Microsound",
+      "blob_size": 1344,
+      "state_size": 20,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1945,6 +1957,10 @@
       "id": 37,
       "name": "Sideband Bank",
       "palette": "sideband-bank",
+      "family": "Additive",
+      "blob_size": 2756,
+      "state_size": 8,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1961,6 +1977,10 @@
       "id": 39,
       "name": "Undertow",
       "palette": "undertow",
+      "family": "Subharmonic",
+      "blob_size": 4696,
+      "state_size": 160,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1969,6 +1989,10 @@
       "id": 40,
       "name": "Reed Pipe",
       "palette": "reed-pipe",
+      "family": "Physical",
+      "blob_size": 2304,
+      "state_size": 72,
+      "arena_size": 8192,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1977,6 +2001,10 @@
       "id": 41,
       "name": "Phase Flock",
       "palette": "phase-flock",
+      "family": "Coupled",
+      "blob_size": 3676,
+      "state_size": 64,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

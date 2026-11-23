@@ -39,13 +39,17 @@ using beads::PlaitsBlobServices;
 using beads::TestSine;
 using plaits::EngineParameters;
 
+#ifndef TEST_SINE_MODEL
+#define TEST_SINE_MODEL 37
+#endif
+
 extern "C" const PlaitsBlobHeader plaits_blob_header
     __attribute__((section(".blob_header"), used)) = {
   beads::kPlaitsBlobMagic,
   sizeof(PlaitsBlobHeader),
   beads::kPlaitsBlobAbi,
   beads::kPlaitsBlobServicesVersion,
-  37,
+  TEST_SINE_MODEL,
   0,
   sizeof(TestSine),
   0, 0, 0, 0, 0, 0, 0, 1.0f, 1.0f
