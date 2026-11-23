@@ -1640,6 +1640,10 @@
       "id": 82,
       "name": "Wavetable Diatonic Chord",
       "palette": "wavetable-chord",
+      "family": "Polyphonic",
+      "blob_size": 744,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [1, 5, 6]

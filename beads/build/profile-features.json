@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "320fb7eb624b583ff34753b8266dccf216b9ce4d611fa699fe0787e725589b7c",
+  "manifest_sha256": "b52e1c584249590c107ef2f636ad8f3ed80191fd7fb81f517fe7eb2313a76c1d",
   "record_version": 1,
   "features": [
     {
@@ -2363,6 +2363,10 @@
       "id": 82,
       "name": "Wavetable Diatonic Chord",
       "palette": "wavetable-chord",
+      "family": "Polyphonic",
+      "blob_size": 744,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [

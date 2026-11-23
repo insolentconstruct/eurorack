@@ -68,6 +68,12 @@ build wave_paraphonic --library "$out/plaits_wavetables.bin" \
   $blob/models/wave_paraphonic.cc $blob/models/wave_paraphonic_engine.cc
 build saw_comb $blob/models/saw_comb.cc $blob/models/saw_comb_engine.cc \
   $libm/sf_tanh.c $libm/sf_expm1.c $libm/math_errf_no_errno.c
+build wavetable_chord --library "$out/plaits_wavetables.bin" \
+  --library "$out/scale_voices_library.bin" \
+  --library "$out/wavetable_scale_voices_library.bin" \
+  $blob/models/wavetable_chord.cc $blob/models/wavetable_chord_engine.cc \
+  $blob/libraries/scale_voices_imports.cc \
+  $blob/libraries/wavetable_scale_voices_imports.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

@@ -118,6 +118,9 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/cymbal_engine.cc \
     $models/saw_comb_engine.cc \
     $models/wave_paraphonic_engine.cc \
+    $models/wavetable_chord_engine.cc \
+    beads/blob/libraries/scale_voices.cc \
+    beads/blob/libraries/wavetable_scale_voices.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \
