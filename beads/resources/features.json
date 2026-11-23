@@ -1179,6 +1179,10 @@
       "id": 30,
       "name": "GENDY",
       "palette": "gendy",
+      "family": "Stochastic",
+      "blob_size": 3140,
+      "state_size": 156,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
