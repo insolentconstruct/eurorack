@@ -113,7 +113,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/phase_weave_engine.cc $models/spectral_spiral_engine.cc \
     $models/pulsar_engine.cc $models/glisson_engine.cc $models/reed_pipe_engine.cc \
     $models/sideband_engine.cc $models/undertow_engine.cc $models/phase_flock_engine.cc \
-    $models/scanned_engine.cc \
+    $models/scanned_engine.cc $models/kick_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \
