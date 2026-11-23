@@ -66,6 +66,16 @@ bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
 blobs=("$out"/blob/*.bin)
 python3 beads/build/tools/blob_sections.py "$out/region.bin" 20261121 \
   --wave beads/resources.cc "${blobs[@]}"
+# One deterministic user terrain, alongside the unchanged stock region.
+python3 - "$out/terrain.bin" <<'PYCODE'
+import math, sys
+grid = bytes(round(127 * math.sin(0.19 * x + 0.11 * y +
+                                0.3 * math.sin(0.05 * x * y))) & 255
+             for y in range(64) for x in range(64))
+open(sys.argv[1], 'wb').write(grid)
+PYCODE
+python3 beads/build/tools/blob_sections.py "$out/region-terr.bin" 20261121 \
+  --wave beads/resources.cc --terrain "$out/terrain.bin" "${blobs[@]}"
 # The same with the models 0x2fe0 further from the libraries: with the
 # region's two placements, libraries and dependents each move independently.
 python3 beads/build/tools/blob_sections.py "$out/region-gap.bin" 20261121 \

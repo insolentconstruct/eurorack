@@ -25,7 +25,7 @@
 // -----------------------------------------------------------------------------
 //
 // Plaits' WaveTerrainEngine as a plain class for a blob, its code unchanged
-// except terrains 5-7's waves and their coordinates, clamped to the bank.
+// except terrains 5-7's waves, and 5-8's coordinates clamped to their table.
 
 #ifndef BEADS_BLOB_MODELS_WAVE_TERRAIN_ENGINE_H_
 #define BEADS_BLOB_MODELS_WAVE_TERRAIN_ENGINE_H_
@@ -44,8 +44,10 @@ class WaveTerrain {
   // waves is the library's copy of wav_integrated_waves.
   void Init(const int16_t* waves, stmlib::BufferAllocator* allocator);
   void Reset();
-  void LoadUserData(const uint8_t* user_data) {
-    user_terrain_ = (const int8_t*)(user_data);
+  // TERR's grids, played after the eight stock terrains; none when 0.
+  void LoadUserData(const int8_t* grids, size_t num_grids) {
+    grids_ = grids;
+    num_grids_ = num_grids;
   }
   void Render(const EngineParameters& parameters,
       float* out,
@@ -63,7 +65,8 @@ class WaveTerrain {
   float terrain_;
 
   float* temp_buffer_;
-  const int8_t* user_terrain_;
+  const int8_t* grids_;
+  size_t num_grids_;
 
   DISALLOW_COPY_AND_ASSIGN(WaveTerrain);
 };
