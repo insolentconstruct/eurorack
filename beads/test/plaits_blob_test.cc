@@ -34,6 +34,7 @@
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
 #include "beads/blob/plaits_region.h"
+#include "beads/blob/synth_choice.h"
 #include "beads/dsp/plaits_voice.h"
 #include "beads/profile.h"
 #include "plaits/resources.h"
@@ -1621,6 +1622,56 @@ void TestLocks() {
   CHECK(PlaitsRegion::Lock(false, false) == PLAITS_SYNTH_SILENT);
 }
 
+// Each section fails independently before selecting a synth.
+void TestFaultMatrix() {
+  test_checker.Start("TestFaultMatrix");
+  const uint8_t served[4] = { 2, 3, 4, 43 };
+  static uint8_t saved[kFlashSize];
+  for (int p = 0; p < 5; ++p) {
+    for (int w = 0; w < 5; ++w) {
+      for (int t = 0; t < 6; ++t) {
+        BuildRegion();
+        const int faults[kNumSections] = { w, t, p, 0 };
+        for (size_t i = 0; i < kNumSections; ++i) {
+          uint8_t* section = flash + directory[i].offset;
+          if (faults[i] == 1) {
+            section[32] ^= 1;
+          } else if (faults[i] == 2) {
+            section[0] ^= 1;
+          } else if (faults[i] == 3) {
+            memset(section + 32, 0xff, directory[i].size - 32);
+          } else if (faults[i] == 4) {
+            memset(section, 0xff, directory[i].size);
+          }
+        }
+        memcpy(saved, flash, kFlashSize);
+        flash_calls = 0;
+        flash_failing_call = 4;
+        plaits_region.set_flash_check(t == 5 ? &FakeFlashCheck : NULL);
+        Read(directory, kNumSections);
+        plaits_region.set_flash_check(NULL);
+        CHECK(!memcmp(saved, flash, kFlashSize));
+        CHECK(plaits_region.ok(PLAITS_SECTION_PLAITS) == (p == 0));
+        CHECK(plaits_region.ok(PLAITS_SECTION_WAVE) == (w == 0));
+        CHECK(plaits_region.ok(PLAITS_SECTION_TERRAIN) == (t == 0));
+        CHECK(plaits_region.ok(PLAITS_SECTION_RINGS));
+        const bool playable = PlaitsVoice::Playable(served, 4, plaits_region);
+        CHECK(playable == (p == 0));
+        CHECK((plaits_region.waves() != NULL) == (w == 0));
+        CHECK((plaits_region.terrains() != NULL) == (t == 0));
+        CHECK(plaits_region.num_terrains() == (t == 0 ? 2 : 0));
+        const uint8_t mask = SynthMask(w == 0, playable, true);
+        for (uint8_t selected = SYNTH_BEADS; selected <= SYNTH_PLAITS;
+             ++selected) {
+          const SynthEngine expected = !p && !w ? SynthEngine(selected)
+              : !w ? SYNTH_BEADS : !p ? SYNTH_PLAITS : SYNTH_SILENT;
+          CHECK(EffectiveSynth(selected, mask) == expected);
+        }
+      }
+    }
+  }
+}
+
 // A model's header flags: TERR's record only for version 2 models.
 void TestModelFlags() {
   test_checker.Start("TestModelFlags");
@@ -1819,6 +1870,7 @@ int main() {
   TestFlashErrors();
   TestPlayable();
   TestLocks();
+  TestFaultMatrix();
   TestModelFlags();
   TestWavesAndTerrains();
   TestTerrainBind();
