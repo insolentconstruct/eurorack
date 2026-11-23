@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "d890a4103684d9150f126dc4e009410dc80f5729616de101da4e3a8d803e468f",
+  "manifest_sha256": "ef660cb73548016d54f5114beb462c3346e625e95ab7f3c7f69604b991b76073",
   "record_version": 1,
   "features": [
     {
@@ -2299,6 +2299,10 @@
       "id": 73,
       "name": "Sub Osc",
       "palette": "sub-oscillator",
+      "family": "Subtractive",
+      "blob_size": 1844,
+      "state_size": 60,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

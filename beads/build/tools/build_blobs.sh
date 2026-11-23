@@ -48,7 +48,7 @@ build speech --library "$out/speech_library.bin" \
 for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned \
     loopback lockstep tapfield attractor rulefield z_filter csaw \
-    saw_square; do
+    saw_square sub_oscillator; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
 # Stock models without libraries: Plaits' helpers and tables they use.
