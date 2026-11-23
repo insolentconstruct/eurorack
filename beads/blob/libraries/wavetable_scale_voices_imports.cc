@@ -43,5 +43,6 @@ void plaits_blob_import_wavetable_scale_voices_render(
     size_t size) {
   reinterpret_cast<WavetableScaleVoicesRender*>(
       library->exports[WAVETABLE_SCALE_VOICES_RENDER])(
-          library, voices, notes, num_voices, scan, detune_cents, out, aux, size);
+          library, voices, notes, num_voices, scan, detune_cents,
+          out, aux, size);
 }

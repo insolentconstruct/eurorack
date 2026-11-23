@@ -24,8 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// WavetableScaleStack as a version 2 blob: init constructs its DSP object in the
-// voice's state.
+// Wavetable Scale Stack as a version 2 blob.
 
 #include <new>
 
@@ -73,7 +72,8 @@ extern "C" const PlaitsBlobHeader2 plaits_blob_header
 
 STATIC_ASSERT(sizeof(WavetableScaleStack) <= beads::kPlaitsBlobMaxStateSize2,
     state);
-STATIC_ASSERT(__alignof__(WavetableScaleStack) <= beads::kPlaitsBlobStateAlignment,
+STATIC_ASSERT(__alignof__(WavetableScaleStack) <=
+    beads::kPlaitsBlobStateAlignment,
     state_alignment);
 
 extern "C" void* plaits_blob_init(

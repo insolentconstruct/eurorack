@@ -22,9 +22,7 @@
 	THE SOFTWARE.
 	See http://creativecommons.org/licenses/MIT/ for more information.
 
-	Emulator harness: the services block at its fixed address, code after it,
-	stmlib::Random's state at its export address in DTCM, other RAM in AXI
-	SRAM. The region is written by render_compare.py.
+	Libm reference code in flash, with input and result arrays in AXI SRAM.
 */
 
 ENTRY(reference)

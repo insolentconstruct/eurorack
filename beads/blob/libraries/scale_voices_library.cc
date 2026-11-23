@@ -93,7 +93,8 @@ void scale_voices_render(
     float* out,
     float* aux,
     size_t size) {
-  voices->Render(notes, num_voices, waveform, detune_cents, fold, out, aux, size);
+  voices->Render(
+      notes, num_voices, waveform, detune_cents, fold, out, aux, size);
 }
 
 // In ScaleVoicesLibraryExport's order.

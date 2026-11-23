@@ -299,18 +299,23 @@ static void BuildProof() {
       &undertow_storage[sizeof(undertow_storage)], 0);
   std::fill(&phase_flock_storage[0],
       &phase_flock_storage[sizeof(phase_flock_storage)], 0);
-  std::fill(&scanned_storage[0],
-      &scanned_storage[sizeof(scanned_storage)], 0);
+  std::fill(&scanned_storage[0], &scanned_storage[sizeof(scanned_storage)], 0);
   std::fill(&kick_storage[0], &kick_storage[sizeof(kick_storage)], 0);
   std::fill(&snare_storage[0], &snare_storage[sizeof(snare_storage)], 0);
   std::fill(&cymbal_storage[0], &cymbal_storage[sizeof(cymbal_storage)], 0);
-  std::fill(&saw_comb_storage[0], &saw_comb_storage[sizeof(saw_comb_storage)], 0);
-  std::fill(&wave_paraphonic_storage[0], &wave_paraphonic_storage[sizeof(wave_paraphonic_storage)], 0);
-  std::fill(&wavetable_chord_storage[0], &wavetable_chord_storage[sizeof(wavetable_chord_storage)], 0);
+  std::fill(&saw_comb_storage[0],
+      &saw_comb_storage[sizeof(saw_comb_storage)], 0);
+  std::fill(&wave_paraphonic_storage[0],
+      &wave_paraphonic_storage[sizeof(wave_paraphonic_storage)], 0);
+  std::fill(&wavetable_chord_storage[0],
+      &wavetable_chord_storage[sizeof(wavetable_chord_storage)], 0);
   std::fill(&fold_storage[0], &fold_storage[sizeof(fold_storage)], 0);
-  std::fill(&wavetable_scale_stack_storage[0], &wavetable_scale_stack_storage[sizeof(wavetable_scale_stack_storage)], 0);
-  std::fill(&diatonic_chord_storage[0], &diatonic_chord_storage[sizeof(diatonic_chord_storage)], 0);
-  std::fill(&scale_stack_storage[0], &scale_stack_storage[sizeof(scale_stack_storage)], 0);
+  std::fill(&wavetable_scale_stack_storage[0],
+      &wavetable_scale_stack_storage[sizeof(wavetable_scale_stack_storage)], 0);
+  std::fill(&diatonic_chord_storage[0],
+      &diatonic_chord_storage[sizeof(diatonic_chord_storage)], 0);
+  std::fill(&scale_stack_storage[0],
+      &scale_stack_storage[sizeof(scale_stack_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
