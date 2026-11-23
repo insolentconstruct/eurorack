@@ -26,14 +26,15 @@
 //
 // One-off recovery firmware for a module that faults at startup on corrupted
 // settings or frozen-buffer flash. It erases the frozen buffer, rewrites the
-// settings (keeping the calibration when it reads back clean and plausible),
-// then shows the result until the module is updated again.
+// settings and the calibration mirror (keeping a calibration that reads back
+// clean and plausible), then shows the result until the module is updated
+// again.
 //
 // LEDs:
 // - Working (up to about 30 s): blue mode LED, the three ASSIGN LEDs chase.
 // - Done, calibration kept: green mode LED blinking once per second.
-// - Done, calibration reset to defaults: as above, with the three ASSIGN LEDs
-//   lit; recalibrate after installing the firmware.
+// - Done, calibration at the factory values: as above, with the three ASSIGN
+//   LEDs lit; recalibrate after installing the firmware.
 // - Failed: red mode LED and the ASSIGN LEDs blinking four times per second.
 
 #include <stm32h7xx_hal.h>

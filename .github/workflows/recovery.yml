@@ -1,0 +1,27 @@
+name: Storage recovery
+on:
+  push:
+    paths: ['beads/recovery/**', 'beads/test/recovery*', 'beads/test/recovery*/**', 'beads/settings.*', '.github/workflows/recovery.yml']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Every released layout is read from its tag.
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Initialize stmlib
+        run: git submodule update --init stmlib
+      - name: Recovery flash logic, with a power cut at every erase and program
+        run: make -f beads/test/recovery.mk test
+      - name: Every firmware's own settings code, before and after recovery
+        run: bash beads/test/recovery_compat.sh "$PWD/build/recovery-compat"
