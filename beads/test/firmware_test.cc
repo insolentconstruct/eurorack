@@ -47,6 +47,7 @@
 #include "beads/dsp/rings_synth.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
+#include "beads/engine_transition.h"
 #include "beads/factory_test.h"
 #include "beads/gain_control.h"
 #include "beads/ui.h"
@@ -92,7 +93,11 @@ extern Synth synth;
 extern Ui ui;
 extern bool synth_mode;
 extern int synth_mode_start_time;
-extern int codec_transition_frames;
+// beads.cc's transition state, under its former global names.
+int& codec_transition_frames = EngineTransition::codec_transition_frames_;
+volatile bool& codec_fade = EngineTransition::codec_fade_;
+float& reverb_style_gain = EngineTransition::reverb_style_gain_;
+bool& clouds_style = EngineTransition::clouds_style_;
 extern volatile bool ready;
 extern GateFlags previous_seed;
 extern uint8_t seed_latch_mode;
@@ -118,8 +123,6 @@ void MainLoopStep() {
 // One main loop pass; the audio interrupt runs on while main waits for a
 // fade before a codec restart (#53).
 void RunMainLoop() {
-  extern volatile bool codec_fade;
-  extern float reverb_style_gain;
   MainLoopStep();
   for (int i = 0; i < 64 && current_rig && codec_fade &&
        reverb_style_gain > 0.0f && codec.callback_; ++i) {
@@ -1299,8 +1302,6 @@ void TestSynthWidthCallback() {
 
 void TestCloudsSwitch() {
   test_checker.Start("TestCloudsSwitch");
-  extern bool clouds_style;
-  extern float reverb_style_gain;
   for (int mode = 0; mode < 2; ++mode) {
     Rig r(false, mode != 0);
     r.audio = 0x20000000;
@@ -1636,7 +1637,6 @@ double RunSquare(Rig* r, int blocks) {
 // Spectral must never start wavetable synthesis.
 void TestSpectralEngine() {
   test_checker.Start("TestSpectralEngine");
-  extern float reverb_style_gain;
   extern uint8_t delay_buffer_1[];
   extern uint8_t delay_buffer_2[];
   Rig r(false, false);
@@ -1770,8 +1770,6 @@ void TestCodecRestartFade() {
   CHECK(peaks[last - 1] < steady / 8);
 
   // FREEZE during the fade postpones the restart without leaving silence.
-  extern volatile bool codec_fade;
-  extern float reverb_style_gain;
   r.Settle();
   settings.mutable_state()->media = (settings.state().media + 1) % 4;
   MainLoopStep();
@@ -3130,7 +3128,6 @@ void TestSlowMediaGestures() {
 // FREEZE is released, then fades and switches (#288).
 void TestEngineChangeWhileFrozen() {
   test_checker.Start("TestEngineChangeWhileFrozen");
-  extern float reverb_style_gain;
   Rig r(false, false);
   PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 65535;
   PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = 8000;
@@ -3388,7 +3385,6 @@ void TestLockedCalibrationCue() {
 // fades and swaps the engine both ways, clearing the recording for spectral.
 void TestProcessorToggle() {
   test_checker.Start("TestProcessorToggle");
-  extern float reverb_style_gain;
   extern uint8_t delay_buffer_1[];
   Rig r(false, false);
   uint8_t block[kProfileSize];
@@ -3464,8 +3460,6 @@ void ObserveCodec(Codec::Call call) {
   if (!transition_trace) {
     return;
   }
-  extern volatile bool codec_fade;
-  extern float reverb_style_gain;
   const char letters[] = "sRxpr";
   transition_trace->blocks += ' ';
   transition_trace->blocks += letters[call];
@@ -3491,7 +3485,6 @@ void ObserveCodec(Codec::Call call) {
 }
 
 void TraceBlock(Rig* r) {
-  extern float reverb_style_gain;
   const float before = reverb_style_gain;
   const int blanking = codec_transition_frames;
   char letter = '-';
@@ -3589,8 +3582,6 @@ bool SameTrace(const std::string& trace, const char* expected) {
 
 // Settles until full level with no transition pending for 100 ms.
 void Quiet(Rig* r) {
-  extern volatile bool codec_fade;
-  extern float reverb_style_gain;
   r->Settle();
   int quiet = 0;
   for (int i = 0; i < 5000 && quiet < 100; ++i) {
@@ -3605,7 +3596,6 @@ void Quiet(Rig* r) {
 // rate changes, the reverb style and Processor changes, block by block.
 void TestTransitionTraces() {
   test_checker.Start("TestTransitionTraces");
-  extern bool clouds_style;
   TransitionTrace t;
 
   // Quality at the same rate: fade, pause, resume, blanking, fade in.
@@ -3769,7 +3759,6 @@ void TestTransitionTraces() {
 // The fade's level, block by block, on a dry signal.
 void TestTransitionFadeLevels() {
   test_checker.Start("TestTransitionFadeLevels");
-  extern float reverb_style_gain;
   Rig r(false, false);
   r.audio = 0x20000000;
   r.Settle();
@@ -3928,7 +3917,6 @@ void TestOptionFanOut() {
   CHECK(player.pitch_scale_ == PitchScale(1));
   r.Block();
   CHECK(player.pitch_scale_ == PitchScale(2));
-  extern float reverb_style_gain;
   settings.set_clouds_style(true);
   SysTick_Handler();
   for (int i = 0; i < 41; ++i) {

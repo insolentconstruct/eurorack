@@ -101,6 +101,8 @@ INNER = (('_Z7Process', 'Process'),
 # Globals used only to label phases; a candidate may lack them.
 LABELS = ('codec_transition_frames', 'reverb_style_gain',
           'reverb_style_previous_gain', 'synth_mode')
+# The static members those globals became.
+TRANSITION_MEMBER = '_ZN5beads16EngineTransition%d%s_E'
 
 
 def thumb_length(halfword):
@@ -128,6 +130,10 @@ class Image(object):
       if s.name and kind in ('STT_FUNC', 'STT_OBJECT', 'STT_NOTYPE'):
         thumb = 1 if kind == 'STT_FUNC' else 0
         self.sym.setdefault(s.name, s['st_value'] & ~thumb)
+    for n in LABELS:
+      member = TRANSITION_MEMBER % (len(n) + 1, n)
+      if n not in self.sym and member in self.sym:
+        self.sym[n] = self.sym[member]
     self.offsets = self.member_offsets(elf)
 
   def member_offsets(self, elf):
