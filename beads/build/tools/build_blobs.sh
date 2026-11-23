@@ -68,6 +68,9 @@ build fluted $blob/models/fluted.cc \
 build brass $blob/models/brass.cc \
   $blob/models/brass_engine.cc \
   beads/plaits_resources.cc
+build skins $blob/models/skins.cc \
+  $blob/models/skins_engine.cc \
+  beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

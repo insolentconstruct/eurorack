@@ -1690,6 +1690,10 @@
       "id": 87,
       "name": "Skins",
       "palette": "skins",
+      "family": "Percussion",
+      "blob_size": 3000,
+      "state_size": 76,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

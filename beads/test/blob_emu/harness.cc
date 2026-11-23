@@ -52,6 +52,7 @@
 #include "beads/blob/models/struck_drum_engine.h"
 #include "beads/blob/models/fluted_engine.h"
 #include "beads/blob/models/brass_engine.h"
+#include "beads/blob/models/skins_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -115,7 +116,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 17;
+const size_t kFirstStock = 18;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -179,6 +180,9 @@ static uint8_t fluted_storage[sizeof(FlutedEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t brass_storage[sizeof(BrassEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t skins_storage[sizeof(SkinsEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -301,6 +305,8 @@ static void BuildProof() {
       &fluted_storage[sizeof(fluted_storage)], 0);
   std::fill(&brass_storage[0],
       &brass_storage[sizeof(brass_storage)], 0);
+  std::fill(&skins_storage[0],
+      &skins_storage[sizeof(skins_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -319,6 +325,7 @@ static void BuildProof() {
   compiled[14] = new(blown_storage) BlownEngine;
   compiled[15] = new(fluted_storage) FlutedEngine;
   compiled[16] = new(brass_storage) BrassEngine;
+  compiled[17] = new(skins_storage) SkinsEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
