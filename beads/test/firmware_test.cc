@@ -1459,6 +1459,14 @@ void TestRingsSynthOwnership() {
   r.Tick(20, true);
   CHECK(ui.should_ignore_state_change());
   settings.SetFeatureValue(FEATURE_RINGS_POLYPHONY, 0);
+  for (int i = 0; i < 100 && !rings_synth.configure_pending(); ++i) {
+    r.Tick(1, true);
+  }
+  CHECK(rings_synth.configure_pending());
+  // A queued self-play request is dropped under FREEZE, as before.
+  ui.self_play_requested_ = true;
+  RunMainLoop();
+  CHECK(!ui.self_play_requested());
   r.Tick(300, true);
   CHECK(CoreTarget(delay_buffer_1).polyphony == 1);
   // The unpatched ASSIGN input's probe would move FEEDBACK between zones.

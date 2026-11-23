@@ -2716,6 +2716,9 @@ cases = [
     '  if (false &&\n'
     '      rings_synth.configure_pending() && !codec_transition_frames &&\n'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
+    '      ui.ClearSelfPlayRequest();\n    }\n    if (FadedOut()) {',
+    '    }\n    if (FadedOut()) {'),
+  ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
     '      !ui.calibrating_or_testing()) {',
     '      !ui.should_ignore_state_change()) {'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/dsp/rings_synth.cc',
