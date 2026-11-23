@@ -59,22 +59,39 @@ class EngineTransition {
     codec_sample_rate_ = 0;
   }
 
-  inline int codec_transition_frames() const {
-    return codec_transition_frames_;
+  // Start or resume the codec with blanking while detection settles.
+  inline void Start(
+      Codec* codec, int sample_rate, Codec::FillBufferCallback callback) {
+    codec_transition_frames_ = kBlockRate / 4;
+    codec_fade_ = false;
+    if (codec_running_ && sample_rate == codec_sample_rate_) {
+      // Same clocks: the converter played silence while paused (#53).
+      codec->Resume(callback);
+      return;
+    }
+    if (codec_sample_rate_) {
+      codec->Restart(
+          codec_sample_rate_, sample_rate, sample_rate / kBlockRate, callback);
+    } else {
+      codec->Start(sample_rate, sample_rate / kBlockRate, callback);
+    }
+    codec_running_ = true;
+    codec_sample_rate_ = sample_rate;
   }
-  inline float reverb_style_gain() const { return reverb_style_gain_; }
-  inline bool codec_running() const { return codec_running_; }
-  inline int codec_sample_rate() const { return codec_sample_rate_; }
 
-  inline void set_codec_transition_frames(int value) {
-    codec_transition_frames_ = value;
+  // Codec restarts fade the output out first (#53): true once it is silent.
+  inline bool Fade() {
+    // Before the first start there is no audio to fade.
+    codec_fade_ = codec_running_;
+    return !codec_running_ || reverb_style_gain_ == 0.0f;
   }
-  inline void set_codec_fade(bool value) {
-    codec_fade_ = value;
-  }
-  inline void set_codec_running(bool value) {
-    codec_running_ = value;
-  }
+
+  // No restart pending: the output fades back in.
+  inline void Cancel() { codec_fade_ = false; }
+
+  inline bool running() const { return codec_running_; }
+  inline bool blanking() const { return codec_transition_frames_ != 0; }
+  inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
   inline void set_codec_sample_rate(int value) {
     codec_sample_rate_ = value;
   }

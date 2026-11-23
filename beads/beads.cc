@@ -544,21 +544,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  transition.set_codec_transition_frames(kBlockRate / 4);
-  transition.set_codec_fade(false);
-  if (transition.codec_running() && sr == transition.codec_sample_rate()) {
-    // Same clocks: the converter played silence while paused (#53).
-    codec.Resume(&Process);
-    return;
-  }
-  if (transition.codec_sample_rate()) {
-    codec.Restart(
-        transition.codec_sample_rate(), sr, sr / kBlockRate, &Process);
-  } else {
-    codec.Start(sr, sr / kBlockRate, &Process);
-  }
-  transition.set_codec_running(true);
-  transition.set_codec_sample_rate(sr);
+  transition.Start(&codec, sr, &Process);
 }
 
 void Init() {
@@ -663,7 +649,7 @@ void Init() {
 // Faded out, with the codec paused if it runs: a new bank 0 owner and the
 // synth that plays on it, or Rings' pending configuration (SYNTH_SILENT).
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
-  if (transition.codec_running()) {
+  if (transition.running()) {
     codec.Pause();
   }
   if (owner == SYNTH_SILENT) {
@@ -673,17 +659,10 @@ void SwapPaused(SynthEngine owner, SynthEngine playing) {
   }
   playing_synth = playing;
   ui.set_playing_synth(playing);
-  if (transition.codec_running()) {
+  if (transition.running()) {
     codec.Resume(&Process);
   }
-  transition.set_codec_fade(false);
-}
-
-// Codec restarts fade the output out first (#53): true once it is silent.
-bool FadedOut() {
-  // Before the first start there is no audio to fade.
-  transition.set_codec_fade(transition.codec_running());
-  return !transition.codec_running() || transition.reverb_style_gain() == 0.0f;
+  transition.Cancel();
 }
 
 void MonitorStateChange() {
@@ -721,23 +700,22 @@ void MonitorStateChange() {
   // A settled zone or polyphony change reconfigures Rings off the interrupt,
   // also while FREEZE sustains it.
   if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&
-      rings_synth.configure_pending() &&
-      !transition.codec_transition_frames() &&
+      rings_synth.configure_pending() && !transition.blanking() &&
       !ui.calibrating_or_testing()) {
     // FREEZE still drops what the state-change guard below drops.
     if (ui.should_ignore_state_change()) {
       synth_mode_start_time = 0;
       ui.ClearSelfPlayRequest();
     }
-    if (FadedOut()) {
+    if (transition.Fade()) {
       SwapPaused(SYNTH_SILENT, playing_synth);
     }
     return;
   }
-  if (ui.should_ignore_state_change() || transition.codec_transition_frames()) {
+  if (ui.should_ignore_state_change() || transition.blanking()) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
-    transition.set_codec_fade(false);
+    transition.Cancel();
     return;
   }
 
@@ -747,7 +725,7 @@ void MonitorStateChange() {
     const SynthEngine owner = wanted == SYNTH_RINGS || wanted == SYNTH_PLAITS
         ? wanted : bank_owner;
     if (synth_mode && owner != bank_owner) {
-      if (!FadedOut()) {
+      if (!transition.Fade()) {
         return;
       }
       SwapPaused(owner, wanted);
@@ -759,8 +737,7 @@ void MonitorStateChange() {
 
   // Once faded out, swap the engine. This clears the recording; a frozen
   // buffer saved to flash returns with the granular engine.
-  if (ui.spectral() != processor.spectral() &&
-      transition.reverb_style_gain() == 0.0f) {
+  if (ui.spectral() != processor.spectral() && transition.faded_out()) {
     codec.Pause();
     processor.set_spectral(ui.spectral());
     if (processor.spectral()) {
@@ -785,7 +762,7 @@ void MonitorStateChange() {
     if (settings.self_play_on_request()) {
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
-        if (!FadedOut()) {
+        if (!transition.Fade()) {
           return;
         }
         ui.ClearSelfPlayRequest();
@@ -807,7 +784,7 @@ void MonitorStateChange() {
         if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
           // If 10 seconds have elapsed with nothing patched in the audio
           // inputs, enable the synth mode.
-          if (!FadedOut()) {
+          if (!transition.Fade()) {
             return;
           }
           codec.Pause();
@@ -832,7 +809,7 @@ void MonitorStateChange() {
     bool mono_changed = mono != processor.mono();
     
     if (synth_mode || mono_changed || media_changed) {
-      if (!FadedOut()) {
+      if (!transition.Fade()) {
         return;
       }
       // elapsed = system_clock.milliseconds();
@@ -847,7 +824,7 @@ void MonitorStateChange() {
     ui.ClearSelfPlayRequest();
   }
   // Restarted, or nothing to restart after all: fade back in.
-  transition.set_codec_fade(false);
+  transition.Cancel();
 }
 
 int main(void) {
