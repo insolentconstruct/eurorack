@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "1f433684bb0f6278abf0d734d82f277e80ba251f6f665cf5462af85909458f5e",
+  "manifest_sha256": "a400725fa30d0f2346c8e0c825f9bd44541d6c6c06794697a152d8e15454dcf7",
   "record_version": 1,
   "features": [
     {
@@ -2434,6 +2434,10 @@
       "id": 88,
       "name": "Circuit Zaps",
       "palette": "circuit-zaps",
+      "family": "Percussion",
+      "blob_size": 1448,
+      "state_size": 36,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

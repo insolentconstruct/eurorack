@@ -1702,6 +1702,10 @@
       "id": 88,
       "name": "Circuit Zaps",
       "palette": "circuit-zaps",
+      "family": "Percussion",
+      "blob_size": 1448,
+      "state_size": 36,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
