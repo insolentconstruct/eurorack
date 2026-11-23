@@ -1822,9 +1822,13 @@
       "id": 95,
       "name": "ZxPulse48k",
       "palette": "zxpulse48k",
+      "family": "Chiptune",
+      "blob_size": 5220,
+      "state_size": 244,
+      "arena_size": 0,
       "credit": "Combust",
       "licence": "MIT",
-      "libraries": [2]
+      "libraries": []
     },
     {
       "id": 96,

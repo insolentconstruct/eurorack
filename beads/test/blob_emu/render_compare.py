@@ -95,8 +95,9 @@ PAIRS = dict([
     (76, 31),
     (71, 32),
     (94, 33),
-    (254, 34)] + [
-    (m, 35 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (95, 34),
+    (254, 35)] + [
+    (m, 36 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -141,9 +142,10 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (76, 47),
     (71, 47),
     (94, 47),
+    (95, 47),
     (96, 79)]
 # These models restart on selection, including a return from another model.
-FRESH_START_MODELS = {51, 76, 71, 94}
+FRESH_START_MODELS = {51, 76, 71, 94, 95}
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)

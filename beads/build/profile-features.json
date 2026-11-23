@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "cb7ca1f41a2cf10420dc16c88155aee08aa23bb8276f1491aaf5f87a373a79af",
+  "manifest_sha256": "7b7a027b9491edc155ac120ea5933969d4544dece6683d6427cb331e9b2215d3",
   "record_version": 1,
   "features": [
     {
@@ -2558,11 +2558,13 @@
       "id": 95,
       "name": "ZxPulse48k",
       "palette": "zxpulse48k",
+      "family": "Chiptune",
+      "blob_size": 5220,
+      "state_size": 244,
+      "arena_size": 0,
       "credit": "Combust",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 96,

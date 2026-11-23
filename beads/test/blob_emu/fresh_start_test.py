@@ -36,7 +36,7 @@ class FreshStartPolicyTest(unittest.TestCase):
                   if isinstance(n, ast.Assign) and
                   any(isinstance(t, ast.Name) and t.id == "FRESH_START_MODELS"
                       for t in n.targets))
-    self.assertEqual(policy, {51, 76, 71, 94})
+    self.assertEqual(policy, {51, 76, 71, 94, 95})
 
 
 if __name__ == "__main__":

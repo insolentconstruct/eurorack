@@ -70,6 +70,7 @@
 #include "beads/blob/models/vowel_fof_engine.h"
 #include "beads/blob/models/virtual_analog_variant_engine.h"
 #include "beads/blob/models/zxphase48k_engine.h"
+#include "beads/blob/models/zxpulse48k_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -133,7 +134,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 35;
+const size_t kFirstStock = 36;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -248,6 +249,9 @@ static uint8_t virtual_analog_variant_storage[sizeof(VirtualAnalogVariantEngine)
     __attribute__((aligned(8)));
 
 static uint8_t zxphase48k_storage[sizeof(ZxPhase48kEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t zxpulse48k_storage[sizeof(ZxPulse48kEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t sine_storage[sizeof(TestSineEngine)]
@@ -411,6 +415,8 @@ static void BuildProof() {
       &virtual_analog_variant_storage[sizeof(virtual_analog_variant_storage)], 0);
   std::fill(&zxphase48k_storage[0],
       &zxphase48k_storage[sizeof(zxphase48k_storage)], 0);
+  std::fill(&zxpulse48k_storage[0],
+      &zxpulse48k_storage[sizeof(zxpulse48k_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(glisson_storage) GlissonEngine;
   compiled[1] = new(scanned_storage) ScannedEngine;
@@ -446,7 +452,8 @@ static void BuildProof() {
   compiled[31] = new(vowel_fof_storage) VowelFofEngine;
   compiled[32] = new(virtual_analog_variant_storage) VirtualAnalogVariantEngine;
   compiled[33] = new(zxphase48k_storage) ZxPhase48kEngine;
-  compiled[34] = new(sine_storage) TestSineEngine;
+  compiled[34] = new(zxpulse48k_storage) ZxPulse48kEngine;
+  compiled[35] = new(sine_storage) TestSineEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
@@ -559,6 +566,13 @@ void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
     std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
     stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
     compiled[engine] = new(zxphase48k_storage) ZxPhase48kEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine == 34) {
+    std::fill(&zxpulse48k_storage[0],
+        &zxpulse48k_storage[sizeof(zxpulse48k_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(zxpulse48k_storage) ZxPulse48kEngine;
     compiled[engine]->Init(&allocator);
   } else if (engine < kFirstStock) {
     BuildProof();
