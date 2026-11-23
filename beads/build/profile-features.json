@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "a43687146e8cea180d29cb30392e621a542526a67241e86d0916cd239bcf239e",
+  "manifest_sha256": "320fb7eb624b583ff34753b8266dccf216b9ce4d611fa699fe0787e725589b7c",
   "record_version": 1,
   "features": [
     {
@@ -2236,11 +2236,14 @@
       "id": 68,
       "name": "Wave Paraphonic",
       "palette": "wave-paraphonic",
+      "family": "Polyphonic",
+      "blob_size": 3576,
+      "state_size": 80,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": [
-        1,
-        2
+        1
       ]
     },
     {

@@ -64,6 +64,8 @@ build snare $blob/models/snare.cc $blob/models/snare_engine.cc \
 build cymbal $blob/models/cymbal.cc $blob/models/cymbal_engine.cc \
   $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
   $libm/libgcc/convert.S
+build wave_paraphonic --library "$out/plaits_wavetables.bin" \
+  $blob/models/wave_paraphonic.cc $blob/models/wave_paraphonic_engine.cc
 build saw_comb $blob/models/saw_comb.cc $blob/models/saw_comb_engine.cc \
   $libm/sf_tanh.c $libm/sf_expm1.c $libm/math_errf_no_errno.c
 # Stock models without libraries: Plaits' helpers and tables they use.

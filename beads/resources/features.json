@@ -1519,9 +1519,13 @@
       "id": 68,
       "name": "Wave Paraphonic",
       "palette": "wave-paraphonic",
+      "family": "Polyphonic",
+      "blob_size": 3576,
+      "state_size": 80,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
-      "libraries": [1, 2]
+      "libraries": [1]
     },
     {
       "id": 69,

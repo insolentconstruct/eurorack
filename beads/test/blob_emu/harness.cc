@@ -49,6 +49,7 @@
 #include "beads/blob/models/snare_engine.h"
 #include "beads/blob/models/cymbal_engine.h"
 #include "beads/blob/models/saw_comb_engine.h"
+#include "beads/blob/models/wave_paraphonic_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -112,7 +113,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 14;
+const size_t kFirstStock = 15;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -167,6 +168,9 @@ static uint8_t cymbal_storage[sizeof(CymbalEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t saw_comb_storage[sizeof(SawCombEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t wave_paraphonic_storage[sizeof(WaveParaphonicEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -280,6 +284,7 @@ static void BuildProof() {
   std::fill(&snare_storage[0], &snare_storage[sizeof(snare_storage)], 0);
   std::fill(&cymbal_storage[0], &cymbal_storage[sizeof(cymbal_storage)], 0);
   std::fill(&saw_comb_storage[0], &saw_comb_storage[sizeof(saw_comb_storage)], 0);
+  std::fill(&wave_paraphonic_storage[0], &wave_paraphonic_storage[sizeof(wave_paraphonic_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -295,6 +300,7 @@ static void BuildProof() {
   compiled[11] = new(snare_storage) SnareEngine;
   compiled[12] = new(cymbal_storage) CymbalEngine;
   compiled[13] = new(saw_comb_storage) SawCombEngine;
+  compiled[14] = new(wave_paraphonic_storage) WaveParaphonicEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
