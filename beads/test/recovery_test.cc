@@ -50,6 +50,9 @@ int test_silent_erases = 0;
 int test_erase_calls = 0;
 uint32_t test_erased = 0;
 int test_programs = 0;
+PWR_TypeDef test_pwr;
+bool test_supply_low = false;
+int test_low_supply_writes = 0;
 
 using namespace beads;
 
@@ -232,16 +235,16 @@ void TestEccError() {
   test_ecc_error = true;
   SettingsRecovery recovery;
   PersistentData data;
-  CHECK(!recovery.ReadCalibration(&data));
+  CHECK(!recovery.ReadCalibration(kSettingsSector, &data));
   CHECK(!recovery.IsBlank(0x08100000 + kSettingsOffset + 0x10000, 32));
   CHECK(test_faultmask == 0 && test_scb.CCR == 0);
   test_ecc_error = false;
-  CHECK(recovery.ReadCalibration(&data));
+  CHECK(recovery.ReadCalibration(kSettingsSector, &data));
   CHECK(recovery.IsBlank(0x08100000 + kSettingsOffset + 0x10000, 32));
 
   // The flag is cleared, or the next erase would fail on it.
   test_ecc_error = true;
-  CHECK(!recovery.ReadCalibration(&data));
+  CHECK(!recovery.ReadCalibration(kSettingsSector, &data));
   test_ecc_error = false;
   CHECK(!test_sr2);
   test_erase_calls = 0;
@@ -250,7 +253,7 @@ void TestEccError() {
 
   // A flag left by an earlier read affects neither a read nor an erase.
   test_sr2 = FLASH_FLAG_DBECCERR_BANK2 | FLASH_FLAG_SNECCERR_BANK2;
-  CHECK(recovery.ReadCalibration(&data));
+  CHECK(recovery.ReadCalibration(kSettingsSector, &data));
   test_sr2 = FLASH_FLAG_SNECCERR_BANK2;
   test_erase_calls = 0;
   CHECK(recovery.EraseSector(0));
