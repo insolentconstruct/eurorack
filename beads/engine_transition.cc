@@ -24,7 +24,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Fades and blanking around codec restarts, engine and reverb style changes.
+// Fades, blanking and codec restarts between engines, synths and styles.
 
 #include "beads/engine_transition.h"
 
@@ -50,5 +50,11 @@ int EngineTransition::codec_sample_rate_;
 
 /* static */
 float EngineTransition::reverb_style_previous_gain_;
+
+/* static */
+SynthEngine EngineTransition::playing_synth_;
+
+/* static */
+SynthEngine EngineTransition::bank_owner_;
 
 }  // namespace beads

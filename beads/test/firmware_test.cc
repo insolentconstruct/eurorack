@@ -80,8 +80,6 @@ extern NormalizationDetector normalization_detector;
 extern PlaitsSynth plaits_synth;
 extern RingsSynth rings_synth;
 extern uint8_t playable_synths;
-extern SynthEngine playing_synth;
-extern SynthEngine bank_owner;
 // The Rings stand-in's calls, and whether Process is running.
 bool in_audio;
 uint32_t configure_calls;
@@ -94,6 +92,8 @@ extern Ui ui;
 extern bool synth_mode;
 extern int synth_mode_start_time;
 // beads.cc's transition state, under its former global names.
+SynthEngine& playing_synth = EngineTransition::playing_synth_;
+SynthEngine& bank_owner = EngineTransition::bank_owner_;
 int& codec_transition_frames = EngineTransition::codec_transition_frames_;
 volatile bool& codec_fade = EngineTransition::codec_fade_;
 float& reverb_style_gain = EngineTransition::reverb_style_gain_;

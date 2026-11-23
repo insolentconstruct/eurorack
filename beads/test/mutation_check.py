@@ -407,7 +407,7 @@ cases = [
     'return tail - sum * coefficient;',
     'return tail + sum * coefficient;'),
   ('TestCloudsSwitch', 'firmware', 'beads/beads.cc',
-    'if (reverb_style_previous_gain == 0.0f) {',
+    'if (transition.reverb_style_previous_gain_ == 0.0f) {',
     'if (true) {'),
   ('TestQuantizedPitchChain', 'firmware', 'beads/beads.cc',
     'processor.set_pitch_scale(ui.pitch_scale());',
@@ -1046,14 +1046,17 @@ cases = [
     'if (ui.self_play_requested()) {',
     'if (false) {'),
   ('TestSelfPlayRequestLifecycle', 'firmware', 'beads/beads.cc',
-    '    ui.ClearSelfPlayRequest();\n    codec_fade = false;\n    return;',
-    '    codec_fade = false;\n    return;'),
+    '    ui.ClearSelfPlayRequest();\n'
+    '    transition.Cancel();\n'
+    '    return;',
+    '    transition.Cancel();\n'
+    '    return;'),
   ('TestMonoStereo', 'firmware', 'beads/beads.cc',
     'bool mono = normalization_detector.mono();',
     'bool mono = false;'),
   ('TestFrozenQualityLock', 'firmware', 'beads/beads.cc',
-    'if (ui.should_ignore_state_change() || codec_transition_frames) {',
-    'if ((ui.should_ignore_state_change() && !ui.freeze_led_state()) || codec_transition_frames) {'),
+    'if (ui.should_ignore_state_change() || transition.blanking()) {',
+    'if ((ui.should_ignore_state_change() && !ui.freeze_led_state()) || transition.blanking()) {'),
   ('TestOverwriteIndicator', 'firmware', 'beads/beads.cc',
     'synth_mode || processor.spectral()\n      ? 1.0f : processor.overwrite_reserve()',
     '1.0f'),
@@ -1103,8 +1106,8 @@ cases = [
     '  inline void Reset() {\n    Reset(true);',
     '  inline void Reset() {\n    Reset(false);'),
   ('TestPlaitsSynthSelection', 'firmware', 'beads/beads.cc',
-    '  } else if (synth_mode && playing_synth == SYNTH_PLAITS) {',
-    '  } else if (synth_mode && playing_synth != SYNTH_PLAITS) {'),
+    '  } else if (synth_mode && transition.playing_synth_ == SYNTH_PLAITS) {',
+    '  } else if (synth_mode && transition.playing_synth_ != SYNTH_PLAITS) {'),
   ('TestSynthEngineStorage', 'options', 'beads/settings.h',
     'inline uint8_t synth() const { return values_[FEATURE_SYNTH]; }',
     'inline uint8_t synth() const { return 0; }'),
@@ -1898,10 +1901,11 @@ cases = [
     '      out[i] = out_buffer_[i];', '      out[i] = out_buffer_[i + 1];'),
   ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
     '    out_buffer_[0] = out_buffer_[block_size_];', ''),
-  ('TestCodecKeepsClocks', 'firmware', 'beads/beads.cc',
-    '    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);',
-    '    codec.Stop();\n'
-    '    codec.Start(sr, sr / kBlockRate, &Process);'),
+  ('TestCodecKeepsClocks', 'firmware', 'beads/engine_transition.h',
+    '      codec->Restart(\n'
+    '          codec_sample_rate_, sample_rate, sample_rate / kBlockRate, callback);',
+    '      codec->Stop();\n'
+    '      codec->Start(sample_rate, sample_rate / kBlockRate, callback);'),
   ('TestProfileToggles', 'options', 'beads/ui.cc',
     '    settings_->SetFeatureValue(feature, value);\n    settings_->SaveOptions();\n    const OptionValue cue',
     '    settings_->SetFeatureValue(feature, value);\n    const OptionValue cue'),
@@ -2463,12 +2467,12 @@ cases = [
     '    mirror_checked_ = false;\n    compaction_failed_ = false;\n',
     '    mirror_checked_ = false;\n'),
   # Transition characterization: timing, order and level of every fade.
-  ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
+  ('TestTransitionTraces', 'firmware', 'beads/engine_transition.h',
     'const float kReverbStyleFadeStep = 1.0f / (0.01f * kBlockRate);',
     'const float kReverbStyleFadeStep = 1.0f / (0.0125f * kBlockRate);'),
-  ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
-    '  codec_transition_frames = kBlockRate / 4;',
-    '  codec_transition_frames = kBlockRate / 5;'),
+  ('TestTransitionTraces', 'firmware', 'beads/engine_transition.h',
+    '    codec_transition_frames_ = kBlockRate / 4;',
+    '    codec_transition_frames_ = kBlockRate / 5;'),
   ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
     '      codec.Pause();\n      processor.Configure(media, mono);',
     '      processor.Configure(media, mono);\n      codec.Pause();'),
@@ -2476,33 +2480,91 @@ cases = [
     'ConfigureAndStartCodec(false, mono_changed || synth_mode);',
     'ConfigureAndStartCodec(false, synth_mode);'),
   ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
-    '    if (reverb_style_previous_gain == 0.0f) {',
-    '    if (reverb_style_gain == 0.0f) {'),
+    '    if (transition.reverb_style_previous_gain_ == 0.0f) {',
+    '    if (transition.reverb_style_gain_ == 0.0f) {'),
   ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
-    '    reverb_style_gain = min(1.0f, reverb_style_gain + kReverbStyleFadeStep);',
-    '    reverb_style_gain = min(1.0f, reverb_style_gain + 2.0f * kReverbStyleFadeStep);'),
+    '    transition.reverb_style_gain_ = min(\n'
+    '        1.0f, transition.reverb_style_gain_ + kReverbStyleFadeStep);',
+    '    transition.reverb_style_gain_ = min(\n'
+    '        1.0f, transition.reverb_style_gain_ + 2.0f * kReverbStyleFadeStep);'),
   ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
-    '    ui.ClearSelfPlayRequest();\n    codec_fade = false;\n    return;',
-    '    ui.ClearSelfPlayRequest();\n    return;'),
-  ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
-    '  if (codec_running && sr == codec_sample_rate) {',
-    '  if (codec_running && sr == codec_sample_rate && !synth_mode) {'),
+    '    ui.ClearSelfPlayRequest();\n'
+    '    transition.Cancel();\n'
+    '    return;',
+    '    ui.ClearSelfPlayRequest();\n'
+    '    return;'),
+  ('TestTransitionTraces', 'firmware', 'beads/engine_transition.h',
+    'namespace beads {\n'
+    '\n'
+    'const int kBlockRate = 4000;\n'
+    'const float kReverbStyleFadeStep = 1.0f / (0.01f * kBlockRate);\n'
+    '\n'
+    'class EngineTransition {\n'
+    ' public:\n'
+    '  EngineTransition() { }\n'
+    '  ~EngineTransition() { }\n'
+    '\n'
+    '  inline void Init() {\n'
+    '    clouds_style_ = false;\n'
+    '    reverb_style_gain_ = 1.0f;\n'
+    '    reverb_style_previous_gain_ = 1.0f;\n'
+    '    codec_fade_ = false;\n'
+    '    codec_running_ = false;\n'
+    '    codec_sample_rate_ = 0;\n'
+    '  }\n'
+    '\n'
+    '  // Start or resume the codec with blanking while detection settles.\n'
+    '  inline void Start(\n'
+    '      Codec* codec, int sample_rate, Codec::FillBufferCallback callback) {\n'
+    '    codec_transition_frames_ = kBlockRate / 4;\n'
+    '    codec_fade_ = false;\n'
+    '    if (codec_running_ && sample_rate == codec_sample_rate_) {',
+    'extern bool synth_mode;\n'
+    '\n'
+    'namespace beads {\n'
+    '\n'
+    'const int kBlockRate = 4000;\n'
+    'const float kReverbStyleFadeStep = 1.0f / (0.01f * kBlockRate);\n'
+    '\n'
+    'class EngineTransition {\n'
+    ' public:\n'
+    '  EngineTransition() { }\n'
+    '  ~EngineTransition() { }\n'
+    '\n'
+    '  inline void Init() {\n'
+    '    clouds_style_ = false;\n'
+    '    reverb_style_gain_ = 1.0f;\n'
+    '    reverb_style_previous_gain_ = 1.0f;\n'
+    '    codec_fade_ = false;\n'
+    '    codec_running_ = false;\n'
+    '    codec_sample_rate_ = 0;\n'
+    '  }\n'
+    '\n'
+    '  // Start or resume the codec with blanking while detection settles.\n'
+    '  inline void Start(\n'
+    '      Codec* codec, int sample_rate, Codec::FillBufferCallback callback) {\n'
+    '    codec_transition_frames_ = kBlockRate / 4;\n'
+    '    codec_fade_ = false;\n'
+    '    if (codec_running_ && sample_rate == codec_sample_rate_ && !::synth_mode) {'),
   ('TestTransitionFadeLevels', 'firmware', 'beads/beads.cc',
     '      float_out[i] = float_out[i] * gain.Next();',
-    '      float_out[i] = float_out[i] * reverb_style_gain;'),
+    '      float_out[i] = float_out[i] * transition.reverb_style_gain_;'),
   # Option fan-out: each setter on its own tick, frozen or blanking.
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
     '  seed_latch_mode = ui.seed_latch();',
     '  seed_latch_mode = ui.should_ignore_state_change() ? seed_latch_mode :\n      ui.seed_latch();'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
     '  plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));',
-    '  plaits_synth.set_bank(codec_transition_frames ? 0 :\n      settings.FeatureValue(FEATURE_PLAITS_BANK));'),
+    '  plaits_synth.set_bank(transition.blanking() ? 0 :\n      settings.FeatureValue(FEATURE_PLAITS_BANK));'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
     '  if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||\n      settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {',
     '  if (settings.FeatureValue(FEATURE_PITCH_NOTCH)) {'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
-    '  if (codec_transition_frames) {\n    --codec_transition_frames;',
-    '  processor.set_pitch_scale(ui.pitch_scale());\n  if (codec_transition_frames) {\n    --codec_transition_frames;'),
+    '  if (transition.codec_transition_frames_) {\n'
+    '    --transition.codec_transition_frames_;',
+    '  processor.set_pitch_scale(ui.pitch_scale());\n'
+    '  if (transition.codec_transition_frames_) {\n'
+    '    --transition.codec_transition_frames_;'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
     '  processor.set_time_scan(ui.time_scan());',
     '  processor.set_time_scan(ui.time_scan());\n  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));'),
@@ -2670,9 +2732,13 @@ cases = [
     '  playable_synths_ = SynthMask(true, true, true);\n  profile_ = NULL;'),
   # [A]+FREEZE follows the playing synth, fallbacks included (#353).
   ('TestFreezeGestureFollowsPlayingSynth', 'firmware', 'beads/beads.cc',
-    '  playing_synth = playing;\n  ui.set_playing_synth(playing);', '  playing_synth = playing;'),
+    '  transition.set_playing_synth(playing);\n'
+    '  ui.set_playing_synth(playing);',
+    '  transition.set_playing_synth(playing);'),
   ('TestFreezeGestureFollowsPlayingSynth', 'firmware', 'beads/beads.cc',
-    '    playing_synth = wanted;\n    ui.set_playing_synth(wanted);', '    playing_synth = wanted;'),
+    '    transition.set_playing_synth(wanted);\n'
+    '    ui.set_playing_synth(wanted);',
+    '    transition.set_playing_synth(wanted);'),
   ('TestFreezeGestureFollowsPlayingSynth', 'firmware', 'beads/ui.cc',
     '    } else if (playing_synth_ == SYNTH_PLAITS) {',
     '    } else if (synth_ == SYNTH_PLAITS) {'),
@@ -2708,16 +2774,20 @@ cases = [
     '  27,  // Rings polyphony.',
     '  0,  // Rings polyphony.'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
-    '    if (synth_mode && owner != bank_owner) {',
+    '    if (synth_mode && owner != transition.bank_owner()) {',
     '    if (false) {'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
-    '  if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&\n'
-    '      rings_synth.configure_pending() && !codec_transition_frames &&\n',
+    '  if (synth_mode && transition.playing_synth() == SYNTH_RINGS &&\n'
+    '      wanted == transition.playing_synth() &&\n'
+    '      rings_synth.configure_pending() && !transition.blanking() &&\n',
     '  if (false &&\n'
-    '      rings_synth.configure_pending() && !codec_transition_frames &&\n'),
+    '      rings_synth.configure_pending() && !transition.blanking() &&\n'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
-    '      ui.ClearSelfPlayRequest();\n    }\n    if (FadedOut()) {',
-    '    }\n    if (FadedOut()) {'),
+    '      ui.ClearSelfPlayRequest();\n'
+    '    }\n'
+    '    if (transition.Fade()) {',
+    '    }\n'
+    '    if (transition.Fade()) {'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
     '      !ui.calibrating_or_testing()) {',
     '      !ui.should_ignore_state_change()) {'),
@@ -2725,7 +2795,7 @@ cases = [
     '  fill(&ram[0], &ram[ram_size], 0);', ''),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
     '  ui.set_synth_fault(wanted == SYNTH_SILENT);\n',
-    '  ui.set_synth_fault(wanted == SYNTH_SILENT);\n  playing_synth = wanted;\n'),
+    '  ui.set_synth_fault(wanted == SYNTH_SILENT);\n  transition.set_playing_synth(wanted);\n'),
   ('TestRingsSynthApp', 'rings_synth', 'beads/dsp/rings_synth.cc',
     '  if (settle_ == kRingsSettleBlocks && !pending_ &&',
     '  if (settle_ >= 0 && !pending_ &&'),
@@ -2745,8 +2815,11 @@ cases = [
     '    settle_ = 0;\n    pending_ = false;',
     '    settle_ = 0;'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
-    '  playing_synth = playing;\n  ui.set_playing_synth(playing);\n  if (codec_running) {',
-    '  ui.set_playing_synth(playing);\n  if (codec_running) {'),
+    '  transition.set_playing_synth(playing);\n'
+    '  ui.set_playing_synth(playing);\n'
+    '  if (transition.running()) {',
+    '  ui.set_playing_synth(playing);\n'
+    '  if (transition.running()) {'),
   ('TestRingsSynthApp', 'rings_synth', 'beads/dsp/rings_synth.cc',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down * kRingsGain;',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down;'),

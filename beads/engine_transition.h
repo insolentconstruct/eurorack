@@ -24,13 +24,14 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Fades and blanking around codec restarts, engine and reverb style changes.
+// Fades, blanking and codec restarts between engines, synths and styles.
 
 #ifndef BEADS_ENGINE_TRANSITION_H_
 #define BEADS_ENGINE_TRANSITION_H_
 
 #include "stmlib/stmlib.h"
 
+#include "beads/blob/synth_choice.h"
 #include "beads/drivers/codec.h"
 
 // Audio callback defined in beads.cc.
@@ -92,6 +93,10 @@ class EngineTransition {
   inline bool running() const { return codec_running_; }
   inline bool blanking() const { return codec_transition_frames_ != 0; }
   inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
+  inline SynthEngine playing_synth() const { return playing_synth_; }
+  inline void set_playing_synth(SynthEngine synth) { playing_synth_ = synth; }
+  inline SynthEngine bank_owner() const { return bank_owner_; }
+  inline void set_bank_owner(SynthEngine owner) { bank_owner_ = owner; }
   inline void set_codec_sample_rate(int value) {
     codec_sample_rate_ = value;
   }
@@ -117,6 +122,9 @@ class EngineTransition {
   // The rate the converter runs at; 0 before its first start.
   static int codec_sample_rate_;
   static float reverb_style_previous_gain_;
+  // The synth that plays, and which synth's RAM is in bank 0.
+  static SynthEngine playing_synth_;
+  static SynthEngine bank_owner_;
 
   DISALLOW_COPY_AND_ASSIGN(EngineTransition);
 };

@@ -83,10 +83,8 @@ RingsSynth rings_synth;
 // Read once at boot; its identity record is readable over SWD.
 PlaitsRegion plaits_region;
 #endif  // PLAITS_BLOBS
-// What can play, what plays, and which synth's RAM is in bank 0.
+// What can play.
 uint8_t playable_synths;
-SynthEngine playing_synth;
-SynthEngine bank_owner;
 Processor processor;
 SeedInput seed_input;
 Settings settings;
@@ -393,11 +391,11 @@ void Process(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
-  if (synth_mode && playing_synth == SYNTH_SILENT) {
+  if (synth_mode && transition.playing_synth_ == SYNTH_SILENT) {
     FloatFrame silence;
     silence = 0.0f;
     fill(&float_out[0], &float_out[size], silence);
-  } else if (synth_mode && playing_synth == SYNTH_RINGS) {
+  } else if (synth_mode && transition.playing_synth_ == SYNTH_RINGS) {
     rings_synth.set_output_limiter_mode(ui.output_limiter_mode());
     rings_synth.set_pitch_scale(ui.pitch_scale());
     rings_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -415,7 +413,7 @@ void Process(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
-  } else if (synth_mode && playing_synth == SYNTH_PLAITS) {
+  } else if (synth_mode && transition.playing_synth_ == SYNTH_PLAITS) {
     plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
     plaits_synth.set_pitch_scale(ui.pitch_scale());
     plaits_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -518,7 +516,7 @@ void TakeBank0(SynthEngine owner) {
   } else {
     plaits_synth.InitVoices(delay_buffer_1);
   }
-  bank_owner = owner;
+  transition.set_bank_owner(owner);
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
@@ -527,10 +525,11 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   synth_mode_start_time = 0;
   if (synth_mode) {
     // Rings when it plays, else Plaits, so Beads <-> Plaits stays instant.
-    TakeBank0(playing_synth == SYNTH_RINGS ? SYNTH_RINGS : SYNTH_PLAITS);
+    TakeBank0(transition.playing_synth() == SYNTH_RINGS
+        ? SYNTH_RINGS : SYNTH_PLAITS);
   } else {
     // The granular processor's Configure clears the bank.
-    bank_owner = SYNTH_SILENT;
+    transition.set_bank_owner(SYNTH_SILENT);
   }
 
   gain_control.Init(
@@ -576,7 +575,7 @@ void Init() {
   plaits_synth.Init(reverb_buffer);
   rings_synth.Init(reverb_buffer);
   playable_synths = SynthMask(true, true, false);
-  bank_owner = SYNTH_SILENT;
+  transition.set_bank_owner(SYNTH_SILENT);
   transition.Init();
   background_buffer_backup.Init(&processor, &settings);
 
@@ -606,8 +605,8 @@ void Init() {
   plaits_synth.set_region(&plaits_region);
 #endif  // PLAITS_BLOBS
   ui.set_playable_synths(playable_synths);
-  playing_synth = EffectiveSynth(ui.synth(), playable_synths);
-  ui.set_playing_synth(playing_synth);
+  transition.set_playing_synth(EffectiveSynth(ui.synth(), playable_synths));
+  ui.set_playing_synth(transition.playing_synth());
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
@@ -657,7 +656,7 @@ void SwapPaused(SynthEngine owner, SynthEngine playing) {
   } else {
     TakeBank0(owner);
   }
-  playing_synth = playing;
+  transition.set_playing_synth(playing);
   ui.set_playing_synth(playing);
   if (transition.running()) {
     codec.Resume(&Process);
@@ -699,7 +698,8 @@ void MonitorStateChange() {
   ui.set_synth_fault(wanted == SYNTH_SILENT);
   // A settled zone or polyphony change reconfigures Rings off the interrupt,
   // also while FREEZE sustains it.
-  if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&
+  if (synth_mode && transition.playing_synth() == SYNTH_RINGS &&
+      wanted == transition.playing_synth() &&
       rings_synth.configure_pending() && !transition.blanking() &&
       !ui.calibrating_or_testing()) {
     // FREEZE still drops what the state-change guard below drops.
@@ -708,7 +708,7 @@ void MonitorStateChange() {
       ui.ClearSelfPlayRequest();
     }
     if (transition.Fade()) {
-      SwapPaused(SYNTH_SILENT, playing_synth);
+      SwapPaused(SYNTH_SILENT, transition.playing_synth());
     }
     return;
   }
@@ -721,17 +721,17 @@ void MonitorStateChange() {
 
   // Plaits and Rings share bank 0: changing owner fades out, rebuilds the
   // new owner from zero, then fades back in. Beads' synth needs no bank.
-  if (wanted != playing_synth) {
+  if (wanted != transition.playing_synth()) {
     const SynthEngine owner = wanted == SYNTH_RINGS || wanted == SYNTH_PLAITS
-        ? wanted : bank_owner;
-    if (synth_mode && owner != bank_owner) {
+        ? wanted : transition.bank_owner();
+    if (synth_mode && owner != transition.bank_owner()) {
       if (!transition.Fade()) {
         return;
       }
       SwapPaused(owner, wanted);
       return;
     }
-    playing_synth = wanted;
+    transition.set_playing_synth(wanted);
     ui.set_playing_synth(wanted);
   }
 
