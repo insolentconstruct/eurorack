@@ -90,6 +90,7 @@ void Ui::Init(
   
   system_clock.Init();
   
+  gestures_.Init();
   settings_ = settings;
   gain_control_ = gain_control;
   calibrator_ = calibrator;
@@ -645,7 +646,8 @@ void Ui::OnSwitchPressed(const Event& e) {
       pot_touched = pot_touched || \
           assignable_cv_pot_[i].editing_hidden_parameter();
     }
-    DoAction(e.control_id == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
+    gestures_.DoAction(
+        this, e.control_id == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
@@ -761,7 +763,7 @@ void Ui::OnSwitchReleased(const Event& e) {
             NextCalibrationStep();
           } else {
             if (uint32_t(e.data) >= kSelfPlayHoldTime) {
-              if (!DoAction(ACTION_HOLD)) {
+              if (!gestures_.DoAction(this, ACTION_HOLD)) {
                 State* state = settings_->mutable_state();
                 if (state->gain != 0) {
                   state->gain = 0;
@@ -900,82 +902,5 @@ void Ui::DoEvents() {
   }
 }
 
-void Ui::StepPlaitsBank() {
-#ifdef PLAITS_BLOBS
-  const uint8_t bank = uint8_t(
-      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) %
-          settings_->profile().num_plaits_banks());
-#else
-  const uint8_t bank = uint8_t(
-      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
-#endif  // PLAITS_BLOBS
-  settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
-  settings_->SaveOptions();
-#ifdef PLAITS_BLOBS
-  // Past three banks the colours repeat until Hygrostat's bank colours.
-  cue_ = plaits_bank_cues_[bank % kNumPlaitsBanks];
-#else
-  cue_ = plaits_bank_cues_[bank];
-#endif  // PLAITS_BLOBS
-  cue_time_ = system_clock.milliseconds();
-}
-
-void Ui::StepRingsPolyphony() {
-  const uint8_t polyphony = uint8_t(
-      (settings_->FeatureValue(FEATURE_RINGS_POLYPHONY) + 1) %
-          kFeatureDefinitions[FEATURE_RINGS_POLYPHONY].values);
-  settings_->SetFeatureValue(FEATURE_RINGS_POLYPHONY, polyphony);
-  settings_->SaveOptions();
-  // Rings' colours: green, yellow, red for one, two, four voices.
-  cue_.color = kOptionColors[polyphony];
-  cue_.pulses = PULSE_STEADY;
-  cue_time_ = system_clock.milliseconds();
-}
-
-bool Ui::DoAction(uint8_t slot) {
-  const ProfileFeature feature = settings_->profile().Action(slot);
-  // While Rings or Plaits plays, [A]+FREEZE steps its polyphony or bank
-  // unless Synth start is there; otherwise the profile's action runs.
-  if (slot == ACTION_FREEZE && synth_mode_ && feature != FEATURE_SYNTH_START) {
-    if (playing_synth_ == SYNTH_RINGS) {
-      StepRingsPolyphony();
-      return true;
-    } else if (playing_synth_ == SYNTH_PLAITS) {
-      StepPlaitsBank();
-      return true;
-    }
-  }
-  if (feature == FEATURE_MONOPHONIC) {
-    State* state = settings_->mutable_state();
-    if (settings_->profile().adjustable(feature)) {
-      state->monophonic_mode = !state->monophonic_mode;
-      settings_->SaveState();
-    }
-    return true;
-  } else if (feature == FEATURE_TRIM) {
-    trim_flag_ = true;
-    freeze_button_state_ = false;
-    return true;
-  } else if (feature == FEATURE_SYNTH_START &&
-      settings_->self_play_on_request() && !spectral_ && no_input_ &&
-      !should_ignore_state_change()) {
-    self_play_requested_ = true;
-    return true;
-  } else if (kFeatureDefinitions[feature].field != kNoField &&
-      !kFeatureDefinitions[feature].stateless) {
-    // Saved as from its options page, with that page's colour.
-    const uint8_t current = settings_->FeatureValue(feature);
-    const uint8_t value = feature == FEATURE_SYNTH
-        ? NextSynth(current, playable_synths_) : !current;
-    settings_->SetFeatureValue(feature, value);
-    settings_->SaveOptions();
-    const OptionValue cue = FindOptionValue(feature, value);
-    cue_.color = cue.color;
-    cue_.pulses = cue.pulses;
-    cue_time_ = system_clock.milliseconds();
-    return true;
-  }
-  return false;
-}
 
 }  // namespace beads

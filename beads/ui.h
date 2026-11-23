@@ -33,6 +33,7 @@
 
 #include "stmlib/ui/event_queue.h"
 
+#include "beads/gesture_controller.h"
 #include "beads/options.h"
 #include "beads/pot_controller.h"
 #include "beads/profile.h"
@@ -209,11 +210,8 @@ class Ui {
   }
   
  private:
+  friend class GestureController;
   void FlashOptionsPage();
-  void StepPlaitsBank();
-  void StepRingsPolyphony();
-  // Returns true when the action is handled.
-  bool DoAction(uint8_t slot);
 
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
@@ -304,6 +302,8 @@ class Ui {
   volatile uint8_t seed_latch_;
   volatile bool time_scan_;
   
+  GestureController gestures_;
+
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 
