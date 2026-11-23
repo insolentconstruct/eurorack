@@ -25,8 +25,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Blob gate controls for version 2 headers; STATE_SIZE and NUM_DEPENDENCIES
-// may be predefined.
+// Blob gate controls for version 2 headers; STATE_SIZE, NUM_DEPENDENCIES and
+// FLAGS may be predefined.
 
 #ifndef BEADS_TEST_BLOB_GATE_COMMON2_H_
 #define BEADS_TEST_BLOB_GATE_COMMON2_H_
@@ -49,6 +49,10 @@ using plaits::EngineParameters;
 #define NUM_DEPENDENCIES 0
 #endif  // NUM_DEPENDENCIES
 
+#ifndef FLAGS
+#define FLAGS 0
+#endif  // FLAGS
+
 extern "C" const PlaitsBlobHeader2 plaits_blob_header
     __attribute__((section(".blob_header"), used)) = {
   beads::kPlaitsBlobMagic,
@@ -56,7 +60,8 @@ extern "C" const PlaitsBlobHeader2 plaits_blob_header
   beads::kPlaitsBlobAbi2,
   beads::kPlaitsBlobServicesVersion2,
   beads::kPlaitsBlobKindModel,
-  100, 1, 0, STATE_SIZE, 0, 0, 0, 0, 0, 0, 0, NUM_DEPENDENCIES, 0, 1.0f, 1.0f,
+  100, 1, 0, STATE_SIZE, 0, 0, 0, 0, 0, 0, 0, NUM_DEPENDENCIES, FLAGS, 1.0f,
+  1.0f,
   { 0, 0, 0, 0 }
 };
 

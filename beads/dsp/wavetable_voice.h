@@ -108,7 +108,7 @@ class WavetableVoice {
       
       MAKE_INTEGRAL_FRACTIONAL(wave);
       
-      const int16_t* wave_start = wav_integrated_waves + \
+      const int16_t* wave_start = integrated_waves + \
           (wave_integral + bank_ * kNumWavesPerTable) * (kTableSize + 4);
       
       const float p = phase_ * float(kTableSize);

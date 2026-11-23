@@ -44,6 +44,10 @@ void PlaitsLibraries::Init(
     uint8_t* scratch,
     size_t scratch_size) {
   num_libraries_ = 0;
+  terrains_.grids = region.terrains();
+  terrains_.count = region.num_terrains();
+  memset(&terrain_record_, 0, sizeof(terrain_record_));
+  terrain_record_.context = &terrains_;
   records_ = reinterpret_cast<PlaitsBlobLibrary*>(ram);
   size_t used = PlaitsLibraryRamAlign(
       region.num_libraries() * sizeof(PlaitsBlobLibrary));
@@ -64,7 +68,7 @@ void PlaitsLibraries::Init(
       memcpy(&offset, blob + info.exports_offset + 4 * j, sizeof(offset));
       library->exports[j] = blob + offset;
     }
-    const PlaitsBlobLibrary* dependencies[kMaxPlaitsBlobDependencies];
+    const PlaitsBlobLibrary* dependencies[kMaxPlaitsBlobRecords];
     Resolve(blob, dependencies);
     uint8_t* library_ram = ram + used;
     fill(&library_ram[0], &library_ram[size], 0);
@@ -99,6 +103,9 @@ void PlaitsLibraries::Resolve(
         reinterpret_cast<const PlaitsBlobDependency*>(
             blob + h->dependencies_offset) + i;
     libraries[i] = Find(d->id);
+  }
+  if (h->flags & PLAITS_BLOB_FLAG_TERRAINS) {
+    libraries[h->num_dependencies] = &terrain_record_;
   }
 }
 

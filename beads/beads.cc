@@ -626,6 +626,7 @@ void Init() {
   RegionLoader region_loader;
   const Profile& profile = settings.profile();
   playable_synths = region_loader.Load(profile, kBank0Size, &plaits_region);
+  integrated_waves = plaits_region.waves();
   rings_synth.set_blob(playable_synths & (1 << SYNTH_RINGS)
       ? plaits_region.synth_blob() : NULL);
   plaits_synth.set_bank_table(profile.plaits_banks());

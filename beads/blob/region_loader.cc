@@ -82,8 +82,7 @@ uint8_t RegionLoader::Load(
       profile.num_plaits_banks() * kProfileBankSize,
       *region);
   const bool rings = RingsSynth::Fits(region->synth_blob(), synth_ram_size);
-  // Beads' wavetables stay compiled in until their section (phase 4).
-  return SynthMask(true, plaits, rings);
+  return SynthMask(region->waves() != NULL, plaits, rings);
 }
 
 }  // namespace beads

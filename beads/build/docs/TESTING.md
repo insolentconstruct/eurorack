@@ -107,7 +107,14 @@ host-test jobs; the release app does not link them:
   or the same library, no RAM or scratch for it, libraries out of order or
   more than eight; the synth-entry builder's records, cleared RAM, exports
   and dependency order. A rebuilt blob's fade-in: its squared ramp on OUT in
-  blocks of any size, nothing changed after it.
+  blocks of any size, nothing changed after it. Model header flags (`TERR`'s
+  record only on version 2); `WAVE`'s rows and `TERR`'s grids as the reader
+  hands them over, and `TERR`'s record after a flagged model's libraries,
+  empty when `TERR` is damaged, refused or hit by an ECC error.
+- `wave_section.mk`: Beads' synth reading a `WAVE` section placed off the
+  table's own alignment renders bit for bit as the compiled-in table (every
+  bank, quality, grains and drone); a changed wave changes the drone and the
+  grains, each on its own.
 - `profile_blobs.mk` and `storage_blobs.mk`: version 3 profiles (bank table,
   directory, unknown IDs, counts, start bank) and the saved bank's fallback,
   built with `PLAITS_BLOBS`.
