@@ -2369,6 +2369,9 @@ cases = [
     '        resonator_loop_high_pass_[0].Process<FILTER_MODE_HIGH_PASS>(\n'
     '            resonance.l), low_pass);',
     '        resonance.l, low_pass);'),
+  ('TestResonatorLoopChain', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '  const float cutoff = options_ & OPTION_FLAG_LOW_CUTOFF ? 10.0f : 40.0f;',
+    '  const float cutoff = options_ & OPTION_FLAG_LOW_CUTOFF ? 20.0f : 40.0f;'),
   ('TestResonatorLoopRender', 'resonator', 'beads/dsp/processor_resonator.cc',
     '  const float cutoff = options_ & OPTION_FLAG_LOW_CUTOFF ? 10.0f : 40.0f;',
     '  const float cutoff = options_ & OPTION_FLAG_LOW_CUTOFF ? 10.0f : 20.0f;'),
@@ -2377,7 +2380,7 @@ cases = [
     'const float kGrainsFeedbackLowPass[4] = { 0.75f, 0.9f, 0.9f, 1.0f };'),
   ('TestResonatorLoopRender', 'resonator', 'beads/dsp/processor_resonator.cc',
     '    resonator_loop_low_pass_ = 0.0f;\n', ''),
-  ('TestResonatorLoopFilters', 'resonator', 'beads/dsp/processor_resonator.cc',
+  ('TestResonatorLoopChain', 'resonator', 'beads/dsp/processor_resonator.cc',
     '  const float low_pass = 1.0f - (ratio() == 2 ? Sqrt(pole) : pole);',
     '  const float low_pass = 1.0f - pole;'),
   ('TestResonatorLoopGain', 'resonator', 'beads/dsp/processor_resonator.cc',

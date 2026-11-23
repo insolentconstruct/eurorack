@@ -1532,6 +1532,53 @@ void TestResonatorLoopFilters() {
   }
 }
 
+// The loop's copy goes through the grains' feedback filters at the
+// resonator's rate, in every quality and at both cutoffs: replayed here.
+void TestResonatorLoopChain() {
+  test_checker.Start("TestResonatorLoopChain");
+  const float low_pass[4] = { 0.999f, 0.9f, 1.0f - sqrtf(0.1f), 0.5f };
+  RandomizedParameter pitch;
+  memset(&pitch, 0, sizeof(pitch));
+  for (int m = 0; m < 4; ++m) {
+    for (int unity = 0; unity < 2; ++unity) {
+      Init(kMedia[m], false, RESONATOR_FEEDBACK);
+      processor.set_resonator_controls(Controls(1, 1));
+      processor.SetFeedbackCutoff(unity);
+      const float sr = processor.sample_rate();
+      const size_t size = BlockSize();
+      Svf high_pass[2];
+      for (int channel = 0; channel < 2; ++channel) {
+        high_pass[channel].Init();
+        high_pass[channel].set_f_q<FREQUENCY_FAST>(
+            (unity ? 10.0f : 40.0f) / sr, 0.5f);
+      }
+      FloatFrame lp;
+      lp = 0.0f;
+      for (int block = 0; block < 200; ++block) {
+        FloatFrame frames[12];
+        for (size_t i = 0; i < size; ++i) {
+          frames[i].l = 0.2f * Noise();
+          frames[i].r = 0.2f * Noise();
+        }
+        FloatFrame grains[12];
+        memcpy(grains, frames, sizeof(frames));
+        processor.ProcessResonatorLoop(pitch, !block, frames, size);
+        const float gain = 1.0f / processor.resonator_.peak_gain_;
+        for (size_t i = 0; i < size; ++i) {
+          const FloatFrame resonance = (frames[i] - grains[i]) * gain;
+          ONE_POLE(lp.l, high_pass[0].Process<FILTER_MODE_HIGH_PASS>(
+              resonance.l), low_pass[m]);
+          ONE_POLE(lp.r, high_pass[1].Process<FILTER_MODE_HIGH_PASS>(
+              resonance.r), low_pass[m]);
+          const FloatFrame loop = processor.resonator_loop_frames_[i];
+          CHECK(fabsf(loop.l - lp.l) <= 1.0e-5f * fabsf(lp.l) + 1.0e-9f);
+          CHECK(fabsf(loop.r - lp.r) <= 1.0e-5f * fabsf(lp.r) + 1.0e-9f);
+        }
+      }
+    }
+  }
+}
+
 // The last block's resonance goes into the recording at the grains' own
 // loop gain, with the tapes' soft clip gain taken out; while FEEDBACK
 // moves, at the lower end for the resonance and the higher for the clip.
@@ -1715,6 +1762,7 @@ int main() {
   TestResonatorBoundPublished();
   TestResonatorLoopRender();
   TestResonatorLoopFilters();
+  TestResonatorLoopChain();
   TestResonatorLoopGain();
   TestResonatorFeedback();
   TestResonatorFeedbackDecays();
