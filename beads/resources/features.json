@@ -173,13 +173,14 @@
       "name": "Synth",
       "values": [
         {"name": "Beads (Stock)", "led": [0, 255, 0]},
-        {"name": "Plaits", "led": [255, 255, 0]}
+        {"name": "Plaits", "led": [255, 255, 0]},
+        {"name": "Rings", "led": [255, 0, 0]}
       ],
       "field": 6,
       "saved": 14,
       "states": ["Off", "Fixed", "Adjustable"],
       "page": true,
-      "page_control": "halves",
+      "page_control": "zones",
       "amount": false,
       "actions": [1],
       "stateless": false,
@@ -789,7 +790,6 @@
         {"name": "Off (stock)", "led": [0, 255, 0]},
         {"name": "After the grains", "led": [255, 255, 0]},
         {"name": "Before the buffer", "led": [255, 0, 0]},
-        {"name": "Chord", "led": [0, 255, 0], "pulse": "slow"},
         {"name": "In the feedback", "led": [255, 255, 0], "pulse": "slow"}
       ],
       "field": null,
@@ -805,6 +805,27 @@
         "state": "Adjustable",
         "value": 0,
         "page_slot": 13,
+        "amount_slot": 0,
+        "action": 0
+      }
+    },
+    {
+      "id": 42,
+      "symbol": "RINGS_POLYPHONY",
+      "name": "Rings polyphony",
+      "values": [{"name": "1"}, {"name": "2"}, {"name": "4"}],
+      "field": null,
+      "saved": 27,
+      "states": ["Adjustable"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true,
+      "factory": {
+        "state": "Adjustable",
+        "value": 0,
+        "page_slot": 0,
         "amount_slot": 0,
         "action": 0
       }

@@ -256,6 +256,7 @@ static PlaitsBlobStatus ReadHeader(
     memcpy(h, blob, sizeof(*h));
   }
   const bool library = h->kind == kPlaitsBlobKindLibrary;
+  const bool synth = h->kind == kPlaitsBlobKindSynth;
   info->abi = h->abi;
   info->kind = h->kind;
   info->first_id = h->first_id;
@@ -270,6 +271,8 @@ static PlaitsBlobStatus ReadHeader(
   info->num_exports = library ? h->render_offset : 0;
   info->dependencies_offset = h->dependencies_offset;
   info->num_dependencies = h->num_dependencies;
+  info->controls_size = synth ? Read32(blob + 72) : 0;
+  info->block_size = synth ? Read32(blob + 76) : 0;
   return PLAITS_BLOB_OK;
 }
 
@@ -308,8 +311,23 @@ PlaitsBlobStatus PlaitsBlob::Check(
     return PLAITS_BLOB_ERROR_SERVICES;
   }
   const bool library = h.kind == kPlaitsBlobKindLibrary;
+  const bool synth = h.kind == kPlaitsBlobKindSynth;
   if (h.kind != kPlaitsBlobKindModel && !library) {
-    return PLAITS_BLOB_ERROR_KIND;
+    if (!synth) {
+      return PLAITS_BLOB_ERROR_KIND;
+    }
+    // A synth: one nonzero ID, both sizes, no arena, flags or libraries.
+    if (h.num_ids != 1 || !h.first_id || h.arena_size || h.flags ||
+        !Read32(blob + 72) || !Read32(blob + 76) ||
+        h.dependencies_offset || h.num_dependencies) {
+      return PLAITS_BLOB_ERROR_HEADER;
+    }
+  }
+  // A model knows only the flags above; TERR's record needs version 2.
+  if (h.kind == kPlaitsBlobKindModel && (h.flags & ~(h.abi == kPlaitsBlobAbi
+      ? PLAITS_BLOB_FLAG_ENVELOPED
+      : PLAITS_BLOB_FLAG_ENVELOPED | PLAITS_BLOB_FLAG_TERRAINS))) {
+    return PLAITS_BLOB_ERROR_HEADER;
   }
   // A library has one nonzero ID, and no flags or gains.
   if (!h.num_ids || h.first_id >= kNumPlaitsModelIds ||
@@ -368,6 +386,7 @@ PlaitsBlobStatus PlaitsBlob::Check(
     }
   }
   const size_t max_state = library ? kPlaitsBlobMaxLibraryRamSize
+      : synth ? kPlaitsBlobMaxSynthRamSize
       : (h.abi == kPlaitsBlobAbi
           ? kPlaitsBlobMaxStateSize : kPlaitsBlobMaxStateSize2);
   if (h.state_size > max_state || h.arena_size > kPlaitsBlobMaxArenaSize) {

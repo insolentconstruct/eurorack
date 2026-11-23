@@ -137,7 +137,6 @@ SHORT = {
     "Off (stock)": "Off",
     "After the grains": "After",
     "Before the buffer": "Before",
-    "Chord": "Chord",
 }
 # On the printable, with width's card on page 1: [A] gestures off the pages.
 PAGE_GESTURES = ("Manual gain",)
@@ -247,6 +246,7 @@ DETAILS = [
     "Move a knob more than a tenth of its travel to take it over; smaller "
     "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
     "brightness use the knob's three thirds; SEED latch uses four quarters; "
+    "Synth uses thirds with the Rings synth installed, halves without; "
     "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
     "Settings save by themselves about a second after you stop turning. "
@@ -309,7 +309,7 @@ DETAILS = [
     "sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make "
     "DENSITY crossfade to a new delay time instead of bending the pitch "
     "([Delay time](FEATURES.md#delay-time)).",
-    "A Hygrostat profile can add Rings' modal resonator after the grains or "
+    "Resonator, on page 5, places Rings' modal resonator after the grains or "
     "before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it "
     "and Attacks hits strike it.",
     "Frozen feedback Evolving runs frozen grains, or frozen delay slices in "
@@ -334,6 +334,9 @@ DETAILS = [
     "noon and SEED unpatched the last voice drones until SEED plays a "
     "note. The models in each bank are listed in the README's \"Plaits "
     "synth\" section.",
+    "Synth Rings, with the Rings synth installed, plays Rings' resonator. "
+    "While it plays, hold [A] and press FREEZE to step its polyphony: one, "
+    "two or four voices ([A] flashes green, yellow or red).",
     "Synth start Manual: the synth never starts by itself. It needs both "
     "audio inputs unpatched and FREEZE off: hold the quality button [A] for "
     "about a second and a half and release it to start or stop it. Patching "
@@ -825,7 +828,8 @@ def svg(pages, mobile=False):
                     d.text(width - margin, y, rows[0]["setting"] + ": " +
                            CARD_NOTES[rows[0]["setting"]].lower(), 15,
                            "bold", COLOURS["red"], "end")
-        y += 34
+        # Print pages sit a little closer to fit Letter.
+        y += 34 if mobile else 31
         if mobile:
             for knob in KNOBS:
                 y += (
@@ -857,7 +861,7 @@ def svg(pages, mobile=False):
                 heights[2] = d.warning(
                     margin + 660, y + heights[2] + 14, 315, 34
                 ) - y
-            y += max(heights) + 5
+            y += max(heights) + 1
     y -= 16
     for line in textwrap.wrap(
         "Author: Insolent Construct • Control sketch • " + ATTRIBUTION,

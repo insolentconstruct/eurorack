@@ -25,7 +25,7 @@
 // -----------------------------------------------------------------------------
 //
 // Plaits' WaveTerrainEngine's code as a plain class for a blob, with terrains
-// 5-7 reading inside their bank.
+// 5-7 and the user grid reading inside their tables.
 
 #include "beads/blob/models/wave_terrain_engine.h"
 
@@ -47,20 +47,25 @@ void WaveTerrain::Init(
   offset_ = 0.0f;
   terrain_ = 0.0f;
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
-  user_terrain_ = NULL;
+  grids_ = NULL;
+  num_grids_ = 0;
 }
 
 void WaveTerrain::Reset() {
 
 }
 
-inline float TerrainLookup(float x, float y, const int8_t* terrain) {
+// Plaits' TerrainLookup on a user grid, its coordinates clamped to the grid.
+inline float TerrainLookupGrid(const int8_t* terrain, float x, float y) {
   const int terrain_size = 64;
   const float value_scale = 1.0f / 128.0f;
   const float coord_scale = float(terrain_size - 2) * 0.5f;
 
   x = (x + 1.0f) * coord_scale;
   y = (y + 1.0f) * coord_scale;
+  // The path can overshoot the terrain; stay inside the grid.
+  x = fminf(fmaxf(x, 0.0f), 62.9999f);
+  y = fminf(fmaxf(y, 0.0f), 62.9999f);
 
   MAKE_INTEGRAL_FRACTIONAL(x);
   MAKE_INTEGRAL_FRACTIONAL(y);
@@ -181,10 +186,14 @@ inline float WaveTerrain::Terrain(float x, float y, int terrain_index) {
         return TerrainLookupWT(waves_, x, y, 2 - (terrain_index - 5));
       }
       break;
-    case 8:
-      {
-        return TerrainLookup(x, y, user_terrain_);
+    default:
+      // TERR's grids; HARMONICS stops at the last one.
+      if (terrain_index >= 8) {
+        const int grid_size = 64 * 64;
+        return TerrainLookupGrid(
+            grids_ + (terrain_index - 8) * grid_size, x, y);
       }
+      break;
   }
   return 0.0f;
 }
@@ -212,10 +221,13 @@ void WaveTerrain::Render(
       f0 * kScale, radius, path_x, path_y, size * kOversampling);
 
   ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
-  int num_terrains = user_terrain_ ? 9 : 8;
+  int num_terrains = 8 + num_grids_;
+  // Plaits' min(), unrolled: the stock terrains' target rounds as before.
+  const float harmonics = parameters.harmonics * 1.05f;
+  const float terrain_scale = float(num_terrains - 1.0001f);
   ParameterInterpolator terrain(
       &terrain_,
-      min(parameters.harmonics * 1.05f, 1.0f) * float(num_terrains - 1.0001f),
+      harmonics < 1.0f ? harmonics * terrain_scale : terrain_scale,
       size);
 
   size_t ij = 0;

@@ -69,7 +69,6 @@ enum ResonatorPlacement {
   RESONATOR_OFF,
   RESONATOR_AFTER_GRAINS,
   RESONATOR_BEFORE_BUFFER,
-  RESONATOR_CHORD,  // Reserved; after the grains for now.
   // After the grains, and FEEDBACK records its resonance.
   RESONATOR_FEEDBACK
 };
@@ -147,8 +146,7 @@ class Processor {
   inline void set_resonator(int placement) {
     // One store: the audio interrupt never sees both placements. In the
     // feedback takes both flags: it records the resonance, and renders it.
-    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS ||
-        placement == RESONATOR_CHORD
+    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
         ? OPTION_FLAG_RESONATOR_GRAINS
         : (placement == RESONATOR_BEFORE_BUFFER
             ? OPTION_FLAG_RESONATOR_INPUT

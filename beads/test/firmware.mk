@@ -8,6 +8,7 @@ CC_FILES       = 		firmware_test.cc \
 		background_buffer_backup.cc \
 		factory_test.cc \
 		synth.cc \
+		rings_synth.cc \
 		processor.cc \
 		processor_options.cc \
 		spectral_processor.cc \

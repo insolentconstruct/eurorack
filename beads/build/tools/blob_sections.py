@@ -25,11 +25,12 @@
 #
 # -----------------------------------------------------------------------------
 #
-# Lay out a region (beads/blob/plaits_region.h): WAVE, TERR and PLTS sections
-# in that order, each on a 32-byte flash word, with a 32-byte header and a
-# trailing CRC-32. PLTS holds one entry per blob (libraries by ID, then
-# models by ID), then the blobs verbatim at 32-byte aligned offsets.
-# Hygrostat's writer must produce the same bytes.
+# Lay out a region (beads/blob/plaits_region.h): WAVE, TERR, PLTS and RNGS
+# sections in that order, each on a 32-byte flash word, with a 32-byte header
+# and a trailing CRC-32. PLTS holds one entry per blob (libraries by ID, then
+# models by ID), then the blobs verbatim at 32-byte aligned offsets. RNGS
+# holds one synth blob (kind 3), right after its header. Hygrostat's writer
+# must produce the same bytes.
 #
 #   blob_sections.py OUT.bin RELEASE [--wave beads/resources.cc]
 #       [--terrain GRIDS.bin] [--gap BYTES] [BLOB.bin...]
@@ -50,7 +51,8 @@ import zlib
 
 SECTION_MAGIC = 0x43535a44
 SECTION_VERSION = 1
-KINDS = {'WAVE': 0x45564157, 'TERR': 0x52524554, 'PLTS': 0x53544c50}
+KINDS = {'WAVE': 0x45564157, 'TERR': 0x52524554, 'PLTS': 0x53544c50,
+         'RNGS': 0x53474e52}
 ALIGNMENT = 32
 WAVE_ROWS = 193
 WAVE_ROW = 260
@@ -61,6 +63,7 @@ HEADER_SIZES = {1: 64, 2: 96}
 BLOB_MAGIC = 0x424d5a44
 KIND_MODEL = 1
 KIND_LIBRARY = 2
+KIND_SYNTH = 3
 MAX_LIBRARIES = 8
 
 
@@ -128,6 +131,24 @@ def blob_ids(blob):
   return range(first, first + count)
 
 
+def rings(release, blob):
+  """The RNGS section: one synth blob, checked as blob_ids checks the
+  others."""
+  magic, header_size, abi, _, kind, synth, count, size = struct.unpack_from(
+      '<8I', blob, 0)
+  if magic != BLOB_MAGIC or abi != 2 or header_size != HEADER_SIZES[2] or \
+      kind != KIND_SYNTH or count != 1 or not 0 < synth < 256:
+    raise ValueError('not a synth blob')
+  if size != len(blob) or size % 4 or size < header_size + 4:
+    raise ValueError('a blob\'s size word does not match its file')
+  if zlib.crc32(blob[:-4]) & 0xffffffff != struct.unpack_from(
+      '<I', blob, size - 4)[0]:
+    raise ValueError('a blob\'s CRC does not match')
+  return section('RNGS', release, 1, blob), [
+      {'synth': synth, 'offset': 32, 'size': size,
+       'sha256': hashlib.sha256(blob).hexdigest()}]
+
+
 def plaits(release, blobs, gap=0):
   """The PLTS section; gap (a test layout) is added before the first
   model."""
@@ -190,11 +211,17 @@ def main(argv):
       raise ValueError('TERR must be 1 to 16 grids of 64 x 64')
     sections.append(('TERR', section('TERR', args.release, count, grids),
                      None))
-  if args.blobs:
-    data, listed = plaits(args.release,
-                          [open(p, 'rb').read() for p in args.blobs],
-                          args.gap)
+  blobs = [open(p, 'rb').read() for p in args.blobs]
+  synths = [b for b in blobs if blob_kind(b) == KIND_SYNTH]
+  blobs = [b for b in blobs if blob_kind(b) != KIND_SYNTH]
+  if len(synths) > 1:
+    raise ValueError('more than one synth blob')
+  if blobs:
+    data, listed = plaits(args.release, blobs, args.gap)
     sections.append(('PLTS', data, listed))
+  if synths:
+    data, listed = rings(args.release, synths[0])
+    sections.append(('RNGS', data, listed))
 
   region = bytearray()
   layout = {'release': args.release, 'sections': []}

@@ -87,17 +87,22 @@ class Codec {
     callback_ = NULL;
     Observe(CALL_PAUSE);
   }
+  // A test may run a block the moment the callback is back, as the DMA can.
   void Resume(FillBufferCallback callback) {
     callback_ = callback;
     Observe(CALL_RESUME);
+    if (on_resume_) {
+      on_resume_();
+    }
   }
   void Observe(Call call) {
     if (observer_) {
       observer_(call);
     }
   }
-  // Zero-initialized with the object; Init leaves it set.
+  // Zero-initialized with the object; Init leaves them set.
   void (*observer_)(Call call);
+  void (*on_resume_)();
   int sample_rate_;
   size_t block_size_;
   FillBufferCallback callback_;

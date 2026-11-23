@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "5457099fec76864c3108aa135062275e4c15dd341138bb1308839f7a0ee673c7",
+  "manifest_sha256": "fb8dba4b3b98fcb8fabacf40067f6db5c25fab742a18ec4a8e452c9de4fdf9f4",
   "record_version": 1,
   "features": [
     {
@@ -345,7 +345,8 @@
       "name": "Synth",
       "values": [
         "Beads (Stock)",
-        "Plaits"
+        "Plaits",
+        "Rings"
       ],
       "states": [
         "Off",
@@ -1372,7 +1373,6 @@
         "Off (stock)",
         "After the grains",
         "Before the buffer",
-        "Chord",
         "In the feedback"
       ],
       "states": [
@@ -1419,6 +1419,35 @@
       "touches_synth": false,
       "cpu_cost": null,
       "saved": 24
+    },
+    {
+      "id": 42,
+      "name": "Rings polyphony",
+      "values": [
+        "1",
+        "2",
+        "4"
+      ],
+      "states": [
+        "Adjustable"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Adjustable",
+      "default": 0,
+      "factory": [
+        42,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "touches_synth": true,
+      "cpu_cost": null,
+      "saved": 27
     },
     {
       "id": 43,

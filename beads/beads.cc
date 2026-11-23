@@ -36,13 +36,14 @@
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
 #include "beads/dsp/plaits_synth.h"
+#include "beads/dsp/rings_synth.h"
 #ifdef PLAITS_BLOBS
-#include "beads/blob/plaits_catalog.h"
-#include "beads/blob/plaits_region.h"
+#include "beads/blob/region_loader.h"
 #include "stmlib/utils/random.h"
 #endif  // PLAITS_BLOBS
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
+#include "beads/blob/synth_choice.h"
 #include "beads/dwt_calibration.h"
 #include "beads/factory_test.h"
 #include "beads/gain_control.h"
@@ -66,6 +67,9 @@ uint16_t reverb_buffer[32768] __attribute__ ((section (".ramd3")));
 // Plaits borrows bank 0; Configure clears it before other users return.
 // Exclude its last byte: 12-bit media never clear it.
 STATIC_ASSERT(kPlaitsSynthRamSize < 256 * 1024, plaits_voices_in_bank_0);
+const size_t kBank0Size = 256 * 1024 - 1;
+// Feature 42's values.
+const int kRingsPolyphonies[3] = { 1, 2, 4 };
 
 BackgroundBufferBackup background_buffer_backup;
 Calibrator calibrator;
@@ -76,12 +80,15 @@ FreezeInput freeze_input;
 GainControl gain_control;
 NormalizationDetector normalization_detector;
 PlaitsSynth plaits_synth;
+RingsSynth rings_synth;
 #ifdef PLAITS_BLOBS
 // Read once at boot; its identity record is readable over SWD.
 PlaitsRegion plaits_region;
-PlaitsSynthLock synth_lock;
-extern "C" const uint8_t plaits_region_begin[];
 #endif  // PLAITS_BLOBS
+// What can play, what plays, and which synth's RAM is in bank 0.
+uint8_t playable_synths;
+SynthEngine playing_synth;
+SynthEngine bank_owner;
 Processor processor;
 SeedInput seed_input;
 Settings settings;
@@ -373,6 +380,7 @@ void Process(
         processor.SetCloudsStyle(clouds_style);
         synth.SetCloudsStyle(clouds_style, false);
         plaits_synth.SetCloudsStyle(clouds_style, false);
+        rings_synth.SetCloudsStyle(clouds_style, false);
       }
       Codec::Frame silence;
       silence.l = 0;
@@ -395,17 +403,29 @@ void Process(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
-#ifdef PLAITS_BLOBS
-  const bool plaits_synth_on = synth_lock == PLAITS_SYNTH_FORCE_PLAITS ||
-      (synth_lock == PLAITS_SYNTH_AS_PROFILED && ui.plaits_synth());
-  if (synth_mode && synth_lock == PLAITS_SYNTH_SILENT) {
+  if (synth_mode && playing_synth == SYNTH_SILENT) {
     FloatFrame silence;
     silence = 0.0f;
     fill(&float_out[0], &float_out[size], silence);
-  } else if (synth_mode && plaits_synth_on) {
-#else
-  if (synth_mode && ui.plaits_synth()) {
-#endif  // PLAITS_BLOBS
+  } else if (synth_mode && playing_synth == SYNTH_RINGS) {
+    rings_synth.set_output_limiter_mode(ui.output_limiter_mode());
+    rings_synth.set_pitch_scale(ui.pitch_scale());
+    rings_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+    rings_synth.Render(
+        seed_button_state,
+        seed_input,
+        freeze,
+        Synth::Resolution(settings.state().media),
+        d, p, m,
+        float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
+  } else if (synth_mode && playing_synth == SYNTH_PLAITS) {
     plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
     plaits_synth.set_pitch_scale(ui.pitch_scale());
     plaits_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -493,12 +513,32 @@ void Process(
   }
 }
 
+// Codec paused: one synth at a time owns delay bank 0, built from zero.
+void TakeBank0(SynthEngine owner) {
+  if (owner == SYNTH_RINGS) {
+#ifdef PLAITS_BLOBS
+    rings_synth.InitVoices(delay_buffer_1, kBank0Size, &plaits_blob_services,
+        ui.mix_parameter(Ui::MIX_PARAMETER_FEEDBACK));
+#else
+    rings_synth.InitVoices(delay_buffer_1, kBank0Size, NULL,
+        ui.mix_parameter(Ui::MIX_PARAMETER_FEEDBACK));
+#endif  // PLAITS_BLOBS
+  } else {
+    plaits_synth.InitVoices(delay_buffer_1);
+  }
+  bank_owner = owner;
+}
+
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
   synth_mode = new_synth_mode;
   synth_mode_start_time = 0;
   if (synth_mode) {
-    plaits_synth.InitVoices(delay_buffer_1);
+    // Rings when it plays, else Plaits, so Beads <-> Plaits stays instant.
+    TakeBank0(playing_synth == SYNTH_RINGS ? SYNTH_RINGS : SYNTH_PLAITS);
+  } else {
+    // The granular processor's Configure clears the bank.
+    bank_owner = SYNTH_SILENT;
   }
 
   gain_control.Init(
@@ -528,54 +568,6 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   codec_sample_rate = sr;
 }
 
-#ifdef PLAITS_BLOBS
-// Reports and clears a double ECC error and the bus fault it raised.
-bool FlashEccOk() {
-  const uint32_t bus = SCB->CFSR &
-      (SCB_CFSR_PRECISERR_Msk | SCB_CFSR_IMPRECISERR_Msk |
-          SCB_CFSR_BFARVALID_Msk);
-  const bool ok = !(FLASH->SR1 & FLASH_SR_DBECCERR) && !bus;
-  FLASH->CCR1 = FLASH_CCR_CLR_DBECCERR;
-  SCB->CFSR = bus;
-  return ok;
-}
-
-// Reads the region with data bus faults ignored: a double ECC error (an
-// interrupted write) reads as garbage and faults that section only. The
-// D-cache is off meanwhile, so no linefill raises an imprecise fault later.
-void ReadPlaitsRegion() {
-  const Profile& profile = settings.profile();
-  plaits_region.set_flash_check(&FlashEccOk);
-  plaits_region.set_library_ram(kPlaitsLibraryRamSize, kPlaitsVoiceRamSize);
-  SCB_DisableDCache();
-  SCB->CCR |= SCB_CCR_BFHFNMIGN_Msk;
-  __DSB();
-  __ISB();
-  __set_FAULTMASK(1);
-  plaits_region.Read(
-      plaits_region_begin,
-      reinterpret_cast<const uint8_t*>(kPlaitsRegionEnd),
-      kPlaitsBlobRelease,
-      profile.directory(), profile.num_sections(),
-      kPlaitsDefaultLayout, kNumPlaitsDefaultSections,
-      &plaits_blob_services, kPlaitsApprovedBlobs, kNumPlaitsApprovedBlobs);
-  __set_FAULTMASK(0);
-  SCB->CCR &= ~SCB_CCR_BFHFNMIGN_Msk;
-  __DSB();
-  __ISB();
-  SCB_EnableDCache();
-  const bool plaits = PlaitsVoice::Playable(
-      profile.plaits_bank(0),
-      profile.num_plaits_banks() * kProfileBankSize,
-      plaits_region);
-  // Beads' wavetables stay compiled in until their section (phase 4).
-  synth_lock = PlaitsRegion::Lock(plaits, true);
-  plaits_synth.set_bank_table(profile.plaits_banks());
-  plaits_synth.set_region(&plaits_region);
-  ui.set_synth_fault(synth_lock == PLAITS_SYNTH_SILENT);
-}
-#endif  // PLAITS_BLOBS
-
 void Init() {
 #ifdef PLAITS_BLOBS
   // Its state is not loaded: seed it with stmlib's initial value.
@@ -603,6 +595,9 @@ void Init() {
   processor.Init(delay_buffers, reverb_buffer);
   synth.Init(reverb_buffer);
   plaits_synth.Init(reverb_buffer);
+  rings_synth.Init(reverb_buffer);
+  playable_synths = SynthMask(true, true, false);
+  bank_owner = SYNTH_SILENT;
   clouds_style = false;
   reverb_style_gain = 1.0f;
   reverb_style_previous_gain = 1.0f;
@@ -628,8 +623,18 @@ void Init() {
   }
   ui.LoadOptions();
 #ifdef PLAITS_BLOBS
-  ReadPlaitsRegion();
+  RegionLoader region_loader;
+  const Profile& profile = settings.profile();
+  playable_synths = region_loader.Load(profile, kBank0Size, &plaits_region);
+  integrated_waves = plaits_region.waves();
+  rings_synth.set_blob(playable_synths & (1 << SYNTH_RINGS)
+      ? plaits_region.synth_blob() : NULL);
+  plaits_synth.set_bank_table(profile.plaits_banks());
+  plaits_synth.set_region(&plaits_region);
 #endif  // PLAITS_BLOBS
+  ui.set_playable_synths(playable_synths);
+  playing_synth = EffectiveSynth(ui.synth(), playable_synths);
+  ui.set_playing_synth(playing_synth);
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
@@ -668,6 +673,25 @@ void Init() {
   }
 }
 
+// Faded out, with the codec paused if it runs: a new bank 0 owner and the
+// synth that plays on it, or Rings' pending configuration (SYNTH_SILENT).
+void SwapPaused(SynthEngine owner, SynthEngine playing) {
+  if (codec_running) {
+    codec.Pause();
+  }
+  if (owner == SYNTH_SILENT) {
+    rings_synth.Configure();
+  } else {
+    TakeBank0(owner);
+  }
+  playing_synth = playing;
+  ui.set_playing_synth(playing);
+  if (codec_running) {
+    codec.Resume(&Process);
+  }
+  codec_fade = false;
+}
+
 // Codec restarts fade the output out first (#53): true once it is silent.
 bool FadedOut() {
   // Before the first start there is no audio to fade.
@@ -703,11 +727,46 @@ void MonitorStateChange() {
   ui.set_no_input(normalization_detector.no_input());
   ui.set_synth_mode(synth_mode);
   plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));
+  rings_synth.set_polyphony(
+      kRingsPolyphonies[settings.FeatureValue(FEATURE_RINGS_POLYPHONY)]);
+  const SynthEngine wanted = EffectiveSynth(ui.synth(), playable_synths);
+  ui.set_synth_fault(wanted == SYNTH_SILENT);
+  // A settled zone or polyphony change reconfigures Rings off the interrupt,
+  // also while FREEZE sustains it.
+  if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&
+      rings_synth.configure_pending() && !codec_transition_frames &&
+      !ui.calibrating_or_testing()) {
+    // FREEZE still drops what the state-change guard below drops.
+    if (ui.should_ignore_state_change()) {
+      synth_mode_start_time = 0;
+      ui.ClearSelfPlayRequest();
+    }
+    if (FadedOut()) {
+      SwapPaused(SYNTH_SILENT, playing_synth);
+    }
+    return;
+  }
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
     codec_fade = false;
     return;
+  }
+
+  // Plaits and Rings share bank 0: changing owner fades out, rebuilds the
+  // new owner from zero, then fades back in. Beads' synth needs no bank.
+  if (wanted != playing_synth) {
+    const SynthEngine owner = wanted == SYNTH_RINGS || wanted == SYNTH_PLAITS
+        ? wanted : bank_owner;
+    if (synth_mode && owner != bank_owner) {
+      if (!FadedOut()) {
+        return;
+      }
+      SwapPaused(owner, wanted);
+      return;
+    }
+    playing_synth = wanted;
+    ui.set_playing_synth(wanted);
   }
 
   // Once faded out, swap the engine. This clears the recording; a frozen

@@ -35,6 +35,13 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
+#ifdef PLAITS_BLOBS
+// WAVE's rows, set at boot; Beads' synth does not play without them.
+const int16_t* integrated_waves = NULL;
+#else
+const int16_t* integrated_waves = wav_integrated_waves;
+#endif  // PLAITS_BLOBS
+
 void Synth::Init(uint16_t* reverb_buffer) {
   clouds_style_ = false;
   output_limiter_mode_ = OUTPUT_LIMITER_STOCK;

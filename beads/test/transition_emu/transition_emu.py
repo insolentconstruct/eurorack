@@ -77,7 +77,7 @@ FEATURE_PLAITS_BANK = 31
 # State bytes (settings.h asserts the layout).
 STATE_GAIN, STATE_GATE_OUTPUT, STATE_NO_AUTOSAVE, STATE_MONOPHONIC = 5, 6, 8, 9
 BUDGET = 200000000
-USAGE = '''usage: transition_emu.py [--summary] ELF OUT.json [SCENARIO ...]
+USAGE = '''usage: transition_emu.py [--summary] [--region BIN] ELF OUT.json [SCENARIO ...]
        transition_emu.py --compare BASE.json CANDIDATE.json
        transition_emu.py --check ELF
 '''
@@ -371,8 +371,11 @@ class Machine(object):
 
 class Rig(object):
 
-  def __init__(self, image):
+  def __init__(self, image, region=None):
     self.m = Machine(image)
+    # The region as an install leaves it, from the app's region start.
+    if region:
+      self.m.uc.mem_write(image.address('plaits_region_begin'), region)
     self.image = image
     self.left = self.right = True
     self.seed_patched = False
@@ -615,13 +618,14 @@ def scenario_synth(r):
   r.tick(300)
   r.tick(9800, audio=False)
   r.tick(600)
-  # The Plaits synth: MEDIA+FREEZE steps its bank.
+  # Plaits selected, but the erased flash has no models: Beads' synth plays,
+  # so MEDIA+FREEZE runs the profile's Buffer trim, not a bank step (#353).
   r.set_feature(FEATURE_SYNTH, 1)
   r.tick(100)
   bank = r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0]
   r.combo('media', 'freeze')
-  r.expect(r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] != bank,
-           'MEDIA+FREEZE steps the Plaits bank')
+  r.expect(r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] == bank,
+           'MEDIA+FREEZE leaves the bank of a Plaits that cannot play')
   r.set_feature(FEATURE_SYNTH, 0)
   r.tick(100)
   r.left = r.right = True
@@ -653,9 +657,9 @@ SCENARIOS = (
 
 
 def run(arguments):
-  path, name = arguments
+  path, name, region = arguments
   start = time.time()
-  r = Rig(Image(path))
+  r = Rig(Image(path), region)
   r.settle()
   dict(SCENARIOS)[name](r)
   phases = {}
@@ -817,6 +821,11 @@ def main(argv):
     return compare(argv[2], argv[3])
   summary = '--summary' in argv
   argv = [a for a in argv if a != '--summary']
+  region = None
+  if '--region' in argv:
+    i = argv.index('--region')
+    region = open(argv[i + 1], 'rb').read()
+    del argv[i:i + 2]
   if len(argv) < 3:
     sys.stderr.write(USAGE)
     return 2
@@ -824,7 +833,7 @@ def main(argv):
   names = argv[3:] or [n for n, _ in SCENARIOS]
   image = Image(path)
   pool = multiprocessing.Pool(min(len(names), multiprocessing.cpu_count()))
-  results = pool.map(run, [(path, n) for n in names])
+  results = pool.map(run, [(path, n, region) for n in names])
   for s in results:
     print('%-14s %12d instructions' % (s['name'], s['total']))
     for key, (n, low, high, total) in sorted(s['phases'].items()):
@@ -833,6 +842,7 @@ def main(argv):
       del s['calls']
   # A summary is for reading; full call lists are kept compact.
   json.dump({'elf_sha256': image.sha256, 'unicorn': unicorn.__version__,
+             'region_sha256': region and hashlib.sha256(region).hexdigest(),
              'scenarios': results}, open(out, 'w'), sort_keys=True,
             indent=1 if summary else None)
   return 0

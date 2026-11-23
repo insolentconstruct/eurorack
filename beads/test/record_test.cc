@@ -87,7 +87,8 @@ void TestRecordJournal() {
   }
   // Both changed, cut after one, two and three words: the record comes
   // first, so a cut never leaves the new state with the old options. Page 5
-  // sits in its second word: after one word it is torn, the old one loads.
+  // and Rings' polyphony sit in its second word: after one word it is torn,
+  // the old one loads.
   for (int cut = 1; cut <= 3; ++cut) {
     const Saved before = Setup(kCalibration, 5);
     Settings both;
@@ -258,7 +259,7 @@ void TestSector14Full() {
 // A cut at each step of a compaction (erase, four calibration words, two
 // record words): the calibration is the old one, never lost or locked; the
 // options are the last saved, the defaults inside the window, or the new
-// ones once the record's first word is in.
+// ones once both record words are in.
 void TestInterruptedCompaction() {
   test_checker.Start("TestInterruptedCompaction");
   const Saved defaults = Defaults();
@@ -279,7 +280,7 @@ void TestInterruptedCompaction() {
     if (cut == 0) {
       CHECK(SameOptions(loaded, saved));
     } else if (cut < 7) {
-      // Page 5 sits in the record's second word: one word is a torn record.
+      // Page 5 and Rings' polyphony sit in the record's second word: one word is a torn record.
       CHECK(SameOptions(loaded, defaults));
     } else {
       CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);

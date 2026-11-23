@@ -340,7 +340,10 @@ eight models in the current bank; TIME controls HARMONICS, SIZE controls
 TIMBRE and SHAPE controls MORPH. DRY/WET sets decay, not the
 oscillator/grain balance it sets in the stock synth; FREEZE sustains.
 Other grain controls remain. At DENSITY noon with SEED unpatched, the
-last voice drones.
+last voice drones. With the Rings synth installed, DRY/WET picks Beads,
+Plaits or Rings in thirds (green / yellow / red); without it, in halves.
+While Rings plays, hold [A] and press FREEZE to step its polyphony: one,
+two or four voices ([A] flashes green, yellow or red).
 
 Synth start selects Automatic (Stock), starting after ten seconds with
 both inputs unpatched, or Manual. With inputs unpatched and FREEZE off,
@@ -350,9 +353,8 @@ the same hold restarts automatic gain. The hold acts on release, and not
 at all if a knob or button was used while [A] was down.
 
 Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off
-(Stock), After the grains, Before the buffer, Chord or In the feedback,
-in fifths. Chord comes with its own change and plays as After the grains
-until then. In the feedback is After the grains whose resonance is also
+(Stock), After the grains, Before the buffer or In the feedback,
+in quarters. In the feedback is After the grains whose resonance is also
 recorded: FEEDBACK sends half its loop through the resonator, so each
 pass rings the modes again, while the level stays near After the
 grains'. Where After the grains dies away, so does it. DRY/WET picks its
@@ -397,6 +399,7 @@ page	LED	knob	setting	value	colour	pulse
 3	REVERB	FEEDBACK	Processor	Spectral	yellow	steady
 3	REVERB	DRY/WET	Synth	Beads (Stock)	green	steady
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
+3	REVERB	DRY/WET	Synth	Rings	red	steady
 3	REVERB	REVERB	Synth start	Automatic (Stock)	green	steady
 3	REVERB	REVERB	Synth start	Manual	yellow	steady
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	100%	green	steady
@@ -412,7 +415,6 @@ page	LED	knob	setting	value	colour	pulse
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Off (stock)	green	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	After the grains	yellow	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Before the buffer	red	steady
-5	FEEDBACK and REVERB	FEEDBACK	Resonator	Chord	green	slow (0.98 Hz)
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	In the feedback	yellow	slow (0.98 Hz)
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Wood	green	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	String	yellow	steady
@@ -474,12 +476,12 @@ yellow holds the eight models added in Plaits 1.2
 Saved data
 ----------
 
-Stock settings, Beta 2 settings and calibration carry over; options,
-width and diffusion from Beta 1 and earlier reset to profile defaults.
-Frozen buffers remain stock-compatible. Disable monophonic grains
-before downgrading. Stock clears Drizzlet options when saving and loads
-trimmed buffers full-length; earlier Drizzlet reads new settings as
-stock.
+Stock settings and calibration carry over; Drizzlet options, width
+and diffusion from earlier releases, Beta 2 and 3 included, reset to
+profile defaults. Frozen buffers remain stock-compatible. Disable
+monophonic grains before downgrading. Stock ignores Drizzlet options and
+loads trimmed buffers full-length; earlier Drizzlet reads new settings
+as stock.
 
 Reset and recovery
 ------------------

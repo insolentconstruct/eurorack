@@ -183,14 +183,15 @@ for row in rows:
     assert (color, pulse) not in seen, (setting, value)
     seen.add((color, pulse))
 assert len(values["Pitch scale"]) == 10
-for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps"):
+for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps",
+                "Synth"):
     assert len(values[setting]) == 3, setting
-for setting in ("Reverb character", "Frozen feedback", "Processor", "Synth",
+for setting in ("Reverb character", "Frozen feedback", "Processor",
                 "Synth start"):
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
-assert len(values["Resonator"]) == 5
+assert len(values["Resonator"]) == 4
 assert len(values["Resonator material"]) == 8
 assert len(values["Resonator ring time"]) == 4
 assert len(values) == 15 and "Stereo width" not in values
@@ -512,9 +513,9 @@ exported = subprocess.check_output(["build/options_tables", "--profile"],
                                   text=True).splitlines()
 # Reserved IDs have a placeholder definition and no catalogue row.
 reserved = [row for row in exported if row.split("\t")[1] == "Reserved"]
-assert [int(row.split("\t")[0]) for row in reserved] == [42]
+assert [int(row.split("\t")[0]) for row in reserved] == []
 exported = [row for row in exported if row not in reserved]
-assert len(catalog["features"]) == len(exported) == 48
+assert len(catalog["features"]) == len(exported) == 49
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 manifest = json.loads(Path("beads/resources/features.json").read_text())
@@ -540,8 +541,8 @@ for feature, row, source in zip(catalog["features"], exported,
     if action and field != 255 and not stateless:
         assert feature["actions"] == ([1] if identity == 7 else [1, 2])
     assert feature.get("stateless", False) == bool(stateless)
-    # The Plaits bank is Adjustable through its saved field, not a page.
-    gesture = identity == 31 and field == 14 and not page
+    # The Plaits bank and Rings polyphony are Adjustable through gestures.
+    gesture = (identity == 31 and field == 14 or identity == 42) and not page
     assert ("Adjustable" in feature["states"]) == bool(
         page or amount or action or gesture)
 # Every value label the firmware shows on a page is the catalogue's.

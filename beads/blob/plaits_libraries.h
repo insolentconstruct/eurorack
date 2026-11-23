@@ -56,12 +56,15 @@ class PlaitsLibraries {
   // The built library with this ID, or NULL.
   const PlaitsBlobLibrary* Find(uint32_t id) const;
 
-  // A blob's dependencies, in its listed order, into libraries.
+  // A blob's dependencies, in its listed order, into libraries; then TERR's
+  // record if the blob is flagged for it.
   void Resolve(
       const uint8_t* blob,
       const PlaitsBlobLibrary** libraries) const;
 
  private:
+  PlaitsBlobTerrains terrains_;
+  PlaitsBlobLibrary terrain_record_;
   PlaitsBlobLibrary* records_;
   uint8_t ids_[kMaxPlaitsLibraries];
   size_t num_libraries_;

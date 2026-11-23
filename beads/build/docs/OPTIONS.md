@@ -52,7 +52,7 @@ Scale (tap SEED to step through):
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
 | FEEDBACK | Processor | Granular (Stock) / Spectral | green; steady / yellow; steady |
-| DRY/WET | Synth | Beads (Stock) / Plaits | green; steady / yellow; steady |
+| DRY/WET | Synth | Beads (Stock) / Plaits / Rings | green; steady / yellow; steady / red; steady |
 | REVERB | Synth start | Automatic (Stock) / Manual | green; steady / yellow; steady |
 
 **Processor:** Switching clears the recording.
@@ -69,7 +69,7 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Resonator | Off (stock) / After the grains / Before the buffer / Chord / In the feedback | green; steady / yellow; steady / red; steady / green; slow blink / yellow; slow blink |
+| FEEDBACK | Resonator | Off (stock) / After the grains / Before the buffer / In the feedback | green; steady / yellow; steady / red; steady / yellow; slow blink |
 | DRY/WET | Resonator material | Wood / String / Glass / Bell / Marimba / Drum / Bowl / Gong | green; steady / yellow; steady / red; steady / green; slow blink / yellow; slow blink / red; slow blink / green; fast blink / yellow; fast blink |
 | REVERB | Resonator ring time | Short / Medium / Long / Very long | green; steady / yellow; steady / red; steady / green; slow blink |
 
@@ -95,7 +95,7 @@ When a page opens, the quality LED [A] shows each stored value in turn, left to 
 
 A Hygrostat profile can skip the stored values, so [A] shows the page's first setting at once ([preview](FEATURES.md#options-page-preview)), and always open on the first page instead of the last one used ([opening page](FEATURES.md#options-page-on-opening)).
 
-Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
+Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 
@@ -119,13 +119,15 @@ Grain stealing follows the 2021 and 2024 firmware by default; a Hygrostat profil
 
 In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make DENSITY crossfade to a new delay time instead of bending the pitch ([Delay time](FEATURES.md#delay-time)).
 
-A Hygrostat profile can add Rings' modal resonator after the grains or before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it and Attacks hits strike it.
+Resonator, on page 5, places Rings' modal resonator after the grains or before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it and Attacks hits strike it.
 
 Frozen feedback Evolving runs frozen grains, or frozen delay slices in delay mode, through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
 Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, stereo width, monophonic grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or wavetable synth; the R gate follows the grain clock DENSITY would set. A new processor takes over when the page closes and FREEZE is off, clearing the recording; until then the current one plays on. A frozen buffer saved to flash comes back with Granular.
 
 Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains, except for models with their own envelope. With DENSITY at noon and SEED unpatched the last voice drones until SEED plays a note. The models in each bank are listed in the README's "Plaits synth" section.
+
+Synth Rings, with the Rings synth installed, plays Rings' resonator. While it plays, hold [A] and press FREEZE to step its polyphony: one, two or four voices ([A] flashes green, yellow or red).
 
 Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half and release it to start or stop it. Patching an input stops it once FREEZE is off.
 

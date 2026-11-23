@@ -51,6 +51,8 @@ MAX_ARENA = 16384
 KIND_MODEL = 1
 KIND_LIBRARY = 2
 KIND_SYNTH = 3
+FLAG_ENVELOPED = 1
+FLAG_TERRAINS = 2
 MAX_LIBRARY_RAM = 65536
 MAX_SYNTH_RAM = 262144
 MAX_EXPORTS = 16
@@ -290,6 +292,12 @@ def gate(elf, base, exports, objdump, path, num_libraries):
       failures.append('section %s (flags 0x%x, %d B)' % (name, s[2], s[5]))
   if kind not in (KIND_MODEL, KIND_LIBRARY, KIND_SYNTH):
     failures.append('kind %d is not a model, library or synth' % kind)
+  # A model's flags: enveloped, and (version 2) TERR's record.
+  flags = struct.unpack_from('<I', elf.Bytes(blob), 52 if abi == 1 else 68)[0]
+  known = (FLAG_ENVELOPED | FLAG_TERRAINS if abi == 2 else FLAG_ENVELOPED) \
+      if kind == KIND_MODEL else 0
+  if flags & ~known:
+    failures.append('header flags 0x%x' % flags)
 
   symbols = elf.Symbols()
   if abi == 1 and services != 1:

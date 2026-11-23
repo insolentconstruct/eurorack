@@ -51,7 +51,7 @@ The manual agrees on the main gestures; autosave toggle and erase/reset chords a
 
 ## Drizzlet options
 
-Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles the populated pages in order, 1 → 2 → 3 → 4 → 1 for the factory layout; custom profiles can use up to seven pages (slots 1–21) and empty pages are skipped; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close unless a profile sets an [idle timeout](#options-page-idle-timeout). Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses: pages 1–3 FEEDBACK, DRY/WET or REVERB; 4 FEEDBACK and DRY/WET; 5 FEEDBACK and REVERB; 6 DRY/WET and REVERB; 7 all three. Beta 2 lit all three for page 4.
+Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal mode and 20 ms with all buttons up. Tap [M] cycles the populated pages in order, 1 → 2 → 3 → 4 → 5 → 1 for the factory layout; custom profiles can use up to seven pages (slots 1–21) and empty pages are skipped; the last page is kept in RAM, with page 1 at power-up. A knob must move >10% to edit. Saves one second after the last qualified movement or value change; no idle close unless a profile sets an [idle timeout](#options-page-idle-timeout). Hold [M] 3 s or press another button to close, keeping changes. The exit press is consumed until the button is released. On page 1 with Scale selected, short SEED taps step the scale instead of closing. All three mix LEDs pulse while the entry hold continues; after release, the page marker pulses: pages 1–3 FEEDBACK, DRY/WET or REVERB; 4 FEEDBACK and DRY/WET; 5 FEEDBACK and REVERB; 6 DRY/WET and REVERB; 7 all three. Beta 2 lit all three for page 4.
 
 | Page / pulsing LED | FEEDBACK | DRY/WET | REVERB |
 |---|---|---|---|
@@ -59,6 +59,7 @@ Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal 
 | 2 / DRY/WET | Frozen feedback | Delay mode | Reverb character |
 | 3 / REVERB | Processor | Synth | Synth start |
 | 4 / FEEDBACK and DRY/WET | LED brightness | SEED latch | Limiter |
+| 5 / FEEDBACK and REVERB | Resonator | Resonator material | Resonator ring time |
 
 Custom profiles can leave knobs unused; unused knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green. Other settings follow the green/yellow/red ladder. The factory scale bank uses coral Fifths, amber Major, blue Minor, amber/blue pentatonics with slow blinking, teal Pelog, violet Bhairav and two pink pulses for Shri. Slow is 0.98 Hz, fast is 3.91 Hz, and a two-pulse group repeats every 2.048 s. Hygrostat profiles can replace the scale definitions, order, colours and patterns; [Scale profiles](SCALE-PROFILES.md) specifies their format. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 
@@ -82,7 +83,8 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 4–7 | The profile that last saved: its CRC-32, 0 for the built-in fallback |
 | 8–23 | One byte per saved option (below) |
 | 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
-| 27–55 | Reserved, 0xFF |
+| 27 | Rings polyphony |
+| 28–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
@@ -114,10 +116,11 @@ freezes each version's offsets.
 | 31 | Plaits bank (#190) | 23 |
 | 40 | Manual gain knob (#301) | The gain is State byte 5 |
 | 41 | Resonator (#88) | 24 |
+| 42 | Rings polyphony | 27 |
 | 43 | Resonator material (#88) | 25 |
 | 44 | Resonator ring time (#88) | 26 |
 
-Other features are not saved: they always take the profile's value. Bytes 24–26 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
+Other features are not saved: they always take the profile's value. A build without Rings reads Synth value 2 as not set. Bytes 24–27 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
 
 Options-only changes (an options page, an [A] gesture, the Plaits bank) append
 a record and leave the settings sector alone; a change to both writes the
@@ -255,7 +258,7 @@ Agreed 2026-10-14; see the [roadmap](https://github.com/insolentconstruct/eurora
 - **Saved fields keep their meaning permanently.** Layout and defaults in
   [Saved data](#saved-data); the options record carries a layout version.
 - **One firmware.** Plaits (#50) and spectral mode (#3) fit in the main firmware as options, so no separate variants are planned. Plaits plays in place of the wavetable synth and borrows the first 168 KB of delay bank 0 while synth mode runs; every exit from synth mode clears the banks.
-- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Factory cap: four pages with three settings each, including the limiter and wavetable synth; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
+- **The options page stays small.** An option has to earn its place: it fixes something users hear as a defect, or several users ask for it, and patching can't already do it. Factory cap: five pages with three settings each, including the limiter, wavetable synth and resonator; monophonic grains use [A]+SEED outside the page. Other requests stay open as issues.
 - **Buffer trim:** grains stay within the trimmed window at their start; release can run about 10 ms past it (the envelope minimum release).
 - **Gestures:** [A]+SEED is taken by monophonic grains; [A]+FREEZE = buffer trim, or the Plaits bank step in Plaits synth play; [A]+REVERB = grain diffusion amount (#2); the FREEZE long hold is unassigned; flash sector 14 holds the calibration mirror.
 
@@ -290,7 +293,7 @@ Free and clockwise remain continuous before Pitch scale; subsequent scale quanti
 
 The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
 
-- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. Synth uses those thirds with three playable synths and those halves with two. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
 - **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
@@ -451,6 +454,18 @@ without the flat zone around each. Calibrated PITCH CV and the PITCH
 attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
 Smooth. Grains, delay pitch and both synths follow the knob law. The law is
 chosen at power-on. No panel slot or saved byte.
+
+### Synth and Rings polyphony
+
+Synth (ID 7) value 2 is Rings, offered only when the Rings synth is
+installed. Page 3's DRY/WET then picks Beads, Plaits or Rings in thirds
+(green, yellow, red); with two playable synths it uses halves, and with one
+it is shown but cannot change. A Synth action steps through the playable
+synths. A saved synth that is not installed stays saved; another one plays
+until it is back. While Rings plays, [A]+FREEZE steps its polyphony (ID 42,
+record byte 27): one, two, then four voices, shown green, yellow and red
+as on Rings, and saved. A profile's Synth start on [A]+FREEZE keeps it.
+Polyphony and FEEDBACK changes also apply while FREEZE sustains Rings.
 
 ### Plaits bank
 
@@ -615,9 +630,9 @@ or saved choice; the audio path is unchanged.
 ### Resonator
 
 Options page 5 (FEEDBACK and REVERB LEDs) holds Hygrostat feature ID 41,
-Off (stock) / After the grains / Before the buffer / Chord / In the feedback
-(#88), on FEEDBACK in fifths. Chord (value 3) is reserved for its own change
-and plays as After the grains until it lands. It adds Rings' modal resonator, 24 modes in stereo (odd modes
+Off (stock) / After the grains / Before the buffer / In the feedback
+(#88), on FEEDBACK in quarters. It adds Rings' modal resonator,
+24 modes in stereo (odd modes
 left, even modes right), computed in Plaits' batched form with its tuning
 and pickup position updated once per 0.25 ms block, so it is close to
 Rings' but not identical. After the grains, the grains strike it and its
@@ -644,7 +659,7 @@ level. Turning the resonator on with SEED held does not strike it. Before
 the buffer a strike while frozen is not heard: the resonance would only
 be recorded.
 
-In the feedback (value 4) is After the grains, and the grains' feedback
+In the feedback (value 3) is After the grains, and the grains' feedback
 loop goes half through the resonator: the grains keep FEEDBACK x sqrt(1/2)
 of their own loop (half its gain, as the gain goes with FEEDBACK squared),
 and the resonance of the previous 0.25 ms block is added to the recording
@@ -748,7 +763,8 @@ layout and every earlier profile keep their gestures.
 
 - [A]+SEED and [A]+FREEZE can take Monophonic grains, Buffer trim, Synth
   start or a two-value toggle: Reverb character, Processor, Frozen feedback,
-  Synth or TIME modulation. A toggle flips its setting, saves it, and [A]
+  Synth or TIME modulation. A toggle flips its setting (Synth steps through
+  the playable synths), saves it, and [A]
   shows the new value's options page colour for half a second (green first
   value, yellow second). Processor clears the recording, as from its page;
   while FREEZE is on, the change waits for its release. In Plaits synth

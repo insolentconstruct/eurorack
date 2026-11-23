@@ -184,9 +184,13 @@ PlaitsDefaultSection harness_defaults[PLAITS_SECTION_LAST];
 uint32_t harness_num_defaults;
 PlaitsRegionIdentity harness_identity;
 uint32_t harness_lock;
+// The checked synth blob of RNGS, or 0.
+uintptr_t harness_synth_blob;
 uintptr_t harness_slot;
 // Wave terrain lookups past the bank, counted by terrain_probe.h.
 uint32_t harness_terrain_overshoot;
+uint32_t harness_num_terrains;
+const uint8_t* harness_user_data = NULL;
 float harness_out[kMaxBlockSize];
 float harness_aux[kMaxBlockSize];
 EngineParameters harness_parameters;
@@ -279,6 +283,8 @@ uint32_t harness_setup(
       harness_defaults, harness_num_defaults,
       &plaits_blob_services, harness_digests, harness_num_digests);
   harness_identity = region.identity();
+  harness_num_terrains = region.num_terrains();
+  harness_synth_blob = reinterpret_cast<uintptr_t>(region.synth_blob());
   harness_lock = PlaitsRegion::Lock(
       region.ok(PLAITS_SECTION_PLAITS), region.ok(PLAITS_SECTION_WAVE));
   libraries.Init(
@@ -288,13 +294,14 @@ uint32_t harness_setup(
 }
 
 // A voice switching to a compiled-in engine: Reset only, after the user data
-// PlaitsVoice loads (none), or the 6-op bank of the model.
+// PlaitsVoice loads, or the 6-op bank of the model.
 void harness_select_compiled(uint32_t engine, uint32_t model) {
   if (engine == kSixOpSlot) {
     static_cast<SixOpEngine*>(compiled[engine])->LoadUnpackedBank(
         &fm_banks[(model - 2) * kFmBankSize]);
   } else {
-    compiled[engine]->LoadUserData(NULL);
+    compiled[engine]->LoadUserData(
+        engine == kFirstStock + 3 ? harness_user_data : NULL);
   }
   compiled[engine]->Reset();
 }

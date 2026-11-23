@@ -4,11 +4,13 @@
 counts the instructions of every main loop pass, audio block (the codec's DMA
 interrupt) and SysTick across scripted transitions: steady granular, a quality
 change, the Clouds reverb toggle, granular to spectral and back, FREEZE during
-a fade, synth entry after 10 s without input and its exit (with a Plaits bank
-step), FREEZE, SEED and ASSIGN gestures, and the MEDIA and ASSIGN combos, each
+a fade, synth entry after 10 s without input and its exit (with MEDIA+FREEZE
+while Plaits, selected without its models, falls back to Beads' synth),
+FREEZE, SEED and ASSIGN gestures, and the MEDIA and ASSIGN combos, each
 checked for its effect. `Process`, `MonitorStateChange` and `Ui::Poll` are also
 counted inclusively. Counts are instructions, not cycles. A refactor must keep
-boot, every call's count and every output hash identical.
+boot, every call's count and every output hash identical. ELFs before
+the #353 fix step the bank there and fail that check.
 
 Needs Python 3, `unicorn==2.1.4` and `pyelftools`:
 

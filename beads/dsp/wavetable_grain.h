@@ -41,6 +41,9 @@ namespace beads {
 const size_t kTableSize = 256;
 const size_t kNumWavesPerTable = 16;
 
+// Beads' wavetables: compiled in, or the region's WAVE section (synth.cc).
+extern const int16_t* integrated_waves;
+
 inline float InterpolateWaveHermite(
     const int16_t* table,
     int32_t index_integral,
@@ -126,7 +129,7 @@ class WavetableGrain : public Grain {
 
     wave_integral_ = wave_integral;
     wave_fractional_ = wave_fractional;
-    wave_start_ = wav_integrated_waves + \
+    wave_start_ = integrated_waves + \
         (bank * kNumWavesPerTable + wave_integral_) * (kTableSize + 4);
     
     frequency = std::min(frequency, 0.25f);

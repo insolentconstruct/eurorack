@@ -26,9 +26,12 @@
 #
 # The Rings synth core at Beads' block size, as the blob builds it.
 TARGET = rings_synth_test
-CC_FILES = rings_synth_test.cc rings_synth.cc rings_synth_core.cc \
+CC_FILES = rings_synth_test.cc rings_core_host.cc rings_synth.cc \
+	rings_synth_core.cc \
 	part.cc string_synth_part.cc string.cc fm_voice.cc resonator.cc \
-	rings_resources.cc units.cc random.cc
+	rings_resources.cc units.cc random.cc reverb.cc trigger_generator.cc \
+	resources.cc pitch_quantizer.cc
+STUBS = beads/test/common_stubs
 HOST_FLAGS = -DRINGS_BLOB -DRINGS_BLOCK_SIZE=12
 include beads/test/host.mk
 VPATH += beads/blob/synths rings/dsp

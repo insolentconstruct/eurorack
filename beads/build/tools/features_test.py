@@ -96,15 +96,9 @@ print('Catalogue format 2, manifest digest and record bytes: PASS')
 DIGEST = '"manifest_sha256": "%s"' % catalogue['manifest_sha256']
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features']] == (
-    list(range(1, 42)) + list(range(43, 50)))
-assert [r['id'] for r in frozen['reserved']] == [42]
+assert [r['id'] for r in frozen['features']] == list(range(1, 50))
+assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
-LAST = '    }\n  ],\n  "plaits_models"'
-POLYPHONY = (', {"id": 42, "symbol": "POLYPHONY", "name": "Polyphony",'
-    ' "values": [{"name": "Off"}, {"name": "On"}], "field": null,'
-    ' "states": ["Off", "Fixed"], "page": false, "amount": false,'
-    ' "actions": [], "stateless": false, "touches_synth": true}')
 faults = [
   ('Frozen ID 29', features.MANIFEST,
       '"symbol": "SEED_START"', '"symbol": "SEED_BEGIN"'),
@@ -116,17 +110,22 @@ faults = [
       '{"name": "Snap", "led": [255, 0, 0]}'),
   ('without gaps', features.MANIFEST, RESONATOR,
       RESONATOR.replace('41', '43')),
-  ('reserved for Rings polyphony', features.MANIFEST, LAST,
-      LAST.replace('    }', '    }' + POLYPHONY, 1)),
+  ('reserved for Rings polyphony', features.FROZEN, '"reserved": []',
+      '"reserved": [{"id": 42, "for": "Rings polyphony"}]'),
+  ('Frozen ID 7: value meanings', features.MANIFEST,
+      '{"name": "Rings", "led": [255, 0, 0]}',
+      '{"name": "Resonator", "led": [255, 0, 0]}'),
+  ('Frozen ID 42', features.MANIFEST,
+      '"symbol": "RINGS_POLYPHONY"', '"symbol": "POLYPHONY"'),
   # A gap is allowed only at a reserved ID.
   ('without gaps', features.MANIFEST, '"id": 49,\n      "symbol"',
       '"id": 51,\n      "symbol"'),
   ('stale', 'beads/profile.cc',
-      '{ 5, kNoField, true, false, false, false },  // Resonator.',
+      '{ 4, kNoField, true, false, false, false },  // Resonator.',
       '{ 6, kNoField, true, false, false, false },  // Resonator.'),
   ('stale', 'beads/profile.cc',
-      '{ 0, kReservedField, false, false, false, false },  // Reserved.',
-      '{ 0, kNoField, false, false, false, false },  // Reserved.'),
+      '{ 3, kNoField, false, false, false, false },  // Rings polyphony.',
+      '{ 4, kNoField, false, false, false, false },  // Rings polyphony.'),
   ('stale', 'beads/profile.h',
       'FEATURE_RESONATOR = 41,', 'FEATURE_RESONATOR = 40,'),
   ('stale', 'beads/profile.cc',
@@ -141,7 +140,7 @@ faults = [
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
   ('stale', 'beads/options.h',
-      'kNumOptionValues = 18;', 'kNumOptionValues = 19;'),
+      'kNumOptionValues = 17;', 'kNumOptionValues = 18;'),
   ('stale', 'beads/options.h',
       'PAGE_VALUES_DELAY = 3,', 'PAGE_VALUES_DELAY = 4,'),
   ('stale', 'beads/options.cc',
@@ -167,6 +166,8 @@ faults = [
       '"name": "Resonator",', '"name": "Rings resonator",'),
   # The options record: each version's layout is frozen.
   ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 30,'),
+  ('Record layout 1: ID 42', features.MANIFEST, '"saved": 27,',
+      '"saved": 28,'),
   ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),
   ('Saved: PITCH', features.MANIFEST, '"saved": 8,\n', ''),
   ('Freeze record layout 2', features.MANIFEST,

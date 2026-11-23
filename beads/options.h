@@ -55,14 +55,14 @@ enum PageValues {
   PAGE_VALUES_PROCESSOR = 2,
   PAGE_VALUES_LIMITER = 3,
   PAGE_VALUES_FROZEN = 2,
-  PAGE_VALUES_SYNTH = 2,
+  PAGE_VALUES_SYNTH = 3,
   PAGE_VALUES_ATTACKS = 3,
   PAGE_VALUES_SYNTH_START = 2,
   PAGE_VALUES_INTERVALS = 3,
   PAGE_VALUES_BRIGHTNESS = 3,
   PAGE_VALUES_SEED_LATCH = 4,
   PAGE_VALUES_TIME_SCAN = 2,
-  PAGE_VALUES_RESONATOR = 5,
+  PAGE_VALUES_RESONATOR = 4,
   PAGE_VALUES_RESONATOR_MATERIAL = 8,
   PAGE_VALUES_RESONATOR_RING = 4,
 };
@@ -127,7 +127,7 @@ struct OptionValue {
 };
 const int kNumOptionColors = 3;
 extern const Leds::Color kOptionColors[kNumOptionColors];
-const size_t kNumOptionValues = 18;
+const size_t kNumOptionValues = 17;
 // The indications other than the shared colours, then none.
 extern const OptionValue kOptionValues[kNumOptionValues];
 // A value's colour and pattern on its options page.
@@ -148,6 +148,11 @@ class Options {
 
   void Init();
   void Configure(const Profile& profile);
+
+  // The synths Synth offers, as SynthMask bits.
+  inline void set_playable_synths(uint8_t playable) {
+    playable_synths_ = playable;
+  }
 
   void Poll(uint32_t now, bool assign, bool other, bool all_up,
       bool just_pressed, bool normal, bool pot_touched, const float* pots,
@@ -194,6 +199,7 @@ class Options {
   void StartPreview(uint32_t now, int knob);
   void Select(uint32_t now, ProfileFeature setting);
   void UpdateZone(float pot, int* zone);
+  uint8_t PlayableSynth(float pot, int zone, uint8_t value) const;
   void Finish();
 
   OptionPage pages_[kNumOptionPages];
@@ -226,6 +232,7 @@ class Options {
   bool qualified_[MIX_PARAMETER_LAST];
   int zone_[MIX_PARAMETER_LAST];
   PitchScale scale_;
+  uint8_t playable_synths_;
   const Profile* profile_;
   mutable OptionValue indication_;
   bool seed_held_;
