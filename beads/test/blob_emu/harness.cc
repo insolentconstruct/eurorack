@@ -54,6 +54,7 @@
 #include "beads/blob/models/csaw_engine.h"
 #include "beads/blob/models/ring_mod_engine.h"
 #include "beads/blob/models/saw_square_engine.h"
+#include "beads/blob/models/harmonics_engine.h"
 #include "beads/blob/models/sub_oscillator_engine.h"
 #include "beads/blob/models/digital_modulation_engine.h"
 #include "beads/blob/plaits_blob.h"
@@ -119,7 +120,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 21;
+const size_t kFirstStock = 22;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -189,6 +190,9 @@ static uint8_t ring_mod_storage[sizeof(RingModEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t saw_square_storage[sizeof(SawSquareEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t harmonics_storage[sizeof(HarmonicsEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t sub_oscillator_storage[sizeof(SubOscillatorEngine)]
@@ -322,6 +326,8 @@ static void BuildProof() {
       &ring_mod_storage[sizeof(ring_mod_storage)], 0);
   std::fill(&saw_square_storage[0],
       &saw_square_storage[sizeof(saw_square_storage)], 0);
+  std::fill(&harmonics_storage[0],
+      &harmonics_storage[sizeof(harmonics_storage)], 0);
   std::fill(&sub_oscillator_storage[0],
       &sub_oscillator_storage[sizeof(sub_oscillator_storage)], 0);
   std::fill(&digital_modulation_storage[0],
@@ -346,8 +352,9 @@ static void BuildProof() {
   compiled[16] = new(csaw_storage) CSawEngine;
   compiled[17] = new(ring_mod_storage) RingModEngine;
   compiled[18] = new(saw_square_storage) SawSquareEngine;
-  compiled[19] = new(sub_oscillator_storage) SubOscillatorEngine;
-  compiled[20] = new(digital_modulation_storage) DigitalModulationEngine;
+  compiled[19] = new(harmonics_storage) HarmonicsEngine;
+  compiled[20] = new(sub_oscillator_storage) SubOscillatorEngine;
+  compiled[21] = new(digital_modulation_storage) DigitalModulationEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

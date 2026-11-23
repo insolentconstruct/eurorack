@@ -123,6 +123,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/csaw_engine.cc \
     $models/ring_mod_engine.cc \
     $models/saw_square_engine.cc \
+    $models/harmonics_engine.cc \
     $models/sub_oscillator_engine.cc \
     $models/digital_modulation_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \

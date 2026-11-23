@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "462d0b73e9bc993964497fa0274cdfdd5f66bdae9af0cad2c3d93f4468f65e97",
+  "manifest_sha256": "0abee2514144bc2098777626a444620441d695e77cb4d97918c9cc8bf629cebc",
   "record_version": 1,
   "features": [
     {
@@ -2178,6 +2178,10 @@
       "id": 58,
       "name": "Harmonics",
       "palette": "harmonics",
+      "family": "Additive",
+      "blob_size": 2908,
+      "state_size": 104,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
