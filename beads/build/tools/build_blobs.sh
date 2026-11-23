@@ -45,7 +45,7 @@ build wavetable --library "$out/plaits_wavetables.bin" \
 build speech --library "$out/speech_library.bin" \
   $blob/models/speech.cc $blob/models/speech_engine.cc \
   $blob/libraries/speech_imports.cc
-for model in particle_noise spectral_spiral phase_weave pulsar; do
+for model in particle_noise spectral_spiral phase_weave pulsar glisson; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
 # Stock models without libraries: Plaits' helpers and tables they use.

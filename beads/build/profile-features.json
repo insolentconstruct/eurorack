@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "a0fcb3af4d9353fef57f48656cdaa0234ad83ae6bc3c58332cc193a82c4ca68d",
+  "manifest_sha256": "7bf735f0b31408a48553b75a55b58fb5b1cda002614cca3338e619adb86f0046",
   "record_version": 1,
   "features": [
     {
@@ -1881,6 +1881,10 @@
       "id": 29,
       "name": "Glisson",
       "palette": "glisson",
+      "family": "Granular",
+      "blob_size": 2416,
+      "state_size": 128,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

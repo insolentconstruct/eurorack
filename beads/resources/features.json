@@ -1166,6 +1166,10 @@
       "id": 29,
       "name": "Glisson",
       "palette": "glisson",
+      "family": "Granular",
+      "blob_size": 2416,
+      "state_size": 128,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
