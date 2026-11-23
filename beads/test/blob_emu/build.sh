@@ -131,6 +131,9 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/speech_sounds_controller.cc \
     $models/speech_sounds_lpc.cc \
     $models/speech_sounds_phonemes.cc \
+    $models/lpc_words_engine.cc \
+    $models/lpc_words_controller.cc \
+    $models/lpc_words_synth.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

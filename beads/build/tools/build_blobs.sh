@@ -100,6 +100,13 @@ build speech_sounds --library "$out/speech_library.bin" \
   $blob/models/speech_sounds_lpc.cc \
   $blob/models/speech_sounds_phonemes.cc \
   $blob/libraries/speech_imports.cc beads/plaits_resources.cc
+build lpc_words --library "$out/speech_library.bin" \
+  $blob/models/lpc_words.cc \
+  $blob/models/lpc_words_engine.cc \
+  $blob/models/lpc_words_controller.cc \
+  $blob/models/lpc_words_synth.cc \
+  $blob/models/lpc_words_word_bank.cc \
+  $blob/libraries/speech_imports.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
