@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "552a70e67be3aaf1e572c2fa1dcbf2baacb370ac7dd37fccd2993dfc7bbd6e92",
+  "manifest_sha256": "49e9eb4be0bff489449caa39e320bba5fb7876b9c760a6de31da3b9c0b5f87af",
   "record_version": 1,
   "features": [
     {
@@ -1997,6 +1997,10 @@
       "id": 41,
       "name": "Phase Flock",
       "palette": "phase-flock",
+      "family": "Coupled",
+      "blob_size": 3676,
+      "state_size": 64,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

@@ -1282,6 +1282,10 @@
       "id": 41,
       "name": "Phase Flock",
       "palette": "phase-flock",
+      "family": "Coupled",
+      "blob_size": 3676,
+      "state_size": 64,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

@@ -43,6 +43,7 @@
 #include "beads/blob/models/reed_pipe_engine.h"
 #include "beads/blob/models/sideband_engine.h"
 #include "beads/blob/models/undertow_engine.h"
+#include "beads/blob/models/phase_flock_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -106,7 +107,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 8;
+const size_t kFirstStock = 9;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -143,6 +144,9 @@ static uint8_t sideband_storage[sizeof(SidebandEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t undertow_storage[sizeof(UndertowEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t phase_flock_storage[sizeof(PhaseFlockEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -248,6 +252,8 @@ static void BuildProof() {
       &sideband_storage[sizeof(sideband_storage)], 0);
   std::fill(&undertow_storage[0],
       &undertow_storage[sizeof(undertow_storage)], 0);
+  std::fill(&phase_flock_storage[0],
+      &phase_flock_storage[sizeof(phase_flock_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -257,6 +263,7 @@ static void BuildProof() {
   compiled[5] = new(reed_pipe_storage) ReedPipeEngine;
   compiled[6] = new(sideband_storage) SidebandEngine;
   compiled[7] = new(undertow_storage) UndertowEngine;
+  compiled[8] = new(phase_flock_storage) PhaseFlockEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
