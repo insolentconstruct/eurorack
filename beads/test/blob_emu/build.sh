@@ -136,6 +136,27 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/harmonics_engine.cc \
     $models/sub_oscillator_engine.cc \
     $models/digital_modulation_engine.cc \
+    $models/gendy_engine.cc \
+    $models/particle_burst_engine.cc \
+    $models/struck_drum_engine.cc \
+    $models/plucked_engine.cc \
+    $models/palette_chord_bank.cc \
+    $models/blown_engine.cc \
+    $models/fluted_engine.cc \
+    $models/brass_engine.cc \
+    $models/skins_engine.cc \
+    $models/circuit_zaps_engine.cc \
+    $models/metalwork_engine.cc \
+    $models/clap_engine.cc \
+    $models/analog_percussion_engine.cc \
+    $models/dual_sync_engine.cc \
+    $models/morph_engine.cc \
+    $models/vowel_engine.cc \
+    $models/helix_engine.cc \
+    $models/shakers_engine.cc \
+    $models/saw_swarm_engine.cc \
+    $models/bubbletime_engine.cc \
+    $models/chords_supersaw_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

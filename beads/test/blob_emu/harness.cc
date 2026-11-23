@@ -66,6 +66,26 @@
 #include "beads/blob/models/triple_engine.h"
 #include "beads/blob/models/bytebeat_engine.h"
 #include "beads/blob/models/acid_engine.h"
+#include "beads/blob/models/gendy_engine.h"
+#include "beads/blob/models/chords_supersaw_engine.h"
+#include "beads/blob/models/bubbletime_engine.h"
+#include "beads/blob/models/saw_swarm_engine.h"
+#include "beads/blob/models/dual_sync_engine.h"
+#include "beads/blob/models/morph_engine.h"
+#include "beads/blob/models/particle_burst_engine.h"
+#include "beads/blob/models/vowel_engine.h"
+#include "beads/blob/models/plucked_engine.h"
+#include "beads/blob/models/blown_engine.h"
+#include "beads/blob/models/struck_drum_engine.h"
+#include "beads/blob/models/fluted_engine.h"
+#include "beads/blob/models/shakers_engine.h"
+#include "beads/blob/models/brass_engine.h"
+#include "beads/blob/models/helix_engine.h"
+#include "beads/blob/models/skins_engine.h"
+#include "beads/blob/models/circuit_zaps_engine.h"
+#include "beads/blob/models/metalwork_engine.h"
+#include "beads/blob/models/clap_engine.h"
+#include "beads/blob/models/analog_percussion_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -129,7 +149,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 31;
+const size_t kFirstStock = 51;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -235,6 +255,66 @@ static uint8_t acid_storage[sizeof(AcidEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t sine_storage[sizeof(TestSineEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t gendy_storage[sizeof(GendyEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t particle_burst_storage[sizeof(ParticleBurstEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t struck_drum_storage[sizeof(StruckDrumEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t plucked_storage[sizeof(PluckedEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t blown_storage[sizeof(BlownEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t fluted_storage[sizeof(FlutedEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t brass_storage[sizeof(BrassEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t skins_storage[sizeof(SkinsEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t circuit_zaps_storage[sizeof(CircuitZapsEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t metalwork_storage[sizeof(MetalworkEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t clap_storage[sizeof(ClapEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t analog_percussion_storage[sizeof(AnalogPercussionEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t dual_sync_storage[sizeof(DualSyncEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t morph_storage[sizeof(MorphEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t vowel_storage[sizeof(VowelEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t helix_storage[sizeof(HelixEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t shakers_storage[sizeof(ShakersEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t saw_swarm_storage[sizeof(SawSwarmEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t bubbletime_storage[sizeof(BubbleTimeEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t chords_supersaw_storage[sizeof(ChordsSupersawEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -387,38 +467,97 @@ static void BuildProof() {
       &bytebeat_storage[sizeof(bytebeat_storage)], 0);
   std::fill(&acid_storage[0],
       &acid_storage[sizeof(acid_storage)], 0);
+  std::fill(&gendy_storage[0], &gendy_storage[sizeof(gendy_storage)], 0);
+  std::fill(&particle_burst_storage[0],
+      &particle_burst_storage[sizeof(particle_burst_storage)], 0);
+  std::fill(&struck_drum_storage[0],
+      &struck_drum_storage[sizeof(struck_drum_storage)], 0);
+  std::fill(&plucked_storage[0],
+      &plucked_storage[sizeof(plucked_storage)], 0);
+  std::fill(&blown_storage[0],
+      &blown_storage[sizeof(blown_storage)], 0);
+  std::fill(&fluted_storage[0],
+      &fluted_storage[sizeof(fluted_storage)], 0);
+  std::fill(&brass_storage[0],
+      &brass_storage[sizeof(brass_storage)], 0);
+  std::fill(&skins_storage[0],
+      &skins_storage[sizeof(skins_storage)], 0);
+  std::fill(&circuit_zaps_storage[0],
+      &circuit_zaps_storage[sizeof(circuit_zaps_storage)], 0);
+  std::fill(&metalwork_storage[0],
+      &metalwork_storage[sizeof(metalwork_storage)], 0);
+  std::fill(&clap_storage[0],
+      &clap_storage[sizeof(clap_storage)], 0);
+  std::fill(&analog_percussion_storage[0],
+      &analog_percussion_storage[sizeof(analog_percussion_storage)], 0);
+  std::fill(&dual_sync_storage[0],
+      &dual_sync_storage[sizeof(dual_sync_storage)], 0);
+  std::fill(&morph_storage[0],
+      &morph_storage[sizeof(morph_storage)], 0);
+  std::fill(&vowel_storage[0],
+      &vowel_storage[sizeof(vowel_storage)], 0);
+  std::fill(&helix_storage[0],
+      &helix_storage[sizeof(helix_storage)], 0);
+  std::fill(&shakers_storage[0],
+      &shakers_storage[sizeof(shakers_storage)], 0);
+  std::fill(&saw_swarm_storage[0],
+      &saw_swarm_storage[sizeof(saw_swarm_storage)], 0);
+  std::fill(&bubbletime_storage[0],
+      &bubbletime_storage[sizeof(bubbletime_storage)], 0);
+  std::fill(&chords_supersaw_storage[0],
+      &chords_supersaw_storage[sizeof(chords_supersaw_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(glisson_storage) GlissonEngine;
-  compiled[1] = new(scanned_storage) ScannedEngine;
-  compiled[2] = new(pulsar_storage) PulsarEngine;
-  compiled[3] = new(loopback_storage) LoopbackEngine;
-  compiled[4] = new(lockstep_storage) LockstepEngine;
-  compiled[5] = new(tapfield_storage) TapfieldEngine;
-  compiled[6] = new(phase_weave_storage) PhaseWeaveEngine;
-  compiled[7] = new(sideband_storage) SidebandEngine;
-  compiled[8] = new(attractor_storage) AttractorEngine;
-  compiled[9] = new(undertow_storage) UndertowEngine;
-  compiled[10] = new(reed_pipe_storage) ReedPipeEngine;
-  compiled[11] = new(phase_flock_storage) PhaseFlockEngine;
-  compiled[12] = new(rulefield_storage) RulefieldEngine;
-  compiled[13] = new(spectral_spiral_storage) SpectralSpiralEngine;
-  compiled[14] = new(z_filter_storage) ZFilterEngine;
-  compiled[15] = new(toy_storage) ToyEngine;
-  compiled[16] = new(csaw_storage) CSawEngine;
-  compiled[17] = new(ring_mod_storage) RingModEngine;
-  compiled[18] = new(buzz_storage) BuzzEngine;
-  compiled[19] = new(saw_square_storage) SawSquareEngine;
-  compiled[20] = new(harmonics_storage) HarmonicsEngine;
-  compiled[21] = new(struck_bell_storage) StruckBellEngine;
-  compiled[22] = new(question_mark_storage) QuestionMarkEngine;
-  compiled[23] = new(bowed_storage) BowedEngine;
-  compiled[24] = new(sub_oscillator_storage) SubOscillatorEngine;
-  compiled[25] = new(digital_modulation_storage) DigitalModulationEngine;
-  compiled[26] = new(raw_fm_storage) RawFmEngine;
-  compiled[27] = new(triple_storage) TripleEngine;
-  compiled[28] = new(bytebeat_storage) BytebeatEngine;
-  compiled[29] = new(acid_storage) AcidEngine;
-  compiled[30] = new(sine_storage) TestSineEngine;
+  compiled[1] = new(gendy_storage) GendyEngine;
+  compiled[2] = new(scanned_storage) ScannedEngine;
+  compiled[3] = new(pulsar_storage) PulsarEngine;
+  compiled[4] = new(loopback_storage) LoopbackEngine;
+  compiled[5] = new(lockstep_storage) LockstepEngine;
+  compiled[6] = new(tapfield_storage) TapfieldEngine;
+  compiled[7] = new(phase_weave_storage) PhaseWeaveEngine;
+  compiled[8] = new(sideband_storage) SidebandEngine;
+  compiled[9] = new(attractor_storage) AttractorEngine;
+  compiled[10] = new(undertow_storage) UndertowEngine;
+  compiled[11] = new(reed_pipe_storage) ReedPipeEngine;
+  compiled[12] = new(phase_flock_storage) PhaseFlockEngine;
+  compiled[13] = new(rulefield_storage) RulefieldEngine;
+  compiled[14] = new(spectral_spiral_storage) SpectralSpiralEngine;
+  compiled[15] = new(z_filter_storage) ZFilterEngine;
+  compiled[16] = new(toy_storage) ToyEngine;
+  compiled[17] = new(csaw_storage) CSawEngine;
+  compiled[18] = new(ring_mod_storage) RingModEngine;
+  compiled[19] = new(buzz_storage) BuzzEngine;
+  compiled[20] = new(dual_sync_storage) DualSyncEngine;
+  compiled[21] = new(morph_storage) MorphEngine;
+  compiled[22] = new(particle_burst_storage) ParticleBurstEngine;
+  compiled[23] = new(saw_square_storage) SawSquareEngine;
+  compiled[24] = new(saw_swarm_storage) SawSwarmEngine;
+  compiled[25] = new(vowel_storage) VowelEngine;
+  compiled[26] = new(harmonics_storage) HarmonicsEngine;
+  compiled[27] = new(plucked_storage) PluckedEngine;
+  compiled[28] = new(blown_storage) BlownEngine;
+  compiled[29] = new(struck_bell_storage) StruckBellEngine;
+  compiled[30] = new(struck_drum_storage) StruckDrumEngine;
+  compiled[31] = new(fluted_storage) FlutedEngine;
+  compiled[32] = new(question_mark_storage) QuestionMarkEngine;
+  compiled[33] = new(bowed_storage) BowedEngine;
+  compiled[34] = new(sub_oscillator_storage) SubOscillatorEngine;
+  compiled[35] = new(digital_modulation_storage) DigitalModulationEngine;
+  compiled[36] = new(raw_fm_storage) RawFmEngine;
+  compiled[37] = new(triple_storage) TripleEngine;
+  compiled[38] = new(bytebeat_storage) BytebeatEngine;
+  compiled[39] = new(shakers_storage) ShakersEngine;
+  compiled[40] = new(brass_storage) BrassEngine;
+  compiled[41] = new(helix_storage) HelixEngine;
+  compiled[42] = new(skins_storage) SkinsEngine;
+  compiled[43] = new(circuit_zaps_storage) CircuitZapsEngine;
+  compiled[44] = new(metalwork_storage) MetalworkEngine;
+  compiled[45] = new(clap_storage) ClapEngine;
+  compiled[46] = new(analog_percussion_storage) AnalogPercussionEngine;
+  compiled[47] = new(bubbletime_storage) BubbleTimeEngine;
+  compiled[48] = new(acid_storage) AcidEngine;
+  compiled[49] = new(chords_supersaw_storage) ChordsSupersawEngine;
+  compiled[50] = new(sine_storage) TestSineEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
@@ -504,10 +643,14 @@ void harness_select_compiled(uint32_t engine, uint32_t model) {
 // The engines built afresh, as at power-on, then one selected: the reference
 // for a rebuilt blob, which equals an engine's first selection.
 void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
+  const uint32_t seed = stmlib::Random::state();
   if (engine < kFirstStock) {
     BuildProof();
   } else {
     BuildStock();
+  }
+  if (model == 56) {
+    stmlib::Random::Seed(seed);
   }
   harness_select_compiled(engine, model);
 }

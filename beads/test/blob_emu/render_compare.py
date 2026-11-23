@@ -62,37 +62,57 @@ RANDOM_STATE = 0x20000000
 # The 6-op engine serves models 2-4.
 PAIRS = dict([
     (29, 0),
-    (31, 1),
-    (32, 2),
-    (33, 3),
-    (34, 4),
-    (35, 5),
-    (36, 6),
-    (37, 7),
-    (38, 8),
-    (39, 9),
-    (40, 10),
-    (41, 11),
-    (42, 12),
-    (43, 13),
-    (44, 14),
-    (45, 15),
-    (46, 16),
-    (47, 17),
-    (49, 18),
-    (55, 19),
-    (58, 20),
-    (62, 21),
-    (70, 22),
-    (72, 23),
-    (73, 24),
-    (74, 25),
-    (77, 26),
-    (78, 27),
-    (79, 28),
-    (96, 29),
-    (254, 30)] + [
-    (m, 31 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (30, 1),
+    (31, 2),
+    (32, 3),
+    (33, 4),
+    (34, 5),
+    (35, 6),
+    (36, 7),
+    (37, 8),
+    (38, 9),
+    (39, 10),
+    (40, 11),
+    (41, 12),
+    (42, 13),
+    (43, 14),
+    (44, 15),
+    (45, 16),
+    (46, 17),
+    (47, 18),
+    (49, 19),
+    (50, 20),
+    (52, 21),
+    (54, 22),
+    (55, 23),
+    (56, 24),
+    (57, 25),
+    (58, 26),
+    (60, 27),
+    (61, 28),
+    (62, 29),
+    (63, 30),
+    (69, 31),
+    (70, 32),
+    (72, 33),
+    (73, 34),
+    (74, 35),
+    (77, 36),
+    (78, 37),
+    (79, 38),
+    (84, 39),
+    (85, 40),
+    (86, 41),
+    (87, 42),
+    (88, 43),
+    (89, 44),
+    (90, 45),
+    (91, 46),
+    (93, 47),
+    (96, 48),
+    (97, 49),
+    (254, 50)] + [
+    (m, 51 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -106,6 +126,7 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (13, 43),
     (18, 36),
     (29, 32),
+    (30, 31),
     (31, 41),
     (32, 36),
     (33, 31),
@@ -123,9 +144,18 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (46, 44),
     (47, 46),
     (49, 45),
+    (50, 30),
+    (52, 30),
+    (54, 30),
     (55, 47),
+    (56, 30),
+    (57, 30),
     (58, 55),
+    (60, 30),
+    (61, 30),
     (62, 49),
+    (63, 30),
+    (69, 30),
     (70, 31),
     (72, 62),
     (73, 58),
@@ -133,11 +163,22 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (77, 78),
     (78, 70),
     (79, 72),
-    (96, 79)]
+    (84, 30),
+    (85, 30),
+    (86, 30),
+    (87, 30),
+    (88, 30),
+    (89, 30),
+    (90, 30),
+    (91, 30),
+    (93, 30),
+    (96, 79),
+    (97, 30)]
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
+FRESH_ON_RESELECT = (56, 93, 97)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -375,6 +416,14 @@ def note_control(model, steps):
   return NOTE_CONTROL_STEPS.get(model, steps[:200]), 0.01
 
 
+def control_steps(model, steps):
+  # Sustained excitation makes the quiet physical and burst models audible.
+  if model in (54, 61, 69):
+    return [(5 if block == 0 else 4, 60.0, 0.5, 0.8, 0.8, 0.8)
+            for block in range(256)]
+  return steps[:200]
+
+
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
                    stats=None, retained=False):
   """Blob voice against compiled engine, block by block, from one seed.
@@ -556,8 +605,11 @@ def identity_compare(model, base, fpscr, gap):
     return {'model': model, 'error': 'PLTS %s' % status}
   m.arena = arena_of(m)
   engine = PAIRS[model]
-  m.select_blob(model)
-  m.select_compiled(engine, model)
+  if model == 56:
+    select_saw_pair(m, False)
+  else:
+    m.select_blob(model)
+    m.select_compiled(engine, model)
   h = hashlib.sha256()
   stats = {}
   differ, samples, _ = compare_blocks(m, engine, CTX['steps'], 0x21,
@@ -625,37 +677,76 @@ def terrain_run(job):
     return run
 
 
+def select_saw_pair(m, fresh):
+  """Both selections start at the same seed and consume exactly six draws."""
+  before = m.word(RANDOM_STATE)
+  expected = before
+  for _ in range(6):
+    expected = (expected * 1664525 + 1013904223) & 0xffffffff
+  m.select_blob(56)
+  blob_seed = m.word(RANDOM_STATE)
+  m.uc.mem_write(RANDOM_STATE, struct.pack('<I', before))
+  if fresh:
+    m.rebuild_compiled(PAIRS[56], 56)
+  else:
+    m.select_compiled(PAIRS[56], 56)
+  if blob_seed != expected or m.word(RANDOM_STATE) != expected:
+    raise RuntimeError('Saw Swarm selection must consume six Random draws')
+
+
 def switch_run(pair):
   """A -> B -> A: the blob voice constructs on every switch in a poisoned
   slot and arena; compiled-in engines only Reset. Retained state shows as
   differences after the return; they are reported."""
   try:
-    run = switch_compare(pair[0], pair[1], False)
-    fresh = switch_compare(pair[0], pair[1], True)
+    run = switch_compare(pair[0], pair[1], False, PLACEMENTS[1], 0)
+    fresh = switch_compare(pair[0], pair[1], True, PLACEMENTS[1], 0)
     run['fresh_differ'] = [p['differ'] for p in fresh['phases']]
+    if pair[0] in FRESH_ON_RESELECT:
+      policy_runs = [switch_compare(pair[0], pair[1], True, base, fpscr)
+                     for base in PLACEMENTS for fpscr in FPSCR]
+      for policy in policy_runs:
+        if any(p['differ'] or not p['slot_cleared']
+               or (p['model'] == pair[0] and not p['out_peak'])
+               for p in policy['phases']):
+          raise RuntimeError('fresh-reselection policy violated')
+      run['fresh_policy'] = policy_runs
     return run
   except RuntimeError as e:
     return {'sequence': [pair[0], pair[1], pair[0]], 'error': str(e)}
 
 
-def switch_compare(first, second, fresh):
+def switch_compare(first, second, fresh, base, fpscr):
   """fresh: each selection compares with the compiled-in engine built afresh
   (first selection after power-on), which a rebuilt blob must equal."""
   sequence = CTX['steps'][:300]
-  m = machine(PLACEMENTS[1])
+  if first in (54, 61, 69):
+    sequence = [(5 if block % 100 == 0 else 4, 60.0, 0.5, 0.8, 0.8, 0.8)
+                for block in range(300)]
+  m = machine(base, fpscr)
   m.setup(CTX['layout'], CTX['digests'])
   m.arena = arena_of(m)
   seed = 0x21
   phases = []
-  for model, part in ((first, sequence[:100]), (second, sequence[100:200]),
-                      (first, sequence[200:])):
+  parts = ((first, sequence[:100]), (second, sequence[100:200]),
+           (first, sequence[200:]))
+  if first == 93:
+    # A held reseed fills BubbleTime's ring before the return selection.
+    held = [(5 if block == 0 else 4, 72.0, 0.8, 0.9, 0.75, 0.8)
+            for block in range(7000)]
+    returned = [(2, 72.0, 0.8, 0.9, 0.75, 0.8)] * 1024
+    parts = ((first, held), (second, sequence[100:200]), (first, returned))
+  for model, part in parts:
     before = m.word(RANDOM_STATE)
-    m.select_blob(model)
-    if fresh:
-      m.rebuild_compiled(PAIRS[model], model)
+    if model == 56:
+      select_saw_pair(m, fresh)
     else:
-      m.select_compiled(PAIRS[model], model)
-    drew = m.word(RANDOM_STATE) != before
+      m.select_blob(model)
+      if fresh:
+        m.rebuild_compiled(PAIRS[model], model)
+      else:
+        m.select_compiled(PAIRS[model], model)
+    drew = model != 56 and m.word(RANDOM_STATE) != before
     slot = m.word(CTX['sym']['harness_slot'])
     cleared = POISON not in bytes(m.uc.mem_read(slot, state_of(model)))
     stats = {}
@@ -665,13 +756,15 @@ def switch_compare(first, second, fresh):
     differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
                                            stats=stats, retained=retained)
     phases.append({'model': model, 'differ': differ, 'samples': samples,
+                   'out_peak': stats.get('out_peak', 0.0),
                    'slot_cleared': cleared, 'switch_drew': drew,
                    'max_difference': stats.get('max', 0.0),
                    'compiled_peak': stats.get('peak', 0.0),
                    'last_differing_block': stats.get('last_block'),
                    'fade_window_peak': stats.get('fade_peak', 0.0),
                    'generator_diverged_block': stats.get('diverged_block')})
-  return {'sequence': [first, second, first], 'phases': phases}
+  return {'sequence': [first, second, first], 'base': hex(base),
+          'fpscr': hex(fpscr), 'phases': phases}
 
 
 def main(argv):
@@ -762,6 +855,9 @@ def main(argv):
       failures.append('switch %d->%d: %s' % (first, second, switch['error']))
       continue
     phases = switch['phases']
+    if first in (54, 61, 69) and any(
+        p['model'] == first and not p['out_peak'] for p in phases):
+      failures.append('model %d: silent switch fixture' % first)
     results['switches'].append(switch)
     if any(switch['fresh_differ']):
       failures.append('switch %d->%d: a rebuilt blob differs from the '
@@ -801,11 +897,14 @@ def main(argv):
   m.setup(layout, digests)
   m.arena = arena_of(m)
   for model, engine in sorted(PAIRS.items()):
-    m.select_blob(model)
-    m.select_compiled(engine, model)
-    control_steps, nudge = note_control(model, steps)
-    differ, samples, _ = compare_blocks(m, engine, control_steps, 0x21,
-                                        nudge=nudge)
+    if model == 56:
+      select_saw_pair(m, False)
+    else:
+      m.select_blob(model)
+      m.select_compiled(engine, model)
+    probe_steps, nudge = note_control(model, control_steps(model, steps))
+    differ, samples, _ = compare_blocks(
+        m, engine, probe_steps, 0x21, nudge=nudge)
     results['controls'].append({'case': 'note nudged, model %d' % model,
                                 'differ': differ, 'samples': samples,
                                 'semitones': nudge})

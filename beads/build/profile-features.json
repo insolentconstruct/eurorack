@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "9c22e36bfb88e3b92742b6769da5df03d8e593236a350e6704b96bbe1391b12c",
+  "manifest_sha256": "66a813e5356f68a8b532a273021617e7ad057f238ac3f7b2cb4c518bf905b26a",
   "record_version": 1,
   "features": [
     {
@@ -1894,6 +1894,10 @@
       "id": 30,
       "name": "GENDY",
       "palette": "gendy",
+      "family": "Stochastic",
+      "blob_size": 3140,
+      "state_size": 156,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -2118,6 +2122,10 @@
       "id": 50,
       "name": "Dual Sync",
       "palette": "dual-sync",
+      "family": "Subtractive",
+      "blob_size": 2860,
+      "state_size": 1068,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2134,6 +2142,10 @@
       "id": 52,
       "name": "Morph",
       "palette": "morph",
+      "family": "Subtractive",
+      "blob_size": 4228,
+      "state_size": 572,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2150,6 +2162,10 @@
       "id": 54,
       "name": "Particle Burst",
       "palette": "particle-burst",
+      "family": "Noise",
+      "blob_size": 2392,
+      "state_size": 104,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2170,6 +2186,10 @@
       "id": 56,
       "name": "Saw Swarm",
       "palette": "saw-swarm",
+      "family": "Subtractive",
+      "blob_size": 3964,
+      "state_size": 88,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2178,6 +2198,10 @@
       "id": 57,
       "name": "Vowel",
       "palette": "vowel",
+      "family": "Vocal",
+      "blob_size": 3436,
+      "state_size": 604,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2206,16 +2230,22 @@
       "id": 60,
       "name": "Plucked",
       "palette": "plucked",
+      "family": "Physical",
+      "blob_size": 4040,
+      "state_size": 176,
+      "arena_size": 12288,
       "credit": "Mutable Instruments",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 61,
       "name": "Blown",
       "palette": "blown",
+      "family": "Physical",
+      "blob_size": 3860,
+      "state_size": 316,
+      "arena_size": 8192,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2236,6 +2266,10 @@
       "id": 63,
       "name": "Struck Drum",
       "palette": "struck-drum",
+      "family": "Additive",
+      "blob_size": 4020,
+      "state_size": 76,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2287,6 +2321,10 @@
       "id": 69,
       "name": "Fluted",
       "palette": "fluted",
+      "family": "Physical",
+      "blob_size": 5860,
+      "state_size": 324,
+      "arena_size": 5120,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2448,6 +2486,10 @@
       "id": 84,
       "name": "Shakers",
       "palette": "shakers",
+      "family": "Percussion",
+      "blob_size": 9216,
+      "state_size": 296,
+      "arena_size": 0,
       "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
       "licence": "MIT",
       "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
@@ -2457,6 +2499,10 @@
       "id": 85,
       "name": "Brass",
       "palette": "brass",
+      "family": "Physical",
+      "blob_size": 2512,
+      "state_size": 52,
+      "arena_size": 10752,
       "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
       "licence": "MIT",
       "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
@@ -2466,16 +2512,22 @@
       "id": 86,
       "name": "Helix",
       "palette": "helix",
+      "family": "Chords",
+      "blob_size": 4508,
+      "state_size": 532,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 87,
       "name": "Skins",
       "palette": "skins",
+      "family": "Percussion",
+      "blob_size": 3000,
+      "state_size": 76,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -2484,6 +2536,10 @@
       "id": 88,
       "name": "Circuit Zaps",
       "palette": "circuit-zaps",
+      "family": "Percussion",
+      "blob_size": 1448,
+      "state_size": 36,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -2492,6 +2548,10 @@
       "id": 89,
       "name": "Metalwork",
       "palette": "metalwork",
+      "family": "Percussion",
+      "blob_size": 2648,
+      "state_size": 84,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -2500,6 +2560,10 @@
       "id": 90,
       "name": "Analog Clap",
       "palette": "clap",
+      "family": "Drums",
+      "blob_size": 3208,
+      "state_size": 200,
+      "arena_size": 0,
       "credit": "Dylan Bolink",
       "licence": "MIT",
       "libraries": []
@@ -2508,6 +2572,10 @@
       "id": 91,
       "name": "Analog Percussion",
       "palette": "analog-percussion",
+      "family": "Drums",
+      "blob_size": 3480,
+      "state_size": 172,
+      "arena_size": 0,
       "credit": "Dylan Bolink",
       "licence": "MIT",
       "libraries": []
@@ -2524,11 +2592,13 @@
       "id": 93,
       "name": "BubbleTime",
       "palette": "bubbletime",
+      "family": "Experimental",
+      "blob_size": 12292,
+      "state_size": 760,
+      "arena_size": 0,
       "credit": "Combust",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 94,
@@ -2565,11 +2635,13 @@
       "id": 97,
       "name": "Supersaw Chords",
       "palette": "chords-supersaw",
+      "family": "Polyphonic",
+      "blob_size": 3996,
+      "state_size": 268,
+      "arena_size": 0,
       "credit": "Dirk Hoppmann",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 98,

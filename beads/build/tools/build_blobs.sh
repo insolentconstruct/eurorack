@@ -69,6 +69,68 @@ build bytebeat $blob/models/bytebeat.cc \
   $blob/models/bytebeat_engine.cc beads/plaits_resources.cc
 build acid $blob/models/acid.cc \
   $blob/models/acid_engine.cc beads/plaits_resources.cc
+build gendy $blob/models/gendy.cc $blob/models/gendy_engine.cc
+build dual_sync $blob/models/dual_sync.cc \
+  $blob/models/dual_sync_engine.cc \
+  beads/plaits_resources.cc
+build morph $blob/models/morph.cc \
+  $blob/models/morph_engine.cc \
+  beads/plaits_resources.cc
+build particle_burst $blob/models/particle_burst.cc \
+  $blob/models/particle_burst_engine.cc \
+  beads/plaits_resources.cc
+build vowel $blob/models/vowel.cc \
+  $blob/models/vowel_engine.cc \
+  beads/plaits_resources.cc
+build plucked $blob/models/plucked.cc \
+  $blob/models/plucked_engine.cc \
+  $blob/models/palette_chord_bank.cc \
+  beads/plaits_resources.cc
+build blown $blob/models/blown.cc \
+  $blob/models/blown_engine.cc \
+  beads/plaits_resources.cc
+build struck_drum $blob/models/struck_drum.cc \
+  $blob/models/struck_drum_engine.cc \
+  beads/plaits_resources.cc
+build fluted $blob/models/fluted.cc \
+  $blob/models/fluted_engine.cc \
+  beads/plaits_resources.cc
+build shakers $blob/models/shakers.cc \
+  $blob/models/shakers_engine.cc \
+  beads/plaits_resources.cc
+build brass $blob/models/brass.cc \
+  $blob/models/brass_engine.cc \
+  beads/plaits_resources.cc
+build helix $blob/models/helix.cc \
+  $blob/models/helix_engine.cc \
+  $blob/models/palette_chord_bank.cc \
+  beads/plaits_resources.cc
+build skins $blob/models/skins.cc \
+  $blob/models/skins_engine.cc \
+  beads/plaits_resources.cc
+build circuit_zaps $blob/models/circuit_zaps.cc \
+  $blob/models/circuit_zaps_engine.cc \
+  beads/plaits_resources.cc
+build metalwork $blob/models/metalwork.cc \
+  $blob/models/metalwork_engine.cc \
+  beads/plaits_resources.cc
+build clap $blob/models/clap.cc \
+  $blob/models/clap_engine.cc \
+  beads/plaits_resources.cc
+build analog_percussion $blob/models/analog_percussion.cc \
+  $blob/models/analog_percussion_engine.cc \
+  beads/plaits_resources.cc
+build saw_swarm $blob/models/saw_swarm.cc \
+  $blob/models/saw_swarm_engine.cc \
+  beads/plaits_resources.cc
+build bubbletime $blob/models/bubbletime.cc \
+  $blob/models/bubbletime_engine.cc \
+  $blob/models/palette_chord_bank.cc \
+  beads/plaits_resources.cc
+build chords_supersaw $blob/models/chords_supersaw.cc \
+  $blob/models/chords_supersaw_engine.cc \
+  $blob/models/palette_chord_bank.cc \
+  beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
