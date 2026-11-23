@@ -51,6 +51,8 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
 done
 build question_mark $blob/models/question_mark.cc \
   $blob/models/question_mark_engine.cc beads/plaits_resources.cc
+build triple $blob/models/triple.cc \
+  $blob/models/triple_engine.cc $blob/models/triple_engine_data.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

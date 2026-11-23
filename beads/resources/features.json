@@ -1591,6 +1591,10 @@
       "id": 78,
       "name": "Triple",
       "palette": "triple",
+      "family": "Polyphonic",
+      "blob_size": 3320,
+      "state_size": 132,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
