@@ -1460,6 +1460,12 @@ void TestResonatorBoundPublished() {
     in[i] = 0.3f * Noise();
   }
   CHECK(bank.LoopGain(other, 12) == 0.0f);
+  for (int field = 0; field < 3; ++field) {
+    ResonatorControls moved = Controls(1, 1);
+    float* value[3] = { &moved.structure, &moved.brightness, &moved.position };
+    *value[field] += 0.1f;
+    CHECK(bank.LoopGain(BoundOf(moved), 12) == 0.0f);
+  }
   CHECK(bank.LoopGain(BoundOf(Controls(1, 1)), 12) > 0.0f);
   (void) in;
 }
