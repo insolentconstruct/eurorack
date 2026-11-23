@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4de7ab768b89793b84a62d95ef5c7da272246c9a8e10f11bfd0d1460b38ee514",
+  "manifest_sha256": "9ff64302535191d88729792e129bc911ee13735e5010a63b4ed0c9115ffd2f9f",
   "record_version": 1,
   "features": [
     {
@@ -2114,6 +2114,10 @@
       "id": 54,
       "name": "Particle Burst",
       "palette": "particle-burst",
+      "family": "Noise",
+      "blob_size": 2392,
+      "state_size": 104,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

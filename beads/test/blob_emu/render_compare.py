@@ -60,8 +60,9 @@ FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
-PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9), (30, 10)] + [
-    (m, 11 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6),
+    (39, 7), (41, 8), (31, 9), (30, 10), (54, 11)] + [
+    (m, 12 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -70,7 +71,8 @@ DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
-    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32), (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (30, 31)]
+    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32),
+    (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (30, 31), (54, 30)]
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -298,6 +300,14 @@ def drive(seed):
     for block in range(8):
       steps.append((2, 48.0 + i, i / 31.0, 0.5, block / 7.0, 0.8))
   return steps
+
+
+def control_steps(model, steps):
+  # Sustained excitation makes the quiet physical and burst models audible.
+  if model in (54, 61, 69):
+    return [(5 if block == 0 else 4, 60.0, 0.5, 0.8, 0.8, 0.8)
+            for block in range(256)]
+  return steps[:200]
 
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
@@ -567,6 +577,9 @@ def switch_compare(first, second, fresh):
   """fresh: each selection compares with the compiled-in engine built afresh
   (first selection after power-on), which a rebuilt blob must equal."""
   sequence = CTX['steps'][:300]
+  if first in (54, 61, 69):
+    sequence = [(5 if block % 100 == 0 else 4, 60.0, 0.5, 0.8, 0.8, 0.8)
+                for block in range(300)]
   m = machine(PLACEMENTS[1])
   m.setup(CTX['layout'], CTX['digests'])
   m.arena = arena_of(m)
@@ -590,6 +603,7 @@ def switch_compare(first, second, fresh):
     differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
                                            stats=stats, retained=retained)
     phases.append({'model': model, 'differ': differ, 'samples': samples,
+                   'out_peak': stats.get('out_peak', 0.0),
                    'slot_cleared': cleared, 'switch_drew': drew,
                    'max_difference': stats.get('max', 0.0),
                    'compiled_peak': stats.get('peak', 0.0),
@@ -687,6 +701,9 @@ def main(argv):
       failures.append('switch %d->%d: %s' % (first, second, switch['error']))
       continue
     phases = switch['phases']
+    if first in (54, 61, 69) and any(
+        p['model'] == first and not p['out_peak'] for p in phases):
+      failures.append('model %d: silent switch fixture' % first)
     results['switches'].append(switch)
     if any(switch['fresh_differ']):
       failures.append('switch %d->%d: a rebuilt blob differs from the '
@@ -728,8 +745,8 @@ def main(argv):
   for model, engine in sorted(PAIRS.items()):
     m.select_blob(model)
     m.select_compiled(engine, model)
-    differ, samples, _ = compare_blocks(m, engine, steps[:200], 0x21,
-                                        nudge=0.01)
+    differ, samples, _ = compare_blocks(
+        m, engine, control_steps(model, steps), 0x21, nudge=0.01)
     results['controls'].append({'case': 'note nudged, model %d' % model,
                                 'differ': differ, 'samples': samples})
     print('control: note nudged, model %d: %d of %d differ' % (
