@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "5054293aaa67cac72e35cea62f1af732095e613a85936b47c8123b394816fba8",
+  "manifest_sha256": "9bd8d7ecfeff133d608a96d76cd8de28611927f93ba806420cf5013df56fd96d",
   "record_version": 1,
   "features": [
     {
@@ -2142,6 +2142,10 @@
       "id": 56,
       "name": "Saw Swarm",
       "palette": "saw-swarm",
+      "family": "Subtractive",
+      "blob_size": 3964,
+      "state_size": 88,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

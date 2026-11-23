@@ -46,6 +46,7 @@
 #include "beads/blob/models/phase_flock_engine.h"
 #include "beads/blob/models/scanned_engine.h"
 #include "beads/blob/models/gendy_engine.h"
+#include "beads/blob/models/saw_swarm_engine.h"
 #include "beads/blob/models/dual_sync_engine.h"
 #include "beads/blob/models/morph_engine.h"
 #include "beads/blob/models/particle_burst_engine.h"
@@ -125,7 +126,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 27;
+const size_t kFirstStock = 28;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -219,6 +220,9 @@ static uint8_t helix_storage[sizeof(HelixEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t shakers_storage[sizeof(ShakersEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t saw_swarm_storage[sizeof(SawSwarmEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -361,6 +365,8 @@ static void BuildProof() {
       &helix_storage[sizeof(helix_storage)], 0);
   std::fill(&shakers_storage[0],
       &shakers_storage[sizeof(shakers_storage)], 0);
+  std::fill(&saw_swarm_storage[0],
+      &saw_swarm_storage[sizeof(saw_swarm_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -389,6 +395,7 @@ static void BuildProof() {
   compiled[24] = new(vowel_storage) VowelEngine;
   compiled[25] = new(helix_storage) HelixEngine;
   compiled[26] = new(shakers_storage) ShakersEngine;
+  compiled[27] = new(saw_swarm_storage) SawSwarmEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
@@ -474,10 +481,14 @@ void harness_select_compiled(uint32_t engine, uint32_t model) {
 // The engines built afresh, as at power-on, then one selected: the reference
 // for a rebuilt blob, which equals an engine's first selection.
 void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
+  const uint32_t seed = stmlib::Random::state();
   if (engine < kFirstStock) {
     BuildProof();
   } else {
     BuildStock();
+  }
+  if (model == 56) {
+    stmlib::Random::Seed(seed);
   }
   harness_select_compiled(engine, model);
 }
