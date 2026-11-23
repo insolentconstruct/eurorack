@@ -58,6 +58,9 @@ build morph $blob/models/morph.cc \
 build particle_burst $blob/models/particle_burst.cc \
   $blob/models/particle_burst_engine.cc \
   beads/plaits_resources.cc
+build vowel $blob/models/vowel.cc \
+  $blob/models/vowel_engine.cc \
+  beads/plaits_resources.cc
 build plucked $blob/models/plucked.cc \
   $blob/models/plucked_engine.cc \
   $blob/models/palette_chord_bank.cc \

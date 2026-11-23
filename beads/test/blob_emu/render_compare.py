@@ -62,9 +62,9 @@ RANDOM_STATE = 0x20000000
 # The 6-op engine serves models 2-4.
 PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6),
     (39, 7), (41, 8), (31, 9), (30, 10), (50, 22), (52, 23), (54, 11),
-    (60, 13), (61, 14), (63, 12), (69, 15), (85, 16), (87, 17), (88, 18),
-    (89, 19), (90, 20), (91, 21)] + [
-    (m, 24 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (57, 24), (60, 13), (61, 14), (63, 12), (69, 15), (85, 16), (87, 17),
+    (88, 18), (89, 19), (90, 20), (91, 21)] + [
+    (m, 25 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -75,8 +75,8 @@ KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32),
     (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (30, 31), (50, 30),
-    (52, 30), (54, 30), (60, 30), (61, 30), (63, 30), (69, 30), (85, 30),
-    (87, 30), (88, 30), (89, 30), (90, 30), (91, 30)]
+    (52, 30), (54, 30), (57, 30), (60, 30), (61, 30), (63, 30), (69, 30),
+    (85, 30), (87, 30), (88, 30), (89, 30), (90, 30), (91, 30)]
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',

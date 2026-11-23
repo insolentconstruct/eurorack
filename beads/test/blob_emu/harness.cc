@@ -49,6 +49,7 @@
 #include "beads/blob/models/dual_sync_engine.h"
 #include "beads/blob/models/morph_engine.h"
 #include "beads/blob/models/particle_burst_engine.h"
+#include "beads/blob/models/vowel_engine.h"
 #include "beads/blob/models/plucked_engine.h"
 #include "beads/blob/models/blown_engine.h"
 #include "beads/blob/models/struck_drum_engine.h"
@@ -122,7 +123,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 24;
+const size_t kFirstStock = 25;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -207,6 +208,9 @@ static uint8_t dual_sync_storage[sizeof(DualSyncEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t morph_storage[sizeof(MorphEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t vowel_storage[sizeof(VowelEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -343,6 +347,8 @@ static void BuildProof() {
       &dual_sync_storage[sizeof(dual_sync_storage)], 0);
   std::fill(&morph_storage[0],
       &morph_storage[sizeof(morph_storage)], 0);
+  std::fill(&vowel_storage[0],
+      &vowel_storage[sizeof(vowel_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -368,6 +374,7 @@ static void BuildProof() {
   compiled[21] = new(analog_percussion_storage) AnalogPercussionEngine;
   compiled[22] = new(dual_sync_storage) DualSyncEngine;
   compiled[23] = new(morph_storage) MorphEngine;
+  compiled[24] = new(vowel_storage) VowelEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
