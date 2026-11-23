@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "34b38534aeec649f1b48236774cf8f98c6ffcd3be85268dae933cd7e2f434c08",
+  "manifest_sha256": "cfeb57ff292eb05f98a329c8f3c7ce4be52435daa2d99ee7f46f6d56e77f1a71",
   "record_version": 1,
   "features": [
     {
@@ -2311,6 +2311,10 @@
       "id": 71,
       "name": "Virtual Analog Variant",
       "palette": "virtual-analog-variant",
+      "family": "Subtractive",
+      "blob_size": 8108,
+      "state_size": 184,
+      "arena_size": 192,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
