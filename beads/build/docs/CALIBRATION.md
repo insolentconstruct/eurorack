@@ -35,8 +35,8 @@ Only the last press saves. A scale more than 10% from nominal (the 1–3 V
 step measures outside about 1.8–2.2 V) is rejected: all LEDs blink for about
 a second, then normal operation resumes on the stored calibration: nothing
 the run measured is used or saved, also when you leave calibration with
-[A]+FREEZE. This catches gross errors such as unplugged cables; 2 V and 4 V or
-slightly wrong references still pass. A result more than 25% from the factory
+[M]+FREEZE (which also toggles autosave). This catches gross errors such as
+unplugged cables; 2 V and 4 V or slightly wrong references still pass. A result more than 25% from the factory
 values on any input is not saved either: the same blink, and the stored
 calibration stays in use. So does any recalibration while an invalid profile
 keeps settings from being saved.
