@@ -47,6 +47,7 @@
 #include "beads/blob/models/scanned_engine.h"
 #include "beads/blob/models/gendy_engine.h"
 #include "beads/blob/models/particle_burst_engine.h"
+#include "beads/blob/models/struck_drum_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -110,7 +111,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 12;
+const size_t kFirstStock = 13;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -159,6 +160,9 @@ static uint8_t gendy_storage[sizeof(GendyEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t particle_burst_storage[sizeof(ParticleBurstEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t struck_drum_storage[sizeof(StruckDrumEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -271,6 +275,8 @@ static void BuildProof() {
   std::fill(&gendy_storage[0], &gendy_storage[sizeof(gendy_storage)], 0);
   std::fill(&particle_burst_storage[0],
       &particle_burst_storage[sizeof(particle_burst_storage)], 0);
+  std::fill(&struck_drum_storage[0],
+      &struck_drum_storage[sizeof(struck_drum_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -284,6 +290,7 @@ static void BuildProof() {
   compiled[9] = new(scanned_storage) ScannedEngine;
   compiled[10] = new(gendy_storage) GendyEngine;
   compiled[11] = new(particle_burst_storage) ParticleBurstEngine;
+  compiled[12] = new(struck_drum_storage) StruckDrumEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
