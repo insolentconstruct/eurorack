@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "030b50f80ce048f00be549c0dfb79f584ed8bb50a72533325c779c0202ea3715",
+  "manifest_sha256": "1f7d16ea69a9142f6c8f22c8e6fb34d389a0054264cd95891acf2aa318092110",
   "record_version": 1,
   "features": [
     {
@@ -1926,6 +1926,10 @@
       "id": 33,
       "name": "Loopback",
       "palette": "loopback",
+      "family": "Feedback",
+      "blob_size": 1068,
+      "state_size": 32,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
