@@ -188,9 +188,8 @@ void TestEveryModelRenders() {
   }
 }
 
-// Every model, resolution and corner of the controls: the voices' quantizer
-// converts in range (the float-cast-overflow sanitizer traps otherwise) and
-// the output stays finite.
+// Every model, resolution and control corner stays finite and converts
+// quantizer values in range, checked by float-cast-overflow sanitization.
 void TestQuantizationBounds() {
   test_checker.Start("TestQuantizationBounds");
   CHECK(reinterpret_cast<uintptr_t>(Ram()) % kPlaitsRamAlignment == 0);
@@ -498,9 +497,8 @@ void TestFreezeSustains() {
   CHECK(energy < 1e-6);
 }
 
-// The drone ends as a note decays through the low-pass gate (#354): when
-// DENSITY leaves noon or SEED plays the next voice, the droning voice keeps
-// sounding, with no step larger than the drone's own.
+// On drone exit via DENSITY or SEED, the old voice decays through its gate
+// without steps larger than the drone's own (#354).
 void TestDroneEndDecays() {
   test_checker.Start("TestDroneEndDecays");
   for (int ending = 0; ending < 2; ++ending) {

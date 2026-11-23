@@ -506,9 +506,8 @@ void TestSynthRefusals() {
   CHECK(Check(b) == PLAITS_BLOB_ERROR_DIGEST);
 }
 
-// A region of WAVE, TERR (two grids), PLTS (two version 2 blobs, the first
-// serving IDs 2 to 4) and RNGS (one synth), as blob_sections.py lays them
-// out.
+// Region layout from blob_sections.py: WAVE, two TERR grids, two v2 PLTS
+// blobs (the first serves IDs 2-4), and one RNGS synth.
 const uint32_t kRelease = 20261121;
 const uint32_t kWaveSize = 32 + kNumWaveRows * kWaveRowSize * 2 + 4;
 const uint32_t kTerrainSectionSize = 32 + 2 * kTerrainSize + 4;
@@ -947,9 +946,8 @@ void TestPlaitsTable() {
   CHECK(!plaits_region.blob(2));
 }
 
-// A version 2 blob with one ID and no imports: a model's entries, or a
-// library's RAM, scratch and two exports; then its dependencies. Returns its
-// size.
+// Build one v2 ID without imports: model entries or library RAM, scratch
+// and two exports, followed by dependencies. Return its size.
 const uint32_t kDependentGot = 200;
 const uint32_t kLibraryRam = 256;
 // Header flags MakeBlob gives a model.
