@@ -97,7 +97,8 @@ def boot(image, region):
   r.tick(9800, audio=False)
   r.recording = True
   r.tick(1500)
-  playing, = m.read(image.address('playing_synth'), '<I')
+  # SynthEngine is one byte (-fshort-enums).
+  playing, = m.read(image.address('playing_synth'), '<B')
   identity = m.read(image.address('plaits_region'), '<3I16I')
   silent = all(c[2] for c in r.calls if c[0] == 'audio')
   return {

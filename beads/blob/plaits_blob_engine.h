@@ -117,6 +117,10 @@ class PlaitsBlobEngine : public plaits::Engine {
 
   // The slot, for tests.
   inline const uint8_t* state() const { return state_; }
+  // The records init gets, for tests.
+  inline const PlaitsBlobLibrary* const* libraries() const {
+    return libraries_;
+  }
 
   virtual void Render(
       const plaits::EngineParameters& parameters,

@@ -952,6 +952,8 @@ void TestPlaitsTable() {
 // size.
 const uint32_t kDependentGot = 200;
 const uint32_t kLibraryRam = 256;
+// Header flags MakeBlob gives a model.
+uint32_t model_flags = 0;
 const uint32_t kLibraryScratch = 64;
 
 uint32_t MakeBlob(
@@ -986,6 +988,7 @@ uint32_t MakeBlob(
     h.reset_offset = 0x79;
     h.render_offset = 0x7d;
     h.out_gain = 1.0f;
+    h.flags = model_flags;
   }
   if (num_dependencies) {
     h.dependencies_offset = next;
@@ -1095,7 +1098,7 @@ uint8_t test_digests[kMaxTestBlobs][kPlaitsBlobDigestSize];
 struct TestBlob {
   uint32_t kind;
   uint32_t id;
-  PlaitsBlobDependency dependencies[2];
+  PlaitsBlobDependency dependencies[kMaxPlaitsBlobDependencies];
   uint32_t num_dependencies;
 };
 
@@ -1746,6 +1749,54 @@ void TestWavesAndTerrains() {
   CHECK(plaits_region.num_terrains() == 0);
 }
 
+// The voice's bind hands a flagged model TERR's record after all four of its
+// libraries, or first when it lists none.
+void TestTerrainBind() {
+  test_checker.Start("TestTerrainBind");
+  uint8_t digests[4][kPlaitsBlobDigestSize];
+  uint8_t scratch[256];
+  for (int i = 0; i < 4; ++i) {
+    MakeBlob(scratch, kPlaitsBlobKindLibrary, i + 1, NULL, 0, digests[i]);
+  }
+  TestBlob blobs[6] = {
+    { kPlaitsBlobKindLibrary, 1, { }, 0 },
+    { kPlaitsBlobKindLibrary, 2, { }, 0 },
+    { kPlaitsBlobKindLibrary, 3, { }, 0 },
+    { kPlaitsBlobKindLibrary, 4, { }, 0 },
+    { kPlaitsBlobKindModel, 43, { }, 0 },
+    { kPlaitsBlobKindModel, 90, { Needs(4, digests[3]), Needs(2, digests[1]),
+        Needs(1, digests[0]), Needs(3, digests[2]) }, 4 },
+  };
+  BuildRegion();
+  model_flags = PLAITS_BLOB_FLAG_TERRAINS;
+  const PlaitsDirectoryEntry d[2] = { directory[1], WritePlaits(blobs, 6, NULL) };
+  model_flags = 0;
+  plaits_region.set_library_ram(kTestLibraryRam, kLibraryScratch);
+  plaits_region.Read(
+      flash, flash + kFlashSize, kRelease, d, 2, defaults, kNumSections,
+      &plaits_blob_services, test_digests, 6);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK);
+  CHECK(plaits_region.num_terrains() == 2);
+  static uint8_t ram[kTestLibraryRam];
+  PlaitsLibraries libraries;
+  libraries.Init(
+      plaits_region, &plaits_blob_services, ram, sizeof(ram), scratch,
+      kLibraryScratch);
+  static PlaitsBlobEngine engine;
+  engine.Bind(plaits_region.blob(90), &plaits_blob_services, 90, &libraries);
+  const PlaitsBlobLibrary* const* records = engine.libraries();
+  const uint32_t order[4] = { 4, 2, 1, 3 };
+  for (int i = 0; i < 4; ++i) {
+    CHECK(records[i] == libraries.Find(order[i]));
+  }
+  const PlaitsBlobTerrains* t = records[4]
+      ? static_cast<const PlaitsBlobTerrains*>(records[4]->context) : NULL;
+  CHECK(t && t->count == 2 && t->grids == plaits_region.terrains());
+  engine.Bind(plaits_region.blob(43), &plaits_blob_services, 43, &libraries);
+  CHECK(engine.libraries()[0] == records[4]);
+  plaits_region.set_library_ram(0, 0);
+}
+
 int main() {
   static uint8_t storage[kFlashSize + 32];
   flash = storage + (32 - reinterpret_cast<uintptr_t>(storage) % 32) % 32;
@@ -1770,6 +1821,7 @@ int main() {
   TestLocks();
   TestModelFlags();
   TestWavesAndTerrains();
+  TestTerrainBind();
   puts("Plaits blob checks: PASS");
   return test_checker.failures() ? 1 : 0;
 }

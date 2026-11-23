@@ -2168,6 +2168,12 @@ cases = [
   ('TestWavesAndTerrains', 'plaits_blob', 'beads/blob/plaits_region.h',
     '    return reinterpret_cast<const int16_t*>(section(PLAITS_SECTION_WAVE));',
     '    return reinterpret_cast<const int16_t*>(sections_[0] + 32);'),
+  ('TestTerrainBind', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
+    '      if (h2->num_dependencies || h2->flags & PLAITS_BLOB_FLAG_TERRAINS) {',
+    '      if (h2->num_dependencies) {'),
+  ('TestTerrainBind', 'plaits_blob', 'beads/blob/plaits_blob_engine.h',
+    '  const PlaitsBlobLibrary* libraries_[kMaxPlaitsBlobRecords];',
+    '  const PlaitsBlobLibrary* libraries_[kMaxPlaitsBlobDependencies];'),
   # Beads' synth from a WAVE section (wave_section_test).
   ('TestSectionRender', 'wave_section', 'beads/dsp/wavetable_voice.h',
     '      const int16_t* wave_start = integrated_waves + \\',
