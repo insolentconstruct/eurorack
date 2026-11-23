@@ -777,6 +777,16 @@ void MonitorStateChange() {
   const SynthEngine wanted = EffectiveSynth(ui.synth(), playable_synths);
   ui.set_synth_fault(wanted == SYNTH_SILENT);
   ui.set_rings_playing(synth_mode && playing_synth == SYNTH_RINGS);
+  // A settled zone or polyphony change reconfigures Rings off the interrupt,
+  // also while FREEZE sustains it.
+  if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&
+      rings_synth.configure_pending() && !codec_transition_frames &&
+      !ui.calibrating_or_testing()) {
+    if (FadedOut()) {
+      SwapPaused(SYNTH_SILENT, playing_synth);
+    }
+    return;
+  }
   if (ui.should_ignore_state_change() || codec_transition_frames) {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
@@ -797,15 +807,6 @@ void MonitorStateChange() {
       return;
     }
     playing_synth = wanted;
-  }
-  // A settled zone or polyphony change reconfigures Rings off the interrupt.
-  if (synth_mode && playing_synth == SYNTH_RINGS &&
-      rings_synth.configure_pending()) {
-    if (!FadedOut()) {
-      return;
-    }
-    SwapPaused(SYNTH_SILENT, playing_synth);
-    return;
   }
 
   // Once faded out, swap the engine. This clears the recording; a frozen

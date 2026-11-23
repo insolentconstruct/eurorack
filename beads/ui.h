@@ -96,6 +96,12 @@ class Ui {
     
     return frozen || calibrating || testing;
   }
+
+  // As above, without FREEZE: the Rings synth reconfigures while sustained.
+  inline bool calibrating_or_testing() const {
+    return (mode_ >= MODE_CALIBRATION_1 && mode_ <= MODE_CALIBRATION_4) || \
+        mode_ == MODE_FACTORY_TEST;
+  }
   
   inline bool pressed_immediate(Switch s) const {
     return switches_.pressed_immediate(s);

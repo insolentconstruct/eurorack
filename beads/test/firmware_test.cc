@@ -1454,6 +1454,24 @@ void TestRingsSynthOwnership() {
   CHECK(CoreTarget(delay_buffer_1).polyphony == 4);
   CHECK(configure_in_audio == 0);
 
+  // FREEZE sustains Rings; polyphony and FEEDBACK changes still apply.
+  ui.set_freeze_button_state(true);
+  r.Tick(20, true);
+  CHECK(ui.should_ignore_state_change());
+  settings.SetFeatureValue(FEATURE_RINGS_POLYPHONY, 0);
+  r.Tick(300, true);
+  CHECK(CoreTarget(delay_buffer_1).polyphony == 1);
+  // The unpatched ASSIGN input's probe would move FEEDBACK between zones.
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 0;
+  r.Tick(1000, true);
+  CHECK(CoreTarget(delay_buffer_1).core == RINGS_CORE_PART);
+  CHECK(ui.should_ignore_state_change());
+  CHECK(configure_in_audio == 0);
+  CHECK(codec.callback_ == &Process);
+  ui.set_freeze_button_state(false);
+  r.Tick(20, true);
+
   // Without Rings, a Rings selection plays Beads' synth, never silence.
   playable_synths = SynthMask(true, true, false);
   ui.set_playable_synths(playable_synths);

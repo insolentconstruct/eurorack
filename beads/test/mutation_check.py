@@ -2700,9 +2700,13 @@ cases = [
     '    if (synth_mode && owner != bank_owner) {',
     '    if (false) {'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
-    '  if (synth_mode && playing_synth == SYNTH_RINGS &&\n'
-    '      rings_synth.configure_pending()) {',
-    '  if (false) {'),
+    '  if (synth_mode && playing_synth == SYNTH_RINGS && wanted == playing_synth &&\n'
+    '      rings_synth.configure_pending() && !codec_transition_frames &&\n',
+    '  if (false &&\n'
+    '      rings_synth.configure_pending() && !codec_transition_frames &&\n'),
+  ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',
+    '      !ui.calibrating_or_testing()) {',
+    '      !ui.should_ignore_state_change()) {'),
   ('TestRingsSynthOwnership', 'firmware', 'beads/dsp/rings_synth.cc',
     '  fill(&ram[0], &ram[ram_size], 0);', ''),
   ('TestRingsSynthOwnership', 'firmware', 'beads/beads.cc',

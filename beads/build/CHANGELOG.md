@@ -4,7 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
-- Synth gains a third value, Rings, offered on page 3 (thirds) only when the Rings synth is installed; without it the page looks as before. While Rings plays, [A]+FREEZE steps its polyphony (one, two, four voices; [A] green, yellow, red), saved. A Synth action steps through the installed synths; earlier builds read a saved Rings as not set. Rings plays at about the Plaits synth's level (one fixed gain after Rings' own output).
+- Synth gains a third value, Rings, offered on page 3 (thirds) only when the Rings synth is installed; without it the page looks as before. While Rings plays, [A]+FREEZE steps its polyphony (one, two, four voices; [A] green, yellow, red), saved; polyphony and FEEDBACK changes apply while FREEZE sustains it. A Synth action steps through the installed synths; earlier builds read a saved Rings as not set. Rings plays at about the Plaits synth's level (one fixed gain after Rings' own output).
 - Options pages: LED brightness keeps the chosen level when the pages close before the save, instead of returning to the old level for up to a second (#355); SEED latch and TIME scan take effect while their knob turns, as the other page settings do (#356).
 - [M] moves the CV from stereo width to diffusion in one step, never passing through no target (#357). A manual gain, width or diffusion set with [A] is saved when an [A]+SEED or [A]+FREEZE gesture runs; stock's [A]+FREEZE skipped that save too (#358).
 - Plaits synth: ending the drone (DENSITY leaving noon, or a SEED note) no longer clicks (#354). The droning voice decays from full level through the low-pass gate, as a played note does; everything else plays bit for bit as before.

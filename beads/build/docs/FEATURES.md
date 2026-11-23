@@ -464,6 +464,7 @@ synths. A saved synth that is not installed stays saved; another one plays
 until it is back. While Rings plays, [A]+FREEZE steps its polyphony (ID 42,
 record byte 27): one, two, then four voices, shown green, yellow and red
 as on Rings, and saved. A profile's Synth start on [A]+FREEZE keeps it.
+Polyphony and FEEDBACK changes also apply while FREEZE sustains Rings.
 
 ### Plaits bank
 
