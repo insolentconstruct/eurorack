@@ -175,7 +175,7 @@ const int kNumFmBanks = 3;
 const int kFmBankSize = 32;
 const size_t kArenaSize = 16384;
 const size_t kCanaryWords = 16;
-const size_t kMaxDigests = 64;
+const size_t kMaxDigests = kMaxPlaitsRegionBlobs + 1;
 // As the development build: kPlaitsLibraryRamSize, and the first voice's RAM
 // as scratch (enough for a word bank).
 const size_t kLibraryRamSize = 64 * 1024;
@@ -432,6 +432,7 @@ uint8_t harness_scratch[kScratchSize] __attribute__((aligned(8)));
 uint32_t harness_library_ram_size = kLibraryRamSize;
 uint8_t harness_digests[kMaxDigests][kPlaitsBlobDigestSize];
 uint32_t harness_num_digests;
+uint32_t harness_digest_capacity = kMaxDigests;
 PlaitsDirectoryEntry harness_directory[PLAITS_SECTION_LAST];
 uint32_t harness_num_entries;
 PlaitsDefaultSection harness_defaults[PLAITS_SECTION_LAST];
@@ -752,9 +753,7 @@ void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
   } else {
     BuildStock();
   }
-  if (model == 56) {
-    stmlib::Random::Seed(seed);
-  }
+  stmlib::Random::Seed(seed);
   harness_select_compiled(engine, model);
 }
 

@@ -74,7 +74,7 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/emu"
           "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
-          "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/render_compare.py blob-out/emu
+          "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/run_profiles.py blob-out/emu
           "$RUNNER_TEMP/emu/bin/python" beads/test/libm_blob_emu/compare.py blob-out/libm
       - name: Check the Rings synth's source against vanilla Rings, gate its blob, build the references
         run: |

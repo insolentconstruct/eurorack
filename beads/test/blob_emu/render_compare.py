@@ -210,6 +210,8 @@ NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
 FRESH_ON_RESELECT = (53, 56, 92, 93, 97, 98, 99)
+# Saw Swarm Reset already clears its state; the others retain warm state.
+RETAINED_ON_RESET = (53, 92, 93, 97, 98, 99)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -311,6 +313,8 @@ class Machine(object):
     if library_ram is not None:
       self.uc.mem_write(self.sym['harness_library_ram_size'],
                         struct.pack('<I', library_ram))
+    if len(digests) > self.word(self.sym['harness_digest_capacity']):
+      raise RuntimeError('too many fixture digests')
     for i, d in enumerate(digests):
       self.uc.mem_write(self.sym['harness_digests'] + 32 * i, d)
     self.uc.mem_write(self.sym['harness_num_digests'],
@@ -904,7 +908,8 @@ def main(argv):
     if first in FRESH_ON_RESELECT:
       if switch.get('return_policy') != 'fresh' or phases[2]['differ']:
         failures.append('model %d: return must equal a fresh engine' % first)
-      if not switch.get('retained_differ', [0, 0, 0])[2]:
+      if first in RETAINED_ON_RESET and not switch.get(
+          'retained_differ', [0, 0, 0])[2]:
         failures.append('model %d: warm reference did not exercise retained '
                         'state' % first)
     if any(switch['fresh_differ']):

@@ -133,6 +133,13 @@ host-test jobs; the release app does not link them:
   Every sin/tanh/expm1 output word and per-input exception flag must match;
   NZCV is incidental. The
   unchanged gate checks three bases; the errno control must be refused.
+- `blob_emu/run_profiles.py` runs the render suite in overlapping profiles
+  that fit the existing bank-1 placement bounds, including the library gap
+  and terrain fixtures. Each profile keeps every stock model and the original
+  proof models for the fault and control cases. The combined model and switch
+  coverage must equal the full registry; every profile must pass. Compiled-in
+  reference code uses bank 2 so it cannot overwrite bank-1 blob fixtures;
+  the exported service tables retain their fixed bank-1 addresses.
 - `blob_emu/render_compare.py`: every OUT and AUX word and the generator's
   state of the 24 stock models, Spectral Spiral, Phase Weave and a test sine
   as blobs against the same classes compiled in (the stock models against
