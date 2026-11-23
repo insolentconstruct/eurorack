@@ -29,12 +29,18 @@
 set -euo pipefail
 out=${1:?usage: build_blobs.sh OUT}
 blob=beads/blob
+libm=$blob/libm
 speech=plaits/dsp/speech
 build() {
   bash beads/build/tools/build_blob.sh "$out" "$@"
 }
 build plaits_wavetables $blob/libraries/plaits_wavetables.cc \
   beads/plaits_resources.cc
+build scale_voices_library $blob/libraries/scale_voices_library.cc \
+  $blob/libraries/scale_voices.cc
+build wavetable_scale_voices_library --library "$out/plaits_wavetables.bin" \
+  $blob/libraries/wavetable_scale_voices_library.cc \
+  $blob/libraries/wavetable_scale_voices.cc
 build speech_library $blob/libraries/speech_library.cc \
   $speech/naive_speech_synth.cc $speech/sam_speech_synth.cc \
   $speech/lpc_speech_synth.cc $speech/lpc_speech_synth_controller.cc \
