@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "1f7d16ea69a9142f6c8f22c8e6fb34d389a0054264cd95891acf2aa318092110",
+  "manifest_sha256": "1e3818ab4fb8124da59fc4b977760d6f8f43419e2fa74e38623d459e67611e67",
   "record_version": 1,
   "features": [
     {
@@ -1938,6 +1938,10 @@
       "id": 34,
       "name": "Lockstep",
       "palette": "lockstep",
+      "family": "PLL",
+      "blob_size": 1700,
+      "state_size": 20,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []

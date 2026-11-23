@@ -63,8 +63,8 @@ RANDOM_STATE = 0x20000000
 PAIRS = dict([
     (36, 0), (254, 1), (43, 2), (32, 3), (29, 4),
     (40, 5), (37, 6), (39, 7), (41, 8), (31, 9),
-    (33, 10)] + [
-    (m, 11 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (33, 10), (34, 11)] + [
+    (m, 12 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -75,7 +75,7 @@ KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (2, 3), (4, 2), (13, 43), (18, 36), (43, 18),
     (32, 36), (29, 32), (40, 29), (37, 40), (39, 37),
-    (41, 39), (31, 41), (33, 31)]
+    (41, 39), (31, 41), (33, 31), (34, 33)]
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',

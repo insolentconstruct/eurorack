@@ -46,6 +46,7 @@
 #include "beads/blob/models/phase_flock_engine.h"
 #include "beads/blob/models/scanned_engine.h"
 #include "beads/blob/models/loopback_engine.h"
+#include "beads/blob/models/lockstep_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -109,7 +110,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 11;
+const size_t kFirstStock = 12;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -155,6 +156,9 @@ static uint8_t scanned_storage[sizeof(ScannedEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t loopback_storage[sizeof(LoopbackEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t lockstep_storage[sizeof(LockstepEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -266,6 +270,8 @@ static void BuildProof() {
       &scanned_storage[sizeof(scanned_storage)], 0);
   std::fill(&loopback_storage[0],
       &loopback_storage[sizeof(loopback_storage)], 0);
+  std::fill(&lockstep_storage[0],
+      &lockstep_storage[sizeof(lockstep_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -278,6 +284,7 @@ static void BuildProof() {
   compiled[8] = new(phase_flock_storage) PhaseFlockEngine;
   compiled[9] = new(scanned_storage) ScannedEngine;
   compiled[10] = new(loopback_storage) LoopbackEngine;
+  compiled[11] = new(lockstep_storage) LockstepEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
