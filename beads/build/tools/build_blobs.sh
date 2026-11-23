@@ -49,6 +49,8 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
+build question_mark $blob/models/question_mark.cc \
+  $blob/models/question_mark_engine.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
