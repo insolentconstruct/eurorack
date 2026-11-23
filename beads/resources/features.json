@@ -1694,9 +1694,13 @@
       "id": 86,
       "name": "Helix",
       "palette": "helix",
+      "family": "Chords",
+      "blob_size": 4508,
+      "state_size": 532,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
-      "libraries": [2]
+      "libraries": []
     },
     {
       "id": 87,

@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "3841fe6a5c76946b9ed7d257932f42251f2861e361ecdd51d6d99abca0891d57",
+  "manifest_sha256": "f93a7167e5f06376303b19512ec02aa03a2c0e363c0661ecb37900c8e7de1298",
   "record_version": 1,
   "features": [
     {
@@ -2424,11 +2424,13 @@
       "id": 86,
       "name": "Helix",
       "palette": "helix",
+      "family": "Chords",
+      "blob_size": 4508,
+      "state_size": 532,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
-      "libraries": [
-        2
-      ]
+      "libraries": []
     },
     {
       "id": 87,

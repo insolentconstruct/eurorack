@@ -77,6 +77,10 @@ build fluted $blob/models/fluted.cc \
 build brass $blob/models/brass.cc \
   $blob/models/brass_engine.cc \
   beads/plaits_resources.cc
+build helix $blob/models/helix.cc \
+  $blob/models/helix_engine.cc \
+  $blob/models/palette_chord_bank.cc \
+  beads/plaits_resources.cc
 build skins $blob/models/skins.cc \
   $blob/models/skins_engine.cc \
   beads/plaits_resources.cc
