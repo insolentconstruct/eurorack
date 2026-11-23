@@ -61,13 +61,17 @@ const uint32_t kNumPlaitsModelIds = 256;
 // region may hold.
 const size_t kMaxPlaitsLibraryExports = 16;
 const size_t kMaxPlaitsBlobDependencies = 4;
+// The dependencies, then TERR's record.
+const size_t kMaxPlaitsBlobRecords = kMaxPlaitsBlobDependencies + 1;
 const size_t kMaxPlaitsLibraries = 8;
 const size_t kPlaitsBlobMaxLibraryRamSize = 65536;
 // A synth's RAM, lent from delay bank 0 while it plays.
 const size_t kPlaitsBlobMaxSynthRamSize = 256 * 1024;
 
+// TERRAINS (version 2 models): init gets TERR's record after its libraries.
 enum PlaitsBlobFlags {
-  PLAITS_BLOB_FLAG_ENVELOPED = 1
+  PLAITS_BLOB_FLAG_ENVELOPED = 1,
+  PLAITS_BLOB_FLAG_TERRAINS = 2
 };
 
 // Version 1: sixteen little-endian words, code and constants, the imports
@@ -258,8 +262,16 @@ struct PlaitsBlobLibrary {
   const void* exports[kMaxPlaitsLibraryExports];
 };
 
+// TERR's grids, the context of the record a model flagged TERRAINS gets after
+// its libraries: NULL and 0 without a valid TERR.
+struct PlaitsBlobTerrains {
+  const int8_t* grids;
+  uint32_t count;
+};
+
 // Version 2 entries: init also gets one library per dependency, in the
-// listed order; reset gets the selected ID minus the first.
+// listed order (then TERR's record if flagged); reset gets the selected ID
+// minus the first.
 typedef void* (*PlaitsBlobInitFn2)(
     void* state,
     const PlaitsBlobServices* services,

@@ -184,6 +184,19 @@ class PlaitsRegion {
     return section(PLAITS_SECTION_RINGS);
   }
 
+  // A valid WAVE's 193 rows, or NULL: Beads' synth plays only with them.
+  inline const int16_t* waves() const {
+    return reinterpret_cast<const int16_t*>(section(PLAITS_SECTION_WAVE));
+  }
+
+  // A valid TERR's grids (64 x 64, rows of x) and their count, or NULL and 0.
+  inline const int8_t* terrains() const {
+    return reinterpret_cast<const int8_t*>(section(PLAITS_SECTION_TERRAIN));
+  }
+  inline uint32_t num_terrains() const {
+    return ok(PLAITS_SECTION_TERRAIN) ? num_terrains_ : 0;
+  }
+
   inline bool ok(PlaitsSection section) const {
     return identity_.sections[section].status == PLAITS_BLOB_OK;
   }
@@ -235,6 +248,7 @@ class PlaitsRegion {
   // Libraries are the table's first entries.
   uint8_t library_ids_[kMaxPlaitsLibraries];
   size_t num_libraries_;
+  uint32_t num_terrains_;
   const uint8_t* blobs_;
   const uint8_t* sections_[PLAITS_SECTION_LAST];
   PlaitsFlashCheck flash_check_;

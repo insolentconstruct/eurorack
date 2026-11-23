@@ -1618,6 +1618,134 @@ void TestLocks() {
   CHECK(PlaitsRegion::Lock(false, false) == PLAITS_SYNTH_SILENT);
 }
 
+// A model's header flags: TERR's record only for version 2 models.
+void TestModelFlags() {
+  test_checker.Start("TestModelFlags");
+  Services();
+  uint8_t* b = region + 32;
+  const uint32_t v2[4] = { 0, PLAITS_BLOB_FLAG_ENVELOPED,
+      PLAITS_BLOB_FLAG_TERRAINS,
+      PLAITS_BLOB_FLAG_ENVELOPED | PLAITS_BLOB_FLAG_TERRAINS };
+  for (int i = 0; i < 4; ++i) {
+    Build2(b)->flags = v2[i];
+    Seal(b, true);
+    CHECK(Check(b) == PLAITS_BLOB_OK);
+  }
+  const uint32_t unknown[3] = { 4, 0x80000000, PLAITS_BLOB_FLAG_TERRAINS | 8 };
+  for (int i = 0; i < 3; ++i) {
+    Build2(b)->flags = unknown[i];
+    Seal(b, true);
+    CHECK(Check(b) == PLAITS_BLOB_ERROR_HEADER);
+  }
+  Build(b)->flags = PLAITS_BLOB_FLAG_ENVELOPED;
+  Seal(b, true);
+  CHECK(Check(b) == PLAITS_BLOB_OK);
+  Build(b)->flags = PLAITS_BLOB_FLAG_TERRAINS;
+  Seal(b, true);
+  CHECK(Check(b) == PLAITS_BLOB_ERROR_HEADER);
+}
+
+// Sets a PLTS blob's flags and seals the blob, its entry and the section.
+void FlagBlob(int entry, uint32_t offset, uint32_t flags, uint8_t* digest) {
+  uint8_t* p = flash + kPlaitsOffset;
+  uint8_t* b = p + offset;
+  Write32(b + 68, flags);
+  Write32(b + kBlobSize - 4, Profile::Crc32(b, kBlobSize - 4));
+  PlaitsBlob::Sha256(b, kBlobSize, digest);
+  SetEntry(entry, 3, Read32(b + kBlobSize - 4));
+  directory[2].crc = SealSection(p);
+}
+
+// WAVE's rows for Beads' synth, TERR's grids for a model flagged for them.
+void TestWavesAndTerrains() {
+  test_checker.Start("TestWavesAndTerrains");
+  BuildRegion();
+  FlagBlob(1, kSecondBlob, PLAITS_BLOB_FLAG_TERRAINS, blob_digests[1]);
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_PLAITS) == PLAITS_BLOB_OK);
+  CHECK(plaits_region.waves() ==
+      reinterpret_cast<const int16_t*>(flash + kWaveOffset + 32));
+  CHECK(plaits_region.terrains() ==
+      reinterpret_cast<const int8_t*>(flash + kTerrainOffset + 32));
+  CHECK(plaits_region.num_terrains() == 2);
+
+  static uint8_t ram[1024];
+  uint8_t scratch[64];
+  PlaitsLibraries libraries;
+  libraries.Init(
+      plaits_region, &plaits_blob_services, ram, sizeof(ram), scratch,
+      sizeof(scratch));
+  const PlaitsBlobLibrary* sentinel =
+      reinterpret_cast<const PlaitsBlobLibrary*>(scratch);
+  const PlaitsBlobLibrary* resolved[kMaxPlaitsBlobRecords];
+  for (size_t i = 0; i < kMaxPlaitsBlobRecords; ++i) {
+    resolved[i] = sentinel;
+  }
+  // No library listed: TERR's record comes first.
+  libraries.Resolve(plaits_region.blob(43), resolved);
+  CHECK(resolved[0] != sentinel && resolved[0] && resolved[1] == sentinel);
+  if (resolved[0] == sentinel || !resolved[0]) {
+    return;
+  }
+  const PlaitsBlobTerrains* terrains =
+      static_cast<const PlaitsBlobTerrains*>(resolved[0]->context);
+  CHECK(terrains->grids == plaits_region.terrains());
+  CHECK(terrains->count == 2);
+  CHECK(terrains->grids &&
+      terrains->grids[kTerrainSize + 5] == int8_t((kTerrainSize + 5) * 3));
+  // An unflagged model gets nothing more.
+  resolved[0] = sentinel;
+  libraries.Resolve(plaits_region.blob(2), resolved);
+  CHECK(resolved[0] == sentinel);
+
+  // A damaged TERR: no grids, the other sections and the record as before.
+  flash[kTerrainOffset + 32 + 7] ^= 1;
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_ERROR_CRC);
+  CHECK(!plaits_region.terrains() && plaits_region.num_terrains() == 0);
+  CHECK(plaits_region.waves() && plaits_region.blob(43));
+  libraries.Init(
+      plaits_region, &plaits_blob_services, ram, sizeof(ram), scratch,
+      sizeof(scratch));
+  libraries.Resolve(plaits_region.blob(43), resolved);
+  terrains = static_cast<const PlaitsBlobTerrains*>(resolved[0]->context);
+  CHECK(!terrains->grids && terrains->count == 0);
+
+  // Bad content counts no grids either.
+  BuildRegion();
+  Write32(flash + kTerrainOffset + 20, 3);
+  directory[1].crc = SealSection(flash + kTerrainOffset);
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_TERRAIN) == PLAITS_BLOB_ERROR_CONTENT);
+  CHECK(plaits_region.num_terrains() == 0);
+
+  // A damaged WAVE: no rows, so Beads' synth cannot play; TERR unaffected.
+  BuildRegion();
+  flash[kWaveOffset + 32 + 1000] ^= 1;
+  Read(directory, kNumSections);
+  CHECK(Status(PLAITS_SECTION_WAVE) == PLAITS_BLOB_ERROR_CRC);
+  CHECK(!plaits_region.waves());
+  CHECK(plaits_region.num_terrains() == 2);
+  // A double ECC error in TERR or WAVE: that section gives nothing.
+  BuildRegion();
+  plaits_region.set_flash_check(&FakeFlashCheck);
+  flash_calls = 0;
+  flash_failing_call = 4;
+  Read(directory, kNumSections);
+  CHECK(!plaits_region.terrains() && plaits_region.num_terrains() == 0);
+  CHECK(plaits_region.waves());
+  flash_calls = 0;
+  flash_failing_call = 2;
+  Read(directory, kNumSections);
+  CHECK(!plaits_region.waves() && plaits_region.num_terrains() == 2);
+  plaits_region.set_flash_check(NULL);
+  // Neither section listed.
+  BuildRegion();
+  Read(directory + 2, 2);
+  CHECK(!plaits_region.waves() && !plaits_region.terrains());
+  CHECK(plaits_region.num_terrains() == 0);
+}
+
 int main() {
   static uint8_t storage[kFlashSize + 32];
   flash = storage + (32 - reinterpret_cast<uintptr_t>(storage) % 32) % 32;
@@ -1640,6 +1768,8 @@ int main() {
   TestFlashErrors();
   TestPlayable();
   TestLocks();
+  TestModelFlags();
+  TestWavesAndTerrains();
   puts("Plaits blob checks: PASS");
   return test_checker.failures() ? 1 : 0;
 }

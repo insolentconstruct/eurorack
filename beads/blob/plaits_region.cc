@@ -92,6 +92,7 @@ void PlaitsRegion::Read(
   memset(&identity_, 0, sizeof(identity_));
   memset(models_, 0, sizeof(models_));
   num_libraries_ = 0;
+  num_terrains_ = 0;
   blobs_ = NULL;
   for (int i = 0; i < PLAITS_SECTION_LAST; ++i) {
     sections_[i] = NULL;
@@ -223,6 +224,7 @@ PlaitsBlobStatus PlaitsRegion::ReadSection(
           payload != h.count * kTerrainSize) {
         return PLAITS_BLOB_ERROR_CONTENT;
       }
+      num_terrains_ = h.count;
       return PLAITS_BLOB_OK;
 
     default:

@@ -79,7 +79,7 @@ class PlaitsBlobEngine : public plaits::Engine {
       arena_size_ = h2->arena_size;
       argument_ = model - h2->first_id;
       SetPostProcessing(h2->flags, h2->out_gain, h2->aux_gain);
-      if (h2->num_dependencies) {
+      if (h2->num_dependencies || h2->flags & PLAITS_BLOB_FLAG_TERRAINS) {
         libraries->Resolve(blob, libraries_);
       }
     }
@@ -170,7 +170,7 @@ class PlaitsBlobEngine : public plaits::Engine {
   size_t arena_size_;
   uint32_t argument_;
   size_t fade_;
-  const PlaitsBlobLibrary* libraries_[kMaxPlaitsBlobDependencies];
+  const PlaitsBlobLibrary* libraries_[kMaxPlaitsBlobRecords];
   void* object_;
   // Bytes, so that the blob's object is nested in this one.
   uint8_t state_[kPlaitsBlobMaxStateSize2] __attribute__((aligned(8)));

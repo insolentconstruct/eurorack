@@ -323,6 +323,12 @@ PlaitsBlobStatus PlaitsBlob::Check(
       return PLAITS_BLOB_ERROR_HEADER;
     }
   }
+  // A model knows only the flags above; TERR's record needs version 2.
+  if (h.kind == kPlaitsBlobKindModel && (h.flags & ~(h.abi == kPlaitsBlobAbi
+      ? PLAITS_BLOB_FLAG_ENVELOPED
+      : PLAITS_BLOB_FLAG_ENVELOPED | PLAITS_BLOB_FLAG_TERRAINS))) {
+    return PLAITS_BLOB_ERROR_HEADER;
+  }
   // A library has one nonzero ID, and no flags or gains.
   if (!h.num_ids || h.first_id >= kNumPlaitsModelIds ||
       h.num_ids > kNumPlaitsModelIds - h.first_id ||
