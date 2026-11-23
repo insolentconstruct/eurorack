@@ -239,6 +239,7 @@ Mutable Instruments built Beads as a real-time granular texture tool around one 
 - One manual paragraph explains it; no hidden state the panel can't show.
 - Patching can't already do it.
 - CPU: the worst measured block stays at or under its codec rate's working limit: 96.5% of the budget at 48 kHz and 97.0% at 32 kHz, at least a point under the clean edges a Beta 4 test build measured on the module (97.8% and 98.1%, with the one-frame output delay; [One-frame output delay](OPTIMIZATIONS.md#one-frame-output-delay)). 24 kHz is not yet measured on Beta 4 and keeps the earlier 90% limit.
+  Palette model banks a user picks in Hygrostat are not features under this rule: a bank over its rate's working limit gets a very obvious warning that it may crackle and is never refused for CPU use (owner 2026-11-21, 2026-11-23).
 
 Prefer, in order: no control (a better default or an indicator), a new value in an existing option, a gesture, then a new option replacing another (the factory layout's twelve page slots are taken).
 
