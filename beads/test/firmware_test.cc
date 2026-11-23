@@ -1463,7 +1463,7 @@ void TestRingsSynthOwnership() {
   }
   CHECK(rings_synth.configure_pending());
   // A queued self-play request is dropped under FREEZE, as before.
-  ui.self_play_requested_ = true;
+  ui.gestures_.self_play_requested_ = true;
   RunMainLoop();
   CHECK(!ui.self_play_requested());
   r.Tick(300, true);

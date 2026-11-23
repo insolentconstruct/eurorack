@@ -180,12 +180,12 @@ void TestTrimGesture() {
     const uint8_t media = r.settings.state().media;
     r.Down(SWITCH_MEDIA);
     r.Down(SWITCH_FREEZE);
-    CHECK(r.ui.trim_flag_);
+    CHECK(r.ui.gestures_.trim_flag_);
     CHECK(!r.ui.freeze_button_state_);
     CHECK(r.ui.ignore_release_[SWITCH_MEDIA]);
     CHECK(r.ui.ignore_release_[SWITCH_FREEZE]);
     r.ui.ClearTrimFlag();
-    CHECK(!r.ui.trim_flag_);
+    CHECK(!r.ui.gestures_.trim_flag_);
     r.Up(order ? SWITCH_MEDIA : SWITCH_FREEZE);
     r.Up(order ? SWITCH_FREEZE : SWITCH_MEDIA);
     CHECK(!r.ui.freeze_button_state_);
@@ -195,7 +195,7 @@ void TestTrimGesture() {
   const uint8_t media = reverse.settings.state().media;
   reverse.Down(SWITCH_FREEZE);
   reverse.Down(SWITCH_MEDIA);
-  CHECK(!reverse.ui.trim_flag_);
+  CHECK(!reverse.ui.gestures_.trim_flag_);
   reverse.Up(SWITCH_FREEZE);
   reverse.Up(SWITCH_MEDIA);
   CHECK(reverse.ui.freeze_button_state_);
@@ -212,7 +212,7 @@ void TestTrimGesture() {
   page.ui.DoEvents();
   page.Up(SWITCH_FREEZE);
   page.Up(SWITCH_MEDIA);
-  CHECK(!page.ui.trim_flag_);
+  CHECK(!page.ui.gestures_.trim_flag_);
   CHECK(!page.ui.freeze_button_state_);
   CHECK(page.settings.state().media == page_media);
 }
@@ -3159,7 +3159,7 @@ void TestProfileActions() {
         if (features[i] == FEATURE_MONOPHONIC) {
           CHECK(r.settings.state().monophonic_mode);
         } else if (features[i] == FEATURE_TRIM) {
-          CHECK(r.ui.trim_flag_);
+          CHECK(r.ui.gestures_.trim_flag_);
         } else {
           CHECK(r.ui.self_play_requested() == !patched);
         }
@@ -3177,7 +3177,7 @@ void TestProfileActions() {
   CHECK(!off.settings.state().monophonic_mode);
   off.Up(SWITCH_SEED);
   off.Down(SWITCH_FREEZE);
-  CHECK(!off.ui.trim_flag_);
+  CHECK(!off.ui.gestures_.trim_flag_);
 }
 
 // The factory profile with the Plaits bank starting elsewhere.
@@ -3230,9 +3230,9 @@ void TestPlaitsBankGesture() {
       r.Down(SWITCH_FREEZE);
       CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == banks[i]);
       CHECK(test_writes == writes + kRecordWords);
-      CHECK(!r.ui.trim_flag_);
+      CHECK(!r.ui.gestures_.trim_flag_);
       CHECK(r.ui.freeze_button_state_);
-      const Leds::Color color = r.ui.plaits_bank_cues_[banks[i]].color;
+      const Leds::Color color = r.ui.gestures_.plaits_bank_cues_[banks[i]].color;
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == color.r);
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == color.g);
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == color.b);
@@ -3246,7 +3246,7 @@ void TestPlaitsBankGesture() {
       CHECK(StoredByte(loaded, FEATURE_PLAITS_BANK) == banks[i]);
     }
     // Each bank has its own colour; the cue lasts half a second.
-    const Ui::BankCue* cues = r.ui.plaits_bank_cues_;
+    const GestureController::BankCue* cues = r.ui.gestures_.plaits_bank_cues_;
     for (int i = 0; i < kNumPlaitsBanks; ++i) {
       CHECK(cues[i].color.r || cues[i].color.g || cues[i].color.b);
       for (int j = 0; j < i; ++j) {
@@ -3300,7 +3300,7 @@ void TestPlaitsBankGesture() {
     PlaySynth(&r, c == 1, c == 0);
     r.Down(SWITCH_MEDIA);
     r.Down(SWITCH_FREEZE);
-    CHECK(r.ui.trim_flag_);
+    CHECK(r.ui.gestures_.trim_flag_);
     CHECK(!r.ui.freeze_button_state_);
     CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
     r.Up(SWITCH_FREEZE);
@@ -3357,7 +3357,7 @@ void TestRingsPolyphonyGesture() {
       CHECK(r.settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == steps[i]);
       CHECK(r.settings.rings_polyphony() == voices[steps[i]]);
       CHECK(test_writes == writes + kRecordWords);
-      CHECK(!r.ui.trim_flag_ && r.ui.freeze_button_state_);
+      CHECK(!r.ui.gestures_.trim_flag_ && r.ui.freeze_button_state_);
       // Rings: red for four voices or more, green for two or fewer.
       const int poly = voices[steps[i]];
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (poly >= 2 ? 255 : 0));
@@ -3378,7 +3378,7 @@ void TestRingsPolyphonyGesture() {
     r.ui.set_playing_synth(SYNTH_BEADS);
     r.Down(SWITCH_MEDIA);
     r.Down(SWITCH_FREEZE);
-    CHECK(r.ui.trim_flag_);
+    CHECK(r.ui.gestures_.trim_flag_);
     CHECK(r.settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == 2);
   }
   // Plaits playing: the bank steps, the polyphony stays.
@@ -3570,7 +3570,7 @@ void TestProfileToggles() {
         r.Up(SWITCH_MEDIA);
         CHECK(test_writes == writes + kRecordWords);
         CHECK(r.settings.state().media == media);
-        CHECK(!r.ui.freeze_button_state_ && !r.ui.trim_flag_);
+        CHECK(!r.ui.freeze_button_state_ && !r.ui.gestures_.trim_flag_);
         CHECK(!r.settings.state().monophonic_mode);
         Settings loaded;
         CHECK(loaded.Init(false, b));
@@ -3641,9 +3641,9 @@ void TestFeedbackAmountSlot() {
       Rig r(false);
       EntriesProfile(b, implicit ? entries + 1 : entries, implicit ? 2 : 3);
       ApplyCustomProfile(&r, b);
-      CHECK(r.ui.amount_feature_[knob[0]] == FEATURE_GAIN_KNOB);
-      CHECK(r.ui.amount_feature_[knob[1]] == FEATURE_WIDTH);
-      CHECK(r.ui.amount_feature_[knob[2]] == FEATURE_DIFFUSION);
+      CHECK(r.ui.gestures_.amount_feature_[knob[0]] == FEATURE_GAIN_KNOB);
+      CHECK(r.ui.gestures_.amount_feature_[knob[1]] == FEATURE_WIDTH);
+      CHECK(r.ui.gestures_.amount_feature_[knob[2]] == FEATURE_DIFFUSION);
       r.settings.mutable_state()->gain = 77;
       const uint8_t media = r.settings.state().media;
       float* pots[] = { &r.feedback, &r.pot, &r.reverb };
@@ -3695,9 +3695,9 @@ void TestFeedbackAmountSlot() {
   Rig r(false);
   EntriesProfile(b, fixed, 2);
   ApplyCustomProfile(&r, b);
-  CHECK(r.ui.amount_feature_[0] == FEATURE_WIDTH);
-  CHECK(r.ui.amount_feature_[1] == FEATURE_NONE);
-  CHECK(r.ui.amount_feature_[2] == FEATURE_NONE);
+  CHECK(r.ui.gestures_.amount_feature_[0] == FEATURE_WIDTH);
+  CHECK(r.ui.gestures_.amount_feature_[1] == FEATURE_NONE);
+  CHECK(r.ui.gestures_.amount_feature_[2] == FEATURE_NONE);
   r.settings.mutable_state()->gain = 77;
   r.Down(SWITCH_MEDIA);
   r.feedback = 1.0f;
@@ -4218,11 +4218,11 @@ std::string GestureState(Rig* r) {
   snprintf(line, sizeof(line),
       "q%d g%d r%d o%d a%d m%d t%d f%d l%d s%d d%d b%d y%d p%d n%d k%d c%d",
       s.media, s.gain, r->gain.restarts, s.gate_output_mode,
-      s.disable_autosave, r->ui.mode_, r->ui.trim_flag_,
+      s.disable_autosave, r->ui.mode_, r->ui.gestures_.trim_flag_,
       r->ui.freeze_button_state_, r->ui.seed_button_locked_,
       r->ui.seed_button_state_, s.assignable_cv_destination,
       r->settings.FeatureValue(FEATURE_PLAITS_BANK),
-      r->ui.self_play_requested_, r->ui.options_.stage(),
+      r->ui.gestures_.self_play_requested_, r->ui.options_.stage(),
       r->ui.options_.page(), s.monophonic_mode,
       r->calibration.starts);
   return line;

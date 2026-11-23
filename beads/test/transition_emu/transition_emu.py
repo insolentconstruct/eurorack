@@ -93,7 +93,7 @@ MEMBERS = {
     'Codec': ('block_size_', 'callback_'),
     'NormalizationDetector': ('rng_state_',),
     'Settings': ('state_', 'values_'),
-    'Ui': ('freeze_button_state_', 'trim_flag_')}
+    'Ui': ('freeze_button_state_',)}
 # Functions whose inclusive counts are recorded, by symbol prefix.
 INNER = (('_Z7Process', 'Process'),
          ('_Z18MonitorStateChangev', 'MonitorStateChange'),
@@ -132,6 +132,9 @@ class Image(object):
 
   def member_offsets(self, elf):
     found = {}
+    members = dict(MEMBERS)
+    if any('GestureController' in name for name in self.sym):
+      members['GestureController'] = ('trim_flag_',)
     for cu in elf.get_dwarf_info().iter_CUs():
       top = cu.get_top_DIE()
       name = top.attributes.get('DW_AT_name')
@@ -143,21 +146,24 @@ class Image(object):
         if die.tag in ('DW_TAG_class_type', 'DW_TAG_structure_type'):
           n = die.attributes.get('DW_AT_name')
           n = n.value.decode() if n else None
-          if n in MEMBERS and n not in found and die.has_children:
+          if n in members and n not in found and die.has_children:
             fields = {}
             for c in die.iter_children():
               cn = c.attributes.get('DW_AT_name')
               loc = c.attributes.get('DW_AT_data_member_location')
               if c.tag == 'DW_TAG_member' and cn and loc:
                 fields[cn.value.decode()] = loc.value
-            if all(m in fields for m in MEMBERS[n]):
+            if all(m in fields for m in members[n]):
               found[n] = fields
         if die.tag in ('DW_TAG_compile_unit', 'DW_TAG_namespace'):
           stack.extend(die.iter_children())
       break
-    for n in MEMBERS:
+    for n in members:
       if n not in found:
         raise RuntimeError('no DWARF layout for %s' % n)
+    if 'GestureController' in found:
+      found['Ui']['trim_flag_'] = found['Ui']['gestures_'] + \
+          found['GestureController']['trim_flag_']
     return found
 
   def address(self, name):

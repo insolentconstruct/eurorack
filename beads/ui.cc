@@ -115,15 +115,13 @@ void Ui::Init(
   assign_modulation_ = 0.0f;
   delay_cue_time_ = 0;
   boot_cue_time_ = system_clock.milliseconds();
-  cue_time_ = 0;
-  cue_ = plaits_bank_cues_[0];
   
   seed_button_state_ = false;
   seed_button_locked_ = true;
   seed_led_state_ = false;
   resonator_assigned_ = false;
-  trim_flag_ = false;
-  no_input_ = self_play_requested_ = false;
+  gestures_.Init(this, settings);
+  no_input_ = false;
   synth_mode_ = false;
   playable_synths_ = SynthMask(true, true, false);
   playing_synth_ = SYNTH_BEADS;
@@ -156,12 +154,7 @@ void Ui::ShowStorageStatus() {
 
 void Ui::LoadOptions() {
   options_.Configure(settings_->profile());
-  const uint8_t amount_slots[MIX_PARAMETER_LAST] = {
-    AMOUNT_FEEDBACK, AMOUNT_DRY_WET, AMOUNT_REVERB
-  };
-  for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    amount_feature_[i] = settings_->profile().Amount(amount_slots[i]);
-  }
+  gestures_.LoadOptions();
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
   evolving_feedback_ = settings_->evolving_feedback();
@@ -275,17 +268,8 @@ void Ui::Poll() {
     if (!was_active && !options_.active() && p->editing_hidden_parameter()) {
       State* state = settings_->mutable_state();
       if (switches_.pressed(SWITCH_MEDIA)) {
-        // Big hack to prevent the long press detection to fire!
-        press_time_[SWITCH_MEDIA] = system_clock.milliseconds();
-        const ProfileFeature feature = amount_feature_[i];
-        if (feature == FEATURE_GAIN_KNOB) {
-          state->gain = 1.0f + p->hidden_parameter() * 255.0f;
-        } else if (feature == FEATURE_WIDTH) {
-          settings_->set_stereo_width(StereoWidthFromPot(
-              p->hidden_parameter(), settings_->stereo_width()));
-        } else if (feature == FEATURE_DIFFUSION) {
-          settings_->set_diffusion(p->hidden_parameter());
-        }
+        gestures_.ProcessAmount(i, p,
+            &press_time_[SWITCH_MEDIA]);
       } else if (switches_.pressed(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
         resonator_assigned_ = false;
@@ -348,13 +332,6 @@ const Leds::Color Ui::media_palette_[4] = {
   { 192, 192, 208 },
 };
 
-/* static */
-const Ui::BankCue Ui::plaits_bank_cues_[kNumPlaitsBanks] = {
-  { { 0, 255, 0 }, PULSE_STEADY },
-  { { 255, 0, 0 }, PULSE_STEADY },
-  { { 255, 255, 0 }, PULSE_STEADY },
-};
-
 void Ui::UpdateLeds() {
   leds_.Clear();
   
@@ -368,9 +345,9 @@ void Ui::UpdateLeds() {
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
     if (switches_.pressed(SWITCH_MEDIA) &&
         assignable_cv_pot_[i].editing_hidden_parameter()) {
-      adjusting_manual_gain |= amount_feature_[i] == FEATURE_GAIN_KNOB;
-      adjusting_width |= amount_feature_[i] == FEATURE_WIDTH;
-      adjusting_diffusion |= amount_feature_[i] == FEATURE_DIFFUSION;
+      adjusting_manual_gain |= gestures_.amount_feature(i) == FEATURE_GAIN_KNOB;
+      adjusting_width |= gestures_.amount_feature(i) == FEATURE_WIDTH;
+      adjusting_diffusion |= gestures_.amount_feature(i) == FEATURE_DIFFUSION;
     }
   }
   
@@ -450,10 +427,11 @@ void Ui::UpdateLeds() {
             leds_.set_media(cue);
           }
           const uint32_t cue_elapsed =
-              system_clock.milliseconds() - cue_time_;
-          if (cue_time_ && cue_elapsed < kGestureCueTime) {
+              system_clock.milliseconds() - gestures_.cue_time();
+          if (gestures_.cue_time() && cue_elapsed < kGestureCueTime) {
             leds_.set_media(
-                cue_.color, PulseLit(cue_.pulses, cue_elapsed) ? 1.0f : 0.0f);
+                gestures_.cue().color,
+                PulseLit(gestures_.cue().pulses, cue_elapsed) ? 1.0f : 0.0f);
           }
         }
         
@@ -638,21 +616,7 @@ void Ui::OnSwitchPressed(const Event& e) {
     return;
   }
 
-  if (switches_.pressed(SWITCH_MEDIA) &&
-      (e.control_id == SWITCH_SEED || e.control_id == SWITCH_FREEZE)) {
-    bool pot_touched = false;
-    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      pot_touched = pot_touched || \
-          assignable_cv_pot_[i].editing_hidden_parameter();
-    }
-    DoAction(e.control_id == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
-    for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-      assignable_cv_pot_[i].Unlock();
-    }
-    // The [A] release that saves the knob's edit is consumed here.
-    if (pot_touched) {
-      settings_->SaveState();
-    }
+  if (gestures_.OnPressed(e, switches_)) {
     ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;
     return;
   }
@@ -760,16 +724,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           if (mode_ >= MODE_CALIBRATION_1 && mode_ <= MODE_CALIBRATION_4) {
             NextCalibrationStep();
           } else {
-            if (uint32_t(e.data) >= kSelfPlayHoldTime) {
-              if (!DoAction(ACTION_HOLD)) {
-                State* state = settings_->mutable_state();
-                if (state->gain != 0) {
-                  state->gain = 0;
-                  settings_->SaveState();
-                }
-                gain_control_->Restart();
-              }
-            } else {
+            if (!gestures_.OnReleased(e)) {
               State* state = settings_->mutable_state();
               state->media = (state->media + 3) % 4;
               settings_->SaveState();
@@ -800,35 +755,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           break;
         }
         if (!pot_touched) {
-          State* state = settings_->mutable_state();
-          // Resonator damping comes last, then FEEDBACK again.
-          if (resonator_assigned_) {
-            resonator_assigned_ = false;
-          } else if (settings_->width_assigned()) {
-            // One store moves the target from width to diffusion.
-            settings_->set_diffusion_assigned(true);
-            if (!settings_->diffusion_assigned()) {
-              settings_->set_width_assigned(false);
-              resonator_assigned_ = resonator_ != 0;
-            }
-          } else if (settings_->diffusion_assigned()) {
-            settings_->set_diffusion_assigned(false);
-            resonator_assigned_ = resonator_ != 0;
-          } else if (state->assignable_cv_destination == 2 && stereo_width_ &&
-                     settings_->profile().adjustable(FEATURE_WIDTH)) {
-            settings_->set_width_assigned(true);
-          } else if (state->assignable_cv_destination == 2 &&
-                     settings_->diffusion_assignable() &&
-                     settings_->profile().adjustable(FEATURE_DIFFUSION)) {
-            settings_->set_diffusion_assigned(true);
-          } else if (state->assignable_cv_destination == 2 && resonator_) {
-            state->assignable_cv_destination = 0;
-            resonator_assigned_ = true;
-          } else {
-            state->assignable_cv_destination =
-                state->assignable_cv_destination == 3 ? 0
-                    : (state->assignable_cv_destination + 1) % 3;
-          }
+          gestures_.StepAssignment();
         }
         settings_->SaveState();
       }
@@ -898,84 +825,6 @@ void Ui::DoEvents() {
   if (queue_.idle_time() > 3000) {
     queue_.Touch();
   }
-}
-
-void Ui::StepPlaitsBank() {
-#ifdef PLAITS_BLOBS
-  const uint8_t bank = uint8_t(
-      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) %
-          settings_->profile().num_plaits_banks());
-#else
-  const uint8_t bank = uint8_t(
-      (settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);
-#endif  // PLAITS_BLOBS
-  settings_->SetFeatureValue(FEATURE_PLAITS_BANK, bank);
-  settings_->SaveOptions();
-#ifdef PLAITS_BLOBS
-  // Past three banks the colours repeat until Hygrostat's bank colours.
-  cue_ = plaits_bank_cues_[bank % kNumPlaitsBanks];
-#else
-  cue_ = plaits_bank_cues_[bank];
-#endif  // PLAITS_BLOBS
-  cue_time_ = system_clock.milliseconds();
-}
-
-void Ui::StepRingsPolyphony() {
-  const uint8_t polyphony = uint8_t(
-      (settings_->FeatureValue(FEATURE_RINGS_POLYPHONY) + 1) %
-          kFeatureDefinitions[FEATURE_RINGS_POLYPHONY].values);
-  settings_->SetFeatureValue(FEATURE_RINGS_POLYPHONY, polyphony);
-  settings_->SaveOptions();
-  // Rings' colours: green, yellow, red for one, two, four voices.
-  cue_.color = kOptionColors[polyphony];
-  cue_.pulses = PULSE_STEADY;
-  cue_time_ = system_clock.milliseconds();
-}
-
-bool Ui::DoAction(uint8_t slot) {
-  const ProfileFeature feature = settings_->profile().Action(slot);
-  // While Rings or Plaits plays, [A]+FREEZE steps its polyphony or bank
-  // unless Synth start is there; otherwise the profile's action runs.
-  if (slot == ACTION_FREEZE && synth_mode_ && feature != FEATURE_SYNTH_START) {
-    if (playing_synth_ == SYNTH_RINGS) {
-      StepRingsPolyphony();
-      return true;
-    } else if (playing_synth_ == SYNTH_PLAITS) {
-      StepPlaitsBank();
-      return true;
-    }
-  }
-  if (feature == FEATURE_MONOPHONIC) {
-    State* state = settings_->mutable_state();
-    if (settings_->profile().adjustable(feature)) {
-      state->monophonic_mode = !state->monophonic_mode;
-      settings_->SaveState();
-    }
-    return true;
-  } else if (feature == FEATURE_TRIM) {
-    trim_flag_ = true;
-    freeze_button_state_ = false;
-    return true;
-  } else if (feature == FEATURE_SYNTH_START &&
-      settings_->self_play_on_request() && !spectral_ && no_input_ &&
-      !should_ignore_state_change()) {
-    self_play_requested_ = true;
-    return true;
-  } else if (kFeatureDefinitions[feature].field != kNoField &&
-      !kFeatureDefinitions[feature].stateless) {
-    // Saved as from its options page, with that page's colour.
-    const uint8_t current = settings_->FeatureValue(feature);
-    const uint8_t value = feature == FEATURE_SYNTH
-        ? NextSynth(current, playable_synths_) : !current;
-    settings_->SetFeatureValue(feature, value);
-    settings_->SaveOptions();
-    const OptionValue cue = FindOptionValue(feature, value);
-    cue_.color = cue.color;
-    cue_.pulses = cue.pulses;
-    cue_time_ = system_clock.milliseconds();
-    return true;
-  }
-  return false;
 }
 
 }  // namespace beads

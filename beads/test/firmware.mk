@@ -23,6 +23,7 @@ CC_FILES       = 		firmware_test.cc \
 		delay_controller.cc \
 		delay_clock.cc \
 		ui.cc \
+		gesture_controller.cc \
 		options.cc \
 		settings.cc \
 		switches.cc \

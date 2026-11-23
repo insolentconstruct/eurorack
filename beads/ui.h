@@ -33,6 +33,7 @@
 
 #include "stmlib/ui/event_queue.h"
 
+#include "beads/gesture_controller.h"
 #include "beads/options.h"
 #include "beads/pot_controller.h"
 #include "beads/profile.h"
@@ -197,23 +198,22 @@ class Ui {
   inline void set_playing_synth(uint8_t synth) { playing_synth_ = synth; }
   // No playable synth: synth mode is silent.
   inline void set_synth_fault(bool fault) { synth_fault_ = fault; }
-  inline bool self_play_requested() const { return self_play_requested_; }
-  inline void ClearSelfPlayRequest() { self_play_requested_ = false; }
+  inline bool self_play_requested() const {
+    return gestures_.self_play_requested();
+  }
+  inline void ClearSelfPlayRequest() { gestures_.ClearSelfPlayRequest(); }
 
   inline bool trim_flag() const {
-    return trim_flag_;
+    return gestures_.trim_flag();
   }
   
   inline void ClearTrimFlag() {
-    trim_flag_ = false;
+    gestures_.ClearTrimFlag();
   }
   
  private:
+  friend class GestureController;
   void FlashOptionsPage();
-  void StepPlaitsBank();
-  void StepRingsPolyphony();
-  // Returns true when the action is handled.
-  bool DoAction(uint8_t slot);
 
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
@@ -227,7 +227,7 @@ class Ui {
 
   // [A] turns a knob into its profile amount; FEEDBACK is the gain by default.
   inline bool media_amount(int i) const {
-    return amount_feature_[i] != FEATURE_NONE;
+    return gestures_.media_amount(i);
   }
 
   stmlib::EventQueue<16> queue_;
@@ -239,13 +239,11 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
   Mode mode_;
   
-  bool trim_flag_;
   bool no_input_;
   bool synth_mode_;
   uint8_t playable_synths_;
   uint8_t playing_synth_;
   bool synth_fault_;
-  bool self_play_requested_;
   bool freeze_button_state_;
   bool freeze_led_state_;
   
@@ -253,11 +251,9 @@ class Ui {
   bool seed_button_locked_;
   bool delay_active_;
   bool pitch_on_notch_;
-  ProfileFeature amount_feature_[MIX_PARAMETER_LAST];
   float assign_modulation_;
   uint32_t delay_cue_time_;
   uint32_t boot_cue_time_;
-  uint32_t cue_time_;
   bool seed_led_state_;
   
   float overwrite_reserve_;
@@ -289,14 +285,6 @@ class Ui {
   uint32_t storage_status_time_;
 
   static const Leds::Color media_palette_[4];
-  // A bank's or a toggled setting's colour and blink pattern, shown on [A].
-  struct BankCue {
-    Leds::Color color;
-    PulsePattern pulses;
-  };
-  static const BankCue plaits_bank_cues_[kNumPlaitsBanks];
-  BankCue cue_;
-  // Last, so the audio callback's members keep their places.
   volatile uint8_t resonator_;
   volatile uint8_t resonator_material_;
   volatile uint8_t resonator_ring_;
@@ -304,6 +292,8 @@ class Ui {
   volatile uint8_t seed_latch_;
   volatile bool time_scan_;
   
+  GestureController gestures_;
+
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 
