@@ -685,12 +685,14 @@ bound falls no faster than its slowest sounding mode decays at the current
 tuning (checked against every mode's poles, every semitone C0 to C8); how
 the loop behaves is therefore measured rather than proven. The loop's level is never set from
 its own output, so brightness and damping still shape it. Over 60 s of
-silence after 10 s of input, in every quality, granular and delay, every
-Material and Ring time, frozen or not and FEEDBACK from 0 to full, it never
-sustained where After the grains dies away, and peaked lower than After the
-grains (4,096 runs each); so too with damping and PITCH's CV jumping,
-Limiter Off, unity delay feedback and Evolving. At FEEDBACK 0 it is After
-the grains exactly; at 0.3 and 0.5 its output stays within 2 dB of After
+silence (30 s frozen) after 10 s of input, in every quality, granular and
+delay, every Material and Ring time, frozen or not and FEEDBACK from 0 to
+full, it never
+sustained where After the grains dies away; peaks were comparable
+(4,096 runs each). With damping and PITCH's CV jumping, Limiter Off, unity
+delay feedback and Evolving, it also never sustained where After dies away.
+At FEEDBACK 0 it is After the grains exactly; at 0.3 and 0.5 its output
+stays within 2 dB of After
 the grains' on the same renders. Frozen, nothing is recorded and it is
 After the grains. The recording's own input limiter is still the ceiling.
 
