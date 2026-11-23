@@ -57,6 +57,9 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
 done
 build fold $blob/models/fold.cc $blob/models/fold_engine.cc \
   beads/plaits_resources.cc
+build noise_bank $blob/models/noise_bank.cc $blob/models/noise_bank_engine.cc \
+  $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
+  $libm/libgcc/convert.S
 build kick $blob/models/kick.cc $blob/models/kick_engine.cc \
   $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
   $libm/libgcc/convert.S

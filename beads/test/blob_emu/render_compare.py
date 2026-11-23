@@ -60,8 +60,8 @@ FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
-PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9), (64, 10), (65, 11), (66, 12), (75, 13), (68, 14), (82, 15), (48, 16), (83, 17), (80, 18), (81, 19)] + [
-    (m, 20 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9), (64, 10), (65, 11), (66, 12), (75, 13), (68, 14), (82, 15), (48, 16), (83, 17), (80, 18), (81, 19), (53, 20)] + [
+    (m, 21 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83)
@@ -70,7 +70,9 @@ DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83)
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
-    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32), (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (64, 31), (65, 64), (66, 64), (75, 64), (68, 64), (82, 64), (48, 64), (83, 64), (80, 64), (81, 64)]
+    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32), (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (53, 64), (64, 31), (65, 64), (66, 64), (75, 64), (68, 64), (82, 64), (48, 64), (83, 64), (80, 64), (81, 64)]
+# These Palette models restart when selected, including a return.
+FRESH_ON_RESELECT = (53,)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -558,6 +560,11 @@ def switch_run(pair):
     run = switch_compare(pair[0], pair[1], False)
     fresh = switch_compare(pair[0], pair[1], True)
     run['fresh_differ'] = [p['differ'] for p in fresh['phases']]
+    if pair[0] in FRESH_ON_RESELECT:
+      fresh['fresh_differ'] = run['fresh_differ']
+      fresh['retained_differ'] = [p['differ'] for p in run['phases']]
+      fresh['return_policy'] = 'fresh'
+      return fresh
     return run
   except RuntimeError as e:
     return {'sequence': [pair[0], pair[1], pair[0]], 'error': str(e)}
@@ -572,8 +579,16 @@ def switch_compare(first, second, fresh):
   m.arena = arena_of(m)
   seed = 0x21
   phases = []
-  for model, part in ((first, sequence[:100]), (second, sequence[100:200]),
-                      (first, sequence[200:])):
+  parts = ((first, sequence[:100]), (second, sequence[100:200]),
+           (first, sequence[200:]))
+  if first == 53:
+    # The return lies inside the hysteresis band after warming branch 1.
+    warm = [(5 if i == 0 else 4, 60.0, 0.5, 0.7, 0.5, 0.8)
+            for i in range(64)]
+    back = [(5 if i == 0 else 4, 60.0, 1.0 / 3.0, 0.7, 0.5, 0.8)
+            for i in range(512)]
+    parts = ((first, warm), (second, sequence[100:200]), (first, back))
+  for model, part in parts:
     before = m.word(RANDOM_STATE)
     m.select_blob(model)
     if fresh:
@@ -688,6 +703,12 @@ def main(argv):
       continue
     phases = switch['phases']
     results['switches'].append(switch)
+    if first in FRESH_ON_RESELECT:
+      if switch.get('return_policy') != 'fresh' or phases[2]['differ']:
+        failures.append('model %d: return must equal a fresh engine' % first)
+      if not switch.get('retained_differ', [0, 0, 0])[2]:
+        failures.append('model %d: warm reference did not exercise retained '
+                        'state' % first)
     if any(switch['fresh_differ']):
       failures.append('switch %d->%d: a rebuilt blob differs from the '
                       'engine built afresh: %s' % (first, second,
