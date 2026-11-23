@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "bca29fdd0be03923136b9e192b50c196051679c260caa69a1ee03f31beb80f0f",
+  "manifest_sha256": "c70d17553bc351af0f2e99a5f9d7c9167af84e0086490e811acb62ec2215e079",
   "record_version": 1,
   "features": [
     {
@@ -2102,6 +2102,10 @@
       "id": 52,
       "name": "Morph",
       "palette": "morph",
+      "family": "Subtractive",
+      "blob_size": 4228,
+      "state_size": 572,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
