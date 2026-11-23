@@ -125,6 +125,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/circuit_zaps_engine.cc \
     $models/metalwork_engine.cc \
     $models/clap_engine.cc \
+    $models/analog_percussion_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

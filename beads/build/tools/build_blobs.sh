@@ -80,6 +80,9 @@ build metalwork $blob/models/metalwork.cc \
 build clap $blob/models/clap.cc \
   $blob/models/clap_engine.cc \
   beads/plaits_resources.cc
+build analog_percussion $blob/models/analog_percussion.cc \
+  $blob/models/analog_percussion_engine.cc \
+  beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
