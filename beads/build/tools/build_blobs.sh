@@ -65,6 +65,9 @@ build struck_drum $blob/models/struck_drum.cc \
 build fluted $blob/models/fluted.cc \
   $blob/models/fluted_engine.cc \
   beads/plaits_resources.cc
+build brass $blob/models/brass.cc \
+  $blob/models/brass_engine.cc \
+  beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

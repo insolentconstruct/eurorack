@@ -120,6 +120,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/palette_chord_bank.cc \
     $models/blown_engine.cc \
     $models/fluted_engine.cc \
+    $models/brass_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \

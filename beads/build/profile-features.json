@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "f9acbf4e3f7b9ebdbd520f1550d0d33ed74e8b9dbe3f171dbf0a5f7dbe33309b",
+  "manifest_sha256": "5262c6f251f5dd3441be838fa94a99bd318066cb2f32c002e7d8935e4176147f",
   "record_version": 1,
   "features": [
     {
@@ -2399,6 +2399,10 @@
       "id": 85,
       "name": "Brass",
       "palette": "brass",
+      "family": "Physical",
+      "blob_size": 2512,
+      "state_size": 52,
+      "arena_size": 10752,
       "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
       "licence": "MIT",
       "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
