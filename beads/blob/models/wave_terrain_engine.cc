@@ -187,12 +187,13 @@ inline float WaveTerrain::Terrain(float x, float y, int terrain_index) {
       }
       break;
     default:
-      {
-        // Only reached with grids: HARMONICS stops at the last one.
+      // TERR's grids; HARMONICS stops at the last one.
+      if (terrain_index >= 8) {
         const int grid_size = 64 * 64;
         return TerrainLookupGrid(
             grids_ + (terrain_index - 8) * grid_size, x, y);
       }
+      break;
   }
   return 0.0f;
 }

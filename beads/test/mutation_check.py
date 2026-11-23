@@ -2217,6 +2217,8 @@ cases = [
   ('TestStock', 'wave_terrain_grid', 'beads/blob/models/wave_terrain_engine.cc',
     '  int num_terrains = 8 + num_grids_;',
     '  int num_terrains = grids_ ? 8 + num_grids_ + !num_grids_ : 8;'),
+  ('TestStock', 'wave_terrain_grid', 'beads/blob/models/wave_terrain_engine.cc',
+    '      if (terrain_index >= 8) {', '      if (terrain_index >= 8 || true) {'),
   ('TestGridSelection', 'wave_terrain_grid', 'beads/blob/models/wave_terrain_engine.cc',
     '  int num_terrains = 8 + num_grids_;',
     '  int num_terrains = num_grids_ ? 9 : 8;'),

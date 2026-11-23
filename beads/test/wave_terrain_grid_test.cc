@@ -129,8 +129,10 @@ void TestLookupEdges() {
     }
   }
   CHECK(worst < 2e-5);
-  // NaN reads the first corner instead of propagating.
-  CHECK(std::isfinite(BlobTerrainLookupGrid(grid, NAN, NAN)));
+  // NaN reads the first row or column instead of propagating.
+  CHECK(BlobTerrainLookupGrid(grid, NAN, NAN) == grid[0] / 128.0f);
+  CHECK(BlobTerrainLookupGrid(grid, NAN, -1.0f) == grid[0] / 128.0f);
+  CHECK(BlobTerrainLookupGrid(grid, -1.0f, NAN) == grid[0] / 128.0f);
   printf("%d points within %g of the clamped reference\n", checked, worst);
   delete[] grids;
 }
@@ -172,12 +174,23 @@ void TestStock() {
   PlaitsRender(NULL, parameters, kNumBlocks, out[1], aux[1]);
   CHECK(Equal(out[0], out[1]));
   CHECK(Equal(aux[0], aux[1]));
-  // A grid pointer with a count of 0 is never played.
-  int8_t* grid = NewGrids(1);
+  // With a count of 0 the grids are never played, even below the range.
+  int8_t* around = NewGrids(32);
+  const int8_t* grid = &around[16 * kGridSize];
   BlobRender(grid, 0, parameters, kNumBlocks, out[0], aux[0]);
   CHECK(Equal(out[0], out[1]));
   CHECK(Equal(aux[0], aux[1]));
-  delete[] grid;
+  Sweep(parameters, -1.0f, -0.15f, 1.0f);
+  BlobRender(grid, 0, parameters, kNumBlocks, out[0], aux[0]);
+  PlaitsRender(NULL, parameters, kNumBlocks, out[1], aux[1]);
+  CHECK(Equal(out[0], out[1]));
+  CHECK(Equal(aux[0], aux[1]));
+  // Nor read: the sanitizer stops a read of freed grids (after any report).
+  fflush(stdout);
+  delete[] around;
+  Sweep(parameters, 0.0f, 1.0f, 1.0f);
+  BlobRender(grid, 0, parameters, kNumBlocks, out[0], aux[0]);
+  CHECK(std::isfinite(out[0][kNumSamples - 1]));
 }
 
 void TestOneGrid() {
