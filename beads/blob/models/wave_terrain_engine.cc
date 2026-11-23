@@ -222,9 +222,12 @@ void WaveTerrain::Render(
 
   ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
   int num_terrains = 8 + num_grids_;
+  // Plaits' min(), unrolled: the stock terrains' target rounds as before.
+  const float harmonics = parameters.harmonics * 1.05f;
+  const float terrain_scale = float(num_terrains - 1.0001f);
   ParameterInterpolator terrain(
       &terrain_,
-      min(parameters.harmonics * 1.05f, 1.0f) * float(num_terrains - 1.0001f),
+      harmonics < 1.0f ? harmonics * terrain_scale : terrain_scale,
       size);
 
   size_t ij = 0;
