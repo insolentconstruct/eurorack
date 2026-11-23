@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "f69ae3ab6b04189bd7f86615401d7fd31e2ad856306f5d753e0d148d404c0b06",
+  "manifest_sha256": "be3cb1b5abd189c11e399715e8161b956805ad15ec7f1b5e40572183b952d666",
   "record_version": 1,
   "features": [
     {
@@ -2492,6 +2492,10 @@
       "id": 96,
       "name": "Acid",
       "palette": "acid",
+      "family": "Acid",
+      "blob_size": 4512,
+      "state_size": 240,
+      "arena_size": 0,
       "credit": "Dylan Bolink",
       "licence": "MIT",
       "notice": "Parts from Open303, Copyright 2009 Robin Schmidt (MIT).",

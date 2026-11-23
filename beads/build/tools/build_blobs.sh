@@ -59,6 +59,8 @@ build raw_fm $blob/models/raw_fm.cc \
   $blob/models/raw_fm_engine.cc beads/plaits_resources.cc
 build triple $blob/models/triple.cc \
   $blob/models/triple_engine.cc $blob/models/triple_engine_data.cc
+build acid $blob/models/acid.cc \
+  $blob/models/acid_engine.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \
