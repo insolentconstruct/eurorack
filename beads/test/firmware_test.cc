@@ -2641,6 +2641,19 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+void TestSendMixProfile() {
+  test_checker.Start("TestSendMixProfile");
+  Rig r(false, false);
+  const uint8_t send[] = { FEATURE_MIX_LAW, 2 };
+  BootWithProfile(&r, send, 1);
+  r.Settle();
+  CHECK(processor.options_ == Processor::OPTION_FLAG_SEND_MIX);
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_GENTLE_MIX));
+  r.Reboot(false);
+  r.Settle();
+  CHECK(processor.options_ == 0);
+}
+
 void TestOutputDivisionProfile() {
   test_checker.Start("TestOutputDivisionProfile");
   Rig r(false, false);
@@ -4187,6 +4200,7 @@ int main() {
   TestPitchLawProfile();
   TestPlaitsBankProfile();
   TestMixOptionsProfile();
+  TestSendMixProfile();
   TestOutputDivisionProfile();
   TestGrainStealingProfile();
   TestDelayOptionsProfile();

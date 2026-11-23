@@ -658,7 +658,8 @@ void Init() {
   playing_synth = EffectiveSynth(ui.synth(), playable_synths);
   ui.set_playing_synth(playing_synth);
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
-  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
+  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW) == 1);
+  processor.set_send_mix(settings.FeatureValue(FEATURE_MIX_LAW) == 2);
   processor.set_output_division(
       1 << settings.FeatureValue(FEATURE_OUTPUT_DIVISION));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));

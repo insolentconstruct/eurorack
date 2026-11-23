@@ -518,13 +518,21 @@ entries keep the original audio callback.
 
 ### Mix law
 
-Hygrostat feature ID 32 chooses Stock / Gentle (#21). Stock DRY/WET brings
-the grains in quickly: at 9 o'clock they are only 2.5 dB under the dry.
+Hygrostat feature ID 32 chooses Stock / Gentle / Send (#21, #48). Stock
+DRY/WET brings the grains in quickly: at 9 o'clock they are only 2.5 dB under the dry.
 Gentle makes the wet side rise in a straight line, so at 9 o'clock the
 grains are 7.6 dB under the dry (Clouds: 8.8 dB) and at noon 3.5 dB quieter
 than stock. The dry level and both ends of the knob stay stock. DRY/WET CV
 follows the same law. Granular, delay and spectral; both synths keep their
 own DRY/WET. Chosen at power-on, with no panel slot or saved byte.
+
+Send (value 2) keeps dry at its fully dry level. DRY/WET sets each new
+grain's level, linearly; that grain keeps its level until it finishes.
+At zero no new grains start, but existing grains and reverb finish.
+Recording and feedback continue, so raising DRY/WET finds recent material.
+The reverb follows the grains before dry is added, regardless of Reverb
+input. Granular only; delay, spectral and synths retain their own mix.
+This adds a value to ID 32 without changing Stock or Gentle.
 
 ### Grain trigger output
 

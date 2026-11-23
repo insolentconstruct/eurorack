@@ -307,6 +307,10 @@ DETAILS = [
     "([Grain trigger output](FEATURES.md#grain-trigger-output)). Grain "
     "timing and audio stay unchanged; delay, spectral and synths keep "
     "their stock output.",
+    "Hygrostat's Mix law Send keeps dry at its fully dry level. DRY/WET "
+    "sets each new grain's level; at zero no new grains start, while "
+    "existing grains and reverb finish. Recording continues. Granular "
+    "only ([Mix law](FEATURES.md#mix-law)).",
     "A Hygrostat profile can trim synth audio to half, quarter or eighth "
     "level, keeping input gain and OUT R triggers unchanged "
     "([Synth output level](FEATURES.md#synth-output-level)). "

@@ -70,7 +70,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
 #else
   { 3, 14, false, false, false, false },  // Plaits bank.
 #endif  // PLAITS_BLOBS
-  { 2, kNoField, false, false, false, false },  // Mix law.
+  { 3, kNoField, false, false, false, false },  // Mix law.
   { 2, kNoField, false, false, false, false },  // Reverb input.
   { 2, kNoField, false, false, false, false },  // Grain stealing.
   { 2, kNoField, false, false, false, false },  // Unity feedback.

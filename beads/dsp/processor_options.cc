@@ -35,6 +35,284 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
+template<typename DelayLineType>
+void DelayGranularPlayer::RenderSend(
+    const DelayLineType* delay_line,
+    const TriggerGenerator::Output& trigger,
+    const Parameters& p,
+    float gain,
+    FloatFrame* out) {
+  if (trigger.trigger && gain > 0.0f) {
+    const float duration = p.size.value();
+    const bool reverse = duration < 0.3333333f;
+
+    float amplitude, pan;
+    ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &pan);
+    amplitude *= gain;
+
+    const int safety = DelayGrain::head_crossing_safety_zone + 1;
+    const int max_delay = delay_line->duration() - 2 * safety;
+
+    new_grain()->Start(
+        delay_line,
+        attacks_ ? attacks_->Snap(
+            p.time.value() * float(max_delay) + float(safety),
+            float(max_delay + safety), delay_line->write_ptr())
+            : p.time.value() * float(max_delay) + float(safety),
+        (reverse ? -1.0f : 1.0f) * \
+            p.pitch.pitch_value(pitch_scale_, random_intervals_),
+        ComputeGrainDuration(duration),
+        p.shape.value(),
+        amplitude, pan,
+        trigger.fractional_sample);
+    SortGrainList(p.monophonic_mode);
+  }
+
+  // Sum the grains in a local frame, which the compiler can keep in
+  // registers.
+  FloatFrame sum;
+  sum.l = 0.0f;
+  sum.r = 0.0f;
+  for (int i = 0; i < NUM_GRAINS; ++i) {
+    grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(delay_line, &sum);
+  }
+  *out += sum;
+
+  Tick();  // Required to estimate the timing between grains.
+}
+
+template<Resolution resolution, int max_delay, int ratio>
+void GranularProcessor<resolution, max_delay, ratio>::ProcessSend(
+    const TriggerGenerator::Output* triggers,
+    const DelayController::Output* taps,
+    const bool* freeze,
+    const Parameters& parameters,
+    const float feedback,
+    const bool mono,
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size, float gain) {
+  if (ratio == 1) {
+    ProcessSendInternal(
+        triggers, taps, freeze, parameters, feedback,
+        mono, in, out, size, gain);
+  } else {
+    size_t d_size = size / size_t(ratio);
+
+    bool d_freeze[d_size];
+    TriggerGenerator::Output d_triggers[d_size];
+    DelayController::Output d_taps[d_size];
+    FloatFrame d_in[d_size];
+    FloatFrame d_out[d_size];
+    float downsampled[d_size];
+    float upsampled[size];
+
+    DownsampleGate(freeze, d_freeze, size);
+
+    if (triggers) {
+      DownsampleTriggers(triggers, d_triggers, size);
+    }
+    if (taps) {
+      DownsampleTaps(taps, d_taps, size);
+    }
+
+    for (size_t channel = 0; channel < 2; ++channel) {
+      for (size_t i = 0; i < size; ++i) {
+        upsampled[i] = *(&(in[i].l) + channel);
+      }
+      src_down_[channel].Process(upsampled, downsampled, size);
+      for (size_t i = 0; i < d_size; ++i) {
+        *(&(d_in[i].l) + channel) = downsampled[i];
+      }
+    }
+
+    ProcessSendInternal(
+        triggers ? d_triggers : NULL,
+        taps ? d_taps : NULL,
+        d_freeze,
+        parameters, feedback,
+        mono, d_in, d_out, d_size, gain);
+
+    for (size_t channel = 0; channel < 2; ++channel) {
+      for (size_t i = 0; i < d_size; ++i) {
+        downsampled[i] = *(&(d_out[i].l) + channel);
+      }
+      src_up_[channel].Process(downsampled, upsampled, d_size);
+      for (size_t i = 0; i < size; ++i) {
+        *(&(out[i].l) + channel) = upsampled[i];
+      }
+    }
+  }
+}
+
+template<Resolution resolution, int max_delay, int ratio>
+void GranularProcessor<resolution, max_delay, ratio>::ProcessSendInternal(
+    const TriggerGenerator::Output* grain_triggers,
+    const DelayController::Output* taps,
+    const bool* freeze,
+    const Parameters& grain_parameters,
+    const float feedback,
+    const bool mono,
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size, float gain) {
+  if (mono) {
+    ProcessSendInternal<true>(
+        grain_triggers, taps, freeze, grain_parameters, feedback,
+        in, out, size, gain);
+  } else {
+    ProcessSendInternal<false>(
+        grain_triggers, taps, freeze, grain_parameters, feedback,
+        in, out, size, gain);
+  }
+}
+
+template<Resolution resolution, int max_delay, int ratio>
+template<bool mono>
+void GranularProcessor<resolution, max_delay, ratio>::ProcessSendInternal(
+    const TriggerGenerator::Output* grain_triggers,
+    const DelayController::Output* taps,
+    const bool* freeze,
+    const Parameters& grain_parameters,
+    const float feedback,
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size, float gain) {
+  const bool wide_detent = filter_mode_.wide_detent;
+  float q_offset = wide_detent ? kWideDetentQOffset : kStockDelayQOffset;
+  float q_scale = wide_detent ? 0.0f : kStockDelayQScale;
+  // volatile stops GCC 9 fusing this into an fmaf, which rounds
+  // differently; -ffp-contract=off would change its other choices.
+  const volatile float speed = stmlib::SemitonesToRatio(
+      grain_parameters.pitch.value(&pitch_modulation_, size, 24.0f, false));
+
+  float bandwidth = 0.5f * (1.0f + grain_parameters.size.attenuverter) + \
+      (grain_parameters.size.has_cv ? grain_parameters.size.cv : 0.0f);
+  CONSTRAIN(bandwidth, 0.0f, 1.0f)
+
+  // Mode and ramp position share one word; zero means settled Auto, so
+  // stock playback skips coefficient work with a single test.
+  uint32_t filter_mode;
+  memcpy(&filter_mode, &filter_mode_, sizeof(filter_mode));
+  if (filter_mode) {
+    const DelayFilterQ q = SmoothDelayFilterQ(
+        &filter_mode_, q_offset, q_scale);
+    q_offset = q.offset;
+    q_scale = q.scale;
+    if (wide_detent) {
+      bandwidth = DelayFilterDetent(bandwidth);
+    }
+  }
+  stmlib::ParameterInterpolator bandwidth_modulation(
+      &bandwidth_, bandwidth, size);
+  stmlib::ParameterInterpolator feedback_modulation(
+      &feedback_, feedback, size);
+  stmlib::ParameterInterpolator speed_modulation(&speed_, speed, size);
+
+  const float feedback_gain = taps ? 1.5f : 3.0f;
+
+  const float lp_coefficients[RESOLUTION_LAST] = { 0.75f, 0.9f, 0.999f };
+  const float input_gains[RESOLUTION_LAST] = { 1.75f, 1.3f, 0.0f };
+
+  const float lp_coefficient = lp_coefficients[resolution];
+  const float soft_limit_gain = input_gains[resolution];
+
+  // Attack marks follow the recording, in samples written.
+  AttackDetector* const attacks = attacks_.mode() ? &attacks_ : NULL;
+  granular_player_.SetAttacks(attacks);
+  uint32_t writes = 0;
+  if (attacks) {
+    for (size_t i = 0; i < size; ++i) {
+      writes += !freeze[i];
+    }
+    attacks->BeginBlock(
+        mono ? mono_delay_line_.write_ptr() : stereo_delay_line_.write_ptr(),
+        mono ? max_delay * 2 : max_delay,
+        grain_triggers != NULL,
+        freeze[0]);
+  }
+  while (size--) {
+    const float feedback = feedback_modulation.Next();
+    FloatFrame input = *in;
+    FloatFrame s = input;
+
+    if (soft_limit_gain) {
+      const float gain = feedback_gain / soft_limit_gain;
+      s += previous_sample_ * feedback * gain;
+    } else {
+      s += previous_sample_ * feedback * feedback * feedback_gain;
+    }
+    input_limiter_.Process(&s, 1);
+
+    if (soft_limit_gain) {
+      s *= soft_limit_gain;
+      s.l = stmlib::SoftClip(s.l);
+      s.r = stmlib::SoftClip(s.r);
+      s = input + feedback * (s - input);
+    }
+
+    out->l = 0.0f;
+    out->r = 0.0f;
+    if (mono) {
+      mono_delay_line_.Write(s, *freeze);
+      if (grain_triggers) {
+        granular_player_.RenderSend(
+            &mono_delay_line_, *grain_triggers, grain_parameters, gain, out);
+      }
+      if (taps) {
+        multitap_delay_.Render(
+            &mono_delay_line_,
+            *taps,
+            speed_modulation.Next(),
+            bandwidth_modulation.Next(),
+            q_offset, q_scale,
+            out);
+      }
+    } else {
+      stereo_delay_line_.Write(s, *freeze);
+      if (grain_triggers) {
+        granular_player_.RenderSend(
+            &stereo_delay_line_, *grain_triggers,
+            grain_parameters, gain, out);
+      }
+      if (taps) {
+        multitap_delay_.Render(
+            &stereo_delay_line_,
+            *taps,
+            speed_modulation.Next(),
+            bandwidth_modulation.Next(),
+            q_offset, q_scale,
+            out);
+      }
+    }
+
+    ONE_POLE(
+        previous_sample_.l,
+        dc_blocker_[0].template Process<stmlib::FILTER_MODE_HIGH_PASS>(
+            out->l),
+        lp_coefficient);
+    ONE_POLE(
+        previous_sample_.r,
+        dc_blocker_[1].template Process<stmlib::FILTER_MODE_HIGH_PASS>(
+            out->r),
+        lp_coefficient);
+
+    if (grain_triggers) {
+      ++grain_triggers;
+    }
+    if (taps) {
+      ++taps;
+    }
+
+    ++freeze;
+    ++in;
+    ++out;
+  }
+  if (attacks) {
+    attacks->EndBlock(writes);
+  }
+}
+
 // 1.5 x feedback squared is the delay loop gain of one tap.
 const float kUnityFeedback = 0.8164966f;
 const float kUnityNotchWidth = 0.03f;
@@ -153,6 +431,8 @@ void Processor::ProcessOptions(
   const TriggerGenerator::Output* grain_triggers = delay_mode ? NULL : triggers;
   const DelayController::Output* delay_taps = delay_mode ? taps : NULL;
 
+  const bool send = (options_ & OPTION_FLAG_SEND_MIX) &&
+      !delay_mode && !spectral_;
   FloatFrame dry_signal[size];
   const float feedback = resonator && resonator_controls_.hold_feedback
       ? resonator_controls_.feedback : mix_parameters.feedback;
@@ -196,20 +476,44 @@ void Processor::ProcessOptions(
     }
     switch (media_) {
       case MEDIA_DIGITAL:
-        processor_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+        if (send) {
+          processor_digital_.ProcessSend(
+              grain_triggers, delay_taps, freeze, parameters, loop_feedback,
+              mono_, recorded, out, size, mix_parameters.dry_wet);
+        } else {
+          processor_digital_.Process(grain_triggers, delay_taps, freeze,
+              parameters, loop_feedback, mono_, recorded, out, size);
+        }
         break;
       case MEDIA_VINTAGE_DIGITAL:
-        processor_vintage_digital_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+        if (send) {
+          processor_vintage_digital_.ProcessSend(
+              grain_triggers, delay_taps, freeze, parameters, loop_feedback,
+              mono_, recorded, out, size, mix_parameters.dry_wet);
+        } else {
+          processor_vintage_digital_.Process(grain_triggers, delay_taps, freeze,
+              parameters, loop_feedback, mono_, recorded, out, size);
+        }
         break;
       case MEDIA_CLEAN_TAPE:
-        processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+        if (send) {
+          processor_clean_tape_.ProcessSend(
+              grain_triggers, delay_taps, freeze, parameters, loop_feedback,
+              mono_, recorded, out, size, mix_parameters.dry_wet);
+        } else {
+          processor_clean_tape_.Process(grain_triggers, delay_taps, freeze,
+              parameters, loop_feedback, mono_, recorded, out, size);
+        }
         break;
       case MEDIA_DIRTY_TAPE:
-        processor_dirty_tape_.Process(grain_triggers, delay_taps, freeze,
-            parameters, loop_feedback, mono_, recorded, out, size);
+        if (send) {
+          processor_dirty_tape_.ProcessSend(
+              grain_triggers, delay_taps, freeze, parameters, loop_feedback,
+              mono_, recorded, out, size, mix_parameters.dry_wet);
+        } else {
+          processor_dirty_tape_.Process(grain_triggers, delay_taps, freeze,
+              parameters, loop_feedback, mono_, recorded, out, size);
+        }
         break;
     }
     QuantizeDrySignal(in, dry_signal, size);
@@ -235,13 +539,13 @@ void Processor::ProcessOptions(
   // Dry/wet balance; the gentle law makes the wet side linear.
   const float post_gain_dry = 0.75f;
   const float post_gain_wet = 1.5f;
-  const float dry_wet = mix_parameters.dry_wet;
+  const float dry_wet = send ? 0.0f : mix_parameters.dry_wet;
   const float dry = (1.0f - dry_wet) * (1.0f + dry_wet) * post_gain_dry;
-  const float wet_law = options_ & OPTION_FLAG_GENTLE_MIX
+  const float wet_law = send ? 1.0f : options_ & OPTION_FLAG_GENTLE_MIX
       ? dry_wet
       : dry_wet * (2.0f - dry_wet);
   const float wet = wet_law * post_gain_wet * wet_fade;
-  if (options_ & OPTION_FLAG_REVERB_ON_GRAINS) {
+  if (send || (options_ & OPTION_FLAG_REVERB_ON_GRAINS)) {
     // Clouds' order: the reverb returns with the grains.
     pre_reverb_limiter_.Process(out, size);
     ProcessReverb(mix_parameters.reverb_amount, out, size);

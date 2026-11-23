@@ -130,6 +130,10 @@ class Processor {
     SetOption(OPTION_FLAG_GENTLE_MIX, gentle);
   }
   void set_output_division(int division);
+  // New grains keep the send level they had at their start.
+  inline void set_send_mix(bool send) {
+    SetOption(OPTION_FLAG_SEND_MIX, send);
+  }
   // Reverb on the grains before the dry/wet mix, as in Clouds.
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_FLAG_REVERB_ON_GRAINS, grains);
@@ -403,7 +407,8 @@ class Processor {
     OPTION_FLAG_LOW_CUTOFF = 32,
     OPTION_FLAG_RESONATOR_GRAINS = 64,
     OPTION_FLAG_RESONATOR_INPUT = 128,
-    OPTION_FLAG_OUTPUT_DIVISION = 256
+    OPTION_FLAG_OUTPUT_DIVISION = 256,
+    OPTION_FLAG_SEND_MIX = 512
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {

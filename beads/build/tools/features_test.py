@@ -100,6 +100,8 @@ assert [r['id'] for r in frozen['features']] == list(range(1, 52))
 assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
 faults = [
+  ('Frozen ID 32: value meanings', features.MANIFEST,
+      '{"name": "Send"}', '{"name": "Return"}'),
   ('Frozen ID 50', features.MANIFEST,
       '"symbol": "SYNTH_LEVEL"', '"symbol": "SYNTH_TRIM"'),
   ('Frozen ID 50: value meanings', features.MANIFEST,

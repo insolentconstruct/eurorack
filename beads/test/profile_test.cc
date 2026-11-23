@@ -685,6 +685,18 @@ uint32_t Beta3Digest(uint32_t* accepted) {
       results.push_back(false);
       continue;
     }
+    // Beta 3 refused Send; it has the same valid placements as Gentle.
+    if (cases[i] == FEATURE_MIX_LAW && cases[i + 2] == 2) {
+      b[18] = 1;
+      const uint32_t gentle_crc = Profile::Crc32(b, 16 + 6 * count);
+      for (int j = 0; j < 4; ++j) {
+        b[16 + 6 * count + j] = gentle_crc >> (8 * j);
+      }
+      Profile gentle;
+      CHECK(ok == gentle.Init(b));
+      results.push_back(false);
+      continue;
+    }
     results.push_back(ok);
     if (!ok) {
       continue;

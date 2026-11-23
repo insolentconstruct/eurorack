@@ -372,6 +372,227 @@ void TestFeedbackDelayReturn() {
   CHECK(reference_energy < return_energy * 0.01);
 }
 
+template<Resolution resolution, int max_delay, int ratio>
+void FillSendRecording(GranularProcessor<resolution, max_delay, ratio>* p,
+    bool mono) {
+  FloatFrame sample;
+  sample.l = 0.1f;
+  sample.r = -0.05f;
+  for (int i = 0; i < max_delay * (mono ? 2 : 1) + 4; ++i) {
+    if (mono) {
+      p->mono_delay_line_.Store(i, sample);
+    } else {
+      p->stereo_delay_line_.Store(i, sample);
+    }
+  }
+}
+
+void InitSendRecording(Processor::Media media, bool mono) {
+  Init(mono);
+  processor.Configure(media, mono);
+  switch (media) {
+    case Processor::MEDIA_DIGITAL:
+      FillSendRecording(&processor.processor_digital_, mono);
+      break;
+    case Processor::MEDIA_VINTAGE_DIGITAL:
+      FillSendRecording(&processor.processor_vintage_digital_, mono);
+      break;
+    case Processor::MEDIA_CLEAN_TAPE:
+      FillSendRecording(&processor.processor_clean_tape_, mono);
+      break;
+    case Processor::MEDIA_DIRTY_TAPE:
+      FillSendRecording(&processor.processor_dirty_tape_, mono);
+      break;
+  }
+  std::fill(freeze, freeze + 12, true);
+  processor.set_send_mix(true);
+  processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+}
+
+void TestSendMixQualities() {
+  test_checker.Start("TestSendMixQualities");
+  FloatFrame tail[3][1200];
+  for (int media = 0; media < 4; ++media) {
+    for (int mono = 0; mono < 2; ++mono) {
+      for (int pass = 0; pass < 3; ++pass) {
+        InitSendRecording(Processor::Media(media), mono);
+        mix.dry_wet = pass == 2 ? 1.0f : 0.5f;
+        parameters.size.base = 0.8f;
+        density.base = 0.5f;
+        stmlib::GateFlags seed[12];
+        std::fill(seed, seed + 12, stmlib::GATE_FLAG_LOW);
+        seed[0] = stmlib::GateFlags(
+            stmlib::GATE_FLAG_RISING | stmlib::GATE_FLAG_HIGH);
+        processor.Process(SEED_BUTTON_STATE_OFF, seed, freeze, density,
+            parameters, mix, input, output, 12);
+        for (int block = 0; block < 100; ++block) {
+          if (pass == 1) {
+            mix.dry_wet = 0.0f;
+          }
+          processor.Process(SEED_BUTTON_STATE_OFF, NULL, freeze, density,
+              parameters, mix, input, output, 12);
+          std::copy(output, output + 12, tail[pass] + block * 12);
+        }
+      }
+      CHECK(memcmp(tail[0], tail[1], sizeof(tail[0])) == 0);
+      double energy = 0.0;
+      float error = 0.0f;
+      for (int i = 0; i < 1200; ++i) {
+        energy += tail[1][i].l * tail[1][i].l +
+            tail[1][i].r * tail[1][i].r;
+        error = std::max(error, fabsf(tail[1][i].l * 2.0f - tail[2][i].l));
+        error = std::max(error, fabsf(tail[1][i].r * 2.0f - tail[2][i].r));
+      }
+      CHECK(energy > 0.001);
+      CHECK(error < 1e-6f);
+    }
+  }
+}
+
+void TestSendMixOtherProcessors() {
+  test_checker.Start("TestSendMixOtherProcessors");
+  static FloatFrame reference[1200 * 12];
+  for (int media = 0; media < 4; ++media) {
+    for (int mono = 0; mono < 2; ++mono) {
+      for (int spectral = 0; spectral < 2; ++spectral) {
+        for (int grains_reverb = 0; grains_reverb < 2; ++grains_reverb) {
+          for (int send = 0; send < 2; ++send) {
+            memset(banks, 0, sizeof(banks));
+            memset(reverb_buffer, 0, sizeof(reverb_buffer));
+            Init(mono);
+            processor.set_spectral(spectral);
+            processor.Configure(Processor::Media(media), mono);
+            processor.set_send_mix(send);
+            processor.set_reverb_on_grains(grains_reverb);
+            if (!spectral) {
+              processor.delay_mode_transition_ = 1.5f;
+              parameters.size.base = 1.0f;
+            }
+            mix.feedback = 0.3f;
+            mix.reverb_amount = 0.6f;
+            const size_t size = size_t(processor.sample_rate()) / 4000;
+            bool identical = true;
+            double energy = 0.0;
+            for (int block = 0; block < 1200; ++block) {
+              mix.dry_wet = block < 400 ? 0.0f
+                  : (block < 800 ? 0.4f : 1.0f);
+              for (size_t i = 0; i < size; ++i) {
+                const float t = float(block * size + i);
+                input[i].l = 0.12f * sinf(t * 0.031f);
+                input[i].r = 0.08f * sinf(t * 0.017f);
+              }
+              processor.Buffer();
+              processor.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze,
+                  density, parameters, mix, input, output, size);
+              for (size_t i = 0; i < size; ++i) {
+                if (send) {
+                  const FloatFrame& expected = reference[block * 12 + i];
+                  identical &= output[i].l == expected.l &&
+                      output[i].r == expected.r;
+                } else {
+                  reference[block * 12 + i] = output[i];
+                }
+                energy += output[i].l * output[i].l +
+                    output[i].r * output[i].r;
+              }
+            }
+            CHECK(identical);
+            CHECK(energy > 0.01);
+          }
+        }
+      }
+    }
+  }
+}
+
+void TestSendMix() {
+  test_checker.Start("TestSendMix");
+  // One sustained grain: its complete tail is independent of later send moves.
+  FloatFrame tail[3][1200];
+  for (int pass = 0; pass < 3; ++pass) {
+    Init(false);
+    FillRecording(false);
+    processor.set_send_mix(true);
+    processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+    mix.dry_wet = pass == 2 ? 1.0f : 0.5f;
+    parameters.size.base = 0.8f;
+    density.base = 0.5f;
+    stmlib::GateFlags seed[12];
+    std::fill(seed, seed + 12, stmlib::GATE_FLAG_LOW);
+    seed[0] = stmlib::GateFlags(
+        stmlib::GATE_FLAG_RISING | stmlib::GATE_FLAG_HIGH);
+    processor.Process(SEED_BUTTON_STATE_OFF, seed, freeze, density,
+        parameters, mix, input, output, 12);
+    for (int block = 0; block < 100; ++block) {
+      if (pass == 1) {
+        mix.dry_wet = 0.0f;
+      }
+      processor.Process(SEED_BUTTON_STATE_OFF, NULL, freeze, density,
+          parameters, mix, input, output, 12);
+      std::copy(output, output + 12, tail[pass] + block * 12);
+    }
+  }
+  CHECK(memcmp(tail[0], tail[1], sizeof(tail[0])) == 0);
+  double energy = 0.0;
+  for (int i = 0; i < 1200; ++i) {
+    energy += tail[1][i].l * tail[1][i].l;
+    CHECK(fabsf(tail[1][i].l * 2.0f - tail[2][i].l) < 1e-6f);
+    CHECK(fabsf(tail[1][i].r * 2.0f - tail[2][i].r) < 1e-6f);
+  }
+  CHECK(energy > 0.001);
+
+  // At zero send the recorder advances, dry stays unity, and no grains start.
+  Init(false);
+  processor.set_send_mix(true);
+  processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+  mix.reverb_amount = 0.8f;
+  const int position = *processor.mutable_delay_write_ptr();
+  for (int i = 0; i < 12; ++i) {
+    input[i].l = 0.1f;
+    input[i].r = -0.05f;
+  }
+  for (int block = 0; block < 100; ++block) {
+    Process();
+  }
+  const int written = *processor.mutable_delay_write_ptr();
+  CHECK(written != position);
+  const FloatFrame recorded =
+      processor.processor_digital_.stereo_delay_line_.Load(written + 1);
+  CHECK(fabsf(recorded.l - input[11].l) < 0.00004f);
+  CHECK(fabsf(recorded.r - input[11].r) < 0.00004f);
+  CHECK(processor.processor_digital_.granular_player_.CountActiveGrains() == 0);
+  CHECK(fabsf(output[11].l - 0.075f) < 0.00001f);
+  CHECK(fabsf(output[11].r + 0.0375f) < 0.00001f);
+  CHECK(processor.wet_ == 1.5f);
+  // Raising the send finds the recording, without another recording pass.
+  std::fill(input, input + 12, FloatFrame());
+  std::fill(freeze, freeze + 12, true);
+  mix.dry_wet = 1.0f;
+  for (int block = 0; block < 100; ++block) {
+    Process();
+  }
+  CHECK(processor.processor_digital_.granular_player_.CountActiveGrains() > 0);
+  // Dry keeps its fully dry level at every send setting, with no grain clock.
+  for (int level = 0; level <= 4; ++level) {
+    Init(false);
+    processor.set_send_mix(true);
+    processor.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
+    density.base = 0.5f;
+    mix.dry_wet = float(level) * 0.25f;
+    mix.reverb_amount = 0.8f;
+    for (int i = 0; i < 12; ++i) {
+      input[i].l = 0.1f;
+      input[i].r = -0.05f;
+    }
+    for (int block = 0; block < 8; ++block) {
+      Process();
+    }
+    CHECK(fabsf(output[11].l - 0.075f) < 0.00001f);
+    CHECK(fabsf(output[11].r + 0.0375f) < 0.00001f);
+  }
+
+}
+
 // Gains reached after a settled block: stock, or the gentle wet law.
 void MixGains(bool gentle, float dry_wet, float* dry, float* wet) {
   Init(false);
@@ -659,6 +880,9 @@ int main() {
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
 #endif  // defined(__SSE__)
+  TestSendMixQualities();
+  TestSendMixOtherProcessors();
+  TestSendMix();
   TestOutputDivision();
   TestFeedbackRecording();
   TestDryWetEndpoints();

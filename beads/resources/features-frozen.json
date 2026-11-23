@@ -31,7 +31,7 @@
     {"id": 29, "symbol": "SEED_START", "values": ["Latched (stock)", "Unlatched"]},
     {"id": 30, "symbol": "PITCH_LAW", "values": ["Notches (stock)", "Smooth"]},
     {"id": 31, "symbol": "PLAITS_BANK", "values": ["Green", "Red", "Yellow"]},
-    {"id": 32, "symbol": "MIX_LAW", "values": ["Stock", "Gentle"]},
+    {"id": 32, "symbol": "MIX_LAW", "values": ["Stock", "Gentle", "Send"]},
     {"id": 33, "symbol": "REVERB_INPUT", "values": ["Mix (stock)", "Grains"]},
     {"id": 34, "symbol": "GRAIN_STEALING", "values": ["2021/2024 (default)", "2026"]},
     {"id": 35, "symbol": "UNITY_FEEDBACK", "values": ["Stock", "Unity notch"]},

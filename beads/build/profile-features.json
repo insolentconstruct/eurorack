@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "21e0b7ca5d6cdc51310f05f623e9e8940dd4eb8fdcff50d639c2ba87e0c427d3",
+  "manifest_sha256": "5c10801f39993ef97b7aff5fa34889ff6f0fda5931567967ae8965afb21e5c70",
   "record_version": 1,
   "features": [
     {
@@ -1166,7 +1166,8 @@
       "name": "Mix law",
       "values": [
         "Stock",
-        "Gentle"
+        "Gentle",
+        "Send"
       ],
       "states": [
         "Off",

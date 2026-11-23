@@ -651,7 +651,7 @@
       "symbol": "MIX_LAW",
       "name": "Mix law",
       "issue": 21,
-      "values": [{"name": "Stock"}, {"name": "Gentle"}],
+      "values": [{"name": "Stock"}, {"name": "Gentle"}, {"name": "Send"}],
       "field": null,
       "states": ["Off", "Fixed"],
       "page": false,
