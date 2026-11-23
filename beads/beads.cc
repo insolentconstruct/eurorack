@@ -38,8 +38,7 @@
 #include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/rings_synth.h"
 #ifdef PLAITS_BLOBS
-#include "beads/blob/plaits_catalog.h"
-#include "beads/blob/plaits_region.h"
+#include "beads/blob/region_loader.h"
 #include "stmlib/utils/random.h"
 #endif  // PLAITS_BLOBS
 #include "beads/dsp/processor.h"
@@ -85,7 +84,6 @@ RingsSynth rings_synth;
 #ifdef PLAITS_BLOBS
 // Read once at boot; its identity record is readable over SWD.
 PlaitsRegion plaits_region;
-extern "C" const uint8_t plaits_region_begin[];
 #endif  // PLAITS_BLOBS
 // What can play, what plays, and which synth's RAM is in bank 0.
 uint8_t playable_synths;
@@ -570,58 +568,6 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   codec_sample_rate = sr;
 }
 
-#ifdef PLAITS_BLOBS
-// Reports and clears a double ECC error and the bus fault it raised.
-bool FlashEccOk() {
-  const uint32_t bus = SCB->CFSR &
-      (SCB_CFSR_PRECISERR_Msk | SCB_CFSR_IMPRECISERR_Msk |
-          SCB_CFSR_BFARVALID_Msk);
-  const bool ok = !(FLASH->SR1 & FLASH_SR_DBECCERR) && !bus;
-  FLASH->CCR1 = FLASH_CCR_CLR_DBECCERR;
-  SCB->CFSR = bus;
-  return ok;
-}
-
-// Reads the region with data bus faults ignored: a double ECC error (an
-// interrupted write) reads as garbage and faults that section only. The
-// D-cache is off meanwhile, so no linefill raises an imprecise fault later.
-void ReadPlaitsRegion() {
-  const Profile& profile = settings.profile();
-  plaits_region.set_flash_check(&FlashEccOk);
-  plaits_region.set_library_ram(kPlaitsLibraryRamSize, kPlaitsVoiceRamSize);
-  SCB_DisableDCache();
-  SCB->CCR |= SCB_CCR_BFHFNMIGN_Msk;
-  __DSB();
-  __ISB();
-  __set_FAULTMASK(1);
-  plaits_region.Read(
-      plaits_region_begin,
-      reinterpret_cast<const uint8_t*>(kPlaitsRegionEnd),
-      kPlaitsBlobRelease,
-      profile.directory(), profile.num_sections(),
-      kPlaitsDefaultLayout, kNumPlaitsDefaultSections,
-      &plaits_blob_services, kPlaitsApprovedBlobs, kNumPlaitsApprovedBlobs);
-  __set_FAULTMASK(0);
-  SCB->CCR &= ~SCB_CCR_BFHFNMIGN_Msk;
-  __DSB();
-  __ISB();
-  SCB_EnableDCache();
-  const bool plaits = PlaitsVoice::Playable(
-      profile.plaits_bank(0),
-      profile.num_plaits_banks() * kProfileBankSize,
-      plaits_region);
-  const uint8_t* rings = plaits_region.synth_blob();
-  if (!RingsSynth::Fits(rings, kBank0Size)) {
-    rings = NULL;
-  }
-  rings_synth.set_blob(rings);
-  // Beads' wavetables stay compiled in until their section (phase 4).
-  playable_synths = SynthMask(true, plaits, rings != NULL);
-  plaits_synth.set_bank_table(profile.plaits_banks());
-  plaits_synth.set_region(&plaits_region);
-}
-#endif  // PLAITS_BLOBS
-
 void Init() {
 #ifdef PLAITS_BLOBS
   // Its state is not loaded: seed it with stmlib's initial value.
@@ -677,7 +623,13 @@ void Init() {
   }
   ui.LoadOptions();
 #ifdef PLAITS_BLOBS
-  ReadPlaitsRegion();
+  RegionLoader region_loader;
+  const Profile& profile = settings.profile();
+  playable_synths = region_loader.Load(profile, kBank0Size, &plaits_region);
+  rings_synth.set_blob(playable_synths & (1 << SYNTH_RINGS)
+      ? plaits_region.synth_blob() : NULL);
+  plaits_synth.set_bank_table(profile.plaits_banks());
+  plaits_synth.set_region(&plaits_region);
 #endif  // PLAITS_BLOBS
   ui.set_playable_synths(playable_synths);
   playing_synth = EffectiveSynth(ui.synth(), playable_synths);
