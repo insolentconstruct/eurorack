@@ -127,12 +127,7 @@ struct ScaleVoiceState {
   float* dc_aux_out;
 };
 
-// Not unrolled: each voice's loop is a chain on its phase, and six template
-// copies unrolled cost ~2.3 KB of flash.
 template <WaveRegion region, bool folding>
-#if !defined(__clang__)
-__attribute__((noinline, optimize("no-unroll-loops")))
-#endif
 void RenderScaleVoices(
     const ScaleVoiceState& state,
     const int* voices,
