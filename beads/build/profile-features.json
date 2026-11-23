@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "cfeb57ff292eb05f98a329c8f3c7ce4be52435daa2d99ee7f46f6d56e77f1a71",
+  "manifest_sha256": "cb7ca1f41a2cf10420dc16c88155aee08aa23bb8276f1491aaf5f87a373a79af",
   "record_version": 1,
   "features": [
     {
@@ -2546,6 +2546,10 @@
       "id": 94,
       "name": "ZxPhase48k",
       "palette": "zxphase48k",
+      "family": "Chiptune",
+      "blob_size": 2936,
+      "state_size": 128,
+      "arena_size": 0,
       "credit": "Combust",
       "licence": "MIT",
       "libraries": []

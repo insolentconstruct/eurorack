@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Palette blob models gain ZxPhase48k; each selection starts its oscillators and modulation afresh.
+
 - Palette blob models gain VA Variant; each selection starts its oscillators and filters afresh.
 
 - Palette blob models gain Vowel FOF; each selection starts its synthesis state afresh.
