@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "2254d209a3a69da5e083e8564d26da2b619b14b67f5e4bba39cf1d86696a1670",
+  "manifest_sha256": "917e63275b4240160e6f82d3872e36c54d55273e599a67ff9526d36178d49df7",
   "record_version": 1,
   "features": [
     {
@@ -2383,6 +2383,10 @@
       "id": 83,
       "name": "Wavetable Scale Stack",
       "palette": "wavetable-scale-stack",
+      "family": "Polyphonic",
+      "blob_size": 568,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [

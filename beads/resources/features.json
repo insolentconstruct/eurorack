@@ -1656,6 +1656,10 @@
       "id": 83,
       "name": "Wavetable Scale Stack",
       "palette": "wavetable-scale-stack",
+      "family": "Polyphonic",
+      "blob_size": 568,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [1, 5, 6]
