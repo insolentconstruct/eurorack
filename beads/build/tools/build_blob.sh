@@ -58,9 +58,8 @@ M="make -f beads/build/link-order.mk KIT_MAKEFILE=beads/makefile KIT_GCC9=1 \
 CCFLAGS=$($M --eval 'blob_q: ; @echo $(CCFLAGS)' blob_q)
 CPPFLAGS=$($M --eval 'blob_q: ; @echo $(CPPFLAGS)' blob_q)
 TOOLCHAIN=$($M --eval 'blob_q: ; @echo $(TOOLCHAIN_BIN)' blob_q)
-# The prelude keeps the services' exports in the GOT and makes the rest
-# PC-relative; PLAITS_BLOB selects blob variants of shared code. Without
-# jump tables a switch is compares, never a branch through a register.
+# The prelude keeps service exports in the GOT; other code is PC-relative.
+# PLAITS_BLOB selects variants; no jump tables permits compare-only switches.
 CODE_FLAGS="-fPIC -fvisibility=hidden -mpic-data-is-text-relative \
 -mno-single-pic-base -fno-stack-protector -fno-jump-tables"
 BLOB_FLAGS="$CODE_FLAGS -fno-threadsafe-statics \

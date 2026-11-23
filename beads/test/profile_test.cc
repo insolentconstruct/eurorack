@@ -411,9 +411,8 @@ void TestBetaProfileDefinitions() {
         b[19] = b[20] = b[21] = 0;
         Checksum(b);
         Profile p;
-        // Adjustable needs a page, or a saved field set by a gesture; the
-        // Plaits bank and Rings' polyphony are only Adjustable.
-        // A full-byte value (no count) takes any byte; a reserved ID none.
+        // Adjustable needs a page or saved gesture (bank/polyphony only use it).
+        // Uncounted full-byte values accept any byte; reserved IDs accept none.
         const bool stepped = id == FEATURE_PLAITS_BANK ||
             id == FEATURE_RINGS_POLYPHONY;
         const bool valid =

@@ -87,9 +87,8 @@ ALLOWED_INFO = re.compile(
     r'^(|\.symtab|\.strtab|\.shstrtab|\.ARM\.attributes|\.rel\.blob|'
     r'\.rel\.blob_exports|(\.rel)?\.debug\w*)$')
 
-# A call to a library: a function named plaits_blob_import_* that loads an
-# export from the library record in r0 (PlaitsBlobLibrary) and tail-calls
-# it. The gate's one exception to "no branch through a register".
+# plaits_blob_import_* wrappers load exports from r0's library record
+# and tail-call them: the gate's only allowed register branches.
 IMPORT = 'plaits_blob_import_'
 IMPORT_LOAD = re.compile(r'^ldr(\.w)?$')
 IMPORT_OPERANDS = re.compile(r'^(r[0-9]|r1[0-2]|ip), \[r0, #(\d+)\]')
@@ -382,9 +381,8 @@ def gate(elf, base, exports, objdump, path, num_libraries):
                  for entries in symbols.values()
                  for value, shndx, info, size in entries
                  if info & 0xf == 1 and size and value - base in table]
-  # Thumb code, from the assembler's mapping symbols ($t up to the next $d
-  # or $t): an address can only be data, and instruction pairs such as
-  # ubfx's 0x080e can look like one in a large blob.
+  # Assembler $t/$d marks distinguish code from address-like data; even ubfx
+  # instruction pairs can resemble addresses in a large blob.
   marks = sorted((value - base, name) for name in ('$t', '$d')
                  for value, _, _, _ in symbols.get(name, []))
   code_ranges = [(offset, marks[i + 1][0] if i + 1 < len(marks)
@@ -446,9 +444,8 @@ def library_exports(elf, base, got, failures):
   return table
 
 
-# Header words the packer fills: size, the three entries, GOT offset and
-# size; by version. A library's reset and render words hold its export
-# table's offset and count.
+# Packer-filled words by version: size, entries, GOT offset and size.
+# Library reset/render words instead hold export offset and count.
 FILLED = {1: (5, 8, 9, 10, 11, 12), 2: (7, 10, 11, 12, 13, 14)}
 DEPENDENCIES_OFFSET = 15
 

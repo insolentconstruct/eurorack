@@ -1118,9 +1118,8 @@ void TestSynthEngineStorage() {
   CHECK(StoredByte(loaded, FEATURE_SYNTH) == 1);
 }
 
-// Page 3's Synth offers the playable synths in value order: three zones,
-// two halves, or one taken by any edit; a saved synth outside them stays
-// until an edit.
+// Synth edits select playable values in order, using three zones or two
+// halves; a lone value fills the knob. Unplayable saved values stay unedited.
 void TestSynthPlayableSets() {
   test_checker.Start("TestSynthPlayableSets");
   const uint8_t all = SynthMask(true, true, true);
@@ -3335,9 +3334,8 @@ void TestPlaitsBankGesture() {
   }
 }
 
-// With Rings playing [A]+FREEZE steps its polyphony, 1, 2, 4 voices, in
-// Rings' colours, keeping FREEZE; Plaits keeps its bank step and a profile's
-// Synth start keeps [A]+FREEZE.
+// Rings' [A]+FREEZE cycles 1/2/4 voices with colours, preserving FREEZE.
+// Plaits keeps bank stepping; a profile's Synth start keeps [A]+FREEZE.
 void TestRingsPolyphonyGesture() {
   test_checker.Start("TestRingsPolyphonyGesture");
   {
