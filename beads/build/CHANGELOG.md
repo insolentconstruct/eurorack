@@ -13,6 +13,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Palette blob models gain Vowel FOF; each selection starts its synthesis state afresh.
 
 - Palette blob models gain Granular Cloud; each selection starts its grains and random stream afresh.
+- Palette VOSIM prepares its DC seed over 16 blocks on each selection, adding 4 ms of silence at the synth rate; returning to it starts a fresh voice.
 
 - [A]+FREEZE follows the synth that actually plays, a fallback included: Plaits steps its bank, Rings its polyphony, and Beads' synth or silence run the profile's [A]+FREEZE action (Buffer trim by default) (#353). The saved Synth choice never changes.
 - Synth gains a third value, Rings, offered on page 3 (thirds) only when the Rings synth is installed; without it the page looks as before. While Rings plays, [A]+FREEZE steps its polyphony (one, two, four voices; [A] green, yellow, red), saved; polyphony and FEEDBACK changes apply while FREEZE sustains it. A Synth action steps through the installed synths; earlier builds read a saved Rings as not set. Rings plays at about the Plaits synth's level (one fixed gain after Rings' own output).

@@ -62,45 +62,80 @@ RANDOM_STATE = 0x20000000
 # The 6-op engine serves models 2-4.
 PAIRS = dict([
     (29, 0),
-    (31, 1),
-    (32, 2),
-    (33, 3),
-    (34, 4),
-    (35, 5),
-    (36, 6),
-    (37, 7),
-    (38, 8),
-    (39, 9),
-    (40, 10),
-    (41, 11),
-    (42, 12),
-    (43, 13),
-    (44, 14),
-    (45, 15),
-    (46, 16),
-    (47, 17),
-    (49, 18),
-    (55, 19),
-    (58, 20),
-    (62, 21),
-    (70, 22),
-    (72, 23),
-    (73, 24),
-    (74, 25),
-    (77, 26),
-    (78, 27),
-    (79, 28),
-    (96, 29),
-    (51, 30),
-    (76, 31),
-    (71, 32),
-    (94, 33),
-    (95, 34),
-    (254, 35)] + [
-    (m, 36 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (30, 1),
+    (31, 2),
+    (32, 3),
+    (33, 4),
+    (34, 5),
+    (35, 6),
+    (36, 7),
+    (37, 8),
+    (38, 9),
+    (39, 10),
+    (40, 11),
+    (41, 12),
+    (42, 13),
+    (43, 14),
+    (44, 15),
+    (45, 16),
+    (46, 17),
+    (47, 18),
+    (48, 19),
+    (49, 20),
+    (50, 21),
+    (51, 22),
+    (52, 23),
+    (53, 24),
+    (54, 25),
+    (55, 26),
+    (56, 27),
+    (57, 28),
+    (58, 29),
+    (59, 30),
+    (60, 31),
+    (61, 32),
+    (62, 33),
+    (63, 34),
+    (64, 35),
+    (65, 36),
+    (66, 37),
+    (68, 38),
+    (69, 39),
+    (70, 40),
+    (71, 41),
+    (72, 42),
+    (73, 43),
+    (74, 44),
+    (75, 45),
+    (76, 46),
+    (77, 47),
+    (78, 48),
+    (79, 49),
+    (80, 50),
+    (81, 51),
+    (82, 52),
+    (83, 53),
+    (84, 54),
+    (85, 55),
+    (86, 56),
+    (87, 57),
+    (88, 58),
+    (89, 59),
+    (90, 60),
+    (91, 61),
+    (92, 62),
+    (93, 63),
+    (94, 64),
+    (95, 65),
+    (96, 66),
+    (97, 67),
+    (98, 68),
+    (99, 69),
+    (254, 70)] + [
+    (m, 71 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
-DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
+DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83, 98, 99)
 # Clamped blobs may differ only where terrain_probe.h counts out-of-range
 # lookups; Wave terrain 5-7 clamp wave and sample positions to the bank.
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
@@ -111,11 +146,13 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (13, 43),
     (18, 36),
     (29, 32),
+    (30, 31),
     (31, 41),
     (32, 36),
     (33, 31),
     (34, 33),
     (35, 34),
+    (36, 43),
     (37, 40),
     (38, 35),
     (39, 37),
@@ -127,29 +164,64 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (45, 77),
     (46, 44),
     (47, 46),
+    (48, 64),
     (49, 45),
+    (50, 30),
+    (51, 47),
+    (52, 30),
+    (53, 64),
+    (54, 30),
     (55, 47),
+    (56, 30),
+    (57, 30),
     (58, 55),
+    (59, 74),
+    (60, 30),
+    (61, 30),
     (62, 49),
+    (63, 30),
+    (64, 31),
+    (65, 64),
+    (66, 64),
+    (68, 64),
+    (69, 30),
     (70, 31),
+    (71, 47),
     (72, 62),
     (73, 58),
     (74, 73),
+    (75, 64),
+    (76, 47),
     (77, 78),
     (78, 70),
     (79, 72),
-    (51, 47),
-    (76, 47),
-    (71, 47),
+    (80, 64),
+    (81, 64),
+    (82, 64),
+    (83, 64),
+    (84, 30),
+    (85, 30),
+    (86, 30),
+    (87, 30),
+    (88, 30),
+    (89, 30),
+    (90, 30),
+    (91, 30),
+    (92, 64),
+    (93, 30),
     (94, 47),
     (95, 47),
-    (96, 79)]
-# These models restart on selection, including a return from another model.
-FRESH_START_MODELS = {51, 76, 71, 94, 95}
+    (96, 79),
+    (97, 30),
+    (98, 64),
+    (99, 64)]
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
+FRESH_ON_RESELECT = (51, 53, 56, 71, 76, 92, 93, 94, 95, 97, 98, 99)
+# Saw Swarm Reset already clears its state; the others retain warm state.
+RETAINED_ON_RESET = (53, 92, 93, 97, 98, 99)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -251,6 +323,8 @@ class Machine(object):
     if library_ram is not None:
       self.uc.mem_write(self.sym['harness_library_ram_size'],
                         struct.pack('<I', library_ram))
+    if len(digests) > self.word(self.sym['harness_digest_capacity']):
+      raise RuntimeError('too many fixture digests')
     for i, d in enumerate(digests):
       self.uc.mem_write(self.sym['harness_digests'] + 32 * i, d)
     self.uc.mem_write(self.sym['harness_num_digests'],
@@ -385,6 +459,14 @@ def note_control(model, steps):
     return ([(1 if i == 0 else 0, 60.0, 0.5, 0.5, 0.5, 0.8)
              for i in range(512)], 12.0)
   return NOTE_CONTROL_STEPS.get(model, steps[:200]), 0.01
+
+
+def control_steps(model, steps):
+  # Sustained excitation makes the quiet physical and burst models audible.
+  if model in (54, 61, 69):
+    return [(5 if block == 0 else 4, 60.0, 0.5, 0.8, 0.8, 0.8)
+            for block in range(256)]
+  return steps[:200]
 
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,
@@ -568,8 +650,11 @@ def identity_compare(model, base, fpscr, gap):
     return {'model': model, 'error': 'PLTS %s' % status}
   m.arena = arena_of(m)
   engine = PAIRS[model]
-  m.select_blob(model)
-  m.select_compiled(engine, model)
+  if model == 56:
+    select_saw_pair(m, False)
+  else:
+    m.select_blob(model)
+    m.select_compiled(engine, model)
   h = hashlib.sha256()
   stats = {}
   differ, samples, _ = compare_blocks(m, engine, CTX['steps'], 0x21,
@@ -637,55 +722,105 @@ def terrain_run(job):
     return run
 
 
+def select_saw_pair(m, fresh):
+  """Both selections start at the same seed and consume exactly six draws."""
+  before = m.word(RANDOM_STATE)
+  expected = before
+  for _ in range(6):
+    expected = (expected * 1664525 + 1013904223) & 0xffffffff
+  m.select_blob(56)
+  blob_seed = m.word(RANDOM_STATE)
+  m.uc.mem_write(RANDOM_STATE, struct.pack('<I', before))
+  if fresh:
+    m.rebuild_compiled(PAIRS[56], 56)
+  else:
+    m.select_compiled(PAIRS[56], 56)
+  if blob_seed != expected or m.word(RANDOM_STATE) != expected:
+    raise RuntimeError('Saw Swarm selection must consume six Random draws')
+
+
 def switch_run(pair):
   """A -> B -> A: the blob voice constructs on every switch in a poisoned
   slot and arena; compiled-in engines only Reset. Retained state shows as
   differences after the return; they are reported."""
   try:
-    run = switch_compare(pair[0], pair[1], False)
-    fresh = switch_compare(pair[0], pair[1], True)
+    run = switch_compare(pair[0], pair[1], False, PLACEMENTS[1], 0)
+    fresh = switch_compare(pair[0], pair[1], True, PLACEMENTS[1], 0)
     run['fresh_differ'] = [p['differ'] for p in fresh['phases']]
+    if pair[0] in FRESH_ON_RESELECT:
+      policy_runs = [switch_compare(pair[0], pair[1], True, base, fpscr)
+                     for base in PLACEMENTS for fpscr in FPSCR]
+      for policy in policy_runs:
+        if any(p['differ'] or not p['slot_cleared']
+               or (p['model'] == pair[0] and not p['out_peak'])
+               for p in policy['phases']):
+          raise RuntimeError('fresh-reselection policy violated')
+      fresh['fresh_policy'] = policy_runs
+      fresh['fresh_differ'] = run['fresh_differ']
+      fresh['retained_differ'] = [p['differ'] for p in run['phases']]
+      fresh['return_policy'] = 'fresh'
+      return fresh
     return run
   except RuntimeError as e:
     return {'sequence': [pair[0], pair[1], pair[0]], 'error': str(e)}
 
 
-def switch_compare(first, second, fresh):
+def switch_compare(first, second, fresh, base, fpscr):
   """fresh: each selection compares with the compiled-in engine built afresh
   (first selection after power-on), which a rebuilt blob must equal."""
   sequence = CTX['steps'][:300]
-  m = machine(PLACEMENTS[1])
+  if first in (54, 61, 69):
+    sequence = [(5 if block % 100 == 0 else 4, 60.0, 0.5, 0.8, 0.8, 0.8)
+                for block in range(300)]
+  m = machine(base, fpscr)
   m.setup(CTX['layout'], CTX['digests'])
   m.arena = arena_of(m)
   seed = 0x21
   phases = []
-  for model, part in ((first, sequence[:100]), (second, sequence[100:200]),
-                      (first, sequence[200:])):
+  parts = ((first, sequence[:100]), (second, sequence[100:200]),
+           (first, sequence[200:]))
+  if first == 93:
+    # A held reseed fills BubbleTime's ring before the return selection.
+    held = [(5 if block == 0 else 4, 72.0, 0.8, 0.9, 0.75, 0.8)
+            for block in range(7000)]
+    returned = [(2, 72.0, 0.8, 0.9, 0.75, 0.8)] * 1024
+    parts = ((first, held), (second, sequence[100:200]), (first, returned))
+  if first == 53:
+    # The return lies inside the hysteresis band after warming branch 1.
+    warm = [(5 if i == 0 else 4, 60.0, 0.5, 0.7, 0.5, 0.8)
+            for i in range(64)]
+    back = [(5 if i == 0 else 4, 60.0, 1.0 / 3.0, 0.7, 0.5, 0.8)
+            for i in range(512)]
+    parts = ((first, warm), (second, sequence[100:200]), (first, back))
+  for model, part in parts:
     before = m.word(RANDOM_STATE)
-    m.select_blob(model)
-    restart = fresh or model in FRESH_START_MODELS
-    if restart:
-      m.rebuild_compiled(PAIRS[model], model)
+    if model == 56:
+      select_saw_pair(m, fresh)
     else:
-      m.select_compiled(PAIRS[model], model)
-    drew = m.word(RANDOM_STATE) != before
+      m.select_blob(model)
+      if fresh:
+        m.rebuild_compiled(PAIRS[model], model)
+      else:
+        m.select_compiled(PAIRS[model], model)
+    drew = model != 56 and m.word(RANDOM_STATE) != before
     slot = m.word(CTX['sym']['harness_slot'])
     cleared = POISON not in bytes(m.uc.mem_read(slot, state_of(model)))
     stats = {}
     # The return, or a second model of one compiled-in engine, meets the
     # state the compiled-in engine kept.
-    retained = not restart and bool(phases) and PAIRS[model] == PAIRS[first]
+    retained = not fresh and bool(phases) and PAIRS[model] == PAIRS[first]
     differ, samples, seed = compare_blocks(m, PAIRS[model], part, seed,
                                            stats=stats, retained=retained)
     phases.append({'model': model, 'differ': differ, 'samples': samples,
-                   'fresh_start': model in FRESH_START_MODELS,
+                   'out_peak': stats.get('out_peak', 0.0),
                    'slot_cleared': cleared, 'switch_drew': drew,
                    'max_difference': stats.get('max', 0.0),
                    'compiled_peak': stats.get('peak', 0.0),
                    'last_differing_block': stats.get('last_block'),
                    'fade_window_peak': stats.get('fade_peak', 0.0),
                    'generator_diverged_block': stats.get('diverged_block')})
-  return {'sequence': [first, second, first], 'phases': phases}
+  return {'sequence': [first, second, first], 'base': hex(base),
+          'fpscr': hex(fpscr), 'phases': phases}
 
 
 def main(argv):
@@ -776,7 +911,17 @@ def main(argv):
       failures.append('switch %d->%d: %s' % (first, second, switch['error']))
       continue
     phases = switch['phases']
+    if first in (54, 61, 69) and any(
+        p['model'] == first and not p['out_peak'] for p in phases):
+      failures.append('model %d: silent switch fixture' % first)
     results['switches'].append(switch)
+    if first in FRESH_ON_RESELECT:
+      if switch.get('return_policy') != 'fresh' or phases[2]['differ']:
+        failures.append('model %d: return must equal a fresh engine' % first)
+      if first in RETAINED_ON_RESET and not switch.get(
+          'retained_differ', [0, 0, 0])[2]:
+        failures.append('model %d: warm reference did not exercise retained '
+                        'state' % first)
     if any(switch['fresh_differ']):
       failures.append('switch %d->%d: a rebuilt blob differs from the '
                       'engine built afresh: %s' % (first, second,
@@ -796,9 +941,7 @@ def main(argv):
           first, second))
     for i in (1, 2) if shared else (2,):
       p = phases[i]
-      if p['differ'] and p['fresh_start']:
-        failures.append('model %d: fresh-start return differs' % p['model'])
-      elif p['differ']:
+      if p['differ']:
         findings.append('model %d after %d: %d of %d samples differ from '
                         'the compiled-in engine, which keeps its state '
                         'across a switch (Reset only); largest difference '
@@ -817,11 +960,14 @@ def main(argv):
   m.setup(layout, digests)
   m.arena = arena_of(m)
   for model, engine in sorted(PAIRS.items()):
-    m.select_blob(model)
-    m.select_compiled(engine, model)
-    control_steps, nudge = note_control(model, steps)
-    differ, samples, _ = compare_blocks(m, engine, control_steps, 0x21,
-                                        nudge=nudge)
+    if model == 56:
+      select_saw_pair(m, False)
+    else:
+      m.select_blob(model)
+      m.select_compiled(engine, model)
+    probe_steps, nudge = note_control(model, control_steps(model, steps))
+    differ, samples, _ = compare_blocks(
+        m, engine, probe_steps, 0x21, nudge=nudge)
     results['controls'].append({'case': 'note nudged, model %d' % model,
                                 'differ': differ, 'samples': samples,
                                 'semitones': nudge})
@@ -1028,12 +1174,18 @@ def main(argv):
   needed = align(len(libraries) * 68) + sum(align(ram_of(i))
                                             for i in library_ids)
   last_with_ram = [i for i in library_ids if ram_of(i)][-1]
+  # No budget refuses the records too; library 6 first loses dependency 1.
+  no_ram = expect(library_ids, 'RAM')
+  if 6 in library_ids:
+    no_ram[('library', 6)] = 'DEPENDENCY'
+  # Later zero-state libraries still exceed the cumulative reservation.
+  short_ram = library_ids[library_ids.index(last_with_ram):]
   speech_library = names.index(3)
   library_cases = [
       ('library RAM not given', {'library_ram': 0}, 'RAM',
-       expect(library_ids, 'RAM')),
+       no_ram),
       ('library RAM one byte short', {'library_ram': needed - 1}, 'RAM',
-       expect([last_with_ram], 'RAM')),
+       expect(short_ram, 'RAM')),
       ('speech library not listed', {'digests': digests[:speech_library] +
                                      digests[speech_library + 1:]}, 'DIGEST',
        expect([3], 'DIGEST')),

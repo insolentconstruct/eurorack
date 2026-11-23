@@ -34,9 +34,10 @@ class FreshStartPolicyTest(unittest.TestCase):
     tree = ast.parse(Path("beads/test/blob_emu/render_compare.py").read_text())
     policy = next(ast.literal_eval(n.value) for n in tree.body
                   if isinstance(n, ast.Assign) and
-                  any(isinstance(t, ast.Name) and t.id == "FRESH_START_MODELS"
+                  any(isinstance(t, ast.Name) and t.id == "FRESH_ON_RESELECT"
                       for t in n.targets))
-    self.assertEqual(policy, {51, 76, 71, 94, 95})
+    self.assertEqual(set(policy),
+                     {51, 53, 56, 71, 76, 92, 93, 94, 95, 97, 98, 99})
 
 
 if __name__ == "__main__":

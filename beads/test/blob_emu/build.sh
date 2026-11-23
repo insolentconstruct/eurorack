@@ -143,6 +143,49 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/zxphase48k_engine.cc \
     $models/zxpulse48k_engine.cc \
     $models/zxpulse48k_chord_bank.cc \
+    $models/gendy_engine.cc \
+    $models/particle_burst_engine.cc \
+    $models/struck_drum_engine.cc \
+    $models/plucked_engine.cc \
+    $models/palette_chord_bank.cc \
+    $models/blown_engine.cc \
+    $models/fluted_engine.cc \
+    $models/brass_engine.cc \
+    $models/skins_engine.cc \
+    $models/circuit_zaps_engine.cc \
+    $models/metalwork_engine.cc \
+    $models/clap_engine.cc \
+    $models/analog_percussion_engine.cc \
+    $models/dual_sync_engine.cc \
+    $models/morph_engine.cc \
+    $models/vowel_engine.cc \
+    $models/helix_engine.cc \
+    $models/shakers_engine.cc \
+    $models/saw_swarm_engine.cc \
+    $models/bubbletime_engine.cc \
+    $models/chords_supersaw_engine.cc \
+    $models/kick_engine.cc \
+    $models/snare_engine.cc \
+    $models/cymbal_engine.cc \
+    $models/saw_comb_engine.cc \
+    $models/wave_paraphonic_engine.cc \
+    $models/wavetable_chord_engine.cc \
+    beads/blob/libraries/scale_voices.cc \
+    beads/blob/libraries/wavetable_scale_voices.cc \
+    $models/fold_engine.cc \
+    $models/wavetable_scale_stack_engine.cc \
+    $models/diatonic_chord_engine.cc \
+    $models/scale_stack_engine.cc \
+    $models/noise_bank_engine.cc \
+    $models/freshets_formant_engine.cc \
+    $models/speech_sounds_engine.cc \
+    $models/speech_sounds_controller.cc \
+    $models/speech_sounds_lpc.cc \
+    $models/speech_sounds_phonemes.cc \
+    $models/lpc_words_engine.cc \
+    $models/lpc_words_controller.cc \
+    $models/lpc_words_synth.cc \
+    $models/vosim_engine.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \
     plaits/dsp/chords/chord_bank.cc plaits/dsp/fm/algorithms.cc \
     plaits/dsp/fm/dx_units.cc $physical/modal_voice.cc $physical/resonator.cc \
