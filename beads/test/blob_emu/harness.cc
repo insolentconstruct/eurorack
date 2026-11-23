@@ -57,6 +57,7 @@
 #include "beads/blob/models/harmonics_engine.h"
 #include "beads/blob/models/sub_oscillator_engine.h"
 #include "beads/blob/models/digital_modulation_engine.h"
+#include "beads/blob/models/vosim_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -120,7 +121,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 22;
+const size_t kFirstStock = 23;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -199,6 +200,9 @@ static uint8_t sub_oscillator_storage[sizeof(SubOscillatorEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t digital_modulation_storage[sizeof(DigitalModulationEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t vosim_storage[sizeof(VosimEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -333,6 +337,7 @@ static void BuildProof() {
   std::fill(&digital_modulation_storage[0],
       &digital_modulation_storage[sizeof(digital_modulation_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+  std::fill(&vosim_storage[0], &vosim_storage[sizeof(vosim_storage)], 0);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
   compiled[2] = new(spectral_spiral_storage) SpectralSpiralEngine;
@@ -355,6 +360,7 @@ static void BuildProof() {
   compiled[19] = new(harmonics_storage) HarmonicsEngine;
   compiled[20] = new(sub_oscillator_storage) SubOscillatorEngine;
   compiled[21] = new(digital_modulation_storage) DigitalModulationEngine;
+  compiled[22] = new(vosim_storage) VosimEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
