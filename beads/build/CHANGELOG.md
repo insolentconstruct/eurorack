@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Custom profiles refuse Synth start on [A]+FREEZE when Plaits or Rings can be selected, keeping their bank and polyphony controls reachable. Beads-only profiles keep that start gesture.
+
 - [A]+FREEZE follows the synth that actually plays, a fallback included: Plaits steps its bank, Rings its polyphony, and Beads' synth or silence run the profile's [A]+FREEZE action (Buffer trim by default) (#353). The saved Synth choice never changes.
 - Synth gains a third value, Rings, offered on page 3 (thirds) only when the Rings synth is installed; without it the page looks as before. While Rings plays, [A]+FREEZE steps its polyphony (one, two, four voices; [A] green, yellow, red), saved; polyphony and FEEDBACK changes apply while FREEZE sustains it. A Synth action steps through the installed synths; earlier builds read a saved Rings as not set. Rings plays at about the Plaits synth's level (one fixed gain after Rings' own output).
 - Options pages: LED brightness keeps the chosen level when the pages close before the save, instead of returning to the old level for up to a second (#355); SEED latch and TIME scan take effect while their knob turns, as the other page settings do (#356).
