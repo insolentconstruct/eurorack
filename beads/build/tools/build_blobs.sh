@@ -93,6 +93,13 @@ build wavetable_scale_stack --library "$out/plaits_wavetables.bin" \
   $blob/libraries/wavetable_scale_voices_imports.cc
 build freshets_formant $blob/models/freshets_formant.cc \
   $blob/models/freshets_formant_engine.cc beads/plaits_resources.cc
+build speech_sounds --library "$out/speech_library.bin" \
+  $blob/models/speech_sounds.cc \
+  $blob/models/speech_sounds_engine.cc \
+  $blob/models/speech_sounds_controller.cc \
+  $blob/models/speech_sounds_lpc.cc \
+  $blob/models/speech_sounds_phonemes.cc \
+  $blob/libraries/speech_imports.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

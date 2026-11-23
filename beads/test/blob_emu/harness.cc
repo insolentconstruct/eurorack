@@ -58,6 +58,8 @@
 #include "beads/blob/models/scale_stack_engine.h"
 #include "beads/blob/models/noise_bank_engine.h"
 #include "beads/blob/models/freshets_formant_engine.h"
+#include "beads/blob/models/speech_sounds_engine.h"
+#include "beads/test/speech_sounds_stubs.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -121,7 +123,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 22;
+const size_t kFirstStock = 23;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -200,6 +202,9 @@ static uint8_t noise_bank_storage[sizeof(NoiseBankEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t freshets_formant_storage[sizeof(FreshetsFormantEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t speech_sounds_storage[sizeof(SpeechSoundsEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -328,6 +333,8 @@ static void BuildProof() {
       noise_bank_storage)], 0);
   std::fill(&freshets_formant_storage[0], &freshets_formant_storage[sizeof(
       freshets_formant_storage)], 0);
+  std::fill(&speech_sounds_storage[0], &speech_sounds_storage[sizeof(
+      speech_sounds_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -351,6 +358,7 @@ static void BuildProof() {
   compiled[19] = new(scale_stack_storage) ScaleStackEngine;
   compiled[20] = new(noise_bank_storage) NoiseBankEngine;
   compiled[21] = new(freshets_formant_storage) FreshetsFormantEngine;
+  compiled[22] = new(speech_sounds_storage) SpeechSoundsEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
