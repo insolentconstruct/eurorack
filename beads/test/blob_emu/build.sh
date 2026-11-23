@@ -120,6 +120,7 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/toy_engine.cc \
     $models/buzz_engine.cc \
     $models/struck_bell_engine.cc \
+    $models/bowed_engine.cc \
     $models/acid_engine.cc \
     $models/triple_engine_data.cc \
     plaits/dsp/engine/*.cc plaits/dsp/engine2/*.cc \

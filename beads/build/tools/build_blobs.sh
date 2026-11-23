@@ -57,6 +57,8 @@ build toy $blob/models/toy.cc \
   $blob/models/toy_engine.cc beads/plaits_resources.cc
 build question_mark $blob/models/question_mark.cc \
   $blob/models/question_mark_engine.cc beads/plaits_resources.cc
+build bowed $blob/models/bowed.cc \
+  $blob/models/bowed_engine.cc beads/plaits_resources.cc
 build raw_fm $blob/models/raw_fm.cc \
   $blob/models/raw_fm_engine.cc beads/plaits_resources.cc
 build triple $blob/models/triple.cc \

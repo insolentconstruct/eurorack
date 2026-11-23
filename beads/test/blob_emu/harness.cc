@@ -51,6 +51,7 @@
 #include "beads/blob/models/toy_engine.h"
 #include "beads/blob/models/buzz_engine.h"
 #include "beads/blob/models/struck_bell_engine.h"
+#include "beads/blob/models/bowed_engine.h"
 #include "beads/blob/models/acid_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
@@ -115,7 +116,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 17;
+const size_t kFirstStock = 18;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -176,6 +177,9 @@ static uint8_t buzz_storage[sizeof(BuzzEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t struck_bell_storage[sizeof(StruckBellEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t bowed_storage[sizeof(BowedEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t acid_storage[sizeof(AcidEngine)]
@@ -300,6 +304,8 @@ static void BuildProof() {
       &buzz_storage[sizeof(buzz_storage)], 0);
   std::fill(&struck_bell_storage[0],
       &struck_bell_storage[sizeof(struck_bell_storage)], 0);
+  std::fill(&bowed_storage[0],
+      &bowed_storage[sizeof(bowed_storage)], 0);
   std::fill(&acid_storage[0],
       &acid_storage[sizeof(acid_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
@@ -319,7 +325,8 @@ static void BuildProof() {
   compiled[13] = new(toy_storage) ToyEngine;
   compiled[14] = new(buzz_storage) BuzzEngine;
   compiled[15] = new(struck_bell_storage) StruckBellEngine;
-  compiled[16] = new(acid_storage) AcidEngine;
+  compiled[16] = new(bowed_storage) BowedEngine;
+  compiled[17] = new(acid_storage) AcidEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

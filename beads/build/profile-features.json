@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "bfc37265f6327fbb1f2edcfaa2347ba3161be5718a40f6be20ffb147dec377d9",
+  "manifest_sha256": "5299f88f899b7aefabc4450707dab32a71a1bf01592f93f13577513b34896d56",
   "record_version": 1,
   "features": [
     {
@@ -2275,6 +2275,10 @@
       "id": 72,
       "name": "Bowed",
       "palette": "bowed",
+      "family": "Physical",
+      "blob_size": 2936,
+      "state_size": 52,
+      "arena_size": 5120,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
