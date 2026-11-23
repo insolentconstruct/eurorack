@@ -66,7 +66,7 @@ class EngineTransition {
     codec_transition_frames_ = kBlockRate / 4;
     codec_fade_ = false;
     if (codec_running_ && sample_rate == codec_sample_rate_) {
-      // Same clocks: the converter played silence while paused (#53).
+      // Same clocks: the converter played silence while paused.
       codec->Resume(callback);
       return;
     }
@@ -80,7 +80,7 @@ class EngineTransition {
     codec_sample_rate_ = sample_rate;
   }
 
-  // Codec restarts fade the output out first (#53): true once it is silent.
+  // Codec restarts fade the output out first: true once it is silent.
   inline bool Fade() {
     // Before the first start there is no audio to fade.
     codec_fade_ = codec_running_;
