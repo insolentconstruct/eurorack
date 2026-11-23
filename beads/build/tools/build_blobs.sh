@@ -49,12 +49,12 @@ for model in particle_noise spectral_spiral phase_weave pulsar glisson \
     reed_pipe sideband undertow phase_flock scanned; do
   build $model $blob/models/$model.cc $blob/models/${model}_engine.cc
 done
+build toy $blob/models/toy.cc \
+  $blob/models/toy_engine.cc beads/plaits_resources.cc
 build buzz $blob/models/buzz.cc \
   $blob/models/buzz_engine.cc beads/plaits_resources.cc
 build struck_bell $blob/models/struck_bell.cc \
   $blob/models/struck_bell_engine.cc beads/plaits_resources.cc
-build toy $blob/models/toy.cc \
-  $blob/models/toy_engine.cc beads/plaits_resources.cc
 build question_mark $blob/models/question_mark.cc \
   $blob/models/question_mark_engine.cc beads/plaits_resources.cc
 build bowed $blob/models/bowed.cc \
@@ -63,6 +63,8 @@ build raw_fm $blob/models/raw_fm.cc \
   $blob/models/raw_fm_engine.cc beads/plaits_resources.cc
 build triple $blob/models/triple.cc \
   $blob/models/triple_engine.cc $blob/models/triple_engine_data.cc
+build bytebeat $blob/models/bytebeat.cc \
+  $blob/models/bytebeat_engine.cc beads/plaits_resources.cc
 build acid $blob/models/acid.cc \
   $blob/models/acid_engine.cc beads/plaits_resources.cc
 # Stock models without libraries: Plaits' helpers and tables they use.
