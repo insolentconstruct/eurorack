@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "a400725fa30d0f2346c8e0c825f9bd44541d6c6c06794697a152d8e15454dcf7",
+  "manifest_sha256": "5e715decdbcce897566b52f224cd62f7f3629ebd48ed453ca4c6ff555bde9691",
   "record_version": 1,
   "features": [
     {
@@ -2446,6 +2446,10 @@
       "id": 89,
       "name": "Metalwork",
       "palette": "metalwork",
+      "family": "Percussion",
+      "blob_size": 2648,
+      "state_size": 84,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
