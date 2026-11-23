@@ -115,6 +115,8 @@ Clouds-style changes the reverb character and, until a diffusion amount is set w
 
 A Hygrostat profile can make DRY/WET bring the grains in more gently ([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); fully dry then has no reverb.
 
+Hygrostat can divide OUT R's grain gates by 2, 4, 8 or 16, keeping the first gate and the original pulse width ([Grain trigger output](FEATURES.md#grain-trigger-output)). Grain timing and audio stay unchanged; delay, spectral and synths keep their stock output.
+
 A Hygrostat profile can trim synth audio to half, quarter or eighth level, keeping input gain and OUT R triggers unchanged ([Synth output level](FEATURES.md#synth-output-level)). There is no panel gesture.
 
 Grain stealing follows the 2021 and 2024 firmware by default; a Hygrostat profile can choose the 2026 source's instead ([Grain stealing](FEATURES.md#grain-stealing)).

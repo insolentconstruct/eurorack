@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "2299346a5ef0e179db576541bd2f8c50d43e111268b48041d1def4b087797b48",
+  "manifest_sha256": "21e0b7ca5d6cdc51310f05f623e9e8940dd4eb8fdcff50d639c2ba87e0c427d3",
   "record_version": 1,
   "features": [
     {
@@ -1677,6 +1677,31 @@
       "default": 0,
       "factory": null,
       "touches_synth": true,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 51,
+      "name": "Grain output division",
+      "values": [
+        "Stock",
+        "/2",
+        "/4",
+        "/8",
+        "/16"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
       "cpu_cost": null,
       "saved": null
     }

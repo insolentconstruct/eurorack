@@ -302,6 +302,11 @@ DETAILS = [
     "([Mix law](FEATURES.md#mix-law)) and reverb only the grains, before "
     "DRY/WET, as on Clouds ([Reverb input](FEATURES.md#reverb-input)); "
     "fully dry then has no reverb.",
+    "Hygrostat can divide OUT R's grain gates by 2, 4, 8 or 16, keeping "
+    "the first gate and the original pulse width "
+    "([Grain trigger output](FEATURES.md#grain-trigger-output)). Grain "
+    "timing and audio stay unchanged; delay, spectral and synths keep "
+    "their stock output.",
     "A Hygrostat profile can trim synth audio to half, quarter or eighth "
     "level, keeping input gain and OUT R triggers unchanged "
     "([Synth output level](FEATURES.md#synth-output-level)). "

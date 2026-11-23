@@ -659,6 +659,8 @@ void Init() {
   ui.set_playing_synth(playing_synth);
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
   processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
+  processor.set_output_division(
+      1 << settings.FeatureValue(FEATURE_OUTPUT_DIVISION));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
   // 0, the default, is the 2021/2024 grain stealing; 1 is the 2026 source's.
   const bool legacy_stealing = !settings.FeatureValue(FEATURE_GRAIN_STEALING);

@@ -526,6 +526,16 @@ than stock. The dry level and both ends of the knob stay stock. DRY/WET CV
 follows the same law. Granular, delay and spectral; both synths keep their
 own DRY/WET. Chosen at power-on, with no panel slot or saved byte.
 
+### Grain trigger output
+
+Hygrostat feature ID 51 chooses Stock, /2, /4, /8 or /16 (#29). When OUT R
+carries grain triggers, it passes the first grain's gate, then every chosen
+number of grains; accepted gates keep their original width. It changes only
+OUT R, not the grain timing, recording or audio mix. The divider keeps its place between
+audio blocks while trigger output is on. Delay, spectral and synths keep
+the stock output. Chosen at power-on, Fixed only, with no panel slot or
+saved byte; Off and omitted entries select Stock.
+
 ### Reverb input
 
 Hygrostat feature ID 33 chooses Mix (stock) / Grains (#20). Stock sends the

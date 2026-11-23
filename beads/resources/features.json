@@ -989,6 +989,39 @@
       "actions": [],
       "stateless": false,
       "touches_synth": true
+    },
+    {
+      "id": 51,
+      "symbol": "OUTPUT_DIVISION",
+      "name": "Grain output division",
+      "issue": 29,
+      "values": [
+        {
+          "name": "Stock"
+        },
+        {
+          "name": "/2"
+        },
+        {
+          "name": "/4"
+        },
+        {
+          "name": "/8"
+        },
+        {
+          "name": "/16"
+        }
+      ],
+      "field": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
     }
   ],
   "plaits_models": [

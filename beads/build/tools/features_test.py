@@ -96,7 +96,7 @@ print('Catalogue format 2, manifest digest and record bytes: PASS')
 DIGEST = '"manifest_sha256": "%s"' % catalogue['manifest_sha256']
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features']] == list(range(1, 51))
+assert [r['id'] for r in frozen['features']] == list(range(1, 52))
 assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
 faults = [
@@ -104,6 +104,10 @@ faults = [
       '"symbol": "SYNTH_LEVEL"', '"symbol": "SYNTH_TRIM"'),
   ('Frozen ID 50: value meanings', features.MANIFEST,
       '"name": "Half"', '"name": "Double"'),
+  ('Frozen ID 51', features.MANIFEST,
+      '"symbol": "OUTPUT_DIVISION"', '"symbol": "OUTPUT_CLOCK"'),
+  ('Frozen ID 51: value meanings', features.MANIFEST,
+      '"name": "/2"', '"name": "/3"'),
   ('Frozen ID 29', features.MANIFEST,
       '"symbol": "SEED_START"', '"symbol": "SEED_BEGIN"'),
   ('Frozen ID 5: value meanings', features.MANIFEST,

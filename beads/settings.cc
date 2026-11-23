@@ -92,6 +92,7 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   0,  // Resonator position.
   0,  // Resonator amount.
   0,  // Synth level.
+  0,  // Output division.
 };
 
 bool Settings::Init(bool recovery_mode) {

@@ -2641,6 +2641,23 @@ void TestMixOptionsProfile() {
   CHECK(processor.options_ == 0);
 }
 
+void TestOutputDivisionProfile() {
+  test_checker.Start("TestOutputDivisionProfile");
+  Rig r(false, false);
+  for (int value = 0; value < 5; ++value) {
+    const uint8_t division[] = { FEATURE_OUTPUT_DIVISION, uint8_t(value) };
+    BootWithProfile(&r, division, 1);
+    r.Settle();
+    CHECK(processor.output_division_ == (1 << value));
+    CHECK(bool(processor.options_ & Processor::OPTION_FLAG_OUTPUT_DIVISION)
+        == (value != 0));
+  }
+  r.Reboot(false);
+  r.Settle();
+  CHECK(processor.output_division_ == 1);
+  CHECK(processor.options_ == 0);
+}
+
 // Grain stealing is a power-on profile choice (#237): 0, the default, resorts
 // the grains from 5 ms as in 2021/2024; 1 keeps the 2026 source's 25 ms.
 void TestGrainStealingProfile() {
@@ -4170,6 +4187,7 @@ int main() {
   TestPitchLawProfile();
   TestPlaitsBankProfile();
   TestMixOptionsProfile();
+  TestOutputDivisionProfile();
   TestGrainStealingProfile();
   TestDelayOptionsProfile();
   TestResonatorProfile();

@@ -602,6 +602,53 @@ void TestOptionsBlockMatchesStock() {
   }
 }
 
+void TestOutputDivision() {
+  test_checker.Start("TestOutputDivision");
+  FloatFrame reference[120];
+  for (int division = 1; division <= 16; division *= 2) {
+    Init(false);
+    density.base = 0.5f;
+    mix.output_gate = true;
+    mix.dry_wet = 0.5f;
+    processor.set_output_division(division);
+    CHECK(bool(processor.options_ & Processor::OPTION_FLAG_OUTPUT_DIVISION)
+        == (division > 1));
+    for (int block = 0; block < 10; ++block) {
+      stmlib::GateFlags seed[12];
+      for (int i = 0; i < 12; ++i) {
+        const int position = block * 12 + i;
+        const int phase = position % 8;
+        seed[i] = phase == 0 ? stmlib::GATE_FLAG_RISING
+            : stmlib::GATE_FLAG_LOW;
+        if (phase < 3) {
+          seed[i] = stmlib::GateFlags(seed[i] | stmlib::GATE_FLAG_HIGH);
+        }
+        input[i].l = 0.1f * sinf(float(position) * 0.13f);
+        input[i].r = -input[i].l;
+      }
+      processor.Process(SEED_BUTTON_STATE_OFF, seed, freeze, density,
+          parameters, mix, input, output, 12);
+      for (int i = 0; i < 12; ++i) {
+        const int position = block * 12 + i;
+        const bool expected = position % 8 < 3
+            && (position / 8) % division == 0;
+        CHECK(output[i].r == (expected ? -0.8f : 0.0f));
+        if (division == 1) {
+          reference[position] = output[i];
+        } else {
+          CHECK(output[i].l == reference[position].l);
+        }
+      }
+    }
+    processor.set_output_division(division);
+    if (division > 1) {
+      CHECK(processor.output_pulse_count_ == 15 % division);
+    }
+    processor.set_output_division(1);
+    CHECK(!(processor.options_ & Processor::OPTION_FLAG_OUTPUT_DIVISION));
+  }
+}
+
 int main() {
   // Match the firmware FPU setup in drivers/system.cc.
 #if defined(__SSE__)
@@ -612,6 +659,7 @@ int main() {
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
 #endif  // defined(__SSE__)
+  TestOutputDivision();
   TestFeedbackRecording();
   TestDryWetEndpoints();
   TestMonoRecordingStereoOutput();

@@ -255,10 +255,38 @@ void Processor::ProcessOptions(
   output_limiter_.ProcessOutput(out, size, output_limiter_mode_, sr);
 
   if (mix_parameters.output_gate) {
+    if ((options_ & OPTION_FLAG_OUTPUT_DIVISION) && !delay_mode && !spectral_) {
+      DivideOutput(triggers, gate_out, size);
+    }
     for (size_t i = 0; i < size; ++i) {
       out[i].l = (out[i].l + out[i].r) * 0.5f;
       out[i].r = gate_out[i] ? -0.8f : 0.0f;
     }
+  }
+}
+
+void Processor::set_output_division(int division) {
+  CONSTRAIN(division, 1, 16);
+  // Init clears the flag, so the first configuration resets the divider.
+  if (!(options_ & OPTION_FLAG_OUTPUT_DIVISION) ||
+      division != output_division_) {
+    output_division_ = division;
+    output_pulse_count_ = 0;
+    output_pulse_ = false;
+  }
+  SetOption(OPTION_FLAG_OUTPUT_DIVISION, division > 1);
+}
+
+void Processor::DivideOutput(
+    const TriggerGenerator::Output* triggers, bool* gate, size_t size) {
+  for (size_t i = 0; i < size; ++i) {
+    if (triggers[i].trigger) {
+      output_pulse_ = output_pulse_count_ == 0;
+      if (++output_pulse_count_ >= output_division_) {
+        output_pulse_count_ = 0;
+      }
+    }
+    gate[i] = triggers[i].gate && output_pulse_;
   }
 }
 

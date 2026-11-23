@@ -40,6 +40,11 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
+  ('TestOutputDivisionProfile', 'firmware', 'beads/beads.cc',
+    'processor.set_output_division(\n      1 << settings.FeatureValue(FEATURE_OUTPUT_DIVISION));',
+    'processor.set_output_division(1);'),
+  ('TestOutputDivision', 'mix', 'beads/dsp/processor_options.cc',
+    '      DivideOutput(triggers, gate_out, size);', ''),
   ('TestSynthLevel', 'firmware', 'beads/beads.cc',
     'const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);',
     'const int32_t divisor = 1;'),
