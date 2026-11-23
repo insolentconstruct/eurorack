@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "917e63275b4240160e6f82d3872e36c54d55273e599a67ff9526d36178d49df7",
+  "manifest_sha256": "4bcbd5cd505fcd1036a94928d4dc1619317b79ac160f4ef217559a4032994d48",
   "record_version": 1,
   "features": [
     {
@@ -2347,6 +2347,10 @@
       "id": 80,
       "name": "Diatonic Chord",
       "palette": "diatonic-chord",
+      "family": "Polyphonic",
+      "blob_size": 668,
+      "state_size": 68,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [

@@ -54,6 +54,7 @@
 #include "beads/test/scale_voices_stubs.h"
 #include "beads/blob/models/fold_engine.h"
 #include "beads/blob/models/wavetable_scale_stack_engine.h"
+#include "beads/blob/models/diatonic_chord_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -117,7 +118,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 18;
+const size_t kFirstStock = 19;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -184,6 +185,9 @@ static uint8_t fold_storage[sizeof(FoldEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t wavetable_scale_stack_storage[sizeof(WavetableScaleStackEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t diatonic_chord_storage[sizeof(DiatonicChordEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -301,6 +305,7 @@ static void BuildProof() {
   std::fill(&wavetable_chord_storage[0], &wavetable_chord_storage[sizeof(wavetable_chord_storage)], 0);
   std::fill(&fold_storage[0], &fold_storage[sizeof(fold_storage)], 0);
   std::fill(&wavetable_scale_stack_storage[0], &wavetable_scale_stack_storage[sizeof(wavetable_scale_stack_storage)], 0);
+  std::fill(&diatonic_chord_storage[0], &diatonic_chord_storage[sizeof(diatonic_chord_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -320,6 +325,7 @@ static void BuildProof() {
   compiled[15] = new(wavetable_chord_storage) WavetableChordEngine;
   compiled[16] = new(fold_storage) FoldEngine;
   compiled[17] = new(wavetable_scale_stack_storage) WavetableScaleStackEngine;
+  compiled[18] = new(diatonic_chord_storage) DiatonicChordEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

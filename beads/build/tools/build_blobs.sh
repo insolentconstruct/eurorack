@@ -70,6 +70,9 @@ build wave_paraphonic --library "$out/plaits_wavetables.bin" \
   $blob/models/wave_paraphonic.cc $blob/models/wave_paraphonic_engine.cc
 build saw_comb $blob/models/saw_comb.cc $blob/models/saw_comb_engine.cc \
   $libm/sf_tanh.c $libm/sf_expm1.c $libm/math_errf_no_errno.c
+build diatonic_chord --library "$out/scale_voices_library.bin" \
+  $blob/models/diatonic_chord.cc $blob/models/diatonic_chord_engine.cc \
+  $blob/libraries/scale_voices_imports.cc
 build wavetable_chord --library "$out/plaits_wavetables.bin" \
   --library "$out/scale_voices_library.bin" \
   --library "$out/wavetable_scale_voices_library.bin" \
