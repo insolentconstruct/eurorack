@@ -1591,6 +1591,10 @@
       "id": 74,
       "name": "Digital Modulation",
       "palette": "digital-modulation",
+      "family": "Digital",
+      "blob_size": 1296,
+      "state_size": 36,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
