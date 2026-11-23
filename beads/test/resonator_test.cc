@@ -1534,9 +1534,10 @@ void TestResonatorLoopFilters() {
 
 // The loop's copy goes through the grains' feedback filters at the
 // resonator's rate, in every quality and at both cutoffs: replayed here.
+// Only Sunny tape's grains run at half the rate; Scorched runs at 24 kHz.
 void TestResonatorLoopChain() {
   test_checker.Start("TestResonatorLoopChain");
-  const float low_pass[4] = { 0.999f, 0.9f, 1.0f - sqrtf(0.1f), 0.5f };
+  const float low_pass[4] = { 0.999f, 0.9f, 1.0f - sqrtf(0.1f), 0.75f };
   RandomizedParameter pitch;
   memset(&pitch, 0, sizeof(pitch));
   for (int m = 0; m < 4; ++m) {
