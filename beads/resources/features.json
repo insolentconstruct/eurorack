@@ -1640,6 +1640,10 @@
       "id": 81,
       "name": "Scale Stack",
       "palette": "scale-stack",
+      "family": "Polyphonic",
+      "blob_size": 492,
+      "state_size": 68,
+      "arena_size": 0,
       "credit": "Tom Burns",
       "licence": "MIT",
       "libraries": [5]

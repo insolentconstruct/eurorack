@@ -60,17 +60,17 @@ FPSCR = (0, 0x03000000)  # reset, and flush-to-zero with default NaN
 RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
-PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9), (64, 10), (65, 11), (66, 12), (75, 13), (68, 14), (82, 15), (48, 16), (83, 17), (80, 18)] + [
-    (m, 19 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+PAIRS = dict([(36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6), (39, 7), (41, 8), (31, 9), (64, 10), (65, 11), (66, 12), (75, 13), (68, 14), (82, 15), (48, 16), (83, 17), (80, 18), (81, 19)] + [
+    (m, 20 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
-DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 82, 83)
+DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83)
 # Clamped blobs may differ only where terrain_probe.h counts out-of-range
 # lookups; Wave terrain 5-7 clamp wave and sample positions to the bank.
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
-    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32), (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (64, 31), (65, 64), (66, 64), (75, 64), (68, 64), (82, 64), (48, 64), (83, 64), (80, 64)]
+    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32), (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (64, 31), (65, 64), (66, 64), (75, 64), (68, 64), (82, 64), (48, 64), (83, 64), (80, 64), (81, 64)]
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',

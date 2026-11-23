@@ -73,6 +73,9 @@ build saw_comb $blob/models/saw_comb.cc $blob/models/saw_comb_engine.cc \
 build diatonic_chord --library "$out/scale_voices_library.bin" \
   $blob/models/diatonic_chord.cc $blob/models/diatonic_chord_engine.cc \
   $blob/libraries/scale_voices_imports.cc
+build scale_stack --library "$out/scale_voices_library.bin" \
+  $blob/models/scale_stack.cc $blob/models/scale_stack_engine.cc \
+  $blob/libraries/scale_voices_imports.cc
 build wavetable_chord --library "$out/plaits_wavetables.bin" \
   --library "$out/scale_voices_library.bin" \
   --library "$out/wavetable_scale_voices_library.bin" \
