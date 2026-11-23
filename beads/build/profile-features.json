@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "0eed19436ea1ed242c31ac4a0b4c95eb9f0692cc7277d180a86e46ae1a1e0253",
+  "manifest_sha256": "a2747cda5b6ecb9790ba3f719f7fff37e91617b8b9a7cdf0450c34dc9dbfe4dc",
   "record_version": 1,
   "features": [
     {
@@ -2216,6 +2216,10 @@
       "id": 66,
       "name": "Cymbal",
       "palette": "cymbal",
+      "family": "Drums",
+      "blob_size": 3800,
+      "state_size": 72,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

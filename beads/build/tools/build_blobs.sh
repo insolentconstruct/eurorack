@@ -61,6 +61,9 @@ build kick $blob/models/kick.cc $blob/models/kick_engine.cc \
 build snare $blob/models/snare.cc $blob/models/snare_engine.cc \
   $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
   $libm/libgcc/convert.S
+build cymbal $blob/models/cymbal.cc $blob/models/cymbal_engine.cc \
+  $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
+  $libm/libgcc/convert.S
 # Stock models without libraries: Plaits' helpers and tables they use.
 physical=plaits/dsp/physical_modelling
 for model in virtual_analog_vcf phase_distortion virtual_analog waveshaping \

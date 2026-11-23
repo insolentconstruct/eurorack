@@ -47,6 +47,7 @@
 #include "beads/blob/models/scanned_engine.h"
 #include "beads/blob/models/kick_engine.h"
 #include "beads/blob/models/snare_engine.h"
+#include "beads/blob/models/cymbal_engine.h"
 #include "beads/blob/plaits_blob.h"
 #include "beads/blob/plaits_blob_engine.h"
 #include "beads/blob/plaits_libraries.h"
@@ -110,7 +111,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 12;
+const size_t kFirstStock = 13;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -159,6 +160,9 @@ static uint8_t kick_storage[sizeof(KickEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t snare_storage[sizeof(SnareEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t cymbal_storage[sizeof(CymbalEngine)]
     __attribute__((aligned(8)));
 
 // The stock engines, as PlaitsEngines in beads/dsp/plaits_voice.cc.
@@ -270,6 +274,7 @@ static void BuildProof() {
       &scanned_storage[sizeof(scanned_storage)], 0);
   std::fill(&kick_storage[0], &kick_storage[sizeof(kick_storage)], 0);
   std::fill(&snare_storage[0], &snare_storage[sizeof(snare_storage)], 0);
+  std::fill(&cymbal_storage[0], &cymbal_storage[sizeof(cymbal_storage)], 0);
   stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
   compiled[0] = new(phase_weave_storage) PhaseWeaveEngine;
   compiled[1] = new(sine_storage) TestSineEngine;
@@ -283,6 +288,7 @@ static void BuildProof() {
   compiled[9] = new(scanned_storage) ScannedEngine;
   compiled[10] = new(kick_storage) KickEngine;
   compiled[11] = new(snare_storage) SnareEngine;
+  compiled[12] = new(cymbal_storage) CymbalEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
