@@ -61,10 +61,38 @@ RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
 PAIRS = dict([
-    (36, 0), (254, 1), (43, 2), (32, 3), (29, 4), (40, 5), (37, 6),
-    (39, 7), (41, 8), (31, 9), (70, 10), (78, 11), (77, 12), (45, 13),
-    (49, 14), (62, 15), (72, 16), (79, 17), (96, 18)] + [
-    (m, 19 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (29, 0),
+    (31, 1),
+    (32, 2),
+    (33, 3),
+    (34, 4),
+    (35, 5),
+    (36, 6),
+    (37, 7),
+    (38, 8),
+    (39, 9),
+    (40, 10),
+    (41, 11),
+    (42, 12),
+    (43, 13),
+    (44, 14),
+    (45, 15),
+    (46, 16),
+    (47, 17),
+    (49, 18),
+    (55, 19),
+    (58, 20),
+    (62, 21),
+    (70, 22),
+    (72, 23),
+    (73, 24),
+    (74, 25),
+    (77, 26),
+    (78, 27),
+    (79, 28),
+    (96, 29),
+    (254, 30)] + [
+    (m, 31 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
@@ -73,9 +101,43 @@ DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15)
 KNOWN = {5: 'terrains 5-7 clamped where Plaits read past the bank'}
 # A -> B -> A switch sequences: every stock model returns once.
 SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
-    (2, 3), (4, 2), (13, 43), (18, 36), (43, 18), (32, 36), (29, 32),
-    (40, 29), (37, 40), (39, 37), (41, 39), (31, 41), (70, 31), (78, 70),
-    (77, 78), (45, 77), (49, 45), (62, 49), (72, 62), (79, 72), (96, 79)]
+    (2, 3),
+    (4, 2),
+    (13, 43),
+    (18, 36),
+    (29, 32),
+    (31, 41),
+    (32, 36),
+    (33, 31),
+    (34, 33),
+    (35, 34),
+    (37, 40),
+    (38, 35),
+    (39, 37),
+    (40, 29),
+    (41, 39),
+    (42, 38),
+    (43, 18),
+    (44, 42),
+    (45, 77),
+    (46, 44),
+    (47, 46),
+    (49, 45),
+    (55, 47),
+    (58, 55),
+    (62, 49),
+    (70, 31),
+    (72, 62),
+    (73, 58),
+    (74, 73),
+    (77, 78),
+    (78, 70),
+    (79, 72),
+    (96, 79)]
+# Tapfield needs a held note: low notes retrigger before its register clocks.
+NOTE_CONTROL_STEPS = {35: [
+    (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
+    for block in range(200)]}
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -310,7 +372,7 @@ def note_control(model, steps):
     # Integer ramps and delay lines need sustained excitation and pitch travel.
     return ([(1 if i == 0 else 0, 60.0, 0.5, 0.5, 0.5, 0.8)
              for i in range(512)], 12.0)
-  return steps[:200], 0.01
+  return NOTE_CONTROL_STEPS.get(model, steps[:200]), 0.01
 
 
 def compare_blocks(m, engine, steps, seed, nudge=0.0, digest=None,

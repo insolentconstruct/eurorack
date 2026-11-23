@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "f10abc61cc35943155628e691936c9f8f7f43a01b6b184b5daec5e75c9a35a1c",
+  "manifest_sha256": "9c22e36bfb88e3b92742b6769da5df03d8e593236a350e6704b96bbe1391b12c",
   "record_version": 1,
   "features": [
     {
@@ -1926,6 +1926,10 @@
       "id": 33,
       "name": "Loopback",
       "palette": "loopback",
+      "family": "Feedback",
+      "blob_size": 1068,
+      "state_size": 32,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1934,6 +1938,10 @@
       "id": 34,
       "name": "Lockstep",
       "palette": "lockstep",
+      "family": "PLL",
+      "blob_size": 1700,
+      "state_size": 20,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1942,6 +1950,10 @@
       "id": 35,
       "name": "Tapfield",
       "palette": "tapfield",
+      "family": "Bitwise",
+      "blob_size": 1816,
+      "state_size": 44,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -1970,6 +1982,10 @@
       "id": 38,
       "name": "Attractor",
       "palette": "attractor",
+      "family": "Chaos",
+      "blob_size": 1508,
+      "state_size": 28,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -2014,6 +2030,10 @@
       "id": 42,
       "name": "Rulefield",
       "palette": "rulefield",
+      "family": "Cellular",
+      "blob_size": 1368,
+      "state_size": 44,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
@@ -2030,6 +2050,10 @@
       "id": 44,
       "name": "Z Filter",
       "palette": "z-filter",
+      "family": "Subtractive",
+      "blob_size": 1788,
+      "state_size": 56,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2050,6 +2074,10 @@
       "id": 46,
       "name": "CSaw",
       "palette": "csaw",
+      "family": "Subtractive",
+      "blob_size": 1444,
+      "state_size": 40,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2058,6 +2086,10 @@
       "id": 47,
       "name": "Ring Mod",
       "palette": "ring-mod",
+      "family": "Digital",
+      "blob_size": 2392,
+      "state_size": 144,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2126,6 +2158,10 @@
       "id": 55,
       "name": "Saw Square",
       "palette": "saw-square",
+      "family": "Subtractive",
+      "blob_size": 1668,
+      "state_size": 56,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2150,6 +2186,10 @@
       "id": 58,
       "name": "Harmonics",
       "palette": "harmonics",
+      "family": "Additive",
+      "blob_size": 2908,
+      "state_size": 104,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2287,6 +2327,10 @@
       "id": 73,
       "name": "Sub Osc",
       "palette": "sub-oscillator",
+      "family": "Subtractive",
+      "blob_size": 1844,
+      "state_size": 60,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
@@ -2295,6 +2339,10 @@
       "id": 74,
       "name": "Digital Modulation",
       "palette": "digital-modulation",
+      "family": "Digital",
+      "blob_size": 1296,
+      "state_size": 36,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
