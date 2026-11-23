@@ -1591,6 +1591,8 @@ void TestResonatorLoopChain() {
       Init(kMedia[m], false, RESONATOR_FEEDBACK);
       processor.set_resonator_controls(Controls(1, 1));
       processor.SetFeedbackCutoff(unity);
+      // Left from another quality: the rate change clears it.
+      processor.resonator_loop_low_pass_ = 1.0f;
       const float sr = processor.sample_rate();
       const size_t size = BlockSize();
       Svf high_pass[2];
@@ -1645,6 +1647,7 @@ void TestResonatorLoopGain() {
         processor.resonator_loop_frames_[i].r = -0.25f;
       }
       // Nothing for an unset object, or at another rate.
+      processor.resonator_loop_feedback_ = 0.6f;
       processor.resonator_sample_rate_ = sr;
       processor.RecordResonance(0.6f, delay, in, recorded, size);
       CHECK(!memcmp(in, recorded, sizeof(FloatFrame) * size));
