@@ -150,6 +150,7 @@ Firmware and Hygrostat both refuse content outside these limits.
 - 1 to 16 grids, each 64 × 64 `int8` in rows of x (4,096 bytes). The value is the sample / 128.
 - Same format as Plaits' own user terrain (`LoadUserData`, `TerrainLookup` in `wave_terrain_engine.cc`) and Palette's `WAVE_TERRAIN_CUSTOM`. The reader maps x and y from [−1, 1] to [0, 62] and interpolates bilinearly, so index 63 is read only as the upper neighbour. No guard samples; all 256 values are valid.
 - No `TERR` section means the eight stock terrains only, bit-identical to today.
+- HARMONICS sweeps the eight stock terrains, then the grids in section order (`8 + count` positions, as Plaits adds its user terrain as a ninth), so a valid `TERR` compresses the stock terrains into a smaller knob range (owner 2026-11-23).
 
 ## Identity
 
