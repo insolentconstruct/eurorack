@@ -30,10 +30,12 @@
 ENTRY(harness_setup)
 EXTERN(harness_select_compiled harness_select_blob harness_rebuild_compiled)
 EXTERN(harness_render_compiled harness_render_blob)
+EXTERN(harness_digest_capacity)
 
 MEMORY
 {
 	FLASH (rx) : ORIGIN = 0x08021400, LENGTH = 640K
+	REFERENCE (rx) : ORIGIN = 0x08100000, LENGTH = 1024K
 	DTCM (rwx) : ORIGIN = 0x20000000, LENGTH = 4K
 	RAM (rwx) : ORIGIN = 0x24000000, LENGTH = 256K
 }
@@ -47,8 +49,8 @@ SECTIONS
 	{
 		KEEP(*(.data._ZN6stmlib6Random10rng_state_E))
 	} >DTCM
-	.text : { *(.text*) *(.rodata*) . = ALIGN(4); } >FLASH
-	.data : { *(.data*) . = ALIGN(4); } >RAM AT>FLASH
+	.text : { *(.text*) *(.rodata*) . = ALIGN(4); } >REFERENCE
+	.data : { *(.data*) . = ALIGN(4); } >RAM AT>REFERENCE
 	.bss (NOLOAD) : { *(.bss*) *(COMMON) . = ALIGN(4); } >RAM
 	/DISCARD/ : { *(.init_array*) *(.fini_array*) *(.ARM.exidx*)
 	              *(.ARM.extab*) *(.init) *(.fini) *(.comment) }
