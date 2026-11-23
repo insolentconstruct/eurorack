@@ -934,9 +934,8 @@ void Ui::StepRingsPolyphony() {
 
 bool Ui::DoAction(uint8_t slot) {
   const ProfileFeature feature = settings_->profile().Action(slot);
-  // Rings and Plaits play nothing to trim: while one plays, [A]+FREEZE steps
-  // its polyphony or bank, keeping FREEZE, unless a profile puts Synth start
-  // there. Beads' synth and silence keep the profile's action.
+  // While Rings or Plaits plays, [A]+FREEZE steps its polyphony or bank
+  // unless Synth start is there; otherwise the profile's action runs.
   if (slot == ACTION_FREEZE && synth_mode_ && feature != FEATURE_SYNTH_START) {
     if (playing_synth_ == SYNTH_RINGS) {
       StepRingsPolyphony();
