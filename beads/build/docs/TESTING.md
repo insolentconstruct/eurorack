@@ -95,10 +95,13 @@ Saves without the CRC tag (every stock save, or a damaged tag) load after the ra
 
 Plaits blobs (development builds, `beads/blob/ABI.md`), in the build and
 host-test jobs; the release app does not link them:
-- `plaits_blob.mk`: version 1 and 2 header refusals, services version 2
-  (contents, the generator's address), `WAVE`/`TERR`/`PLTS` sections and their
-  faults one at a time, the directory's layout, the `PLTS` table, all or none,
-  the default layout by digest, and the synth locks. Libraries: their header
+- `plaits_blob.mk`: version 1 and 2 header refusals, synth (kind 3) header
+  refusals and fields, services version 2 (contents, the generator's
+  address), `WAVE`/`TERR`/`PLTS`/`RNGS` sections and their faults one at a
+  time (none hides another), the directory's layout, the `PLTS` table, all
+  or none, `RNGS`'s one synth blob (count, size, kind, allowlist, a model or
+  library in it, a synth in `PLTS`), the default layout by digest, and the
+  synth locks. Libraries: their header
   and export table refusals; a missing library, a wrong digest, a library
   refused for its own reason (newer services, not listed), a cycle, a later
   or the same library, no RAM or scratch for it, libraries out of order or
@@ -126,16 +129,18 @@ host-test jobs; the release app does not link them:
   as at synth entry; switch sequences with the slot and arena poisoned;
   writes from blob or library code outside the slot, arena, stack and
   outputs (a library's shared RAM included); canaries; section and library
-  faults and the lock for every `WAVE`/`PLTS` outcome. A blob's first 48
+  faults (`RNGS`'s included, with the synth blob served only when `RNGS` is
+  valid) and the lock for every `WAVE`/`PLTS` outcome. A blob's first 48
   OUT samples after each build must equal the compiled-in samples times the
   fade-in, bit for bit, and every other OUT and AUX sample must equal them. Differences
   after a return to a model that kept state compiled in, and Wave terrain's
   reads past Plaits' wavetable (`KNOWN`), are reported as findings.
 - `build_region.sh` (run by the release build): every blob, the default
-  region (the 24 stock models and their four libraries), and
-  `plaits_catalog.cc` regenerated and compared; `blob_libraries.py` checks
-  every model ID each blob serves lists exactly its catalogue libraries, built
-  there, and `blob_emu/build.sh` checks five wrong catalogues are refused.
+  region (the 24 stock models and their four libraries in `PLTS`, the Rings
+  synth in `RNGS`), and `plaits_catalog.cc` regenerated and compared;
+  `blob_libraries.py` checks every model ID each blob serves lists exactly its
+  catalogue libraries, built there, and `blob_emu/build.sh` checks five wrong
+  catalogues are refused.
 
 The Rings synth blob (development only, `beads/blob/ABI.md` "Synth blobs"):
 - `rings_synth.mk`: the core at block 12 with sanitizers: sizes, a used bank

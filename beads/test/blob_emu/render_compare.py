@@ -27,11 +27,12 @@
 #
 # Render each blob and the same engine compiled in, under Unicorn's Cortex-M7,
 # and compare every OUT and AUX word and the shared generator's state. The
-# region (WAVE and PLTS sections) is copied into flash at two placements, and
-# again with the models moved away from the libraries they call: four
-# layouts of library and dependent.
+# region (WAVE, PLTS and RNGS sections) is copied into flash at two
+# placements, and again with the models moved away from the libraries they
+# call: four layouts of library and dependent.
 # Also: model-switch sequences with poisoned storage, a write guard around
-# the blob voice's slot and arena, and the reader's faults and synth locks.
+# the blob voice's slot and arena, and the reader's faults (each section's,
+# RNGS's included) and synth locks.
 #
 #   render_compare.py OUT  (beads/test/blob_emu/build.sh's output)
 
@@ -80,8 +81,9 @@ STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'TABLE', 'MODEL', 'KIND', 'LIBRARY', 'CONTENT', 'DIRECTORY',
           'ECC', 'DEPENDENCY']
 LOCKS = ['AS_PROFILED', 'FORCE_BEADS', 'FORCE_PLAITS', 'SILENT']
-SECTIONS = ('WAVE', 'TERR', 'PLTS')
-KINDS = {'WAVE': 0x45564157, 'TERR': 0x52524554, 'PLTS': 0x53544c50}
+SECTIONS = ('WAVE', 'TERR', 'PLTS', 'RNGS')
+KINDS = {'WAVE': 0x45564157, 'TERR': 0x52524554, 'PLTS': 0x53544c50,
+         'RNGS': 0x53474e52}
 SINE = 0x08021440
 POISON = struct.pack('<I', 0x7fa5a5a5)  # a NaN no engine writes
 SLOT_SIZE = 4352
@@ -197,20 +199,23 @@ class Machine(object):
     return STATUS[status]
 
   def identity(self):
-    # PlaitsRegionIdentity: three words, three sections of four, the count.
-    raw = bytes(self.uc.mem_read(self.sym['harness_identity'], 64))
-    words = struct.unpack_from('<16I', raw, 0)
+    # PlaitsRegionIdentity: three words, four per section, the count.
+    count = 3 + 4 * len(SECTIONS)
+    raw = bytes(self.uc.mem_read(self.sym['harness_identity'],
+                                 4 * count + 4))
+    words = struct.unpack_from('<%dI' % (count + 1), raw, 0)
     sections = {}
     for i, name in enumerate(SECTIONS):
       status, address, size, crc = words[3 + 4 * i:7 + 4 * i]
       sections[name] = {'status': STATUS[status],
                         'address': '0x%08x' % address, 'size': size,
                         'crc': '0x%08x' % crc}
-    blobs = bytes(self.uc.mem_read(self.sym['harness_identity'] + 64,
-                                   words[15]))
+    blobs = bytes(self.uc.mem_read(
+        self.sym['harness_identity'] + 4 * count + 4, words[count]))
     return {'release': words[0], 'services_status': STATUS[words[1]],
             'directory_status': STATUS[words[2]], 'sections': sections,
-            'num_blobs': words[15], 'blob_status': [STATUS[b] for b in blobs]}
+            'num_blobs': words[count],
+            'blob_status': [STATUS[b] for b in blobs]}
 
   def statuses(self):
     identity = self.identity()
@@ -393,7 +398,10 @@ def load(out):
   CTX['gap_region'] = open(out + '/region-gap.bin', 'rb').read()
   CTX['gap_layout'] = json.load(open(out + '/region-gap.bin.json'))
   plts = [s for s in CTX['layout']['sections'] if s['kind'] == 'PLTS'][0]
-  CTX['digests'] = [bytes.fromhex(b['sha256']) for b in plts['blobs']]
+  rngs = [s for s in CTX['layout']['sections'] if s['kind'] == 'RNGS'][0]
+  # The synth's digest last: the cases below drop PLTS entries by index.
+  CTX['digests'] = [bytes.fromhex(b['sha256'])
+                    for b in plts['blobs'] + rngs['blobs']]
   CTX['steps'] = drive(1)
 
 
@@ -556,6 +564,7 @@ def main(argv):
   layout = CTX['layout']
   plts = plts_of(layout)
   wave = [s for s in layout['sections'] if s['kind'] == 'WAVE'][0]
+  rngs = [s for s in layout['sections'] if s['kind'] == 'RNGS'][0]
   blobs = {b['model']: b for b in plts['blobs'] if 'model' in b}
   libraries = [b for b in plts['blobs'] if 'library' in b]
   digests = CTX['digests']
@@ -726,25 +735,37 @@ def main(argv):
   def flip(data, at):
     return data[:at] + bytes([data[at] ^ 1]) + data[at + 1:]
 
+  r_off, r_size = rngs['offset'], rngs['size']
   first_blob = p_off + plts['blobs'][0]['offset']
+  synth = r_off + rngs['blobs'][0]['offset']
   guard_row = w_off + 32 + 192 * 520 + 10
   cases = [
-      ('intact', region, None, None, ('OK', 'NO_REGION', 'OK')),
+      ('intact', region, None, None, ('OK', 'NO_REGION', 'OK', 'OK')),
       ('PLTS byte flipped', flip(region, first_blob + 200), None, None,
-       ('OK', 'NO_REGION', 'CRC')),
+       ('OK', 'NO_REGION', 'CRC', 'OK')),
       ('PLTS interrupted', region[:p_off + 2000] +
        b'\xff' * (len(region) - p_off - 2000), None, None,
-       ('OK', 'NO_REGION', 'CRC')),
+       ('OK', 'NO_REGION', 'CRC', 'NO_REGION')),
       ('PLTS blob byte flipped, CRCs refreshed', crc_fix(
           flip(region, first_blob + 200), p_off, plts['size']), None, None,
-       ('OK', 'NO_REGION', 'SELECTION')),
+       ('OK', 'NO_REGION', 'SELECTION', 'OK')),
       ('WAVE guard row changed, CRC refreshed', crc_fix(
           flip(region, guard_row), w_off, wave['size']), None, None,
-       ('SELECTION', 'NO_REGION', 'OK')),
+       ('SELECTION', 'NO_REGION', 'OK', 'OK')),
       ('WAVE erased', b'\xff' * p_off + region[p_off:], None, None,
-       ('NO_REGION', 'NO_REGION', 'OK')),
-      ('stale tail after PLTS', region + b'DZSC' * 64, None, None,
-       ('OK', 'NO_REGION', 'OK')),
+       ('NO_REGION', 'NO_REGION', 'OK', 'OK')),
+      ('RNGS byte flipped', flip(region, synth + 200), None, None,
+       ('OK', 'NO_REGION', 'OK', 'CRC')),
+      ('RNGS interrupted', region[:r_off + 2000] +
+       b'\xff' * (len(region) - r_off - 2000), None, None,
+       ('OK', 'NO_REGION', 'OK', 'CRC')),
+      ('RNGS blob byte flipped, CRCs refreshed', crc_fix(
+          flip(region, synth + 200), r_off, r_size), None, None,
+       ('OK', 'NO_REGION', 'OK', 'SELECTION')),
+      ('RNGS erased', region[:r_off] + b'\xff' * r_size, None, None,
+       ('OK', 'NO_REGION', 'OK', 'NO_REGION')),
+      ('stale tail after RNGS', region + b'DZSC' * 64, None, None,
+       ('OK', 'NO_REGION', 'OK', 'OK')),
   ]
   for name, data, directory, defaults, expected in cases:
     m = machine(pbase, data=data)
@@ -754,6 +775,10 @@ def main(argv):
     print('fault: %s: %s' % (name, ' '.join(got)))
     if got != expected:
       failures.append('%s: %s, not %s' % (name, got, expected))
+    # The synth blob is served exactly when RNGS is valid.
+    served = m.word(sym['harness_synth_blob'])
+    if served != (pbase + synth if got[3] == 'OK' else 0):
+      failures.append('%s: synth blob at 0x%08x' % (name, served))
 
   # The guard row on its own: selected by a directory with its new CRC, the
   # content check refuses it.
@@ -767,27 +792,38 @@ def main(argv):
   results['faults'].append({'case': 'WAVE guard row, selected',
                             'statuses': got})
   print('fault: WAVE guard row, selected: %s' % ' '.join(got))
-  if got[0] != 'CONTENT' or got[2] != 'OK':
+  if got[0] != 'CONTENT' or got[2:] != ('OK', 'OK'):
     failures.append('WAVE guard row, selected: %s' % (got,))
 
   # Release, selection, digests, services, directory layout.
+  every = len(SECTIONS)
   more = [
-      ('another release', {'release': RELEASE - 1}, ('RELEASE', 'NO_REGION',
-                                                     'RELEASE')),
-      ('digest not listed', {'digests': digests[1:]}, ('OK', 'NO_REGION',
-                                                       'DIGEST')),
+      ('another release', {'release': RELEASE - 1},
+       ('RELEASE', 'NO_REGION', 'RELEASE', 'RELEASE')),
+      ('digest not listed', {'digests': digests[1:]},
+       ('OK', 'NO_REGION', 'DIGEST', 'OK')),
+      ('synth digest not listed', {'digests': digests[:-1]},
+       ('OK', 'NO_REGION', 'OK', 'DIGEST')),
       ('directory out of order', {'directory': layout['sections'][::-1]},
-       ('DIRECTORY',) * 3),
+       ('DIRECTORY',) * every),
       ('directory past the region', {'directory': [dict(
-          plts, offset=REGION_END - pbase - 64)]}, ('DIRECTORY',) * 3),
+          plts, offset=REGION_END - pbase - 64)]}, ('DIRECTORY',) * every),
       ('directory misaligned', {'directory': [dict(
-          plts, offset=plts['offset'] + 4)]}, ('DIRECTORY',) * 3),
+          plts, offset=plts['offset'] + 4)]}, ('DIRECTORY',) * every),
+      ('RNGS misaligned', {'directory': [plts, dict(
+          rngs, offset=rngs['offset'] + 4)]}, ('DIRECTORY',) * every),
       ('directory overlapping', {'directory': [
-          dict(wave, size=wave['size'] + 64), plts]}, ('DIRECTORY',) * 3),
-      ('PLTS only', {'directory': [plts]}, ('NO_REGION', 'NO_REGION', 'OK')),
+          dict(wave, size=wave['size'] + 64), plts]}, ('DIRECTORY',) * every),
+      ('PLTS only', {'directory': [plts]},
+       ('NO_REGION', 'NO_REGION', 'OK', 'NO_REGION')),
+      ('RNGS only', {'directory': [rngs]},
+       ('NO_REGION', 'NO_REGION', 'NO_REGION', 'OK')),
       ('another selection', {'directory': [dict(
           plts, crc='0x%08x' % (int(plts['crc'], 16) ^ 1))]},
-       ('NO_REGION', 'NO_REGION', 'SELECTION')),
+       ('NO_REGION', 'NO_REGION', 'SELECTION', 'NO_REGION')),
+      ('another RNGS selection', {'directory': [plts, dict(
+          rngs, crc='0x%08x' % (int(rngs['crc'], 16) ^ 1))]},
+       ('NO_REGION', 'NO_REGION', 'OK', 'SELECTION')),
   ]
   for name, options, expected in more:
     m = machine(pbase)
@@ -860,18 +896,21 @@ def main(argv):
   results['faults'].append({'case': 'services export byte flipped',
                             'statuses': got})
   print('fault: services export byte flipped: %s' % ' '.join(got))
-  if got != ('OK', 'NO_REGION', 'SERVICES'):
+  if got != ('OK', 'NO_REGION', 'SERVICES', 'SERVICES'):
     failures.append('services export byte flipped: %s' % (got,))
 
   # Without a profile directory: the release's default layout, by digest.
   defaults = layout['sections']
   for name, data, expected in (
-      ('defaults', region, ('OK', 'NO_REGION', 'OK')),
+      ('defaults', region, ('OK', 'NO_REGION', 'OK', 'OK')),
       ('defaults, PLTS changed', crc_fix(flip(region, first_blob + 200),
                                          p_off, plts['size']),
-       ('OK', 'NO_REGION', 'DIGEST')),
+       ('OK', 'NO_REGION', 'DIGEST', 'OK')),
+      ('defaults, RNGS changed', crc_fix(flip(region, synth + 200),
+                                         r_off, r_size),
+       ('OK', 'NO_REGION', 'OK', 'DIGEST')),
       ('defaults, erased region', b'\xff' * len(region),
-       ('NO_REGION', 'NO_REGION', 'NO_REGION'))):
+       ('NO_REGION',) * len(SECTIONS))):
     m = machine(pbase, data=data)
     m.setup(layout, digests, defaults=defaults)
     got = m.statuses()

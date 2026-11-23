@@ -36,7 +36,7 @@ import json
 import sys
 
 KINDS = {'WAVE': 'kPlaitsSectionWave', 'TERR': 'kPlaitsSectionTerrain',
-         'PLTS': 'kPlaitsSectionPlaits'}
+         'PLTS': 'kPlaitsSectionPlaits', 'RNGS': 'kPlaitsSectionRings'}
 
 
 def digest(hex_text, indent):

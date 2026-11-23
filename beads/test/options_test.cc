@@ -37,6 +37,7 @@
 #include "beads/test/test_checker.h"
 
 #define private public
+#include "beads/blob/synth_choice.h"
 #include "beads/settings.h"
 #include "beads/ui.h"
 #include "beads/normalization_detector.h"
@@ -1092,29 +1093,103 @@ void TestCloudsStorage() {
 void TestSynthEngineStorage() {
   test_checker.Start("TestSynthEngineStorage");
   Rig r(false);
-  CHECK(!r.settings.plaits_synth() && !r.ui.plaits_synth());
-  CheckRecordByte(FEATURE_SYNTH, 2);
+  CHECK(!r.settings.synth() && !r.ui.synth());
+  CheckRecordByte(FEATURE_SYNTH, 3);
   // Page 3, DRY/WET knob: two halves with a dead band, previewed live.
-  r.settings.set_plaits_synth(false);
+  r.settings.set_synth(SYNTH_BEADS);
   r.settings.SaveState();
   r.ui.LoadOptions();
   r.EnterPage(2);
   r.pot = .9f;
   r.Tick(1, true);
-  CHECK(r.ui.options_.Value(FEATURE_SYNTH) && r.ui.plaits_synth());
-  CHECK(!r.settings.plaits_synth());
+  CHECK(r.ui.options_.Value(FEATURE_SYNTH) && r.ui.synth());
+  CHECK(!r.settings.synth());
   r.pot = .5f;
   r.Tick(1, true);
   CHECK(r.ui.options_.Value(FEATURE_SYNTH));
   r.pot = .46f;
   r.Tick(1, true);
-  CHECK(!r.ui.options_.Value(FEATURE_SYNTH) && !r.ui.plaits_synth());
+  CHECK(!r.ui.options_.Value(FEATURE_SYNTH) && !r.ui.synth());
   r.pot = .54f;
   r.Tick(1001, true);
-  CHECK(r.settings.plaits_synth());
+  CHECK(r.settings.synth());
   Settings loaded;
-  CHECK(loaded.Init(false) && loaded.plaits_synth());
+  CHECK(loaded.Init(false) && loaded.synth());
   CHECK(StoredByte(loaded, FEATURE_SYNTH) == 1);
+}
+
+// Page 3's Synth offers the playable synths in value order: three zones,
+// two halves, or one taken by any edit; a saved synth outside them stays
+// until an edit.
+void TestSynthPlayableSets() {
+  test_checker.Start("TestSynthPlayableSets");
+  const uint8_t all = SynthMask(true, true, true);
+  struct Case {
+    uint8_t playable;
+    uint8_t low;
+    uint8_t middle;
+    uint8_t high;
+  } cases[] = {
+    { all, SYNTH_BEADS, SYNTH_PLAITS, SYNTH_RINGS },
+    { SynthMask(true, true, false), SYNTH_BEADS, SYNTH_PLAITS, SYNTH_PLAITS },
+    { SynthMask(true, false, true), SYNTH_BEADS, SYNTH_RINGS, SYNTH_RINGS },
+    { SynthMask(false, true, true), SYNTH_PLAITS, SYNTH_RINGS, SYNTH_RINGS },
+    { SynthMask(false, false, true), SYNTH_RINGS, SYNTH_RINGS, SYNTH_RINGS },
+    { SynthMask(true, false, false), SYNTH_BEADS, SYNTH_BEADS, SYNTH_BEADS },
+  };
+  for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c) {
+    Rig r(false);
+    r.ui.set_playable_synths(cases[c].playable);
+    r.EnterPage(2);
+    const uint32_t writes = test_writes;
+    // Low, then the middle third (a dead band for halves), then high.
+    r.pot = .1f;
+    r.Tick(1, true);
+    CHECK(r.ui.synth() == cases[c].low);
+    r.pot = .45f;
+    r.Tick(1, true);
+    r.pot = .5f;
+    r.Tick(1, true);
+    const bool halves = cases[c].middle == cases[c].high &&
+        cases[c].low != cases[c].high;
+    CHECK(r.ui.synth() == (halves ? cases[c].low : cases[c].middle));
+    r.pot = .9f;
+    r.Tick(1, true);
+    CHECK(r.ui.options_.Value(FEATURE_SYNTH) == cases[c].high);
+    CHECK(r.ui.synth() == cases[c].high);
+    CHECK(r.settings.synth() == SYNTH_BEADS);
+    r.Tick(1001, true);
+    CHECK(r.settings.synth() == cases[c].high);
+    // Saved Beads: only a new value writes.
+    CHECK((test_writes == writes) == (cases[c].high == SYNTH_BEADS));
+    // The indication is the value's colour: green, yellow, red.
+    const OptionValue& indication = r.ui.options_.indication();
+    CHECK(indication.setting == FEATURE_SYNTH);
+    CHECK(indication.value == cases[c].high);
+    CHECK(!memcmp(&indication.color, &kOptionColors[cases[c].high],
+        sizeof(Leds::Color)));
+    Settings loaded;
+    CHECK(loaded.Init(false) && loaded.synth() == cases[c].high);
+  }
+  // Saved Rings on a unit without it: kept through a page commit.
+  Rig r(false);
+  r.settings.set_synth(SYNTH_RINGS);
+  r.settings.SaveOptions();
+  r.ui.LoadOptions();
+  CHECK(r.ui.synth() == SYNTH_RINGS);
+  r.EnterPage(2);
+  r.feedback = .9f;
+  r.Tick(1001, true);
+  CHECK(r.settings.spectral());
+  CHECK(r.settings.synth() == SYNTH_RINGS);
+  CHECK(StoredByte(r.settings, FEATURE_SYNTH) == SYNTH_RINGS);
+  // With Plaits alone, the saved Rings stays until the knob selects Plaits.
+  r.ui.set_playable_synths(SynthMask(false, true, false));
+  r.Tick(1001, true);
+  CHECK(r.settings.synth() == SYNTH_RINGS);
+  r.pot = .1f;
+  r.Tick(1001, true);
+  CHECK(r.settings.synth() == SYNTH_PLAITS);
 }
 
 // Spectral and the synth start are separate record bytes.
@@ -1987,7 +2062,7 @@ void TestOptionsKnobsAndSettling() {
           ? r.settings.self_play_on_request() : setting == FEATURE_INTERVALS
           ? int(r.settings.random_intervals()) : setting == FEATURE_FROZEN
           ? r.settings.evolving_feedback() : setting == FEATURE_SYNTH
-          ? r.settings.plaits_synth() : setting == FEATURE_ATTACKS
+          ? r.settings.synth() : setting == FEATURE_ATTACKS
           ? int(r.settings.attack_mode()) : setting == FEATURE_BRIGHTNESS
           ? r.settings.FeatureValue(FEATURE_BRIGHTNESS)
           : setting == FEATURE_SEED_LATCH
@@ -3126,13 +3201,13 @@ void PlaitsBankProfile(uint8_t* b, int value) {
 
 // Plays the Plaits (or wavetable) synth with FREEZE latched.
 void PlaySynth(Rig* r, bool synth_mode, bool plaits) {
-  r->settings.set_plaits_synth(plaits);
+  r->settings.set_synth(plaits ? SYNTH_PLAITS : SYNTH_BEADS);
   r->ui.set_no_input(synth_mode);
   r->ui.set_synth_mode(synth_mode);
   r->Down(SWITCH_FREEZE);
   r->Up(SWITCH_FREEZE);
   CHECK(r->ui.freeze_button_state_);
-  CHECK(r->ui.plaits_synth() == plaits);
+  CHECK(r->ui.synth() == plaits);
 }
 
 // [A]+FREEZE steps the Plaits bank in Plaits synth play (#190), keeping
@@ -3259,6 +3334,115 @@ void TestPlaitsBankGesture() {
   }
 }
 
+// With Rings playing [A]+FREEZE steps its polyphony, 1, 2, 4 voices, in
+// Rings' colours, keeping FREEZE; Plaits keeps its bank step and a profile's
+// Synth start keeps [A]+FREEZE.
+void TestRingsPolyphonyGesture() {
+  test_checker.Start("TestRingsPolyphonyGesture");
+  {
+    Rig r(false);
+    r.ui.set_playable_synths(SynthMask(true, true, true));
+    CHECK(r.settings.profile().adjustable(FEATURE_RINGS_POLYPHONY));
+    PlaySynth(&r, true, false);
+    r.settings.set_synth(SYNTH_RINGS);
+    r.ui.set_rings_playing(true);
+    r.Tick(1, true);
+    CHECK(r.ui.synth() == SYNTH_RINGS);
+    const uint8_t media = r.settings.state().media;
+    const uint8_t steps[] = { 1, 2, 0, 1, 2 };
+    const uint8_t voices[] = { 1, 2, 4 };
+    for (int i = 0; i < 5; ++i) {
+      const uint32_t writes = test_writes;
+      r.Down(SWITCH_MEDIA);
+      r.Down(SWITCH_FREEZE);
+      CHECK(r.settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == steps[i]);
+      CHECK(r.settings.rings_polyphony() == voices[steps[i]]);
+      CHECK(test_writes == writes + kRecordWords);
+      CHECK(!r.ui.trim_flag_ && r.ui.freeze_button_state_);
+      // Rings: red for four voices or more, green for two or fewer.
+      const int poly = voices[steps[i]];
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == (poly >= 2 ? 255 : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == (poly <= 2 ? 255 : 0));
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] == 0);
+      r.Up(SWITCH_FREEZE);
+      r.Up(SWITCH_MEDIA);
+      CHECK(r.settings.state().media == media);
+      CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 0);
+      Settings loaded;
+      CHECK(loaded.Init(false));
+      CHECK(loaded.FeatureValue(FEATURE_RINGS_POLYPHONY) == steps[i]);
+    }
+    r.Tick(600, true);
+    const Leds::Color quality = r.ui.media_palette_[media];
+    CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
+    // Rings not playing (a fallback plays): buffer trim, no step.
+    r.ui.set_rings_playing(false);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.trim_flag_);
+    CHECK(r.settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == 2);
+  }
+  // Plaits playing: the bank steps, the polyphony stays.
+  {
+    Rig r(false);
+    r.ui.set_playable_synths(SynthMask(true, true, true));
+    PlaySynth(&r, true, true);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.settings.FeatureValue(FEATURE_PLAITS_BANK) == 1);
+    CHECK(r.settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == 0);
+  }
+  // Synth start on [A]+FREEZE keeps it, to stop the synth.
+  {
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_SYNTH_START, 0, 0, ACTION_FREEZE);
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    CHECK(r.settings.profile().adjustable(FEATURE_RINGS_POLYPHONY));
+    r.settings.set_self_play_on_request(true);
+    PlaySynth(&r, true, false);
+    r.ui.set_rings_playing(true);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.ui.self_play_requested());
+    CHECK(r.settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == 0);
+  }
+}
+
+// A Synth action steps through the playable synths only.
+void TestSynthActionSteps() {
+  test_checker.Start("TestSynthActionSteps");
+  struct Case {
+    uint8_t playable;
+    uint8_t steps[3];
+  } cases[] = {
+    { SynthMask(true, true, true), { 1, 2, 0 } },
+    { SynthMask(true, false, true), { 2, 0, 2 } },
+    { SynthMask(false, true, true), { 1, 2, 1 } },
+    { SynthMask(true, true, false), { 1, 0, 1 } },
+    { SynthMask(false, false, true), { 2, 2, 2 } },
+  };
+  uint8_t b[kProfileSize];
+  CustomProfile(b, FEATURE_SYNTH, 0, 0, ACTION_SEED);
+  for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c) {
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.ui.set_playable_synths(cases[c].playable);
+    for (int i = 0; i < 3; ++i) {
+      const uint8_t value = cases[c].steps[i];
+      r.Down(SWITCH_MEDIA);
+      r.Down(SWITCH_SEED);
+      CHECK(r.settings.synth() == value && r.ui.synth() == value);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] == kOptionColors[value].r);
+      CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] == kOptionColors[value].g);
+      r.Up(SWITCH_SEED);
+      r.Up(SWITCH_MEDIA);
+      Settings loaded;
+      CHECK(loaded.Init(false, b) && loaded.synth() == value);
+    }
+  }
+}
+
 void TestProfileAmounts() {
   test_checker.Start("TestProfileAmounts");
   uint8_t b[kProfileSize];
@@ -3336,7 +3520,7 @@ bool SawToggleValue(Rig* r, ProfileFeature feature) {
     case FEATURE_FROZEN:
       return r->ui.evolving_feedback();
     case FEATURE_SYNTH:
-      return r->ui.plaits_synth();
+      return r->ui.synth();
     default:
       return r->settings.FeatureValue(feature);
   }
@@ -3354,7 +3538,8 @@ void TestProfileToggles() {
   for (int t = 0; t < 5; ++t) {
     const ProfileFeature feature = toggles[t];
     CHECK(kFeatureDefinitions[feature].action);
-    CHECK(kFeatureDefinitions[feature].values == 2);
+    CHECK(kFeatureDefinitions[feature].values ==
+        (feature == FEATURE_SYNTH ? 3 : 2));
     CHECK(kFeatureDefinitions[feature].field != kNoField);
     for (int slot = ACTION_SEED; slot <= ACTION_FREEZE; ++slot) {
       const Switch button = slot == ACTION_SEED ? SWITCH_SEED : SWITCH_FREEZE;
@@ -4306,6 +4491,7 @@ int main() {
   TestFrozenFeedbackStorage();
   TestAttackStorage();
   TestSynthEngineStorage();
+  TestSynthPlayableSets();
   TestPitchStorage();
   TestSelfPlayStorage();
   TestEngineStorage();
@@ -4352,6 +4538,8 @@ int main() {
   TestBetaOptionPages();
   TestProfileActions();
   TestPlaitsBankGesture();
+  TestRingsPolyphonyGesture();
+  TestSynthActionSteps();
   TestProfileAmounts();
   TestProfileToggles();
   TestTogglesInPlaitsPlay();

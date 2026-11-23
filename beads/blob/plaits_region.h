@@ -24,8 +24,9 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The region after the app: WAVE, TERR and PLTS sections, each valid on its
-// own; a directory in the profile or the release's default layout says where.
+// The region after the app: WAVE, TERR, PLTS and RNGS sections, each valid on
+// its own; a directory in the profile or the release's default layout says
+// where.
 
 #ifndef BEADS_BLOB_PLAITS_REGION_H_
 #define BEADS_BLOB_PLAITS_REGION_H_
@@ -41,6 +42,7 @@ const uint32_t kPlaitsSectionVersion = 1;
 const uint32_t kPlaitsSectionWave = 0x45564157;  // WAVE
 const uint32_t kPlaitsSectionTerrain = 0x52524554;  // TERR
 const uint32_t kPlaitsSectionPlaits = 0x53544c50;  // PLTS
+const uint32_t kPlaitsSectionRings = 0x53474e52;  // RNGS
 const uint32_t kPlaitsRegionEnd = 0x08100000;
 const size_t kMaxPlaitsRegionBlobs = 128;
 // Library RAM: the records, then each library's RAM, on 32 bytes.
@@ -61,6 +63,7 @@ enum PlaitsSection {
   PLAITS_SECTION_WAVE,
   PLAITS_SECTION_TERRAIN,
   PLAITS_SECTION_PLAITS,
+  PLAITS_SECTION_RINGS,
   PLAITS_SECTION_LAST
 };
 
@@ -175,6 +178,12 @@ class PlaitsRegion {
   }
   const uint8_t* library(size_t index) const;
 
+  // The checked synth blob of a valid RNGS, or NULL. The app checks its ID,
+  // RAM, control block and block size.
+  inline const uint8_t* synth_blob() const {
+    return section(PLAITS_SECTION_RINGS);
+  }
+
   inline bool ok(PlaitsSection section) const {
     return identity_.sections[section].status == PLAITS_BLOB_OK;
   }
@@ -200,6 +209,13 @@ class PlaitsRegion {
       const uint8_t (*digests)[kPlaitsBlobDigestSize],
       size_t num_digests);
   PlaitsBlobStatus ReadBlobs(
+      const uint8_t* data,
+      uint32_t size,
+      uint32_t count,
+      const PlaitsBlobServices* services,
+      const uint8_t (*digests)[kPlaitsBlobDigestSize],
+      size_t num_digests);
+  PlaitsBlobStatus ReadSynth(
       const uint8_t* data,
       uint32_t size,
       uint32_t count,

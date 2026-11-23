@@ -6,7 +6,7 @@
     {"id": 4, "symbol": "PROCESSOR", "values": ["Granular (Stock)", "Spectral"]},
     {"id": 5, "symbol": "LIMITER", "values": ["Stock", "Fast release", "Off"]},
     {"id": 6, "symbol": "FROZEN", "values": ["Stock", "Evolving"]},
-    {"id": 7, "symbol": "SYNTH", "values": ["Beads (Stock)", "Plaits"]},
+    {"id": 7, "symbol": "SYNTH", "values": ["Beads (Stock)", "Plaits", "Rings"]},
     {"id": 8, "symbol": "ATTACKS", "values": ["Off", "Snap", "Snap and trigger"]},
     {"id": 9, "symbol": "SYNTH_START", "values": ["Automatic (Stock)", "Manual"]},
     {"id": 10, "symbol": "INTERVALS", "values": ["Free (Stock)", "Fifths and octaves", "Recent notes"]},
@@ -41,6 +41,7 @@
     {"id": 39, "symbol": "START_QUALITY", "values": ["Keep current", "Bright digital", "Cold digital", "Sunny tape", "Scorched cassette"]},
     {"id": 40, "symbol": "GAIN_KNOB", "values": ["Not on a knob"]},
     {"id": 41, "symbol": "RESONATOR", "values": ["Off (stock)", "After the grains", "Before the buffer"]},
+    {"id": 42, "symbol": "RINGS_POLYPHONY", "values": ["1", "2", "4"]},
     {"id": 43, "symbol": "RESONATOR_MATERIAL", "values": ["Wood", "String", "Glass", "Bell", "Marimba", "Drum", "Bowl", "Gong"]},
     {"id": 44, "symbol": "RESONATOR_RING", "values": ["Short", "Medium", "Long", "Very long"]},
     {"id": 45, "symbol": "RESONATOR_STRUCTURE", "values": null},
@@ -50,9 +51,7 @@
     {"id": 49, "symbol": "RESONATOR_AMOUNT", "values": null}
   ],
   "records": [
-    {"version": 1, "saved": [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13], [7, 14], [8, 15], [9, 16], [10, 17], [11, 18], [12, 19], [18, 20], [21, 21], [23, 22], [31, 23], [41, 24], [43, 25], [44, 26]]}
+    {"version": 1, "saved": [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13], [7, 14], [8, 15], [9, 16], [10, 17], [11, 18], [12, 19], [18, 20], [21, 21], [23, 22], [31, 23], [41, 24], [43, 25], [44, 26], [42, 27]]}
   ],
-  "reserved": [
-    {"id": 42, "for": "Rings polyphony"}
-  ]
+  "reserved": []
 }

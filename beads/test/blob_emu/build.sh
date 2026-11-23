@@ -22,9 +22,9 @@
 #
 # See http://creativecommons.org/licenses/MIT/ for more information.
 #
-# Build the emulator harness, the blobs and their region (WAVE and PLTS), in
-# the build image from the Drizzlet root, with the library check's negative
-# controls; then the services link's.
+# Build the emulator harness, the blobs and their region (WAVE, PLTS and
+# RNGS), in the build image from the Drizzlet root, with the library check's
+# negative controls; then the services link's.
 #   beads/test/blob_emu/build.sh OUT
 set -euo pipefail
 out=${1:?usage: build.sh OUT}
@@ -61,7 +61,8 @@ PYCODE
 done
 bash beads/build/tools/build_blob.sh "$out/blob" pos_sine \
   beads/test/blob_gate/pos_sine.cc
-# Every blob: the stock models and their libraries, the proof's models.
+# Every blob: the stock models and their libraries, the proof's models, the
+# Rings synth (RNGS).
 blobs=("$out"/blob/*.bin)
 python3 beads/build/tools/blob_sections.py "$out/region.bin" 20261121 \
   --wave beads/resources.cc "${blobs[@]}"

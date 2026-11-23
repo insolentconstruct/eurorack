@@ -96,6 +96,12 @@ class Ui {
     
     return frozen || calibrating || testing;
   }
+
+  // As above, without FREEZE: the Rings synth reconfigures while sustained.
+  inline bool calibrating_or_testing() const {
+    return (mode_ >= MODE_CALIBRATION_1 && mode_ <= MODE_CALIBRATION_4) || \
+        mode_ == MODE_FACTORY_TEST;
+  }
   
   inline bool pressed_immediate(Switch s) const {
     return switches_.pressed_immediate(s);
@@ -147,7 +153,8 @@ class Ui {
   OutputLimiterMode output_limiter_mode() const;
   inline bool clouds_style() const { return clouds_style_; }
   inline bool evolving_feedback() const { return evolving_feedback_; }
-  inline bool plaits_synth() const { return plaits_synth_; }
+  // The selected synth, previewed while its page is open; a SynthEngine.
+  inline uint8_t synth() const { return synth_; }
   inline AttackMode attack_mode() const { return attack_mode_; }
   inline float attack_threshold() const { return attack_threshold_; }
   inline DelayMode delay_mode() const { return delay_mode_; }
@@ -181,10 +188,15 @@ class Ui {
   
   inline void set_no_input(bool no_input) { no_input_ = no_input; }
   inline void set_synth_mode(bool synth_mode) { synth_mode_ = synth_mode; }
-#ifdef PLAITS_BLOBS
-  // Neither synth's region is intact: synth mode is silent.
+  // The synths Synth offers, as SynthMask bits.
+  inline void set_playable_synths(uint8_t playable) {
+    playable_synths_ = playable;
+    options_.set_playable_synths(playable);
+  }
+  // [A]+FREEZE steps Rings' polyphony while it plays.
+  inline void set_rings_playing(bool playing) { rings_playing_ = playing; }
+  // No playable synth: synth mode is silent.
   inline void set_synth_fault(bool fault) { synth_fault_ = fault; }
-#endif  // PLAITS_BLOBS
   inline bool self_play_requested() const { return self_play_requested_; }
   inline void ClearSelfPlayRequest() { self_play_requested_ = false; }
 
@@ -199,6 +211,7 @@ class Ui {
  private:
   void FlashOptionsPage();
   void StepPlaitsBank();
+  void StepRingsPolyphony();
   // Returns true when the action is handled.
   bool DoAction(uint8_t slot);
 
@@ -229,9 +242,9 @@ class Ui {
   bool trim_flag_;
   bool no_input_;
   bool synth_mode_;
-#ifdef PLAITS_BLOBS
+  uint8_t playable_synths_;
+  bool rings_playing_;
   bool synth_fault_;
-#endif  // PLAITS_BLOBS
   bool self_play_requested_;
   bool freeze_button_state_;
   bool freeze_led_state_;
@@ -264,7 +277,7 @@ class Ui {
   volatile OutputLimiterMode output_limiter_mode_;
   volatile bool clouds_style_;
   volatile bool evolving_feedback_;
-  volatile bool plaits_synth_;
+  volatile uint8_t synth_;
   volatile AttackMode attack_mode_;
   float attack_threshold_;
   volatile bool spectral_;

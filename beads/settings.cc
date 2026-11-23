@@ -83,7 +83,7 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   0,  // Start quality.
   0,  // Gain knob.
   24,  // Resonator.
-  0,  // Reserved.
+  27,  // Rings polyphony.
   25,  // Resonator material.
   26,  // Resonator ring.
   0,  // Resonator structure.

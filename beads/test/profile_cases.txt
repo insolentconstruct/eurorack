@@ -17,8 +17,10 @@ accept fixed-only-features : 30 1 1 0 0 0, 41 1 2 0 0 0, 39 1 4 0 0 0
 accept brightness-last-slot : 18 2 2 21 0 0
 accept saved-without-control : 23 2 1 0 0 0
 accept time-modulation-on-freeze : 23 2 0 0 0 2
+accept rings-polyphony-four : 42 2 2 0 0 0
+accept synth-rings-fixed : 7 1 2 0 0 0
 reject id-zero : 0 1 0 0 0 0
-reject unknown-id : 42 1 0 0 0 0
+reject unknown-id : 50 1 0 0 0 0
 reject repeated-id : 2 1 1 0 0 0, 2 1 0 0 0 0
 reject state-3 : 2 3 0 0 0 0
 reject value-out-of-range : 2 1 2 0 0 0
@@ -32,6 +34,8 @@ reject action-4 : 4 2 0 0 0 4
 reject action-while-fixed : 4 1 1 0 0 1
 reject adjustable-without-control : 30 2 1 0 0 0
 reject plaits-bank-fixed : 31 1 0 0 0 0
+reject rings-polyphony-out-of-range : 42 2 3 0 0 0
+reject rings-polyphony-fixed : 42 1 0 0 0 0
 reject synth-start-without-gesture : 9 2 0 9 0 0
 reject hold-without-synth-start : 13 2 0 0 0 3
 reject synth-on-freeze : 7 2 0 8 0 2

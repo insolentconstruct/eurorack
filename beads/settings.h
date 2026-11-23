@@ -173,10 +173,16 @@ class Settings {
     SetFeatureValue(FEATURE_DELAY, mode);
   }
 
-  inline bool plaits_synth() const { return values_[FEATURE_SYNTH]; }
+  // A SynthEngine value; EffectiveSynth gives the one that plays.
+  inline uint8_t synth() const { return values_[FEATURE_SYNTH]; }
 
-  inline void set_plaits_synth(bool plaits) {
-    values_[FEATURE_SYNTH] = plaits;
+  inline void set_synth(uint8_t synth) {
+    SetFeatureValue(FEATURE_SYNTH, synth);
+  }
+
+  // One, two or four voices.
+  inline uint8_t rings_polyphony() const {
+    return 1 << values_[FEATURE_RINGS_POLYPHONY];
   }
 
   inline RandomIntervals random_intervals() const {

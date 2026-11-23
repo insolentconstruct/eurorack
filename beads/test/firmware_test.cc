@@ -40,9 +40,11 @@
 #define private public
 #define protected public
 #include "beads/background_buffer_backup.h"
+#include "beads/blob/synth_choice.h"
 #include "beads/calibrator.h"
 #include "beads/cv_reader.h"
 #include "beads/dsp/plaits_synth.h"
+#include "beads/dsp/rings_synth.h"
 #include "beads/dsp/processor.h"
 #include "beads/dsp/synth.h"
 #include "beads/factory_test.h"
@@ -75,6 +77,15 @@ extern FactoryTest factory_test;
 extern GainControl gain_control;
 extern NormalizationDetector normalization_detector;
 extern PlaitsSynth plaits_synth;
+extern RingsSynth rings_synth;
+extern uint8_t playable_synths;
+extern SynthEngine playing_synth;
+extern SynthEngine bank_owner;
+// The Rings stand-in's calls, and whether Process is running.
+bool in_audio;
+uint32_t configure_calls;
+uint32_t render_calls;
+uint32_t configure_in_audio;
 extern Processor processor;
 extern Settings settings;
 extern Synth synth;
@@ -199,7 +210,9 @@ struct Rig {
           | (test_freeze_input ? Codec::EVENT_FREEZE : 0));
     }
     if (codec.callback_) {
+      in_audio = true;
       codec.callback_(events, in, out, codec.block_size_);
+      in_audio = false;
       if (peaks) {
         int32_t peak = 0;
         for (size_t i = 0; i < codec.block_size_; ++i) {
@@ -1190,7 +1203,7 @@ void TestCustomScaleCallbackChain() {
     CHECK(synth.wavetable_granular_player_.pitch_scale_ == 15);
     CHECK(fabsf(NextSynthGrainSemitones(&r) - 3.25f) < 0.01f);
   }
-  settings.set_plaits_synth(true);
+  settings.set_synth(SYNTH_PLAITS);
   r.Settle();
   r.Tick(50, true);
   CHECK(plaits_synth.pitch_scale_ == 15);
@@ -1340,16 +1353,153 @@ void TestCloudsSwitch() {
 
 // Byte 21 picks the synth. The Plaits voices borrow the start of the first
 // delay bank only in synth mode; leaving it clears what they used.
+// A stand-in for the Rings blob: its RAM holds the target it was given.
+
+void* HostInit(uint8_t* ram, size_t ram_size, const PlaitsBlobServices* s) {
+  CHECK(ram[0] == 0 && ram[ram_size - 1] == 0);
+  return ram;
+}
+
+bool HostConfigure(void* context, const RingsSynthTarget* target,
+                   const RingsSynthControls* controls, bool entry) {
+  ++configure_calls;
+  configure_in_audio += in_audio;
+  *static_cast<RingsSynthTarget*>(context) = *target;
+  return true;
+}
+
+void HostRender(void* context, RingsSynthControls* controls, float* out,
+                float* aux, size_t size) {
+  ++render_calls;
+  CHECK(bank_owner == SYNTH_RINGS);
+  for (size_t i = 0; i < size; ++i) {
+    out[i] = aux[i] = (render_calls & 1) ? 0.25f : -0.25f;
+  }
+}
+
+inline const RingsSynthTarget& CoreTarget(const uint8_t* ram) {
+  return *reinterpret_cast<const RingsSynthTarget*>(ram);
+}
+
+// An interrupt the moment the codec resumes.
+void BlockOnResume() {
+  RigBlock(current_rig);
+}
+
+// Rings through those entries: bank 0 changes owner only faded out with the
+// codec paused; configure never runs in Process.
+void TestRingsSynthOwnership() {
+  test_checker.Start("TestRingsSynthOwnership");
+  extern uint8_t delay_buffer_1[];
+  Rig r(false, true);
+  settings.set_synth(SYNTH_RINGS);
+  settings.SaveState();
+  r.Reboot(false);
+  rings_synth.set_entries(&HostInit, &HostConfigure, &HostRender);
+  playable_synths = SynthMask(true, true, true);
+  ui.set_playable_synths(playable_synths);
+  playing_synth = EffectiveSynth(ui.synth(), playable_synths);
+  CHECK(playing_synth == SYNTH_RINGS);
+  configure_calls = render_calls = configure_in_audio = 0;
+  // A used bank: Rings must start from zero.
+  memset(delay_buffer_1, 0xa5, 256 * 1024);
+  r.Settle();
+  r.Advance(10001);
+  CHECK(synth_mode && bank_owner == SYNTH_RINGS);
+  CHECK(configure_calls == 1);
+  r.Settle();
+  CHECK(render_calls > 0);
+  codec.on_resume_ = &BlockOnResume;
+
+  // FEEDBACK into Disastrous peace: configured by main, faded, once.
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 65535;
+  r.Tick(300, true);
+  CHECK(configure_calls == 2);
+  CHECK(CoreTarget(delay_buffer_1).core == RINGS_CORE_STRING_SYNTH);
+  CHECK(codec.callback_ == &Process);
+
+  // Rings -> Plaits takes bank 0; Rings renders no more.
+  settings.set_synth(SYNTH_PLAITS);
+  ui.LoadOptions();
+  // Never a synth on another's bank, even for one block.
+  for (int i = 0; i < 400; ++i) {
+    RunMainLoop();
+    CHECK(playing_synth != SYNTH_PLAITS || bank_owner == SYNTH_PLAITS);
+    r.Block();
+  }
+  CHECK(playing_synth == SYNTH_PLAITS && bank_owner == SYNTH_PLAITS);
+  const uint32_t renders = render_calls;
+  r.Tick(100, true);
+  CHECK(render_calls == renders);
+  // Plaits -> Beads keeps Plaits' bank; Beads -> Rings rebuilds Rings.
+  settings.set_synth(SYNTH_BEADS);
+  ui.LoadOptions();
+  r.Tick(20, true);
+  CHECK(playing_synth == SYNTH_BEADS && bank_owner == SYNTH_PLAITS);
+  settings.set_synth(SYNTH_RINGS);
+  ui.LoadOptions();
+  for (int i = 0; i < 400; ++i) {
+    RunMainLoop();
+    CHECK(playing_synth != SYNTH_RINGS || bank_owner == SYNTH_RINGS);
+    r.Block();
+  }
+  CHECK(playing_synth == SYNTH_RINGS && bank_owner == SYNTH_RINGS);
+  CHECK(configure_calls == 3);
+  CHECK(render_calls > renders);
+  CHECK(codec.callback_ == &Process);
+
+  // Polyphony from feature 42, applied off the interrupt.
+  settings.SetFeatureValue(FEATURE_RINGS_POLYPHONY, 2);
+  r.Tick(300, true);
+  CHECK(CoreTarget(delay_buffer_1).polyphony == 4);
+  CHECK(configure_in_audio == 0);
+
+  // FREEZE sustains Rings; polyphony and FEEDBACK changes still apply.
+  ui.set_freeze_button_state(true);
+  r.Tick(20, true);
+  CHECK(ui.should_ignore_state_change());
+  settings.SetFeatureValue(FEATURE_RINGS_POLYPHONY, 0);
+  for (int i = 0; i < 100 && !rings_synth.configure_pending(); ++i) {
+    r.Tick(1, true);
+  }
+  CHECK(rings_synth.configure_pending());
+  // A queued self-play request is dropped under FREEZE, as before.
+  ui.self_play_requested_ = true;
+  RunMainLoop();
+  CHECK(!ui.self_play_requested());
+  r.Tick(300, true);
+  CHECK(CoreTarget(delay_buffer_1).polyphony == 1);
+  // The unpatched ASSIGN input's probe would move FEEDBACK between zones.
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  PotsAdc::values_[POTS_ADC_CHANNEL_FEEDBACK] = 0;
+  r.Tick(1000, true);
+  CHECK(CoreTarget(delay_buffer_1).core == RINGS_CORE_PART);
+  CHECK(ui.should_ignore_state_change());
+  CHECK(configure_in_audio == 0);
+  CHECK(codec.callback_ == &Process);
+  ui.set_freeze_button_state(false);
+  r.Tick(20, true);
+
+  // Without Rings, a Rings selection plays Beads' synth, never silence.
+  playable_synths = SynthMask(true, true, false);
+  ui.set_playable_synths(playable_synths);
+  r.Tick(20, true);
+  CHECK(playing_synth == SYNTH_BEADS);
+  CHECK(settings.synth() == SYNTH_RINGS);
+  rings_synth.set_entries(NULL, NULL, NULL);
+  codec.on_resume_ = NULL;
+}
+
 void TestPlaitsSynthSelection() {
   test_checker.Start("TestPlaitsSynthSelection");
   extern uint8_t delay_buffer_1[];
   extern uint8_t delay_buffer_2[];
   for (int plaits = 0; plaits < 2; ++plaits) {
     Rig r(false, true);
-    settings.set_plaits_synth(plaits);
+    settings.set_synth(plaits);
     settings.SaveState();
     r.Reboot(false);
-    CHECK(ui.plaits_synth() == bool(plaits));
+    CHECK(ui.synth() == bool(plaits));
     r.Settle();
     CHECK(!synth_mode);
     r.Advance(10001);
@@ -1712,7 +1862,7 @@ void TestSynthStopClearsReverb() {
               PROFILE_OFF);
           CHECK(settings.FeatureValue(FEATURE_SYNTH_TAIL) == 0);
         }
-        settings.set_plaits_synth(plaits);
+        settings.set_synth(plaits);
         ui.LoadOptions();
         PotsAdc::values_[POTS_ADC_CHANNEL_REVERB] = 60000;
         StartSelfPlay(&r, path == 1);
@@ -2065,7 +2215,7 @@ void TestAttackTriggers() {
   for (int plaits = 0; plaits < 2; ++plaits) {
     Rig s(false, true);
     settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
-    settings.set_plaits_synth(plaits);
+    settings.set_synth(plaits);
     settings.SaveState();
     s.Reboot(false);
     PotsAdc::values_[POTS_ADC_CHANNEL_DENSITY] = plaits ? 32768 : 16000;
@@ -2258,7 +2408,7 @@ void TestPlaitsBankProfile() {
   Rig r(false, true);
   // ASSIGN CV at 0 V: the host probe would otherwise modulate FEEDBACK.
   r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
-  settings.set_plaits_synth(true);
+  settings.set_synth(SYNTH_PLAITS);
   settings.SaveState();
   StartPlaits(&r);
   CHECK(PlaitsModel(&r, 65535) == 15);
@@ -2289,7 +2439,7 @@ void TestPlaitsBankProfile() {
   FlashPlaitsBankProfile(2);
   Rig blank(false, true);
   blank.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
-  settings.set_plaits_synth(true);
+  settings.set_synth(SYNTH_PLAITS);
   settings.SaveState();
   StartPlaits(&blank);
   CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == 2);
@@ -2322,7 +2472,7 @@ void TestMixOptionsProfile() {
   for (int engine = 0; engine < 3; ++engine) {
     for (int on = 0; on < 2; ++on) {
       Rig r(false, engine > 0);
-      settings.set_plaits_synth(engine == 2);
+      settings.set_synth(engine == 2);
       settings.SaveState();
       if (on) {
         BootWithProfile(&r, both, 2);
@@ -2421,7 +2571,7 @@ void TestDelayOptionsProfile() {
     uint64_t hashes[2];
     for (int on = 0; on < 2; ++on) {
       Rig r(false, engine > 0);
-      settings.set_plaits_synth(engine == 2);
+      settings.set_synth(engine == 2);
       settings.SaveState();
       if (on) {
         BootWithProfile(&r, both, 2);
@@ -2478,7 +2628,7 @@ void TestResonatorProfile() {
     uint64_t hashes[3];
     for (int placement = 0; placement < 3; ++placement) {
       Rig r(false, engine > 0);
-      settings.set_plaits_synth(engine == 2);
+      settings.set_synth(engine == 2);
       settings.SaveState();
       if (placement) {
         const uint8_t entry[] = { FEATURE_RESONATOR, uint8_t(placement) };
@@ -2505,7 +2655,7 @@ void TestResonatorProfile() {
   // a Snap and trigger hit strikes it after the silent grains.
   for (int placement = 1; placement < 3; ++placement) {
     Rig r(false, false);
-    settings.set_plaits_synth(false);
+    settings.set_synth(SYNTH_BEADS);
     settings.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
     settings.SaveState();
     const uint8_t entry[] = { FEATURE_RESONATOR, uint8_t(placement) };
@@ -2892,7 +3042,7 @@ void TestSlowMediaGestures() {
   // In Plaits synth play with Manual start, a slow [A]+FREEZE steps the
   // bank and keeps the synth.
   Rig s(true, true);
-  settings.set_plaits_synth(true);
+  settings.set_synth(SYNTH_PLAITS);
   settings.SaveState();
   s.Reboot(false);
   StartSelfPlay(&s, true);
@@ -3493,7 +3643,7 @@ void TestTransitionTraces() {
   // Synth entry 10 s after the inputs empty, and exit when a cable returns.
   for (int plaits = 0; plaits < 2; ++plaits) {
     Rig r(false, true);
-    settings.set_plaits_synth(plaits);
+    settings.set_synth(plaits ? SYNTH_PLAITS : SYNTH_BEADS);
     ui.LoadOptions();
     Quiet(&r);
     CHECK(!synth_mode);
@@ -3873,6 +4023,7 @@ int main() {
   TestRecentNotesChain();
   TestSelfPlayFrozenBackup();
   TestPlaitsSynthSelection();
+  TestRingsSynthOwnership();
   TestSpectralEngine();
   TestCodecRestartFade();
   TestCodecKeepsClocks();

@@ -29,6 +29,7 @@
 
 #include <cmath>
 
+#include "beads/blob/synth_choice.h"
 #include "beads/test/storage_fixtures.h"
 #ifdef PLAITS_BLOBS
 #include "beads/test/profile_v3.h"
@@ -418,8 +419,8 @@ void TestInterruptedRewrite() {
       CHECK(SameCalibration(loaded, new_calibration));
     }
     // A cut inside the mirror sector before its record is back resets the
-    // options; past it they come back from that sector. Page 5 sits in the
-    // record's second word, so both words complete it.
+    // options; past it they come back from that sector. Page 5 and Rings'
+    // polyphony sit in the record's second word, so both words complete it.
     CHECK(SameOptions(loaded, cut >= 1 && cut <= 6 ? defaults : saved));
     // Whatever came back is stable.
     Settings again;
@@ -914,7 +915,7 @@ void TestSupplyDrop() {
       CHECK(SameState(loaded, defaults));
       CHECK(SameCalibration(loaded, new_calibration));
     }
-    // Page 5 sits in the record's second word: both words complete it.
+    // Page 5 and Rings' polyphony sit in the record's second word: both words complete it.
     CHECK(SameOptions(loaded, drop <= 6 ? defaults : saved));
     // The interrupted save completes on the next one, the options with the
     // next save after it at the latest.
@@ -1106,18 +1107,20 @@ void TestSavedFeatures() {
   CHECK(kRecordOffsets[FEATURE_SEED_LATCH] == 21);
   CHECK(kRecordOffsets[FEATURE_TIME_SCAN] == 22);
   CHECK(kRecordOffsets[FEATURE_PLAITS_BANK] == 23);
+  CHECK(kRecordOffsets[FEATURE_RINGS_POLYPHONY] == 27);
   CHECK(!kRecordOffsets[FEATURE_MONOPHONIC]);
   CHECK(kRecordOffsets[FEATURE_RESONATOR] == 24);
   CHECK(kRecordOffsets[FEATURE_RESONATOR_MATERIAL] == 25);
   CHECK(kRecordOffsets[FEATURE_RESONATOR_RING] == 26);
   for (int i = 1; i < FEATURE_LAST; ++i) {
     // Saved: the options a user changes, Monophonic aside (stock State).
-    const bool page_5 = i == FEATURE_RESONATOR ||
-        i == FEATURE_RESONATOR_MATERIAL || i == FEATURE_RESONATOR_RING;
+    const bool second_word = i == FEATURE_RESONATOR ||
+        i == FEATURE_RESONATOR_MATERIAL || i == FEATURE_RESONATOR_RING ||
+        i == FEATURE_RINGS_POLYPHONY;
     const bool unsaved = kFeatureDefinitions[i].field == kNoField ||
         kFeatureDefinitions[i].field == kReservedField;
     CHECK(!kRecordOffsets[i] == (unsaved &&
-        i != FEATURE_WIDTH && i != FEATURE_DIFFUSION && !page_5));
+        i != FEATURE_WIDTH && i != FEATURE_DIFFUSION && !second_word));
   }
   uint8_t b[kProfileSize];
   ProfileTemplate(b);
@@ -1129,7 +1132,7 @@ void TestSavedFeatures() {
     s.set_clouds_style(true);
     s.set_output_limiter_mode(OUTPUT_LIMITER_OFF);
     s.set_self_play_on_request(true);
-    s.set_plaits_synth(true);
+    s.set_synth(SYNTH_PLAITS);
     s.set_attack_mode(ATTACK_MODE_SNAP_AND_TRIGGER);
     s.set_evolving_feedback(true);
     s.set_delay_mode(DELAY_MODE_WIDE_DETENT);
@@ -1139,7 +1142,7 @@ void TestSavedFeatures() {
     Settings loaded;
     CHECK(loaded.Init(false));
     CHECK(loaded.pitch_scale() == pitch);
-    CHECK(loaded.clouds_style() && loaded.plaits_synth() && loaded.spectral());
+    CHECK(loaded.clouds_style() && loaded.synth() && loaded.spectral());
     CHECK(loaded.output_limiter_mode() == OUTPUT_LIMITER_OFF);
     CHECK(loaded.self_play_on_request() && loaded.random_intervals());
     CHECK(loaded.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
@@ -1150,9 +1153,9 @@ void TestSavedFeatures() {
     CHECK(raw[11] == 1 && raw[12] == OUTPUT_LIMITER_OFF && raw[13] == 1);
     CHECK(raw[14] == 1 && raw[15] == ATTACK_MODE_SNAP_AND_TRIGGER);
     CHECK(raw[16] == 1 && raw[17] == RANDOM_INTERVALS_FIFTHS);
-    // Page 5 at the factory values: Off, String, Medium.
-    CHECK(raw[24] == 0 && raw[25] == 1 && raw[26] == 1);
-    for (size_t i = 27; i < sizeof(OptionsRecord); ++i) {
+    // Page 5 at the factory values: Off, String, Medium; one voice.
+    CHECK(raw[24] == 0 && raw[25] == 1 && raw[26] == 1 && raw[27] == 0);
+    for (size_t i = 28; i < sizeof(OptionsRecord); ++i) {
       CHECK(raw[i] == 0xff);
     }
     for (size_t i = 0; i < sizeof(State().padding); ++i) {
@@ -1191,6 +1194,63 @@ void TestSavedFeatures() {
     CHECK(restored.output_limiter_mode() == OUTPUT_LIMITER_FAST);
     CHECK(restored.clouds_style());
   }
+}
+
+// Rings is Synth value 2 and its polyphony a byte of its own; a byte past
+// either's values is not set, as Rings' 2 is for a build without it.
+void TestRingsSettings() {
+  test_checker.Start("TestRingsSettings");
+  CHECK(kFeatureDefinitions[FEATURE_SYNTH].values == SYNTH_LAST);
+  Wipe();
+  Settings s;
+  s.Init(false);
+  CHECK(s.synth() == SYNTH_BEADS && s.rings_polyphony() == 1);
+  const uint8_t voices[] = { 1, 2, 4 };
+  for (int poly = 0; poly < 3; ++poly) {
+    s.set_synth(SYNTH_RINGS);
+    s.SetFeatureValue(FEATURE_RINGS_POLYPHONY, poly);
+    CHECK(s.rings_polyphony() == voices[poly]);
+    s.SaveOptions();
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.synth() == SYNTH_RINGS);
+    CHECK(loaded.rings_polyphony() == voices[poly]);
+    const uint8_t* raw =
+        reinterpret_cast<const uint8_t*>(&loaded.stored_record_);
+    CHECK(raw[kRecordOffsets[FEATURE_SYNTH]] == SYNTH_RINGS);
+    CHECK(raw[kRecordOffsets[FEATURE_RINGS_POLYPHONY]] == poly);
+  }
+  // Past the values, each takes the profile's start: Plaits, four voices.
+  uint8_t b[kProfileSize];
+  ProfileTemplate(b);
+  uint8_t* synth = b + 16 + 6 * (FEATURE_SYNTH - 1);
+  uint8_t* poly = b + 16;
+  while (poly[0] != FEATURE_RINGS_POLYPHONY) {
+    poly += 6;
+  }
+  CHECK(synth[0] == FEATURE_SYNTH && poly[0] == FEATURE_RINGS_POLYPHONY);
+  synth[2] = SYNTH_PLAITS;
+  poly[2] = 2;
+  ProfileChecksum(b);
+  const uint8_t unset[] = { 3, 0x80, 0xff };
+  for (size_t i = 0; i < sizeof(unset); ++i) {
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.record_);
+    bytes[kRecordOffsets[FEATURE_SYNTH]] = unset[i];
+    bytes[kRecordOffsets[FEATURE_RINGS_POLYPHONY]] = unset[i];
+    CHECK(s.chunk_storage_.SaveRecord());
+    CHECK(s.Init(false, b));
+    CHECK(s.synth() == SYNTH_PLAITS && s.rings_polyphony() == 4);
+  }
+  // Fixed or off, the profile's Synth holds and the saved byte stays.
+  s.set_synth(SYNTH_RINGS);
+  s.SaveOptions();
+  synth[1] = PROFILE_FIXED;
+  synth[3] = 0;  // A fixed setting has no page.
+  ProfileChecksum(b);
+  CHECK(s.Init(false, b) && s.synth() == SYNTH_PLAITS);
+  s.SaveOptions();
+  Settings restored;
+  CHECK(restored.Init(false) && restored.synth() == SYNTH_RINGS);
 }
 
 // Page 5 saves its three settings; exact values and the CV target do not.
@@ -1579,8 +1639,9 @@ void TestProfileDormantAmounts() {
     CHECK(saved[kRecordOffsets[FEATURE_BRIGHTNESS]] == 0);
     CHECK(saved[kRecordOffsets[FEATURE_SEED_LATCH]] == 0);
     CHECK(saved[2] == 0xff && saved[3] == 0xff);
-    // Page 5 (bytes 24-26) is saved; the rest stays erased.
-    for (size_t i = 27; i < sizeof(OptionsRecord); ++i) {
+    // Page 5 (bytes 24-26) and Rings' polyphony (27) are saved; the rest
+    // stays erased.
+    for (size_t i = 28; i < sizeof(OptionsRecord); ++i) {
       CHECK(saved[i] == 0xff);
     }
   }
@@ -1764,6 +1825,7 @@ int main() {
   TestLockedCalibrationRefused();
   TestProfileSettings();
   TestSavedFeatures();
+  TestRingsSettings();
   TestResonatorSaved();
   TestSavedFeaturePairs();
   TestPitchScale15();

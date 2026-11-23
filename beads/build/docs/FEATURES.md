@@ -82,7 +82,8 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 4–7 | The profile that last saved: its CRC-32, 0 for the built-in fallback |
 | 8–23 | One byte per saved option (below) |
 | 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
-| 27–55 | Reserved, 0xFF |
+| 27 | Rings polyphony |
+| 28–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
@@ -114,10 +115,11 @@ freezes each version's offsets.
 | 31 | Plaits bank (#190) | 23 |
 | 40 | Manual gain knob (#301) | The gain is State byte 5 |
 | 41 | Resonator (#88) | 24 |
+| 42 | Rings polyphony | 27 |
 | 43 | Resonator material (#88) | 25 |
 | 44 | Resonator ring time (#88) | 26 |
 
-Other features are not saved: they always take the profile's value. Bytes 24–26 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
+Other features are not saved: they always take the profile's value. A build without Rings reads Synth value 2 as not set. Bytes 24–27 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
 
 Options-only changes (an options page, an [A] gesture, the Plaits bank) append
 a record and leave the settings sector alone; a change to both writes the
@@ -290,7 +292,7 @@ Free and clockwise remain continuous before Pitch scale; subsequent scale quanti
 
 The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
 
-- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. Synth uses those thirds with three playable synths and those halves with two. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
 - **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
@@ -451,6 +453,18 @@ without the flat zone around each. Calibrated PITCH CV and the PITCH
 attenurandomizer are unchanged. The pitch notch cue (ID 22) stays dark with
 Smooth. Grains, delay pitch and both synths follow the knob law. The law is
 chosen at power-on. No panel slot or saved byte.
+
+### Synth and Rings polyphony
+
+Synth (ID 7) value 2 is Rings, offered only when the Rings synth is
+installed. Page 3's DRY/WET then picks Beads, Plaits or Rings in thirds
+(green, yellow, red); with two playable synths it uses halves, and with one
+it is shown but cannot change. A Synth action steps through the playable
+synths. A saved synth that is not installed stays saved; another one plays
+until it is back. While Rings plays, [A]+FREEZE steps its polyphony (ID 42,
+record byte 27): one, two, then four voices, shown green, yellow and red
+as on Rings, and saved. A profile's Synth start on [A]+FREEZE keeps it.
+Polyphony and FEEDBACK changes also apply while FREEZE sustains Rings.
 
 ### Plaits bank
 
@@ -711,7 +725,8 @@ layout and every earlier profile keep their gestures.
 
 - [A]+SEED and [A]+FREEZE can take Monophonic grains, Buffer trim, Synth
   start or a two-value toggle: Reverb character, Processor, Frozen feedback,
-  Synth or TIME modulation. A toggle flips its setting, saves it, and [A]
+  Synth or TIME modulation. A toggle flips its setting (Synth steps through
+  the playable synths), saves it, and [A]
   shows the new value's options page colour for half a second (green first
   value, yellow second). Processor clears the recording, as from its page;
   while FREEZE is on, the change waits for its release. In Plaits synth

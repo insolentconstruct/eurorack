@@ -36,7 +36,7 @@ import glob
 import json
 import sys
 
-from blob_sections import blob_ids, blob_kind, KIND_LIBRARY
+from blob_sections import blob_ids, blob_kind, KIND_LIBRARY, KIND_SYNTH
 
 NUM_PLAITS_MODELS = 24
 
@@ -51,6 +51,8 @@ def main(argv):
   blobs = []
   for path in sorted(glob.glob(out + '/*.bin')):
     data = open(path, 'rb').read()
+    if blob_kind(data) == KIND_SYNTH:
+      continue  # A synth serves no Plaits model and calls no library.
     evidence = json.load(open(path + '.json'))
     blobs.append((path[len(out) + 1:-len('.bin')], blob_kind(data),
                   blob_ids(data), evidence))

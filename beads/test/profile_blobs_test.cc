@@ -119,9 +119,9 @@ void TestBankRefusals() {
   memset(many, 0, sizeof(many));
   ProfileV3(b, many, 16, kDirectory, 0, 0);
   CHECK(!p.Init(b));
-  PlaitsDirectoryEntry four[4];
-  memset(four, 0, sizeof(four));
-  ProfileV3(b, kBanks, 1, four, 4, 0);
+  PlaitsDirectoryEntry five[5];
+  memset(five, 0, sizeof(five));
+  ProfileV3(b, kBanks, 1, five, 5, 0);
   CHECK(!p.Init(b));
   ProfileV3(b, kBanks, 4, kDirectory, 2, 0);
   b[14] = 3;

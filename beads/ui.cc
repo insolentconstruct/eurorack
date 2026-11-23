@@ -35,6 +35,7 @@
 #include "stmlib/system/system_clock.h"
 
 #include "beads/background_buffer_backup.h"
+#include "beads/blob/synth_choice.h"
 #include "beads/calibrator.h"
 #include "beads/gain_control.h"
 #include "beads/settings.h"
@@ -124,6 +125,8 @@ void Ui::Init(
   trim_flag_ = false;
   no_input_ = self_play_requested_ = false;
   synth_mode_ = false;
+  playable_synths_ = SynthMask(true, true, false);
+  rings_playing_ = synth_fault_ = false;
   
   overwrite_reserve_ = 1.0f;
   
@@ -161,7 +164,7 @@ void Ui::LoadOptions() {
   output_limiter_mode_ = settings_->output_limiter_mode();
   clouds_style_ = settings_->clouds_style();
   evolving_feedback_ = settings_->evolving_feedback();
-  plaits_synth_ = settings_->plaits_synth();
+  synth_ = settings_->synth();
   attack_mode_ = settings_->attack_mode();
   attack_threshold_ = kAttackThresholds[
       settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
@@ -294,8 +297,7 @@ void Ui::Poll() {
   const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
   clouds_style_ = previewing
       ? options_.Value(FEATURE_REVERB) : settings_->clouds_style();
-  plaits_synth_ = previewing
-      ? options_.Value(FEATURE_SYNTH) : settings_->plaits_synth();
+  synth_ = previewing ? options_.Value(FEATURE_SYNTH) : settings_->synth();
   delay_mode_ = previewing
       ? DelayMode(options_.Value(FEATURE_DELAY)) : settings_->delay_mode();
   evolving_feedback_ = previewing
@@ -533,7 +535,6 @@ void Ui::UpdateLeds() {
       break;
   }
   
-#ifdef PLAITS_BLOBS
   // No synth can play until a good install: [A] blinks fast, as the
   // recovery firmware shows a failure.
   if (synth_fault_ && synth_mode_ && mode_ == MODE_NORMAL) {
@@ -542,7 +543,6 @@ void Ui::UpdateLeds() {
       leds_.set(Led(LED_ASSIGN_1 + i), fast_blink ? 255 : 0);
     }
   }
-#endif  // PLAITS_BLOBS
 
   if (options_.stage() == Options::STAGE_WAIT_RELEASE ||
       options_.stage() == Options::STAGE_EDITING) {
@@ -919,14 +919,30 @@ void Ui::StepPlaitsBank() {
   cue_time_ = system_clock.milliseconds();
 }
 
+void Ui::StepRingsPolyphony() {
+  const uint8_t polyphony = uint8_t(
+      (settings_->FeatureValue(FEATURE_RINGS_POLYPHONY) + 1) %
+          kFeatureDefinitions[FEATURE_RINGS_POLYPHONY].values);
+  settings_->SetFeatureValue(FEATURE_RINGS_POLYPHONY, polyphony);
+  settings_->SaveOptions();
+  // Rings' colours: green, yellow, red for one, two, four voices.
+  cue_.color = kOptionColors[polyphony];
+  cue_.pulses = PULSE_STEADY;
+  cue_time_ = system_clock.milliseconds();
+}
+
 bool Ui::DoAction(uint8_t slot) {
   const ProfileFeature feature = settings_->profile().Action(slot);
-  // Plaits plays nothing to trim: [A]+FREEZE steps its bank, keeping FREEZE,
-  // unless a profile puts Synth start there.
-  if (slot == ACTION_FREEZE && synth_mode_ && plaits_synth_ &&
-      feature != FEATURE_SYNTH_START) {
-    StepPlaitsBank();
-    return true;
+  // The synths play nothing to trim: [A]+FREEZE steps Rings' polyphony or
+  // the Plaits bank, keeping FREEZE, unless a profile puts Synth start there.
+  if (slot == ACTION_FREEZE && synth_mode_ && feature != FEATURE_SYNTH_START) {
+    if (rings_playing_) {
+      StepRingsPolyphony();
+      return true;
+    } else if (synth_ == SYNTH_PLAITS) {
+      StepPlaitsBank();
+      return true;
+    }
   }
   if (feature == FEATURE_MONOPHONIC) {
     State* state = settings_->mutable_state();
@@ -947,7 +963,9 @@ bool Ui::DoAction(uint8_t slot) {
   } else if (kFeatureDefinitions[feature].field != kNoField &&
       !kFeatureDefinitions[feature].stateless) {
     // Saved as from its options page, with that page's colour.
-    const uint8_t value = !settings_->FeatureValue(feature);
+    const uint8_t current = settings_->FeatureValue(feature);
+    const uint8_t value = feature == FEATURE_SYNTH
+        ? NextSynth(current, playable_synths_) : !current;
     settings_->SetFeatureValue(feature, value);
     settings_->SaveOptions();
     const OptionValue cue = FindOptionValue(feature, value);
