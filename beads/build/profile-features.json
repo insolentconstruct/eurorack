@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "1e3818ab4fb8124da59fc4b977760d6f8f43419e2fa74e38623d459e67611e67",
+  "manifest_sha256": "175644f1016ff98a719193d87491fc86c942ff260c5cc54bf894035b5224b0fb",
   "record_version": 1,
   "features": [
     {
@@ -1950,6 +1950,10 @@
       "id": 35,
       "name": "Tapfield",
       "palette": "tapfield",
+      "family": "Bitwise",
+      "blob_size": 1816,
+      "state_size": 44,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "libraries": []
