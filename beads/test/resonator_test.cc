@@ -975,10 +975,8 @@ float StateEnergy() {
   return energy;
 }
 
-// Drizzlet's objects: a strike alone bends the pitch, by the table's amount
-// and back; loud input never does. Pairs sound left and right. At every
-// rate, pitch extreme and the CV's longest ring, the bank stays finite and
-// dies away.
+// Strikes bend pitch by the table amount; loud input does not. Pairs pan.
+// All rates, pitch extremes and longest CV rings stay finite and decay.
 void TestResonatorMaterials() {
   test_checker.Start("TestResonatorMaterials");
   RandomizedParameter pitch;

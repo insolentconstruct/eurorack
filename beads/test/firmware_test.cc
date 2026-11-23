@@ -1351,9 +1351,8 @@ void TestCloudsSwitch() {
   }
 }
 
-// Byte 21 picks the synth. The Plaits voices borrow the start of the first
-// delay bank only in synth mode; leaving it clears what they used.
-// A stand-in for the Rings blob: its RAM holds the target it was given.
+// Byte 21 selects the synth; leaving Plaits clears its borrowed delay RAM.
+// The Rings stand-in stores its target in RAM.
 
 void* HostInit(uint8_t* ram, size_t ram_size, const PlaitsBlobServices* s) {
   CHECK(ram[0] == 0 && ram[ram_size - 1] == 0);
@@ -2200,9 +2199,8 @@ int Hit(Rig* r, int* first, bool* led) {
   return count + CountGrainBlocks(r, 1200);
 }
 
-// Snap and trigger with SEED unpatched (#290, #294): a hit adds a grain to
-// DENSITY's own rate, in granular playback only, frozen or not; it never
-// clocks the synths or the delay.
+// SEED-unpatched snap/trigger hits add grains only in granular mode (#290,
+// #294), frozen or not; they never clock synths or delay.
 void TestAttackTriggers() {
   test_checker.Start("TestAttackTriggers");
   Rig r(false, false);
@@ -3009,9 +3007,8 @@ void MoveAction(uint8_t* block, uint8_t feature, uint8_t action) {
   }
 }
 
-// Monophonic or Buffer trim on the [A] hold would leave a saved manual gain
-// no way back to automatic gain (#291): such a profile is refused, and the
-// standard controls' hold restarts automatic gain.
+// Reject profiles whose [A] hold prevents returning to automatic gain
+// (#291); the standard controls' hold restores it.
 void TestHoldActionRestartsAutoGain() {
   test_checker.Start("TestHoldActionRestartsAutoGain");
   const uint8_t features[] = { FEATURE_MONOPHONIC, FEATURE_TRIM };
@@ -3281,9 +3278,8 @@ void RewriteOnNextSave() {
   settings.SaveState();
 }
 
-// #346: a run that doesn't complete changes nothing, in use or in flash,
-// though the sector is rewritten during it: a step rejected after the
-// offsets, or after the pitch, or the run left by the autosave chord.
+// Incomplete calibration changes neither live nor saved values (#346),
+// including rejected offsets/pitch and exit via the autosave chord.
 void TestUnfinishedCalibrationKept() {
   test_checker.Start("TestUnfinishedCalibrationKept");
   for (int exit = 0; exit < 3; ++exit) {

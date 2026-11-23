@@ -43,9 +43,8 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
-// Drizzlet's objects: measured or textbook mode sets, levels matched to
-// String's on grain-like noise.
-// Tuned bar, 1:4:10 (Rossing); upper modes short.
+// Measured or textbook modes, matched to String's level on grain-like noise.
+// Tuned bar: 1:4:10 (Rossing), with short upper modes.
 const ResonatorModes kResonatorMarimba = {
   {
     1.0f, 1.0f, 3.99f, 3.99f, 9.95f, 9.95f,
