@@ -126,7 +126,8 @@ void Ui::Init(
   no_input_ = self_play_requested_ = false;
   synth_mode_ = false;
   playable_synths_ = SynthMask(true, true, false);
-  rings_playing_ = synth_fault_ = false;
+  playing_synth_ = SYNTH_BEADS;
+  synth_fault_ = false;
   
   overwrite_reserve_ = 1.0f;
   
@@ -933,13 +934,13 @@ void Ui::StepRingsPolyphony() {
 
 bool Ui::DoAction(uint8_t slot) {
   const ProfileFeature feature = settings_->profile().Action(slot);
-  // The synths play nothing to trim: [A]+FREEZE steps Rings' polyphony or
-  // the Plaits bank, keeping FREEZE, unless a profile puts Synth start there.
+  // While Rings or Plaits plays, [A]+FREEZE steps its polyphony or bank
+  // unless Synth start is there; otherwise the profile's action runs.
   if (slot == ACTION_FREEZE && synth_mode_ && feature != FEATURE_SYNTH_START) {
-    if (rings_playing_) {
+    if (playing_synth_ == SYNTH_RINGS) {
       StepRingsPolyphony();
       return true;
-    } else if (synth_ == SYNTH_PLAITS) {
+    } else if (playing_synth_ == SYNTH_PLAITS) {
       StepPlaitsBank();
       return true;
     }

@@ -1490,6 +1490,74 @@ void TestRingsSynthOwnership() {
   codec.on_resume_ = NULL;
 }
 
+// [A]+FREEZE follows the synth that plays, fallbacks included (#353): the
+// Plaits bank, Rings' polyphony, else the profile's action (Buffer trim).
+void TestFreezeGestureFollowsPlayingSynth() {
+  test_checker.Start("TestFreezeGestureFollowsPlayingSynth");
+  const struct {
+    uint8_t selected;
+    uint8_t playable;
+    SynthEngine playing;
+  } cases[] = {
+    { SYNTH_PLAITS, SynthMask(true, false, true), SYNTH_BEADS },
+    { SYNTH_PLAITS, SynthMask(false, false, true), SYNTH_SILENT },
+    { SYNTH_PLAITS, SynthMask(false, false, false), SYNTH_SILENT },
+    { SYNTH_RINGS, SynthMask(true, true, false), SYNTH_BEADS },
+    { SYNTH_RINGS, SynthMask(false, true, false), SYNTH_PLAITS },
+    { SYNTH_RINGS, SynthMask(false, false, false), SYNTH_SILENT },
+    { SYNTH_BEADS, SynthMask(false, true, true), SYNTH_PLAITS },
+    { SYNTH_PLAITS, SynthMask(true, true, true), SYNTH_PLAITS },
+    { SYNTH_RINGS, SynthMask(true, true, true), SYNTH_RINGS },
+    { SYNTH_BEADS, SynthMask(true, true, true), SYNTH_BEADS },
+  };
+  for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+    Rig r(false, true);
+    settings.set_synth(cases[i].selected);
+    settings.SaveState();
+    r.Reboot(false);
+    rings_synth.set_entries(&HostInit, &HostConfigure, &HostRender);
+    playable_synths = cases[i].playable;
+    ui.set_playable_synths(playable_synths);
+    r.StartAutomatic();
+    CHECK(synth_mode && playing_synth == cases[i].playing);
+    test_down[SWITCH_FREEZE] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = false;
+    r.Tick(10, true);
+    CHECK(ui.freeze_button_state());
+    test_down[SWITCH_MEDIA] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = true;
+    r.Tick(10, true);
+    test_down[SWITCH_FREEZE] = test_down[SWITCH_MEDIA] = false;
+    r.Tick(50, true);
+    const bool plaits = cases[i].playing == SYNTH_PLAITS;
+    const bool rings = cases[i].playing == SYNTH_RINGS;
+    CHECK(settings.FeatureValue(FEATURE_PLAITS_BANK) == (plaits ? 1 : 0));
+    CHECK(settings.FeatureValue(FEATURE_RINGS_POLYPHONY) == (rings ? 1 : 0));
+    // Buffer trim releases FREEZE; the steps keep it.
+    CHECK(ui.freeze_button_state() == (plaits || rings));
+    CHECK(settings.synth() == cases[i].selected);
+    // The UI learns of every change before its next event, swaps included.
+    // A change waits for FREEZE's release.
+    if (ui.freeze_button_state()) {
+      test_down[SWITCH_FREEZE] = true;
+      r.Tick(10, true);
+      test_down[SWITCH_FREEZE] = false;
+      r.Tick(10, true);
+    }
+    settings.set_synth((cases[i].selected + 1) % SYNTH_SILENT);
+    ui.LoadOptions();
+    for (int j = 0; j < 400; ++j) {
+      RunMainLoop();
+      CHECK(ui.playing_synth_ == playing_synth);
+      r.Block();
+    }
+    CHECK(playing_synth == EffectiveSynth(settings.synth(), playable_synths));
+    rings_synth.set_entries(NULL, NULL, NULL);
+  }
+}
+
 void TestPlaitsSynthSelection() {
   test_checker.Start("TestPlaitsSynthSelection");
   extern uint8_t delay_buffer_1[];
@@ -4024,6 +4092,7 @@ int main() {
   TestSelfPlayFrozenBackup();
   TestPlaitsSynthSelection();
   TestRingsSynthOwnership();
+  TestFreezeGestureFollowsPlayingSynth();
   TestSpectralEngine();
   TestCodecRestartFade();
   TestCodecKeepsClocks();

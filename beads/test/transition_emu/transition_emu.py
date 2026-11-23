@@ -615,13 +615,14 @@ def scenario_synth(r):
   r.tick(300)
   r.tick(9800, audio=False)
   r.tick(600)
-  # The Plaits synth: MEDIA+FREEZE steps its bank.
+  # Plaits selected, but the erased flash has no models: Beads' synth plays,
+  # so MEDIA+FREEZE runs the profile's Buffer trim, not a bank step (#353).
   r.set_feature(FEATURE_SYNTH, 1)
   r.tick(100)
   bank = r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0]
   r.combo('media', 'freeze')
-  r.expect(r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] != bank,
-           'MEDIA+FREEZE steps the Plaits bank')
+  r.expect(r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] == bank,
+           'MEDIA+FREEZE leaves the bank of a Plaits that cannot play')
   r.set_feature(FEATURE_SYNTH, 0)
   r.tick(100)
   r.left = r.right = True
