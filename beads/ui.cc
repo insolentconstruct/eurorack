@@ -107,6 +107,7 @@ void Ui::Init(
   
   fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
+  fill(&suppressed_press_[0], &suppressed_press_[SWITCH_LAST], false);
   
   freeze_button_state_ = false;
   freeze_led_state_ = false;
@@ -201,7 +202,7 @@ void Ui::Poll() {
         assignable_cv_pot_[i].editing_hidden_parameter();
   }
   options_.Poll(
-      system_clock.milliseconds(), switches_.pressed(SWITCH_ASSIGN) &&
+      system_clock.milliseconds(), chord_modifier(SWITCH_ASSIGN) &&
       switches_.pressed_immediate(SWITCH_ASSIGN),
       other, all_up, switches_.just_pressed(SWITCH_ASSIGN),
       mode_ == MODE_NORMAL, pot_touched, mix_pot_value_,
@@ -235,7 +236,11 @@ void Ui::Poll() {
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
+    if (switches_.released(s)) {
+      suppressed_press_[i] = false;
+    }
     if (switches_.just_pressed(s)) {
+      suppressed_press_[i] = !accept_switch_events;
       if (accept_switch_events) {
         queue_.AddEvent(CONTROL_SWITCH, i, 0);
       }
@@ -268,10 +273,10 @@ void Ui::Poll() {
     PotController* p = &assignable_cv_pot_[i];
     if (!was_active && !options_.active() && p->editing_hidden_parameter()) {
       State* state = settings_->mutable_state();
-      if (switches_.pressed(SWITCH_MEDIA)) {
+      if (chord_modifier(SWITCH_MEDIA)) {
         gestures_.ProcessAmount(i, p,
             &press_time_[SWITCH_MEDIA]);
-      } else if (switches_.pressed(SWITCH_ASSIGN)) {
+      } else if (chord_modifier(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
         resonator_assigned_ = false;
         state->assignable_cv_destination = 3;
@@ -347,7 +352,7 @@ void Ui::UpdateLeds() {
   bool adjusting_width = false;
   bool adjusting_diffusion = false;
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (switches_.pressed(SWITCH_MEDIA) &&
+    if (chord_modifier(SWITCH_MEDIA) &&
         assignable_cv_pot_[i].editing_hidden_parameter()) {
       adjusting_manual_gain |= gestures_.amount_feature(i) == FEATURE_GAIN_KNOB;
       adjusting_width |= gestures_.amount_feature(i) == FEATURE_WIDTH;
@@ -582,7 +587,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // SEED + FREEZE = seed lock.
   //
-  if (switches_.pressed(SWITCH_SEED) && e.control_id == SWITCH_FREEZE) {
+  if (chord_modifier(SWITCH_SEED) && e.control_id == SWITCH_FREEZE) {
     seed_button_locked_ = true;
     seed_button_state_ = false;
     ignore_release_[SWITCH_SEED] = ignore_release_[SWITCH_FREEZE] = true;
@@ -593,7 +598,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + SEED = toggle gate output mode.
   //
-  if (switches_.pressed(SWITCH_ASSIGN) && e.control_id == SWITCH_SEED) {
+  if (chord_modifier(SWITCH_ASSIGN) && e.control_id == SWITCH_SEED) {
     State* state = settings_->mutable_state();
     state->gate_output_mode = !state->gate_output_mode;
     settings_->SaveState();
@@ -608,7 +613,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + FREEZE = toggle autosave.
   //
-  if (switches_.pressed(SWITCH_ASSIGN) && e.control_id == SWITCH_FREEZE) {
+  if (chord_modifier(SWITCH_ASSIGN) && e.control_id == SWITCH_FREEZE) {
     State* state = settings_->mutable_state();
     state->disable_autosave = !state->disable_autosave;
     settings_->SaveState();
@@ -623,7 +628,7 @@ void Ui::OnSwitchPressed(const Event& e) {
     return;
   }
 
-  if (gestures_.OnPressed(e, switches_)) {
+  if (chord_modifier(SWITCH_MEDIA) && gestures_.OnPressed(e, switches_)) {
     ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;
     return;
   }
@@ -632,8 +637,8 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + Media = calibration mode.
   //
-  if ((e.control_id == SWITCH_ASSIGN && switches_.pressed(SWITCH_MEDIA)) || \
-      (e.control_id == SWITCH_MEDIA && switches_.pressed(SWITCH_ASSIGN))) {
+  if ((e.control_id == SWITCH_ASSIGN && chord_modifier(SWITCH_MEDIA)) || \
+      (e.control_id == SWITCH_MEDIA && chord_modifier(SWITCH_ASSIGN))) {
     mode_ = MODE_CALIBRATION_1;
     calibrator_->Start();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {

@@ -606,6 +606,20 @@ void LoseCalibration() {
   TestFlashDamage(0x081c0000 + 32);
 }
 
+void TestSuppressedStorageChord() {
+  test_checker.Start("TestSuppressedStorageChord");
+  Rig r(false, true);
+  LoseCalibration();
+  r.Reboot(false);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(3010, true);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
+}
+
 void TestStorageWarning() {
   test_checker.Start("TestStorageWarning");
   Rig r(false, true);
@@ -4196,6 +4210,7 @@ int main() {
   TestTriggerOutput();
   TestStartupBranches();
   TestStorageWarning();
+  TestSuppressedStorageChord();
   TestStorageRepair();
   TestFailedBufferLoad();
   TestCallbackCvRouting();
