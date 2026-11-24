@@ -63,6 +63,17 @@ cursor_offset = (
     + layout.members("Reverb")[1]["engine_"]
     + layout.members("FxEngine<32768, (beads::Format)1>")[1]["write_ptr_"]
 )
+ui_fields = layout.members("Ui")[1]
+if "self_play_requested_" in ui_fields:
+    request_offset = ui_fields["self_play_requested_"]
+else:
+    request_offset = (ui_fields["gestures_"]
+                      + layout.members("GestureController")[1][
+                          "self_play_requested_"])
+if "transition" in table:
+    transition_fields = layout.members("EngineTransition")[1]
+else:
+    transition_fields = None
 layout.close()
 
 
@@ -77,10 +88,16 @@ monitor = function("_Z18MonitorStateChangev")
 synth_mode_address = SD.defined_symbol(
     side.symbols, "synth_mode", "OBJECT"
 ).value
-style_address = SD.defined_symbol(side.symbols, "clouds_style", "OBJECT").value
-transition = SD.defined_symbol(
-    side.symbols, "codec_transition_frames", "OBJECT"
-).value
+if transition_fields is None:
+    style_address = SD.defined_symbol(
+        side.symbols, "clouds_style", "OBJECT").value
+    transition = SD.defined_symbol(
+        side.symbols, "codec_transition_frames", "OBJECT").value
+else:
+    transition_base = SD.defined_symbol(
+        side.symbols, "transition", "OBJECT").value
+    style_address = transition_base + transition_fields["clouds_style_"]
+    transition = transition_base + transition_fields["codec_transition_frames_"]
 rows = []
 for quality in range(4):
     for mode in ("normal-then-selfplay", "synth"):
@@ -131,7 +148,7 @@ for quality in range(4):
         if mode == "normal-then-selfplay":
             # Request self-play through the real main-loop mode monitor.
             x.m.write(state + 11, bytes([0xa1]))
-            request = x.obj["ui"] + side.fields["Ui"]["self_play_requested_"]
+            request = x.obj["ui"] + request_offset
             x.m.write(request, bytes([1]))
             x.m.call(monitor, [], fpscr=M.FZ)
             assert x.m.read(synth_mode_address, 1) == bytes([1])

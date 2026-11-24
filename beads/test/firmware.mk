@@ -2,6 +2,7 @@ TARGET = firmware_test
 include beads/test/plaits_sources.mk
 CC_FILES       = 		firmware_test.cc \
 		beads.cc \
+		engine_transition.cc \
 		cv_reader.cc \
 		normalization_detector.cc \
 		gain_control.cc \
@@ -23,6 +24,7 @@ CC_FILES       = 		firmware_test.cc \
 		delay_controller.cc \
 		delay_clock.cc \
 		ui.cc \
+		gesture_controller.cc \
 		options.cc \
 		settings.cc \
 		switches.cc \
