@@ -54,6 +54,7 @@ void GainControl::Init(
     bool reset) {
   if (reset) {
     mode_ = 0;
+    attenuation_ = false;
     ceiling_ = kStockCeiling;
     stable_agc_peak_ = agc_peak_ = peak_ = 0.5f;
     gain_ = 1.0f;
@@ -227,16 +228,18 @@ void GainControl::ProcessModified(
     const Codec::Frame* in,
     FloatFrame* out,
     size_t size) {
-  if (mode_ == 1) {
-    ProcessInternal<true, false>(
-        active, gain_setting, left_normalization, right_normalization,
-        in, out, size);
-  } else if (mode_ == 2) {
-    ProcessInternal<false, true>(
-        active, gain_setting, left_normalization, right_normalization,
-        in, out, size);
+  if (attenuation_) {
+    if (mode_ == 1) {
+      ProcessInternal<true, false>(
+          active, gain_setting, left_normalization, right_normalization,
+          in, out, size);
+    } else {
+      ProcessInternal<true, true>(
+          active, gain_setting, left_normalization, right_normalization,
+          in, out, size);
+    }
   } else {
-    ProcessInternal<true, true>(
+    ProcessInternal<false, true>(
         active, gain_setting, left_normalization, right_normalization,
         in, out, size);
   }

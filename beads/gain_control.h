@@ -72,6 +72,7 @@ class GainControl {
       size_t size);
 
   inline void set_attenuation(bool enabled) {
+    attenuation_ = enabled;
     mode_ = (mode_ & 2) | (enabled ? 1 : 0);
   }
 
@@ -127,6 +128,7 @@ class GainControl {
   
   bool auto_gain_;
   uint8_t mode_;  // Bit 0: attenuation; bit 1: gain ceiling.
+  bool attenuation_;
   float manual_gain_;
   
   float one_hertz_;
