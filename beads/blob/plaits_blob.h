@@ -320,7 +320,7 @@ class PlaitsBlob {
   static PlaitsBlobStatus CheckServices(const PlaitsBlobServices* services);
 
   // Validates a v1 or v2 blob within [begin, end) before any of its code runs.
-  // Writes its SHA-256 if digest is non-NULL.
+  // If Check reaches SHA-256, it writes the result to a non-NULL digest.
   static PlaitsBlobStatus Check(
       const uint8_t* blob,
       const uint8_t* begin,

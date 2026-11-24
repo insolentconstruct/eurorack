@@ -52,7 +52,7 @@ class PlaitsBlobEngine : public plaits::Engine {
   ~PlaitsBlobEngine() { }
 
   // Bind a checked blob in place on each switch, then call Init.
-  // Pass the selected model ID and its resolved libraries (see ABI.md).
+  // Resolve dependencies from the initialized library registry (see ABI.md).
   void Bind(
       const uint8_t* blob,
       const PlaitsBlobServices* services,
