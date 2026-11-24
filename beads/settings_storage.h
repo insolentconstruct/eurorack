@@ -237,9 +237,13 @@ class ChunkStorage {
     }
     HAL_FLASH_Unlock();
     bool saved = false;
-    if (record_address(size_t(next_record_index_) + 1) <= MIRROR_LAST && \
+    const uint32_t address = record_address(next_record_index_);
+    const size_t size = ChunkSize<RecordData>();
+    if (address + size <= MIRROR_LAST &&
+        (address + 2 * size > MIRROR_LAST ||
+            Flash::IsBlank(address + size, size)) &&
         MirrorMatches()) {
-      saved = WriteChunk(record_address(next_record_index_), record_data_);
+      saved = WriteChunk(address, record_data_);
       next_record_index_ = saved ? next_record_index_ + 1 : REWRITE_NEEDED;
     }
     if (!saved) {

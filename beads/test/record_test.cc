@@ -47,6 +47,28 @@ Saved CompactionPending(Settings* s) {
 
 // Options saves append in the mirror sector, never in the settings sector;
 // with a state, the record goes first.
+void TestOptionsAppendAfterBlankGap() {
+  test_checker.Start("TestOptionsAppendAfterBlankGap");
+  Setup(kCalibration, 5);
+  OptionsRecord record;
+  CHECK(RecordAt(2, &record));
+  record.values[0] = PITCH_SCALE_MAJOR;
+  for (int foreign = 0; foreign < 2; ++foreign) {
+    Setup(kCalibration, 5);
+    if (foreign) ++record.version;
+    PokeChunk(RecordChunk(4), OptionsRecord::tag, &record, sizeof(record));
+    Settings s;
+    CHECK(s.Init(false) && !s.write_locked());
+    s.set_pitch_scale(PITCH_SCALE_MINOR);
+    s.SaveOptions();
+
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(loaded.pitch_scale() == PITCH_SCALE_MINOR);
+    CHECK(SameCalibration(loaded, kCalibration));
+  }
+}
+
 void TestRecordJournal() {
   test_checker.Start("TestRecordJournal");
   const Saved saved = Setup(kCalibration, 5);
@@ -962,6 +984,7 @@ int main() {
   if (!CHECK(MapBank2())) {
     return 1;
   }
+  TestOptionsAppendAfterBlankGap();
   TestRecordJournal();
   TestRecordChecksum();
   TestRecordVersions();
