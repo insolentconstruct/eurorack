@@ -524,6 +524,16 @@ void ProcessAudio(
   }
 }
 
+#ifdef TEST
+void Process(const Codec::Event* events, const Codec::Frame* in,
+    Codec::Frame* out, size_t size) {
+  ProcessAudio<false>(events, in, out, size);
+}
+const Codec::FillBufferCallback kStockAudioCallback = &Process;
+#else
+const Codec::FillBufferCallback kStockAudioCallback = &ProcessAudio<false>;
+#endif  // TEST
+
 // Selected only for synth profiles with an output trim.
 void ProcessSynthLevel(
     const Codec::Event* events,
@@ -571,13 +581,14 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 
   const Codec::FillBufferCallback callback = oliverb_mode ? &ProcessAudio<true>
       : (new_synth_mode && settings.FeatureValue(FEATURE_SYNTH_LEVEL)
-            ? &ProcessSynthLevel : &ProcessAudio<false>);
+            ? &ProcessSynthLevel : kStockAudioCallback);
   transition.Start(sr, callback);
 }
 
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
   const Codec::FillBufferCallback callback = synth_mode &&
-      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &ProcessAudio<false>;
+      settings.FeatureValue(FEATURE_SYNTH_LEVEL)
+      ? &ProcessSynthLevel : kStockAudioCallback;
   transition.SwapPaused(owner, playing, callback);
 }
 
