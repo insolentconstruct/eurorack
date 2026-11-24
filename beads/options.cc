@@ -77,7 +77,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_SCALE,  // Pitch.
   PAGE_CONTROL_HALVES,  // Reverb.
   PAGE_CONTROL_ZONES,  // Delay.
-  PAGE_CONTROL_HALVES,  // Processor.
+  PAGE_CONTROL_ZONES,  // Processor.
   PAGE_CONTROL_ZONES,  // Limiter.
   PAGE_CONTROL_HALVES,  // Frozen.
   PAGE_CONTROL_ZONES,  // Synth.

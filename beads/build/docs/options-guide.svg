@@ -264,21 +264,27 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="256" y="922" font-size="15" font-weight="normal" fill="#222" text-anchor="start">R</text>
 <circle cx="278" cy="917" r="7" fill="#222" stroke="#333" stroke-width="2"/>
 <text x="291" y="922" font-size="15" font-weight="normal" fill="#555" text-anchor="start">pulsing</text>
-<text x="1065" y="922" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="end">Processor: switching clears the recording.</text>
+<text x="1065" y="922" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="end">Processor: granular ↔ spectral resets the recording.</text>
 <text x="35" y="953" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Processor</text>
 <circle cx="192.5" cy="1025" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 192.5 1025 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 164.900 1049.642 A 37 37 0 0 1 185.225 988.722" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.22" y="1013.23" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Granular</text>
-<path d="M 199.775 988.722 A 37 37 0 0 1 220.100 1049.642" fill="none" stroke="#555" stroke-width="3"/>
-<text x="242.78" y="1013.23" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Spectral</text>
-<path d="M 187.287 988.369 A 37 37 0 0 1 197.713 988.369" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 164.900 1049.642 A 37 37 0 0 1 161.703 1004.492" fill="none" stroke="#555" stroke-width="3"/>
+<text x="139.63" y="1033.74" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Granular</text>
+<path d="M 171.992 994.203 A 37 37 0 0 1 213.008 994.203" fill="none" stroke="#555" stroke-width="3"/>
+<text x="192.5" y="977.0" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Spectral</text>
+<path d="M 223.297 1004.492 A 37 37 0 0 1 220.100 1049.642" fill="none" stroke="#555" stroke-width="3"/>
+<text x="245.37" y="1033.74" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Oliverb</text>
+<path d="M 162.912 1002.784 A 37 37 0 0 1 170.284 995.412" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 214.716 995.412 A 37 37 0 0 1 222.088 1002.784" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="44" cy="1065" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
 <text x="60" y="1070" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Granular (Stock)</text>
 <text x="347" y="1070" font-size="15" font-weight="normal" fill="#555" text-anchor="end">green; steady</text>
 <circle cx="44" cy="1086" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
 <text x="60" y="1091" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Spectral</text>
 <text x="347" y="1091" font-size="15" font-weight="normal" fill="#555" text-anchor="end">yellow; steady</text>
+<circle cx="44" cy="1107" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="60" y="1112" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Oliverb</text>
+<text x="347" y="1112" font-size="15" font-weight="normal" fill="#555" text-anchor="end">red; steady</text>
 <text x="365" y="953" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Synth</text>
 <circle cx="522.5" cy="1025" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 522.5 1025 v -16" stroke="#222" stroke-width="2"/>

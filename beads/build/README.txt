@@ -321,8 +321,8 @@ Frozen feedback selects Stock or Evolving. Evolving fades in to soften
 and drift frozen grains, or frozen delay slices in delay mode,
 controlled by FEEDBACK; it stops with FREEZE off.
 
-Processor: Lower half selects Granular (Stock); upper half selects
-Spectral, using Mutable Instruments Clouds. TIME selects a spectrum,
+Processor selects Granular (green), Spectral (yellow) or Oliverb (red)
+in thirds. Spectral uses Mutable Instruments Clouds. TIME selects a spectrum,
 SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls
 renewal and phase scrambling. SEED glitches; FREEZE holds. Random
 controls update per spectrum. Mixing, quality and assignable CV work
@@ -330,9 +330,15 @@ normally; the R gate follows the grain clock that DENSITY would set, not
 the spectrum renewal. Unavailable: diffusion, stereo width, monophonic
 grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay, buffer
 trim, FREEZE autosave and the wavetable synth.
-Closing fades the change and clears recording; while FREEZE is on, the
-current engine plays on and the change waits for FREEZE to be released.
-The saved frozen buffer returns with Granular.
+Switching between Granular and Spectral resets the recording. A saved
+frozen buffer returns with Granular. Engine changes fade and wait for
+FREEZE to be released.
+
+Oliverb is Clouds Parasites' modulated pitch-shifting reverb. TIME sets
+pre-delay, SIZE sets tank size, PITCH shifts feedback, DENSITY sets
+decay and SHAPE sweeps the damping filters. DRY/WET crossfades, FEEDBACK
+controls modulation rate and REVERB controls modulation depth. FREEZE
+holds the loop while pitch shift and modulation continue.
 
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance
 voices, retaining pitch and random settings. FEEDBACK selects one of
@@ -397,6 +403,7 @@ page	LED	knob	setting	value	colour	pulse
 2	DRY/WET	REVERB	Reverb character	Clouds-style	yellow	steady
 3	REVERB	FEEDBACK	Processor	Granular (Stock)	green	steady
 3	REVERB	FEEDBACK	Processor	Spectral	yellow	steady
+3	REVERB	FEEDBACK	Processor	Oliverb	red	steady
 3	REVERB	DRY/WET	Synth	Beads (Stock)	green	steady
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
 3	REVERB	DRY/WET	Synth	Rings	red	steady

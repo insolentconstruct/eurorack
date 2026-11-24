@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "01c70ae7e47f7dd3606e2ef0beb0f476f19a24edcebaf81cff0c7d6eb073daf3",
+  "manifest_sha256": "42d70b5f4519a0a0f63093bec17c73063bd37f24105e0fd1300efae7505387df",
   "record_version": 1,
   "features": [
     {
@@ -182,7 +182,8 @@
       "name": "Processor",
       "values": [
         "Granular (Stock)",
-        "Spectral"
+        "Spectral",
+        "Oliverb"
       ],
       "states": [
         "Off",

@@ -20,6 +20,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Lock flash between frozen-buffer backup operations.
 - Retry an incomplete settings or calibration-copy sector erase.
 - A settings save no longer revives older settings past an empty slot.
+- Processor gains Oliverb, a dedicated modulated and pitch-shifting reverb based on Clouds Parasites (#216).
 
 - Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
 

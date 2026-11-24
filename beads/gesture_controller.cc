@@ -220,7 +220,8 @@ bool GestureController::DoAction(uint8_t slot) {
     ui_->freeze_button_state_ = false;
     return true;
   } else if (feature == FEATURE_SYNTH_START &&
-      settings_->self_play_on_request() && !ui_->spectral_ && ui_->no_input_ &&
+      settings_->self_play_on_request() && ui_->no_input_ &&
+      ui_->processor_mode() == PROCESSOR_GRANULAR &&
       !ui_->should_ignore_state_change()) {
     self_play_requested_ = true;
     return true;
@@ -228,8 +229,12 @@ bool GestureController::DoAction(uint8_t slot) {
       !kFeatureDefinitions[feature].stateless) {
     // Saved as from its options page, with that page's colour.
     const uint8_t current = settings_->FeatureValue(feature);
-    const uint8_t value = feature == FEATURE_SYNTH
+    uint8_t value = feature == FEATURE_SYNTH
         ? NextSynth(current, ui_->playable_synths_) : !current;
+    if (feature == FEATURE_PROCESSOR &&
+        !settings_->profile().entry(feature).page_slot) {
+      value = current == PROCESSOR_OLIVERB ? PROCESSOR_GRANULAR : current + 1;
+    }
     settings_->SetFeatureValue(feature, value);
     settings_->SaveOptions();
     const OptionValue cue = FindOptionValue(feature, value);

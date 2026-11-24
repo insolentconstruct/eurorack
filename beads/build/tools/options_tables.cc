@@ -122,6 +122,7 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_DELAY, 2, "Wide/smooth filter" },
   { beads::FEATURE_PROCESSOR, 0, "Granular (Stock)" },
   { beads::FEATURE_PROCESSOR, 1, "Spectral" },
+  { beads::FEATURE_PROCESSOR, 2, "Oliverb" },
   { beads::FEATURE_LIMITER, 0, "Stock" },
   { beads::FEATURE_LIMITER, 1, "Fast release" },
   { beads::FEATURE_LIMITER, 2, "Off" },

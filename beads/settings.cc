@@ -241,7 +241,7 @@ bool Settings::Init(bool recovery_mode,
   // A newly installed profile starts in its quality once; a frozen recording
   // returning from flash keeps the quality it was made in.
   const bool restores = state_.frozen && !state_.disable_autosave && \
-      !spectral();
+      processor_mode() == PROCESSOR_GRANULAR;
   if (new_profile && start_quality && !restores) {
     state_.media = 4 - start_quality;
   }

@@ -35,6 +35,7 @@
 #include "beads/drivers/seed_input.h"
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
+#include "beads/dsp/fx/oliverb.h"
 #include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/rings_synth.h"
 #ifdef PLAITS_BLOBS
@@ -87,6 +88,11 @@ PlaitsRegion plaits_region;
 uint8_t playable_synths;
 EngineTransition transition;
 Processor processor;
+Oliverb oliverb;
+beads::Limiter oliverb_limiter;
+bool oliverb_mode;
+bool oliverb_restore_pending;
+Processor::Media oliverb_media;
 SeedInput seed_input;
 Settings settings;
 Synth synth;
@@ -162,14 +168,23 @@ bool seed_latch_enabled;
 bool fixed_reverb_decay;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-template<bool manual_delay, bool fixed_decay>
+float OliverbControl(const RandomizedParameter& control, float lo, float hi) {
+  float value = control.base;
+  if (control.has_cv) {
+    value += control.attenuverter * control.cv;
+  }
+  CONSTRAIN(value, lo, hi);
+  return value;
+}
+
+template<bool manual_delay, bool fixed_decay, bool play_oliverb = false>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) __attribute__((always_inline));
 
-template<bool manual_delay, bool fixed_decay>
+template<bool manual_delay, bool fixed_decay, bool play_oliverb>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
@@ -210,13 +225,13 @@ inline void ProcessAudio(
   ui.set_freeze_led_state(freeze_block);
   
   const AttackMode attack_mode = ui.attack_mode();
-  if (attack_mode != processor.attack_input()->mode()) {
+  if (!play_oliverb && attack_mode != processor.attack_input()->mode()) {
     processor.SetAttacks(attack_mode, ui.attack_threshold());
   }
   // Snap and trigger keeps listening while frozen, only to start grains.
   const bool attack_trigger_mode = attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER;
   bool attack_onset = false;
-  if (attack_mode && !transition.blanking() &&
+  if (!play_oliverb && attack_mode && !transition.blanking() &&
       (!freeze_block || attack_trigger_mode) &&
       !synth_mode && processor.attack_recording()) {
     attack_onset = processor.attack_input()->Process(
@@ -235,7 +250,9 @@ inline void ProcessAudio(
   }
   // Hits add grains apart from SEED, in granular playback only.
   const bool attack_trigger = attack_onset && attack_trigger_mode;
-  processor.set_attack_trigger(attack_trigger);
+  if (!play_oliverb) {
+    processor.set_attack_trigger(attack_trigger);
+  }
   bool seed_block = attack_trigger;
   GateFlags* seed_input = NULL;
   if (!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED)) {
@@ -252,7 +269,7 @@ inline void ProcessAudio(
     previous_seed = GATE_FLAG_LOW;
   }
   ui.set_seed_led_state(seed_block && !transition.blanking());
-  ui.set_overwrite_reserve(synth_mode || processor.spectral()
+  ui.set_overwrite_reserve(play_oliverb || synth_mode || processor.spectral()
       ? 1.0f : processor.overwrite_reserve());
   
   // Conversion of input samples into floats, (with automatic gain control).
@@ -350,22 +367,25 @@ inline void ProcessAudio(
   }
 
   if (ui.trim_flag()) {
-    if (!processor.spectral()) {
+    if (!play_oliverb && !processor.spectral()) {
       processor.Trim();
     }
     ui.ClearTrimFlag();
   }
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
-  const bool requested_style = ui.clouds_style();
-  const bool engine_change = ui.spectral() != processor.spectral() &&
+  const bool requested_style = play_oliverb
+      ? transition.clouds_style() : ui.clouds_style();
+  const ProcessorMode active_mode = play_oliverb ? PROCESSOR_OLIVERB
+      : ProcessorMode(processor.spectral());
+  const bool engine_change = ui.processor_mode() != active_mode &&
       !ui.should_ignore_state_change();
   if (transition.Hold(requested_style, engine_change, &processor, &synth,
       &plaits_synth, &rings_synth, out, size)) {
     return;
   }
 #ifdef DWT_CALIBRATION
-  if (dwt_calibration::stats.synthetic) {
+  if (!play_oliverb && dwt_calibration::stats.synthetic) {
     dwt_calibration::PrepareSynthetic(
         &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
@@ -374,9 +394,42 @@ inline void ProcessAudio(
         &seed_input, seed, freeze, float_in, size, &calibration_callback);
   }
 #endif  // DWT_CALIBRATION
-  processor.set_output_limiter_mode(ui.output_limiter_mode());
-  synth.set_output_limiter_mode(ui.output_limiter_mode());
-  if (synth_mode && transition.playing_synth() == SYNTH_SILENT) {
+  if (!play_oliverb) {
+    processor.set_output_limiter_mode(ui.output_limiter_mode());
+    synth.set_output_limiter_mode(ui.output_limiter_mode());
+  }
+  if (play_oliverb) {
+    Oliverb::Controls controls;
+    controls.pre_delay = 0.018f + 0.132f * OliverbControl(p.time, 0.0f, 1.0f);
+    controls.size = OliverbControl(p.size, 0.0f, 1.0f);
+    controls.pitch = OliverbControl(p.pitch, -24.0f, 24.0f);
+    controls.decay = d.value();
+    controls.texture = OliverbControl(p.shape, 0.0f, 1.0f);
+    controls.diffusion = settings.diffusion_set() ? settings.diffusion() : 0.5f;
+    if (diffusion_assigned) {
+      controls.diffusion += assign_cv;
+      CONSTRAIN(controls.diffusion, 0.0f, 1.0f);
+    }
+    controls.mod_rate = m.feedback;
+    controls.mod_depth = m.reverb_amount;
+    controls.mix = m.dry_wet;
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+    oliverb.Process(controls, freeze, float_in, float_out, size);
+    oliverb_limiter.ProcessOutput(float_out, size, ui.output_limiter_mode(),
+        Processor::SampleRate(oliverb_media));
+    if (m.output_gate) {
+      for (size_t i = 0; i < size; ++i) {
+        float_out[i].l = (float_out[i].l + float_out[i].r) * 0.5f;
+        float_out[i].r = 0.0f;
+      }
+    }
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
+  } else if (synth_mode && transition.playing_synth() == SYNTH_SILENT) {
     FloatFrame silence;
     silence = 0.0f;
     fill(&float_out[0], &float_out[size], silence);
@@ -590,6 +643,9 @@ void ProcessSynthLevel(
 }
 
 Codec::FillBufferCallback AudioCallback(bool synth) {
+  if (oliverb_mode) {
+    return &ProcessAudio<false, false, true>;
+  }
   if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
     return fixed_reverb_decay ? &ProcessSynthLevel<true>
         : &ProcessSynthLevel<false>;
@@ -602,7 +658,8 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
-  int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
+  const Processor::Media media = oliverb_mode ? oliverb_media : processor.media();
+  const int sr = new_synth_mode ? 48000 : int(Processor::SampleRate(media));
   if (new_synth_mode && background_buffer_backup.busy()) {
     background_buffer_backup.Process(false);
   }
@@ -613,16 +670,16 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
     // Rings when it plays, else Plaits, so Beads <-> Plaits stays instant.
     transition.TakeBank(transition.playing_synth() == SYNTH_RINGS
         ? SYNTH_RINGS : SYNTH_PLAITS);
-  } else {
+  } else if (!oliverb_mode) {
     // The granular processor's Configure clears the bank.
     transition.set_bank_owner(SYNTH_SILENT);
   }
 
   gain_control.Init(
       float(sr),
-      processor.media() == Processor::MEDIA_DIRTY_TAPE
+      media == Processor::MEDIA_DIRTY_TAPE
           ? GainControl::SOFT_CLIPPING_MODE_ON
-          : (processor.media() == Processor::MEDIA_CLEAN_TAPE
+          : (media == Processor::MEDIA_CLEAN_TAPE
                 ? GainControl::SOFT_CLIPPING_MODE_DYNAMIC
                 : GainControl::SOFT_CLIPPING_MODE_OFF),
       reset_gain_control);
@@ -738,7 +795,10 @@ void Init() {
   
   // A frozen buffer saved by the granular engine stays in flash.
   processor.set_spectral(ui.spectral());
-  bool was_frozen = !processor.spectral() && background_buffer_backup.Load();
+  oliverb_mode = false;
+  oliverb_restore_pending = ui.processor_mode() == PROCESSOR_OLIVERB;
+  bool was_frozen = ui.processor_mode() == PROCESSOR_GRANULAR &&
+      background_buffer_backup.Load();
   if (was_frozen) {
     ui.set_freeze_button_state(was_frozen);
     ConfigureAndStartCodec(false, true);
@@ -749,7 +809,9 @@ void MonitorStateChange() {
   if (transition.RetryCodec()) {
     return;
   }
-  UpdateResonator();
+  if (!oliverb_mode) {
+    UpdateResonator();
+  }
   seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
@@ -762,19 +824,21 @@ void MonitorStateChange() {
     resonator_placement = ui.resonator();
     processor.set_resonator(resonator_placement);
   }
-  ui.set_delay_active(processor.delay_active());
+  ui.set_delay_active(!oliverb_mode && processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
       settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
     ui.set_modulation_indication(cv_reader.pitch_on_notch(),
         cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
-  // The wavetable synth adds the PITCH CV to the knob: no recent notes there.
-  RememberNote(ui.intervals_mode(), !synth_mode &&
-      !normalization_detector.normalized(
-          NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV),
-      cv_reader.cv(CV_ADC_CHANNEL_PITCH),
-      -cv_reader.pot(POTS_ADC_CHANNEL_PITCH_AMOUNT),
-      system_clock.milliseconds());
+  // Oliverb suspends the recent-note history with the recording.
+  if (!oliverb_mode) {
+    RememberNote(ui.intervals_mode(), !synth_mode &&
+        !normalization_detector.normalized(
+            NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV),
+        cv_reader.cv(CV_ADC_CHANNEL_PITCH),
+        -cv_reader.pot(POTS_ADC_CHANNEL_PITCH_AMOUNT),
+        system_clock.milliseconds());
+  }
   ui.set_no_input(normalization_detector.no_input());
   ui.set_synth_mode(synth_mode);
   plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));
@@ -803,6 +867,47 @@ void MonitorStateChange() {
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
     transition.Cancel();
+    return;
+  }
+
+  const bool wants_oliverb = ui.processor_mode() == PROCESSOR_OLIVERB;
+  if (oliverb_mode || wants_oliverb) {
+    const Processor::Media media = Processor::Media(settings.state().media);
+    if (oliverb_mode == wants_oliverb && media == oliverb_media) {
+      transition.Cancel();
+      return;
+    }
+    if (!transition.Fade()) {
+      return;
+    }
+
+    transition.Pause();
+    oliverb_mode = wants_oliverb;
+    if (oliverb_mode) {
+      oliverb_media = media;
+      const float sr = Processor::SampleRate(media);
+      oliverb.Init(reverb_buffer, int(sr));
+      oliverb_limiter.Init(1.0f / (sr * 6.0f), 0.9f);
+    } else {
+      const bool resume_mono = normalization_detector.mono();
+      // A compatible suspended recording stays in its delay bank.
+      const bool reset = processor.spectral() != ui.spectral() ||
+          processor.media() != media || processor.mono() != resume_mono ||
+          transition.bank_owner() != SYNTH_SILENT;
+      if (reset) {
+        processor.set_spectral(ui.spectral());
+        background_buffer_backup.Init(&processor, &settings);
+        processor.Configure(media, resume_mono);
+      }
+      if (!ui.spectral() && (reset || oliverb_restore_pending) &&
+          background_buffer_backup.Load()) {
+        settings.mutable_state()->media = processor.media();
+        ui.set_freeze_button_state(true);
+      }
+      oliverb_restore_pending = false;
+      processor.ClearReverb();
+    }
+    ConfigureAndStartCodec(false, true);
     return;
   }
 
@@ -921,11 +1026,13 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     MonitorStateChange();
-    if (!synth_mode && !processor.spectral()) {
-      background_buffer_backup.Process(ui.freeze_led_state());
+    if (!oliverb_mode) {
+      if (!synth_mode && !processor.spectral()) {
+        background_buffer_backup.Process(ui.freeze_led_state());
+      }
+      processor.Buffer();
+      processor.WasteCPUCycles(16);
     }
-    processor.Buffer();
-    processor.WasteCPUCycles(16);
   }
 }
 

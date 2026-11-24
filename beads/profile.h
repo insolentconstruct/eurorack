@@ -80,6 +80,12 @@ enum AmountSlot {
   AMOUNT_LAST
 };
 
+enum ProcessorMode {
+  PROCESSOR_GRANULAR = 0,
+  PROCESSOR_SPECTRAL = 1,
+  PROCESSOR_OLIVERB = 2
+};
+
 enum ProfileFeature {
   FEATURE_NONE = 0,
   FEATURE_PITCH = 1,
