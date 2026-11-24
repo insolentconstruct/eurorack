@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "25ddb8ff5acd212343b8782c043e70a39f9181f3a5fdb12e8a6692892f562354",
+  "manifest_sha256": "0d3751debb530101e2776872d4446df47e8a0dccbc9a251acc8aff6fae676bb9",
   "record_version": 1,
   "features": [
     {
@@ -1923,6 +1923,10 @@
       "id": 28,
       "name": "Natural Speech",
       "palette": "natural-speech",
+      "family": "Vocal",
+      "blob_size": 22132,
+      "state_size": 860,
+      "arena_size": 0,
       "credit": "Lyle Mills",
       "licence": "MIT",
       "notice": "Voice data rendered with Kokoro-82M (Apache-2.0), voice af_heart.",
@@ -2380,6 +2384,10 @@
       "id": 67,
       "name": "Wave Scan",
       "palette": "wave-scan",
+      "family": "Wavetable",
+      "blob_size": 37604,
+      "state_size": 556,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []

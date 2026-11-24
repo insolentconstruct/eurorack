@@ -17,6 +17,11 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Resonator Material bounds are prepared in the main loop; controls and their completed bound reach audio together on the next pass.
 
 - A refused calibration save now gives the rejection blink and keeps the calibration selected from flash, including a partially completed write.
+
+- Palette Natural Speech is available as a removable model; selecting it again starts fresh, including its bank and word selectors.
+
+- Palette Wave Scan is available as a removable model; selecting it again starts fresh, including its model selector.
+
 - Palette VOSIM prepares its DC seed over 16 blocks on each selection, adding 4 ms of silence at the synth rate; returning to it starts a fresh voice.
 
 - Hygrostat Mix law Send keeps dry present, lets grains finish at zero send and keeps recording (#48).
