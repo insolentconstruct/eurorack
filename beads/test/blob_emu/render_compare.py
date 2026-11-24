@@ -126,8 +126,9 @@ PAIRS = dict([
     (97, 62),
     (98, 63),
     (99, 64),
-    (254, 65)] + [
-    (m, 66 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (67, 65),
+    (254, 66)] + [
+    (m, 67 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83, 98, 99)
@@ -204,14 +205,15 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (96, 79),
     (97, 30),
     (98, 64),
-    (99, 64)]
+    (99, 64),
+    (67, 64)]
 # Tapfield needs a held note: low notes retrigger before its register clocks.
 NOTE_CONTROL_STEPS = {35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
-FRESH_ON_RESELECT = (53, 56, 92, 93, 97, 98, 99)
+FRESH_ON_RESELECT = (53, 56, 67, 92, 93, 97, 98, 99)
 # Saw Swarm Reset already clears its state; the others retain warm state.
-RETAINED_ON_RESET = (53, 92, 93, 97, 98, 99)
+RETAINED_ON_RESET = (53, 67, 92, 93, 97, 98, 99)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -775,7 +777,7 @@ def switch_compare(first, second, fresh, base, fpscr):
             for block in range(7000)]
     returned = [(2, 72.0, 0.8, 0.9, 0.75, 0.8)] * 1024
     parts = ((first, held), (second, sequence[100:200]), (first, returned))
-  if first == 53:
+  if first in (53, 67):
     # The return lies inside the hysteresis band after warming branch 1.
     warm = [(5 if i == 0 else 4, 60.0, 0.5, 0.7, 0.5, 0.8)
             for i in range(64)]

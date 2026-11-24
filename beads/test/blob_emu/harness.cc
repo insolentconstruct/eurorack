@@ -89,6 +89,7 @@
 #include "beads/blob/models/kick_engine.h"
 #include "beads/blob/models/snare_engine.h"
 #include "beads/blob/models/cymbal_engine.h"
+#include "beads/blob/models/wave_scan_engine.h"
 #include "beads/blob/models/saw_comb_engine.h"
 #include "beads/blob/models/wave_paraphonic_engine.h"
 #include "beads/blob/models/wavetable_chord_engine.h"
@@ -166,7 +167,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 66;
+const size_t kFirstStock = 67;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -371,6 +372,9 @@ static uint8_t freshets_formant_storage[sizeof(FreshetsFormantEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t speech_sounds_storage[sizeof(SpeechSoundsEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t wave_scan_storage[sizeof(WaveScanEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t lpc_words_storage[sizeof(LPCWordsEngine)]
@@ -661,7 +665,10 @@ static void BuildProof() {
   compiled[62] = new(chords_supersaw_storage) ChordsSupersawEngine;
   compiled[63] = new(speech_sounds_storage) SpeechSoundsEngine;
   compiled[64] = new(lpc_words_storage) LPCWordsEngine;
-  compiled[65] = new(sine_storage) TestSineEngine;
+  std::fill(&wave_scan_storage[0],
+      &wave_scan_storage[sizeof(wave_scan_storage)], 0);
+  compiled[65] = new(wave_scan_storage) WaveScanEngine;
+  compiled[66] = new(sine_storage) TestSineEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();

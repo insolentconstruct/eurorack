@@ -151,6 +151,7 @@ build snare $blob/models/snare.cc $blob/models/snare_engine.cc \
 build cymbal $blob/models/cymbal.cc $blob/models/cymbal_engine.cc \
   $libm/sinf.c $libm/sincosf_data.c $libm/math_errf_no_errno.c \
   $libm/libgcc/convert.S
+build wave_scan $blob/models/wave_scan.cc $blob/models/wave_scan_engine.cc
 build wave_paraphonic --library "$out/plaits_wavetables.bin" \
   $blob/models/wave_paraphonic.cc $blob/models/wave_paraphonic_engine.cc
 build saw_comb $blob/models/saw_comb.cc $blob/models/saw_comb_engine.cc \

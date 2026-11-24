@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "fb35f045092dd6eae750cbff221d996397ee4a46a27fc843d1ca6f2afd8ce6e8",
+  "manifest_sha256": "75c73404eacc8c690ee963a032b12cb883b9b65a9d9667433e3581ccc602cf39",
   "record_version": 1,
   "features": [
     {
@@ -2326,6 +2326,10 @@
       "id": 67,
       "name": "Wave Scan",
       "palette": "wave-scan",
+      "family": "Wavetable",
+      "blob_size": 37604,
+      "state_size": 556,
+      "arena_size": 0,
       "credit": "Mutable Instruments",
       "licence": "MIT",
       "libraries": []
