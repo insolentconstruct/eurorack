@@ -15,6 +15,10 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Palette blob models gain Granular Cloud; each selection starts its grains and random stream afresh.
 - Palette VOSIM prepares its DC seed over 16 blocks on each selection, adding 4 ms of silence at the synth rate; returning to it starts a fresh voice.
 
+- Hygrostat Mix law Send keeps dry present, lets grains finish at zero send and keeps recording (#48).
+- Hygrostat can divide the granular OUT R gate by 2, 4, 8 or 16 without changing grain timing (#29).
+
+- Hygrostat can lower the Beads, Plaits and Rings synth output to half, quarter or eighth level, keeping the input gain and OUT R triggers unchanged (#51).
 - [A]+FREEZE follows the synth that actually plays, a fallback included: Plaits steps its bank, Rings its polyphony, and Beads' synth or silence run the profile's [A]+FREEZE action (Buffer trim by default) (#353). The saved Synth choice never changes.
 - Synth gains a third value, Rings, offered on page 3 (thirds) only when the Rings synth is installed; without it the page looks as before. While Rings plays, [A]+FREEZE steps its polyphony (one, two, four voices; [A] green, yellow, red), saved; polyphony and FEEDBACK changes apply while FREEZE sustains it. A Synth action steps through the installed synths; earlier builds read a saved Rings as not set. Rings plays at about the Plaits synth's level (one fixed gain after Rings' own output).
 - Options pages: LED brightness keeps the chosen level when the pages close before the save, instead of returning to the old level for up to a second (#355); SEED latch and TIME scan take effect while their knob turns, as the other page settings do (#356).

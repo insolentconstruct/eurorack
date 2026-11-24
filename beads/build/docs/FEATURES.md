@@ -508,15 +508,44 @@ green. A blank or stock settings sector, a SEED power-on reset or a saved
 value the firmware doesn't know starts on the profile's bank. More banks,
 such as Plaits Palette models (#194), would add values to this ID.
 
+### Synth output level
+
+Hygrostat feature ID 50 chooses Stock / Half / Quarter / Eighth (#51),
+reducing both synth audio outputs by 0, 6.02, 12.04 or 18.06 dB. This is a
+final output trim, after the synth's own effects and limiting; it does not
+change the saved input gain, grain levels, feedback or reverb tails. When
+OUT R carries triggers, its level stays stock. It applies to Beads, Plaits
+and Rings synths; granular, delay and spectral output stay stock. Chosen at
+power-on, Fixed only, with no panel slot or saved byte. Off and omitted
+entries keep the original audio callback.
+
 ### Mix law
 
-Hygrostat feature ID 32 chooses Stock / Gentle (#21). Stock DRY/WET brings
-the grains in quickly: at 9 o'clock they are only 2.5 dB under the dry.
+Hygrostat feature ID 32 chooses Stock / Gentle / Send (#21, #48). Stock
+DRY/WET brings the grains in quickly: at 9 o'clock they are only 2.5 dB under the dry.
 Gentle makes the wet side rise in a straight line, so at 9 o'clock the
 grains are 7.6 dB under the dry (Clouds: 8.8 dB) and at noon 3.5 dB quieter
 than stock. The dry level and both ends of the knob stay stock. DRY/WET CV
 follows the same law. Granular, delay and spectral; both synths keep their
 own DRY/WET. Chosen at power-on, with no panel slot or saved byte.
+
+Send (value 2) keeps dry at its fully dry level. DRY/WET sets each new
+grain's level, linearly; that grain keeps its level until it finishes.
+At zero no new grains start, but existing grains and reverb finish.
+Recording and feedback continue, so raising DRY/WET finds recent material.
+The reverb follows the grains before dry is added, regardless of Reverb
+input. Granular only; delay, spectral and synths retain their own mix.
+This adds a value to ID 32 without changing Stock or Gentle.
+
+### Grain trigger output
+
+Hygrostat feature ID 51 chooses Stock, /2, /4, /8 or /16 (#29). When OUT R
+carries grain triggers, it passes the first grain's gate, then every chosen
+number of grains; accepted gates keep their original width. It changes only
+OUT R, not the grain timing, recording or audio mix. The divider keeps its place between
+audio blocks while trigger output is on. Delay, spectral and synths keep
+the stock output. Chosen at power-on, Fixed only, with no panel slot or
+saved byte; Off and omitted entries select Stock.
 
 ### Reverb input
 

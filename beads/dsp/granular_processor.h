@@ -228,6 +228,18 @@ class GranularProcessor {
       }
     }
   }
+
+  // Defined with the optional path to preserve stock code generation.
+  void ProcessSend(
+      const TriggerGenerator::Output* triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& parameters,
+      const float feedback,
+      const bool mono,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size, float gain);
   
   inline void set_delay_mode(DelayMode mode) {
     filter_mode_.wide_detent = mode == DELAY_MODE_WIDE_DETENT;
@@ -487,6 +499,28 @@ class GranularProcessor {
     }
   }
       
+  void ProcessSendInternal(
+      const TriggerGenerator::Output* grain_triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& grain_parameters,
+      const float feedback,
+      const bool mono,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size, float gain);
+
+  template<bool mono>
+  void ProcessSendInternal(
+      const TriggerGenerator::Output* grain_triggers,
+      const DelayController::Output* taps,
+      const bool* freeze,
+      const Parameters& grain_parameters,
+      const float feedback,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size, float gain);
+
   DelayGranularPlayer dummy_granular_player_;
   DelayGranularPlayer granular_player_;
   MultitapDelay multitap_delay_;

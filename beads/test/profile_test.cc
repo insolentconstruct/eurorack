@@ -354,7 +354,7 @@ void TestBetaProfileDefinitions() {
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    255, 255, 255, 255, 255, 255, 255, 255, 255
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank and Rings' polyphony; older
@@ -682,6 +682,18 @@ uint32_t Beta3Digest(uint32_t* accepted) {
       }
       Profile plaits;
       CHECK(ok == plaits.Init(b));
+      results.push_back(false);
+      continue;
+    }
+    // Beta 3 refused Send; it has the same valid placements as Gentle.
+    if (cases[i] == FEATURE_MIX_LAW && cases[i + 2] == 2) {
+      b[18] = 1;
+      const uint32_t gentle_crc = Profile::Crc32(b, 16 + 6 * count);
+      for (int j = 0; j < 4; ++j) {
+        b[16 + 6 * count + j] = gentle_crc >> (8 * j);
+      }
+      Profile gentle;
+      CHECK(ok == gentle.Init(b));
       results.push_back(false);
       continue;
     }

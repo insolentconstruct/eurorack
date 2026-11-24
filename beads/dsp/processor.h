@@ -129,6 +129,11 @@ class Processor {
   inline void set_gentle_mix(bool gentle) {
     SetOption(OPTION_FLAG_GENTLE_MIX, gentle);
   }
+  void set_output_division(int division);
+  // New grains keep the send level they had at their start.
+  inline void set_send_mix(bool send) {
+    SetOption(OPTION_FLAG_SEND_MIX, send);
+  }
   // Reverb on the grains before the dry/wet mix, as in Clouds.
   inline void set_reverb_on_grains(bool grains) {
     SetOption(OPTION_FLAG_REVERB_ON_GRAINS, grains);
@@ -401,12 +406,17 @@ class Processor {
     // State, not a choice: the unity loop's 10 Hz cutoff is in place.
     OPTION_FLAG_LOW_CUTOFF = 32,
     OPTION_FLAG_RESONATOR_GRAINS = 64,
-    OPTION_FLAG_RESONATOR_INPUT = 128
+    OPTION_FLAG_RESONATOR_INPUT = 128,
+    OPTION_FLAG_OUTPUT_DIVISION = 256,
+    OPTION_FLAG_SEND_MIX = 512
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
     options_ = enabled ? (options_ | flag) : (options_ & ~flag);
   }
+
+  void DivideOutput(const TriggerGenerator::Output* triggers,
+      bool* gate, size_t size);
 
   void ProcessWithOptions(
       SeedButtonState seed_button_state,
@@ -513,7 +523,7 @@ class Processor {
   
   float delay_mode_transition_;
   DelayMode delay_mode_;
-  uint8_t options_;
+  uint16_t options_;
   TimeScan time_scan_;
 
   float dry_;
@@ -553,6 +563,10 @@ class Processor {
   stmlib::Svf strike_filter_;
   bool strike_sounding_;
   
+  int output_division_;
+  int output_pulse_count_;
+  bool output_pulse_;
+
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };
 

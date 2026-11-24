@@ -90,6 +90,8 @@ const char* const kOptionNames[] = {
   "Resonator damping",
   "Resonator position",
   "Resonator amount",
+  "Synth output level",
+  "Grain output division",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.

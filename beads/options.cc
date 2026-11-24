@@ -122,6 +122,8 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // Resonator damping.
   PAGE_CONTROL_NONE,  // Resonator position.
   PAGE_CONTROL_NONE,  // Resonator amount.
+  PAGE_CONTROL_NONE,  // Synth level.
+  PAGE_CONTROL_NONE,  // Output division.
 };
 const Leds::Color kOptionColors[kNumOptionColors] = {
   { 0, 255, 0 },
