@@ -75,6 +75,16 @@ build bytebeat $blob/models/bytebeat.cc \
   $blob/models/bytebeat_engine.cc beads/plaits_resources.cc
 build acid $blob/models/acid.cc \
   $blob/models/acid_engine.cc beads/plaits_resources.cc
+build granular_cloud $blob/models/granular_cloud.cc \
+  $blob/models/granular_cloud_engine.cc
+build vowel_fof $blob/models/vowel_fof.cc \
+  $blob/models/vowel_fof_engine.cc $blob/models/vowel_fof_data.cc
+build virtual_analog_variant $blob/models/virtual_analog_variant.cc \
+  $blob/models/virtual_analog_variant_engine.cc beads/plaits_resources.cc
+build zxphase48k $blob/models/zxphase48k.cc \
+  $blob/models/zxphase48k_engine.cc beads/plaits_resources.cc
+build zxpulse48k $blob/models/zxpulse48k.cc \
+  $blob/models/zxpulse48k_engine.cc $blob/models/zxpulse48k_chord_bank.cc beads/plaits_resources.cc
 build gendy $blob/models/gendy.cc $blob/models/gendy_engine.cc
 build dual_sync $blob/models/dual_sync.cc \
   $blob/models/dual_sync_engine.cc \
