@@ -330,17 +330,26 @@ class Machine(object):
     image = self.image
     main = image.address('main')
     init = image.address('_Z4Initv')
+    do_events = image.address('_ZN5beads2Ui8DoEventsEv')
     code = bytes(uc.mem_read(main, 0x40))
-    i = 0
+    i = previous = 0
+    initialized = False
     while i < len(code):
       hw = code[i] | code[i + 1] << 8
       n = thumb_length(hw)
-      if n == 4 and self.bl_target(main + i, code[i:i + 4]) == init:
-        self.loop_head = main + i + 4
+      target = self.bl_target(main + i, code[i:i + 4]) if n == 4 else None
+      if target == init:
+        initialized = True
+      elif initialized and target == do_events:
+        # The compiler can hoist setup out of the loop after Init.
+        load, = struct.unpack_from('<H', code, previous)
+        if load & 0xff00 == 0x4800:  # LDR r0, [pc, #imm]
+          self.loop_head = main + previous
         break
+      previous = i
       i += n
     if self.loop_head is None:
-      raise RuntimeError('no call to Init at the start of main')
+      raise RuntimeError('cannot locate the Ui::DoEvents loop head in main')
     uc.hook_add(unicorn.UC_HOOK_CODE, self.on_head, begin=self.loop_head,
                 end=self.loop_head)
     sp, reset = struct.unpack('<II', uc.mem_read(
