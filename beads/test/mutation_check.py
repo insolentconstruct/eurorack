@@ -2687,7 +2687,7 @@ cases = [
     '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/settings_storage.h',
     '        !memcmp(&requested, &durable, sizeof(PersistentData));',
-    '        requested.padding[0] == durable.padding[0];'),
+    '        memcmp(&requested, &durable, sizeof(PersistentData));'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
     '        queue_.Touch();  // A full second of it after the save\'s erase.\n',
     ''),
