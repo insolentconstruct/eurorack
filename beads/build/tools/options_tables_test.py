@@ -293,7 +293,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     for phrase in ("Monophonic grains", "Buffer trim", "Plaits banks",
                    "Manual gain",
                    "Wavetable synth (Manual)", "FREEZE [B]",
-                   "Switching clears the recording."):
+                   "Granular ↔ Spectral resets the recording."):
         assert phrase in markdown.split("## Details")[0], phrase
     assert "erase" not in markdown.lower()
     for name in ("options-guide.svg", "options-guide-mobile.svg"):
@@ -313,9 +313,9 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         else:
             assert labels.count("[A] + DRY/WET: Stereo width") == 1
             assert labels.count("Manual gain") == 1
-        assert labels.count("Processor: switching clears the recording."
+        assert labels.count("Processor: granular ↔ spectral resets the recording."
                             if printable
-                            else "Switching clears the recording.") == 1
+                            else "Granular ↔ Spectral resets the recording.") == 1
         assert ("hold [A] 1.5 s" if printable
                 else "about a second and a half") in " ".join(labels)
         assert labels.count("READ THE [A] LED") == 1
@@ -348,7 +348,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     # Check the non-TSV zone descriptions against the shipped reference too.
     for phrase in (
         "Three zones",
-        "Lower half selects",
+        "in quarters",
         "each stored value in turn",
         "about two seconds",
         "three seconds",

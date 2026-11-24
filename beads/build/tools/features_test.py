@@ -175,7 +175,7 @@ faults = [
   ('Zones: REVERB', features.MANIFEST,
       '"field": 1,\n      "saved": 9,\n'
       '      "states": ["Off", "Fixed", "Adjustable"],\n'
-      '      "page": true,\n      "page_control": "halves",',
+      '      "page": true,\n      "page_control": "steps",',
       '"field": 1,\n      "saved": 9,\n'
       '      "states": ["Off", "Fixed", "Adjustable"],\n'
       '      "page": true,\n      "page_control": "zones",'),
