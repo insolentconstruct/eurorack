@@ -685,6 +685,10 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  if (settings.FeatureValue(FEATURE_TIME_CV_RANGE)) {
+    cv_reader.UseFineTimeCv(
+        settings.persistent_data().adc_calibration[CV_ADC_CHANNEL_TIME]);
+  }
   fixed_reverb_decay = Reverb::InitFixedDecay(
       settings.FeatureValue(FEATURE_REVERB_DECAY));
 #ifdef PLAITS_BLOBS

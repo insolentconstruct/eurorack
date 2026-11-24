@@ -356,9 +356,10 @@ void TestBetaProfileDefinitions() {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    kNoField, kNoField  // Manual delay toggle and reverb decay.
+    kNoField, kNoField, kNoField  // Manual delay, reverb decay, TIME CV.
   };
-  CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
+  STATIC_ASSERT(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION,
+      missing_expected_feature_field);
   // The factory profile lists the Plaits bank and Rings' polyphony; older
   // profiles imply them.
   Template(b);

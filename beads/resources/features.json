@@ -1108,6 +1108,20 @@
       "actions": [],
       "stateless": false,
       "touches_synth": true
+    },
+    {
+      "id": 55,
+      "symbol": "TIME_CV_RANGE",
+      "name": "TIME CV range",
+      "issue": 39,
+      "values": [{"name": "Stock"}, {"name": "Fine (1/8)"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
     }
   ],
   "plaits_models": [

@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Custom profiles can reduce TIME CV sensitivity to one eighth (#39).
+
 - A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE (#309).
 
 - Custom profiles can set a fixed reverb decay while REVERB still controls the mix (#38).

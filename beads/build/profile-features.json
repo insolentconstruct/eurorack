@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4e70861e39ddac015a0af386ca8ee70a41d01aec947a49d59b3c6431df895671",
+  "manifest_sha256": "01c70ae7e47f7dd3606e2ef0beb0f476f19a24edcebaf81cff0c7d6eb073daf3",
   "record_version": 1,
   "features": [
     {
@@ -1786,6 +1786,28 @@
         "Short",
         "Medium",
         "Long"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 55,
+      "name": "TIME CV range",
+      "values": [
+        "Stock",
+        "Fine (1/8)"
       ],
       "states": [
         "Off",

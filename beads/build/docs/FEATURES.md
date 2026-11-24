@@ -596,6 +596,15 @@ resulting tail length depends on sample rate and reverb character. The
 existing mix limits are 0.90 for the processor and 0.80 for the synths.
 An optional full-wet range would need a separate choice.
 
+### TIME CV range
+
+Hygrostat feature ID 55 chooses Stock or Fine (1/8) (#39). Fine scales the
+calibrated TIME jack signal to one eighth of its stock value, in every mode
+that uses that jack. TIME and its attenurandomizer keep their existing
+roles and travel. Unpatched TIME behaves as before. A calibration save
+keeps its original units. The choice is Fixed only, with no panel slot
+or saved byte. Earlier firmware uses its fallback profile if ID 55 is present.
+
 ### Grain stealing
 
 Hygrostat feature ID 34 chooses 2021/2024 (value 0, the default) or 2026

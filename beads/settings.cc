@@ -96,6 +96,7 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   28,  // Gain ceiling.
   0,  // Manual delay.
   0,  // Reverb decay.
+  0,  // Time cv range.
 };
 
 bool Settings::Init(bool recovery_mode) {

@@ -143,6 +143,9 @@ class Calibrator {
         std::copy(&previous[0], &previous[CV_ADC_CHANNEL_LAST], c);
       }
     }
+    if (settings_->FeatureValue(FEATURE_TIME_CV_RANGE)) {
+      cv_reader_->RefreshFineTimeCv(c[CV_ADC_CHANNEL_TIME]);
+    }
     return saved;
   }
   
