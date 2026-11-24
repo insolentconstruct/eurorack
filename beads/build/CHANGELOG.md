@@ -4,6 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Resume jack detection when calibration is cancelled before the first measurement.
 - Recover calibration and settings independently from partially damaged dumps.
 - Guard writes and use RAM defaults when neither calibration copy is usable.
 - Preserve a measured calibration during recalibration after a stock factory reset.

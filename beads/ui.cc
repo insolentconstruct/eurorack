@@ -615,6 +615,9 @@ void Ui::OnSwitchPressed(const Event& e) {
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
+    if (mode_ == MODE_CALIBRATION_1) {
+      calibrator_->ResumeNormalization();
+    }
     mode_ = MODE_DISPLAY_AUTOSAVE;
     ignore_release_[SWITCH_ASSIGN] = ignore_release_[SWITCH_FREEZE] = true;
     return;

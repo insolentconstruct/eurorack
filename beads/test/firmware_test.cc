@@ -3378,6 +3378,18 @@ void RewriteOnNextSave() {
 
 // Incomplete calibration changes neither live nor saved values (#346),
 // including rejected offsets/pitch and exit via the autosave chord.
+void TestCalibrationExitResumesNormalization() {
+  test_checker.Start("TestCalibrationExitResumesNormalization");
+  Rig r(false, false);
+  r.Settle();
+  Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+  Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input());
+}
+
 void TestUnfinishedCalibrationKept() {
   test_checker.Start("TestUnfinishedCalibrationKept");
   for (int exit = 0; exit < 3; ++exit) {
@@ -4225,6 +4237,7 @@ int main() {
   TestEngineChangeWhileFrozen();
   TestProcessorToggle();
   TestCalibrationStepOnRelease();
+  TestCalibrationExitResumesNormalization();
   TestRejectedCalibrationCue();
   TestUnfinishedCalibrationKept();
   TestLockedCalibrationCue();
