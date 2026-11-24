@@ -17,6 +17,12 @@ Delay-mode SEED latching can pop, as in stock. A Hygrostat profile can fade it i
 
 ## Fixes
 
+If missing or damaged wavetable content forces Beads' synth to Plaits,
+[A]+FREEZE steps the fallback bank while it plays, and the [A] hold starts
+and stops Manual synth play. Turning a gain knob still consumes the hold;
+Automatic synth start keeps the automatic-gain restart. Repairing the content
+restores the profile's gestures without changing its profile or saved State.
+
 Low supply voltage blocks settings and buffer saves. Interrupted saves follow the power-cut path; saving resumes after voltage recovers (#175).
 
 ## Buttons and startup

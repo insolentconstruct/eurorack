@@ -1584,13 +1584,15 @@ cases = [
     '    { FEATURE_PLAITS_BANK, PROFILE_ADJUSTABLE, 0, 0,',
     '    { FEATURE_PLAITS_BANK, PROFILE_OFF, 0, 0,'),
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
-    'if (slot == ACTION_FREEZE && synth_mode_ && feature != FEATURE_SYNTH_START) {',
-    'if (slot == ACTION_FREEZE && feature != FEATURE_SYNTH_START) {'),
+    'if (slot == ACTION_FREEZE && synth_mode_ &&\n'
+    '      (fallback || feature != FEATURE_SYNTH_START)) {',
+    'if (slot == ACTION_FREEZE &&\n'
+    '      (fallback || feature != FEATURE_SYNTH_START)) {'),
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     '    } else if (playing_synth_ == SYNTH_PLAITS) {',
     '    } else if (true) {'),
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
-    '&& feature != FEATURE_SYNTH_START) {', '&& true) {'),
+    '(fallback || feature != FEATURE_SYNTH_START)) {', '(true)) {'),
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     '(settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);',
     '(settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % 4);'),
