@@ -1177,7 +1177,7 @@ void TestSynthPlayableSets() {
   r.ui.LoadOptions();
   CHECK(r.ui.synth() == SYNTH_RINGS);
   r.EnterPage(2);
-  r.feedback = .9f;
+  r.feedback = .38f;
   r.Tick(1001, true);
   CHECK(r.settings.spectral());
   CHECK(r.settings.synth() == SYNTH_RINGS);
