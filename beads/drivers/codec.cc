@@ -334,6 +334,12 @@ bool Codec::Restart(
 
     HAL_SAI_DeInit(&sai_tx_);
     HAL_SAI_DeInit(&sai_rx_);
+  } else {
+    // An abort timeout can leave the HAL DMA handles in the error state.
+    if (!InitializeDMA() || !InitializeGPIODMA()) {
+      return false;
+    }
+    instance_ = this;
   }
 
   // Resume the new clocks while reset remains asserted (PCM3060, p.16).
