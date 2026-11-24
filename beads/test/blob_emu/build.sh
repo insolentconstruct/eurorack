@@ -136,6 +136,13 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/harmonics_engine.cc \
     $models/sub_oscillator_engine.cc \
     $models/digital_modulation_engine.cc \
+    $models/granular_cloud_engine.cc \
+    $models/vowel_fof_engine.cc \
+    $models/vowel_fof_data.cc \
+    $models/virtual_analog_variant_engine.cc \
+    $models/zxphase48k_engine.cc \
+    $models/zxpulse48k_engine.cc \
+    $models/zxpulse48k_chord_bank.cc \
     $models/gendy_engine.cc \
     $models/particle_burst_engine.cc \
     $models/struck_drum_engine.cc \

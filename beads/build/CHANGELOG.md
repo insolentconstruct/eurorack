@@ -4,6 +4,15 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
+
+- Palette blob models gain ZxPhase48k; each selection starts its oscillators and modulation afresh.
+
+- Palette blob models gain VA Variant; each selection starts its oscillators and filters afresh.
+
+- Palette blob models gain Vowel FOF; each selection starts its synthesis state afresh.
+
+- Palette blob models gain Granular Cloud; each selection starts its grains and random stream afresh.
 - Palette VOSIM prepares its DC seed over 16 blocks on each selection, adding 4 ms of silence at the synth rate; returning to it starts a fresh voice.
 
 - [A]+FREEZE follows the synth that actually plays, a fallback included: Plaits steps its bank, Rings its polyphony, and Beads' synth or silence run the profile's [A]+FREEZE action (Buffer trim by default) (#353). The saved Synth choice never changes.

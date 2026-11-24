@@ -66,6 +66,11 @@
 #include "beads/blob/models/triple_engine.h"
 #include "beads/blob/models/bytebeat_engine.h"
 #include "beads/blob/models/acid_engine.h"
+#include "beads/blob/models/granular_cloud_engine.h"
+#include "beads/blob/models/vowel_fof_engine.h"
+#include "beads/blob/models/virtual_analog_variant_engine.h"
+#include "beads/blob/models/zxphase48k_engine.h"
+#include "beads/blob/models/zxpulse48k_engine.h"
 #include "beads/blob/models/gendy_engine.h"
 #include "beads/blob/models/chords_supersaw_engine.h"
 #include "beads/blob/models/bubbletime_engine.h"
@@ -166,7 +171,7 @@ class TestSineEngine : public Engine {
 
 // The proof's Palette models and test sine, then the stock engines in
 // PlaitsVoice's registry order (the 6-op engine serves models 2-4).
-const size_t kFirstStock = 66;
+const size_t kFirstStock = 71;
 const size_t kNumStock = 22;
 const size_t kNumCompiled = kFirstStock + kNumStock;
 const size_t kSixOpSlot = kFirstStock + 2;
@@ -269,6 +274,21 @@ static uint8_t bytebeat_storage[sizeof(BytebeatEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t acid_storage[sizeof(AcidEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t granular_cloud_storage[sizeof(GranularCloudEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t vowel_fof_storage[sizeof(VowelFofEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t virtual_analog_variant_storage[sizeof(VirtualAnalogVariantEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t zxphase48k_storage[sizeof(ZxPhase48kEngine)]
+    __attribute__((aligned(8)));
+
+static uint8_t zxpulse48k_storage[sizeof(ZxPulse48kEngine)]
     __attribute__((aligned(8)));
 
 static uint8_t sine_storage[sizeof(TestSineEngine)]
@@ -530,6 +550,16 @@ static void BuildProof() {
       &bytebeat_storage[sizeof(bytebeat_storage)], 0);
   std::fill(&acid_storage[0],
       &acid_storage[sizeof(acid_storage)], 0);
+  std::fill(&granular_cloud_storage[0],
+      &granular_cloud_storage[sizeof(granular_cloud_storage)], 0);
+  std::fill(&vowel_fof_storage[0],
+      &vowel_fof_storage[sizeof(vowel_fof_storage)], 0);
+  std::fill(&virtual_analog_variant_storage[0],
+      &virtual_analog_variant_storage[sizeof(virtual_analog_variant_storage)], 0);
+  std::fill(&zxphase48k_storage[0],
+      &zxphase48k_storage[sizeof(zxphase48k_storage)], 0);
+  std::fill(&zxpulse48k_storage[0],
+      &zxpulse48k_storage[sizeof(zxpulse48k_storage)], 0);
   std::fill(&gendy_storage[0], &gendy_storage[sizeof(gendy_storage)], 0);
   std::fill(&particle_burst_storage[0],
       &particle_burst_storage[sizeof(particle_burst_storage)], 0);
@@ -618,50 +648,55 @@ static void BuildProof() {
   compiled[19] = new(fold_storage) FoldEngine;
   compiled[20] = new(buzz_storage) BuzzEngine;
   compiled[21] = new(dual_sync_storage) DualSyncEngine;
-  compiled[22] = new(morph_storage) MorphEngine;
-  compiled[23] = new(noise_bank_storage) NoiseBankEngine;
-  compiled[24] = new(particle_burst_storage) ParticleBurstEngine;
-  compiled[25] = new(saw_square_storage) SawSquareEngine;
-  compiled[26] = new(saw_swarm_storage) SawSwarmEngine;
-  compiled[27] = new(vowel_storage) VowelEngine;
-  compiled[28] = new(harmonics_storage) HarmonicsEngine;
-  compiled[29] = new(vosim_storage) VosimEngine;
-  compiled[30] = new(plucked_storage) PluckedEngine;
-  compiled[31] = new(blown_storage) BlownEngine;
-  compiled[32] = new(struck_bell_storage) StruckBellEngine;
-  compiled[33] = new(struck_drum_storage) StruckDrumEngine;
-  compiled[34] = new(kick_storage) KickEngine;
-  compiled[35] = new(snare_storage) SnareEngine;
-  compiled[36] = new(cymbal_storage) CymbalEngine;
-  compiled[37] = new(wave_paraphonic_storage) WaveParaphonicEngine;
-  compiled[38] = new(fluted_storage) FlutedEngine;
-  compiled[39] = new(question_mark_storage) QuestionMarkEngine;
-  compiled[40] = new(bowed_storage) BowedEngine;
-  compiled[41] = new(sub_oscillator_storage) SubOscillatorEngine;
-  compiled[42] = new(digital_modulation_storage) DigitalModulationEngine;
-  compiled[43] = new(saw_comb_storage) SawCombEngine;
-  compiled[44] = new(raw_fm_storage) RawFmEngine;
-  compiled[45] = new(triple_storage) TripleEngine;
-  compiled[46] = new(bytebeat_storage) BytebeatEngine;
-  compiled[47] = new(diatonic_chord_storage) DiatonicChordEngine;
-  compiled[48] = new(scale_stack_storage) ScaleStackEngine;
-  compiled[49] = new(wavetable_chord_storage) WavetableChordEngine;
-  compiled[50] = new(wavetable_scale_stack_storage) WavetableScaleStackEngine;
-  compiled[51] = new(shakers_storage) ShakersEngine;
-  compiled[52] = new(brass_storage) BrassEngine;
-  compiled[53] = new(helix_storage) HelixEngine;
-  compiled[54] = new(skins_storage) SkinsEngine;
-  compiled[55] = new(circuit_zaps_storage) CircuitZapsEngine;
-  compiled[56] = new(metalwork_storage) MetalworkEngine;
-  compiled[57] = new(clap_storage) ClapEngine;
-  compiled[58] = new(analog_percussion_storage) AnalogPercussionEngine;
-  compiled[59] = new(freshets_formant_storage) FreshetsFormantEngine;
-  compiled[60] = new(bubbletime_storage) BubbleTimeEngine;
-  compiled[61] = new(acid_storage) AcidEngine;
-  compiled[62] = new(chords_supersaw_storage) ChordsSupersawEngine;
-  compiled[63] = new(speech_sounds_storage) SpeechSoundsEngine;
-  compiled[64] = new(lpc_words_storage) LPCWordsEngine;
-  compiled[65] = new(sine_storage) TestSineEngine;
+  compiled[22] = new(granular_cloud_storage) GranularCloudEngine;
+  compiled[23] = new(morph_storage) MorphEngine;
+  compiled[24] = new(noise_bank_storage) NoiseBankEngine;
+  compiled[25] = new(particle_burst_storage) ParticleBurstEngine;
+  compiled[26] = new(saw_square_storage) SawSquareEngine;
+  compiled[27] = new(saw_swarm_storage) SawSwarmEngine;
+  compiled[28] = new(vowel_storage) VowelEngine;
+  compiled[29] = new(harmonics_storage) HarmonicsEngine;
+  compiled[30] = new(vosim_storage) VosimEngine;
+  compiled[31] = new(plucked_storage) PluckedEngine;
+  compiled[32] = new(blown_storage) BlownEngine;
+  compiled[33] = new(struck_bell_storage) StruckBellEngine;
+  compiled[34] = new(struck_drum_storage) StruckDrumEngine;
+  compiled[35] = new(kick_storage) KickEngine;
+  compiled[36] = new(snare_storage) SnareEngine;
+  compiled[37] = new(cymbal_storage) CymbalEngine;
+  compiled[38] = new(wave_paraphonic_storage) WaveParaphonicEngine;
+  compiled[39] = new(fluted_storage) FlutedEngine;
+  compiled[40] = new(question_mark_storage) QuestionMarkEngine;
+  compiled[41] = new(virtual_analog_variant_storage) VirtualAnalogVariantEngine;
+  compiled[42] = new(bowed_storage) BowedEngine;
+  compiled[43] = new(sub_oscillator_storage) SubOscillatorEngine;
+  compiled[44] = new(digital_modulation_storage) DigitalModulationEngine;
+  compiled[45] = new(saw_comb_storage) SawCombEngine;
+  compiled[46] = new(vowel_fof_storage) VowelFofEngine;
+  compiled[47] = new(raw_fm_storage) RawFmEngine;
+  compiled[48] = new(triple_storage) TripleEngine;
+  compiled[49] = new(bytebeat_storage) BytebeatEngine;
+  compiled[50] = new(diatonic_chord_storage) DiatonicChordEngine;
+  compiled[51] = new(scale_stack_storage) ScaleStackEngine;
+  compiled[52] = new(wavetable_chord_storage) WavetableChordEngine;
+  compiled[53] = new(wavetable_scale_stack_storage) WavetableScaleStackEngine;
+  compiled[54] = new(shakers_storage) ShakersEngine;
+  compiled[55] = new(brass_storage) BrassEngine;
+  compiled[56] = new(helix_storage) HelixEngine;
+  compiled[57] = new(skins_storage) SkinsEngine;
+  compiled[58] = new(circuit_zaps_storage) CircuitZapsEngine;
+  compiled[59] = new(metalwork_storage) MetalworkEngine;
+  compiled[60] = new(clap_storage) ClapEngine;
+  compiled[61] = new(analog_percussion_storage) AnalogPercussionEngine;
+  compiled[62] = new(freshets_formant_storage) FreshetsFormantEngine;
+  compiled[63] = new(bubbletime_storage) BubbleTimeEngine;
+  compiled[64] = new(zxphase48k_storage) ZxPhase48kEngine;
+  compiled[65] = new(zxpulse48k_storage) ZxPulse48kEngine;
+  compiled[66] = new(acid_storage) AcidEngine;
+  compiled[67] = new(chords_supersaw_storage) ChordsSupersawEngine;
+  compiled[68] = new(speech_sounds_storage) SpeechSoundsEngine;
+  compiled[69] = new(lpc_words_storage) LPCWordsEngine;
+  compiled[70] = new(sine_storage) TestSineEngine;
   for (size_t i = 0; i < kFirstStock; ++i) {
     // All engines share the same RAM space, as in PlaitsVoice::Init.
     allocator.Free();
@@ -748,7 +783,42 @@ void harness_select_compiled(uint32_t engine, uint32_t model) {
 // for a rebuilt blob, which equals an engine's first selection.
 void harness_rebuild_compiled(uint32_t engine, uint32_t model) {
   const uint32_t seed = stmlib::Random::state();
-  if (engine < kFirstStock) {
+  if (engine == 22) {
+    std::fill(&granular_cloud_storage[0],
+        &granular_cloud_storage[sizeof(granular_cloud_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(granular_cloud_storage) GranularCloudEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine == 46) {
+    std::fill(&vowel_fof_storage[0],
+        &vowel_fof_storage[sizeof(vowel_fof_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(vowel_fof_storage) VowelFofEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine == 41) {
+    std::fill(&virtual_analog_variant_storage[0],
+        &virtual_analog_variant_storage[sizeof(virtual_analog_variant_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(virtual_analog_variant_storage) VirtualAnalogVariantEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine == 64) {
+    std::fill(&zxphase48k_storage[0],
+        &zxphase48k_storage[sizeof(zxphase48k_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(zxphase48k_storage) ZxPhase48kEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine == 65) {
+    std::fill(&zxpulse48k_storage[0],
+        &zxpulse48k_storage[sizeof(zxpulse48k_storage)], 0);
+    std::fill(&compiled_arena[0], &compiled_arena[kArenaSize], 0);
+    stmlib::BufferAllocator allocator(compiled_arena, kArenaSize);
+    compiled[engine] = new(zxpulse48k_storage) ZxPulse48kEngine;
+    compiled[engine]->Init(&allocator);
+  } else if (engine < kFirstStock) {
     BuildProof();
   } else {
     BuildStock();
