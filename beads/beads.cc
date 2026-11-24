@@ -166,9 +166,7 @@ uint8_t seed_latch_mode;
 bool seed_latch_enabled;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-template<bool abyss_mode>
-inline __attribute__((always_inline))
-void ProcessAudio(
+void Process(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
@@ -216,7 +214,7 @@ void ProcessAudio(
   bool attack_onset = false;
   if (attack_mode && !transition.blanking() &&
       (!freeze_block || attack_trigger_mode) &&
-      !abyss_mode && !synth_mode && processor.attack_recording()) {
+      !synth_mode && processor.attack_recording()) {
     attack_onset = processor.attack_input()->Process(
         in,
         size,
@@ -250,7 +248,7 @@ void ProcessAudio(
     previous_seed = GATE_FLAG_LOW;
   }
   ui.set_seed_led_state(seed_block && !transition.blanking());
-  ui.set_overwrite_reserve(abyss_mode || synth_mode || processor.spectral()
+  ui.set_overwrite_reserve(synth_mode || processor.spectral()
       ? 1.0f : processor.overwrite_reserve());
   
   // Conversion of input samples into floats, (with automatic gain control).
@@ -348,7 +346,7 @@ void ProcessAudio(
   }
 
   if (ui.trim_flag()) {
-    if (!abyss_mode && !processor.spectral()) {
+    if (!processor.spectral()) {
       processor.Trim();
     }
     ui.ClearTrimFlag();
@@ -356,16 +354,14 @@ void ProcessAudio(
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
   const bool requested_style = ui.clouds_style();
-  const int current_mode = abyss_mode ? int(PROCESSOR_ABYSS)
-      : int(processor.spectral());
-  const bool engine_change = ui.processor_mode() != current_mode &&
+  const bool engine_change = ui.spectral() != processor.spectral() &&
       !ui.should_ignore_state_change();
   if (transition.Hold(requested_style, engine_change, &processor, &synth,
       &plaits_synth, &rings_synth, out, size)) {
     return;
   }
 #ifdef DWT_CALIBRATION
-  if (!abyss_mode && dwt_calibration::stats.synthetic) {
+  if (dwt_calibration::stats.synthetic) {
     dwt_calibration::PrepareSynthetic(
         &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
@@ -378,12 +374,11 @@ void ProcessAudio(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
-  if (!abyss_mode && synth_mode && transition.playing_synth() == SYNTH_SILENT) {
+  if (synth_mode && transition.playing_synth() == SYNTH_SILENT) {
     FloatFrame silence;
     silence = 0.0f;
     fill(&float_out[0], &float_out[size], silence);
-  } else if (!abyss_mode && synth_mode &&
-      transition.playing_synth() == SYNTH_RINGS) {
+  } else if (synth_mode && transition.playing_synth() == SYNTH_RINGS) {
     rings_synth.set_output_limiter_mode(ui.output_limiter_mode());
     rings_synth.set_pitch_scale(ui.pitch_scale());
     rings_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -401,8 +396,7 @@ void ProcessAudio(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
-  } else if (!abyss_mode && synth_mode &&
-      transition.playing_synth() == SYNTH_PLAITS) {
+  } else if (synth_mode && transition.playing_synth() == SYNTH_PLAITS) {
     plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
     plaits_synth.set_pitch_scale(ui.pitch_scale());
     plaits_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -420,7 +414,7 @@ void ProcessAudio(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
-  } else if (!abyss_mode && synth_mode) {
+  } else if (synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
     synth.set_random_intervals(ui.random_intervals());
     synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -438,33 +432,6 @@ void ProcessAudio(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
-  } else if (abyss_mode) {
-    Abyss::Controls controls;
-    controls.room = p.time.value();
-    controls.decay = p.size.value();
-    controls.drift = p.shape.value();
-    controls.diffusion = d.value();
-    controls.gravity = m.feedback;
-    controls.pitch = p.pitch.value(NULL, 0, 24.0f, false);
-    CONSTRAIN(controls.pitch, -24.0f, 24.0f);
-    controls.tone = m.reverb_amount;
-    controls.mix = m.dry_wet;
-#ifdef DWT_CALIBRATION
-    const uint32_t calibration_start = dwt_calibration::Read();
-#endif  // DWT_CALIBRATION
-    abyss.Process(controls, freeze, float_in, float_out, size);
-#ifdef DWT_CALIBRATION
-    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
-        dwt_calibration::Read() - calibration_start);
-#endif  // DWT_CALIBRATION
-    abyss_limiter.ProcessOutput(
-        float_out, size, ui.output_limiter_mode(), processor.sample_rate());
-    if (m.output_gate) {
-      for (size_t i = 0; i < size; ++i) {
-        float_out[i].l = (float_out[i].l + float_out[i].r) * 0.5f;
-        float_out[i].r = 0.0f;
-      }
-    }
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
     processor.set_random_intervals(ui.random_intervals());
@@ -511,20 +478,133 @@ void ProcessAudio(
   }
 }
 
-void Process(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<false>(events, in, out, size);
+RandomizedParameter AbyssParameter(PotsAdcChannel knob,
+    PotsAdcChannel amount, CvAdcChannel cv,
+    NormalizationDetectorChannel channel) {
+  RandomizedParameter parameter;
+  parameter.base = cv_reader.pot(knob);
+  parameter.attenuverter = cv_reader.pot(amount);
+  parameter.has_cv = !normalization_detector.normalized(channel);
+  parameter.cv = cv_reader.cv(cv);
+  return parameter;
+}
+
+float AbyssMix(Ui::MixParameter parameter, float cv) {
+  const State& state = settings.state();
+  float value = ui.mix_parameter(parameter) * 1.005f;
+  if (!settings.width_assigned() && !settings.diffusion_assigned()) {
+    const float amount = state.assignable_cv_destination == 3
+        ? float(state.assignable_cv_amount[parameter]) / 256.0f
+        : float(state.assignable_cv_destination == parameter);
+    value += cv * amount;
+  }
+  CONSTRAIN(value, 0.0f, 1.0f);
+  return value;
 }
 
 void ProcessAbyss(
     const Codec::Event* events,
     const Codec::Frame* in,
-    Codec::Frame* out,
+    Codec::Frame* codec_out,
     size_t size) {
-  ProcessAudio<true>(events, in, out, size);
+#ifdef PROFILE_INTERRUPT
+  ScopedDebugPinToggler toggler;
+#endif  // PROFILE_INTERRUPT
+#ifdef DWT_CALIBRATION
+  dwt_calibration::ScopedBlockTimer calibration_callback;
+#endif  // DWT_CALIBRATION
+  FloatFrame input[kMaxCodecBlockSize];
+  FloatFrame output[kMaxCodecBlockSize];
+  bool freeze[kMaxCodecBlockSize];
+  normalization_detector.Process(
+      events[size - 1], in[size - 1], cv_reader.cv_values());
+  cv_reader.Read();
+  for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
+    ui.ProcessPot(Ui::MixParameter(i), cv_reader.pot(
+        PotsAdcChannel(POTS_ADC_CHANNEL_FEEDBACK + i)));
+  }
+
+  bool frozen = false;
+  bool seeded = false;
+  for (size_t i = 0; i < size; ++i) {
+    freeze[i] = ui.freeze_button_state() || (events[i] & Codec::EVENT_FREEZE);
+    frozen |= freeze[i];
+    seeded |= events[i] & Codec::EVENT_SEED;
+  }
+  ui.set_freeze_led_state(frozen);
+  ui.set_seed_led_state(seeded && !transition.blanking() &&
+      !normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED));
+  ui.set_overwrite_reserve(1.0f);
+
+  gain_control.Process(
+      !transition.blanking(), settings.state().gain,
+      normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
+      normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT),
+      in, input, size);
+  if (transition.Blanking(codec_out, size)) {
+    return;
+  }
+
+  ui.ClearTrimFlag();
+  const bool change = ui.processor_mode() != PROCESSOR_ABYSS &&
+      !ui.should_ignore_state_change();
+  if (transition.Hold(ui.clouds_style(), change, &processor, &synth,
+      &plaits_synth, &rings_synth, codec_out, size)) {
+    return;
+  }
+
+  Abyss::Controls controls;
+  controls.room = AbyssParameter(POTS_ADC_CHANNEL_TIME,
+      POTS_ADC_CHANNEL_TIME_AMOUNT, CV_ADC_CHANNEL_TIME,
+      NORMALIZATION_DETECTOR_CHANNEL_TIME_CV).value();
+  controls.decay = AbyssParameter(POTS_ADC_CHANNEL_SIZE,
+      POTS_ADC_CHANNEL_SIZE_AMOUNT, CV_ADC_CHANNEL_SIZE,
+      NORMALIZATION_DETECTOR_CHANNEL_SIZE_CV).value();
+  controls.drift = AbyssParameter(POTS_ADC_CHANNEL_SHAPE,
+      POTS_ADC_CHANNEL_SHAPE_AMOUNT, CV_ADC_CHANNEL_SHAPE,
+      NORMALIZATION_DETECTOR_CHANNEL_SHAPE_CV).value();
+  ModulatedParameter diffusion;
+  diffusion.base = cv_reader.pot(POTS_ADC_CHANNEL_DENSITY);
+  diffusion.cv = normalization_detector.normalized(
+      NORMALIZATION_DETECTOR_CHANNEL_DENSITY_CV)
+      ? 0.0f : cv_reader.cv(CV_ADC_CHANNEL_DENSITY);
+  controls.diffusion = diffusion.value();
+  const float cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+  controls.gravity = AbyssMix(Ui::MIX_PARAMETER_FEEDBACK, cv);
+  controls.pitch = AbyssParameter(POTS_ADC_CHANNEL_PITCH,
+      POTS_ADC_CHANNEL_PITCH_AMOUNT, CV_ADC_CHANNEL_PITCH,
+      NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV).value(NULL, 0, 24.0f, false);
+  CONSTRAIN(controls.pitch, -24.0f, 24.0f);
+  controls.tone = AbyssMix(Ui::MIX_PARAMETER_REVERB, cv);
+  controls.mix = AbyssMix(Ui::MIX_PARAMETER_DRY_WET, cv);
+
+#ifdef DWT_CALIBRATION
+  const uint32_t start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+  abyss.Process(controls, freeze, input, output, size);
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+      dwt_calibration::Read() - start);
+#endif  // DWT_CALIBRATION
+  abyss_limiter.ProcessOutput(
+      output, size, ui.output_limiter_mode(), processor.sample_rate());
+  transition.Apply(output, size);
+
+  const bool gate_output = settings.state().gate_output_mode;
+  for (size_t i = 0; i < size; ++i) {
+    float left = output[i].l;
+    float right = output[i].r;
+    if (gate_output) {
+      left = (left + right) * 0.5f;
+      right = 0.0f;
+    }
+    CONSTRAIN(left, -1.0f, 0.999999f);
+    CONSTRAIN(right, -1.0f, 0.999999f);
+    codec_out[i].l = int32_t(left * 2147483648.0f);
+    codec_out[i].r = int32_t(right * 2147483648.0f);
+  }
 }
 
 // Selected only for synth profiles with an output trim.
@@ -770,10 +850,14 @@ void MonitorStateChange() {
 
   // Once faded out, swap the engine. This clears the recording; a frozen
   // buffer saved to flash returns with the granular engine.
-  if (ui.processor_mode() != active_processor_mode &&
-      transition.faded_out()) {
+  const ProcessorMode wanted_processor = ui.processor_mode();
+  if (wanted_processor != active_processor_mode &&
+      (wanted_processor == PROCESSOR_ABYSS || transition.faded_out())) {
+    if (wanted_processor == PROCESSOR_ABYSS && !transition.Fade()) {
+      return;
+    }
     transition.Pause();
-    active_processor_mode = ui.processor_mode();
+    active_processor_mode = wanted_processor;
     processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
     if (active_processor_mode != PROCESSOR_GRANULAR) {
       background_buffer_backup.Init(&processor, &settings);

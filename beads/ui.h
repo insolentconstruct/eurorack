@@ -176,7 +176,7 @@ class Ui {
   inline ProcessorMode processor_mode() const {
     return ProcessorMode(processor_mode_);
   }
-  inline bool spectral() const { return processor_mode_ == PROCESSOR_SPECTRAL; }
+  inline bool spectral() const { return spectral_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -282,7 +282,7 @@ class Ui {
   volatile uint8_t synth_;
   volatile AttackMode attack_mode_;
   float attack_threshold_;
-  volatile uint8_t processor_mode_;
+  volatile bool spectral_;
   volatile PitchScale pitch_scale_;
   volatile bool random_intervals_;
   volatile RandomIntervals intervals_mode_;
@@ -300,6 +300,8 @@ class Ui {
   volatile uint8_t gain_ceiling_;
 
   GestureController gestures_;
+
+  volatile uint8_t processor_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

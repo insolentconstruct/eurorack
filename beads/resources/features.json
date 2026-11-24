@@ -99,7 +99,7 @@
         {"name": "Granular (Stock)", "led": [0, 255, 0]},
         {"name": "Spectral", "led": [255, 255, 0]},
         {"name": "Reserved", "led": [255, 0, 0]},
-        {"name": "Abyss", "led": [32, 96, 255]}
+        {"name": "Abyss", "led": [255, 0, 0], "pulse": "slow"}
       ],
       "field": 3,
       "saved": 11,

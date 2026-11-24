@@ -163,6 +163,7 @@ void Ui::LoadOptions() {
   attack_threshold_ = kAttackThresholds[
       settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
   processor_mode_ = settings_->processor_mode();
+  spectral_ = processor_mode_ == PROCESSOR_SPECTRAL;
   pitch_scale_ = settings_->pitch_scale();
   intervals_mode_ = settings_->random_intervals();
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
@@ -324,6 +325,7 @@ void Ui::Poll() {
   }
   if (!previewing) {
     processor_mode_ = settings_->processor_mode();
+    spectral_ = processor_mode_ == PROCESSOR_SPECTRAL;
   }
   UpdateLeds();
 }
