@@ -990,8 +990,8 @@ cases = [
     'pitch = base + RandomStep(pitch - base);',
     'pitch = base + QuantizeFifths(pitch - base);'),
   ('TestRecentNotesChain', 'firmware', 'beads/beads.cc',
-    'RememberNote(ui.intervals_mode(), !oliverb_mode && !synth_mode &&',
-    'RememberNote(RANDOM_INTERVALS_FIFTHS, !oliverb_mode && !synth_mode &&'),
+    'RememberNote(ui.intervals_mode(), !synth_mode &&',
+    'RememberNote(RANDOM_INTERVALS_FIFTHS, !synth_mode &&'),
   ('TestIntervalsOption', 'options', 'beads/ui.cc',
     '        settings_->SetFeatureValue(f, options_.Value(f));',
     '        if (f != FEATURE_INTERVALS) {\n'
