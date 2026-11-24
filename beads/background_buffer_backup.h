@@ -44,6 +44,7 @@ class BackgroundBufferBackup {
   void Init(Processor* processor, Settings* settings);
   bool Load();
   void Process(bool freeze_state);
+  inline void set_suspended(bool suspended) { suspended_ = suspended; }
   
   void EraseSector();
   void WriteBlock();
@@ -88,6 +89,7 @@ class BackgroundBufferBackup {
   bool save_started_;
   bool previous_freeze_state_;
   bool busy_;
+  bool suspended_;
   
   DISALLOW_COPY_AND_ASSIGN(BackgroundBufferBackup);
 };

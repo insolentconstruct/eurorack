@@ -62,6 +62,7 @@ void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
   STATIC_ASSERT(sizeof(BufferBackupHeader) == kFlashWordSize, one_flash_word);
   processor_ = processor;
   settings_ = settings;
+  suspended_ = false;
   
   backup_delay_ = kBackupDelay;
   thaw_start_time_ = system_clock.milliseconds();
@@ -246,6 +247,9 @@ void BackgroundBufferBackup::WriteBlock() {
 }
 
 void BackgroundBufferBackup::Process(bool freeze_state) {
+  if (suspended_) {
+    return;
+  }
   const uint32_t now = system_clock.milliseconds();
   if (!freeze_state) {
     if (freeze_state_) {

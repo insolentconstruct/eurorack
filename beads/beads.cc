@@ -832,6 +832,10 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
     abyss.Init(delay_buffer_1, delay_buffer_2, float(sr));
     abyss_limiter.Init(1.0f / (float(sr) * 6.0f), 0.9f);
   }
+  const bool dedicated_reverb =
+      oliverb_mode || active_processor_mode == PROCESSOR_ABYSS;
+  processor.set_suspended(dedicated_reverb);
+  background_buffer_backup.set_suspended(dedicated_reverb);
   transition.Start(sr, AudioCallback(new_synth_mode), true);
 }
 
@@ -1197,13 +1201,11 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     MonitorStateChange();
-    if (!oliverb_mode && active_processor_mode != PROCESSOR_ABYSS) {
-      if (!synth_mode && !processor.spectral()) {
-        background_buffer_backup.Process(ui.freeze_led_state());
-      }
-      processor.Buffer();
-      processor.WasteCPUCycles(16);
+    if (!synth_mode && !processor.spectral()) {
+      background_buffer_backup.Process(ui.freeze_led_state());
     }
+    processor.Buffer();
+    processor.WasteCPUCycles(16);
   }
 }
 

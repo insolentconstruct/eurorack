@@ -219,9 +219,11 @@ class Processor {
   inline void set_spectral(bool spectral) { spectral_ = spectral; }
   inline bool spectral() const { return spectral_; }
 
+  inline void set_suspended(bool suspended) { suspended_ = suspended; }
+
   // Main loop: the spectral engine's frames.
   inline void Buffer() {
-    if (spectral_) {
+    if (spectral_ && !suspended_) {
       spectral_processor_.Buffer();
     }
   }
@@ -320,7 +322,9 @@ class Processor {
   
   void WasteCPUCycles(size_t size) {
     // The one with the most convoluted memory access!
-    processor_vintage_digital_.WasteCPUCycles(size);
+    if (!suspended_) {
+      processor_vintage_digital_.WasteCPUCycles(size);
+    }
   }
 
   void Process(
@@ -699,6 +703,7 @@ class Processor {
   int output_division_;
   int output_pulse_count_;
   bool output_pulse_;
+  bool suspended_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };
