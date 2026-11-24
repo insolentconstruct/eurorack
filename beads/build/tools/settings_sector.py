@@ -38,9 +38,9 @@ firmware's later saves land on erased flash.
 With --mirror-out, MIRROR is the image for the calibration copy sector (0x081C0000): the same
 calibration, then the latest options record of OPTIONS, a dump of that sector (none: the options
 start from their defaults). NOW, the current settings sector, decides which image goes first to
-protect the measured calibration during the restore. If both the chosen and current calibration
-match factory values, COPY must be the current mirror dump. Its usable measured calibration takes
-precedence, independently of which dump supplies the options.
+protect the measured calibration during the restore. COPY is the current mirror dump. Its
+usable calibration takes precedence if the chosen live calibration is damaged, or if the
+chosen and current calibrations both match factory values and COPY holds a measured one.
 """
 
 import argparse
@@ -169,22 +169,30 @@ def main(argv):
             raise ValueError("%s exists" % name)
     calibration_source = args.calibration
     with open(calibration_source, "rb") as f:
-        calibration = read_calibration(f.read())
-    current = None
+        calibration_dump = f.read()
+    check_sector_size(calibration_dump)
+    calibration = read_chunk(calibration_dump, 0, CALI, CALI_SIZE)
+    now = current = None
     if args.now:
         with open(args.now, "rb") as f:
             now = f.read()
         check_sector_size(now)
         current = read_chunk(now, 0, CALI, CALI_SIZE)
-    if current and current.startswith(FACTORY_BYTES) and calibration.startswith(FACTORY_BYTES):
+    unusable_live = calibration_dump == now and (
+        calibration is None or not usable(calibration))
+    factory_live = current and current.startswith(FACTORY_BYTES) and (
+        calibration and calibration.startswith(FACTORY_BYTES))
+    if unusable_live or factory_live:
         if not args.calibration_copy:
-            raise ValueError("factory calibration in both inputs: supply the current --calibration-copy")
+            raise ValueError("supply the current --calibration-copy to recover the live calibration")
         with open(args.calibration_copy, "rb") as f:
             source = f.read()
         check_sector_size(source)
         copy = read_chunk(source, 0, CALI, CALI_SIZE)
-        if copy and usable(copy) and not copy.startswith(FACTORY_BYTES):
+        if copy and usable(copy) and (unusable_live or not copy.startswith(FACTORY_BYTES)):
             calibration, calibration_source = copy, args.calibration_copy
+    if calibration is None:
+        raise ValueError("no valid calibration record")
     with open(args.settings, "rb") as f:
         state = read_state(f.read())
     if not usable(calibration):

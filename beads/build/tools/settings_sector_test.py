@@ -246,6 +246,18 @@ with tempfile.TemporaryDirectory() as directory:
                      directory)[2] == calibration(0.25)
     assert ss.options(ss.erased(mirror.read_bytes())) == record(2)
 
+    # Settings-only recovery also follows the mirror after live CALI damage.
+    damaged_now = bytearray(now)
+    damaged_now[8] ^= 1
+    for source in ("cal.bin", "now.bin"):
+        (Path(directory) / source).write_bytes(damaged_now)
+    out.unlink()
+    mirror.unlink()
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert load(ss.erased(out.read_bytes()), directory) == (
+        True, calibration(0.25), state(3))
+
     # A calibration more than 25% from the factory values, an options dump without the copy image,
     # or a copy image without the sector as it is now: refused, nothing written.
     wild = dump(calibration(0.5)[:16] + struct.pack("<ff", -200.0, 60.0) + calibration(0.5)[24:],
