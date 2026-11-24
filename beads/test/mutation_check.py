@@ -546,6 +546,9 @@ cases = [
   ('TestCalibrationExitResumesNormalization', 'firmware', 'beads/ui.cc',
     '      calibrator_->ResumeNormalization();',
     '      (void)0;'),
+  ('TestSynthEntryCancelsBackup', 'firmware', 'beads/beads.cc',
+    '        if (background_buffer_backup.busy()) {',
+    '        if (false) {'),
 
 
 ]

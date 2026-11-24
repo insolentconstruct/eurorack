@@ -953,6 +953,24 @@ void TestSynthFadeSurvivesTimerReset() {
   CHECK(synth_mode);
 }
 
+void TestSynthEntryCancelsBackup() {
+  test_checker.Start("TestSynthEntryCancelsBackup");
+  Rig r(false);
+  r.Settle();
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  codec_fade_gain = 0.0f;
+  // The callback reported thaw before the backup's next main loop pass.
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.remaining_sectors_ = 1;
+  MonitorStateChange();
+  CHECK(synth_mode);
+  CHECK(!background_buffer_backup.busy());
+}
+
 // Codec restarts fade out first (#53): the output steps down to silence
 // over about 10 ms instead of stopping at full level.
 void TestCodecRestartFade() {
@@ -1214,6 +1232,7 @@ int main() {
   TestCodecKeepsClocks();
   TestCodecRestartRetry();
   TestSynthFadeSurvivesTimerReset();
+  TestSynthEntryCancelsBackup();
   TestCodecRestartFade();
   TestSynthStopPreservesReverb();
   TestRejectedCalibrationCue();
