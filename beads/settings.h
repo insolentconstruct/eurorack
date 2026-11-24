@@ -134,7 +134,13 @@ class Settings {
     values_[FEATURE_SYNTH_START] = on_request;
   }
 
-  inline bool spectral() const { return values_[FEATURE_PROCESSOR]; }
+  inline ProcessorMode processor_mode() const {
+    return ProcessorMode(values_[FEATURE_PROCESSOR]);
+  }
+
+  inline bool spectral() const {
+    return processor_mode() == PROCESSOR_SPECTRAL;
+  }
 
   inline void set_spectral(bool spectral) {
     values_[FEATURE_PROCESSOR] = spectral;

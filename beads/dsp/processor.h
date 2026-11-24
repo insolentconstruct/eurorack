@@ -221,13 +221,15 @@ class Processor {
     }
   }
   
-  inline float sample_rate() const {
+  inline float sample_rate() const { return SampleRate(media_); }
+
+  static inline float SampleRate(Media media) {
 #ifdef ENABLE_HARDWARE_24K
     float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
 #else
     float sr[4] = { 48000.0f, 48000.0f, 32000.0f, 48000.0f };
 #endif  // ENABLE_HARDWARE_24K
-    return sr[media_];
+    return sr[media];
   }
   
   inline int ratio() const {

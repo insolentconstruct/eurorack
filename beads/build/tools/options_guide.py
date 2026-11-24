@@ -143,7 +143,7 @@ PAGE_GESTURES = ("Manual gain",)
 OFF_PAGES = "Off the pages: "
 # A line under a setting's card in the guides.
 CARD_NOTES = {
-    "Processor": "Switching clears the recording.",
+    "Processor": "Granular ↔ Spectral resets the recording.",
     "Resonator": "SEED and hits strike it.",
     "Random pitch steps": "Relative to PITCH; scale follows.",
 }
@@ -244,7 +244,7 @@ DETAILS = [
     "and always open on the first page instead of the last one used "
     "([opening page](FEATURES.md#options-page-on-opening)).",
     "Move a knob more than a tenth of its travel to take it over; smaller "
-    "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
+    "bumps are ignored. Pitch scale, Delay mode, Processor, Attacks, Limiter and LED "
     "brightness use the knob's three thirds; SEED latch uses four quarters; "
     "Synth uses thirds with the Rings synth installed, halves without; "
     "the remaining settings use two halves. Near a boundary, "
@@ -336,9 +336,24 @@ DETAILS = [
     "diffusion, stereo width, monophonic grains, Evolving, Attacks, Random "
     "pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or "
     "wavetable synth; the R gate follows the grain clock DENSITY would set. "
-    "A new processor takes over when the page closes and FREEZE is off, "
-    "clearing the recording; until then the current one plays on. A frozen "
-    "buffer saved to flash comes back with Granular.",
+    "The new processor takes over when the page closes and FREEZE is off. "
+    "A frozen buffer saved to flash comes back with Granular.",
+    "Processor Oliverb: Clouds Parasites' pitch-shifting reverb. TIME sets "
+    "18–150 ms pre-delay, SIZE sets tank size, PITCH shifts the feedback by "
+    "up to two octaves each way and DENSITY sets decay. SHAPE sweeps from low-pass "
+    "to high-pass through noon. The Diffusion setting and assigned Diffusion CV "
+    "set diffusion, with noon as the default. TIME, SIZE, PITCH and SHAPE "
+    "attenuverters set signed CV depth. Unpatched, the controls stay steady.",
+    "In Oliverb, DRY/WET crossfades, FEEDBACK sets modulation rate and "
+    "REVERB sets modulation depth. Assign CV can still reach those knobs. "
+    "FREEZE mutes the reverb input, sets loop gain to one and opens the "
+    "damping filters. Pitch shift and modulation continue. SEED has no audio "
+    "effect, and OUT R is silent in gate mode.",
+    "Oliverb runs at the quality's native codec rate. Release FREEZE to "
+    "change Processor or quality. The shared reverb tail resets at handoff. "
+    "Returning from Oliverb keeps a suspended recording when its engine, "
+    "quality and input channel count still match. A Processor gesture cycles "
+    "all three modes when the profile has no Processor page slot.",
     "Synth Plaits plays six Plaits voices instead of the wavetable "
     "synth: FEEDBACK picks one of the eight models in the current bank, "
     "TIME, SIZE and SHAPE set "

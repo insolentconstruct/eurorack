@@ -97,13 +97,14 @@
       "name": "Processor",
       "values": [
         {"name": "Granular (Stock)", "led": [0, 255, 0]},
-        {"name": "Spectral", "led": [255, 255, 0]}
+        {"name": "Spectral", "led": [255, 255, 0]},
+        {"name": "Oliverb", "led": [255, 0, 0]}
       ],
       "field": 3,
       "saved": 11,
       "states": ["Off", "Fixed", "Adjustable"],
       "page": true,
-      "page_control": "halves",
+      "page_control": "zones",
       "amount": false,
       "actions": [1, 2],
       "stateless": false,

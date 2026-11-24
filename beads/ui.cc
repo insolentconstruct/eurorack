@@ -162,7 +162,7 @@ void Ui::LoadOptions() {
   attack_mode_ = settings_->attack_mode();
   attack_threshold_ = kAttackThresholds[
       settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
-  spectral_ = settings_->spectral();
+  processor_mode_ = settings_->processor_mode();
   pitch_scale_ = settings_->pitch_scale();
   intervals_mode_ = settings_->random_intervals();
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
@@ -323,7 +323,7 @@ void Ui::Poll() {
     resonator_assigned_ = false;
   }
   if (!previewing) {
-    spectral_ = settings_->spectral();
+    processor_mode_ = settings_->processor_mode();
   }
   UpdateLeds();
 }

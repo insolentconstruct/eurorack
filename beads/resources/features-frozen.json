@@ -3,7 +3,7 @@
     {"id": 1, "symbol": "PITCH", "values": ["Off", "Chromatic", "Fifths", "Major", "Minor", "Pentatonic major", "Pentatonic minor", "Pelog", "Raag Bhairav", "Raag Shri", "User scale 10", "User scale 11", "User scale 12", "User scale 13", "User scale 14", "User scale 15"]},
     {"id": 2, "symbol": "REVERB", "values": ["Stock", "Clouds-style"]},
     {"id": 3, "symbol": "DELAY", "values": ["Auto (Stock)", "Disabled", "Wide/smooth filter"]},
-    {"id": 4, "symbol": "PROCESSOR", "values": ["Granular (Stock)", "Spectral"]},
+    {"id": 4, "symbol": "PROCESSOR", "values": ["Granular (Stock)", "Spectral", "Oliverb"]},
     {"id": 5, "symbol": "LIMITER", "values": ["Stock", "Fast release", "Off"]},
     {"id": 6, "symbol": "FROZEN", "values": ["Stock", "Evolving"]},
     {"id": 7, "symbol": "SYNTH", "values": ["Beads (Stock)", "Plaits", "Rings"]},

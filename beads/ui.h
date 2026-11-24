@@ -173,7 +173,8 @@ class Ui {
   inline bool time_scan() const { return time_scan_; }
 
   // The saved engine, applied once the options page has closed.
-  inline bool spectral() const { return spectral_; }
+  inline ProcessorMode processor_mode() const { return processor_mode_; }
+  inline bool spectral() const { return processor_mode_ == PROCESSOR_SPECTRAL; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -279,7 +280,7 @@ class Ui {
   volatile uint8_t synth_;
   volatile AttackMode attack_mode_;
   float attack_threshold_;
-  volatile bool spectral_;
+  volatile ProcessorMode processor_mode_;
   volatile PitchScale pitch_scale_;
   volatile bool random_intervals_;
   volatile RandomIntervals intervals_mode_;
