@@ -79,8 +79,9 @@ void Processor::Init(
   delay_mode_ = DELAY_MODE_AUTO;
 }
 
-void Processor::SetCloudsStyle(bool clouds) {
-  clouds_style_ = clouds;
+void Processor::SetReverbCharacter(uint8_t character) {
+  clouds_style_ = character == REVERB_CLOUDS;
+  reverb_.set_character(character);
   diffuser_.Init(diffuser_buffer_);
   reverb_.Reset(sample_rate(), true);
 }
@@ -341,11 +342,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
 #endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
-  if (clouds_style_) {
-    reverb_.ProcessClouds(out, size);
-  } else {
-    reverb_.Process(out, size);
-  }
+  reverb_.Render(out, size);
   
   // Final clipping/limiting
   output_limiter_.ProcessOutput(

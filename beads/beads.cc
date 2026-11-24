@@ -380,8 +380,8 @@ inline void ProcessAudio(
   }
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
-  const bool requested_style = play_oliverb
-      ? transition.clouds_style() : ui.clouds_style();
+  const uint8_t requested_style = play_oliverb
+      ? transition.reverb_character() : ui.reverb_character();
   const ProcessorMode active_mode = play_oliverb ? PROCESSOR_OLIVERB
       : ProcessorMode(processor.spectral());
   const bool engine_change = ui.processor_mode() != active_mode &&
@@ -396,7 +396,7 @@ inline void ProcessAudio(
         &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
         sizeof(reverb_buffer) / sizeof(reverb_buffer[0]),
-        transition.clouds_style(), &synth_mode, &p, &d, &m, &seed_button_state,
+        transition.reverb_character(), &synth_mode, &p, &d, &m, &seed_button_state,
         &seed_input, seed, freeze, float_in, size, &calibration_callback);
     active_processor_mode = processor.spectral()
         ? PROCESSOR_SPECTRAL : PROCESSOR_GRANULAR;
@@ -697,7 +697,7 @@ void ProcessAbyss(
   ui.ClearTrimFlag();
   const bool change = ui.processor_mode() != PROCESSOR_ABYSS &&
       !ui.should_ignore_state_change();
-  if (transition.Hold(ui.clouds_style(), change, &processor, &synth,
+  if (transition.Hold(transition.reverb_character(), change, &processor, &synth,
       &plaits_synth, &rings_synth, codec_out, size)) {
     return;
   }

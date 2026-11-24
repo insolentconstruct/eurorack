@@ -157,7 +157,7 @@ void Ui::LoadOptions() {
   options_.Configure(settings_->profile());
   gestures_.LoadOptions();
   output_limiter_mode_ = settings_->output_limiter_mode();
-  clouds_style_ = settings_->clouds_style();
+  reverb_character_ = settings_->reverb_character();
   evolving_feedback_ = settings_->evolving_feedback();
   synth_ = settings_->synth();
   attack_mode_ = settings_->attack_mode();
@@ -289,8 +289,8 @@ void Ui::Poll() {
   }
   
   const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
-  clouds_style_ = previewing
-      ? options_.Value(FEATURE_REVERB) : settings_->clouds_style();
+  reverb_character_ = previewing
+      ? options_.Value(FEATURE_REVERB) : settings_->reverb_character();
   synth_ = previewing ? options_.Value(FEATURE_SYNTH) : settings_->synth();
   delay_mode_ = previewing
       ? DelayMode(options_.Value(FEATURE_DELAY)) : settings_->delay_mode();

@@ -50,7 +50,7 @@ const int kNumOptionPages = 7;
 // Value counts of the page features, checked against their enums.
 enum PageValues {
   PAGE_VALUES_PITCH = 16,
-  PAGE_VALUES_REVERB = 2,
+  PAGE_VALUES_REVERB = 4,
   PAGE_VALUES_DELAY = 3,
   PAGE_VALUES_PROCESSOR = 4,
   PAGE_VALUES_LIMITER = 3,
@@ -128,7 +128,7 @@ struct OptionValue {
 };
 const int kNumOptionColors = 3;
 extern const Leds::Color kOptionColors[kNumOptionColors];
-const size_t kNumOptionValues = 19;
+const size_t kNumOptionValues = 20;
 // The indications other than the shared colours, then none.
 extern const OptionValue kOptionValues[kNumOptionValues];
 // A value's colour and pattern on its options page.

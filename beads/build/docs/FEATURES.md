@@ -293,6 +293,21 @@ changes, including settled option changes. Module listening done; module CPU 105
 
 Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality; delay lengths remain in samples.
 
+Page 2 Reverb character uses four equal steps. Stock is green, the existing
+second value is yellow, Plate is red and Bloom pulses green. All four use
+the same REVERB amount and decay mapping and share the 64 KiB tank buffer.
+The legacy profile toggle returns Plate or Bloom to Stock, then toggles
+between Stock and the second value.
+
+Plate uses four input diffusers and a figure-eight tank with modulated decay
+diffusers, damping and staggered stereo output taps. Its tank follows the
+published figure-eight structure with its own delay lengths and tap mix.
+[Jon Dattorro, Effect Design, Part 1 (1997)](https://aes.org/publications/elibrary/elibrary-page/?id=10160)
+
+Bloom uses the stock tank. An onset on the mono reverb send restarts a
+250 ms ramp for diffusion and feedback. A short slew smooths the reset
+while the preceding tail is still ringing.
+
 ## Stereo width
 
 | Allocation | Use |

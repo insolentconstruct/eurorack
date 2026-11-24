@@ -75,7 +75,7 @@ const ProfileFeature kPageFeatures[kNumPageFeatures] = {
 const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // None.
   PAGE_CONTROL_SCALE,  // Pitch.
-  PAGE_CONTROL_HALVES,  // Reverb.
+  PAGE_CONTROL_STEPS,  // Reverb.
   PAGE_CONTROL_ZONES,  // Delay.
   PAGE_CONTROL_STEPS,  // Processor.
   PAGE_CONTROL_ZONES,  // Limiter.
@@ -145,6 +145,7 @@ const OptionValue kOptionValues[] = {
   { FEATURE_PITCH, 7, { 0, 220, 160 }, PULSE_STEADY },
   { FEATURE_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
   { FEATURE_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
+  { FEATURE_REVERB, 3, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_PROCESSOR, 3, { 255, 0, 0 }, PULSE_SLOW },
   { FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR, 3, { 255, 255, 0 }, PULSE_SLOW },

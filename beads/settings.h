@@ -151,7 +151,8 @@ class Settings {
     values_[FEATURE_PROCESSOR] = spectral;
   }
 
-  inline bool clouds_style() const { return values_[FEATURE_REVERB]; }
+  inline uint8_t reverb_character() const { return values_[FEATURE_REVERB]; }
+  inline bool clouds_style() const { return reverb_character() == 1; }
 
   inline void set_clouds_style(bool clouds) {
     values_[FEATURE_REVERB] = clouds;

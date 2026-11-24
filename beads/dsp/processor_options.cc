@@ -694,11 +694,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessReverb)(
 #endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
-  if (clouds_style_) {
-    reverb_.ProcessClouds(out, size);
-  } else {
-    reverb_.Process(out, size);
-  }
+  reverb_.Render(out, size);
 }
 
 }  // namespace beads

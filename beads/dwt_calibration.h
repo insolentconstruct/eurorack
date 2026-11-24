@@ -306,7 +306,7 @@ inline void PrepareSynthetic(
     Processor* processor, uint8_t* delay_buffer_1, size_t delay_buffer_1_size,
     uint8_t* delay_buffer_2, size_t delay_buffer_2_size,
     uint16_t* reverb_buffer, size_t reverb_buffer_size,
-    bool clouds_style, bool* synth_mode, Parameters* p, ModulatedParameter* d,
+    uint8_t reverb_character, bool* synth_mode, Parameters* p, ModulatedParameter* d,
     Processor::MixParameters* m, SeedButtonState* seed_button_state,
     stmlib::GateFlags** seed_input, stmlib::GateFlags* seed, bool* freeze,
     FloatFrame* float_in, size_t size, ScopedBlockTimer* callback) {
@@ -322,7 +322,7 @@ inline void PrepareSynthetic(
     processor->Init(buffers, reverb_buffer);
     processor->Configure(Processor::MEDIA_DIGITAL, false);
     stmlib::Random::Seed(kStimulusSeed);
-    processor->SetCloudsStyle(clouds_style);
+    processor->SetReverbCharacter(reverb_character);
   }
   *synth_mode = false;
   *p = Parameters();

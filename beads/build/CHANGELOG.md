@@ -3,6 +3,7 @@
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
 ## Unreleased
+- Page 2 Reverb character adds Plate and Bloom.
 
 - Custom profiles can reduce TIME CV sensitivity to one eighth (#39).
 

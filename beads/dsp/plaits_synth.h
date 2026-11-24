@@ -69,7 +69,11 @@ class PlaitsSynth {
   // Builds the voices in kPlaitsSynthRamSize bytes of ram.
   void InitVoices(uint8_t* ram);
   void SetCloudsStyle(bool clouds, bool clear) {
-    clouds_style_ = clouds;
+    SetReverbCharacter(clouds, clear);
+  }
+  void SetReverbCharacter(uint8_t character, bool clear) {
+    clouds_style_ = character == REVERB_CLOUDS;
+    reverb_.set_character(character);
     reverb_.Reset(kSynthSampleRate, clear);
   }
 
