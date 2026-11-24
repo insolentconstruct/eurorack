@@ -158,6 +158,9 @@ class Ui {
   inline uint8_t synth() const { return synth_; }
   inline AttackMode attack_mode() const { return attack_mode_; }
   inline float attack_threshold() const { return attack_threshold_; }
+  inline bool manual_delay_requested() const {
+    return gestures_.manual_delay_requested();
+  }
   inline DelayMode delay_mode() const { return delay_mode_; }
   inline StereoWidth stereo_width() const { return stereo_width_; }
   inline PitchScale pitch_scale() const { return pitch_scale_; }

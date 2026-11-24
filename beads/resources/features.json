@@ -1076,6 +1076,19 @@
       "actions": [],
       "stateless": false,
       "touches_synth": false
+    },
+    {
+      "id": 53,
+      "symbol": "MANUAL_DELAY",
+      "name": "Manual delay toggle",
+      "values": [{"name": "Off"}, {"name": "On"}],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [1, 2],
+      "stateless": true,
+      "touches_synth": false
     }
   ],
   "plaits_models": [

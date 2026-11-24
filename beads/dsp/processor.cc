@@ -135,7 +135,44 @@ void Processor::Process(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
+  ProcessBlock<false>(false, seed_button_state, seed_input, freeze, density,
+      parameters, mix_parameters, in, out, size);
+}
+
+void Processor::ProcessManualDelay(
+    bool delay_requested,
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* seed_input,
+    const bool* freeze,
+    const ModulatedParameter& density,
+    const Parameters& parameters,
+    const MixParameters& mix_parameters,
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size) {
+  ProcessBlock<true>(delay_requested, seed_button_state, seed_input, freeze,
+      density, parameters, mix_parameters, in, out, size);
+}
+
+template<bool manual_delay>
+void Processor::ProcessBlock(
+    bool delay_requested,
+    SeedButtonState seed_button_state,
+    const stmlib::GateFlags* seed_input,
+    const bool* freeze,
+    const ModulatedParameter& density,
+    const Parameters& parameters,
+    const MixParameters& mix_parameters,
+    const FloatFrame* in,
+    FloatFrame* out,
+    size_t size) {
   // TIME scan and the mix options run in their own copy of the block.
+  if (manual_delay && options_) {
+    ProcessManualDelayWithOptions(delay_requested, seed_button_state,
+        seed_input, freeze, density, parameters, mix_parameters, in, out,
+        size);
+    return;
+  }
   if (options_) {
     ProcessWithOptions(
         seed_button_state, seed_input, freeze, density, parameters,
@@ -146,8 +183,10 @@ void Processor::Process(
   const float threshold = delay_mode ? 0.98f : 0.99f;
   const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
       parameters.size.base > threshold ? 1.0f : -1.0f;
+  const float transition_direction = manual_delay
+      ? (!spectral_ && delay_requested ? 1.0f : -1.0f) : direction;
   const float sr = sample_rate();
-  delay_mode_transition_ += direction * float(size) / sr;
+  delay_mode_transition_ += transition_direction * float(size) / sr;
   
   CONSTRAIN(delay_mode_transition_,
             -kDelayModeTransitionTime,

@@ -44,6 +44,7 @@ void GestureController::Init(Ui* ui, Settings* settings) {
   settings_ = settings;
   cue_time_ = 0;
   cue_ = plaits_bank_cues_[0];
+  manual_delay_requested_ = false;
   trim_flag_ = false;
   self_play_requested_ = false;
 }
@@ -204,6 +205,14 @@ bool GestureController::DoAction(uint8_t slot) {
     if (settings_->profile().adjustable(feature)) {
       state->monophonic_mode = !state->monophonic_mode;
       settings_->SaveState();
+    }
+    return true;
+  } else if (feature == FEATURE_MANUAL_DELAY) {
+    if (!ui_->synth_mode_ && !ui_->spectral_) {
+      manual_delay_requested_ = !manual_delay_requested_;
+      cue_.color = kOptionColors[manual_delay_requested_ ? 1 : 0];
+      cue_.pulses = PULSE_STEADY;
+      cue_time_ = system_clock.milliseconds();
     }
     return true;
   } else if (feature == FEATURE_TRIM) {

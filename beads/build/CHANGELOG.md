@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE (#309).
+
 - Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
 
 - Palette blob models gain ZxPhase48k; each selection starts its oscillators and modulation afresh.

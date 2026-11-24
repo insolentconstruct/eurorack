@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4297b65d15cc59ca90a8fc96d2d9f9ca3bdc1b623ab86b2702474885ef153365",
+  "manifest_sha256": "f12d4f4e755dccd659141ed19fc52c592154e374ac22a5f189b2f356ed9089a4",
   "record_version": 1,
   "features": [
     {
@@ -1752,6 +1752,31 @@
       "touches_synth": false,
       "cpu_cost": null,
       "saved": 28
+    },
+    {
+      "id": 53,
+      "name": "Manual delay toggle",
+      "values": [
+        "Off",
+        "On"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [
+        1,
+        2
+      ],
+      "stateless": true,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
     }
   ],
   "plaits_models": [

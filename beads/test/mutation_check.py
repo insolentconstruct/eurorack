@@ -2358,7 +2358,8 @@ cases = [
     '        ProcessResonator(parameters.pitch, strike, out, size);\n',
     '      } else {\n'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
-    '    ProcessOptions<true>(', '    ProcessOptions<false>('),
+    '    ProcessOptions<true, manual_delay>(',
+    '    ProcessOptions<false, manual_delay>('),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
     '  if (options_ &\n'
     '      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {',
@@ -3047,6 +3048,15 @@ cases = [
   ('TestRingsSynthApp', 'rings_synth', 'beads/dsp/rings_synth.cc',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down * kRingsGain;',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down;'),
+  ('TestManualDelayAction', 'firmware', 'beads/gesture_controller.cc',
+    'manual_delay_requested_ = !manual_delay_requested_;',
+    'manual_delay_requested_ = true;'),
+  ('TestManualDelayAction', 'firmware', 'beads/dsp/processor.cc',
+    'const float transition_direction = manual_delay',
+    'const float transition_direction = false'),
+  ('TestManualDelayAction', 'firmware', 'beads/dsp/processor_options.cc',
+    'const float transition_direction = manual_delay',
+    'const float transition_direction = false'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

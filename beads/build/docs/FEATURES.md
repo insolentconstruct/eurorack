@@ -25,6 +25,18 @@ restores the profile's gestures without changing its profile or saved State.
 
 Low supply voltage blocks settings and buffer saves. Interrupted saves follow the power-cut path; saving resumes after voltage recovers (#175).
 
+## Manual delay toggle
+
+A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE
+([#309](https://github.com/insolentconstruct/eurorack/issues/309)). The module
+boots in grains and each press reverses the target of the existing wet fade.
+SIZE still controls grain size and never switches modes in that profile.
+The toggle works with any Delay mode setting. Wide/smooth filter still sets
+the delay filter response. The toggle is kept in RAM until power-off. The
+gesture acts during granular and delay playback. Plaits and Rings keep
+[A]+FREEZE for their bank and polyphony. Factory profiles keep their
+existing SIZE and gesture behaviour.
+
 ## Buttons and startup
 
 | Gesture | Allocation / action | Saved? |

@@ -60,6 +60,7 @@ class GestureController {
 
   inline const BankCue& cue() const { return cue_; }
   inline uint32_t cue_time() const { return cue_time_; }
+  inline bool manual_delay_requested() const { return manual_delay_requested_; }
   inline bool trim_flag() const { return trim_flag_; }
   inline bool self_play_requested() const { return self_play_requested_; }
   inline void ClearTrimFlag() { trim_flag_ = false; }
@@ -83,6 +84,7 @@ class GestureController {
   BankCue cue_;
   uint32_t cue_time_;
   ProfileFeature amount_feature_[MIX_PARAMETER_LAST];
+  volatile bool manual_delay_requested_;
   bool trim_flag_;
   bool self_play_requested_;
   static const BankCue plaits_bank_cues_[kNumPlaitsBanks];

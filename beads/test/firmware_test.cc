@@ -3105,6 +3105,69 @@ void MoveAction(uint8_t* block, uint8_t feature, uint8_t action) {
   }
 }
 
+void ToggleManualDelay(Rig* r, Switch button) {
+  test_down[SWITCH_MEDIA] = true;
+  r->Tick(20, true);
+  test_down[button] = true;
+  r->Tick(20, true);
+  test_down[button] = false;
+  test_down[SWITCH_MEDIA] = false;
+  r->Tick(20, true);
+}
+
+void TestManualDelayAction() {
+  test_checker.Start("TestManualDelayAction");
+  Rig r(false, false);
+  r.audio = 0x10000000;
+  for (int mode = DELAY_MODE_AUTO; mode <= DELAY_MODE_WIDE_DETENT; ++mode) {
+    uint8_t block[kProfileSize];
+    const uint8_t entries[] = {
+      FEATURE_MANUAL_DELAY, 1, FEATURE_DELAY, uint8_t(mode),
+      FEATURE_MIX_LAW, uint8_t(mode == DELAY_MODE_WIDE_DETENT)
+    };
+    BuildProfile(block, entries, 3);
+    const bool freeze = mode == DELAY_MODE_WIDE_DETENT;
+    const Switch button = freeze ? SWITCH_FREEZE : SWITCH_SEED;
+    MoveAction(block, freeze ? FEATURE_TRIM : FEATURE_MONOPHONIC, 0);
+    MoveAction(block, FEATURE_MANUAL_DELAY,
+        freeze ? ACTION_FREEZE : ACTION_SEED);
+    FlashProfile(block);
+    PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
+    r.Reboot(false);
+    CHECK(!settings.profile_locked());
+    r.Tick(2300, true);
+    CHECK(!processor.delay_active());
+
+    PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 32768;
+    ToggleManualDelay(&r, button);
+    CHECK(!processor.delay_active());
+    CHECK(processor.delay_mode_transition_ > -kDelayModeTransitionTime);
+    ToggleManualDelay(&r, button);
+    r.Tick(300, true);
+    CHECK(processor.delay_mode_transition_ == -kDelayModeTransitionTime);
+    ToggleManualDelay(&r, button);
+    r.Tick(2300, true);
+    CHECK(processor.delay_active());
+    CHECK(!ui.freeze_button_state() && !ui.trim_flag());
+    CHECK(processor.processor_digital_.filter_mode_.wide_detent ==
+        (mode == DELAY_MODE_WIDE_DETENT));
+
+    PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
+    ToggleManualDelay(&r, button);
+    CHECK(processor.delay_active());
+    CHECK(processor.delay_mode_transition_ < kDelayModeTransitionTime);
+    r.Tick(2300, true);
+    CHECK(!processor.delay_active());
+    ToggleManualDelay(&r, button);
+    r.Tick(2300, true);
+    CHECK(processor.delay_active());
+    r.Reboot(false);
+    r.Tick(2300, true);
+    CHECK(!processor.delay_active());
+  }
+  FlashProfile(factory_profile);
+}
+
 // Reject profiles whose [A] hold prevents returning to automatic gain
 // (#291); the standard controls' hold restores it.
 void TestHoldActionRestartsAutoGain() {
@@ -4219,6 +4282,7 @@ int main() {
   TestResonatorPage();
   TestResonatorDampingCv();
   TestResonatorSeedCallback();
+  TestManualDelayAction();
   TestHoldActionRestartsAutoGain();
   TestManualSynthStartNeedsGesture();
   TestSlowMediaGestures();

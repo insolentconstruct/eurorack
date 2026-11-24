@@ -319,8 +319,9 @@ void TestProfileKinds() {
         b[5] = 1;
         b[6] = 6;
         b[16] = id;
-        b[17] = PROFILE_ADJUSTABLE;
-        b[18] = 0;
+        const bool manual_delay = id == FEATURE_MANUAL_DELAY;
+        b[17] = manual_delay ? PROFILE_FIXED : PROFILE_ADJUSTABLE;
+        b[18] = manual_delay ? 1 : 0;
         b[19] = b[20] = b[21] = 0;
         b[19 + kind] = slot;
         Checksum(b);
@@ -354,7 +355,8 @@ void TestBetaProfileDefinitions() {
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    kNoField  // Manual delay toggle.
   };
   CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
   // The factory profile lists the Plaits bank and Rings' polyphony; older

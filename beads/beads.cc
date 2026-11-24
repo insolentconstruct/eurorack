@@ -160,7 +160,15 @@ uint8_t seed_latch_mode;
 bool seed_latch_enabled;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-void Process(
+template<bool manual_delay>
+inline void ProcessAudio(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) __attribute__((always_inline));
+
+template<bool manual_delay>
+inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
@@ -441,13 +449,19 @@ void Process(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    processor.Process(
-        seed_button_state,
-        seed_input,
-        freeze,
-        d, p, m,
-        float_in,
-        float_out, size);
+    if (manual_delay) {
+      processor.ProcessManualDelay(ui.manual_delay_requested(),
+          seed_button_state, seed_input, freeze, d, p, m,
+          float_in, float_out, size);
+    } else {
+      processor.Process(
+          seed_button_state,
+          seed_input,
+          freeze,
+          d, p, m,
+          float_in,
+          float_out, size);
+    }
 #ifdef DWT_CALIBRATION
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
@@ -470,6 +484,22 @@ void Process(
   }
 }
 
+void Process(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<false>(events, in, out, size);
+}
+
+void ProcessManualDelay(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<true>(events, in, out, size);
+}
+
 // Selected only for synth profiles with an output trim.
 void ProcessSynthLevel(
     const Codec::Event* events,
@@ -488,6 +518,16 @@ void ProcessSynthLevel(
       out[i].r /= divisor;
     }
   }
+}
+
+Codec::FillBufferCallback AudioCallback(bool synth) {
+  if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
+    return &ProcessSynthLevel;
+  }
+  if (!synth && settings.profile().entry(FEATURE_MANUAL_DELAY).action) {
+    return &ProcessManualDelay;
+  }
+  return &Process;
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
@@ -514,15 +554,11 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  const Codec::FillBufferCallback callback = new_synth_mode &&
-      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
-  transition.Start(sr, callback);
+  transition.Start(sr, AudioCallback(new_synth_mode));
 }
 
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
-  const Codec::FillBufferCallback callback = synth_mode &&
-      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
-  transition.SwapPaused(owner, playing, callback);
+  transition.SwapPaused(owner, playing, AudioCallback(synth_mode));
 }
 
 void Init() {

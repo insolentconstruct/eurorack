@@ -326,6 +326,17 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
+  void ProcessManualDelay(
+      bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
   
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
@@ -418,6 +429,30 @@ class Processor {
   void DivideOutput(const TriggerGenerator::Output* triggers,
       bool* gate, size_t size);
 
+  template<bool manual_delay>
+  inline void ProcessBlock(
+      bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) __attribute__((always_inline));
+  template<bool manual_delay>
+  inline void ProcessOptionsBlock(
+      bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) __attribute__((always_inline));
   void ProcessWithOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -428,9 +463,21 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
+  void ProcessManualDelayWithOptions(
+      bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
   // One source for both blocks, each inlined in ProcessWithOptions.
-  template<bool resonator>
+  template<bool resonator, bool manual_delay>
   inline void ProcessOptions(
+      bool delay_requested,
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,

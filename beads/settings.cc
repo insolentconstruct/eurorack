@@ -94,6 +94,7 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   0,  // Synth level.
   0,  // Output division.
   28,  // Gain ceiling.
+  0,  // Manual delay.
 };
 
 bool Settings::Init(bool recovery_mode) {

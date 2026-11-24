@@ -93,6 +93,7 @@ const char* const kOptionNames[] = {
   "Synth output level",
   "Grain output division",
   "Gain ceiling",
+  "Manual delay toggle",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.
