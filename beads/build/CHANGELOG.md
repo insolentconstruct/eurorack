@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Palette Natural Speech is available as a removable model; selecting it again starts fresh, including its bank and word selectors.
+
 - Palette Wave Scan is available as a removable model; selecting it again starts fresh, including its model selector.
 
 - Palette VOSIM prepares its DC seed over 16 blocks on each selection, adding 4 ms of silence at the synth rate; returning to it starts a fresh voice.

@@ -127,8 +127,9 @@ PAIRS = dict([
     (98, 63),
     (99, 64),
     (67, 65),
-    (254, 66)] + [
-    (m, 67 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (28, 66),
+    (254, 67)] + [
+    (m, 68 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83, 98, 99)
@@ -206,14 +207,17 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (97, 30),
     (98, 64),
     (99, 64),
-    (67, 64)]
-# Tapfield needs a held note: low notes retrigger before its register clocks.
-NOTE_CONTROL_STEPS = {35: [
+    (67, 64),
+    (28, 64)]
+# Speech needs a voiced segment; Tapfield needs time for its register clocks.
+NOTE_CONTROL_STEPS = {28: [
+    (5 if block == 0 else 4, 60.0, 0.5, 0.5, 0.5, 0.8)
+    for block in range(1024)], 35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
-FRESH_ON_RESELECT = (53, 56, 67, 92, 93, 97, 98, 99)
+FRESH_ON_RESELECT = (28, 53, 56, 67, 92, 93, 97, 98, 99)
 # Saw Swarm Reset already clears its state; the others retain warm state.
-RETAINED_ON_RESET = (53, 67, 92, 93, 97, 98, 99)
+RETAINED_ON_RESET = (28, 53, 67, 92, 93, 97, 98, 99)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -783,6 +787,11 @@ def switch_compare(first, second, fresh, base, fpscr):
             for i in range(64)]
     back = [(5 if i == 0 else 4, 60.0, 1.0 / 3.0, 0.7, 0.5, 0.8)
             for i in range(512)]
+    parts = ((first, warm), (second, sequence[100:200]), (first, back))
+  if first == 28:
+    # Returning in the bank hysteresis band exposes Reset's retained selector.
+    warm = [(2, 60.0, 1.0, 0.7, 0.5, 0.8)] * 64
+    back = [(2, 60.0, 0.5, 0.7, 0.5, 0.8)] * 512
     parts = ((first, warm), (second, sequence[100:200]), (first, back))
   for model, part in parts:
     before = m.word(RANDOM_STATE)
