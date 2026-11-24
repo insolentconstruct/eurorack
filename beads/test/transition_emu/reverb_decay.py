@@ -32,7 +32,7 @@ import struct
 import transition_emu as te
 
 PROFILE_ADDRESS = te.FLASH + 0x20400
-REVERB_INPUT, SYNTH_LEVEL, REVERB_DECAY = 33, 50, 54
+REVERB_INPUT, SYNTH_LEVEL, MANUAL_DELAY, REVERB_DECAY = 33, 50, 53, 54
 POTS_ADDRESS = '_ZN5beads7PotsAdc7values_E'
 ENGINES = (
     ('synth', 'Synth'),
@@ -40,12 +40,17 @@ ENGINES = (
     ('rings_synth', 'RingsSynth'))
 
 
-def install_profile(image, value, state=1, extras=()):
+def install_profile(image, value, state=1, extras=(), manual_delay=False):
   machine = te.Machine(image)
   profile = bytearray(machine.uc.mem_read(PROFILE_ADDRESS, 16))
   count, length = struct.unpack_from('<BH', profile, 5)
-  entries = bytes(machine.uc.mem_read(PROFILE_ADDRESS + 16, length))
+  entries = bytearray(machine.uc.mem_read(PROFILE_ADDRESS + 16, length))
   offset = 6 * count
+  if manual_delay:
+    for i in range(5, offset, 6):
+      if entries[i] == 1:
+        entries[i] = 0
+    extras += ((MANUAL_DELAY, 1, 1, 0, 0, 1),)
   entry = bytes((REVERB_DECAY, state, value, 0, 0, 0))
   entry += b"".join(bytes(row) for row in extras)
   profile[5] = count + 1 + len(extras)
@@ -87,6 +92,21 @@ def check_assigned_cv(rig, decay):
   rig.m.write(rig.state + 1, '<B', 0)
 
 
+def check_manual_delay(rig, decay):
+  position = rig.image.member(
+      'processor', 'Processor', 'delay_mode_transition_')
+  assert rig.m.read(position, '<f')[0] < 0.0
+  rig.combo('media', 'seed')
+  rig.tick(1800)
+  assert rig.m.read(position, '<f')[0] > 0.0
+  check_mix(rig, 'processor', 'Processor', decay, 0.9)
+  rig.combo('media', 'seed')
+  rig.tick(1800)
+  assert rig.m.read(position, '<f')[0] < 0.0
+  check_mix(rig, 'processor', 'Processor', decay, 0.9)
+  print('Fixed decay %.2f passed with manual delay' % decay, flush=True)
+
+
 def main():
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument('elf')
@@ -94,7 +114,7 @@ def main():
   args = parser.parse_args()
   region = args.region.read() if args.region else None
   te.MEMBERS.update((cls, ('reverb_',)) for _, cls in ENGINES)
-  te.MEMBERS['Processor'] = ('reverb_',)
+  te.MEMBERS['Processor'] = ('reverb_', 'delay_mode_transition_')
   te.MEMBERS['Reverb'] = ('mix_', 'reverb_time_')
   image = te.Image(args.elf)
   off = te.Rig(image, region, install_profile(image, 3, state=0))
@@ -109,11 +129,16 @@ def main():
     # Long also exercises the grains reverb route and synth output trim.
     extras = ((REVERB_INPUT, 1, 1, 0, 0, 0),
               (SYNTH_LEVEL, 1, 1, 0, 0, 0)) if choice == 3 else ()
-    rig = te.Rig(image, region, install_profile(image, choice, extras=extras))
+    manual_delay = choice in (1, 3)
+    profile = install_profile(
+        image, choice, extras=extras, manual_delay=manual_delay)
+    rig = te.Rig(image, region, profile)
     rig.settle()
     fixed = check_mix(rig, 'processor', 'Processor', decay, 0.9)
     assert fixed == coupled, (choice, fixed, coupled)
     print('Fixed decay %d passed in the processor' % choice, flush=True)
+    if manual_delay:
+      check_manual_delay(rig, decay)
   rig.set_media(2)
   rig.tick(320)
   check_assigned_cv(rig, decay)

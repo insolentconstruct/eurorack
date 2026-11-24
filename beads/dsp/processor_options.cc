@@ -30,6 +30,8 @@
 
 #include <algorithm>
 
+#include "beads/dsp/fx/reverb_decay_render.h"
+
 namespace beads {
 
 using namespace std;
@@ -313,6 +315,7 @@ void GranularProcessor<resolution, max_delay, ratio>::ProcessSendInternal(
   }
 }
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 // 1.5 x feedback squared is the delay loop gain of one tap.
 const float kUnityFeedback = 0.8164966f;
 const float kUnityNotchWidth = 0.03f;
@@ -339,9 +342,10 @@ void Processor::SetFeedbackCutoff(bool low) {
   processor_dirty_tape_.set_feedback_cutoff(cutoff / 24000.0f);
   SetOption(OPTION_FLAG_LOW_CUTOFF, low);
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
 template<bool resonator, bool manual_delay>
-void Processor::ProcessOptions(
+void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
     bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -551,12 +555,12 @@ void Processor::ProcessOptions(
   if (send || (options_ & OPTION_FLAG_REVERB_ON_GRAINS)) {
     // Clouds' order: the reverb returns with the grains.
     pre_reverb_limiter_.Process(out, size);
-    ProcessReverb(mix_parameters.reverb_amount, out, size);
+    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);
     MixDryWet(dry_signal, dry, wet, out, size);
   } else {
     MixDryWet(dry_signal, dry, wet, out, size);
     pre_reverb_limiter_.Process(out, size);
-    ProcessReverb(mix_parameters.reverb_amount, out, size);
+    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);
   }
 
   output_limiter_.ProcessOutput(out, size, output_limiter_mode_, sr);
@@ -572,6 +576,7 @@ void Processor::ProcessOptions(
   }
 }
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 void Processor::set_output_division(int division) {
   CONSTRAIN(division, 1, 16);
   // Init clears the flag, so the first configuration resets the divider.
@@ -596,8 +601,9 @@ void Processor::DivideOutput(
     gate[i] = triggers[i].gate && output_pulse_;
   }
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
-void Processor::ProcessWithOptions(
+void Processor::BEADS_DECAY_RENDER(ProcessWithOptions)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -607,11 +613,11 @@ void Processor::ProcessWithOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  ProcessOptionsBlock<false>(false, seed_button_state, seed_input, freeze,
-      density, parameters, mix_parameters, in, out, size);
+  BEADS_DECAY_RENDER(ProcessOptionsBlock)<false>(false, seed_button_state,
+      seed_input, freeze, density, parameters, mix_parameters, in, out, size);
 }
 
-void Processor::ProcessManualDelayWithOptions(
+void Processor::BEADS_DECAY_RENDER(ProcessManualDelayWithOptions)(
     bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -622,12 +628,13 @@ void Processor::ProcessManualDelayWithOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  ProcessOptionsBlock<true>(delay_requested, seed_button_state, seed_input,
-      freeze, density, parameters, mix_parameters, in, out, size);
+  BEADS_DECAY_RENDER(ProcessOptionsBlock)<true>(delay_requested,
+      seed_button_state, seed_input, freeze, density, parameters,
+      mix_parameters, in, out, size);
 }
 
 template<bool manual_delay>
-void Processor::ProcessOptionsBlock(
+void Processor::BEADS_DECAY_RENDER(ProcessOptionsBlock)(
     bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -641,16 +648,17 @@ void Processor::ProcessOptionsBlock(
   // Resonator profiles run their own instance of the block.
   if (options_ &
       (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
-    ProcessOptions<true, manual_delay>(
+    BEADS_DECAY_RENDER(ProcessOptions)<true, manual_delay>(
         delay_requested, seed_button_state, seed_input, freeze, density, parameters,
         mix_parameters, in, out, size);
   } else {
-    ProcessOptions<false, manual_delay>(
+    BEADS_DECAY_RENDER(ProcessOptions)<false, manual_delay>(
         delay_requested, seed_button_state, seed_input, freeze, density, parameters,
         mix_parameters, in, out, size);
   }
 }
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 void Processor::MixDryWet(
     const FloatFrame* dry_signal,
     float dry,
@@ -668,12 +676,22 @@ void Processor::MixDryWet(
     wow_and_flutter_.Process(out, size);
   }
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
-void Processor::ProcessReverb(float reverb, FloatFrame* out, size_t size) {
+void Processor::BEADS_DECAY_RENDER(ProcessReverb)(
+    float reverb, FloatFrame* out, size_t size) {
   const bool caveman = media_ != MEDIA_DIGITAL;
   reverb_.set_mix(reverb * reverb * 0.9f);
+#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
-  reverb_.set_decay_amount(reverb_time);
+#endif  // BEADS_FIXED_REVERB_DECAY
+#ifdef BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(Reverb::fixed_decay());
+#else
+  reverb_.set_time(caveman
+      ? (0.45f + 0.5f * reverb_time)
+      : (0.3f + 0.6f * reverb_time));
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
   if (clouds_style_) {

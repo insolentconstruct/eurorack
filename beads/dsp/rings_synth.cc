@@ -34,6 +34,8 @@
 #include "beads/blob/plaits_blob.h"
 #include "beads/dsp/pitch_quantizer.h"
 
+#include "beads/dsp/fx/reverb_decay_render.h"
+
 namespace beads {
 
 using namespace rings;
@@ -42,6 +44,7 @@ using namespace std;
 // As the Plaits synth's model quantizer.
 const float kZoneHysteresis = 0.048f;
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 void RingsSynth::Init() {
   zone_quantizer_.Init(kNumRingsZones, kZoneHysteresis, false);
   target_.core = RINGS_CORE_PART;
@@ -136,8 +139,9 @@ void RingsSynth::Configure() {
   }
   pending_ = false;
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
-void RingsSynth::Render(
+void RingsSynth::BEADS_DECAY_RENDER(Render)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -226,9 +230,15 @@ void RingsSynth::Render(
   pre_reverb_limiter_.Process(out, size);
   const float reverb = mix_parameters.reverb_amount;
   const float reverb_mix = reverb * reverb * 0.8f;
+#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_mix(reverb_mix);
-  reverb_.set_decay_amount(reverb_time);
+#ifdef BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(Reverb::fixed_decay());
+#else
+  reverb_.set_time(0.3f + 0.6f * reverb_time);
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(0.6f);
   if (clouds_style_) {
     reverb_.ProcessClouds(out, size);
@@ -246,6 +256,7 @@ void RingsSynth::Render(
   }
 }
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 void RingsSynth::ComputeTarget(
     float feedback,
     int polyphony,
@@ -304,5 +315,6 @@ void RingsSynth::ComputeControls(
   CONSTRAIN(chord_, 0, kNumChords - 1);
   s->chord = chord_;
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
 }  // namespace beads

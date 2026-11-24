@@ -83,10 +83,16 @@ class PlaitsSynth {
       const Processor::MixParameters& mix_parameters,
       FloatFrame* out,
       size_t size);
-
-  inline void set_reverb_decay(uint8_t choice) {
-    reverb_.SetDecayLaw(choice, false);
-  }
+  void RenderFixedDecay(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      Synth::Resolution resolution,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const Processor::MixParameters& mix_parameters,
+      FloatFrame* out,
+      size_t size);
 
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;

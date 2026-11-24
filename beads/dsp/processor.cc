@@ -32,16 +32,18 @@
 
 #include "beads/dsp/mu_law.h"
 
+#include "beads/dsp/fx/reverb_decay_render.h"
+
 namespace beads {
 
 using namespace std;
 using namespace stmlib;
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
   options_ = 0;
-  reverb_decay_ = 0;
   time_scan_.Init();
   attack_input_.Init();
   attack_trigger_ = false;
@@ -87,7 +89,6 @@ void Processor::Configure(Media media, bool mono) {
   attack_input_.Reset();
   feedback_diffuser_.Init();
   media_ = media;
-  reverb_.SetDecayLaw(reverb_decay_, media != MEDIA_DIGITAL);
   mono_ = mono;
   
   int max_delay = 0;
@@ -126,8 +127,9 @@ void Processor::Configure(Media media, bool mono) {
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
   reverb_.Reset(sr);
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
-void Processor::Process(
+void Processor::BEADS_DECAY_RENDER(Process)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -137,11 +139,11 @@ void Processor::Process(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  ProcessBlock<false>(false, seed_button_state, seed_input, freeze, density,
-      parameters, mix_parameters, in, out, size);
+  BEADS_DECAY_RENDER(ProcessBlock)<false>(false, seed_button_state,
+      seed_input, freeze, density, parameters, mix_parameters, in, out, size);
 }
 
-void Processor::ProcessManualDelay(
+void Processor::BEADS_DECAY_RENDER(ProcessManualDelay)(
     bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -152,12 +154,12 @@ void Processor::ProcessManualDelay(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  ProcessBlock<true>(delay_requested, seed_button_state, seed_input, freeze,
-      density, parameters, mix_parameters, in, out, size);
+  BEADS_DECAY_RENDER(ProcessBlock)<true>(delay_requested, seed_button_state,
+      seed_input, freeze, density, parameters, mix_parameters, in, out, size);
 }
 
 template<bool manual_delay>
-void Processor::ProcessBlock(
+void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
     bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -170,13 +172,13 @@ void Processor::ProcessBlock(
     size_t size) {
   // TIME scan and the mix options run in their own copy of the block.
   if (manual_delay && options_) {
-    ProcessManualDelayWithOptions(delay_requested, seed_button_state,
-        seed_input, freeze, density, parameters, mix_parameters, in, out,
-        size);
+    BEADS_DECAY_RENDER(ProcessManualDelayWithOptions)(delay_requested,
+        seed_button_state, seed_input, freeze, density, parameters,
+        mix_parameters, in, out, size);
     return;
   }
   if (options_) {
-    ProcessWithOptions(
+    BEADS_DECAY_RENDER(ProcessWithOptions)(
         seed_button_state, seed_input, freeze, density, parameters,
         mix_parameters, in, out, size);
     return;
@@ -326,9 +328,17 @@ void Processor::ProcessBlock(
   const bool caveman = media_ != MEDIA_DIGITAL;
   const float reverb = mix_parameters.reverb_amount;
   const float reverb_mix = reverb * reverb * 0.9f;
+#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_mix(reverb_mix);
-  reverb_.set_decay_amount(reverb_time);
+#ifdef BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(Reverb::fixed_decay());
+#else
+  reverb_.set_time(caveman
+      ? (0.45f + 0.5f * reverb_time)
+      : (0.3f + 0.6f * reverb_time));
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
   if (clouds_style_) {
@@ -349,6 +359,7 @@ void Processor::ProcessBlock(
   }
 }
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 void Processor::QuantizeDrySignal(
     const FloatFrame* in,
     FloatFrame* out,
@@ -378,5 +389,6 @@ void Processor::QuantizeDrySignal(
       break;
   }
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
 }  // namespace beads

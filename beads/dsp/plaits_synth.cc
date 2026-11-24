@@ -32,6 +32,8 @@
 
 #include "stmlib/utils/random.h"
 
+#include "beads/dsp/fx/reverb_decay_render.h"
+
 namespace beads {
 
 using namespace std;
@@ -41,6 +43,7 @@ using namespace stmlib;
 const float kPlaitsVoiceGain = 2.0f / 3.0f;
 const float kModelHysteresis = 0.048f;
 
+#ifndef BEADS_FIXED_REVERB_DECAY
 #ifdef PLAITS_BLOBS
 // Plaits' banks, until the profile's are set: green, red, yellow.
 const uint8_t kPlaitsStockBanks[kNumPlaitsBanks][kPlaitsBankSize] = {
@@ -151,8 +154,9 @@ void PlaitsSynth::StartNote(const Parameters& p, int model) {
   gain_l_[active_voice_] = kPlaitsVoiceGain * (1.0f - pan) * (1.0f + pan);
   gain_r_[active_voice_] = kPlaitsVoiceGain * pan * (2.0f - pan);
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
-void PlaitsSynth::Render(
+void PlaitsSynth::BEADS_DECAY_RENDER(Render)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -255,9 +259,15 @@ void PlaitsSynth::Render(
   // Reverb.
   const float reverb = mix_parameters.reverb_amount;
   const float reverb_mix = reverb * reverb * 0.8f;
+#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_mix(reverb_mix);
-  reverb_.set_decay_amount(reverb_time);
+#ifdef BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(Reverb::fixed_decay());
+#else
+  reverb_.set_time(0.3f + 0.6f * reverb_time);
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(0.6f);
   if (clouds_style_) {
     reverb_.ProcessClouds(out, size);

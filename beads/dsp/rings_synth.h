@@ -102,13 +102,19 @@ class RingsSynth {
       const Processor::MixParameters& mix_parameters,
       FloatFrame* out,
       size_t size);
+  void RenderFixedDecay(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      Synth::Resolution resolution,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const Processor::MixParameters& mix_parameters,
+      FloatFrame* out,
+      size_t size);
 
   // Polyphony 1, 2 or 4 (feature 42).
   inline void set_polyphony(int polyphony) { polyphony_ = polyphony; }
-  inline void set_reverb_decay(uint8_t choice) {
-    reverb_.SetDecayLaw(choice, false);
-  }
-
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
   }

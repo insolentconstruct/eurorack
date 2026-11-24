@@ -30,11 +30,16 @@
 
 #include <algorithm>
 
+#include "beads/dsp/fx/reverb_decay_render.h"
+
 namespace beads {
 
 using namespace std;
 using namespace stmlib;
 
+#ifdef BEADS_FIXED_REVERB_DECAY
+extern const int16_t* integrated_waves;
+#else
 #ifdef PLAITS_BLOBS
 // WAVE's rows, set at boot; Beads' synth does not play without them.
 const int16_t* integrated_waves = NULL;
@@ -59,8 +64,9 @@ void Synth::Init(uint16_t* reverb_buffer) {
   wavetable_voice_.Init(sr);
   bank_quantizer_.Init(kNumBanks, 0.048f, false);
 }
+#endif  // BEADS_FIXED_REVERB_DECAY
 
-void Synth::Render(
+void Synth::BEADS_DECAY_RENDER(Render)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -133,9 +139,15 @@ void Synth::Render(
   // Reverb.
   const float reverb = mix_parameters.reverb_amount;
   const float reverb_mix = reverb * reverb * 0.8f;
+#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_mix(reverb_mix);
-  reverb_.set_decay_amount(reverb_time);
+#ifdef BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(Reverb::fixed_decay());
+#else
+  reverb_.set_time(0.3f + 0.6f * reverb_time);
+#endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(0.6f);
   if (clouds_style_) {
     reverb_.ProcessClouds(out, size);

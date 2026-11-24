@@ -158,16 +158,17 @@ int synth_mode_start_time;
 GateFlags previous_seed;
 uint8_t seed_latch_mode;
 bool seed_latch_enabled;
+bool fixed_reverb_decay;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-template<bool manual_delay>
+template<bool manual_delay, bool fixed_decay>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) __attribute__((always_inline));
 
-template<bool manual_delay>
+template<bool manual_delay, bool fixed_decay>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
@@ -385,13 +386,23 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    rings_synth.Render(
-        seed_button_state,
-        seed_input,
-        freeze,
-        Synth::Resolution(settings.state().media),
-        d, p, m,
-        float_out, size);
+    if (fixed_decay) {
+      rings_synth.RenderFixedDecay(
+          seed_button_state,
+          seed_input,
+          freeze,
+          Synth::Resolution(settings.state().media),
+          d, p, m,
+          float_out, size);
+    } else {
+      rings_synth.Render(
+          seed_button_state,
+          seed_input,
+          freeze,
+          Synth::Resolution(settings.state().media),
+          d, p, m,
+          float_out, size);
+    }
 #ifdef DWT_CALIBRATION
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
@@ -403,13 +414,23 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    plaits_synth.Render(
-        seed_button_state,
-        seed_input,
-        freeze,
-        Synth::Resolution(settings.state().media),
-        d, p, m,
-        float_out, size);
+    if (fixed_decay) {
+      plaits_synth.RenderFixedDecay(
+          seed_button_state,
+          seed_input,
+          freeze,
+          Synth::Resolution(settings.state().media),
+          d, p, m,
+          float_out, size);
+    } else {
+      plaits_synth.Render(
+          seed_button_state,
+          seed_input,
+          freeze,
+          Synth::Resolution(settings.state().media),
+          d, p, m,
+          float_out, size);
+    }
 #ifdef DWT_CALIBRATION
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
@@ -421,13 +442,23 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    synth.Render(
-        seed_button_state,
-        seed_input,
-        freeze,
-        Synth::Resolution(settings.state().media),
-        d, p, m,
-        float_out, size);
+    if (fixed_decay) {
+      synth.RenderFixedDecay(
+          seed_button_state,
+          seed_input,
+          freeze,
+          Synth::Resolution(settings.state().media),
+          d, p, m,
+          float_out, size);
+    } else {
+      synth.Render(
+          seed_button_state,
+          seed_input,
+          freeze,
+          Synth::Resolution(settings.state().media),
+          d, p, m,
+          float_out, size);
+    }
 #ifdef DWT_CALIBRATION
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
@@ -450,17 +481,33 @@ inline void ProcessAudio(
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
     if (manual_delay) {
-      processor.ProcessManualDelay(ui.manual_delay_requested(),
-          seed_button_state, seed_input, freeze, d, p, m,
-          float_in, float_out, size);
+      if (fixed_decay) {
+        processor.ProcessManualDelayFixedDecay(ui.manual_delay_requested(),
+            seed_button_state, seed_input, freeze, d, p, m,
+            float_in, float_out, size);
+      } else {
+        processor.ProcessManualDelay(ui.manual_delay_requested(),
+            seed_button_state, seed_input, freeze, d, p, m,
+            float_in, float_out, size);
+      }
     } else {
-      processor.Process(
-          seed_button_state,
-          seed_input,
-          freeze,
-          d, p, m,
-          float_in,
-          float_out, size);
+      if (fixed_decay) {
+        processor.ProcessFixedDecay(
+            seed_button_state,
+            seed_input,
+            freeze,
+            d, p, m,
+            float_in,
+            float_out, size);
+      } else {
+        processor.Process(
+            seed_button_state,
+            seed_input,
+            freeze,
+            d, p, m,
+            float_in,
+            float_out, size);
+      }
     }
 #ifdef DWT_CALIBRATION
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
@@ -489,7 +536,15 @@ void Process(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<false>(events, in, out, size);
+  ProcessAudio<false, false>(events, in, out, size);
+}
+
+void ProcessFixedDecay(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<false, true>(events, in, out, size);
 }
 
 void ProcessManualDelay(
@@ -497,16 +552,29 @@ void ProcessManualDelay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<true>(events, in, out, size);
+  ProcessAudio<true, false>(events, in, out, size);
+}
+
+void ProcessManualDelayFixedDecay(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<true, true>(events, in, out, size);
 }
 
 // Selected only for synth profiles with an output trim.
+template<bool fixed_decay>
 void ProcessSynthLevel(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  Process(events, in, out, size);
+  if (fixed_decay) {
+    ProcessFixedDecay(events, in, out, size);
+  } else {
+    Process(events, in, out, size);
+  }
   const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
   if (settings.state().gate_output_mode) {
     for (size_t i = 0; i < size; ++i) {
@@ -522,12 +590,14 @@ void ProcessSynthLevel(
 
 Codec::FillBufferCallback AudioCallback(bool synth) {
   if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
-    return &ProcessSynthLevel;
+    return fixed_reverb_decay ? &ProcessSynthLevel<true>
+        : &ProcessSynthLevel<false>;
   }
   if (!synth && settings.profile().entry(FEATURE_MANUAL_DELAY).action) {
-    return &ProcessManualDelay;
+    return fixed_reverb_decay
+        ? &ProcessManualDelayFixedDecay : &ProcessManualDelay;
   }
-  return &Process;
+  return fixed_reverb_decay ? &ProcessFixedDecay : &Process;
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
@@ -610,11 +680,8 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
-  const uint8_t reverb_decay = settings.FeatureValue(FEATURE_REVERB_DECAY);
-  processor.set_reverb_decay(reverb_decay);
-  synth.set_reverb_decay(reverb_decay);
-  plaits_synth.set_reverb_decay(reverb_decay);
-  rings_synth.set_reverb_decay(reverb_decay);
+  fixed_reverb_decay = Reverb::InitFixedDecay(
+      settings.FeatureValue(FEATURE_REVERB_DECAY));
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;
   const Profile& profile = settings.profile();

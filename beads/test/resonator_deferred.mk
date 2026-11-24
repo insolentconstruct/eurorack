@@ -44,6 +44,7 @@ CC_FILES       = 		resonator_deferred_test.cc \
 		playback_options.cc \
 		diffuser.cc \
 		reverb.cc \
+		reverb_decay.cc \
 		mu_law.cc \
 		delay_controller.cc \
 		delay_clock.cc \

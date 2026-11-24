@@ -1695,13 +1695,13 @@ cases = [
   ('TestReverbOnGrains', 'mix', 'beads/dsp/processor_options.cc',
     'if (send || (options_ & OPTION_FLAG_REVERB_ON_GRAINS)) {', 'if (false) {'),
   ('TestReverbOnGrains', 'mix', 'beads/dsp/processor_options.cc',
-    '    ProcessReverb(mix_parameters.reverb_amount, out, size);\n'
+    '    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);\n'
     '    MixDryWet(dry_signal, dry, wet, out, size);',
     '    MixDryWet(dry_signal, dry, wet, out, size);\n'
-    '    ProcessReverb(mix_parameters.reverb_amount, out, size);'),
+    '    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);'),
   ('TestReverbOnGrains', 'mix', 'beads/dsp/processor_options.cc',
     '    pre_reverb_limiter_.Process(out, size);\n'
-    '    ProcessReverb(mix_parameters.reverb_amount, out, size);\n'
+    '    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);\n'
     '    MixDryWet(',
     '    pre_reverb_limiter_.Process(out, size);\n'
     '    MixDryWet('),
@@ -1712,8 +1712,8 @@ cases = [
     '      out[i].r = gate_out[i] ? -0.8f : 0.0f;',
     '      out[i].r = gate_out[i] ? -0.7f : 0.0f;'),
   ('TestTimeScan', 'processor', 'beads/dsp/processor.cc',
-    '  if (options_) {\n    ProcessWithOptions(',
-    '  if (false) {\n    ProcessWithOptions('),
+    '  if (options_) {\n    BEADS_DECAY_RENDER(ProcessWithOptions)(',
+    '  if (false) {\n    BEADS_DECAY_RENDER(ProcessWithOptions)('),
   ('TestMixOptionsProfile', 'firmware', 'beads/beads.cc',
     'processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW) == 1);',
     'processor.set_gentle_mix(false);'),
@@ -2358,8 +2358,8 @@ cases = [
     '        ProcessResonator(parameters.pitch, strike, out, size);\n',
     '      } else {\n'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
-    '    ProcessOptions<true, manual_delay>(',
-    '    ProcessOptions<false, manual_delay>('),
+    '    BEADS_DECAY_RENDER(ProcessOptions)<true, manual_delay>(',
+    '    BEADS_DECAY_RENDER(ProcessOptions)<false, manual_delay>('),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
     '  if (options_ &\n'
     '      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {',
