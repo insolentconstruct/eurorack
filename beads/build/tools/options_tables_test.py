@@ -186,9 +186,10 @@ assert len(values["Pitch scale"]) == 10
 for setting in ("Delay mode", "Attacks", "Limiter", "Random pitch steps",
                 "Synth"):
     assert len(values[setting]) == 3, setting
-for setting in ("Reverb character", "Frozen feedback", "Processor",
-                "Synth start"):
+for setting in ("Frozen feedback", "Synth start"):
     assert len(values[setting]) == 2, setting
+for setting in ("Reverb character", "Processor"):
+    assert len(values[setting]) == 4, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
 assert len(values["Resonator"]) == 4

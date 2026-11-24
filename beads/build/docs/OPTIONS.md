@@ -45,13 +45,13 @@ Scale (tap SEED to step through):
 |---|---|---|---|
 | FEEDBACK | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
 | DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
-| REVERB | Reverb character | Stock / Clouds-style / Plate / Bloom | green; steady / yellow; steady / red; steady / green; slow |
+| REVERB | Reverb character | Stock / Clouds-style / Plate / Bloom | green; steady / yellow; steady / red; steady / green; slow blink |
 
 ## Page 3 — REVERB LED pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Processor | Granular (Stock) / Spectral / Oliverb / Abyss | green; steady / yellow; steady / red; steady / red; slow |
+| FEEDBACK | Processor | Granular (Stock) / Spectral / Oliverb / Abyss | green; steady / yellow; steady / red; steady / red; slow blink |
 | DRY/WET | Synth | Beads (Stock) / Plaits / Rings | green; steady / yellow; steady / red; steady |
 | REVERB | Synth start | Automatic (Stock) / Manual | green; steady / yellow; steady |
 
@@ -95,7 +95,7 @@ When a page opens, the quality LED [A] shows each stored value in turn, left to 
 
 A Hygrostat profile can skip the stored values, so [A] shows the page's first setting at once ([preview](FEATURES.md#options-page-preview)), and always open on the first page instead of the last one used ([opening page](FEATURES.md#options-page-on-opening)).
 
-Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; Processor, Reverb character and SEED latch use four quarters; Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
+Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use thirds; Processor, Reverb character and SEED latch use quarters; Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 
@@ -135,7 +135,7 @@ Processor Oliverb uses Clouds Parasites' pitch-shifting reverb. TIME sets 18–1
 
 In Oliverb, DRY/WET crossfades, FEEDBACK sets modulation rate and REVERB sets modulation depth. Assign CV can still reach those knobs. FREEZE mutes the reverb input, sets loop gain to one and opens the damping filters. Pitch shift and modulation continue. SEED has no audio effect, and OUT R is silent in gate mode.
 
-Oliverb runs at the quality's native codec rate. Release FREEZE to change Processor or quality. The shared reverb tail resets at handoff. Returning from Oliverb keeps a suspended recording when its engine, quality and input channel count still match. A Processor gesture cycles all four modes when the profile has no Processor page slot. With both a page and a gesture, the shortcut still switches between Granular and Spectral. See [Abyss](ABYSS.md) for its controls.
+Oliverb runs at the quality's native codec rate. Release FREEZE to change Processor or quality. The shared reverb tail resets at handoff. Returning from Oliverb keeps a suspended recording when its engine, quality and input channel count still match. A Processor gesture cycles all four modes when the profile has no Processor page slot. With a page and a gesture assigned, the shortcut switches Granular and Spectral. See [Abyss](ABYSS.md) for its controls.
 
 Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains, except for models with their own envelope. With DENSITY at noon and SEED unpatched the last voice drones until SEED plays a note. The models in each bank are listed in the README's "Plaits synth" section.
 

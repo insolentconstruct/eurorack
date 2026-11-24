@@ -313,16 +313,16 @@ grains (at noon, hits only) and while frozen too. Only granular playback
 uses hits: not delay, Spectral or the synths. SEED and its cable work as
 usual.
 
-Reverb character selects Stock or Clouds-style, which adds diffusion
-until manually set. In delay and wavetable synth, only reverb changes.
-Switching fades sound and clears the tail.
+Reverb character selects Stock, Clouds-style, Plate or Bloom in
+quarters. Clouds-style adds diffusion until manually set. Switching
+fades sound and clears the tail.
 
 Frozen feedback selects Stock or Evolving. Evolving fades in to soften
 and drift frozen grains, or frozen delay slices in delay mode,
 controlled by FEEDBACK; it stops with FREEZE off.
 
-Processor selects Granular (green), Spectral (yellow) or Oliverb (red)
-in thirds. Spectral uses Mutable Instruments Clouds. TIME selects a spectrum,
+Processor selects Granular (green), Spectral (yellow), Oliverb (red)
+or Abyss (pulsing red) in quarters. Spectral uses Mutable Instruments Clouds. TIME selects a spectrum,
 SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls
 renewal and phase scrambling. SEED glitches; FREEZE holds. Random
 controls update per spectrum. Mixing, quality and assignable CV work
@@ -331,7 +331,7 @@ the spectrum renewal. Unavailable: diffusion, stereo width, monophonic
 grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay, buffer
 trim, FREEZE autosave and the wavetable synth.
 Switching between Granular and Spectral resets the recording. A saved
-frozen buffer returns with Granular. Engine changes fade and wait for
+frozen buffer returns with Granular. Processor changes fade and wait for
 FREEZE to be released.
 
 Oliverb is Clouds Parasites' modulated pitch-shifting reverb. TIME sets
@@ -401,9 +401,12 @@ page	LED	knob	setting	value	colour	pulse
 2	DRY/WET	DRY/WET	Delay mode	Wide/smooth filter	red	steady
 2	DRY/WET	REVERB	Reverb character	Stock	green	steady
 2	DRY/WET	REVERB	Reverb character	Clouds-style	yellow	steady
+2	DRY/WET	REVERB	Reverb character	Plate	red	steady
+2	DRY/WET	REVERB	Reverb character	Bloom	green	slow (0.98 Hz)
 3	REVERB	FEEDBACK	Processor	Granular (Stock)	green	steady
 3	REVERB	FEEDBACK	Processor	Spectral	yellow	steady
 3	REVERB	FEEDBACK	Processor	Oliverb	red	steady
+3	REVERB	FEEDBACK	Processor	Abyss	red	slow (0.98 Hz)
 3	REVERB	DRY/WET	Synth	Beads (Stock)	green	steady
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
 3	REVERB	DRY/WET	Synth	Rings	red	steady

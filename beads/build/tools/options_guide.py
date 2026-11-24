@@ -244,8 +244,8 @@ DETAILS = [
     "and always open on the first page instead of the last one used "
     "([opening page](FEATURES.md#options-page-on-opening)).",
     "Move a knob more than a tenth of its travel to take it over; smaller "
-    "bumps are ignored. Pitch scale, Delay mode, Processor, Attacks, Limiter and LED "
-    "brightness use the knob's three thirds; SEED latch uses four quarters; "
+    "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
+    "brightness use thirds; Processor, Reverb character and SEED latch use quarters; "
     "Synth uses thirds with the Rings synth installed, halves without; "
     "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
@@ -353,7 +353,9 @@ DETAILS = [
     "change Processor or quality. The shared reverb tail resets at handoff. "
     "Returning from Oliverb keeps a suspended recording when its engine, "
     "quality and input channel count still match. A Processor gesture cycles "
-    "all three modes when the profile has no Processor page slot.",
+    "all four modes when the profile has no Processor page slot. With a page and "
+    "a gesture assigned, the shortcut switches Granular and Spectral. See [Abyss](ABYSS.md) "
+    "for its controls.",
     "Synth Plaits plays six Plaits voices instead of the wavetable "
     "synth: FEEDBACK picks one of the eight models in the current bank, "
     "TIME, SIZE and SHAPE set "
