@@ -656,6 +656,24 @@ void TestSuppressedStorageChord() {
   CHECK(!settings.state().disable_autosave);
 }
 
+void TestWarningChordDebounceBoundary() {
+  test_checker.Start("TestWarningChordDebounceBoundary");
+  Rig r(false, true);
+  LoseCalibration();
+  r.Reboot(false);
+  while (system_clock.milliseconds() - ui.storage_status_time_ < 2998) {
+    r.Advance(1);
+  }
+  CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(20, true);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
+}
+
 void TestStorageWarning() {
   test_checker.Start("TestStorageWarning");
   Rig r(false, true);
@@ -4270,6 +4288,7 @@ int main() {
   TestStartupBranches();
   TestStorageWarning();
   TestSuppressedStorageChord();
+  TestWarningChordDebounceBoundary();
   TestStorageRepair();
   TestFailedBufferLoad();
   TestCallbackCvRouting();

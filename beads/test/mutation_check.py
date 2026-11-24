@@ -3078,6 +3078,9 @@ cases = [
   ('TestRestartDmaAbortTimeout', 'codec', 'beads/drivers/codec.cc',
     '    if (!InitializeDMA() || !InitializeGPIODMA()) {',
     '    if (false) {'),
+  ('TestWarningChordDebounceBoundary', 'firmware', 'beads/ui.cc',
+    '      suppressed_press_[i] = true;',
+    '      suppressed_press_[i] = false;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

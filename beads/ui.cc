@@ -185,12 +185,18 @@ void Ui::Poll() {
   
   const Options::Stage previous_stage = options_.stage();
   const bool was_active = options_.active();
+  const bool storage_status = showing_storage_status();
   bool other = false;
   bool all_up = true;
   bool pot_touched = false;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     const Switch s = Switch(i);
     const bool down = switches_.pressed_immediate(s);
+    if (storage_status && down) {
+      suppressed_press_[i] = true;
+    } else if (!down && switches_.up(s)) {
+      suppressed_press_[i] = false;
+    }
     const bool scale_seed = s == SWITCH_SEED && options_.seed_allowed() &&
         !switches_.pressed_immediate(SWITCH_ASSIGN);
     other = other || (s != SWITCH_ASSIGN && !scale_seed && down);
@@ -204,7 +210,8 @@ void Ui::Poll() {
   options_.Poll(
       system_clock.milliseconds(), chord_modifier(SWITCH_ASSIGN) &&
       switches_.pressed_immediate(SWITCH_ASSIGN),
-      other, all_up, switches_.just_pressed(SWITCH_ASSIGN),
+      other, all_up, switches_.just_pressed(SWITCH_ASSIGN) &&
+      !suppressed_press_[SWITCH_ASSIGN],
       mode_ == MODE_NORMAL, pot_touched, mix_pot_value_,
       !switches_.up(SWITCH_SEED) && !switches_.released(SWITCH_SEED),
       switches_.just_pressed(SWITCH_SEED), *settings_);
@@ -231,22 +238,17 @@ void Ui::Poll() {
 
   // Ignore switch events while options are open or draining, and buttons
   // held through the storage status shown at power-up.
-  const bool storage_status = showing_storage_status();
   const bool accept_switch_events = !was_active && !options_.active() &&
       options_.stage() != Options::STAGE_DRAIN && !storage_status;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
-    if (switches_.released(s)) {
-      suppressed_press_[i] = false;
-    }
     if (switches_.just_pressed(s)) {
-      suppressed_press_[i] = storage_status;
-      if (accept_switch_events) {
+      ignore_release_[i] = !accept_switch_events || suppressed_press_[i];
+      if (!ignore_release_[i]) {
         queue_.AddEvent(CONTROL_SWITCH, i, 0);
       }
       press_time_[i] = system_clock.milliseconds();
-      ignore_release_[i] = !accept_switch_events;
     }
 
     if (switches_.pressed(s) && !ignore_release_[i]) {
