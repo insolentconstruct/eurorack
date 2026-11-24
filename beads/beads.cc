@@ -573,6 +573,8 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 
   Codec::FillBufferCallback callback = &Process;
   if (active_processor_mode == PROCESSOR_ABYSS) {
+    processor.ResetDelayTransition();
+    processor.ClearReverb();
     abyss.Init(delay_buffer_1, delay_buffer_2, float(sr));
     abyss_limiter.Init(1.0f / (float(sr) * 6.0f), 0.9f);
     callback = &ProcessAbyss;

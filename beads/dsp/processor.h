@@ -177,6 +177,10 @@ class Processor {
     return delay_mode_transition_ > 0.0f && !spectral_;
   }
 
+  inline void ResetDelayTransition() {
+    delay_mode_transition_ = -kDelayModeTransitionTime;
+  }
+
   inline AttackInput* attack_input() { return &attack_input_; }
 
   // Attacks are marked only while granular playback records.
