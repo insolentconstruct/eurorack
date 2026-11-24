@@ -125,6 +125,50 @@ jobs:
             artifacts/objects/*/objects.txt
             artifacts/objects/*/link.txt
             artifacts/objects/*/*.map
+  release-emulator:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        include:
+          - shard: 1
+            scenarios: steady media
+          - shard: 2
+            scenarios: clouds_style processor
+          - shard: 3
+            scenarios: freeze_fade gestures
+          - shard: 4
+            scenarios: ui synth release_synth
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: drizzlet-release-assets
+          path: artifacts
+      - name: Install the Cortex-M7 emulator
+        run: |
+          python3 -m venv "$RUNNER_TEMP/emu"
+          "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4 pyelftools==0.32
+      - name: Check release region boots and fallback
+        run: |
+          timeout 1200 "$RUNNER_TEMP/emu/bin/python" beads/test/transition_emu/region_boots.py \
+            artifacts/app.elf artifacts/region.bin region-boots.json --shard ${{ matrix.shard }}/4
+      - name: Check release transitions and bank ownership
+        run: |
+          timeout 1200 "$RUNNER_TEMP/emu/bin/python" beads/test/transition_emu/transition_emu.py \
+            --summary --region artifacts/region.bin artifacts/app.elf transitions.json ${{ matrix.scenarios }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: release-emulator-${{ matrix.shard }}
+          path: |
+            region-boots.json
+            transitions.json
   image:
     # Publishes the build image after a green build on drizzlet, so users can pull it.
     if: github.event_name == 'push' && github.ref == 'refs/heads/drizzlet' && github.repository == 'insolentconstruct/eurorack'
@@ -159,7 +203,7 @@ jobs:
           echo "Pushed \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
   release:
     if: startsWith(github.ref, 'refs/tags/drizzlet-')
-    needs: build
+    needs: [build, release-emulator]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

@@ -618,18 +618,67 @@ def scenario_synth(r):
   r.tick(300)
   r.tick(9800, audio=False)
   r.tick(600)
-  # Plaits selected, but the erased flash has no models: Beads' synth plays,
-  # so MEDIA+FREEZE runs the profile's Buffer trim, not a bank step (#353).
+  # An installed Plaits owns the bank gesture; an erased region falls back.
   r.set_feature(FEATURE_SYNTH, 1)
   r.tick(100)
   bank = r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0]
+  plaits = r.m.read(r.image.address('playing_synth'), '<B')[0] == 1
   r.combo('media', 'freeze')
-  r.expect(r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] == bank,
-           'MEDIA+FREEZE leaves the bank of a Plaits that cannot play')
+  changed = r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] != bank
+  r.expect(changed == plaits,
+           'MEDIA+FREEZE steps the bank only while Plaits plays')
   r.set_feature(FEATURE_SYNTH, 0)
   r.tick(100)
   r.left = r.right = True
   r.tick(700)
+
+
+
+def scenario_release_synth(r):
+  # Exercise the installed models and shared bank through both synth owners.
+  r.expect(r.m.read(r.image.address('playable_synths'), '<B')[0] == 7,
+           'the release region makes all three synths playable')
+  r.left = r.right = False
+  r.recording = True
+  r.tick(300)
+  r.tick(9800, audio=False)
+  r.tick(600)
+  r.expect(r.m.read(r.image.address('synth_mode'), '<B')[0],
+           'unplugged inputs enter synth mode')
+  for selected in (1, 2, 1, 0):
+    r.set_feature(FEATURE_SYNTH, selected)
+    r.tick(700)
+    r.expect(r.m.read(r.image.address('playing_synth'), '<B')[0] == selected,
+             'selected release synth plays')
+    if selected in (1, 2):
+      r.expect(r.m.read(r.image.address('bank_owner'), '<B')[0] == selected,
+               'shared bank belongs to the playing synth')
+    if selected == 1:
+      bank = r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0]
+      r.combo('media', 'freeze')
+      r.expect(r.m.read(r.values + FEATURE_PLAITS_BANK, '<B')[0] != bank,
+               'MEDIA+FREEZE changes the playing Plaits bank')
+      pots = r.image.address('_ZN5beads7PotsAdc7values_E')
+      voices = r.image.member('plaits_synth', 'PlaitsSynth', 'voice_')
+      stride = (r.image.member('plaits_synth', 'PlaitsSynth', 'patch_') -
+                voices) // 6
+      models = set()
+      for feedback in (0x1000, 0x7000, 0xe000):
+        r.m.write(pots, '<H', feedback)
+        r.tick(100)
+        r.tap('seed')
+        r.tick(100)
+        for voice in range(6):
+          model = r.m.read(voices + voice * stride +
+                           r.image.offsets['PlaitsVoice']['model_'], '<i')[0]
+          if model >= 0:
+            models.add(model)
+      r.expect(len(models) > 1, 'the installed Plaits voice changes model')
+      r.m.write(pots, '<H', POTS[0])
+  r.left = r.right = True
+  r.tick(700)
+  r.expect(not r.m.read(r.image.address('synth_mode'), '<B')[0],
+           'plugged inputs leave synth mode')
 
 
 def scenario_ui(r):
@@ -653,7 +702,8 @@ SCENARIOS = (
     ('freeze_fade', scenario_freeze_fade),
     ('gestures', scenario_gestures),
     ('synth', scenario_synth),
-    ('ui', scenario_ui))
+    ('ui', scenario_ui),
+    ('release_synth', scenario_release_synth))
 
 
 def run(arguments):
@@ -830,7 +880,10 @@ def main(argv):
     sys.stderr.write(USAGE)
     return 2
   path, out = argv[1], argv[2]
-  names = argv[3:] or [n for n, _ in SCENARIOS]
+  names = argv[3:] or [n for n, _ in SCENARIOS if n != 'release_synth']
+  if 'release_synth' in names:
+    MEMBERS['PlaitsSynth'] = ('voice_', 'patch_')
+    MEMBERS['PlaitsVoice'] = ('model_',)
   image = Image(path)
   pool = multiprocessing.Pool(min(len(names), multiprocessing.cpu_count()))
   results = pool.map(run, [(path, n, region) for n in names])
