@@ -196,7 +196,7 @@ bool Settings::Init(bool recovery_mode,
       stored_state_ = defaults;
     }
     status = STORAGE_RESTORED;
-  } else if (lost) {
+  } else if (lost || implausible) {
     status = STORAGE_DAMAGED;
   }
   if (status == STORAGE_RESTORED) {

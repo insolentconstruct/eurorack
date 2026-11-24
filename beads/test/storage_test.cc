@@ -200,14 +200,14 @@ void TestCalibrationFromMirror() {
     CHECK(SameState(s, saved));
     CHECK(SameOptions(s, saved));
     CHECK(StockLoads(calibration, saved.state));
-    // Out of range in both copies: loaded as stock loads it.
+    // Out of range in both copies: use RAM defaults and leave flash alone.
     Setup(calibration, 5);
     PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
     PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
     Take(&snapshot);
     Settings both;
-    CHECK(both.Init(false) && !both.write_locked());
-    CHECK(SameCalibration(both, wild));
+    CHECK(both.Init(false) && both.write_locked());
+    CHECK(SameCalibration(both, Factory()));
     CHECK(Unchanged(snapshot));
   }
 }
@@ -286,6 +286,39 @@ void TestCalibrationLost() {
       CHECK(SameOptions(s, defaults));
       CHECK(SameCalibration(s, Factory()));
       CHECK(Unchanged(snapshot));
+    }
+  }
+}
+
+void TestImplausibleCalibrationWithoutMirror() {
+  test_checker.Start("TestImplausibleCalibrationWithoutMirror");
+  const Saved defaults = Defaults();
+  for (int nan = 0; nan < 2; ++nan) {
+    PersistentData wild = Factory();
+    wild.adc_calibration[CV_ADC_CHANNEL_PITCH].offset =
+        nan ? __builtin_nanf("") : 84.0f;
+    for (int mirror = 0; mirror < 2; ++mirror) {
+      Setup(Calibration(0.1f), 5);
+      PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+      PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
+      if (!mirror) {
+        static uint8_t blank[kSectorSize];
+        memset(blank, 255, sizeof(blank));
+        Poke(kMirror, blank, sizeof(blank));
+      }
+      Take(&snapshot);
+      Settings s;
+      CHECK(s.Init(false) && s.write_locked());
+      CHECK(SameState(s, defaults));
+      CHECK(SameOptions(s, defaults));
+      CHECK(SameCalibration(s, Factory()));
+      s.SaveState();
+      CHECK(Unchanged(snapshot));
+
+      Settings repair;
+      CHECK(repair.Init(true) && !repair.write_locked());
+      CHECK(repair.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+      CHECK(StockLoads(Factory(), defaults.state));
     }
   }
 }
@@ -1866,6 +1899,7 @@ int main() {
   TestCalibrationFromMirror();
   TestRestoredCalibrationChoice();
   TestCalibrationLost();
+  TestImplausibleCalibrationWithoutMirror();
   TestFactoryPrimaryInterruptedRecalibration();
   TestAppendAfterBlankGap();
   TestRetryIncompleteErase();
