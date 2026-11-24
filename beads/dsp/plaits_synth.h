@@ -84,6 +84,10 @@ class PlaitsSynth {
       FloatFrame* out,
       size_t size);
 
+  inline void set_reverb_decay(uint8_t choice) {
+    reverb_.SetDecayLaw(choice, false);
+  }
+
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
   }

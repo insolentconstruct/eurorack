@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "f12d4f4e755dccd659141ed19fc52c592154e374ac22a5f189b2f356ed9089a4",
+  "manifest_sha256": "4e70861e39ddac015a0af386ca8ee70a41d01aec947a49d59b3c6431df895671",
   "record_version": 1,
   "features": [
     {
@@ -1775,6 +1775,30 @@
       "default": 0,
       "factory": null,
       "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 54,
+      "name": "Reverb decay",
+      "values": [
+        "Coupled (stock)",
+        "Short",
+        "Medium",
+        "Long"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
       "cpu_cost": null,
       "saved": null
     }

@@ -127,6 +127,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // Output division.
   PAGE_CONTROL_STEPS,  // Gain ceiling.
   PAGE_CONTROL_NONE,  // Manual delay.
+  PAGE_CONTROL_NONE,  // Reverb decay.
 };
 const Leds::Color kOptionColors[kNumOptionColors] = {
   { 0, 255, 0 },

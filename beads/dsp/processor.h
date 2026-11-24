@@ -113,6 +113,8 @@ class Processor {
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
   void SetCloudsStyle(bool clouds);
+  // Set from the profile before choosing the recording quality.
+  inline void set_reverb_decay(uint8_t choice) { reverb_decay_ = choice; }
   // Attacks (#58, #47); changing the mode forgets the marks.
   void SetAttacks(int mode, float threshold) {
     attack_input_.Configure(mode, threshold);
@@ -613,6 +615,7 @@ class Processor {
   int output_division_;
   int output_pulse_count_;
   bool output_pulse_;
+  uint8_t reverb_decay_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

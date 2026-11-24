@@ -581,6 +581,21 @@ back in with them. Granular, delay and spectral; both synths keep the stock
 routing. Chosen at power-on, with
 no panel slot or saved byte.
 
+### Reverb decay
+
+Hygrostat feature ID 54 offers Coupled (stock), Short, Medium and Long
+(#38). A fixed decay lets you use a long tail at a low mix or a short tail
+at a high mix. REVERB and its assigned CV keep their existing mix response.
+The choice applies to both reverb characters, all qualities, granular, delay,
+spectral and all three synths. It has no panel slot or saved byte. Off and
+omitted entries use the stock coupled response. Firmware without ID 54
+uses its fallback profile if this entry is present.
+
+Short, Medium and Long set loop feedback to 0.30, 0.60 and 0.85. The
+resulting tail length depends on sample rate and reverb character. The
+existing mix limits are 0.90 for the processor and 0.80 for the synths.
+An optional full-wet range would need a separate choice.
+
 ### Grain stealing
 
 Hygrostat feature ID 34 chooses 2021/2024 (value 0, the default) or 2026

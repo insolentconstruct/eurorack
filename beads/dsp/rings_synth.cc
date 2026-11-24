@@ -228,7 +228,7 @@ void RingsSynth::Render(
   const float reverb_mix = reverb * reverb * 0.8f;
   const float reverb_time = reverb * reverb * reverb;
   reverb_.set_mix(reverb_mix);
-  reverb_.set_time(0.3f + 0.6f * reverb_time);
+  reverb_.set_decay_amount(reverb_time);
   reverb_.set_lp(0.6f);
   if (clouds_style_) {
     reverb_.ProcessClouds(out, size);

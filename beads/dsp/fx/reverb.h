@@ -43,6 +43,7 @@ class Reverb {
   ~Reverb() { }
   
   void Init(uint16_t* buffer, float sample_rate) {
+    SetDecayLaw(0, false);
     engine_.Init(buffer);
     Reset(sample_rate);
   }
@@ -188,6 +189,17 @@ class Reverb {
     mix_ = mix;
   }
   
+  // Select the feedback coefficients before rendering.
+  void SetDecayLaw(uint8_t choice, bool caveman) {
+    static const float fixed_feedback[] = { 0.0f, 0.3f, 0.6f, 0.85f };
+    decay_base_ = choice ? fixed_feedback[choice] : (caveman ? 0.45f : 0.3f);
+    decay_scale_ = choice ? 0.0f : (caveman ? 0.5f : 0.6f);
+  }
+
+  inline void set_decay_amount(float amount) {
+    reverb_time_ = decay_base_ + decay_scale_ * amount;
+  }
+
   inline void set_time(float reverb_time) {
     reverb_time_ = reverb_time;
   }
@@ -209,6 +221,8 @@ class Reverb {
   float dry_;
   float send_;
   float reverb_time_;
+  float decay_base_;
+  float decay_scale_;
   float lp_;
   
   float lp_1_;

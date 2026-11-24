@@ -385,14 +385,17 @@ class Machine(object):
 
 class Rig(object):
 
-  def __init__(self, image, region=None):
+  def __init__(self, image, region=None, profile=None):
     self.m = Machine(image)
     # The region as an install leaves it, from the app's region start.
     if region:
       self.m.uc.mem_write(image.address('plaits_region_begin'), region)
+    if profile is not None:
+      self.m.uc.mem_write(FLASH + 0x20400, profile)
     self.image = image
     self.left = self.right = True
     self.seed_patched = False
+    self.assign_cv = None
     self.freeze_gate = False
     self.sample = 0
     self.half = 0
@@ -455,7 +458,9 @@ class Rig(object):
       return
     probe = self.probe()
     cv = PROBE_HIGH_CV if probe else PROBE_LOW_CV
-    m.write(self.image.address('_ZN5beads5CvAdc7values_E'), '<6H', *[cv] * 6)
+    assign = cv if self.assign_cv is None else self.assign_cv
+    m.write(self.image.address('_ZN5beads5CvAdc7values_E'),
+            '<6H', assign, cv, cv, cv, cv, cv)
     frames, events = [], []
     for i in range(size):
       level = SQUARE_LEVEL if (self.sample // (SQUARE_PERIOD // 2)) % 2 \
@@ -721,9 +726,9 @@ SCENARIOS = (
 
 
 def run(arguments):
-  path, name, region = arguments
+  path, name, region, *profile = arguments
   start = time.time()
-  r = Rig(Image(path), region)
+  r = Rig(Image(path), region, *profile)
   r.settle()
   dict(SCENARIOS)[name](r)
   phases = {}

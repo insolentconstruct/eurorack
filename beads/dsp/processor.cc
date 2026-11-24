@@ -41,6 +41,7 @@ void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
   options_ = 0;
+  reverb_decay_ = 0;
   time_scan_.Init();
   attack_input_.Init();
   attack_trigger_ = false;
@@ -86,6 +87,7 @@ void Processor::Configure(Media media, bool mono) {
   attack_input_.Reset();
   feedback_diffuser_.Init();
   media_ = media;
+  reverb_.SetDecayLaw(reverb_decay_, media != MEDIA_DIGITAL);
   mono_ = mono;
   
   int max_delay = 0;
@@ -326,9 +328,7 @@ void Processor::ProcessBlock(
   const float reverb_mix = reverb * reverb * 0.9f;
   const float reverb_time = reverb * reverb * reverb;
   reverb_.set_mix(reverb_mix);
-  reverb_.set_time(caveman
-      ? (0.45f + 0.5f * reverb_time)
-      : (0.3f + 0.6f * reverb_time));
+  reverb_.set_decay_amount(reverb_time);
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
   if (clouds_style_) {

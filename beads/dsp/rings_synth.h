@@ -105,6 +105,10 @@ class RingsSynth {
 
   // Polyphony 1, 2 or 4 (feature 42).
   inline void set_polyphony(int polyphony) { polyphony_ = polyphony; }
+  inline void set_reverb_decay(uint8_t choice) {
+    reverb_.SetDecayLaw(choice, false);
+  }
+
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
   }

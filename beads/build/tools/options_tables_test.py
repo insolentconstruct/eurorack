@@ -515,7 +515,11 @@ exported = subprocess.check_output(["build/options_tables", "--profile"],
 reserved = [row for row in exported if row.split("\t")[1] == "Reserved"]
 assert [int(row.split("\t")[0]) for row in reserved] == []
 exported = [row for row in exported if row not in reserved]
-assert len(catalog["features"]) == len(exported) == 52
+assert len(catalog["features"]) == len(exported) == 54
+decay = catalog["features"][-1]
+assert decay["id"] == 54 and decay["values"] == [
+    "Coupled (stock)", "Short", "Medium", "Long"]
+assert decay["states"] == ["Off", "Fixed"] and decay["saved"] is None
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
     "100%", "66%", "33%"]
 manifest = json.loads(Path("beads/resources/features.json").read_text())

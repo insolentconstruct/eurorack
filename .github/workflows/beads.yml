@@ -162,6 +162,11 @@ jobs:
         run: |
           timeout 1200 "$RUNNER_TEMP/emu/bin/python" beads/test/transition_emu/transition_emu.py \
             --summary --region artifacts/region.bin artifacts/app.elf transitions.json ${{ matrix.scenarios }}
+      - name: Check fixed reverb decay profiles
+        if: matrix.shard == 4
+        run: |
+          timeout 180 "$RUNNER_TEMP/emu/bin/python" beads/test/transition_emu/reverb_decay.py \
+            artifacts/app.elf --region artifacts/region.bin
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

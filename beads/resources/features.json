@@ -1089,6 +1089,25 @@
       "actions": [1, 2],
       "stateless": true,
       "touches_synth": false
+    },
+    {
+      "id": 54,
+      "symbol": "REVERB_DECAY",
+      "name": "Reverb decay",
+      "issue": 38,
+      "values": [
+        {"name": "Coupled (stock)"},
+        {"name": "Short"},
+        {"name": "Medium"},
+        {"name": "Long"}
+      ],
+      "field": null,
+      "states": ["Off", "Fixed"],
+      "page": false,
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": true
     }
   ],
   "plaits_models": [

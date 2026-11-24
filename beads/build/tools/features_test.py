@@ -96,11 +96,14 @@ print('Catalogue format 2, manifest digest and record bytes: PASS')
 DIGEST = '"manifest_sha256": "%s"' % catalogue['manifest_sha256']
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features']] == list(range(1, 54))
+assert [r['id'] for r in frozen['features'][:-1]] == list(range(1, 54))
+assert frozen['features'][-1] == {
+    'id': 54, 'symbol': 'REVERB_DECAY',
+    'values': ['Coupled (stock)', 'Short', 'Medium', 'Long']}
 assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
 faults = [
-  ('Frozen ID 52', features.MANIFEST,
+  ('Frozen ID 53', features.MANIFEST,
       '"symbol": "MANUAL_DELAY"', '"symbol": "DELAY_TOGGLE"'),
   ('Frozen ID 32: value meanings', features.MANIFEST,
       '{"name": "Send"}', '{"name": "Return"}'),
@@ -112,6 +115,8 @@ faults = [
       '"symbol": "OUTPUT_DIVISION"', '"symbol": "OUTPUT_CLOCK"'),
   ('Frozen ID 51: value meanings', features.MANIFEST,
       '"name": "/2"', '"name": "/3"'),
+  ('Frozen ID 54: value meanings', features.MANIFEST,
+      '{"name": "Coupled (stock)"}', '{"name": "Separate"}'),
   ('Frozen ID 29', features.MANIFEST,
       '"symbol": "SEED_START"', '"symbol": "SEED_BEGIN"'),
   ('Frozen ID 5: value meanings', features.MANIFEST,

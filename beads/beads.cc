@@ -610,6 +610,11 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  const uint8_t reverb_decay = settings.FeatureValue(FEATURE_REVERB_DECAY);
+  processor.set_reverb_decay(reverb_decay);
+  synth.set_reverb_decay(reverb_decay);
+  plaits_synth.set_reverb_decay(reverb_decay);
+  rings_synth.set_reverb_decay(reverb_decay);
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;
   const Profile& profile = settings.profile();

@@ -92,6 +92,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 5, kNoField, false, false, false, false },  // Output division.
   { 4, kNoField, true, false, false, false },  // Gain ceiling.
   { 2, kNoField, false, false, true, true },  // Manual delay.
+  { 4, kNoField, false, false, false, false },  // Reverb decay.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]
