@@ -22,6 +22,9 @@ accept synth-rings-fixed : 7 1 2 0 0 0
 accept send-mix : 32 1 2 0 0 0
 accept synth-level-eighth : 50 1 3 0 0 0
 accept grain-output-sixteenth : 51 1 4 0 0 0
+accept manual-delay-seed : 53 1 1 0 0 1
+accept manual-delay-freeze : 53 1 1 0 0 2
+reject manual-delay-without-gesture : 53 1 1 0 0 0
 accept reverb-decay-long : 54 1 3 0 0 0
 reject reverb-decay-value : 54 1 4 0 0 0
 reject reverb-decay-page : 54 2 1 1 0 0

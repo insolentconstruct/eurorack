@@ -417,13 +417,15 @@ void TestBetaProfileDefinitions() {
         // Uncounted full-byte values accept any byte; reserved IDs accept none.
         const bool stepped = id == FEATURE_PLAITS_BANK ||
             id == FEATURE_RINGS_POLYPHONY;
+        const bool needs_action = id == FEATURE_MANUAL_DELAY &&
+            state == PROFILE_FIXED && value;
         const bool valid =
             kFeatureDefinitions[id].field != kReservedField &&
             (!kFeatureDefinitions[id].values ||
             value < kFeatureDefinitions[id].values) &&
             (state != PROFILE_ADJUSTABLE || kFeatureDefinitions[id].page ||
                 kFeatureDefinitions[id].field != kNoField || stepped) &&
-            (!stepped || state == PROFILE_ADJUSTABLE);
+            (!stepped || state == PROFILE_ADJUSTABLE) && !needs_action;
         CHECK(p.Init(b) == valid);
       }
     }

@@ -547,8 +547,10 @@ for feature, row, source in zip(catalog["features"], exported,
     assert feature.get("stateless", False) == bool(stateless)
     # The Plaits bank and Rings polyphony are Adjustable through gestures.
     gesture = (identity == 31 and field == 14 or identity == 42) and not page
+    # Manual delay is assigned in the profile and toggles only a RAM target.
+    adjustable_action = action and identity != 53
     assert ("Adjustable" in feature["states"]) == bool(
-        page or amount or action or gesture)
+        page or amount or adjustable_action or gesture), identity
 # Every value label the firmware shows on a page is the catalogue's.
 shown = {}
 for row in rows:

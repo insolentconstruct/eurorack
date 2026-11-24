@@ -27,7 +27,7 @@ Low supply voltage blocks settings and buffer saves. Interrupted saves follow th
 
 ## Manual delay toggle
 
-A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE
+A custom profile can assign Manual delay toggle (ID 53) to [A]+SEED or [A]+FREEZE
 ([#309](https://github.com/insolentconstruct/eurorack/issues/309)). The module
 boots in grains and each press reverses the target of the existing wet fade.
 SIZE still controls grain size and never switches modes in that profile.
