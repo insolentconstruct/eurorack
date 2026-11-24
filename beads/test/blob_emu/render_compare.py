@@ -61,78 +61,80 @@ RANDOM_STATE = 0x20000000
 # Blob-to-engine order follows harness.cc: Palette, sine, then PlaitsVoice.
 # The 6-op engine serves models 2-4.
 PAIRS = dict([
-    (29, 0),
-    (30, 1),
-    (31, 2),
-    (32, 3),
-    (33, 4),
-    (34, 5),
-    (35, 6),
-    (36, 7),
-    (37, 8),
-    (38, 9),
-    (39, 10),
-    (40, 11),
-    (41, 12),
-    (42, 13),
-    (43, 14),
-    (44, 15),
-    (45, 16),
-    (46, 17),
-    (47, 18),
-    (48, 19),
-    (49, 20),
-    (50, 21),
-    (51, 22),
-    (52, 23),
-    (53, 24),
-    (54, 25),
-    (55, 26),
-    (56, 27),
-    (57, 28),
-    (58, 29),
-    (59, 30),
-    (60, 31),
-    (61, 32),
-    (62, 33),
-    (63, 34),
-    (64, 35),
-    (65, 36),
-    (66, 37),
-    (68, 38),
-    (69, 39),
-    (70, 40),
-    (71, 41),
-    (72, 42),
-    (73, 43),
-    (74, 44),
-    (75, 45),
-    (76, 46),
-    (77, 47),
-    (78, 48),
-    (79, 49),
-    (80, 50),
-    (81, 51),
-    (82, 52),
-    (83, 53),
-    (84, 54),
-    (85, 55),
-    (86, 56),
-    (87, 57),
-    (88, 58),
-    (89, 59),
-    (90, 60),
-    (91, 61),
-    (92, 62),
-    (93, 63),
-    (94, 64),
-    (95, 65),
-    (96, 66),
-    (97, 67),
-    (98, 68),
-    (99, 69),
-    (254, 70)] + [
-    (m, 71 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
+    (28, 0),
+    (29, 1),
+    (30, 2),
+    (31, 3),
+    (32, 4),
+    (33, 5),
+    (34, 6),
+    (35, 7),
+    (36, 8),
+    (37, 9),
+    (38, 10),
+    (39, 11),
+    (40, 12),
+    (41, 13),
+    (42, 14),
+    (43, 15),
+    (44, 16),
+    (45, 17),
+    (46, 18),
+    (47, 19),
+    (48, 20),
+    (49, 21),
+    (50, 22),
+    (51, 23),
+    (52, 24),
+    (53, 25),
+    (54, 26),
+    (55, 27),
+    (56, 28),
+    (57, 29),
+    (58, 30),
+    (59, 31),
+    (60, 32),
+    (61, 33),
+    (62, 34),
+    (63, 35),
+    (64, 36),
+    (65, 37),
+    (66, 38),
+    (67, 39),
+    (68, 40),
+    (69, 41),
+    (70, 42),
+    (71, 43),
+    (72, 44),
+    (73, 45),
+    (74, 46),
+    (75, 47),
+    (76, 48),
+    (77, 49),
+    (78, 50),
+    (79, 51),
+    (80, 52),
+    (81, 53),
+    (82, 54),
+    (83, 55),
+    (84, 56),
+    (85, 57),
+    (86, 58),
+    (87, 59),
+    (88, 60),
+    (89, 61),
+    (90, 62),
+    (91, 63),
+    (92, 64),
+    (93, 65),
+    (94, 66),
+    (95, 67),
+    (96, 68),
+    (97, 69),
+    (98, 70),
+    (99, 71),
+    (254, 72)] + [
+    (m, 73 + (m if m < 2 else 2 if m < 5 else m - 2)) for m in range(24)])
 # Library users: 6-op FM, Wave terrain, Wavetable, Chords, String machine,
 # Chiptune and Speech; dependencies come from profile-features.json.
 DEPENDENTS = (2, 3, 4, 5, 6, 7, 13, 14, 15, 68, 80, 81, 82, 83, 98, 99)
@@ -214,14 +216,18 @@ SWITCHES = [(m, (m + 5) % 24) for m in range(24)] + [
     (96, 79),
     (97, 30),
     (98, 64),
-    (99, 64)]
-# Tapfield needs a held note: low notes retrigger before its register clocks.
-NOTE_CONTROL_STEPS = {35: [
+    (99, 64),
+    (67, 64),
+    (28, 64)]
+# Speech needs a voiced segment; Tapfield needs time for its register clocks.
+NOTE_CONTROL_STEPS = {28: [
+    (5 if block == 0 else 4, 60.0, 0.5, 0.5, 0.5, 0.8)
+    for block in range(1024)], 35: [
     (1 if block == 0 else 0, 84.0, 0.5, 0.5, 0.5, 0.8)
     for block in range(200)]}
-FRESH_ON_RESELECT = (51, 53, 56, 71, 76, 92, 93, 94, 95, 97, 98, 99)
+FRESH_ON_RESELECT = (28, 51, 53, 56, 67, 71, 76, 92, 93, 94, 95, 97, 98, 99)
 # Saw Swarm Reset already clears its state; the others retain warm state.
-RETAINED_ON_RESET = (53, 92, 93, 97, 98, 99)
+RETAINED_ON_RESET = (28, 53, 67, 92, 93, 97, 98, 99)
 BLOCK = 12
 STATUS = ['OK', 'PLACEMENT', 'HEADER', 'ABI', 'SERVICES', 'LAYOUT', 'RAM',
           'CRC', 'DIGEST', 'IMPORTS', 'NO_REGION', 'RELEASE', 'SELECTION',
@@ -785,12 +791,17 @@ def switch_compare(first, second, fresh, base, fpscr):
             for block in range(7000)]
     returned = [(2, 72.0, 0.8, 0.9, 0.75, 0.8)] * 1024
     parts = ((first, held), (second, sequence[100:200]), (first, returned))
-  if first == 53:
+  if first in (53, 67):
     # The return lies inside the hysteresis band after warming branch 1.
     warm = [(5 if i == 0 else 4, 60.0, 0.5, 0.7, 0.5, 0.8)
             for i in range(64)]
     back = [(5 if i == 0 else 4, 60.0, 1.0 / 3.0, 0.7, 0.5, 0.8)
             for i in range(512)]
+    parts = ((first, warm), (second, sequence[100:200]), (first, back))
+  if first == 28:
+    # Returning in the bank hysteresis band exposes Reset's retained selector.
+    warm = [(2, 60.0, 1.0, 0.7, 0.5, 0.8)] * 64
+    back = [(2, 60.0, 0.5, 0.7, 0.5, 0.8)] * 512
     parts = ((first, warm), (second, sequence[100:200]), (first, back))
   for model, part in parts:
     before = m.word(RANDOM_STATE)

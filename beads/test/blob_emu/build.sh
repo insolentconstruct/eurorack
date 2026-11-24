@@ -167,6 +167,8 @@ for source in beads/test/blob_emu/harness.cc beads/blob/plaits_blob.cc \
     $models/kick_engine.cc \
     $models/snare_engine.cc \
     $models/cymbal_engine.cc \
+    $models/wave_scan_engine.cc \
+    $models/natural_speech_engine.cc \
     $models/saw_comb_engine.cc \
     $models/wave_paraphonic_engine.cc \
     $models/wavetable_chord_engine.cc \
