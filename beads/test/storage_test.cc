@@ -368,6 +368,24 @@ void TestAppendAfterBlankGap() {
   CHECK(StockLoads(calibration, s.state()));
 }
 
+void TestRefusedRecalibrationPreservesMeasuredMirror() {
+  test_checker.Start("TestRefusedRecalibrationPreservesMeasuredMirror");
+  const PersistentData factory = Factory();
+  const PersistentData measured = Calibration(0.1f);
+  Setup(measured, 5);
+  PokeChunk(kSector, PersistentData::tag, &factory, sizeof(factory));
+  TestFlashBudget() = 0;
+  Settings s;
+  CHECK(s.Init(false) && SameCalibration(s, measured));
+  TestFlashBudget() = -1;
+  Take(&snapshot);
+  s.mutable_persistent_data()->adc_calibration[CV_ADC_CHANNEL_PITCH].offset =
+      84.0f;
+  CHECK(!s.SavePersistentData());
+  CHECK(SameCalibration(s, measured));
+  CHECK(Unchanged(snapshot));
+}
+
 void TestRetryIncompleteErase() {
   test_checker.Start("TestRetryIncompleteErase");
   const PersistentData calibration = Calibration(0.1f);
@@ -1902,6 +1920,7 @@ int main() {
   TestImplausibleCalibrationWithoutMirror();
   TestFactoryPrimaryInterruptedRecalibration();
   TestAppendAfterBlankGap();
+  TestRefusedRecalibrationPreservesMeasuredMirror();
   TestRetryIncompleteErase();
   TestStateTerminator();
   TestInterruptedAppend();
