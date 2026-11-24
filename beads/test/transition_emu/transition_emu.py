@@ -96,6 +96,8 @@ MEMBERS = {
     'Ui': ('freeze_button_state_',)}
 # Functions whose inclusive counts are recorded, by symbol prefix.
 INNER = (('_Z7Process', 'Process'),
+         ('_Z12ProcessAudioILb0EE', 'Process'),
+         ('_Z12ProcessAudioILb1EE', 'Process'),
          ('_Z18MonitorStateChangev', 'MonitorStateChange'),
          ('_ZN5beads2Ui4PollEv', 'Ui::Poll'))
 # Globals used only to label phases; a candidate may lack them.
