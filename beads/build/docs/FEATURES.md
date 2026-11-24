@@ -335,6 +335,7 @@ The user guides (OPTIONS.md, README) describe positions and timing in words. The
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
 - **Synth start, Manual:** hold [A] 1.5 s and release to start or stop (the manual says 1 s).
 - **Processor, Spectral:** takes effect once the page has closed and FREEZE is off (until then the current engine plays on): a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
+- **Processor, Oliverb:** TIME sets pre-delay from 18 to 150 ms.
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
 

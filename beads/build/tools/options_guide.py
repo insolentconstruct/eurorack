@@ -339,7 +339,7 @@ DETAILS = [
     "The new processor takes over when the page closes and FREEZE is off. "
     "A frozen buffer saved to flash comes back with Granular.",
     "Processor Oliverb uses Clouds Parasites' pitch-shifting reverb. TIME sets "
-    "18–150 ms pre-delay, SIZE sets tank size, PITCH shifts the feedback by "
+    "pre-delay, SIZE sets tank size, PITCH shifts the feedback by "
     "up to two octaves each way. DENSITY and DENSITY CV set decay. SHAPE sweeps "
     "from low-pass to high-pass through noon. The Diffusion setting and assigned Diffusion CV "
     "set diffusion, with noon as the default. TIME, SIZE, PITCH and SHAPE "
