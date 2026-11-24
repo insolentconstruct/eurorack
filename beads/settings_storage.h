@@ -357,7 +357,7 @@ class ChunkStorage {
         !memcmp(&mirror, persistent_data_, sizeof(PersistentData))) {
       return true;
     }
-    if (valid && Usable(mirror) && !SectorUsable() && \
+    if (valid && Usable(mirror) && !SectorProtects(mirror) && \
         !WriteCalibration(sector_index, FLASH_STORAGE_BASE, mirror)) {
       return false;
     }
@@ -379,10 +379,12 @@ class ChunkStorage {
     return !check_ || check_(data, *reference_);
   }
 
-  // The sector's calibration, read from flash, is usable.
-  bool SectorUsable() {
+  // Factory values cannot protect the only measured calibration.
+  bool SectorProtects(const PersistentData& mirror) {
     PersistentData data;
-    return ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data);
+    return ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data) &&
+        (!reference_ || !data.SameCalibration(*reference_) ||
+            mirror.SameCalibration(*reference_));
   }
 
   bool EraseSector(uint32_t index, uint32_t address);

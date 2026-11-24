@@ -290,6 +290,35 @@ void TestCalibrationLost() {
   }
 }
 
+void TestFactoryPrimaryInterruptedRecalibration() {
+  test_checker.Start("TestFactoryPrimaryInterruptedRecalibration");
+  const PersistentData factory = Factory();
+  const PersistentData old_calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  for (int cut = 0; cut <= 24; ++cut) {
+    Setup(old_calibration, 5);
+    PokeChunk(kSector, PersistentData::tag, &factory, sizeof(factory));
+    TestFlashBudget() = 0;
+    Settings s;
+    CHECK(s.Init(false) && SameCalibration(s, old_calibration));
+    *s.mutable_persistent_data() = new_calibration;
+    TestFlashBudget() = cut;
+    const bool saved = s.SavePersistentData();
+    TestFlashBudget() = -1;
+
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    if (cut < 10) {
+      CHECK(SameCalibration(loaded, old_calibration));
+    } else if (saved || cut == 24) {
+      CHECK(saved && SameCalibration(loaded, new_calibration));
+    } else {
+      CHECK(SameCalibration(loaded, old_calibration) ||
+          SameCalibration(loaded, new_calibration));
+    }
+  }
+}
+
 void TestAppendAfterBlankGap() {
   test_checker.Start("TestAppendAfterBlankGap");
   const PersistentData calibration = Calibration(0.1f);
@@ -1837,6 +1866,7 @@ int main() {
   TestCalibrationFromMirror();
   TestRestoredCalibrationChoice();
   TestCalibrationLost();
+  TestFactoryPrimaryInterruptedRecalibration();
   TestAppendAfterBlankGap();
   TestRetryIncompleteErase();
   TestStateTerminator();

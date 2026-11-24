@@ -4,6 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Preserve a measured calibration during recalibration after a stock factory reset.
 - Lock flash between frozen-buffer backup operations.
 - Retry an incomplete settings or calibration-copy sector erase.
 - A settings save no longer revives older settings past an empty slot.
