@@ -196,7 +196,7 @@ bool Settings::Init(bool recovery_mode,
       stored_state_ = defaults;
     }
     status = STORAGE_RESTORED;
-  } else if (lost) {
+  } else if (lost || implausible) {
     status = STORAGE_DAMAGED;
   }
   if (status == STORAGE_RESTORED) {
@@ -267,6 +267,13 @@ bool Settings::CalibrationPlausible(
 }
 
 bool Settings::SavePersistentData() {
+  if (!CalibrationPlausible(persistent_data_, factory_)) {
+    PersistentData durable;
+    if (ReadPersistentData(&durable)) {
+      persistent_data_ = durable;
+    }
+    return false;
+  }
   fill(
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],

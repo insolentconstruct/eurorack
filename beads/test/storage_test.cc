@@ -200,14 +200,14 @@ void TestCalibrationFromMirror() {
     CHECK(SameState(s, saved));
     CHECK(SameOptions(s, saved));
     CHECK(StockLoads(calibration, saved.state));
-    // Out of range in both copies: loaded as stock loads it.
+    // Out of range in both copies: use RAM defaults and leave flash alone.
     Setup(calibration, 5);
     PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
     PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
     Take(&snapshot);
     Settings both;
-    CHECK(both.Init(false) && !both.write_locked());
-    CHECK(SameCalibration(both, wild));
+    CHECK(both.Init(false) && both.write_locked());
+    CHECK(SameCalibration(both, Factory()));
     CHECK(Unchanged(snapshot));
   }
 }
@@ -290,6 +290,140 @@ void TestCalibrationLost() {
   }
 }
 
+void TestImplausibleCalibrationWithoutMirror() {
+  test_checker.Start("TestImplausibleCalibrationWithoutMirror");
+  const Saved defaults = Defaults();
+  for (int nan = 0; nan < 2; ++nan) {
+    PersistentData wild = Factory();
+    wild.adc_calibration[CV_ADC_CHANNEL_PITCH].offset =
+        nan ? __builtin_nanf("") : 84.0f;
+    for (int mirror = 0; mirror < 2; ++mirror) {
+      Setup(Calibration(0.1f), 5);
+      PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+      PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
+      if (!mirror) {
+        static uint8_t blank[kSectorSize];
+        memset(blank, 255, sizeof(blank));
+        Poke(kMirror, blank, sizeof(blank));
+      }
+      Take(&snapshot);
+      Settings s;
+      CHECK(s.Init(false) && s.write_locked());
+      CHECK(SameState(s, defaults));
+      CHECK(SameOptions(s, defaults));
+      CHECK(SameCalibration(s, Factory()));
+      s.SaveState();
+      CHECK(Unchanged(snapshot));
+
+      Settings repair;
+      CHECK(repair.Init(true) && !repair.write_locked());
+      CHECK(repair.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+      CHECK(StockLoads(Factory(), defaults.state));
+    }
+  }
+}
+
+void TestFactoryPrimaryInterruptedRecalibration() {
+  test_checker.Start("TestFactoryPrimaryInterruptedRecalibration");
+  const Saved defaults = Defaults();
+  const PersistentData factory = Factory();
+  const PersistentData old_calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  for (int cut = 0; cut <= 24; ++cut) {
+    Setup(old_calibration, 5);
+    PokeChunk(kSector, PersistentData::tag, &factory, sizeof(factory));
+    TestFlashBudget() = 0;
+    Settings s;
+    CHECK(s.Init(false) && SameCalibration(s, old_calibration));
+    *s.mutable_persistent_data() = new_calibration;
+    TestFlashBudget() = cut;
+    const bool saved = s.SavePersistentData();
+    TestFlashBudget() = -1;
+
+    if (cut >= 1 && cut <= 4) {
+      // Stock rebuilds the torn primary with factory values.
+      PersistentData stock_calibration = factory;
+      State stock_state = defaults.state;
+      StockStorage stock;
+      const int wide_sectors = TestFlash().wide_sectors;
+      CHECK(!stock.Init(&stock_calibration, &stock_state));
+      TestFlash().wide_sectors = wide_sectors;
+      CHECK(stock_calibration.SameCalibration(factory));
+      CHECK(MirrorHolds(old_calibration));
+    }
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(
+        loaded, cut <= 12 ? old_calibration : new_calibration));
+    if (cut == 24) {
+      CHECK(saved);
+    }
+  }
+}
+
+void TestAppendAfterBlankGap() {
+  test_checker.Start("TestAppendAfterBlankGap");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 3);
+  uint8_t blank[kStateChunk];
+  memset(blank, 255, sizeof(blank));
+  Poke(StateChunk(3), blank, sizeof(blank));
+
+  Settings s;
+  CHECK(s.Init(false) && !s.write_locked());
+  CHECK(s.state().gain == 1);
+  s.mutable_state()->gain = 99;
+  s.SaveState();
+  CHECK(StockLoads(calibration, s.state()));
+}
+
+void TestRefusedRecalibrationPreservesMeasuredMirror() {
+  test_checker.Start("TestRefusedRecalibrationPreservesMeasuredMirror");
+  const PersistentData factory = Factory();
+  const PersistentData measured = Calibration(0.1f);
+  Setup(measured, 5);
+  PokeChunk(kSector, PersistentData::tag, &factory, sizeof(factory));
+  TestFlashBudget() = 0;
+  Settings s;
+  CHECK(s.Init(false) && SameCalibration(s, measured));
+  TestFlashBudget() = -1;
+  Take(&snapshot);
+  s.mutable_persistent_data()->adc_calibration[CV_ADC_CHANNEL_PITCH].offset =
+      84.0f;
+  CHECK(!s.SavePersistentData());
+  CHECK(SameCalibration(s, measured));
+  CHECK(Unchanged(snapshot));
+}
+
+void TestAppendBeforeUnreadableState() {
+  test_checker.Start("TestAppendBeforeUnreadableState");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 2);
+  Blank(StateChunk(2), kStateChunk);
+  TestFlashDamage(StateChunk(3));
+  Settings s;
+  CHECK(s.Init(false) && !s.write_locked());
+  s.mutable_state()->gain = 99;
+  s.SaveState();
+  CHECK(TestFlash().num_damaged == 0);
+  if (!TestFlash().num_damaged) {
+    CHECK(StockLoads(calibration, s.state()));
+  }
+}
+
+void TestRetryIncompleteErase() {
+  test_checker.Start("TestRetryIncompleteErase");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 5);
+  Settings s;
+  CHECK(s.Init(false));
+  const uint32_t erases = TestFlashErases();
+  TestFlashStuckErases() = 1;
+  CHECK(s.SavePersistentData());
+  CHECK(TestFlashErases() == erases + 2);
+  CHECK(StockLoads(calibration, s.state()));
+}
+
 void TestStateTerminator() {
   test_checker.Start("TestStateTerminator");
   const Saved defaults = Defaults();
@@ -333,8 +467,8 @@ void TestStateTerminator() {
     CHECK(SameState(s, saved));
     CHECK(SameCalibration(s, calibration));
     CHECK(Unchanged(snapshot));
-    // Saves append up to the damaged word, then start the sector over.
-    for (int j = 0; j < unread[i] - 11; ++j) {
+    // Rewrite before the next save would expose the damaged word to stock.
+    for (int j = 0; j < unread[i] - 12; ++j) {
       s.mutable_state()->gain = uint8_t(100 + j);
       s.SaveState();
     }
@@ -1808,6 +1942,12 @@ int main() {
   TestCalibrationFromMirror();
   TestRestoredCalibrationChoice();
   TestCalibrationLost();
+  TestImplausibleCalibrationWithoutMirror();
+  TestFactoryPrimaryInterruptedRecalibration();
+  TestAppendAfterBlankGap();
+  TestRefusedRecalibrationPreservesMeasuredMirror();
+  TestAppendBeforeUnreadableState();
+  TestRetryIncompleteErase();
   TestStateTerminator();
   TestInterruptedAppend();
   TestInterruptedRewrite();

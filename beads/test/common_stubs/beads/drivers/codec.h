@@ -51,6 +51,7 @@ class Codec {
     starts_ = stops_ = idle_stops_ = restarts_ = 0;
     previous_sample_rate_ = 0;
     running_ = false;
+    fail_restart_ = false;
     return true;
   }
   bool Start(int32_t rate, size_t size, FillBufferCallback callback) {
@@ -67,6 +68,11 @@ class Codec {
       int32_t rate,
       size_t size,
       FillBufferCallback callback) {
+    if (fail_restart_) {
+      running_ = false;
+      callback_ = NULL;
+      return false;
+    }
     previous_sample_rate_ = previous_rate;
     sample_rate_ = rate;
     block_size_ = size;
@@ -112,6 +118,7 @@ class Codec {
   int stops_;
   int idle_stops_;
   bool running_;
+  bool fail_restart_;
 };
 
 }  // namespace beads

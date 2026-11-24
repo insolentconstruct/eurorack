@@ -47,6 +47,28 @@ Saved CompactionPending(Settings* s) {
 
 // Options saves append in the mirror sector, never in the settings sector;
 // with a state, the record goes first.
+void TestOptionsAppendAfterBlankGap() {
+  test_checker.Start("TestOptionsAppendAfterBlankGap");
+  Setup(kCalibration, 5);
+  OptionsRecord record;
+  CHECK(RecordAt(2, &record));
+  record.values[0] = PITCH_SCALE_MAJOR;
+  for (int foreign = 0; foreign < 2; ++foreign) {
+    Setup(kCalibration, 5);
+    if (foreign) ++record.version;
+    PokeChunk(RecordChunk(4), OptionsRecord::tag, &record, sizeof(record));
+    Settings s;
+    CHECK(s.Init(false) && !s.write_locked());
+    s.set_pitch_scale(PITCH_SCALE_MINOR);
+    s.SaveOptions();
+
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(loaded.pitch_scale() == PITCH_SCALE_MINOR);
+    CHECK(SameCalibration(loaded, kCalibration));
+  }
+}
+
 void TestRecordJournal() {
   test_checker.Start("TestRecordJournal");
   const Saved saved = Setup(kCalibration, 5);
@@ -303,18 +325,22 @@ void TestCompactionGuards() {
   PersistentData wild = kCalibration;
   wild.adc_calibration[CV_ADC_CHANNEL_PITCH].scale *= 1.5f;
   const PersistentData recalibrated = Calibration(-0.05f);
-  for (int fault = 0; fault < 5; ++fault) {
+  for (int fault = 0; fault < 6; ++fault) {
     Settings s;
     CompactionPending(&s);
     static uint8_t mirror[kSectorSize];
     if (fault == 4) {
-      // Out of range in both copies, and in use.
+      // Out of range in both copies: boot locks writes.
       Setup(kCalibration, 5);
       PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
       PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
-      CHECK(s.Init(false) && SameCalibration(s, wild));
-      const uint8_t junk[32] = { 0 };
-      Poke(RecordChunk(s.chunk_storage_.next_record_index_), junk, 32);
+      CHECK(s.Init(false) && s.write_locked());
+      CHECK(SameCalibration(s, Factory()));
+      s.chunk_storage_.next_record_index_ = 0xffff;
+    } else if (fault == 5) {
+      // Calibration became implausible in RAM and flash after an unlocked boot.
+      PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+      *s.mutable_persistent_data() = wild;
     } else if (fault == 0) {
       TestFlashDamage(kSector + 32);  // Unreadable.
     } else if (fault == 1) {
@@ -923,12 +949,12 @@ void TestStuckRecordSlot() {
       s.mutable_state()->media = i & 3;
       s.SaveState();
     }
-    CHECK(TestFlashErases() == erases + 1);
+    CHECK(TestFlashErases() == erases + 3);
     CHECK(s.chunk_storage_.record_pending());
     CHECK(s.pitch_scale() == scale);
     CHECK(Release());
     CHECK(HoldsCalibration(kSector, kCalibration));
-    CHECK(MirrorHolds(kCalibration));
+    CHECK(!MirrorHolds(kCalibration));
     TestFlash().after_operation = &StuckSlot;
     CHECK(s.Init(false) && !s.write_locked());
     CHECK(SameCalibration(s, kCalibration));
@@ -962,6 +988,7 @@ int main() {
   if (!CHECK(MapBank2())) {
     return 1;
   }
+  TestOptionsAppendAfterBlankGap();
   TestRecordJournal();
   TestRecordChecksum();
   TestRecordVersions();
