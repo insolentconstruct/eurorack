@@ -304,6 +304,23 @@ void TestSynthFadeSurvivesTimerReset() {
   CHECK(synth_mode);
 }
 
+void TestSynthEntryCancelsBackup() {
+  test_checker.Start("TestSynthEntryCancelsBackup");
+  extern float& reverb_style_gain;
+  Rig r(false, true);
+  r.left = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  reverb_style_gain = 0.0f;
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.remaining_sectors_ = 1;
+  MonitorStateChange();
+  CHECK(synth_mode);
+  CHECK(!background_buffer_backup.busy());
+}
+
 void TestAutomaticSelfPlay() {
   test_checker.Start("TestAutomaticSelfPlay");
   Rig r(false, true);
@@ -4222,6 +4239,7 @@ int main() {
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
   TestSynthFadeSurvivesTimerReset();
+  TestSynthEntryCancelsBackup();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();
   TestMonoStereo();

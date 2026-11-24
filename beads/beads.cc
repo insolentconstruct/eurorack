@@ -493,6 +493,9 @@ void ProcessSynthLevel(
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
+  if (new_synth_mode && background_buffer_backup.busy()) {
+    background_buffer_backup.Process(false);
+  }
   synth_mode = new_synth_mode;
   synth_fade = false;
   synth_mode_start_time = 0;
