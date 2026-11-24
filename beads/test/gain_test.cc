@@ -155,7 +155,29 @@ void TestInputAttenuation() {
   }
 }
 
+void TestGainCeilings() {
+  test_checker.Start("TestGainCeilings");
+  const float gains[] = { 40.0f, 15.848932f, 7.943282f, 3.981072f };
+  for (int value = 0; value < 4; ++value) {
+    control.Init(48000.0f, GainControl::SOFT_CLIPPING_MODE_OFF, true);
+    control.set_ceiling(value);
+    control.Restart();
+    Render(0.0f, 0, 16000, true);
+    const float level = 0.0001f;
+    CHECK(fabsf(Render(level, 0, 100, true).l / level - gains[value])
+        < 0.001f);
+    control.Restart();
+    CHECK(control.adjusting());
+    Render(0.01f, 0, 1, true);
+    CHECK(fabsf(Render(level, 0, 16000, true).l / level - gains[value])
+        < 0.001f);
+    CHECK(!control.adjusting());
+    CHECK(fabsf(Render(0.01f, 255, 2000, true).l - 0.4f) < 0.0001f);
+  }
+}
+
 int main() {
+  TestGainCeilings();
   TestInputAttenuation();
   TestGainLearningWindow();
   TestGainHeadroomAndRise();

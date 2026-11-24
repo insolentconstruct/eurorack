@@ -4496,12 +4496,43 @@ void TestSynthFaultCue() {
   CHECK(test_writes == writes);
 }
 
+void TestGainCeilingPage() {
+  test_checker.Start("TestGainCeilingPage");
+  for (int slot = 1; slot < kNumPageSlots; ++slot) {
+    Rig r(false);
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_GAIN_CEILING, slot, 0, 0);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    const int knob = (slot - 1) % 3;
+    for (int value = 0; value < 4; ++value) {
+      const float pot = (float(value) + 0.5f) / 4.0f;
+      if (knob == 0) {
+        r.feedback = pot;
+      } else if (knob == 1) {
+        r.pot = pot;
+      } else {
+        r.reverb = pot;
+      }
+      r.Tick(40, true);
+      CHECK(r.ui.options_.Value(FEATURE_GAIN_CEILING) == value);
+      CHECK(r.ui.gain_ceiling() == value);
+      r.Tick(1002, true);
+      CHECK(r.settings.FeatureValue(FEATURE_GAIN_CEILING) == value);
+      Settings loaded;
+      CHECK(loaded.Init(false, b));
+      CHECK(loaded.FeatureValue(FEATURE_GAIN_CEILING) == value);
+    }
+  }
+}
+
 int main() {
   if (!CHECK(mmap(reinterpret_cast<void*>(0x08100000), 0x100000,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
       -1, 0) == reinterpret_cast<void*>(0x08100000))) {
     return 1;
   }
+  TestGainCeilingPage();
   TestCommitPublication();
   TestPendingSeed();
   TestPendingExitButtons();

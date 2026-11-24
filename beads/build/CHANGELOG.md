@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Custom options pages can limit automatic input gain to +24, +18 or +12 dB; Stock stays +32 dB and manual gain is unchanged (#59).
+
 - Hygrostat Mix law Send keeps dry present, lets grains finish at zero send and keeps recording (#48).
 - Hygrostat can divide the granular OUT R gate by 2, 4, 8 or 16 without changing grain timing (#29).
 

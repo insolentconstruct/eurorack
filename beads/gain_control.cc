@@ -46,13 +46,15 @@ const float kActiveTime = 5.0f;  // second
 
 const float kMinGain = 1.0f;
 const float kMaxGain = 40.0f;
+const float GainControl::kStockCeiling = 40.0f;
 
 void GainControl::Init(
     float sample_rate,
     SoftClippingMode soft_clipping_mode,
     bool reset) {
   if (reset) {
-    attenuation_ = false;
+    mode_ = 0;
+    ceiling_ = kStockCeiling;
     stable_agc_peak_ = agc_peak_ = peak_ = 0.5f;
     gain_ = 1.0f;
     soft_clipping_amount_ = 0.0f;
@@ -67,7 +69,7 @@ void GainControl::Init(
   one_hertz_ = 1.0f / sample_rate;
 }
 
-template<bool attenuation>
+template<bool attenuation, bool ceiling>
 void GainControl::ProcessInternal(
     bool active,
     uint8_t gain_setting,
@@ -149,7 +151,9 @@ void GainControl::ProcessInternal(
   }
   
   const float optimal_gain = min(0.9f / min(agc_peak_, 0.9f), kMaxGain);
-  const float gain = auto_gain_ ? optimal_gain : manual_gain_;
+  const float automatic_gain = ceiling ? min(optimal_gain, ceiling_)
+      : optimal_gain;
+  const float gain = auto_gain_ ? automatic_gain : manual_gain_;
 
   float soft_clipping_amount;
   if (soft_clipping_mode_ == SOFT_CLIPPING_MODE_OFF) {
@@ -215,6 +219,29 @@ void GainControl::ProcessInternal(
   }
 }
 
+void GainControl::ProcessModified(
+    bool active,
+    uint8_t gain_setting,
+    bool left_normalization,
+    bool right_normalization,
+    const Codec::Frame* in,
+    FloatFrame* out,
+    size_t size) {
+  if (mode_ == 1) {
+    ProcessInternal<true, false>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
+  } else if (mode_ == 2) {
+    ProcessInternal<false, true>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
+  } else {
+    ProcessInternal<true, true>(
+        active, gain_setting, left_normalization, right_normalization,
+        in, out, size);
+  }
+}
+
 void GainControl::Process(
     bool active,
     uint8_t gain_setting,
@@ -223,12 +250,12 @@ void GainControl::Process(
     const Codec::Frame* in,
     FloatFrame* out,
     size_t size) {
-  if (attenuation_) {
-    ProcessInternal<true>(
+  if (mode_) {
+    ProcessModified(
         active, gain_setting, left_normalization, right_normalization,
         in, out, size);
   } else {
-    ProcessInternal<false>(
+    ProcessInternal<false, false>(
         active, gain_setting, left_normalization, right_normalization,
         in, out, size);
   }

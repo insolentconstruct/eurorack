@@ -90,6 +90,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 0, kNoField, false, false, false, false },  // Resonator amount.
   { 4, kNoField, false, false, false, false },  // Synth level.
   { 5, kNoField, false, false, false, false },  // Output division.
+  { 4, kNoField, true, false, false, false },  // Gain ceiling.
 };
 
 const volatile uint8_t kProfileBlock[kProfileSize]

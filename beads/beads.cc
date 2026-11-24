@@ -729,6 +729,7 @@ void MonitorStateChange() {
   seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
+  gain_control.set_ceiling(ui.gain_ceiling());
   processor.set_time_scan(ui.time_scan());
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));

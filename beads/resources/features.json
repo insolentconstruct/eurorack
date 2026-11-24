@@ -1022,6 +1022,60 @@
       "actions": [],
       "stateless": false,
       "touches_synth": false
+    },
+    {
+      "id": 52,
+      "symbol": "GAIN_CEILING",
+      "name": "Gain ceiling",
+      "issue": 59,
+      "values": [
+        {
+          "name": "Stock (+32 dB)",
+          "led": [
+            0,
+            255,
+            0
+          ]
+        },
+        {
+          "name": "+24 dB",
+          "led": [
+            255,
+            255,
+            0
+          ]
+        },
+        {
+          "name": "+18 dB",
+          "led": [
+            255,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "+12 dB",
+          "led": [
+            255,
+            255,
+            0
+          ],
+          "pulse": "slow"
+        }
+      ],
+      "field": null,
+      "saved": 28,
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page": true,
+      "page_control": "steps",
+      "amount": false,
+      "actions": [],
+      "stateless": false,
+      "touches_synth": false
     }
   ],
   "plaits_models": [

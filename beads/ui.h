@@ -162,6 +162,7 @@ class Ui {
   inline PitchScale pitch_scale() const { return pitch_scale_; }
   inline bool random_intervals() const { return random_intervals_; }
   inline RandomIntervals intervals_mode() const { return intervals_mode_; }
+  inline uint8_t gain_ceiling() const { return gain_ceiling_; }
   inline uint8_t resonator() const { return resonator_; }
   inline uint8_t resonator_material() const { return resonator_material_; }
   inline uint8_t resonator_ring() const { return resonator_ring_; }
@@ -304,6 +305,8 @@ class Ui {
   volatile uint8_t seed_latch_;
   volatile bool time_scan_;
   
+  volatile uint8_t gain_ceiling_;
+
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 
