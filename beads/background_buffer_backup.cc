@@ -166,8 +166,15 @@ void BackgroundBufferBackup::EraseSector() {
   }
 }
 
+class FlashLock {
+ public:
+  FlashLock() { }
+  ~FlashLock() { HAL_FLASH_Lock(); }
+};
+
 void BackgroundBufferBackup::WriteBlock() {
   if (remaining_bytes_) {
+    const FlashLock lock;
     HAL_FLASH_Unlock();  // A settings save may have locked it.
     uint8_t* source = processor_->delay_buffer_raw_bytes(write_offset_);
     uint8_t buffer[kFlashWordSize];
@@ -271,6 +278,7 @@ bool BackgroundBufferBackup::EraseBufferSector(uint32_t sector, int attempts) {
   if (settings_->write_locked()) {
     return false;
   }
+  const FlashLock lock;
   HAL_FLASH_Unlock();
   for (int attempt = 0; attempt < attempts; ++attempt) {
     FLASH_EraseInitTypeDef erase_params;

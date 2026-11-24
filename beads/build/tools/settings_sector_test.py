@@ -88,9 +88,13 @@ with tempfile.TemporaryDirectory() as directory:
     assert load(backup, directory) == (True, calibration(0.5), state(3))
     assert load(now, directory) == (True, calibration(0.25), state(4))
 
+    cali_only = dump(calibration(0.5), [])
+    states_only = dump(calibration(0.25), [state(1), state(4)], cali_tag=ss.STAT)
+
     # Calibration only, settings only, and both: each loads as chosen.
     for cali_dump, settings_dump, expected in (
             (backup, now, (calibration(0.5), state(4))),
+            (cali_only, states_only, (calibration(0.5), state(4))),
             (now, backup, (calibration(0.25), state(3))),
             (backup, backup, (calibration(0.5), state(3)))):
         result, out = run(directory, cali_dump, settings_dump)
@@ -106,17 +110,24 @@ with tempfile.TemporaryDirectory() as directory:
     assert ss.parse(full) == (calibration(0.5), state(4091))
     assert load(full, directory) == (True, calibration(0.5), state(4091))
 
-    # Dumps the firmware would not read are refused, and no image is written.
+    # Refuse dumps that lack the requested record or are the wrong size.
     bad_checksum = bytearray(backup)
     bad_checksum[8] ^= 1
-    for broken in (backup[:-1], dump(calibration(0.5), []),
-                   dump(calibration(0.5), [state(1)], cali_tag=ss.STAT),
-                   bytes(bad_checksum), b"\xff" * ss.SECTOR_SIZE):
-        if len(broken) == ss.SECTOR_SIZE:
-            assert not load(broken, directory)[0]
-        for cali_dump, settings_dump in ((broken, now), (now, broken)):
-            result, out = run(directory, cali_dump, settings_dump)
-            assert result.returncode == 1 and not out.exists(), result
+    blank = b"\xff" * ss.SECTOR_SIZE
+    for cali_dump, settings_dump in (
+            (backup[:-1], now), (backup, now[:-1]), (states_only, now),
+            (backup, cali_only), (bytes(bad_checksum), now),
+            (blank, now), (backup, blank)):
+        result, out = run(directory, cali_dump, settings_dump)
+        assert result.returncode == 1 and not out.exists(), result
+
+    # Keep the stock restore usable and flag calibration that Tuneup rejects.
+    for outlier in (float("nan"), 3.4028234663852886e38):
+        wild = bytearray(calibration(0.5))
+        struct.pack_into("<f", wild, 4, outlier)
+        result, out = run(directory, dump(wild, []), now)
+        assert result.returncode == 0 and "outside the Tuneup range" in result.stderr
+        assert load(ss.erased(out.read_bytes()), directory) == (True, bytes(wild), state(4))
 
     # An existing output is never overwritten.
     result, out = run(directory, backup, now)

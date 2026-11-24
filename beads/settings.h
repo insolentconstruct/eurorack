@@ -45,6 +45,11 @@ struct PersistentData {
   AdcCalibrationData adc_calibration[CV_ADC_CHANNEL_LAST];
   uint8_t padding[72];
   enum { tag = 0x494C4143 };  // CALI
+
+  bool SameCalibration(const PersistentData& other) const {
+    return !memcmp(adc_calibration, other.adc_calibration,
+        sizeof(adc_calibration));
+  }
 };
 
 struct State {
@@ -75,8 +80,9 @@ class Settings {
   // False on a new module's blank storage: the factory test runs.
   bool Init(bool recovery_mode);
 
-  // False when a calibration out of range was refused for the stored one.
+  // True when the requested calibration was saved.
   bool SavePersistentData();
+  bool ReadPersistentData(PersistentData* data);
   void SaveState();
   
   inline State* mutable_state() {
@@ -101,6 +107,8 @@ class Settings {
   inline StorageRepair repair() const { return repair_; }
 
  private:
+  bool ReadPreferredMirror(bool calibration_valid, PersistentData* data);
+
   static bool CalibrationPlausible(
       const PersistentData& data,
       const PersistentData& factory);

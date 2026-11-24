@@ -69,7 +69,8 @@ static bool probe_callback;
 static int callback_calls;
 static size_t callback_size;
 static int init_calls;
-static int fail_init;
+static bool fail_rx_dma;
+int fail_init;
 static Codec::Frame* tx_buffer;
 
 void Process(const Codec::Event*, const Codec::Frame*, Codec::Frame* out,
@@ -191,7 +192,7 @@ HAL_StatusTypeDef HAL_DMA_Start(DMA_HandleTypeDef* dma,
     CHECK(source == uintptr_t(&SEED_GPIO_PORT->IDR));
   }
   Record(START, device, size);
-  return HAL_OK;
+  return device == RX && fail_rx_dma ? HAL_ERROR : HAL_OK;
 }
 
 void ResetHarness() {
@@ -202,6 +203,7 @@ void ResetHarness() {
   tick = 0;
   init_calls = 0;
   fail_init = 0;
+  fail_rx_dma = false;
   callback_calls = 0;
   callback_size = 0;
   fake_dma_rx.CR = 0;
@@ -357,6 +359,30 @@ void TestRestartInitFailure() {
   }
 }
 
+void TestRestartDmaFailure() {
+  test_checker.Start("TestRestartDmaFailure");
+  RunningCodec(48000);
+  fail_rx_dma = true;
+  CHECK(!codec.Restart(48000, 32000, 16, &Process));
+  CHECK(reset_low && !clocks);
+  codec.Fill(0);
+  CHECK(callback_calls == 0);
+  fail_rx_dma = false;
+  events.clear();
+  CHECK(codec.Restart(0, 32000, 16, &Process));
+  CHECK(events.size() == 11);
+  CheckEvent(0, RESET_LOW, NONE);
+  CheckEvent(8, RESUME, RX);
+  CheckEvent(9, DELAY, NONE);
+  CheckEvent(10, RESET_HIGH, NONE);
+  for (size_t i = 0; i < events.size(); ++i) {
+    CHECK(events[i].reset_low || events[i].clocks);
+    CHECK(!events[i].callback_attached);
+  }
+  codec.Fill(0);
+  CHECK(callback_calls == 1);
+}
+
 static const Codec::Frame* ramp_half;
 
 void Ramp(const Codec::Event*, const Codec::Frame*, Codec::Frame* out,
@@ -409,7 +435,8 @@ int main() {
   TestStartUnchanged();
   TestRestartNullCallback();
   TestRestartInitFailure();
+  TestRestartDmaFailure();
   TestOneFrameDelay();
-  printf("Codec: 5 tests, %d failures\n", test_checker.failures());
+  printf("Codec: 6 tests, %d failures\n", test_checker.failures());
   return test_checker.failures() ? 1 : 0;
 }

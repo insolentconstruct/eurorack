@@ -115,15 +115,9 @@ bool FactoryTest::Calibrate(int step) {
       break;
   
     case 7:
-      {
-        bool success = calibrator_->Calibrate(CV_ADC_CHANNEL_DENSITY, 1, 0.6f);
-        if (success) {
+      return calibrator_->Calibrate(CV_ADC_CHANNEL_DENSITY, 1, 0.6f) &&
           calibrator_->Save();
-        }
-        return success;
-      }
-      break;
-    
+
     default:
       // Received by the CV generator side of the test bench.
       return true;

@@ -592,6 +592,20 @@ void TestStorageWarning() {
   }
 }
 
+void TestSuppressedStorageChord() {
+  test_checker.Start("TestSuppressedStorageChord");
+  Rig r(false);
+  LoseCalibration();
+  r.Reboot();
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(3010);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(10);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
+}
+
 void TestStorageRepair() {
   test_checker.Start("TestStorageRepair");
   // A torn calibration with its mirror intact: restored without a word,
@@ -898,6 +912,65 @@ void TestCodecKeepsClocks() {
   }
 }
 
+void TestCodecRestartRetry() {
+  test_checker.Start("TestCodecRestartRetry");
+  Rig r(false);
+  r.Settle();
+  const int restarts = codec.restarts_;
+  codec.fail_restart_ = true;
+  settings.mutable_state()->media = Processor::MEDIA_VINTAGE_DIGITAL;
+  for (int i = 0; i < 200 && codec.running_; ++i) {
+    r.Tick(1);
+  }
+  CHECK(!codec.running_);
+  CHECK(codec.callback_ == NULL);
+  codec.fail_restart_ = false;
+  r.Tick(50);
+  CHECK(!codec.running_);
+  r.Tick(300);
+  CHECK(codec.running_);
+  CHECK(codec.restarts_ == restarts + 1);
+  CHECK(codec.previous_sample_rate_ == 0);
+  CHECK(codec.sample_rate_ == int(processor.sample_rate()));
+  CHECK(codec.callback_ == &Process);
+  CHECK(codec_transition_frames == 0);
+}
+
+void TestSynthFadeSurvivesTimerReset() {
+  test_checker.Start("TestSynthFadeSurvivesTimerReset");
+  Rig r(false);
+  r.Settle();
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input());
+  codec_fade_gain = 1.0f;
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  MainLoopStep();
+  CHECK(codec_fade && !synth_mode);
+  synth_mode_start_time = 0;  // A late output peak in the callback.
+  r.Tick(20);
+  CHECK(synth_mode);
+}
+
+void TestSynthEntryCancelsBackup() {
+  test_checker.Start("TestSynthEntryCancelsBackup");
+  Rig r(false);
+  r.Settle();
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  codec_fade_gain = 0.0f;
+  // The callback reported thaw before the backup's next main loop pass.
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.remaining_sectors_ = 1;
+  MonitorStateChange();
+  CHECK(synth_mode);
+  CHECK(!background_buffer_backup.busy());
+}
+
 // Codec restarts fade out first (#53): the output steps down to silence
 // over about 10 ms instead of stopping at full level.
 void TestCodecRestartFade() {
@@ -1004,7 +1077,10 @@ bool SameCalibration(const PersistentData& a, const PersistentData& b) {
 // step. One in range is saved.
 void TestRejectedCalibrationCue() {
   test_checker.Start("TestRejectedCalibrationCue");
-  for (int wild = 0; wild < 2; ++wild) {
+  for (int failure = 0; failure < 3; ++failure) {
+    const bool wild = failure == 1;
+    const bool low_supply = failure == 2;
+    const bool rejected = wild || low_supply;
     Rig r(false);
     // DENSITY CV reading 0.2 of the ADC: an offset near the factory one.
     r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
@@ -1033,15 +1109,17 @@ void TestRejectedCalibrationCue() {
     }
     CHECK(ui.queue_.idle_time() > 1500);
     ui.mode_ = Ui::MODE_CALIBRATION_4;
+    TestFlash().supply_low = low_supply;
     ui.NextCalibrationStep();
-    CHECK(ui.mode_ == (wild ? Ui::MODE_PANIC : Ui::MODE_NORMAL));
-    CHECK(SameCalibration(settings.persistent_data(), wild ? stored : attempt));
+    TestFlash().supply_low = false;
+    CHECK(ui.mode_ == (rejected ? Ui::MODE_PANIC : Ui::MODE_NORMAL));
+    CHECK(SameCalibration(settings.persistent_data(), rejected ? stored : attempt));
     TestFlashExpose(true);
     const bool same_mirror = !memcmp(
         mirror, reinterpret_cast<const void*>(0x081c0000), sizeof(mirror));
     TestFlashExpose(false);
-    CHECK(same_mirror == bool(wild));
-    if (wild) {
+    CHECK(same_mirror == rejected);
+    if (rejected) {
       r.Advance(500);
       CHECK(ui.mode_ == Ui::MODE_PANIC);
       r.Advance(1000);
@@ -1049,7 +1127,7 @@ void TestRejectedCalibrationCue() {
     }
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(SameCalibration(loaded.persistent_data(), wild ? stored : attempt));
+    CHECK(SameCalibration(loaded.persistent_data(), rejected ? stored : attempt));
   }
 }
 
@@ -1072,6 +1150,18 @@ void RewriteOnNextSave() {
 // #346: a run that doesn't complete changes nothing, in use or in flash,
 // though the sector is rewritten during it: a step rejected after the
 // offsets, or after the pitch, or the run left by the autosave chord.
+void TestCalibrationExitResumesNormalization() {
+  test_checker.Start("TestCalibrationExitResumesNormalization");
+  Rig r(false);
+  r.Settle();
+  Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+  Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input());
+}
+
 void TestUnfinishedCalibrationKept() {
   test_checker.Start("TestUnfinishedCalibrationKept");
   for (int exit = 0; exit < 3; ++exit) {
@@ -1134,14 +1224,19 @@ int main() {
   TestTriggerOutput();
   TestStartupBranches();
   TestStorageWarning();
+  TestSuppressedStorageChord();
   TestStorageRepair();
   TestFailedBufferLoad();
   TestCallbackCvRouting();
   TestPitchChain();
   TestCodecKeepsClocks();
+  TestCodecRestartRetry();
+  TestSynthFadeSurvivesTimerReset();
+  TestSynthEntryCancelsBackup();
   TestCodecRestartFade();
   TestSynthStopPreservesReverb();
   TestRejectedCalibrationCue();
   TestUnfinishedCalibrationKept();
+  TestCalibrationExitResumesNormalization();
   return test_checker.failures() ? 1 : 0;
 }

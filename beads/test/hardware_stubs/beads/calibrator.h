@@ -34,6 +34,7 @@ namespace beads {
 
 class Calibrator {
  public:
+  void ResumeNormalization() { }
   Calibrator() : starts(0) { }
   int starts;
   void Start() { ++starts; }

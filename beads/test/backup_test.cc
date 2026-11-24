@@ -662,6 +662,25 @@ void TestLockedBackup() {
   TestFlashRepairAll();
 }
 
+void TestBackupLocksFlash() {
+  test_checker.Start("TestBackupLocksFlash");
+  for (int low_supply = 0; low_supply < 2; ++low_supply) {
+    Wipe();
+    Rig r;
+    r.Boot();
+    test_locked = true;
+    TestFlash().supply_low = low_supply;
+    r.backup.remaining_sectors_ = 6;
+    r.backup.EraseSector();
+    CHECK(test_locked);
+    r.backup.remaining_bytes_ = kAudio;
+    r.backup.write_offset_ = 0;
+    r.backup.WriteBlock();
+    CHECK(test_locked);
+    TestFlash().supply_low = false;
+  }
+}
+
 void TestEraseDamagedSectors() {
   test_checker.Start("TestEraseDamagedSectors");
   Wipe();
@@ -852,6 +871,7 @@ int main() {
   TestFrozenNoReads();
   TestStaleFlags();
   TestLockedBackup();
+  TestBackupLocksFlash();
   TestEraseDamagedSectors();
   TestRetriedBufferErase();
   TestStuckBufferErase();

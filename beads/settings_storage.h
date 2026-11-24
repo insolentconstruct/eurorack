@@ -174,22 +174,37 @@ class ChunkStorage {
     if (Flash::SupplyLow()) {
       return;  // Kept in RAM; the next save writes it.
     }
-    if (chunk_address(next_state_chunk_index_ + 1) > FLASH_STORAGE_LAST) {
+    const uint32_t address = chunk_address(next_state_chunk_index_);
+    const size_t size = ChunkSize<StateData>();
+    StateData stranded;
+    // Filling a gap would make the following old record visible again.
+    if (address + size > FLASH_STORAGE_LAST ||
+        (address + 2 * size <= FLASH_STORAGE_LAST &&
+            ReadChunk(address + size, &stranded) == CHUNK_VALID)) {
       RewriteSector();
     } else {
       HAL_FLASH_Unlock();
-      if (WriteChunk(chunk_address(next_state_chunk_index_), state_data_)) {
+      if (WriteChunk(address, state_data_)) {
         next_state_chunk_index_++;
         HAL_FLASH_Lock();
       } else {
         // The next free chunk can't take the record: start the sector over.
+        HAL_FLASH_Lock();
         RewriteSector();
       }
     }
   }
 
-  void SavePersistentData() {
-    RewriteSector();
+  bool SavePersistentData() {
+    return RewriteSector();
+  }
+
+  bool ReadCalibration(PersistentData* persistent_data) {
+    return ReadChunk(chunk_address(0), persistent_data) == CHUNK_VALID;
+  }
+
+  bool Usable(const PersistentData& data) const {
+    return !check_ || check_(data, *reference_);
   }
 
   // The mirrored calibration, if it reads clean and passes its checks.
@@ -240,25 +255,19 @@ class ChunkStorage {
     return STORAGE_OK;
   }
 
-  void RewriteSector() {
-    // A calibration out of range never replaces a usable one: that one stays.
-    PersistentData data;
-    if (!Usable(*persistent_data_) && \
-        ((ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data)) ||
-            (ReadChunk(MIRROR_BASE, &data) == CHUNK_VALID && Usable(data)))) {
-      *persistent_data_ = data;
+  bool RewriteSector() {
+    if (!Usable(*persistent_data_)) {
+      return false;
     }
     HAL_FLASH_Unlock();
-    if (MirrorPersistentData() && \
-        EraseSector(sector_index, FLASH_STORAGE_BASE) && \
-        WriteChunk(chunk_address(0), persistent_data_) && \
-        WriteChunk(chunk_address(1), state_data_)) {
-      next_state_chunk_index_ = 2;
-    } else {
-      // Settings stay in RAM; the next save tries the whole sector again.
-      next_state_chunk_index_ = REWRITE_NEEDED;
-    }
+    const bool saved = MirrorPersistentData() &&
+        EraseSector(sector_index, FLASH_STORAGE_BASE) &&
+        WriteChunk(chunk_address(0), persistent_data_) &&
+        WriteChunk(chunk_address(1), state_data_);
+    // Retry the whole sector on the next save after a flash failure.
+    next_state_chunk_index_ = saved ? 2 : REWRITE_NEEDED;
     HAL_FLASH_Lock();
+    return saved;
   }
 
   // Leaves a verified copy of the calibration about to be written in the
@@ -291,15 +300,13 @@ class ChunkStorage {
         !memcmp(&copy, &data, sizeof(PersistentData));
   }
 
-  bool Usable(const PersistentData& data) const {
-    return !check_ || check_(data, *reference_);
-  }
-
   // True once the sector holds a usable calibration, read back; if it
   // doesn't, writes the mirror's there first.
   bool SectorUsable(const PersistentData& mirror) {
     PersistentData data;
-    if (ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data)) {
+    if (ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data) &&
+        (!reference_ || !data.SameCalibration(*reference_) ||
+            mirror.SameCalibration(*reference_))) {
       return true;
     }
     return WriteCalibration(sector_index, FLASH_STORAGE_BASE, mirror);
@@ -327,7 +334,9 @@ class ChunkStorage {
         SCB_InvalidateDCache_by_Addr(
             (uint32_t*)(address),
             FLASH_STORAGE_LAST - FLASH_STORAGE_BASE);
-        return true;
+        if (Flash::IsBlank(address, FLASH_STORAGE_LAST - FLASH_STORAGE_BASE)) {
+          return true;
+        }
       }
     }
     return false;

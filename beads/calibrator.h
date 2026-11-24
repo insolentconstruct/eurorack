@@ -97,6 +97,8 @@ class Calibrator {
     normalization_detector_->Stop();
   }
   
+  inline void ResumeNormalization() { normalization_detector_->Start(); }
+
   inline void CalibrateOffsets() {
     for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
       if (i != CV_ADC_CHANNEL_PITCH && i != CV_ADC_CHANNEL_DENSITY) {
@@ -104,7 +106,7 @@ class Calibrator {
             cv_reader_->unscaled_cv(CvAdcChannel(i));
       }
     }
-    normalization_detector_->Start();
+    ResumeNormalization();
   }
   
   inline bool Calibrate(CvAdcChannel channel, int step, float expected_value) {
@@ -123,13 +125,21 @@ class Calibrator {
     return true;
   }
   
-  // False when the settings refuse the calibration.
+  // Keep the calibration that will load on reboot after a failed save.
   inline bool Save() {
+    PersistentData* data = settings_->mutable_persistent_data();
+    const PersistentData previous = *data;
     std::copy(
         &calibration_data_[0],
         &calibration_data_[CV_ADC_CHANNEL_LAST],
-        settings_->mutable_persistent_data()->adc_calibration);
-    return settings_->SavePersistentData();
+        data->adc_calibration);
+    if (settings_->SavePersistentData()) {
+      return true;
+    }
+    if (!settings_->ReadPersistentData(data)) {
+      *data = previous;
+    }
+    return false;
   }
   
  private:
