@@ -372,6 +372,8 @@ void ProcessAudio(
         sizeof(reverb_buffer) / sizeof(reverb_buffer[0]),
         transition.clouds_style(), &synth_mode, &p, &d, &m, &seed_button_state,
         &seed_input, seed, freeze, float_in, size, &calibration_callback);
+    active_processor_mode = processor.spectral()
+        ? PROCESSOR_SPECTRAL : PROCESSOR_GRANULAR;
   }
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
