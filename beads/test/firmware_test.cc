@@ -285,6 +285,25 @@ struct Rig {
 
 void RigBlock(Rig* r) { r->Block(); }
 
+void TestSynthFadeSurvivesTimerReset() {
+  test_checker.Start("TestSynthFadeSurvivesTimerReset");
+  extern volatile bool& codec_fade;
+  extern float& reverb_style_gain;
+  Rig r(false, true);
+  r.left = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  reverb_style_gain = 1.0f;
+  MonitorStateChange();
+  CHECK(codec_fade && !synth_mode);
+  synth_mode_start_time = 0;  // A late output peak in the callback.
+  reverb_style_gain = 0.0f;
+  MonitorStateChange();
+  CHECK(synth_mode);
+}
+
 void TestAutomaticSelfPlay() {
   test_checker.Start("TestAutomaticSelfPlay");
   Rig r(false, true);
@@ -4202,6 +4221,7 @@ int main() {
   TestCustomScaleCallbackChain();
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
+  TestSynthFadeSurvivesTimerReset();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();
   TestMonoStereo();

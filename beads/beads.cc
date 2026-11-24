@@ -153,6 +153,7 @@ void SysTick_Handler() {
 
 
 bool synth_mode;
+bool synth_fade;
 int synth_mode_start_time;
 
 GateFlags previous_seed;
@@ -493,6 +494,7 @@ void ProcessSynthLevel(
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
   synth_mode = new_synth_mode;
+  synth_fade = false;
   synth_mode_start_time = 0;
   if (synth_mode) {
     // Rings when it plays, else Plaits, so Beads <-> Plaits stays instant.
@@ -615,6 +617,7 @@ void Init() {
     ui.set_factory_test(false);
     ui.ShowStorageStatus();
     synth_mode_start_time = 0;
+    synth_fade = false;
     synth_mode = true;
   }
   ready = true;
@@ -679,6 +682,7 @@ void MonitorStateChange() {
     return;
   }
   if (ui.should_ignore_state_change() || transition.blanking()) {
+    synth_fade = false;
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
     transition.Cancel();
@@ -726,6 +730,7 @@ void MonitorStateChange() {
   // The wavetable synth does not start in spectral mode.
   if (normalization_detector.no_input() && !processor.spectral()) {
     if (settings.self_play_on_request()) {
+      synth_fade = false;
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
         if (!transition.Fade()) {
@@ -743,22 +748,22 @@ void MonitorStateChange() {
         ConfigureAndStartCodec(!synth_mode, true);
       }
     } else if (!synth_mode) {
-      if (!synth_mode_start_time) {
-        synth_mode_start_time = system_clock.milliseconds();
-        if (!synth_mode_start_time) synth_mode_start_time = 1;
-      } else {
-        if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
-          // If 10 seconds have elapsed with nothing patched in the audio
-          // inputs, enable the synth mode.
-          if (!transition.Fade()) {
-            return;
-          }
-          transition.Pause();
-          ConfigureAndStartCodec(true, true);
+      const uint32_t now = system_clock.milliseconds();
+      const int start = synth_mode_start_time;
+      if (synth_fade || (start && now - start >= 10000)) {
+        // Finish the fade even if the callback resets the idle timer.
+        synth_fade = true;
+        if (!transition.Fade()) {
+          return;
         }
+        transition.Pause();
+        ConfigureAndStartCodec(true, true);
+      } else if (!start) {
+        synth_mode_start_time = now ? now : 1;
       }
     }
   } else {
+    synth_fade = false;
     // Awful block of code to troubleshoot glitches related to changes of
     // sample rate and more general codec settings.
     //
