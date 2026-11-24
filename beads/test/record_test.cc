@@ -330,13 +330,13 @@ void TestCompactionGuards() {
     CompactionPending(&s);
     static uint8_t mirror[kSectorSize];
     if (fault == 4) {
-      // Out of range in both copies, and in use.
+      // Out of range in both copies: boot locks writes.
       Setup(kCalibration, 5);
       PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
       PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
-      CHECK(s.Init(false) && SameCalibration(s, wild));
-      const uint8_t junk[32] = { 0 };
-      Poke(RecordChunk(s.chunk_storage_.next_record_index_), junk, 32);
+      CHECK(s.Init(false) && s.write_locked());
+      CHECK(SameCalibration(s, Factory()));
+      s.chunk_storage_.next_record_index_ = 0xffff;
     } else if (fault == 0) {
       TestFlashDamage(kSector + 32);  // Unreadable.
     } else if (fault == 1) {
@@ -945,12 +945,12 @@ void TestStuckRecordSlot() {
       s.mutable_state()->media = i & 3;
       s.SaveState();
     }
-    CHECK(TestFlashErases() == erases + 1);
+    CHECK(TestFlashErases() == erases + 3);
     CHECK(s.chunk_storage_.record_pending());
     CHECK(s.pitch_scale() == scale);
     CHECK(Release());
     CHECK(HoldsCalibration(kSector, kCalibration));
-    CHECK(MirrorHolds(kCalibration));
+    CHECK(!MirrorHolds(kCalibration));
     TestFlash().after_operation = &StuckSlot;
     CHECK(s.Init(false) && !s.write_locked());
     CHECK(SameCalibration(s, kCalibration));
