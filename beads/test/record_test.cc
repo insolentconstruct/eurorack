@@ -325,7 +325,7 @@ void TestCompactionGuards() {
   PersistentData wild = kCalibration;
   wild.adc_calibration[CV_ADC_CHANNEL_PITCH].scale *= 1.5f;
   const PersistentData recalibrated = Calibration(-0.05f);
-  for (int fault = 0; fault < 5; ++fault) {
+  for (int fault = 0; fault < 6; ++fault) {
     Settings s;
     CompactionPending(&s);
     static uint8_t mirror[kSectorSize];
@@ -337,6 +337,10 @@ void TestCompactionGuards() {
       CHECK(s.Init(false) && s.write_locked());
       CHECK(SameCalibration(s, Factory()));
       s.chunk_storage_.next_record_index_ = 0xffff;
+    } else if (fault == 5) {
+      // Calibration became implausible in RAM and flash after an unlocked boot.
+      PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+      *s.mutable_persistent_data() = wild;
     } else if (fault == 0) {
       TestFlashDamage(kSector + 32);  // Unreadable.
     } else if (fault == 1) {
