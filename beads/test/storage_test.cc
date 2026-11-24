@@ -386,6 +386,22 @@ void TestRefusedRecalibrationPreservesMeasuredMirror() {
   CHECK(Unchanged(snapshot));
 }
 
+void TestAppendBeforeUnreadableState() {
+  test_checker.Start("TestAppendBeforeUnreadableState");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 2);
+  Blank(StateChunk(2), kStateChunk);
+  TestFlashDamage(StateChunk(3));
+  Settings s;
+  CHECK(s.Init(false) && !s.write_locked());
+  s.mutable_state()->gain = 99;
+  s.SaveState();
+  CHECK(TestFlash().num_damaged == 0);
+  if (!TestFlash().num_damaged) {
+    CHECK(StockLoads(calibration, s.state()));
+  }
+}
+
 void TestRetryIncompleteErase() {
   test_checker.Start("TestRetryIncompleteErase");
   const PersistentData calibration = Calibration(0.1f);
@@ -1921,6 +1937,7 @@ int main() {
   TestFactoryPrimaryInterruptedRecalibration();
   TestAppendAfterBlankGap();
   TestRefusedRecalibrationPreservesMeasuredMirror();
+  TestAppendBeforeUnreadableState();
   TestRetryIncompleteErase();
   TestStateTerminator();
   TestInterruptedAppend();

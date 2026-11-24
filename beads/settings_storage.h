@@ -197,11 +197,10 @@ class ChunkStorage {
     }
     const uint32_t address = chunk_address(next_state_chunk_index_);
     const size_t size = ChunkSize<StateData>();
-    StateData stranded;
-    // Filling a gap would make the following old record visible again.
+    // Do not append in a gap ahead of data stock could read or fault on.
     if (address + size > FLASH_STORAGE_LAST ||
         (address + 2 * size <= FLASH_STORAGE_LAST &&
-            ReadChunk(address + size, &stranded) == CHUNK_VALID)) {
+            !Flash::IsBlank(address + size, size))) {
       RewriteSector();
     } else {
       HAL_FLASH_Unlock();
