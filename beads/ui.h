@@ -152,7 +152,8 @@ class Ui {
   }
   
   OutputLimiterMode output_limiter_mode() const;
-  inline bool clouds_style() const { return clouds_style_; }
+  inline uint8_t reverb_character() const { return reverb_character_; }
+  inline bool clouds_style() const { return reverb_character() == 1; }
   inline bool evolving_feedback() const { return evolving_feedback_; }
   // The selected synth, previewed while its page is open; a SynthEngine.
   inline uint8_t synth() const { return synth_; }
@@ -274,7 +275,7 @@ class Ui {
   // Entry-only request: main discards events queued before options entry.
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
-  volatile bool clouds_style_;
+  volatile uint8_t reverb_character_;
   volatile bool evolving_feedback_;
   volatile uint8_t synth_;
   volatile AttackMode attack_mode_;

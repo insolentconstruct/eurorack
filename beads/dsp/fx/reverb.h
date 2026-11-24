@@ -37,12 +37,20 @@
 
 namespace beads {
 
+enum ReverbCharacter {
+  REVERB_STOCK,
+  REVERB_CLOUDS,
+  REVERB_PLATE,
+  REVERB_BLOOM
+};
+
 class Reverb {
  public:
   Reverb() { }
   ~Reverb() { }
   
   void Init(uint16_t* buffer, float sample_rate) {
+    renderer_ = 0;
     engine_.Init(buffer);
     Reset(sample_rate);
   }
@@ -57,9 +65,52 @@ class Reverb {
     dry_ = 0.0f;
     wet_ = 0.0f;
     send_ = 0.0f;
+    bloom_fast_ = 0.0f;
+    bloom_slow_ = 0.0f;
+    bloom_progress_ = 0.0f;
+    bloom_density_ = 0.0f;
+    bloom_onset_ = false;
+    bloom_tick_ = 1.0f / sample_rate;
   }
   
+  void Render(FloatFrame* in_out, size_t size) {
+    if (renderer_) {
+      renderer_(this, in_out, size);
+    } else {
+      Process(in_out, size);
+    }
+  }
+
   void Process(FloatFrame* in_out, size_t size) {
+    ProcessTank<false>(in_out, size);
+  }
+
+  void ProcessClouds(FloatFrame* in_out, size_t size) {
+    RenderClouds(this, in_out, size);
+  }
+
+  void Reset(float sample_rate, bool clear) {
+    if (clear) {
+      Clear();
+    }
+    Reset(sample_rate);
+  }
+
+  void set_character(uint8_t character);
+  inline void set_mix(float mix) { mix_ = mix; }
+  inline void set_time(float reverb_time) { reverb_time_ = reverb_time; }
+  inline void set_lp(float lp) { lp_ = lp; }
+  inline void Clear() { engine_.Clear(); }
+
+ private:
+  typedef void (*Renderer)(Reverb*, FloatFrame*, size_t);
+
+  static void RenderClouds(Reverb* self, FloatFrame* in_out, size_t size);
+  static void RenderPlate(Reverb* self, FloatFrame* in_out, size_t size);
+  static void RenderBloom(Reverb* self, FloatFrame* in_out, size_t size);
+
+  template<bool bloom>
+  void ProcessTank(FloatFrame* in_out, size_t size) {
     // This is the Griesinger topology described in the Dattorro paper
     // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
     // Modulation is applied in the loop of the first diffuser AP for additional
@@ -86,9 +137,8 @@ class Reverb {
     E::DelayLine<Memory, 9> del2;
     E::Context c;
 
-    const float kap = 0.625f;
     const float klp = lp_;
-    const float krt = reverb_time_;
+    const float decay = reverb_time_;
 
     const float input_gain = 0.2f * (1.0f - 0.333f * reverb_time_);
     const float output_gain = 0.4f / input_gain;
@@ -134,7 +184,15 @@ class Reverb {
 
       c.Write(ap1, 100, 0.0f);
       
-      c.Read(in_out->l + in_out->r, send_amount);
+      const float input = in_out->l + in_out->r;
+      float kap = 0.625f;
+      float krt = decay;
+      if (bloom) {
+        const float density = BloomDensity(fabsf(input) * send_amount);
+        kap *= 0.3f + 0.7f * density;
+        krt *= 0.55f + 0.45f * density;
+      }
+      c.Read(input, send_amount);
       
       // Diffuse through 4 allpasses.
       c.ReadTail(ap1_tail, kap);
@@ -175,32 +233,22 @@ class Reverb {
     }
   }
   
-  void ProcessClouds(FloatFrame* in_out, size_t size);
-
-  void Reset(float sample_rate, bool clear) {
-    if (clear) {
-      Clear();
+  float BloomDensity(float level) {
+    // A new onset resets the ramp while a short slew protects a ringing tail.
+    ONE_POLE(bloom_fast_, level, 350.0f * bloom_tick_);
+    ONE_POLE(bloom_slow_, level, 18.0f * bloom_tick_);
+    const float rise = std::max(bloom_fast_, 0.08f * level) - bloom_slow_;
+    if (rise > 0.004f && !bloom_onset_) {
+      bloom_progress_ = 0.0f;
+      bloom_onset_ = true;
+    } else if (rise < 0.0015f) {
+      bloom_onset_ = false;
     }
-    Reset(sample_rate);
+    bloom_progress_ = std::min(1.0f, bloom_progress_ + 4.0f * bloom_tick_);
+    ONE_POLE(bloom_density_, bloom_progress_, 350.0f * bloom_tick_);
+    return bloom_density_;
   }
 
-  inline void set_mix(float mix) {
-    mix_ = mix;
-  }
-  
-  inline void set_time(float reverb_time) {
-    reverb_time_ = reverb_time;
-  }
-  
-  inline void set_lp(float lp) {
-    lp_ = lp;
-  }
-  
-  inline void Clear() {
-    engine_.Clear();
-  }
-  
- private:
   typedef FxEngine<32768, FORMAT_16_BIT> E;
   E engine_;
   
@@ -213,6 +261,13 @@ class Reverb {
   
   float lp_1_;
   float lp_2_;
+  float bloom_fast_;
+  float bloom_slow_;
+  float bloom_progress_;
+  float bloom_density_;
+  float bloom_tick_;
+  bool bloom_onset_;
+  Renderer renderer_;
   
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };

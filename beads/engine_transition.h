@@ -68,20 +68,21 @@ class EngineTransition {
     return true;
   }
 
-  inline bool Hold(bool requested_style, bool engine_change,
+  inline bool Hold(uint8_t requested_style, bool engine_change,
       Processor* processor, Synth* synth, PlaitsSynth* plaits_synth,
       RingsSynth* rings_synth, Codec::Frame* out, size_t size) {
     reverb_style_previous_gain_ = reverb_style_gain_;
-    if (requested_style != clouds_style_ || engine_change || codec_fade_) {
+    if (requested_style != reverb_character_ || engine_change || codec_fade_) {
       reverb_style_gain_ = std::max(
           0.0f, reverb_style_gain_ - kReverbStyleFadeStep);
       if (reverb_style_previous_gain_ == 0.0f) {
-        if (requested_style != clouds_style_) {
-          clouds_style_ = requested_style;
-          processor->SetCloudsStyle(clouds_style_);
-          synth->SetCloudsStyle(clouds_style_, false);
-          plaits_synth->SetCloudsStyle(clouds_style_, false);
-          rings_synth->SetCloudsStyle(clouds_style_, false);
+        if (requested_style != reverb_character_) {
+          reverb_character_ = requested_style;
+          clouds_style_ = requested_style == REVERB_CLOUDS;
+          processor->SetReverbCharacter(requested_style);
+          synth->SetReverbCharacter(requested_style, false);
+          plaits_synth->SetReverbCharacter(requested_style, false);
+          rings_synth->SetReverbCharacter(requested_style, false);
         }
         Codec::Frame silence;
         silence.l = 0;
@@ -124,6 +125,7 @@ class EngineTransition {
   inline bool blanking() const { return codec_transition_frames_ != 0; }
   inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
   inline bool clouds_style() const { return clouds_style_; }
+  inline uint8_t reverb_character() const { return reverb_character_; }
   inline SynthEngine playing_synth() const { return playing_synth_; }
   inline void set_playing_synth(SynthEngine synth) { playing_synth_ = synth; }
   inline SynthEngine bank_owner() const { return bank_owner_; }
@@ -134,6 +136,7 @@ class EngineTransition {
   // Blank codec output while normalization detection catches up with a restart.
   int codec_transition_frames_;
   bool clouds_style_;
+  uint8_t reverb_character_;
   float reverb_style_gain_;
   // Set by main before it restarts the codec: the output fades out first.
   volatile bool codec_fade_;

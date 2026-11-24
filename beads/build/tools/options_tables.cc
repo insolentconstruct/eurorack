@@ -114,6 +114,8 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_PITCH, 9, "Raag Shri" },
   { beads::FEATURE_REVERB, 0, "Stock" },
   { beads::FEATURE_REVERB, 1, "Clouds-style" },
+  { beads::FEATURE_REVERB, 2, "Plate" },
+  { beads::FEATURE_REVERB, 3, "Bloom" },
   { beads::FEATURE_DELAY, 0, "Auto (Stock)" },
   { beads::FEATURE_DELAY, 1, "Disabled" },
   { beads::FEATURE_DELAY, 2, "Wide/smooth filter" },

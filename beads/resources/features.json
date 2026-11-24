@@ -46,13 +46,15 @@
       "name": "Reverb character",
       "values": [
         {"name": "Stock", "led": [0, 255, 0]},
-        {"name": "Clouds-style", "led": [255, 255, 0]}
+        {"name": "Clouds-style", "led": [255, 255, 0]},
+        {"name": "Plate", "led": [255, 0, 0]},
+        {"name": "Bloom", "led": [0, 255, 0], "pulse": "slow"}
       ],
       "field": 1,
       "saved": 9,
       "states": ["Off", "Fixed", "Adjustable"],
       "page": true,
-      "page_control": "halves",
+      "page_control": "steps",
       "amount": false,
       "actions": [1, 2],
       "stateless": false,

@@ -347,7 +347,7 @@ void Process(
   }
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
-  const bool requested_style = ui.clouds_style();
+  const uint8_t requested_style = ui.reverb_character();
   const bool engine_change = ui.spectral() != processor.spectral() &&
       !ui.should_ignore_state_change();
   if (transition.Hold(requested_style, engine_change, &processor, &synth,
@@ -360,7 +360,7 @@ void Process(
         &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
         sizeof(reverb_buffer) / sizeof(reverb_buffer[0]),
-        transition.clouds_style(), &synth_mode, &p, &d, &m, &seed_button_state,
+        transition.reverb_character(), &synth_mode, &p, &d, &m, &seed_button_state,
         &seed_input, seed, freeze, float_in, size, &calibration_callback);
   }
 #endif  // DWT_CALIBRATION

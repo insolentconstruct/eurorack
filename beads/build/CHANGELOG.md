@@ -3,6 +3,7 @@
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
 ## Unreleased
+- Page 2 Reverb character adds Plate and Bloom.
 
 - Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
 

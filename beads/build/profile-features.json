@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4297b65d15cc59ca90a8fc96d2d9f9ca3bdc1b623ab86b2702474885ef153365",
+  "manifest_sha256": "ae1afcdd433c3221c068af8c23a995fa834fa90f1e3455095d0a3430161cf5ae",
   "record_version": 1,
   "features": [
     {
@@ -74,7 +74,9 @@
       "name": "Reverb character",
       "values": [
         "Stock",
-        "Clouds-style"
+        "Clouds-style",
+        "Plate",
+        "Bloom"
       ],
       "states": [
         "Off",

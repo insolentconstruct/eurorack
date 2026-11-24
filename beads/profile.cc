@@ -35,7 +35,7 @@ namespace beads {
 const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 0, kNoField, false, false, false, false },  // None.
   { 16, 0, true, false, false, false },  // Pitch.
-  { 2, 1, true, false, true, false },  // Reverb.
+  { 4, 1, true, false, true, false },  // Reverb.
   { 3, 2, true, false, false, false },  // Delay.
   { 2, 3, true, false, true, false },  // Processor.
   { 3, 4, true, false, false, false },  // Limiter.

@@ -42,6 +42,7 @@ void EngineTransition::Init(Codec* codec, PlaitsSynth* plaits_synth,
   bank_size_ = bank_size;
   bank_owner_ = SYNTH_SILENT;
   clouds_style_ = false;
+  reverb_character_ = REVERB_STOCK;
   reverb_style_gain_ = 1.0f;
   reverb_style_previous_gain_ = 1.0f;
   codec_fade_ = false;

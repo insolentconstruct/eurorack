@@ -230,11 +230,7 @@ void RingsSynth::Render(
   reverb_.set_mix(reverb_mix);
   reverb_.set_time(0.3f + 0.6f * reverb_time);
   reverb_.set_lp(0.6f);
-  if (clouds_style_) {
-    reverb_.ProcessClouds(out, size);
-  } else {
-    reverb_.Process(out, size);
-  }
+  reverb_.Render(out, size);
   output_limiter_.ProcessOutput(
       out, size, output_limiter_mode_, kSynthSampleRate);
 

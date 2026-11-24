@@ -112,7 +112,8 @@ class Processor {
   };
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
-  void SetCloudsStyle(bool clouds);
+  void SetCloudsStyle(bool clouds) { SetReverbCharacter(clouds); }
+  void SetReverbCharacter(uint8_t character);
   // Attacks (#58, #47); changing the mode forgets the marks.
   void SetAttacks(int mode, float threshold) {
     attack_input_.Configure(mode, threshold);

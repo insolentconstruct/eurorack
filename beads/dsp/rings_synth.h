@@ -66,7 +66,11 @@ class RingsSynth {
   // The Beads-side chain, as the Plaits synth's, in its reverb buffer.
   void Init(uint16_t* reverb_buffer);
   void SetCloudsStyle(bool clouds, bool clear) {
-    clouds_style_ = clouds;
+    SetReverbCharacter(clouds, clear);
+  }
+  void SetReverbCharacter(uint8_t character, bool clear) {
+    clouds_style_ = character == REVERB_CLOUDS;
+    reverb_.set_character(character);
     reverb_.Reset(kSynthSampleRate, clear);
   }
 
