@@ -325,6 +325,7 @@ void TestImplausibleCalibrationWithoutMirror() {
 
 void TestFactoryPrimaryInterruptedRecalibration() {
   test_checker.Start("TestFactoryPrimaryInterruptedRecalibration");
+  const Saved defaults = Defaults();
   const PersistentData factory = Factory();
   const PersistentData old_calibration = Calibration(0.1f);
   const PersistentData new_calibration = Calibration(-0.1f);
@@ -339,15 +340,23 @@ void TestFactoryPrimaryInterruptedRecalibration() {
     const bool saved = s.SavePersistentData();
     TestFlashBudget() = -1;
 
+    if (cut >= 1 && cut <= 4) {
+      // Stock rebuilds the torn primary with factory values.
+      PersistentData stock_calibration = factory;
+      State stock_state = defaults.state;
+      StockStorage stock;
+      const int wide_sectors = TestFlash().wide_sectors;
+      CHECK(!stock.Init(&stock_calibration, &stock_state));
+      TestFlash().wide_sectors = wide_sectors;
+      CHECK(stock_calibration.SameCalibration(factory));
+      CHECK(MirrorHolds(old_calibration));
+    }
     Settings loaded;
     CHECK(loaded.Init(false) && !loaded.write_locked());
-    if (cut < 10) {
-      CHECK(SameCalibration(loaded, old_calibration));
-    } else if (saved || cut == 24) {
-      CHECK(saved && SameCalibration(loaded, new_calibration));
-    } else {
-      CHECK(SameCalibration(loaded, old_calibration) ||
-          SameCalibration(loaded, new_calibration));
+    CHECK(SameCalibration(
+        loaded, cut <= 12 ? old_calibration : new_calibration));
+    if (cut == 24) {
+      CHECK(saved);
     }
   }
 }
