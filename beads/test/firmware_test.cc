@@ -1848,6 +1848,28 @@ void TestCodecRestartFade() {
 
 // A change at the same sample rate keeps the converter clocked (#53): only
 // rate changes use the reset-held restart sequence.
+void TestCodecRestartRetry() {
+  test_checker.Start("TestCodecRestartRetry");
+  Rig r(false, false);
+  r.Settle();
+  const int restarts = codec.restarts_;
+  codec.fail_restart_ = true;
+  settings.mutable_state()->media = Processor::MEDIA_VINTAGE_DIGITAL;
+  for (int i = 0; i < 200 && codec.running_; ++i) {
+    r.Tick(1, true);
+  }
+  CHECK(!codec.running_ && codec.callback_ == NULL);
+  codec.fail_restart_ = false;
+  r.Tick(50, true);
+  CHECK(!codec.running_);
+  r.Tick(350, true);
+  CHECK(codec.running_ && codec.callback_ == &Process);
+  CHECK(codec.restarts_ == restarts + 1);
+  CHECK(codec.previous_sample_rate_ == 0);
+  CHECK(codec.sample_rate_ == int(processor.sample_rate()));
+  CHECK(codec_transition_frames == 0);
+}
+
 void TestCodecKeepsClocks() {
   test_checker.Start("TestCodecKeepsClocks");
   Rig r(false, false);
@@ -4262,6 +4284,7 @@ int main() {
   TestFreezeGestureFollowsPlayingSynth();
   TestSpectralEngine();
   TestCodecRestartFade();
+  TestCodecRestartRetry();
   TestCodecKeepsClocks();
   TestSynthLevel();
   TestSynthStopClearsReverb();

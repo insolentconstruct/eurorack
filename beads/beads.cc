@@ -521,7 +521,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
 
   const Codec::FillBufferCallback callback = new_synth_mode &&
       settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
-  transition.Start(sr, callback);
+  transition.Start(sr, callback, true);
 }
 
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
@@ -611,8 +611,7 @@ void Init() {
     factory_test.Start();
     ui.set_factory_test(true);
     normalization_detector.Init(2);
-    transition.set_codec_sample_rate(48000);
-    codec.Start(48000, 48000 / kBlockRate, &FactoryTest::ProcessFn);
+    transition.Start(48000, &FactoryTest::ProcessFn, false);
   } else {
 #ifdef PROFILE_INTERRUPT
     DebugPin::Init();
@@ -635,6 +634,9 @@ void Init() {
 }
 
 void MonitorStateChange() {
+  if (transition.RetryCodec()) {
+    return;
+  }
   UpdateResonator();
   seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;

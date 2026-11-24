@@ -4,6 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Retry a codec start or restart after a DMA failure instead of staying silent.
 - Cancel an unfinished frozen-buffer backup before entering synth mode.
 - Finish an automatic synth-entry fade after a late audio peak.
 - Ignore buttons held through a storage warning until they are released.

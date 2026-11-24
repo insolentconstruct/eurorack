@@ -29,6 +29,7 @@
 #include "beads/engine_transition.h"
 
 #include "beads/ui.h"
+#include "stmlib/system/system_clock.h"
 
 namespace beads {
 
@@ -47,25 +48,43 @@ void EngineTransition::Init(Codec* codec, PlaitsSynth* plaits_synth,
   codec_fade_ = false;
   codec_running_ = false;
   codec_sample_rate_ = 0;
+  codec_retry_rate_ = 0;
 }
 
 void EngineTransition::Start(
-    int sample_rate, Codec::FillBufferCallback callback) {
-  codec_transition_frames_ = kBlockRate / 4;
+    int sample_rate, Codec::FillBufferCallback callback, bool blank_output) {
+  codec_transition_frames_ = blank_output ? kBlockRate / 4 : 0;
   codec_fade_ = false;
   if (codec_running_ && sample_rate == codec_sample_rate_) {
     // Same clocks: the converter played silence while paused.
     codec_->Resume(callback);
     return;
   }
-  if (codec_sample_rate_) {
-    codec_->Restart(
-        codec_sample_rate_, sample_rate, sample_rate / kBlockRate, callback);
-  } else {
-    codec_->Start(sample_rate, sample_rate / kBlockRate, callback);
+  StartCodec(sample_rate, callback);
+}
+
+void EngineTransition::StartCodec(
+    int sample_rate, Codec::FillBufferCallback callback) {
+  const size_t block_size = sample_rate / kBlockRate;
+  codec_running_ = codec_sample_rate_ || codec_retry_rate_
+      ? codec_->Restart(codec_sample_rate_, sample_rate, block_size, callback)
+      : codec_->Start(sample_rate, block_size, callback);
+  codec_sample_rate_ = codec_running_ ? sample_rate : 0;
+  codec_retry_rate_ = codec_running_ ? 0 : sample_rate;
+  if (!codec_running_) {
+    codec_retry_callback_ = callback;
+    codec_retry_time_ = stmlib::system_clock.milliseconds();
   }
-  codec_running_ = true;
-  codec_sample_rate_ = sample_rate;
+}
+
+bool EngineTransition::RetryCodec() {
+  if (!codec_retry_rate_) {
+    return false;
+  }
+  if (stmlib::system_clock.milliseconds() - codec_retry_time_ >= 100) {
+    StartCodec(codec_retry_rate_, codec_retry_callback_);
+  }
+  return true;
 }
 
 void EngineTransition::Pause() {
