@@ -25,10 +25,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Included first in every blob translation unit (build_blob.sh). The
-// services' exports keep default visibility, reached through the GOT at their
-// fixed addresses; everything declared after is the blob's own, reached
-// PC-relative wherever the linker places it.
+// Include first so service exports use the GOT and blob symbols stay
+// PC-relative (see ABI.md).
 
 #ifndef BEADS_BLOB_BLOB_VISIBILITY_H_
 #define BEADS_BLOB_BLOB_VISIBILITY_H_
