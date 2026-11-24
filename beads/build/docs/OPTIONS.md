@@ -133,6 +133,8 @@ Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks 
 
 Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains, except for models with their own envelope. With DENSITY at noon and SEED unpatched the last voice drones until SEED plays a note. The models in each bank are listed in the README's "Plaits synth" section.
 
+Plaits models start fresh whenever a voice switches models, including when returning to a model used earlier. Filters, grains and modulation may restart instead of continuing where they left off. A short fade-in softens the restart. Palette VOSIM also has about 4 ms of silence on selection while it prepares its initial DC estimate. See [model selection](FEATURES.md#model-selection-and-reselection).
+
 Synth Rings, with the Rings synth installed, plays Rings' resonator. While it plays, hold [A] and press FREEZE to step its polyphony: one, two or four voices ([A] flashes green, yellow or red).
 
 Synth start Manual: the synth never starts by itself. It needs both audio inputs unpatched and FREEZE off: hold the quality button [A] for about a second and a half and release it to start or stop it. Patching an input stops it once FREEZE is off.

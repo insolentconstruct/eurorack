@@ -347,6 +347,12 @@ DETAILS = [
     "noon and SEED unpatched the last voice drones until SEED plays a "
     "note. The models in each bank are listed in the README's \"Plaits "
     "synth\" section.",
+    "Plaits models start fresh whenever a voice switches models, including "
+    "when returning to a model used earlier. Filters, grains and modulation "
+    "may restart instead of continuing where they left off. A short fade-in "
+    "softens the restart. Palette VOSIM also has about 4 ms of silence on "
+    "selection while it prepares its initial DC estimate. "
+    "See [model selection](FEATURES.md#model-selection-and-reselection).",
     "Synth Rings, with the Rings synth installed, plays Rings' resonator. "
     "While it plays, hold [A] and press FREEZE to step its polyphony: one, "
     "two or four voices ([A] flashes green, yellow or red).",
