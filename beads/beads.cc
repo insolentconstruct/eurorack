@@ -183,7 +183,7 @@ float OliverbControl(const RandomizedParameter& control, float lo, float hi) {
   return value;
 }
 
-template<bool manual_delay, bool fixed_decay, bool play_oliverb = false>
+template<bool manual_delay, bool fixed_decay, bool play_oliverb>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
@@ -598,7 +598,7 @@ void Process(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<false, false>(events, in, out, size);
+  ProcessAudio<false, false, false>(events, in, out, size);
 }
 
 void ProcessFixedDecay(
@@ -606,7 +606,7 @@ void ProcessFixedDecay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<false, true>(events, in, out, size);
+  ProcessAudio<false, true, false>(events, in, out, size);
 }
 
 void ProcessManualDelay(
@@ -614,7 +614,7 @@ void ProcessManualDelay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<true, false>(events, in, out, size);
+  ProcessAudio<true, false, false>(events, in, out, size);
 }
 
 void ProcessManualDelayFixedDecay(
@@ -622,7 +622,7 @@ void ProcessManualDelayFixedDecay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<true, true>(events, in, out, size);
+  ProcessAudio<true, true, false>(events, in, out, size);
 }
 
 RandomizedParameter AbyssParameter(PotsAdcChannel knob,

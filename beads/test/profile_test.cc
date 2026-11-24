@@ -678,6 +678,19 @@ uint32_t Beta3Digest(uint32_t* accepted) {
     }
     Profile parsed;
     const bool ok = parsed.Init(b);
+    // The RC1 choices have the same placements as the legacy values.
+    if ((cases[i] == FEATURE_PROCESSOR || cases[i] == FEATURE_REVERB) &&
+        (cases[i + 2] == 2 || cases[i + 2] == 3)) {
+      b[18] = 1;
+      const uint32_t legacy_crc = Profile::Crc32(b, 16 + 6 * count);
+      for (int j = 0; j < 4; ++j) {
+        b[16 + 6 * count + j] = legacy_crc >> (8 * j);
+      }
+      Profile legacy;
+      CHECK(ok == legacy.Init(b));
+      results.push_back(false);
+      continue;
+    }
     // Beta 3 refused Synth value 2; as Rings it is accepted where Plaits is.
     if (cases[i] == FEATURE_SYNTH && cases[i + 2] == 2) {
       b[18] = 1;

@@ -83,7 +83,8 @@ enum AmountSlot {
 enum ProcessorMode {
   PROCESSOR_GRANULAR = 0,
   PROCESSOR_SPECTRAL = 1,
-  PROCESSOR_OLIVERB = 2
+  PROCESSOR_OLIVERB = 2,
+  PROCESSOR_ABYSS = 3
 };
 
 enum ProfileFeature {
@@ -144,13 +145,6 @@ enum ProfileFeature {
   FEATURE_REVERB_DECAY = 54,
   FEATURE_TIME_CV_RANGE = 55,
   FEATURE_LAST
-};
-
-enum ProcessorMode {
-  PROCESSOR_GRANULAR,
-  PROCESSOR_SPECTRAL,
-  PROCESSOR_OLIVERB,
-  PROCESSOR_ABYSS,
 };
 
 enum ProfileState {

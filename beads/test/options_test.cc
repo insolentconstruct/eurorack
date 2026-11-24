@@ -1076,7 +1076,7 @@ void TestFrozenFeedbackStorage() {
 
 void TestCloudsStorage() {
   test_checker.Start("TestCloudsStorage");
-  CheckRecordByte(FEATURE_REVERB, 2);
+  CheckRecordByte(FEATURE_REVERB, 4);
   // Its neighbour in the record is kept.
   Rig r(false);
   r.settings.set_pitch_scale(PITCH_SCALE_PELOG);
@@ -1194,7 +1194,7 @@ void TestSynthPlayableSets() {
 // Spectral and the synth start are separate record bytes.
 void TestEngineStorage() {
   test_checker.Start("TestEngineStorage");
-  CheckRecordByte(FEATURE_PROCESSOR, 2);
+  CheckRecordByte(FEATURE_PROCESSOR, 4);
   Rig r(false);
   for (int i = 0; i < 4; ++i) {
     r.settings.set_spectral(i & 1);
@@ -1226,7 +1226,7 @@ void TestEngineStorage() {
 // audio code only once the page has closed.
 void TestEngineOption() {
   test_checker.Start("TestEngineOption");
-  const float positions[2] = { 0.15f, 0.85f };
+  const float positions[2] = { 0.15f, 0.38f };
   for (int target = 0; target < 2; ++target) {
     Rig r(false);
     r.settings.set_spectral(!target);
@@ -1407,13 +1407,13 @@ void TestSettingsRollover() {
     const uint16_t index = r.settings.chunk_storage_.next_state_chunk_index_;
     for (int i = 0; i < 2; ++i) {
       const uint32_t writes = test_writes;
-      r.reverb = i ? .1f : .9f;
+      r.reverb = i ? .1f : .38f;
       r.Tick(1100, true);
       CHECK(test_writes == writes + 2);
     }
     CHECK(!r.settings.clouds_style());
     CHECK(r.settings.chunk_storage_.next_state_chunk_index_ == index);
-    r.reverb = .9f;
+    r.reverb = .38f;
     r.Tick(1100, true);
     CHECK(r.settings.clouds_style());
     while (r.settings.chunk_storage_.next_state_chunk_index_ <=
@@ -2056,8 +2056,8 @@ void TestOptionsKnobsAndSettling() {
       CHECK(r.ui.options_.Value(setting) == (setting == FEATURE_PITCH
           ? int(r.settings.pitch_scale()) : setting == FEATURE_DELAY
           ? int(r.settings.delay_mode()) : setting == FEATURE_REVERB
-          ? r.settings.clouds_style() : setting == FEATURE_PROCESSOR
-          ? r.settings.spectral() : setting == FEATURE_SYNTH_START
+          ? r.settings.reverb_character() : setting == FEATURE_PROCESSOR
+          ? r.settings.processor_mode() : setting == FEATURE_SYNTH_START
           ? r.settings.self_play_on_request() : setting == FEATURE_INTERVALS
           ? int(r.settings.random_intervals()) : setting == FEATURE_FROZEN
           ? r.settings.evolving_feedback() : setting == FEATURE_SYNTH
@@ -2159,20 +2159,20 @@ void TestOptionsZonesAndSaveBatch() {
   r.feedback = .29f;
   r.Tick(1, true);
   CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_OFF);
-  // Halves retain a value inside the midpoint dead band; two knobs
+  // Quarters retain a value inside the first boundary dead band; two knobs
   // settle in one batch.
   {
     Rig halves(false);
     halves.EnterPage(1);
-    halves.reverb = .9f;
+    halves.reverb = .38f;
     halves.Tick(1, true);
-    halves.reverb = .5f;
+    halves.reverb = .25f;
     halves.Tick(1, true);
     CHECK(halves.ui.options_.Value(FEATURE_REVERB));
-    halves.reverb = .46f;
+    halves.reverb = .20f;
     halves.Tick(1, true);
     CHECK(!halves.ui.options_.Value(FEATURE_REVERB));
-    halves.reverb = .54f;
+    halves.reverb = .30f;
     halves.Tick(1, true);
     const uint32_t writes = test_writes;
     halves.feedback = .9f;
@@ -2222,7 +2222,7 @@ void TestOptionsPalette() {
   CHECK(FindOptionValue(FEATURE_PITCH, PITCH_SCALE_LAST).setting ==
       FEATURE_NONE);
   // Only page values light, and only the values a feature has.
-  CHECK(FindOptionValue(FEATURE_REVERB, 2).setting == FEATURE_NONE);
+  CHECK(FindOptionValue(FEATURE_REVERB, 4).setting == FEATURE_NONE);
   CHECK(FindOptionValue(FEATURE_ATTACK_SENSITIVITY, 0).setting ==
       FEATURE_NONE);
   for (size_t i = 0; i < count; ++i) {
@@ -2760,11 +2760,11 @@ void TestPageTwoKnobRoutingAndSavedMeaning() {
       CHECK(r.settings.FeatureValue(feature) == value);
     }
     CHECK(r.settings.evolving_feedback());
-    CHECK(r.settings.clouds_style());
+    CHECK(r.settings.reverb_character() == 3);
     CHECK(r.settings.delay_mode() == DELAY_MODE_WIDE_DETENT);
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.evolving_feedback() && loaded.clouds_style());
+    CHECK(loaded.evolving_feedback() && loaded.reverb_character() == 3);
     CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     CHECK(loaded.profile().Page(4) == FEATURE_FROZEN);
   }
@@ -3510,12 +3510,12 @@ void EntriesProfile(uint8_t* b, const uint8_t (*entries)[6], int count) {
   }
 }
 
-bool SawToggleValue(Rig* r, ProfileFeature feature) {
+uint8_t SawToggleValue(Rig* r, ProfileFeature feature) {
   switch (feature) {
     case FEATURE_REVERB:
-      return r->ui.clouds_style();
+      return r->ui.reverb_character();
     case FEATURE_PROCESSOR:
-      return r->ui.spectral();
+      return r->ui.processor_mode();
     case FEATURE_FROZEN:
       return r->ui.evolving_feedback();
     case FEATURE_SYNTH:
@@ -3525,7 +3525,7 @@ bool SawToggleValue(Rig* r, ProfileFeature feature) {
   }
 }
 
-// [A]+SEED and [A]+FREEZE flip a two-value setting, save it and show the
+// [A]+SEED and [A]+FREEZE advance a gesture setting, save it and show the
 // colour its options page gives the new value for half a second.
 void TestProfileToggles() {
   test_checker.Start("TestProfileToggles");
@@ -3538,7 +3538,8 @@ void TestProfileToggles() {
     const ProfileFeature feature = toggles[t];
     CHECK(kFeatureDefinitions[feature].action);
     CHECK(kFeatureDefinitions[feature].values ==
-        (feature == FEATURE_SYNTH ? 3 : 2));
+        (feature == FEATURE_PROCESSOR || feature == FEATURE_REVERB ? 4
+            : feature == FEATURE_SYNTH ? 3 : 2));
     CHECK(kFeatureDefinitions[feature].field != kNoField);
     for (int slot = ACTION_SEED; slot <= ACTION_FREEZE; ++slot) {
       const Switch button = slot == ACTION_SEED ? SWITCH_SEED : SWITCH_FREEZE;
@@ -3553,13 +3554,14 @@ void TestProfileToggles() {
       ApplyCustomProfile(&r, b);
       CHECK(r.settings.profile().Action(slot) == feature);
       const uint8_t media = r.settings.state().media;
-      for (int flip = 0; flip < 2; ++flip) {
-        const uint8_t value = flip == 0 ? 1 : 0;
+      const int steps = feature == FEATURE_PROCESSOR ? 4 : 2;
+      for (int flip = 0; flip < steps; ++flip) {
+        const uint8_t value = (flip + 1) % steps;
         const uint32_t writes = test_writes;
         r.Down(SWITCH_MEDIA);
         r.Down(button);
         CHECK(r.settings.FeatureValue(feature) == value);
-        CHECK(SawToggleValue(&r, feature) == bool(value));
+        CHECK(SawToggleValue(&r, feature) == value);
         CHECK(test_writes == writes + kRecordWords);
         const OptionValue& cue = FindOptionValue(feature, value);
         CHECK(cue.setting == feature && cue.value == value);

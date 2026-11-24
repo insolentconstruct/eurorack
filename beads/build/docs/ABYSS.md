@@ -25,8 +25,8 @@ THE SOFTWARE.
 
 # Abyss
 
-Select Abyss in the Processor option with the FEEDBACK knob in its middle
-zone. The indication pulses red. Entering Abyss borrows the recording memory.
+Select Abyss in the Processor option with the FEEDBACK knob in its top
+quarter. The indication pulses red. Entering Abyss borrows the recording memory.
 Returning to Granular restores its saved frozen recording when available.
 
 | Control | Effect |

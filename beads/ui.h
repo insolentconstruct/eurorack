@@ -308,7 +308,6 @@ class Ui {
 
   GestureController gestures_;
 
-  volatile uint8_t processor_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
