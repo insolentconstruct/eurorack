@@ -272,12 +272,23 @@ bool Settings::SavePersistentData() {
       0);
   PackRecord();
   PackState();
-  const PersistentData requested = persistent_data_;
-  chunk_storage_.SavePersistentData();
-  // False when nothing can be written, or the calibration was out of range
-  // and the stored one kept.
-  return !chunk_storage_.locked() && \
-      !memcmp(&requested, &persistent_data_, sizeof(PersistentData));
+  return chunk_storage_.SavePersistentData();
+}
+
+bool Settings::ReadPersistentData(PersistentData* data) {
+  if (!chunk_storage_.ReadPersistentData(data)) {
+    return false;
+  }
+  PersistentData mirror;
+  if (!memcmp(data->adc_calibration, factory_.adc_calibration,
+          sizeof(data->adc_calibration)) &&
+      chunk_storage_.ReadMirror(&mirror) &&
+      CalibrationPlausible(mirror, factory_) &&
+      memcmp(mirror.adc_calibration, factory_.adc_calibration,
+          sizeof(mirror.adc_calibration))) {
+    *data = mirror;
+  }
+  return true;
 }
 
 void Settings::NormalizeOptions() {

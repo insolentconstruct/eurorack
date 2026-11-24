@@ -166,7 +166,7 @@ class Processor {
     // A SEED held while it starts does not strike it.
     seed_gate_ = true;
   }
-  // Set at the UI rate; until then the resonator keeps its defaults.
+  // Built in the main loop; until then the resonator keeps its controls.
   void set_resonator_controls(const ResonatorControls& controls);
   // Configure turns it off; the main loop sets it again each pass.
   inline void set_seed_latch_fade(bool enabled) {

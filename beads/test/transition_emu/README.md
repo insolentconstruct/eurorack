@@ -55,3 +55,11 @@ blinks every LED (`beads/bootloader/bootloader.cc`, upstream commit
 `d8f473915232af74347762b6365202bfd26f73f6`, `UpdateLeds`). Its assignment-LED
 pattern and 250 ms period match the existing `Ui::MODE_REPAIR_FAILED` cue;
 the exact period is Drizzlet's recovery convention.
+
+CI runs the release ELF and its region in four bounded shards after the build.
+Each shard checks its fault boots and transition scenarios. The
+explicit `release_synth` scenario requires all three installed synths, enters
+synth mode, switches Plaits/Rings/Plaits/Beads, checks shared bank ownership,
+steps the Plaits bank and model control, then checks exit on plugged inputs.
+It is excluded from the default erased-region scenarios. Release publication
+waits for these checks; JSON evidence is retained per shard.

@@ -110,9 +110,9 @@ class Settings {
   inline const Profile& profile() const { return profile_; }
   inline bool profile_locked() const { return profile_locked_; }
 
-  // False when the calibration was refused: storage locked, or out of range
-  // and the stored one kept.
+  // False when the requested calibration rewrite did not complete.
   bool SavePersistentData();
+  bool ReadPersistentData(PersistentData* data);
   void SaveState();
 
   // Saves only the options, if they changed.

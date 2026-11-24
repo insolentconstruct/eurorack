@@ -123,7 +123,7 @@ class Calibrator {
     return true;
   }
   
-  // False when the settings refuse the calibration: the previous one stays.
+  // Settings keep the calibration that will be loaded on reboot.
   inline bool Save() {
     AdcCalibrationData* c = \
         settings_->mutable_persistent_data()->adc_calibration;
@@ -132,8 +132,14 @@ class Calibrator {
     std::copy(
         &calibration_data_[0], &calibration_data_[CV_ADC_CHANNEL_LAST], c);
     const bool saved = settings_->SavePersistentData();
+    PersistentData durable;
     if (!saved) {
-      std::copy(&previous[0], &previous[CV_ADC_CHANNEL_LAST], c);
+      if (settings_->ReadPersistentData(&durable)) {
+        std::copy(&durable.adc_calibration[0],
+            &durable.adc_calibration[CV_ADC_CHANNEL_LAST], c);
+      } else {
+        std::copy(&previous[0], &previous[CV_ADC_CHANNEL_LAST], c);
+      }
     }
     return saved;
   }

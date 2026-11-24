@@ -144,7 +144,6 @@ void SysTick_Handler() {
     return;
   }
   ui.Poll();
-  UpdateResonator();
   if (!skip_factory_test) {
     factory_test.Poll();
   }
@@ -630,6 +629,7 @@ void Init() {
 }
 
 void MonitorStateChange() {
+  UpdateResonator();
   seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));

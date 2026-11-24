@@ -209,8 +209,18 @@ class ChunkStorage {
     }
   }
 
-  void SavePersistentData() {
-    RewriteSector();
+  bool SavePersistentData() {
+    const PersistentData requested = *persistent_data_;
+    const bool saved = RewriteSector();
+    PersistentData durable;
+    return saved && ReadPersistentData(&durable) &&
+        !memcmp(&requested, &durable, sizeof(PersistentData));
+  }
+
+  // The usable calibration selected at boot, even after a partial rewrite.
+  bool ReadPersistentData(PersistentData* data) {
+    return (ReadChunk(chunk_address(0), data) == CHUNK_VALID && Usable(*data)) ||
+        (ReadChunk(MIRROR_BASE, data) == CHUNK_VALID && Usable(*data));
   }
 
   // Appends the record, or compacts the mirror sector when it can't. False
@@ -327,7 +337,7 @@ class ChunkStorage {
     return saved;
   }
 
-  void RewriteSector();
+  bool RewriteSector();
 
   // Leaves a verified copy of the calibration about to be written in the
   // mirror sector; only writes it if it is missing or different, then puts
@@ -492,7 +502,7 @@ template<
     typename PersistentData,
     typename StateData,
     typename RecordData>
-void ChunkStorage<sector_index, mirror_sector_index,
+bool ChunkStorage<sector_index, mirror_sector_index,
     PersistentData, StateData, RecordData>::RewriteSector() {
   // A calibration out of range never replaces a usable one: that one stays.
   PersistentData data;
@@ -512,6 +522,7 @@ void ChunkStorage<sector_index, mirror_sector_index,
     next_state_chunk_index_ = REWRITE_NEEDED;
   }
   HAL_FLASH_Lock();
+  return next_state_chunk_index_ == 2;
 }
 
 template<
