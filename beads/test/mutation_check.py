@@ -1485,8 +1485,16 @@ cases = [
     '      mode_ = MODE_STORAGE_WARNING;',
     '      mode_ = MODE_NORMAL;'),
   ('TestStorageWarning', 'firmware', 'beads/ui.cc',
-    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;',
-    '      options_.stage() != Options::STAGE_DRAIN;'),
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;\n'
+    '  for (int i = 0; i < SWITCH_LAST; ++i) {\n'
+    '    Switch s = Switch(i);\n\n'
+    '    if (switches_.just_pressed(s)) {\n'
+    '      ignore_release_[i] = !accept_switch_events || suppressed_press_[i];',
+    '      options_.stage() != Options::STAGE_DRAIN;\n'
+    '  for (int i = 0; i < SWITCH_LAST; ++i) {\n'
+    '    Switch s = Switch(i);\n\n'
+    '    if (switches_.just_pressed(s)) {\n'
+    '      ignore_release_[i] = !accept_switch_events;'),
   ('TestStorageWarning', 'firmware', 'beads/ui.cc',
     'const uint32_t kStorageStatusTime = 3000;',
     'const uint32_t kStorageStatusTime = 4000;'),
