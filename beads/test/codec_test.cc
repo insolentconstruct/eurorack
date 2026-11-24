@@ -461,6 +461,6 @@ int main() {
   TestRestartDmaFailure();
   TestRestartDmaAbortTimeout();
   TestOneFrameDelay();
-  printf("Codec: 5 tests, %d failures\n", test_checker.failures());
+  printf("Codec: 7 tests, %d failures\n", test_checker.failures());
   return test_checker.failures() ? 1 : 0;
 }

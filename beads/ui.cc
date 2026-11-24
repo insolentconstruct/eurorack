@@ -231,8 +231,9 @@ void Ui::Poll() {
 
   // Ignore switch events while options are open or draining, and buttons
   // held through the storage status shown at power-up.
+  const bool storage_status = showing_storage_status();
   const bool accept_switch_events = !was_active && !options_.active() &&
-      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();
+      options_.stage() != Options::STAGE_DRAIN && !storage_status;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
@@ -240,7 +241,7 @@ void Ui::Poll() {
       suppressed_press_[i] = false;
     }
     if (switches_.just_pressed(s)) {
-      suppressed_press_[i] = !accept_switch_events;
+      suppressed_press_[i] = storage_status;
       if (accept_switch_events) {
         queue_.AddEvent(CONTROL_SWITCH, i, 0);
       }

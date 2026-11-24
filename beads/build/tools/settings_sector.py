@@ -30,15 +30,14 @@
 
 Each settings input is a dump of the settings sector (0x081E0000, 128 KB) from the same module, as
 RECOVERY.md's backup command makes. OUT holds the calibration record of the first and the latest
-settings record of the second. Each dump needs only the requested record. The output uses
-stmlib's ChunkStorage layout after erasing the
-sector. OUT is only those two records (160 bytes): the restore command erases the whole sector and
-programs just them, so the firmware's later saves land on erased flash, as after its own rewrite.
+settings record of the second. Each dump needs only the requested record. OUT uses stmlib's
+ChunkStorage layout after an erase. It contains only those two records (160 bytes), so the
+firmware's later saves land on erased flash.
 
 With --mirror-out, MIRROR is the image for the calibration copy sector (0x081C0000): the same
 calibration, then the latest options record of OPTIONS, a dump of that sector (none: the options
-start from their defaults). NOW, the settings sector as it is, decides which image goes first, so a
-usable calibration stays in one of the two sectors at every step.
+start from their defaults). NOW, the current settings sector, decides which image goes first to
+protect the measured calibration during the restore.
 """
 
 import argparse
