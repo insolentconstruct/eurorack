@@ -96,8 +96,7 @@ struct PlaitsBlobHeader {
 };
 
 // Version 2: 24 words. A model serves num_ids consecutive IDs from first_id.
-// Code, constants, the GOT, then (libraries) the export table, then the
-// dependency list, then the CRC-32.
+// See ABI.md for the payload layout.
 struct PlaitsBlobHeader2 {
   uint32_t magic;
   uint32_t header_size;
@@ -269,9 +268,8 @@ struct PlaitsBlobTerrains {
   uint32_t count;
 };
 
-// Version 2 entries: init also gets one library per dependency, in the
-// listed order (then TERR's record if flagged); reset gets the selected ID
-// minus the first.
+// Version 2: init gets dependencies in order, then TERR's record if flagged.
+// Reset takes the selected ID minus first_id.
 typedef void* (*PlaitsBlobInitFn2)(
     void* state,
     const PlaitsBlobServices* services,
@@ -295,9 +293,8 @@ typedef void* (*PlaitsBlobLibraryInitFn)(
 
 extern const PlaitsBlobServices plaits_blob_services;
 
-// What the loader needs from either header version, once Check passed. A
-// library's RAM and scratch are state_size and arena_size; a synth's RAM is
-// state_size and its configure entry reset_offset.
+// Checked fields from either header version. Libraries use state_size for RAM
+// and arena_size for scratch. Synths use state_size and reset_offset (configure).
 struct PlaitsBlobInfo {
   uint32_t abi;
   uint32_t kind;
@@ -322,9 +319,8 @@ class PlaitsBlob {
   // Checks the services table and its frozen exports, once at boot.
   static PlaitsBlobStatus CheckServices(const PlaitsBlobServices* services);
 
-  // Checks a blob at blob, inside [begin, end), before any of its code runs;
-  // digest receives its SHA-256 (or is NULL). Version 1 and 2 headers:
-  // models, libraries and synths.
+  // Validates a v1 or v2 blob within [begin, end) before any of its code runs.
+  // Writes its SHA-256 if digest is non-NULL.
   static PlaitsBlobStatus Check(
       const uint8_t* blob,
       const uint8_t* begin,

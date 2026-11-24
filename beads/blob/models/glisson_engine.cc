@@ -122,9 +122,8 @@ void Glisson::RenderMono(
         g->aux_phase -= static_cast<int>(g->aux_phase);
       }
 
-      // A parabolic grain window avoids a third interpolated sine lookup
-      // for every grain and sample. The remaining oscillator phases are
-      // already wrapped, so the cheaper no-wrap lookup is safe.
+      // The parabola saves a sine lookup per grain sample. The oscillator
+      // phases are already wrapped for SineNoWrap.
       const float envelope = 4.0f * g->envelope_phase * \
           (1.0f - g->envelope_phase);
       out[j] += SineNoWrap(g->phase) * envelope * gain;

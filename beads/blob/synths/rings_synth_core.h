@@ -50,9 +50,8 @@ class RingsSynthCore {
   // In zeroed RAM: Rings' objects start from zeroed .bss.
   void Init();
 
-  // Main loop, codec paused: applies a valid target, then renders one
-  // discarded block on the target's core (both cores on entry), so no
-  // reconfiguration reaches the audio interrupt. Refuses anything else.
+  // Main loop, codec paused: apply a valid target and prime its core (both
+  // on entry) with one discarded block before audio resumes.
   bool Configure(
       const RingsSynthTarget& target,
       const RingsSynthControls& controls,

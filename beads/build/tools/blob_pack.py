@@ -381,8 +381,8 @@ def gate(elf, base, exports, objdump, path, num_libraries):
                  for entries in symbols.values()
                  for value, shndx, info, size in entries
                  if info & 0xf == 1 and size and value - base in table]
-  # Assembler $t/$d marks distinguish code from address-like data; even ubfx
-  # instruction pairs can resemble addresses in a large blob.
+  # Use assembler $t/$d marks so instruction pairs resembling addresses
+  # (for example ubfx in a large blob) do not trigger the pointer check.
   marks = sorted((value - base, name) for name in ('$t', '$d')
                  for value, _, _, _ in symbols.get(name, []))
   code_ranges = [(offset, marks[i + 1][0] if i + 1 < len(marks)
@@ -522,8 +522,7 @@ def main(argv):
       continue
     data = pack(elf, base, table, records)
     packed[base] = data
-    # A secondary check: a word equal to an address inside the blob, outside
-    # exported data tables.
+    # Check for in-blob addresses outside exported data and Thumb code.
     inside |= set(
         o for o in range(0, len(data) - 3, 2)
         if base <= struct.unpack_from('<I', data, o)[0] < base + len(data) and

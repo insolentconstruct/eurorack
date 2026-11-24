@@ -42,9 +42,8 @@ class PlaitsLibraries {
   PlaitsLibraries() { }
   ~PlaitsLibraries() { }
 
-  // Outside the audio interrupt: builds the region's libraries in ram, as
-  // PlaitsRegion::Read accounted for them, in table order (a library comes
-  // after those it needs). scratch is free until the voices are built.
+  // Outside the audio interrupt: builds validated libraries in dependency
+  // order, borrowing the first voice's RAM as scratch (see ABI.md).
   void Init(
       const PlaitsRegion& region,
       const PlaitsBlobServices* services,
