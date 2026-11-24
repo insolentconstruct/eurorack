@@ -1033,6 +1033,9 @@ void MonitorStateChange() {
     transition.Pause();
     oliverb_mode = wants_oliverb;
     if (oliverb_mode) {
+      if (background_buffer_backup.busy()) {
+        background_buffer_backup.Process(false);
+      }
       if (active_processor_mode == PROCESSOR_ABYSS) {
         processor.Configure(media, normalization_detector.mono());
         oliverb_restore_pending = true;
@@ -1092,6 +1095,10 @@ void MonitorStateChange() {
     transition.Pause();
     oliverb_mode = false;
     active_processor_mode = wanted_processor;
+    if (active_processor_mode == PROCESSOR_ABYSS &&
+        background_buffer_backup.busy()) {
+      background_buffer_backup.Process(false);
+    }
     processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
     if (active_processor_mode != PROCESSOR_GRANULAR) {
       background_buffer_backup.Init(&processor, &settings);
@@ -1162,7 +1169,8 @@ void MonitorStateChange() {
     Processor::Media media = Processor::Media(settings.state().media);
     bool mono = normalization_detector.mono();
     bool media_changed = media != processor.media();
-    bool mono_changed = mono != processor.mono();
+    bool mono_changed = active_processor_mode != PROCESSOR_ABYSS &&
+        mono != processor.mono();
     
     if (synth_mode || mono_changed || media_changed) {
       if (!transition.Fade()) {
