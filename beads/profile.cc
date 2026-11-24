@@ -955,6 +955,13 @@ bool Profile::Parse(const volatile uint8_t* b) {
     pages[e.page_slot] = amounts[e.amount_slot] = actions[e.action] = true;
     entries_[id] = e;
   }
+  // Plaits and Rings need [A]+FREEZE for their bank or polyphony.
+  const ProfileEntry& synth = entries_[FEATURE_SYNTH];
+  if (entries_[FEATURE_SYNTH_START].action == ACTION_FREEZE &&
+      (synth.state == PROFILE_ADJUSTABLE ||
+          (synth.state == PROFILE_FIXED && synth.value))) {
+    return false;
+  }
   // Another FEEDBACK amount needs manual gain moved or fixed.
   if (!HasScale(entries_[FEATURE_PITCH].value) ||
       (amounts[AMOUNT_FEEDBACK] &&

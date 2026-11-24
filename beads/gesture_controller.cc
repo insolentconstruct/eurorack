@@ -183,10 +183,14 @@ void GestureController::StepRingsPolyphony() {
 }
 
 bool GestureController::DoAction(uint8_t slot) {
-  const ProfileFeature feature = settings_->profile().Action(slot);
-  // While Rings or Plaits plays, [A]+FREEZE steps its polyphony or bank
-  // unless Synth start is there; otherwise the profile's action runs.
-  if (slot == ACTION_FREEZE && ui_->synth_mode_ && feature != FEATURE_SYNTH_START) {
+  const bool fallback = settings_->synth() == SYNTH_BEADS &&
+      ui_->playing_synth_ == SYNTH_PLAITS &&
+      !(ui_->playable_synths_ & (1 << SYNTH_BEADS));
+  const ProfileFeature feature = fallback && slot == ACTION_HOLD
+      ? FEATURE_SYNTH_START : settings_->profile().Action(slot);
+  // A missing wavetable leaves the fallback bank and start gesture available.
+  if (slot == ACTION_FREEZE && ui_->synth_mode_ &&
+      (fallback || feature != FEATURE_SYNTH_START)) {
     if (ui_->playing_synth_ == SYNTH_RINGS) {
       StepRingsPolyphony();
       return true;

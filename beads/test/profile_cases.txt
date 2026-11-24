@@ -51,3 +51,7 @@ reject feedback-amount-gain-off : 12 2 0 0 3 0
 reject pitch-scale-not-in-bank : 1 1 10 0 0 0
 reject bad-checksum crc : 2 1 1 0 0 0
 reject other-format format=2 : 2 1 1 0 0 0
+accept synth-start-freeze-beads-only : 7 1 0 0 0 0, 9 1 1 0 0 2
+reject synth-start-freeze-plaits : 7 1 1 0 0 0, 9 1 1 0 0 2
+reject synth-start-freeze-rings : 7 1 2 0 0 0, 9 1 1 0 0 2
+reject synth-start-freeze-selectable : 7 2 0 8 0 0, 9 2 0 9 0 2
