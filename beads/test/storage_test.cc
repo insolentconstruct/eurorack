@@ -458,8 +458,8 @@ void TestStateTerminator() {
     CHECK(SameState(s, saved));
     CHECK(SameCalibration(s, calibration));
     CHECK(Unchanged(snapshot));
-    // Saves append up to the damaged word, then start the sector over.
-    for (int j = 0; j < unread[i] - 11; ++j) {
+    // Rewrite before the next save would expose the damaged word to stock.
+    for (int j = 0; j < unread[i] - 12; ++j) {
       s.mutable_state()->gain = uint8_t(100 + j);
       s.SaveState();
     }
