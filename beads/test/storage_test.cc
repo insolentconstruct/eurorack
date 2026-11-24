@@ -1116,7 +1116,7 @@ void TestSavedFeatures() {
     // Saved: the options a user changes, Monophonic aside (stock State).
     const bool second_word = i == FEATURE_RESONATOR ||
         i == FEATURE_RESONATOR_MATERIAL || i == FEATURE_RESONATOR_RING ||
-        i == FEATURE_RINGS_POLYPHONY;
+        i == FEATURE_RINGS_POLYPHONY || i == FEATURE_GAIN_CEILING;
     const bool unsaved = kFeatureDefinitions[i].field == kNoField ||
         kFeatureDefinitions[i].field == kReservedField;
     CHECK(!kRecordOffsets[i] == (unsaved &&
