@@ -45,6 +45,11 @@ struct PersistentData {
   AdcCalibrationData adc_calibration[CV_ADC_CHANNEL_LAST];
   uint8_t padding[72];
   enum { tag = 0x494C4143 };  // CALI
+
+  bool SameCalibration(const PersistentData& other) const {
+    return !memcmp(adc_calibration, other.adc_calibration,
+        sizeof(adc_calibration));
+  }
 };
 
 struct State {

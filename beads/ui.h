@@ -160,6 +160,10 @@ class Ui {
   }
   
  private:
+  bool chord_modifier(Switch button) const {
+    return switches_.pressed(button) && !suppressed_press_[button];
+  }
+
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
 
@@ -177,6 +181,7 @@ class Ui {
   uint32_t press_time_[SWITCH_LAST];
   static const uint32_t long_press_duration[SWITCH_LAST];
   bool ignore_release_[SWITCH_LAST];
+  bool suppressed_press_[SWITCH_LAST];
   Mode mode_;
   
   bool trim_flag_;

@@ -73,6 +73,7 @@ void Ui::Init(
   
   fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
+  fill(&suppressed_press_[0], &suppressed_press_[SWITCH_LAST], false);
   
   freeze_button_state_ = false;
   freeze_led_state_ = false;
@@ -122,6 +123,7 @@ void Ui::Poll() {
       }
       press_time_[i] = system_clock.milliseconds();
       ignore_release_[i] = !accept_switch_events;
+      suppressed_press_[i] = !accept_switch_events;
     }
     
     if (switches_.pressed(s) && !ignore_release_[i]) {
@@ -305,7 +307,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // SEED + FREEZE = seed lock.
   //
-  if (switches_.pressed(SWITCH_SEED) && e.control_id == SWITCH_FREEZE) {
+  if (chord_modifier(SWITCH_SEED) && e.control_id == SWITCH_FREEZE) {
     seed_button_locked_ = true;
     seed_button_state_ = false;
     ignore_release_[SWITCH_SEED] = ignore_release_[SWITCH_FREEZE] = true;
@@ -316,7 +318,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + SEED = toggle gate output mode.
   //
-  if (switches_.pressed(SWITCH_ASSIGN) && e.control_id == SWITCH_SEED) {
+  if (chord_modifier(SWITCH_ASSIGN) && e.control_id == SWITCH_SEED) {
     State* state = settings_->mutable_state();
     state->gate_output_mode = !state->gate_output_mode;
     settings_->SaveState();
@@ -331,12 +333,15 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + FREEZE = toggle autosave.
   //
-  if (switches_.pressed(SWITCH_ASSIGN) && e.control_id == SWITCH_FREEZE) {
+  if (chord_modifier(SWITCH_ASSIGN) && e.control_id == SWITCH_FREEZE) {
     State* state = settings_->mutable_state();
     state->disable_autosave = !state->disable_autosave;
     settings_->SaveState();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
+    }
+    if (mode_ == MODE_CALIBRATION_1) {
+      calibrator_->ResumeNormalization();
     }
     mode_ = MODE_DISPLAY_AUTOSAVE;
     ignore_release_[SWITCH_ASSIGN] = ignore_release_[SWITCH_FREEZE] = true;
@@ -348,7 +353,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Media + SEED = toogle monophonic mode.
   //
-  if (switches_.pressed(SWITCH_MEDIA) && e.control_id == SWITCH_SEED) {
+  if (chord_modifier(SWITCH_MEDIA) && e.control_id == SWITCH_SEED) {
     State* state = settings_->mutable_state();
     state->monophonic_mode = !state->monophonic_mode;
     settings_->SaveState();
@@ -361,7 +366,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Media + FREEZE = trim the buffer and unfreeze.
   //
-  if (switches_.pressed(SWITCH_MEDIA) && \
+  if (chord_modifier(SWITCH_MEDIA) && \
       e.control_id == SWITCH_FREEZE) {
     trim_flag_ = true;
     freeze_button_state_ = false;
@@ -375,8 +380,8 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + Media = calibration mode.
   //
-  if ((e.control_id == SWITCH_ASSIGN && switches_.pressed(SWITCH_MEDIA)) || \
-      (e.control_id == SWITCH_MEDIA && switches_.pressed(SWITCH_ASSIGN))) {
+  if ((e.control_id == SWITCH_ASSIGN && chord_modifier(SWITCH_MEDIA)) || \
+      (e.control_id == SWITCH_MEDIA && chord_modifier(SWITCH_ASSIGN))) {
     mode_ = MODE_CALIBRATION_1;
     calibrator_->Start();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {

@@ -97,6 +97,8 @@ class Calibrator {
     normalization_detector_->Stop();
   }
   
+  inline void ResumeNormalization() { normalization_detector_->Start(); }
+
   inline void CalibrateOffsets() {
     for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
       if (i != CV_ADC_CHANNEL_PITCH && i != CV_ADC_CHANNEL_DENSITY) {
@@ -104,7 +106,7 @@ class Calibrator {
             cv_reader_->unscaled_cv(CvAdcChannel(i));
       }
     }
-    normalization_detector_->Start();
+    ResumeNormalization();
   }
   
   inline bool Calibrate(CvAdcChannel channel, int step, float expected_value) {

@@ -69,7 +69,7 @@ class Codec {
   
   bool Init();
   bool Start(int32_t sample_rate, size_t block_size, FillBufferCallback callback = NULL);
-  // Changes the sample rate with the converter held in reset.
+  // Starts under reset. The previous rate is zero if clocks are stopped.
   bool Restart(
       int32_t previous_sample_rate,
       int32_t sample_rate,
@@ -89,6 +89,7 @@ class Codec {
   bool InitializeCodec(int32_t sample_rate);
   bool InitializeDMA();
   bool InitializeGPIODMA();
+  bool StartDma(size_t block_size);
 
   static Codec* instance_;
 

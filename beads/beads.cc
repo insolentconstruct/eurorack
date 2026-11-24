@@ -100,13 +100,17 @@ void SysTick_Handler() {
 // the AGC while the normalization detection system is still catching up with
 // a codec restart.
 int codec_transition_frames;
-// The rate the converter runs at; 0 before its first start.
+// The running rate, or 0 while stopped.
 int codec_sample_rate;
+int codec_retry_sample_rate;
+Codec::FillBufferCallback codec_retry_callback;
+uint32_t codec_retry_time;
 // Set by main before it restarts the codec: the output fades out first.
 volatile bool codec_fade;
 volatile float codec_fade_gain;
 float codec_fade_previous_gain;
 bool synth_mode;
+bool synth_fade;
 int synth_mode_start_time;
 
 GateFlags previous_seed;
@@ -330,9 +334,22 @@ void Process(
   }
 }
 
+void StartCodec(int sr, Codec::FillBufferCallback callback) {
+  const bool started = codec_sample_rate || codec_retry_sample_rate
+      ? codec.Restart(codec_sample_rate, sr, sr / kBlockRate, callback)
+      : codec.Start(sr, sr / kBlockRate, callback);
+  codec_sample_rate = started ? sr : 0;
+  codec_retry_sample_rate = started ? 0 : sr;
+  if (!started) {
+    codec_retry_callback = callback;
+    codec_retry_time = system_clock.milliseconds();
+  }
+}
+
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
   synth_mode = new_synth_mode;
+  synth_fade = false;
   synth_mode_start_time = 0;
 
   gain_control.Init(
@@ -353,12 +370,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
     codec.Resume(&Process);
     return;
   }
-  if (codec_sample_rate) {
-    codec.Restart(codec_sample_rate, sr, sr / kBlockRate, &Process);
-  } else {
-    codec.Start(sr, sr / kBlockRate, &Process);
-  }
-  codec_sample_rate = sr;
+  StartCodec(sr, &Process);
 }
 
 void Init() {
@@ -374,6 +386,8 @@ void Init() {
   dwt_calibration::Init();
 #endif  // DWT_CALIBRATION
   codec_sample_rate = 0;
+  codec_retry_sample_rate = 0;
+  synth_fade = false;
   codec_fade = false;
   codec_fade_gain = 1.0f;
   codec_fade_previous_gain = 1.0f;
@@ -409,8 +423,7 @@ void Init() {
     factory_test.Start();
     ui.set_factory_test(true);
     normalization_detector.Init(2);
-    codec_sample_rate = 48000;
-    codec.Start(48000, 48000 / kBlockRate, &FactoryTest::ProcessFn);
+    StartCodec(48000, &FactoryTest::ProcessFn);
   } else {
 #ifdef PROFILE_INTERRUPT
     DebugPin::Init();
@@ -437,7 +450,14 @@ bool FadedOut() {
 }
 
 void MonitorStateChange() {
+  if (codec_retry_sample_rate) {
+    if (system_clock.milliseconds() - codec_retry_time >= 100) {
+      StartCodec(codec_retry_sample_rate, codec_retry_callback);
+    }
+    return;
+  }
   if (ui.should_ignore_state_change() || codec_transition_frames) {
+    synth_fade = false;
     synth_mode_start_time = 0;
     codec_fade = false;
     return;
@@ -445,22 +465,25 @@ void MonitorStateChange() {
   
   if (normalization_detector.no_input()) {
     if (!synth_mode) {
-      if (!synth_mode_start_time) {
+      if (synth_fade || (synth_mode_start_time &&
+          system_clock.milliseconds() - synth_mode_start_time >= 10000)) {
+        // Finish the fade once the quiet interval has elapsed.
+        synth_fade = true;
+        if (!FadedOut()) {
+          return;
+        }
+        if (background_buffer_backup.busy()) {
+          background_buffer_backup.Process(false);
+        }
+        codec.Pause();
+        ConfigureAndStartCodec(true, true);
+      } else if (!synth_mode_start_time) {
         synth_mode_start_time = system_clock.milliseconds();
         if (!synth_mode_start_time) synth_mode_start_time = 1;
-      } else {
-        if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
-          // If 10 seconds have elapsed with nothing patched in the audio
-          // inputs, enable the synth mode.
-          if (!FadedOut()) {
-            return;
-          }
-          codec.Pause();
-          ConfigureAndStartCodec(true, true);
-        }
       }
     }
   } else {
+    synth_fade = false;
     // Awful block of code to troubleshoot glitches related to changes of
     // sample rate and more general codec settings.
     //

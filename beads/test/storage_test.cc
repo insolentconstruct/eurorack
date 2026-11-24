@@ -331,13 +331,6 @@ void TestCalibrationFromMirror() {
     CHECK(SameCalibration(s, calibration));
     CHECK(SameState(s, saved));
     CHECK(StockLoads(calibration, saved));
-    // Out of range in both copies: loaded as stock loads it.
-    Setup(wild, 5);
-    Take(&snapshot);
-    Settings both;
-    CHECK(both.Init(false) && !both.write_locked());
-    CHECK(SameCalibration(both, wild));
-    CHECK(Unchanged(snapshot));
   }
 }
 
@@ -460,6 +453,78 @@ void TestCalibrationLost() {
       CHECK(Unchanged(snapshot));
     }
   }
+}
+
+void TestImplausibleCalibrationWithoutMirror() {
+  test_checker.Start("TestImplausibleCalibrationWithoutMirror");
+  const State defaults = Defaults();
+  for (int nan = 0; nan < 2; ++nan) {
+    PersistentData wild = Factory();
+    wild.adc_calibration[CV_ADC_CHANNEL_PITCH].offset =
+        nan ? __builtin_nanf("") : 84.0f;
+    for (int mirror = 0; mirror < 2; ++mirror) {
+      Setup(wild, 5);
+      if (!mirror) {
+        static uint8_t blank[kSectorSize];
+        memset(blank, 255, sizeof(blank));
+        Poke(kMirror, blank, sizeof(blank));
+      }
+      Take(&snapshot);
+      Settings s;
+      CHECK(s.Init(false) && s.write_locked());
+      CHECK(SameState(s, defaults));
+      CHECK(SameCalibration(s, Factory()));
+      s.SaveState();
+      CHECK(Unchanged(snapshot));
+
+      Settings repair;
+      CHECK(repair.Init(true) && !repair.write_locked());
+      CHECK(repair.repair() == STORAGE_REPAIR_CALIBRATION_RESET);
+      CHECK(StockLoads(Factory(), defaults));
+    }
+  }
+}
+
+void TestFactoryPrimaryInterruptedRecalibration() {
+  test_checker.Start("TestFactoryPrimaryInterruptedRecalibration");
+  Defaults();
+  uint8_t factory[kCalibrationChunk];
+  Peek(factory, kSector, sizeof(factory));
+  const PersistentData old_calibration = Calibration(0.1f);
+  const PersistentData new_calibration = Calibration(-0.1f);
+  for (int cut = 0; cut <= 16; ++cut) {
+    Setup(old_calibration, 5);
+    Poke(kSector, factory, sizeof(factory));
+    TestFlashBudget() = 0;
+    Settings s;
+    CHECK(s.Init(false));
+    CHECK(SameCalibration(s, old_calibration));
+    *s.mutable_persistent_data() = new_calibration;
+    TestFlashBudget() = cut;
+    s.SavePersistentData();
+    TestFlashBudget() = -1;
+
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(
+        loaded, cut <= 10 ? old_calibration : new_calibration));
+  }
+}
+
+void TestAppendAfterBlankGap() {
+  test_checker.Start("TestAppendAfterBlankGap");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 3);
+  uint8_t blank[kStateChunk];
+  memset(blank, 255, sizeof(blank));
+  Poke(StateChunk(3), blank, sizeof(blank));
+
+  Settings s;
+  CHECK(s.Init(false) && !s.write_locked());
+  CHECK(s.state().gain == 1);
+  s.mutable_state()->gain = 99;
+  s.SaveState();
+  CHECK(StockLoads(calibration, s.state()));
 }
 
 void TestStateTerminator() {
@@ -1345,6 +1410,19 @@ void TestFailedErase() {
   }
 }
 
+void TestRetryIncompleteErase() {
+  test_checker.Start("TestRetryIncompleteErase");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 5);
+  Settings s;
+  CHECK(s.Init(false));
+  const uint32_t erases = TestFlashErases();
+  TestFlashStuckErases() = 1;
+  CHECK(s.SavePersistentData());
+  CHECK(TestFlashErases() == erases + 2);
+  CHECK(StockLoads(calibration, s.state()));
+}
+
 void TestNonBlankSlot() {
   test_checker.Start("TestNonBlankSlot");
   // A record is never programmed over a free chunk that isn't blank.
@@ -1452,6 +1530,9 @@ int main() {
   TestRestoredCalibrationChoice();
   TestFactoryCalibrationGuard();
   TestCalibrationLost();
+  TestImplausibleCalibrationWithoutMirror();
+  TestFactoryPrimaryInterruptedRecalibration();
+  TestAppendAfterBlankGap();
   TestStateTerminator();
   TestInterruptedAppend();
   TestInterruptedRewrite();
@@ -1470,6 +1551,7 @@ int main() {
   TestCalibrationSavePrecedence();
   TestStaleErrorFlag();
   TestFailedErase();
+  TestRetryIncompleteErase();
   TestNonBlankSlot();
   TestFailedProgram();
   TestMatchesStmlib();

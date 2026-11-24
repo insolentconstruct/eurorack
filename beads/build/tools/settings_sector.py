@@ -63,13 +63,21 @@ def read_chunk(sector, address, tag, size):
     return data
 
 
-def parse(sector):
-    """Returns the calibration and the latest settings, as the firmware loads them."""
+def check_size(sector):
     if len(sector) != SECTOR_SIZE:
         raise ValueError("a dump is %d bytes, not %d" % (len(sector), SECTOR_SIZE))
+
+
+def read_calibration(sector):
+    check_size(sector)
     calibration = read_chunk(sector, 0, CALI, CALI_SIZE)
     if calibration is None:
         raise ValueError("no valid calibration record: the firmware would not read this dump")
+    return calibration
+
+
+def read_state(sector):
+    check_size(sector)
     state = None
     address = CALI_CHUNK
     while address + STATE_CHUNK <= SECTOR_SIZE:
@@ -80,7 +88,23 @@ def parse(sector):
         address += STATE_CHUNK
     if state is None:
         raise ValueError("no valid settings record: the firmware would not read this dump")
-    return calibration, state
+    return state
+
+
+def parse(sector):
+    """Returns the calibration and the latest settings, as the firmware loads them."""
+    return read_calibration(sector), read_state(sector)
+
+
+def plausible_for_tuneup(calibration):
+    factory = struct.unpack("<12f", struct.pack(
+        "<12f", -2, 1, -2, 1, -120, 60, -3.2, 1.6, -3.2, 1.6, -3.2, 1.6))
+    values = struct.unpack_from("<12f", calibration)
+    for value, reference in zip(values, factory):
+        ratio, = struct.unpack("<f", struct.pack("<f", value / reference))
+        if not 0.75 <= ratio <= 1.25:
+            return False
+    return True
 
 
 def build(calibration, state):
@@ -99,9 +123,9 @@ def main(argv):
     parser.add_argument("out", help="image to write (must not exist)")
     args = parser.parse_args(argv)
     with open(args.calibration, "rb") as f:
-        calibration, _ = parse(f.read())
+        calibration = read_calibration(f.read())
     with open(args.settings, "rb") as f:
-        _, state = parse(f.read())
+        state = read_state(f.read())
     image = build(calibration, state)
     if parse(erased(image)) != (calibration, state):
         raise ValueError("the image does not read back")
@@ -111,6 +135,9 @@ def main(argv):
     print("calibration from %s (PITCH scale %.4f, offset %.4f)" % (
             args.calibration, pitch_scale, pitch_offset))
     print("settings from %s" % args.settings)
+    if not plausible_for_tuneup(calibration):
+        print("settings_sector.py: calibration is outside the Tuneup range. "
+              "Tuneup needs a usable mirror or enters storage recovery.", file=sys.stderr)
     print("wrote %s" % args.out)
     return 0
 

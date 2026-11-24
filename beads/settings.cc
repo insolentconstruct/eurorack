@@ -87,14 +87,14 @@ bool Settings::Init(bool recovery_mode) {
   const bool lost = status == STORAGE_CALIBRATION_LOST;
   const bool loaded = status == STORAGE_OK || status == STORAGE_RESTORED;
   if ((lost || loaded) && ReadPreferredMirror(loaded, &persistent_data_)) {
-    if (recovery_mode) {
-      state_ = defaults;
-    }
     status = STORAGE_RESTORED;
-  } else if (lost) {
+  } else if (lost || (loaded && !chunk_storage_.Usable(persistent_data_))) {
     status = STORAGE_DAMAGED;
   }
   if (status == STORAGE_RESTORED) {
+    if (recovery_mode) {
+      state_ = defaults;
+    }
     chunk_storage_.SavePersistentData();
   }
   
@@ -146,14 +146,12 @@ bool Settings::ReadPreferredMirror(
   const bool implausible = calibration_valid &&
       !CalibrationPlausible(*data, factory_);
   const bool factory_values = calibration_valid &&
-      !memcmp(data->adc_calibration, factory_.adc_calibration,
-          sizeof(data->adc_calibration));
+      data->SameCalibration(factory_);
   PersistentData mirror;
   if ((!calibration_valid || implausible || factory_values) &&
       chunk_storage_.ReadMirror(&mirror) &&
       CalibrationPlausible(mirror, factory_) &&
-      (!factory_values || memcmp(mirror.adc_calibration,
-          factory_.adc_calibration, sizeof(mirror.adc_calibration)))) {
+      (!factory_values || !mirror.SameCalibration(factory_))) {
     *data = mirror;
     return true;
   }
