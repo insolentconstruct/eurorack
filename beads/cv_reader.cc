@@ -86,6 +86,12 @@ void CvReader::Init(const Settings* settings) {
       &c[CV_ADC_CHANNEL_SHAPE].offset);
 }
 
+void CvReader::UseFineTimeCv(const AdcCalibrationData& calibration) {
+  RefreshFineTimeCv(calibration);
+  cv_channel_[CV_ADC_CHANNEL_TIME].Init(
+      0.5f, -0.2f, 0.2f, &fine_time_cv_.scale, &fine_time_cv_.offset);
+}
+
 void CvReader::Read() {
   for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
     cv_channel_[i].Process(cv_.value(CvAdcChannel(i)));

@@ -53,7 +53,8 @@
     {"id": 51, "symbol": "OUTPUT_DIVISION", "values": ["Stock", "/2", "/4", "/8", "/16"]},
     {"id": 52, "symbol": "GAIN_CEILING", "values": ["Stock (+32 dB)", "+24 dB", "+18 dB", "+12 dB"]},
     {"id": 53, "symbol": "MANUAL_DELAY", "values": ["Off", "On"]},
-    {"id": 54, "symbol": "REVERB_DECAY", "values": ["Coupled (stock)", "Short", "Medium", "Long"]}
+    {"id": 54, "symbol": "REVERB_DECAY", "values": ["Coupled (stock)", "Short", "Medium", "Long"]},
+    {"id": 55, "symbol": "TIME_CV_RANGE", "values": ["Stock", "Fine (1/8)"]}
   ],
   "records": [
     {"version": 1, "saved": [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13], [7, 14], [8, 15], [9, 16], [10, 17], [11, 18], [12, 19], [18, 20], [21, 21], [23, 22], [31, 23], [41, 24], [43, 25], [44, 26], [42, 27], [52, 28]]}

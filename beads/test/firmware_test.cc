@@ -1896,6 +1896,66 @@ void BootWithProfile(Rig* r, const uint8_t* pairs, size_t count) {
   FlashProfile(factory_profile);
 }
 
+void TestFineTimeCvProfile() {
+  test_checker.Start("TestFineTimeCvProfile");
+  Rig r(false, false);
+  const uint8_t time_cv_range = 55;
+  for (uint8_t value = 0; value < 2; ++value) {
+    const uint8_t pair[] = { time_cv_range, value };
+    BootWithProfile(&r, pair, 1);
+    CHECK(!settings.profile_locked());
+    r.cv_patched[CV_ADC_CHANNEL_TIME] = true;
+    r.cv_patched[CV_ADC_CHANNEL_SIZE] = true;
+    const uint16_t steps[] = { 16384, 32768, 49152 };
+    for (size_t i = 0; i < sizeof(steps) / sizeof(steps[0]); ++i) {
+      r.cv[CV_ADC_CHANNEL_TIME] = r.cv[CV_ADC_CHANNEL_SIZE] = steps[i];
+      r.Tick(16, true);
+      const AdcCalibrationData* c = settings.persistent_data().adc_calibration;
+      const float raw = float(steps[i]) / 65536.0f;
+      const float time = raw * c[CV_ADC_CHANNEL_TIME].scale +
+          c[CV_ADC_CHANNEL_TIME].offset;
+      const float size = raw * c[CV_ADC_CHANNEL_SIZE].scale +
+          c[CV_ADC_CHANNEL_SIZE].offset;
+      CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_TIME) -
+          time * (value ? 0.125f : 1.0f)) < 1.0e-6f);
+      CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_SIZE) - size) < 1.0e-6f);
+    }
+    const float previous = cv_reader.cv(CV_ADC_CHANNEL_TIME);
+    calibrator.Start();
+    normalization_detector.Start();
+    AdcCalibrationData& c =
+        calibrator.calibration_data_[CV_ADC_CHANNEL_TIME];
+    c.offset += 0.0625f;
+    CHECK(calibrator.Save());
+    r.Tick(16, true);
+    CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_TIME) - previous -
+        0.0625f * (value ? 0.125f : 1.0f)) < 1.0e-6f);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.persistent_data().adc_calibration[CV_ADC_CHANNEL_TIME].
+        offset == c.offset);
+    calibrator.Start();
+    normalization_detector.Start();
+    c.offset += 0.0625f;
+    TestFlash().supply_low = true;
+    CHECK(!calibrator.Save());
+    TestFlash().supply_low = false;
+    r.Tick(16, true);
+    CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_TIME) - previous -
+        0.0625f * (value ? 0.125f : 1.0f)) < 1.0e-6f);
+    r.cv[CV_ADC_CHANNEL_TIME] = 0;
+    r.Tick(16, true);
+    CHECK(cv_reader.cv(CV_ADC_CHANNEL_TIME) == (value ? 0.2f : 1.6f));
+    calibrator.Start();
+    normalization_detector.Start();
+    c.scale = -3.4f;
+    CHECK(calibrator.Save());
+    r.cv[CV_ADC_CHANNEL_TIME] = 65535;
+    r.Tick(16, true);
+    CHECK(cv_reader.cv(CV_ADC_CHANNEL_TIME) == (value ? -0.2f : -1.6f));
+  }
+}
+
 // Loads the factory profile plus Fixed entries, as feature/value pairs.
 void FixedFeaturesProfile(const uint8_t* pairs, size_t count) {
   uint8_t block[kProfileSize];
@@ -4250,6 +4310,7 @@ int main() {
   TestStorageRepair();
   TestFailedBufferLoad();
   TestCallbackCvRouting();
+  TestFineTimeCvProfile();
   TestPitchChain();
   TestQuantizedPitchChain();
   TestRandomIntervalsChain();

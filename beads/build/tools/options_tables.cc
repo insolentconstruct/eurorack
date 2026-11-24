@@ -95,6 +95,7 @@ const char* const kOptionNames[] = {
   "Gain ceiling",
   "Manual delay toggle",
   "Reverb decay",
+  "TIME CV range",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.
