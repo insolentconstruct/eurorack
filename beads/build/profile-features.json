@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4297b65d15cc59ca90a8fc96d2d9f9ca3bdc1b623ab86b2702474885ef153365",
+  "manifest_sha256": "a2d397a4e5c95bc23cb60ef498a90d58f89c2e909f3f4db358c435a9588788df",
   "record_version": 1,
   "features": [
     {
@@ -182,7 +182,9 @@
       "name": "Processor",
       "values": [
         "Granular (Stock)",
-        "Spectral"
+        "Spectral",
+        "Reserved",
+        "Abyss"
       ],
       "states": [
         "Off",

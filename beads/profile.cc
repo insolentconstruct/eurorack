@@ -37,7 +37,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 16, 0, true, false, false, false },  // Pitch.
   { 2, 1, true, false, true, false },  // Reverb.
   { 3, 2, true, false, false, false },  // Delay.
-  { 2, 3, true, false, true, false },  // Processor.
+  { 4, 3, true, false, true, false },  // Processor.
   { 3, 4, true, false, false, false },  // Limiter.
   { 2, 5, true, false, true, false },  // Frozen.
   { 3, 6, true, false, true, false },  // Synth.

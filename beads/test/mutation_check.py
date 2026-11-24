@@ -40,6 +40,10 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
+  ('TestAbyss', 'abyss', 'beads/dsp/fx/abyss.cc',
+    'frozen_ * tap;', 'frozen_ * 0.95f * tap;'),
+  ('TestAbyss', 'abyss', 'beads/dsp/fx/abyss.cc',
+    'const float inverse = bloom * cutoff;', 'const float inverse = bloom + 0.0f * cutoff;'),
   ('TestSendMix', 'mix', 'beads/dsp/processor_options.cc',
     'stereo_delay_line_.Write(s, *freeze);\n      if (grain_triggers)',
     'stereo_delay_line_.Write(s * 0.0f, *freeze);\n      if (grain_triggers)'),
@@ -69,13 +73,13 @@ cases = [
     'if (new_profile && start_quality && !restores) {',
     'if (new_profile && start_quality && (restores || true)) {'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      !spectral();',
+    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      processor_mode() == PROCESSOR_GRANULAR;',
     'const bool restores = state_.frozen;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      !spectral();',
-    'const bool restores = state_.frozen && !spectral();'),
+    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      processor_mode() == PROCESSOR_GRANULAR;',
+    'const bool restores = state_.frozen && processor_mode() == PROCESSOR_GRANULAR;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      !spectral();',
+    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      processor_mode() == PROCESSOR_GRANULAR;',
     'const bool restores = state_.frozen && !state_.disable_autosave;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
     'if (new_profile && start_quality && !restores) {',

@@ -77,7 +77,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_SCALE,  // Pitch.
   PAGE_CONTROL_HALVES,  // Reverb.
   PAGE_CONTROL_ZONES,  // Delay.
-  PAGE_CONTROL_HALVES,  // Processor.
+  PAGE_CONTROL_STEPS,  // Processor.
   PAGE_CONTROL_ZONES,  // Limiter.
   PAGE_CONTROL_HALVES,  // Frozen.
   PAGE_CONTROL_ZONES,  // Synth.
@@ -142,6 +142,7 @@ const OptionValue kOptionValues[] = {
   { FEATURE_PITCH, 7, { 0, 220, 160 }, PULSE_STEADY },
   { FEATURE_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
   { FEATURE_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
+  { FEATURE_PROCESSOR, 3, { 32, 96, 255 }, PULSE_STEADY },
   { FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR, 3, { 255, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 3, { 0, 255, 0 }, PULSE_SLOW },
@@ -399,6 +400,13 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
               ? PlayableSynth(pot, zone_[i], *value) : zone_[i];
           break;
         case PAGE_CONTROL_STEPS:
+          if (setting == FEATURE_PROCESSOR) {
+            const ProcessorMode modes[] = {
+              PROCESSOR_GRANULAR, PROCESSOR_ABYSS, PROCESSOR_SPECTRAL
+            };
+            *value = modes[zone_[i]];
+            break;
+          }
           {
             // Equal steps, each held a little past its edge.
             const int last = kFeatureDefinitions[setting].values - 1;

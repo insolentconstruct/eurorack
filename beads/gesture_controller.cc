@@ -211,7 +211,8 @@ bool GestureController::DoAction(uint8_t slot) {
     ui_->freeze_button_state_ = false;
     return true;
   } else if (feature == FEATURE_SYNTH_START &&
-      settings_->self_play_on_request() && !ui_->spectral_ && ui_->no_input_ &&
+      settings_->self_play_on_request() &&
+      ui_->processor_mode() == PROCESSOR_GRANULAR && ui_->no_input_ &&
       !ui_->should_ignore_state_change()) {
     self_play_requested_ = true;
     return true;

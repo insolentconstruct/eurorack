@@ -97,13 +97,15 @@
       "name": "Processor",
       "values": [
         {"name": "Granular (Stock)", "led": [0, 255, 0]},
-        {"name": "Spectral", "led": [255, 255, 0]}
+        {"name": "Spectral", "led": [255, 255, 0]},
+        {"name": "Reserved", "led": [255, 0, 0]},
+        {"name": "Abyss", "led": [32, 96, 255]}
       ],
       "field": 3,
       "saved": 11,
       "states": ["Off", "Fixed", "Adjustable"],
       "page": true,
-      "page_control": "halves",
+      "page_control": "steps",
       "amount": false,
       "actions": [1, 2],
       "stateless": false,

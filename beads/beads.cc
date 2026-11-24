@@ -35,6 +35,7 @@
 #include "beads/drivers/seed_input.h"
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
+#include "beads/dsp/fx/abyss.h"
 #include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/rings_synth.h"
 #ifdef PLAITS_BLOBS
@@ -58,8 +59,10 @@ using namespace stmlib;
 
 const bool skip_factory_test = false;
 
-uint8_t delay_buffer_1[512 * 1024] __attribute__ ((section (".ramd1")));
-uint8_t delay_buffer_2[256 * 1024] __attribute__ ((section (".ramd2")));
+uint8_t delay_buffer_1[512 * 1024]
+    __attribute__ ((section (".ramd1"), aligned (4)));
+uint8_t delay_buffer_2[256 * 1024]
+    __attribute__ ((section (".ramd2"), aligned (4)));
 uint16_t reverb_buffer[32768] __attribute__ ((section (".ramd3")));
 
 // Plaits borrows bank 0; Configure clears it before other users return.
@@ -86,7 +89,10 @@ PlaitsRegion plaits_region;
 // What can play, what plays, and which synth's RAM is in bank 0.
 uint8_t playable_synths;
 EngineTransition transition;
+Abyss abyss;
+beads::Limiter abyss_limiter;
 Processor processor;
+uint8_t active_processor_mode;
 SeedInput seed_input;
 Settings settings;
 Synth synth;
@@ -160,7 +166,9 @@ uint8_t seed_latch_mode;
 bool seed_latch_enabled;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-void Process(
+template<bool abyss_mode>
+inline __attribute__((always_inline))
+void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
@@ -208,7 +216,7 @@ void Process(
   bool attack_onset = false;
   if (attack_mode && !transition.blanking() &&
       (!freeze_block || attack_trigger_mode) &&
-      !synth_mode && processor.attack_recording()) {
+      !abyss_mode && !synth_mode && processor.attack_recording()) {
     attack_onset = processor.attack_input()->Process(
         in,
         size,
@@ -242,7 +250,7 @@ void Process(
     previous_seed = GATE_FLAG_LOW;
   }
   ui.set_seed_led_state(seed_block && !transition.blanking());
-  ui.set_overwrite_reserve(synth_mode || processor.spectral()
+  ui.set_overwrite_reserve(abyss_mode || synth_mode || processor.spectral()
       ? 1.0f : processor.overwrite_reserve());
   
   // Conversion of input samples into floats, (with automatic gain control).
@@ -340,7 +348,7 @@ void Process(
   }
 
   if (ui.trim_flag()) {
-    if (!processor.spectral()) {
+    if (!abyss_mode && !processor.spectral()) {
       processor.Trim();
     }
     ui.ClearTrimFlag();
@@ -348,14 +356,16 @@ void Process(
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
   const bool requested_style = ui.clouds_style();
-  const bool engine_change = ui.spectral() != processor.spectral() &&
+  const int current_mode = abyss_mode ? int(PROCESSOR_ABYSS)
+      : int(processor.spectral());
+  const bool engine_change = ui.processor_mode() != current_mode &&
       !ui.should_ignore_state_change();
   if (transition.Hold(requested_style, engine_change, &processor, &synth,
       &plaits_synth, &rings_synth, out, size)) {
     return;
   }
 #ifdef DWT_CALIBRATION
-  if (dwt_calibration::stats.synthetic) {
+  if (!abyss_mode && dwt_calibration::stats.synthetic) {
     dwt_calibration::PrepareSynthetic(
         &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
@@ -366,11 +376,12 @@ void Process(
 #endif  // DWT_CALIBRATION
   processor.set_output_limiter_mode(ui.output_limiter_mode());
   synth.set_output_limiter_mode(ui.output_limiter_mode());
-  if (synth_mode && transition.playing_synth() == SYNTH_SILENT) {
+  if (!abyss_mode && synth_mode && transition.playing_synth() == SYNTH_SILENT) {
     FloatFrame silence;
     silence = 0.0f;
     fill(&float_out[0], &float_out[size], silence);
-  } else if (synth_mode && transition.playing_synth() == SYNTH_RINGS) {
+  } else if (!abyss_mode && synth_mode &&
+      transition.playing_synth() == SYNTH_RINGS) {
     rings_synth.set_output_limiter_mode(ui.output_limiter_mode());
     rings_synth.set_pitch_scale(ui.pitch_scale());
     rings_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -388,7 +399,8 @@ void Process(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
-  } else if (synth_mode && transition.playing_synth() == SYNTH_PLAITS) {
+  } else if (!abyss_mode && synth_mode &&
+      transition.playing_synth() == SYNTH_PLAITS) {
     plaits_synth.set_output_limiter_mode(ui.output_limiter_mode());
     plaits_synth.set_pitch_scale(ui.pitch_scale());
     plaits_synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -406,7 +418,7 @@ void Process(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
-  } else if (synth_mode) {
+  } else if (!abyss_mode && synth_mode) {
     synth.set_pitch_scale(ui.pitch_scale());
     synth.set_random_intervals(ui.random_intervals());
     synth.set_stereo_width(stereo_width, ui.stereo_width() != 0);
@@ -424,6 +436,33 @@ void Process(
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
 #endif  // DWT_CALIBRATION
+  } else if (abyss_mode) {
+    Abyss::Controls controls;
+    controls.room = p.time.value();
+    controls.decay = p.size.value();
+    controls.drift = p.shape.value();
+    controls.diffusion = d.value();
+    controls.gravity = m.feedback;
+    controls.pitch = p.pitch.value(NULL, 0, 24.0f, false);
+    CONSTRAIN(controls.pitch, -24.0f, 24.0f);
+    controls.tone = m.reverb_amount;
+    controls.mix = m.dry_wet;
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+    abyss.Process(controls, freeze, float_in, float_out, size);
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
+    abyss_limiter.ProcessOutput(
+        float_out, size, ui.output_limiter_mode(), processor.sample_rate());
+    if (m.output_gate) {
+      for (size_t i = 0; i < size; ++i) {
+        float_out[i].l = (float_out[i].l + float_out[i].r) * 0.5f;
+        float_out[i].r = 0.0f;
+      }
+    }
   } else {
     processor.set_pitch_scale(ui.pitch_scale());
     processor.set_random_intervals(ui.random_intervals());
@@ -470,6 +509,22 @@ void Process(
   }
 }
 
+void Process(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<false>(events, in, out, size);
+}
+
+void ProcessAbyss(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<true>(events, in, out, size);
+}
+
 // Selected only for synth profiles with an output trim.
 void ProcessSynthLevel(
     const Codec::Event* events,
@@ -514,8 +569,14 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  const Codec::FillBufferCallback callback = new_synth_mode &&
-      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
+  Codec::FillBufferCallback callback = &Process;
+  if (active_processor_mode == PROCESSOR_ABYSS) {
+    abyss.Init(delay_buffer_1, delay_buffer_2, float(sr));
+    abyss_limiter.Init(1.0f / (float(sr) * 6.0f), 0.9f);
+    callback = &ProcessAbyss;
+  } else if (new_synth_mode && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
+    callback = &ProcessSynthLevel;
+  }
   transition.Start(sr, callback);
 }
 
@@ -620,8 +681,10 @@ void Init() {
   ready = true;
   
   // A frozen buffer saved by the granular engine stays in flash.
-  processor.set_spectral(ui.spectral());
-  bool was_frozen = !processor.spectral() && background_buffer_backup.Load();
+  active_processor_mode = ui.processor_mode();
+  processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
+  bool was_frozen = active_processor_mode == PROCESSOR_GRANULAR &&
+      background_buffer_backup.Load();
   if (was_frozen) {
     ui.set_freeze_button_state(was_frozen);
     ConfigureAndStartCodec(false, true);
@@ -703,10 +766,12 @@ void MonitorStateChange() {
 
   // Once faded out, swap the engine. This clears the recording; a frozen
   // buffer saved to flash returns with the granular engine.
-  if (ui.spectral() != processor.spectral() && transition.faded_out()) {
+  if (ui.processor_mode() != active_processor_mode &&
+      transition.faded_out()) {
     transition.Pause();
-    processor.set_spectral(ui.spectral());
-    if (processor.spectral()) {
+    active_processor_mode = ui.processor_mode();
+    processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
+    if (active_processor_mode != PROCESSOR_GRANULAR) {
       background_buffer_backup.Init(&processor, &settings);
     }
     processor.Configure(Processor::Media(settings.state().media),
@@ -714,7 +779,8 @@ void MonitorStateChange() {
     if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {
       processor.ClearReverb();
     }
-    if (!processor.spectral() && background_buffer_backup.Load()) {
+    if (active_processor_mode == PROCESSOR_GRANULAR &&
+        background_buffer_backup.Load()) {
       // The restored recording keeps the quality it was saved with.
       settings.mutable_state()->media = processor.media();
       ui.set_freeze_button_state(true);
@@ -723,8 +789,9 @@ void MonitorStateChange() {
     return;
   }
   
-  // The wavetable synth does not start in spectral mode.
-  if (normalization_detector.no_input() && !processor.spectral()) {
+  // Self-play uses the granular engine only.
+  if (normalization_detector.no_input() &&
+      active_processor_mode == PROCESSOR_GRANULAR) {
     if (settings.self_play_on_request()) {
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
@@ -799,7 +866,7 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     MonitorStateChange();
-    if (!synth_mode && !processor.spectral()) {
+    if (!synth_mode && active_processor_mode == PROCESSOR_GRANULAR) {
       background_buffer_backup.Process(ui.freeze_led_state());
     }
     processor.Buffer();
