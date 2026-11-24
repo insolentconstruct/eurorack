@@ -92,6 +92,7 @@ const char* const kOptionNames[] = {
   "Resonator amount",
   "Synth output level",
   "Grain output division",
+  "Gain ceiling",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.
@@ -159,6 +160,10 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_RESONATOR_RING, 1, "Medium" },
   { beads::FEATURE_RESONATOR_RING, 2, "Long" },
   { beads::FEATURE_RESONATOR_RING, 3, "Very long" },
+  { beads::FEATURE_GAIN_CEILING, 0, "Stock (+32 dB)" },
+  { beads::FEATURE_GAIN_CEILING, 1, "+24 dB" },
+  { beads::FEATURE_GAIN_CEILING, 2, "+18 dB" },
+  { beads::FEATURE_GAIN_CEILING, 3, "+12 dB" },
 };
 
 const char* ColorName(const beads::Leds::Color& color) {

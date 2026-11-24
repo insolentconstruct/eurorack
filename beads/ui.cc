@@ -168,6 +168,7 @@ void Ui::LoadOptions() {
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
   stereo_width_ = settings_->stereo_width();
   delay_mode_ = settings_->delay_mode();
+  gain_ceiling_ = settings_->FeatureValue(FEATURE_GAIN_CEILING);
   resonator_ = settings_->FeatureValue(FEATURE_RESONATOR);
   resonator_material_ = settings_->FeatureValue(FEATURE_RESONATOR_MATERIAL);
   resonator_ring_ = settings_->FeatureValue(FEATURE_RESONATOR_RING);
@@ -299,6 +300,9 @@ void Ui::Poll() {
   output_limiter_mode_ = previewing
       ? OutputLimiterMode(options_.Value(FEATURE_LIMITER))
       : settings_->output_limiter_mode();
+  gain_ceiling_ = previewing
+      ? options_.Value(FEATURE_GAIN_CEILING)
+      : settings_->FeatureValue(FEATURE_GAIN_CEILING);
   resonator_ = previewing
       ? options_.Value(FEATURE_RESONATOR)
       : settings_->FeatureValue(FEATURE_RESONATOR);

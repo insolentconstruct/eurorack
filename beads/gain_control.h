@@ -71,7 +71,16 @@ class GainControl {
       FloatFrame* out,
       size_t size);
 
-  inline void set_attenuation(bool enabled) { attenuation_ = enabled; }
+  inline void set_attenuation(bool enabled) {
+    attenuation_ = enabled;
+    SelectProcess();
+  }
+
+  void set_ceiling(uint8_t value) {
+    const float gains[] = { 40.0f, 15.848932f, 7.943282f, 3.981072f };
+    ceiling_ = value < 4 ? gains[value] : kStockCeiling;
+    SelectProcess();
+  }
 
   inline float peak() const { return peak_; }
 
@@ -89,8 +98,9 @@ class GainControl {
   }
 
  private:
-  template<bool attenuation>
-  void ProcessInternal(
+  template<bool attenuation, bool ceiling>
+  static void ProcessInternal(
+      GainControl* control,
       bool active,
       uint8_t gain,
       bool left_normalization,
@@ -99,6 +109,13 @@ class GainControl {
       FloatFrame* out,
       size_t size);
 
+  typedef void (*ProcessFunction)(GainControl*,
+      bool, uint8_t, bool, bool, const Codec::Frame*, FloatFrame*, size_t);
+
+  float OptimalGain() const;
+  void SelectProcess();
+
+  static const float kStockCeiling;
   float peak_;
   float agc_peak_;
   float stable_agc_peak_;
@@ -117,6 +134,9 @@ class GainControl {
   size_t ignore_time_;
   size_t active_time_;
   
+  float ceiling_;
+  volatile ProcessFunction process_;
+
   DISALLOW_COPY_AND_ASSIGN(GainControl);
 };
 

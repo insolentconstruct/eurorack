@@ -65,6 +65,7 @@ enum PageValues {
   PAGE_VALUES_RESONATOR = 4,
   PAGE_VALUES_RESONATOR_MATERIAL = 8,
   PAGE_VALUES_RESONATOR_RING = 4,
+  PAGE_VALUES_GAIN_CEILING = 4,
 };
 
 // How a knob picks a page feature's value.
@@ -108,7 +109,7 @@ const float kOptionsIdleMovement = 0.02f;
 const int kNumIdleTimeouts = 5;
 extern const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts];
 extern const OptionPage kOptionPages[kNumOptionPages];
-const int kNumPageFeatures = 16;
+const int kNumPageFeatures = 17;
 extern const ProfileFeature kPageFeatures[kNumPageFeatures];
 extern const uint8_t kPageControls[FEATURE_LAST];
 
@@ -127,7 +128,7 @@ struct OptionValue {
 };
 const int kNumOptionColors = 3;
 extern const Leds::Color kOptionColors[kNumOptionColors];
-const size_t kNumOptionValues = 17;
+const size_t kNumOptionValues = 18;
 // The indications other than the shared colours, then none.
 extern const OptionValue kOptionValues[kNumOptionValues];
 // A value's colour and pattern on its options page.
