@@ -46,6 +46,7 @@ const float kActiveTime = 5.0f;  // second
 
 const float kMinGain = 1.0f;
 const float kMaxGain = 40.0f;
+const float GainControl::kStockCeiling = 40.0f;
 
 void GainControl::Init(
     float sample_rate,
@@ -53,6 +54,8 @@ void GainControl::Init(
     bool reset) {
   if (reset) {
     attenuation_ = false;
+    ceiling_ = kStockCeiling;
+    SelectProcess();
     stable_agc_peak_ = agc_peak_ = peak_ = 0.5f;
     gain_ = 1.0f;
     soft_clipping_amount_ = 0.0f;
@@ -67,8 +70,13 @@ void GainControl::Init(
   one_hertz_ = 1.0f / sample_rate;
 }
 
-template<bool attenuation>
+inline float GainControl::OptimalGain() const {
+  return min(0.9f / min(agc_peak_, 0.9f), kMaxGain);
+}
+
+template<bool attenuation, bool ceiling>
 void GainControl::ProcessInternal(
+    GainControl* control,
     bool active,
     uint8_t gain_setting,
     bool left_normalization,
@@ -84,44 +92,44 @@ void GainControl::ProcessInternal(
     silence.r = 0.0f;
     fill(&out[0], &out[size], silence);
 
-    peak_ = 0.0f;
-    agc_peak_ = stable_agc_peak_ = 0.5f;
-    gain_ = 1.0f;
-    time_ = 0;
+    control->peak_ = 0.0f;
+    control->agc_peak_ = control->stable_agc_peak_ = 0.5f;
+    control->gain_ = 1.0f;
+    control->time_ = 0;
     return;
   }
   
-  const float hz = float(size) * one_hertz_;
-  if (time_ < ignore_time_) {
-    agc_peak_ = 0.5f;
-  } else if (time_ < active_time_) {
+  const float hz = float(size) * control->one_hertz_;
+  if (control->time_ < control->ignore_time_) {
+    control->agc_peak_ = 0.5f;
+  } else if (control->time_ < control->active_time_) {
     SLOPE(
-        agc_peak_,
-        peak_,
+        control->agc_peak_,
+        control->peak_,
         10.0f * hz,  // Reduce gain in 0.1s if a peak is detected
         2.0f * hz);  // Adjust gain in 0.5s if the level is too low
-    stable_agc_peak_ = agc_peak_;
+    control->stable_agc_peak_ = control->agc_peak_;
   } else {
     SLOPE(
-        agc_peak_,
-        peak_,
+        control->agc_peak_,
+        control->peak_,
         5.0f * hz,  // Reduce gain in 0.2s if a peak is detected
         // Recover from a peak reduction in 2.0s as long as the observed level
         // isn't lower than what we measured during the learning phase.
         // Otherwise, pump the gain in 100s.
-        (peak_ > stable_agc_peak_ ? 0.5f : 0.01f) * hz);
+        (control->peak_ > control->stable_agc_peak_ ? 0.5f : 0.01f) * hz);
   }
   
   if (active) {
-    if (time_ > ignore_time_ || peak_ > 0.001f) {
-      time_ += size;
+    if (control->time_ > control->ignore_time_ || control->peak_ > 0.001f) {
+      control->time_ += size;
     }
-    if (time_ >= active_time_) {
-      time_ = active_time_;
+    if (control->time_ >= control->active_time_) {
+      control->time_ = control->active_time_;
     }
   }
   
-  auto_gain_ = gain_setting == 0;
+  control->auto_gain_ = gain_setting == 0;
 
   float manual_gain = static_cast<float>(gain_setting) / 255.0f;
   manual_gain *= manual_gain;
@@ -143,21 +151,25 @@ void GainControl::ProcessInternal(
           (kMaxGain - kMinGain - first_step) * amount;
     }
   }
-  ONE_POLE(manual_gain_, manual_gain, 0.01f);
+  ONE_POLE(control->manual_gain_, manual_gain, 0.01f);
   if (attenuation && gain_setting == 1) {
-    manual_gain_ = 0.0f;
+    control->manual_gain_ = 0.0f;
   }
   
-  const float optimal_gain = min(0.9f / min(agc_peak_, 0.9f), kMaxGain);
-  const float gain = auto_gain_ ? optimal_gain : manual_gain_;
+  const float optimal_gain = control->OptimalGain();
+  const float automatic_gain = ceiling ? min(optimal_gain, control->ceiling_)
+      : optimal_gain;
+  const float gain = control->auto_gain_ ? automatic_gain
+      : control->manual_gain_;
 
   float soft_clipping_amount;
-  if (soft_clipping_mode_ == SOFT_CLIPPING_MODE_OFF) {
+  if (control->soft_clipping_mode_ == SOFT_CLIPPING_MODE_OFF) {
     soft_clipping_amount = 0.0f;
-  } else if (soft_clipping_mode_ == SOFT_CLIPPING_MODE_ON) {
+  } else if (control->soft_clipping_mode_ == SOFT_CLIPPING_MODE_ON) {
     soft_clipping_amount = 1.0f;
   } else {
-    soft_clipping_amount = 2.0f * (manual_gain_ / optimal_gain - 0.75f);
+    soft_clipping_amount =
+        2.0f * (control->manual_gain_ / optimal_gain - 0.75f);
     CONSTRAIN(soft_clipping_amount, 0.0f, 1.0f)
   }
   
@@ -165,9 +177,9 @@ void GainControl::ProcessInternal(
     soft_clipping_amount = 0.0f;
   }
 
-  ParameterInterpolator gain_modulation(&gain_, gain, size);
+  ParameterInterpolator gain_modulation(&control->gain_, gain, size);
   ParameterInterpolator soft_clipping_amount_modulation(
-      &soft_clipping_amount_,
+      &control->soft_clipping_amount_,
       soft_clipping_amount,
       size);
   while (size--) {
@@ -179,7 +191,7 @@ void GainControl::ProcessInternal(
     
     if (active) {
       const float peak = max(fabsf(l), fabsf(r));
-      SLOPE(peak_, peak, 0.1f, 2.0f * one_hertz_);
+      SLOPE(control->peak_, peak, 0.1f, 2.0f * control->one_hertz_);
     }
     
     const float gain = gain_modulation.Next();
@@ -187,8 +199,8 @@ void GainControl::ProcessInternal(
     l *= gain;
     r *= gain;
     
-    if (!auto_gain_) {
-      if (soft_clipping_mode_ == SOFT_CLIPPING_MODE_OFF) {
+    if (!control->auto_gain_) {
+      if (control->soft_clipping_mode_ == SOFT_CLIPPING_MODE_OFF) {
         CONSTRAIN(l, -1.0f, +1.0f)
         CONSTRAIN(r, -1.0f, +1.0f)
       } else {
@@ -215,6 +227,17 @@ void GainControl::ProcessInternal(
   }
 }
 
+void GainControl::SelectProcess() {
+  const bool ceiling = ceiling_ < kStockCeiling;
+  if (attenuation_) {
+    process_ = ceiling ? &GainControl::ProcessInternal<true, true>
+        : &GainControl::ProcessInternal<true, false>;
+  } else {
+    process_ = ceiling ? &GainControl::ProcessInternal<false, true>
+        : &GainControl::ProcessInternal<false, false>;
+  }
+}
+
 void GainControl::Process(
     bool active,
     uint8_t gain_setting,
@@ -223,15 +246,8 @@ void GainControl::Process(
     const Codec::Frame* in,
     FloatFrame* out,
     size_t size) {
-  if (attenuation_) {
-    ProcessInternal<true>(
-        active, gain_setting, left_normalization, right_normalization,
-        in, out, size);
-  } else {
-    ProcessInternal<false>(
-        active, gain_setting, left_normalization, right_normalization,
-        in, out, size);
-  }
+  process_(this, active, gain_setting, left_normalization,
+      right_normalization, in, out, size);
 }
 
 }  // namespace beads

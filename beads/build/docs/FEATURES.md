@@ -90,7 +90,8 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 8–23 | One byte per saved option (below) |
 | 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
 | 27 | Rings polyphony |
-| 28–55 | Reserved, 0xFF |
+| 28 | Gain ceiling |
+| 29–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
@@ -125,8 +126,9 @@ freezes each version's offsets.
 | 42 | Rings polyphony | 27 |
 | 43 | Resonator material (#88) | 25 |
 | 44 | Resonator ring time (#88) | 26 |
+| 52 | Gain ceiling (#59) | 28 |
 
-Other features are not saved: they always take the profile's value. A build without Rings reads Synth value 2 as not set. Bytes 24–27 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
+Other features are not saved: they always take the profile's value. A build without Rings reads Synth value 2 as not set. Bytes 24–28 sit in the record's second flash word, so a record now takes both words: a power cut between them leaves the previous record in use.
 
 Options-only changes (an options page, an [A] gesture, the Plaits bank) append
 a record and leave the settings sector alone; a change to both writes the
@@ -820,3 +822,15 @@ layout and every earlier profile keep their gestures.
 
 Firmware before Beta 4 refuses these layouts. The format is in
 [SCALE-PROFILES.md](SCALE-PROFILES.md#a-gestures-beta-4).
+
+### Gain ceiling
+
+Hygrostat feature ID 52 limits automatic input gain to Stock (+32 dB),
++24 dB, +18 dB or +12 dB (#59). The gain driver multiplies samples
+digitally; the codec has no programmable gain steps. Stock keeps the
+original 40× limit. The lower limits are 15.849×, 7.943× and 3.981×.
+Manual gain and [A] hold restart keep their usual behaviour.
+
+A custom profile can assign this setting to a page knob, with green,
+yellow, red and slowly pulsing yellow indications. Changes preview immediately and save
+in options record byte 28. The factory pages stay unchanged and use Stock.

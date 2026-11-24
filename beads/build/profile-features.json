@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "0d3751debb530101e2776872d4446df47e8a0dccbc9a251acc8aff6fae676bb9",
+  "manifest_sha256": "4297b65d15cc59ca90a8fc96d2d9f9ca3bdc1b623ab86b2702474885ef153365",
   "record_version": 1,
   "features": [
     {
@@ -1705,6 +1705,53 @@
       "touches_synth": false,
       "cpu_cost": null,
       "saved": null
+    },
+    {
+      "id": 52,
+      "name": "Gain ceiling",
+      "values": [
+        "Stock (+32 dB)",
+        "+24 dB",
+        "+18 dB",
+        "+12 dB"
+      ],
+      "states": [
+        "Off",
+        "Fixed",
+        "Adjustable"
+      ],
+      "page_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": 28
     }
   ],
   "plaits_models": [

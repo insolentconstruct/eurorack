@@ -70,6 +70,7 @@ const ProfileFeature kPageFeatures[kNumPageFeatures] = {
   FEATURE_RESONATOR,
   FEATURE_RESONATOR_MATERIAL,
   FEATURE_RESONATOR_RING,
+  FEATURE_GAIN_CEILING,
 };
 const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // None.
@@ -124,6 +125,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // Resonator amount.
   PAGE_CONTROL_NONE,  // Synth level.
   PAGE_CONTROL_NONE,  // Output division.
+  PAGE_CONTROL_STEPS,  // Gain ceiling.
 };
 const Leds::Color kOptionColors[kNumOptionColors] = {
   { 0, 255, 0 },
@@ -148,6 +150,7 @@ const OptionValue kOptionValues[] = {
   { FEATURE_RESONATOR_MATERIAL, 6, { 0, 255, 0 }, PULSE_FAST },
   { FEATURE_RESONATOR_MATERIAL, 7, { 255, 255, 0 }, PULSE_FAST },
   { FEATURE_RESONATOR_RING, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { FEATURE_GAIN_CEILING, 3, { 255, 255, 0 }, PULSE_SLOW },
 };
 
 const uint32_t kOptionsIdleTimeouts[kNumIdleTimeouts] = {
