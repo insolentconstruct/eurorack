@@ -941,10 +941,13 @@ void Init() {
     synth_fade = false;
     synth_mode = true;
   }
+  active_processor_mode = ui.processor_mode();
+  const bool abyss_selected = active_processor_mode == PROCESSOR_ABYSS;
+  processor.set_suspended(abyss_selected);
+  background_buffer_backup.set_suspended(abyss_selected);
   ready = true;
   
   // A frozen buffer saved by the granular engine stays in flash.
-  active_processor_mode = ui.processor_mode();
   processor.set_spectral(ui.spectral());
   oliverb_mode = false;
   oliverb_restore_pending = ui.processor_mode() == PROCESSOR_OLIVERB;
