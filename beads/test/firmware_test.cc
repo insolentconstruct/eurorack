@@ -3352,8 +3352,7 @@ void TestEngineChangeWhileFrozen() {
   PotsAdc::values_[POTS_ADC_CHANNEL_TIME] = 32768;
 }
 
-// In calibration, holding [A] confirms a step only on release, once. The
-// stopped normalization probe counts down from INT_MIN, so no audio runs.
+// In calibration, holding [A] confirms a step only on release, once.
 void TestCalibrationStepOnRelease() {
   test_checker.Start("TestCalibrationStepOnRelease");
   Rig r(false, false);
