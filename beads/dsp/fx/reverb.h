@@ -65,8 +65,8 @@ class Reverb {
     dry_ = 0.0f;
     wet_ = 0.0f;
     send_ = 0.0f;
-    bloom_fast_ = 0.0f;
-    bloom_slow_ = 0.0f;
+    bloom_peak_ = 0.0f;
+    bloom_baseline_ = 0.0f;
     bloom_progress_ = 0.0f;
     bloom_density_ = 0.0f;
     bloom_onset_ = false;
@@ -235,13 +235,14 @@ class Reverb {
   
   float BloomDensity(float level) {
     // A new onset resets the ramp while a short slew protects a ringing tail.
-    ONE_POLE(bloom_fast_, level, 350.0f * bloom_tick_);
-    ONE_POLE(bloom_slow_, level, 18.0f * bloom_tick_);
-    const float rise = std::max(bloom_fast_, 0.08f * level) - bloom_slow_;
-    if (rise > 0.004f && !bloom_onset_) {
+    bloom_peak_ = std::max(level, bloom_peak_ * (1.0f - 25.0f * bloom_tick_));
+    ONE_POLE(bloom_baseline_, bloom_peak_, 18.0f * bloom_tick_);
+    const float threshold = 0.004f + 0.2f * bloom_baseline_;
+    const float rise = bloom_peak_ - bloom_baseline_;
+    if (rise > threshold && !bloom_onset_) {
       bloom_progress_ = 0.0f;
       bloom_onset_ = true;
-    } else if (rise < 0.0015f) {
+    } else if (rise < 0.5f * threshold) {
       bloom_onset_ = false;
     }
     bloom_progress_ = std::min(1.0f, bloom_progress_ + 4.0f * bloom_tick_);
@@ -261,8 +262,8 @@ class Reverb {
   
   float lp_1_;
   float lp_2_;
-  float bloom_fast_;
-  float bloom_slow_;
+  float bloom_peak_;
+  float bloom_baseline_;
   float bloom_progress_;
   float bloom_density_;
   float bloom_tick_;
