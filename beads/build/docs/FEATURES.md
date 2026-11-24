@@ -518,7 +518,7 @@ This also applies to Palette's Granular Cloud, Vowel FOF, VA Variant,
 ZxPhase48k, ZxPulse48k, Saw Swarm, Supersaw Chords, BubbleTime, Noise Bank,
 Freshets Formant, Speech Sounds and LPC Words. These fresh starts are
 accepted differences from Palette. VOSIM starts fresh too, with about 4 ms
-of silence on selection while it prepares its initial DC estimate over
+of silence on selection while it prepares the sound over
 16 blocks. These are selection behaviours, not added delays on every note.
 Final release-image module qualification is still pending.
 

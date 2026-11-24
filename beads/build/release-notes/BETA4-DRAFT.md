@@ -22,6 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -->
 
+<!--
+Before publication, recheck the pending automatic-gain ceiling, fallback gesture safeguards, calibration-save and resonator fixes, and additional Palette models.
+Publish Hygrostat copy separately after its model picker, starter banks and matching assets are available.
+-->
+
 **Beta 4 — draft** · date `{DATE}` · tag `{TAG}`
 
 **TL;DR:** Beta 4 keeps the familiar Beads controls and stock musical option
@@ -44,8 +49,8 @@ pending; the additions below are not yet claimed qualified on a module.
   cancels that action. Slow width or bank gestures no longer reset gain first.
 - Plaits drone release and Speech word-to-phoneme switching avoid unwanted
   clicks or noise bursts.
-- Calibration saves protect the remaining usable copy; incomplete or rejected
-  calibration keeps the stored values. Drizzlet options now have their own
+- Calibration storage protects a usable backup. Cancelled or out-of-range
+  calibration keeps the previous values. Drizzlet options now have their own
   saved record, separate from stock settings.
 - The default grain stealing follows Mutable Instruments' 2021/2024 firmware.
   This can make dense textures a little louder than Betas 1–3.
@@ -56,15 +61,15 @@ pending; the additions below are not yet claimed qualified on a module.
 
 The standard image contains Plaits' three banks of eight models, Beads'
 original wavetables and Rings synthesis. Rings and the wavetables are
-removable in Hygrostat to make room for other models. Additional Palette
-models are selected there; they are not all installed in the standard WAV.
+removable in Hygrostat to make room for other models. Palette models are
+available only through Hygrostat; none are installed in the standard WAV.
 
 - **Resonator:** page 5 adds placement, Material and Ring time. Choose After
   the grains, Before the buffer or In the feedback; Off is the default.
   PITCH tunes it; SEED and detected hits strike it. All 32 grains remain.
 - **Rings synth:** page 3 Synth gains Rings when installed. While Rings plays,
   [A]+FREEZE steps one, two or four voices. This is separate from the
-  resonator alongside grains; neither is a Resonestor replacement mode.
+  resonator alongside grains.
 - **Plaits and Palette reselection:** models start fresh when a voice switches
   to them, with a short fade-in. Returning to a model can restart filters,
   grains, random sequences or modulation instead of resuming earlier state.
@@ -76,35 +81,21 @@ models are selected there; they are not all installed in the standard WAV.
 Profiles keep the module focused on the controls and sounds you use.
 The standard layout remains available; customized layouts get matching guides.
 
-- **Mix law Send:** keeps dry audio present; DRY/WET sets new grains' levels.
+- **Send mixing:** keeps dry audio present; DRY/WET sets new grains' levels.
   At zero, existing grains and reverb finish and recording continues.
   Granular only.
 - **Synth output level:** Stock, Half, Quarter or Eighth; applies to Beads,
   Plaits and Rings audio without changing input gain or OUT R triggers.
-- **Grain trigger output:** Stock, /2, /4, /8 or /16 on OUT R; keeps the first
+- **Divided grain triggers:** Stock, /2, /4, /8 or /16 on OUT R; keeps the first
   gate and pulse width, without changing grain timing or audio.
 
 These choices are set in a profile. See the
 [options guide](../docs/OPTIONS.md) and [feature catalogue](../docs/FEATURES.md).
-Processor-load estimates give a very obvious warning when a selected bank
-exceeds its rate's working limit. CPU use never blocks that bank's selection;
+Banks estimated to exceed the processing limit should show a prominent
+warning in Hygrostat; confirm this in the released editor.
+CPU use never blocks that bank's selection;
 a warned bank may crackle. Flash capacity and missing dependencies still
 need to be resolved before export.
-
-**Pending merge:** Gain ceiling is planned as an adjustable, page-assignable
-limit for automatic input gain, with Stock at +32 dB. Confirm the merged
-values and generated guide before including it in the release announcement.
-
-### What's new paragraph for the Hygrostat page (draft)
-
-Beta 4 lets you choose a smaller collection of the sounds and controls you
-use: keep the standard Plaits banks, Beads wavetables and removable Rings
-synth, or make room for Palette models. Four starter banks—Drums, Physical,
-Harmonic and Experimental—offer a starting point before the full picker.
-Profiles also offer Send mixing, synth output trim and divided grain gates,
-with a matching guide. A very obvious CPU warning flags banks that may
-crackle, but never blocks their selection. Starter banks and new controls
-await the matching Beta 4 asset rollout; final module qualification is pending.
 
 ## Updating and remaining checks
 
