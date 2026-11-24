@@ -226,6 +226,26 @@ with tempfile.TemporaryDirectory() as directory:
     assert result.returncode == 0, result.stderr
     assert "write 1: " + str(out) in result.stdout, result.stdout
 
+    # A settings-only restore uses the live measured mirror, not old options.
+    live_mirror = Path(directory) / "live-mirror.bin"
+    live_mirror.write_bytes(mirror_dump(calibration(0.25), []))
+    result, out, mirror = run_mirror(directory, factory_now, backup,
+                                     options_backup, factory_now)
+    assert result.returncode == 1 and not out.exists() and not mirror.exists()
+    command = [sys.executable, str(Path(__file__).parent / "settings_sector.py"),
+               "--calibration", str(Path(directory) / "cal.bin"),
+               "--calibration-copy", str(live_mirror),
+               "--settings", str(Path(directory) / "set.bin"),
+               "--options", str(Path(directory) / "opt.bin"),
+               "--now", str(Path(directory) / "now.bin"),
+               "--mirror-out", str(mirror), str(out)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "write 1: " + str(out) in result.stdout, result.stdout
+    assert load_both(ss.erased(out.read_bytes()), ss.erased(mirror.read_bytes()),
+                     directory)[2] == calibration(0.25)
+    assert ss.options(ss.erased(mirror.read_bytes())) == record(2)
+
     # A calibration more than 25% from the factory values, an options dump without the copy image,
     # or a copy image without the sector as it is now: refused, nothing written.
     wild = dump(calibration(0.5)[:16] + struct.pack("<ff", -200.0, 60.0) + calibration(0.5)[24:],
