@@ -86,18 +86,7 @@ bool Settings::Init(bool recovery_mode) {
   // mirror with the loaded states, before anything is written.
   const bool lost = status == STORAGE_CALIBRATION_LOST;
   const bool loaded = status == STORAGE_OK || status == STORAGE_RESTORED;
-  const bool implausible = loaded && \
-      !CalibrationPlausible(persistent_data_, factory);
-  const bool factory_values = loaded && \
-      !memcmp(persistent_data_.adc_calibration, factory.adc_calibration,
-          sizeof(factory.adc_calibration));
-  PersistentData mirror;
-  if ((lost || implausible || factory_values) && \
-      chunk_storage_.ReadMirror(&mirror) && \
-      CalibrationPlausible(mirror, factory) && \
-      (!factory_values || memcmp(mirror.adc_calibration,
-          factory.adc_calibration, sizeof(mirror.adc_calibration)))) {
-    persistent_data_ = mirror;
+  if ((lost || loaded) && ReadPreferredMirror(loaded, &persistent_data_)) {
     if (recovery_mode) {
       state_ = defaults;
     }
@@ -152,15 +141,45 @@ bool Settings::CalibrationPlausible(
   return true;
 }
 
+bool Settings::ReadPreferredMirror(
+    bool calibration_valid, PersistentData* data) {
+  const bool implausible = calibration_valid &&
+      !CalibrationPlausible(*data, factory_);
+  const bool factory_values = calibration_valid &&
+      !memcmp(data->adc_calibration, factory_.adc_calibration,
+          sizeof(data->adc_calibration));
+  PersistentData mirror;
+  if ((!calibration_valid || implausible || factory_values) &&
+      chunk_storage_.ReadMirror(&mirror) &&
+      CalibrationPlausible(mirror, factory_) &&
+      (!factory_values || memcmp(mirror.adc_calibration,
+          factory_.adc_calibration, sizeof(mirror.adc_calibration)))) {
+    *data = mirror;
+    return true;
+  }
+  return false;
+}
+
+bool Settings::ReadPersistentData(PersistentData* data) {
+  const bool valid = chunk_storage_.ReadCalibration(data);
+  return ReadPreferredMirror(valid, data) ||
+      (valid && CalibrationPlausible(*data, factory_));
+}
+
 bool Settings::SavePersistentData() {
   fill(
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],
       0);
-  const PersistentData requested = persistent_data_;
-  chunk_storage_.SavePersistentData();
-  // False when the calibration was out of range and the stored one kept.
-  return !memcmp(&requested, &persistent_data_, sizeof(PersistentData));
+  if (!chunk_storage_.Usable(persistent_data_)) {
+    PersistentData durable;
+    if (ReadPersistentData(&durable)) {
+      persistent_data_ = durable;
+      chunk_storage_.SavePersistentData();
+    }
+    return false;
+  }
+  return chunk_storage_.SavePersistentData();
 }
 
 void Settings::SaveState() {

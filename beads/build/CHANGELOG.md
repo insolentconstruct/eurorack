@@ -6,6 +6,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
 ## Unreleased
+- **Behaviour fix:** a failed calibration save blinks all LEDs and keeps the calibration selected at reboot, or the prior calibration in RAM if neither flash copy is usable.
 - **Behaviour fix:** a calibration that doesn't complete is no longer used or saved. A rejected step, or leaving calibration with [M]+FREEZE, used to keep the offsets and pitch already measured, and the next settings rewrite saved them over the calibration. Now the run is measured separately and only a completed one replaces the calibration; a rejected step still blinks all LEDs. The vanilla source kept the partial calibration ([#346](https://github.com/insolentconstruct/eurorack/issues/346)).
 - **Behaviour change:** a recalibration more than 25% from the factory values is no longer saved. The stored calibration stays in use, in flash and in its copy, and all LEDs blink for about a second, as for a rejected calibration step. The vanilla source saved and used it.
 - The delay uses less CPU, with the same sound: the taps' SHAPE envelope is computed once per sample instead of once per tap. On a development board, the busiest blocks of the delay scenarios use 4.4% to 7.8% fewer cycles.

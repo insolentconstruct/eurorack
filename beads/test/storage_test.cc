@@ -38,6 +38,7 @@
 
 #define private public
 #include "beads/settings.h"
+#include "beads/calibrator.h"
 #undef private
 
 bool test_down[4];
@@ -1125,6 +1126,97 @@ void TestSupplyDrop() {
   CHECK(TestFlash().low_supply_writes == 0);
 }
 
+bool SaveCalibration(Settings* settings, const PersistentData& requested) {
+  Calibrator calibrator;
+  calibrator.settings_ = settings;
+  memcpy(calibrator.calibration_data_, requested.adc_calibration,
+      sizeof(requested.adc_calibration));
+  return calibrator.Save();
+}
+
+void TestCalibrationSaveRefusal() {
+  test_checker.Start("TestCalibrationSaveRefusal");
+  const PersistentData old = Calibration(0.1f);
+  const PersistentData requested = Calibration(-0.1f);
+  Setup(old, 4);
+  Settings low;
+  CHECK(low.Init(false));
+  Take(&snapshot);
+  TestFlash().supply_low = true;
+  CHECK(!SaveCalibration(&low, requested));
+  CHECK(SameCalibration(low, old));
+  CHECK(Unchanged(snapshot));
+  TestFlash().supply_low = false;
+  Settings rebooted;
+  CHECK(rebooted.Init(false));
+  CHECK(SameCalibration(rebooted, low.persistent_data()));
+
+  Setup(old, 4);
+  LoseCalibration(0);
+  Settings locked;
+  CHECK(locked.Init(false) && locked.write_locked());
+  *locked.mutable_persistent_data() = old;
+  Take(&snapshot);
+  CHECK(!SaveCalibration(&locked, requested));
+  CHECK(SameCalibration(locked, old));
+  CHECK(Unchanged(snapshot));
+}
+
+void TestCalibrationSavePrecedence() {
+  test_checker.Start("TestCalibrationSavePrecedence");
+  const PersistentData old = Calibration(0.1f);
+  const PersistentData requested = Calibration(-0.1f);
+  for (int drop = 1; drop <= 11; ++drop) {
+    Setup(old, 6);
+    Settings live;
+    CHECK(live.Init(false));
+    TestFlash().supply_budget = drop;
+    CHECK(SaveCalibration(&live, requested) == (drop == 11));
+    CHECK(SameCalibration(live, drop <= 5 ? old : requested));
+    TestFlash().supply_low = false;
+    TestFlash().supply_budget = 0;
+    Settings rebooted;
+    CHECK(rebooted.Init(false));
+    CHECK(SameCalibration(rebooted, live.persistent_data()));
+  }
+
+  Defaults();
+  uint8_t factory_chunk[kCalibrationChunk];
+  Peek(factory_chunk, kSector, sizeof(factory_chunk));
+  Setup(old, 4);
+  Poke(kSector, factory_chunk, sizeof(factory_chunk));
+  TestFlash().supply_low = true;
+  Settings live;
+  CHECK(live.Init(false));
+  CHECK(!SaveCalibration(&live, requested));
+  Settings rebooted;
+  CHECK(rebooted.Init(false));
+  CHECK(SameCalibration(live, old));
+  CHECK(SameCalibration(rebooted, live.persistent_data()));
+  TestFlash().supply_low = false;
+
+  // A refused boot repair left the custom calibration only in the mirror.
+  // An out-of-range save must not replace it with the factory primary.
+  PersistentData wild = requested;
+  wild.adc_calibration[CV_ADC_CHANNEL_PITCH].scale *= 2.0f;
+  CHECK(!SaveCalibration(&live, wild));
+  Settings after_rejection;
+  CHECK(after_rejection.Init(false));
+  CHECK(SameCalibration(live, old));
+  CHECK(SameCalibration(after_rejection, old));
+  CHECK(MirrorHolds(old));
+
+  Wipe();
+  TestFlash().supply_low = true;
+  Settings blank;
+  CHECK(!blank.Init(false));
+  TestFlash().supply_low = false;
+  Take(&snapshot);
+  CHECK(!SaveCalibration(&blank, wild));
+  CHECK(SameCalibration(blank, Factory()));
+  CHECK(Unchanged(snapshot));
+}
+
 const uint32_t kStaleFlag = 0x00040000;  // PGSERR
 
 typedef ChunkStorage<15, 14, PersistentData, State> Storage;
@@ -1374,6 +1466,8 @@ int main() {
   TestOutOfRangeRecalibration();
   TestLowSupply();
   TestSupplyDrop();
+  TestCalibrationSaveRefusal();
+  TestCalibrationSavePrecedence();
   TestStaleErrorFlag();
   TestFailedErase();
   TestNonBlankSlot();

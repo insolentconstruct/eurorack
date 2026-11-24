@@ -1004,7 +1004,10 @@ bool SameCalibration(const PersistentData& a, const PersistentData& b) {
 // step. One in range is saved.
 void TestRejectedCalibrationCue() {
   test_checker.Start("TestRejectedCalibrationCue");
-  for (int wild = 0; wild < 2; ++wild) {
+  for (int failure = 0; failure < 3; ++failure) {
+    const bool wild = failure == 1;
+    const bool low_supply = failure == 2;
+    const bool rejected = wild || low_supply;
     Rig r(false);
     // DENSITY CV reading 0.2 of the ADC: an offset near the factory one.
     r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
@@ -1033,15 +1036,17 @@ void TestRejectedCalibrationCue() {
     }
     CHECK(ui.queue_.idle_time() > 1500);
     ui.mode_ = Ui::MODE_CALIBRATION_4;
+    TestFlash().supply_low = low_supply;
     ui.NextCalibrationStep();
-    CHECK(ui.mode_ == (wild ? Ui::MODE_PANIC : Ui::MODE_NORMAL));
-    CHECK(SameCalibration(settings.persistent_data(), wild ? stored : attempt));
+    TestFlash().supply_low = false;
+    CHECK(ui.mode_ == (rejected ? Ui::MODE_PANIC : Ui::MODE_NORMAL));
+    CHECK(SameCalibration(settings.persistent_data(), rejected ? stored : attempt));
     TestFlashExpose(true);
     const bool same_mirror = !memcmp(
         mirror, reinterpret_cast<const void*>(0x081c0000), sizeof(mirror));
     TestFlashExpose(false);
-    CHECK(same_mirror == bool(wild));
-    if (wild) {
+    CHECK(same_mirror == rejected);
+    if (rejected) {
       r.Advance(500);
       CHECK(ui.mode_ == Ui::MODE_PANIC);
       r.Advance(1000);
@@ -1049,7 +1054,7 @@ void TestRejectedCalibrationCue() {
     }
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(SameCalibration(loaded.persistent_data(), wild ? stored : attempt));
+    CHECK(SameCalibration(loaded.persistent_data(), rejected ? stored : attempt));
   }
 }
 

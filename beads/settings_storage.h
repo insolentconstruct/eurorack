@@ -188,8 +188,16 @@ class ChunkStorage {
     }
   }
 
-  void SavePersistentData() {
-    RewriteSector();
+  bool SavePersistentData() {
+    return RewriteSector();
+  }
+
+  bool ReadCalibration(PersistentData* persistent_data) {
+    return ReadChunk(chunk_address(0), persistent_data) == CHUNK_VALID;
+  }
+
+  bool Usable(const PersistentData& data) const {
+    return !check_ || check_(data, *reference_);
   }
 
   // The mirrored calibration, if it reads clean and passes its checks.
@@ -240,7 +248,7 @@ class ChunkStorage {
     return STORAGE_OK;
   }
 
-  void RewriteSector() {
+  bool RewriteSector() {
     // A calibration out of range never replaces a usable one: that one stays.
     PersistentData data;
     if (!Usable(*persistent_data_) && \
@@ -249,16 +257,14 @@ class ChunkStorage {
       *persistent_data_ = data;
     }
     HAL_FLASH_Unlock();
-    if (MirrorPersistentData() && \
-        EraseSector(sector_index, FLASH_STORAGE_BASE) && \
-        WriteChunk(chunk_address(0), persistent_data_) && \
-        WriteChunk(chunk_address(1), state_data_)) {
-      next_state_chunk_index_ = 2;
-    } else {
-      // Settings stay in RAM; the next save tries the whole sector again.
-      next_state_chunk_index_ = REWRITE_NEEDED;
-    }
+    const bool saved = MirrorPersistentData() &&
+        EraseSector(sector_index, FLASH_STORAGE_BASE) &&
+        WriteChunk(chunk_address(0), persistent_data_) &&
+        WriteChunk(chunk_address(1), state_data_);
+    // Retry the whole sector on the next save after a flash failure.
+    next_state_chunk_index_ = saved ? 2 : REWRITE_NEEDED;
     HAL_FLASH_Lock();
+    return saved;
   }
 
   // Leaves a verified copy of the calibration about to be written in the
@@ -289,10 +295,6 @@ class ChunkStorage {
         WriteChunk(address, &data) && \
         ReadChunk(address, &copy) == CHUNK_VALID && \
         !memcmp(&copy, &data, sizeof(PersistentData));
-  }
-
-  bool Usable(const PersistentData& data) const {
-    return !check_ || check_(data, *reference_);
   }
 
   // True once the sector holds a usable calibration, read back; if it
