@@ -285,6 +285,42 @@ struct Rig {
 
 void RigBlock(Rig* r) { r->Block(); }
 
+void TestSynthFadeSurvivesTimerReset() {
+  test_checker.Start("TestSynthFadeSurvivesTimerReset");
+  extern volatile bool& codec_fade;
+  extern float& reverb_style_gain;
+  Rig r(false, true);
+  r.left = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  reverb_style_gain = 1.0f;
+  MonitorStateChange();
+  CHECK(codec_fade && !synth_mode);
+  synth_mode_start_time = 0;  // A late output peak in the callback.
+  reverb_style_gain = 0.0f;
+  MonitorStateChange();
+  CHECK(synth_mode);
+}
+
+void TestSynthEntryCancelsBackup() {
+  test_checker.Start("TestSynthEntryCancelsBackup");
+  extern float& reverb_style_gain;
+  Rig r(false, true);
+  r.left = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  reverb_style_gain = 0.0f;
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.remaining_sectors_ = 1;
+  MonitorStateChange();
+  CHECK(synth_mode);
+  CHECK(!background_buffer_backup.busy());
+}
+
 void TestAutomaticSelfPlay() {
   test_checker.Start("TestAutomaticSelfPlay");
   Rig r(false, true);
@@ -604,6 +640,38 @@ void LoseCalibration() {
   }
   TestFlashDamage(0x081e0000 + 32);
   TestFlashDamage(0x081c0000 + 32);
+}
+
+void TestSuppressedStorageChord() {
+  test_checker.Start("TestSuppressedStorageChord");
+  Rig r(false, true);
+  LoseCalibration();
+  r.Reboot(false);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(3010, true);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
+}
+
+void TestWarningChordDebounceBoundary() {
+  test_checker.Start("TestWarningChordDebounceBoundary");
+  Rig r(false, true);
+  LoseCalibration();
+  r.Reboot(false);
+  while (system_clock.milliseconds() - ui.storage_status_time_ < 2998) {
+    r.Advance(1);
+  }
+  CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(20, true);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
 }
 
 void TestStorageWarning() {
@@ -1798,6 +1866,28 @@ void TestCodecRestartFade() {
 
 // A change at the same sample rate keeps the converter clocked (#53): only
 // rate changes use the reset-held restart sequence.
+void TestCodecRestartRetry() {
+  test_checker.Start("TestCodecRestartRetry");
+  Rig r(false, false);
+  r.Settle();
+  const int restarts = codec.restarts_;
+  codec.fail_restart_ = true;
+  settings.mutable_state()->media = Processor::MEDIA_VINTAGE_DIGITAL;
+  for (int i = 0; i < 200 && codec.running_; ++i) {
+    r.Tick(1, true);
+  }
+  CHECK(!codec.running_ && codec.callback_ == NULL);
+  codec.fail_restart_ = false;
+  r.Tick(50, true);
+  CHECK(!codec.running_);
+  r.Tick(350, true);
+  CHECK(codec.running_ && codec.callback_ == &Process);
+  CHECK(codec.restarts_ == restarts + 1);
+  CHECK(codec.previous_sample_rate_ == 0);
+  CHECK(codec.sample_rate_ == int(processor.sample_rate()));
+  CHECK(codec_transition_frames == 0);
+}
+
 void TestCodecKeepsClocks() {
   test_checker.Start("TestCodecKeepsClocks");
   Rig r(false, false);
@@ -3280,8 +3370,7 @@ void TestEngineChangeWhileFrozen() {
   PotsAdc::values_[POTS_ADC_CHANNEL_TIME] = 32768;
 }
 
-// In calibration, holding [A] confirms a step only on release, once. The
-// stopped normalization probe counts down from INT_MIN, so no audio runs.
+// In calibration, holding [A] confirms a step only on release, once.
 void TestCalibrationStepOnRelease() {
   test_checker.Start("TestCalibrationStepOnRelease");
   Rig r(false, false);
@@ -3378,6 +3467,18 @@ void RewriteOnNextSave() {
 
 // Incomplete calibration changes neither live nor saved values (#346),
 // including rejected offsets/pitch and exit via the autosave chord.
+void TestCalibrationExitResumesNormalization() {
+  test_checker.Start("TestCalibrationExitResumesNormalization");
+  Rig r(false, false);
+  r.Settle();
+  Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+  Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input());
+}
+
 void TestUnfinishedCalibrationKept() {
   test_checker.Start("TestUnfinishedCalibrationKept");
   for (int exit = 0; exit < 3; ++exit) {
@@ -4176,6 +4277,8 @@ int main() {
   TestCustomScaleCallbackChain();
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
+  TestSynthFadeSurvivesTimerReset();
+  TestSynthEntryCancelsBackup();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();
   TestMonoStereo();
@@ -4184,6 +4287,8 @@ int main() {
   TestTriggerOutput();
   TestStartupBranches();
   TestStorageWarning();
+  TestSuppressedStorageChord();
+  TestWarningChordDebounceBoundary();
   TestStorageRepair();
   TestFailedBufferLoad();
   TestCallbackCvRouting();
@@ -4197,6 +4302,7 @@ int main() {
   TestFreezeGestureFollowsPlayingSynth();
   TestSpectralEngine();
   TestCodecRestartFade();
+  TestCodecRestartRetry();
   TestCodecKeepsClocks();
   TestSynthLevel();
   TestSynthStopClearsReverb();
@@ -4225,6 +4331,7 @@ int main() {
   TestEngineChangeWhileFrozen();
   TestProcessorToggle();
   TestCalibrationStepOnRelease();
+  TestCalibrationExitResumesNormalization();
   TestRejectedCalibrationCue();
   TestUnfinishedCalibrationKept();
   TestLockedCalibrationCue();

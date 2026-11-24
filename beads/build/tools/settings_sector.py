@@ -26,18 +26,21 @@
 """Build a settings sector image from the calibration of one dump and the settings of another.
 
     settings_sector.py --calibration CALIBRATION.bin --settings SETTINGS.bin OUT.bin
-    settings_sector.py ... [--options OPTIONS.bin] --now NOW.bin --mirror-out MIRROR.bin OUT.bin
+    settings_sector.py ... [--options OPTIONS.bin] [--calibration-copy COPY.bin]
+                       --now NOW.bin --mirror-out MIRROR.bin OUT.bin
 
 Each settings input is a dump of the settings sector (0x081E0000, 128 KB) from the same module, as
 RECOVERY.md's backup command makes. OUT holds the calibration record of the first and the latest
-settings record of the second, laid out as stmlib's ChunkStorage writes them after erasing the
-sector. OUT is only those two records (160 bytes): the restore command erases the whole sector and
-programs just them, so the firmware's later saves land on erased flash, as after its own rewrite.
+settings record of the second. Each dump needs only the requested record. OUT uses stmlib's
+ChunkStorage layout after an erase. It contains only those two records (160 bytes), so the
+firmware's later saves land on erased flash.
 
 With --mirror-out, MIRROR is the image for the calibration copy sector (0x081C0000): the same
 calibration, then the latest options record of OPTIONS, a dump of that sector (none: the options
-start from their defaults). NOW, the settings sector as it is, decides which image goes first, so a
-usable calibration stays in one of the two sectors at every step.
+start from their defaults). NOW, the current settings sector, decides which image goes first to
+protect the measured calibration during the restore. COPY is the current mirror dump. Its
+usable calibration takes precedence if the chosen live calibration is damaged, or if the
+chosen and current calibrations both match factory values and COPY holds a measured one.
 """
 
 import argparse
@@ -57,6 +60,7 @@ OPTIONS_SIZE = 56  # OptionsRecord.
 OPTIONS_CHUNK = 64
 # Settings::Init's factory calibration: (scale, offset) per CV channel.
 FACTORY = [(-2.0, 1.0), (-2.0, 1.0), (-120.0, 60.0), (-3.2, 1.6), (-3.2, 1.6), (-3.2, 1.6)]
+FACTORY_BYTES = b"".join(struct.pack("<ff", *pair) for pair in FACTORY)
 
 
 def checksum(data):
@@ -75,13 +79,21 @@ def read_chunk(sector, address, tag, size):
     return data
 
 
-def parse(sector):
-    """Returns the calibration and the latest settings, as the firmware loads them."""
+def check_sector_size(sector):
     if len(sector) != SECTOR_SIZE:
         raise ValueError("a dump is %d bytes, not %d" % (len(sector), SECTOR_SIZE))
+
+
+def read_calibration(sector):
+    check_sector_size(sector)
     calibration = read_chunk(sector, 0, CALI, CALI_SIZE)
     if calibration is None:
-        raise ValueError("no valid calibration record: the firmware would not read this dump")
+        raise ValueError("no valid calibration record")
+    return calibration
+
+
+def read_state(sector):
+    check_sector_size(sector)
     state = None
     address = CALI_CHUNK
     while address + STATE_CHUNK <= SECTOR_SIZE:
@@ -91,8 +103,13 @@ def parse(sector):
         state = record
         address += STATE_CHUNK
     if state is None:
-        raise ValueError("no valid settings record: the firmware would not read this dump")
-    return calibration, state
+        raise ValueError("no valid settings record")
+    return state
+
+
+def parse(sector):
+    """Returns the calibration and the latest settings, as the firmware loads them."""
+    return read_calibration(sector), read_state(sector)
 
 
 def usable(calibration):
@@ -138,20 +155,46 @@ def main(argv):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--calibration", required=True, help="dump to take the calibration from")
     parser.add_argument("--settings", required=True, help="dump to take the settings from")
+    parser.add_argument("--calibration-copy", help="current calibration copy sector dump")
     parser.add_argument("--options", help="calibration copy sector dump to take the options from")
     parser.add_argument("--now", help="the settings sector as it is now")
     parser.add_argument("--mirror-out", help="calibration copy sector image to write (must not exist)")
     parser.add_argument("out", help="image to write (must not exist)")
     args = parser.parse_args(argv)
-    if (args.now is None) != (args.mirror_out is None) or (args.options and not args.mirror_out):
-        raise ValueError("--mirror-out needs --now, and --options needs --mirror-out")
+    if (args.now is None) != (args.mirror_out is None) or (
+            (args.options or args.calibration_copy) and not args.mirror_out):
+        raise ValueError("--mirror-out needs --now, and copy-sector inputs need --mirror-out")
     for name in (args.out, args.mirror_out):
         if name and os.path.exists(name):
             raise ValueError("%s exists" % name)
-    with open(args.calibration, "rb") as f:
-        calibration, _ = parse(f.read())
+    calibration_source = args.calibration
+    with open(calibration_source, "rb") as f:
+        calibration_dump = f.read()
+    check_sector_size(calibration_dump)
+    calibration = read_chunk(calibration_dump, 0, CALI, CALI_SIZE)
+    now = current = None
+    if args.now:
+        with open(args.now, "rb") as f:
+            now = f.read()
+        check_sector_size(now)
+        current = read_chunk(now, 0, CALI, CALI_SIZE)
+    unusable_live = calibration_dump == now and (
+        calibration is None or not usable(calibration))
+    factory_live = current and current.startswith(FACTORY_BYTES) and (
+        calibration and calibration.startswith(FACTORY_BYTES))
+    if unusable_live or factory_live:
+        if not args.calibration_copy:
+            raise ValueError("supply the current --calibration-copy to recover the live calibration")
+        with open(args.calibration_copy, "rb") as f:
+            source = f.read()
+        check_sector_size(source)
+        copy = read_chunk(source, 0, CALI, CALI_SIZE)
+        if copy and usable(copy) and (unusable_live or not copy.startswith(FACTORY_BYTES)):
+            calibration, calibration_source = copy, args.calibration_copy
+    if calibration is None:
+        raise ValueError("no valid calibration record")
     with open(args.settings, "rb") as f:
-        _, state = parse(f.read())
+        state = read_state(f.read())
     if not usable(calibration):
         raise ValueError("the calibration is more than 25% from the factory values")
     image = build(calibration, state)
@@ -162,11 +205,6 @@ def main(argv):
         if args.options:
             with open(args.options, "rb") as f:
                 record = options(f.read())
-        with open(args.now, "rb") as f:
-            now = f.read()
-        if len(now) != SECTOR_SIZE:
-            raise ValueError("a dump is %d bytes, not %d" % (len(now), SECTOR_SIZE))
-        current = read_chunk(now, 0, CALI, CALI_SIZE)
         mirror = build_mirror(calibration, record)
         if read_chunk(erased(mirror), 0, CALI, CALI_SIZE) != calibration or \
                 options(erased(mirror)) != record:
@@ -177,14 +215,14 @@ def main(argv):
         f.write(image)
     pitch_scale, pitch_offset = struct.unpack_from("<ff", calibration, 2 * 8)  # CV_ADC_CHANNEL_PITCH
     print("calibration from %s (PITCH scale %.4f, offset %.4f)" % (
-            args.calibration, pitch_scale, pitch_offset))
+            calibration_source, pitch_scale, pitch_offset))
     print("settings from %s" % args.settings)
     print("wrote %s" % args.out)
     if args.mirror_out:
         print("options from %s" % (args.options if record else "none: the profile's defaults"))
         print("wrote %s" % args.mirror_out)
-        # Erase a sector only while the other holds a usable calibration.
-        if current is not None and usable(current):
+        # Factory values cannot protect a measured copy in the mirror.
+        if current and usable(current) and not current.startswith(FACTORY_BYTES):
             order = [(args.mirror_out, "0x081C0000"), (args.out, "0x081E0000")]
         else:
             order = [(args.out, "0x081E0000"), (args.mirror_out, "0x081C0000")]

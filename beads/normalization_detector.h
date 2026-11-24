@@ -75,9 +75,8 @@ class NormalizationDetector {
   }
   
   inline void Stop() {
-    // TODO(pichenettes): it's a dirty way of halting the detector,
-    // since it'll utimately kick back into action after 140 hours.
-    prescaler_count_ = 1 << 31;
+    // Delay the next probe until calibration restarts the detector.
+    prescaler_count_ = INT32_MAX;
     normalization_probe_.Low();
   }
 

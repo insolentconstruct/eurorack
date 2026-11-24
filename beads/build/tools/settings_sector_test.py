@@ -153,22 +153,32 @@ with tempfile.TemporaryDirectory() as directory:
         assert load(ss.erased(image), directory) == (True,) + expected
         assert ss.parse(ss.erased(image)) == expected
 
+    # Each input needs only the requested record.
+    cali_only = dump(calibration(0.5), [])
+    state_only = dump(calibration(0.5), [state(6)], cali_tag=ss.STAT)
+    result, out = run(directory, cali_only, state_only)
+    assert result.returncode == 0, result.stderr
+    assert load(ss.erased(out.read_bytes()), directory) == (
+        True, calibration(0.5), state(6))
+
     # A full sector: the last settings record wins.
     full = dump(calibration(0.5), [state(i) for i in range(4092)])
     assert ss.parse(full) == (calibration(0.5), state(4091))
     assert load(full, directory) == (True, calibration(0.5), state(4091))
 
-    # Dumps the firmware would not read are refused, and no image is written.
+    # Malformed sector sizes and damage to requested records are refused.
     bad_checksum = bytearray(backup)
     bad_checksum[8] ^= 1
-    for broken in (backup[:-1], dump(calibration(0.5), []),
-                   dump(calibration(0.5), [state(1)], cali_tag=ss.STAT),
-                   bytes(bad_checksum), b"\xff" * ss.SECTOR_SIZE):
+    blank = b"\xff" * ss.SECTOR_SIZE
+    for broken in (backup[:-1], blank, cali_only, state_only, bytes(bad_checksum)):
         if len(broken) == ss.SECTOR_SIZE:
             assert not load(broken, directory)[0]
-        for cali_dump, settings_dump in ((broken, now), (now, broken)):
-            result, out = run(directory, cali_dump, settings_dump)
-            assert result.returncode == 1 and not out.exists(), result
+    for broken in (backup[:-1], blank, state_only, bytes(bad_checksum)):
+        result, out = run(directory, broken, now)
+        assert result.returncode == 1 and not out.exists(), result
+    for broken in (backup[:-1], blank, cali_only):
+        result, out = run(directory, now, broken)
+        assert result.returncode == 1 and not out.exists(), result
 
     # An existing output is never overwritten.
     result, out = run(directory, backup, now)
@@ -209,6 +219,45 @@ with tempfile.TemporaryDirectory() as directory:
         result, out, mirror = run_mirror(directory, backup, backup, options_backup, damaged)
         assert result.returncode == 0, result.stderr
         assert "write 1: " + str(out) in result.stdout, result.stdout
+    # Exact factory values cannot protect an older measured mirror.
+    factory = b"".join(struct.pack("<ff", *pair) for pair in ss.FACTORY) + bytes(72)
+    factory_now = dump(factory, [state(4)])
+    result, out, mirror = run_mirror(directory, now, backup, options_backup, factory_now)
+    assert result.returncode == 0, result.stderr
+    assert "write 1: " + str(out) in result.stdout, result.stdout
+
+    # A settings-only restore uses the live measured mirror, not old options.
+    live_mirror = Path(directory) / "live-mirror.bin"
+    live_mirror.write_bytes(mirror_dump(calibration(0.25), []))
+    result, out, mirror = run_mirror(directory, factory_now, backup,
+                                     options_backup, factory_now)
+    assert result.returncode == 1 and not out.exists() and not mirror.exists()
+    command = [sys.executable, str(Path(__file__).parent / "settings_sector.py"),
+               "--calibration", str(Path(directory) / "cal.bin"),
+               "--calibration-copy", str(live_mirror),
+               "--settings", str(Path(directory) / "set.bin"),
+               "--options", str(Path(directory) / "opt.bin"),
+               "--now", str(Path(directory) / "now.bin"),
+               "--mirror-out", str(mirror), str(out)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "write 1: " + str(out) in result.stdout, result.stdout
+    assert load_both(ss.erased(out.read_bytes()), ss.erased(mirror.read_bytes()),
+                     directory)[2] == calibration(0.25)
+    assert ss.options(ss.erased(mirror.read_bytes())) == record(2)
+
+    # Settings-only recovery also follows the mirror after live CALI damage.
+    damaged_now = bytearray(now)
+    damaged_now[8] ^= 1
+    for source in ("cal.bin", "now.bin"):
+        (Path(directory) / source).write_bytes(damaged_now)
+    out.unlink()
+    mirror.unlink()
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert load(ss.erased(out.read_bytes()), directory) == (
+        True, calibration(0.25), state(3))
+
     # A calibration more than 25% from the factory values, an options dump without the copy image,
     # or a copy image without the sector as it is now: refused, nothing written.
     wild = dump(calibration(0.5)[:16] + struct.pack("<ff", -200.0, 60.0) + calibration(0.5)[24:],

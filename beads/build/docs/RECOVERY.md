@@ -13,7 +13,7 @@ To restore, first dump both sectors as they are now with the same command, namin
 
 - **Both:** `python3 beads/build/tools/settings_sector.py --calibration beads-settings.bin --settings beads-settings.bin --options beads-options.bin --now beads-now.bin --mirror-out beads-restore-copy.bin beads-restore.bin`
 - **Calibration only**, keeping today's settings and options, e.g. to undo a recalibration: `--calibration beads-settings.bin --settings beads-now.bin --options beads-options-now.bin`, the rest as above.
-- **Settings only**, keeping today's calibration: `--calibration beads-now.bin --settings beads-settings.bin --options beads-options.bin`, the rest as above.
+- **Settings only**, keeping today's calibration: `--calibration beads-now.bin --calibration-copy beads-options-now.bin --settings beads-settings.bin --options beads-options.bin`, the rest as above.
 
 Without `--options`, Drizzlet's options start from the profile's defaults. The tool prints `write 1` and `write 2`, each an image and its address: write them in that order, and go on only if the first verifies. The first command leaves the module halted, so the firmware doesn't start between the two:
 
@@ -24,7 +24,7 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
     -c "init; halt; flash write_image erase IMAGE2 ADDRESS2; verify_image IMAGE2 ADDRESS2; reset run; shutdown"
 ```
 
-The order keeps a usable calibration in one of the two sectors at every step: the copy sector goes first while the settings sector holds a usable calibration, otherwise the settings sector does. Each image holds only the calibration and the latest settings or options, so later saves land on erased flash; don't write the 128 KB backups themselves back. If the module showed the damaged-settings warning, restoring this way also repairs it. The tool refuses a dump the firmware would not read and a calibration more than 25% from the factory values, and never overwrites a file. To reset the settings and options to defaults instead, hold SEED while powering on; calibration is kept.
+The copy sector goes first while the settings sector holds a usable measured calibration. Otherwise the settings sector goes first. For a settings-only restore with damaged or factory calibration in the settings sector, supply the current copy-sector dump with `--calibration-copy`. The tool uses the same calibration preference as a normal boot. Each image holds only the calibration and the latest settings or options, so later saves land on erased flash; don't write the 128 KB backups themselves back. If the module showed the damaged-settings warning, restoring this way also repairs it. The tool requires the requested record in each input, rejects a calibration more than 25% from factory values, and creates only new files. To reset the settings and options to defaults instead, hold SEED while powering on; calibration is kept.
 
 ## ST-Link recovery
 
