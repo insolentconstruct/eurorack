@@ -72,6 +72,8 @@ class GestureController {
   }
 
  private:
+  friend class Ui;
+
   void StepPlaitsBank();
   void StepRingsPolyphony();
   bool DoAction(uint8_t slot);

@@ -1609,15 +1609,15 @@ cases = [
     '    { FEATURE_PLAITS_BANK, PROFILE_ADJUSTABLE, 0, 0,',
     '    { FEATURE_PLAITS_BANK, PROFILE_OFF, 0, 0,'),
   ('TestPlaitsBankGesture', 'options', 'beads/gesture_controller.cc',
-    'if (slot == ACTION_FREEZE && ui_->synth_mode_ && feature != '
-    'FEATURE_SYNTH_START) {',
-    'if (slot == ACTION_FREEZE && feature != FEATURE_SYNTH_START) {'),
+    'if (slot == ACTION_FREEZE && ui_->synth_mode_ &&\n'
+    '      (fallback || feature != FEATURE_SYNTH_START)) {',
+    'if (slot == ACTION_FREEZE &&\n'
+    '      (fallback || feature != FEATURE_SYNTH_START)) {'),
   ('TestPlaitsBankGesture', 'options', 'beads/gesture_controller.cc',
     '    } else if (ui_->playing_synth_ == SYNTH_PLAITS) {',
     '    } else if (true) {'),
   ('TestPlaitsBankGesture', 'options', 'beads/gesture_controller.cc',
-    '&& feature != FEATURE_SYNTH_START) {',
-    '&& true) {'),
+    '(fallback || feature != FEATURE_SYNTH_START)) {', '(true)) {'),
   ('TestPlaitsBankGesture', 'options', 'beads/gesture_controller.cc',
     '(settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % kNumPlaitsBanks);',
     '(settings_->FeatureValue(FEATURE_PLAITS_BANK) + 1) % 4);'),

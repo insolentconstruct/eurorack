@@ -212,6 +212,8 @@ class Ui {
   }
   
  private:
+  inline bool DoAction(uint8_t slot) { return gestures_.DoAction(slot); }
+
   friend class GestureController;
   void FlashOptionsPage();
 
