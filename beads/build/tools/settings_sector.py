@@ -197,8 +197,9 @@ def main(argv):
     if args.mirror_out:
         print("options from %s" % (args.options if record else "none: the profile's defaults"))
         print("wrote %s" % args.mirror_out)
-        # Erase a sector only while the other holds a usable calibration.
-        if current is not None and usable(current):
+        # Factory values cannot protect a measured copy in the mirror.
+        factory = b"".join(struct.pack("<ff", *pair) for pair in FACTORY)
+        if current is not None and usable(current) and not current.startswith(factory):
             order = [(args.mirror_out, "0x081C0000"), (args.out, "0x081E0000")]
         else:
             order = [(args.out, "0x081E0000"), (args.mirror_out, "0x081C0000")]

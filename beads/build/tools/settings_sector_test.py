@@ -219,6 +219,13 @@ with tempfile.TemporaryDirectory() as directory:
         result, out, mirror = run_mirror(directory, backup, backup, options_backup, damaged)
         assert result.returncode == 0, result.stderr
         assert "write 1: " + str(out) in result.stdout, result.stdout
+    # Exact factory values cannot protect an older measured mirror.
+    factory = b"".join(struct.pack("<ff", *pair) for pair in ss.FACTORY) + bytes(72)
+    factory_now = dump(factory, [state(4)])
+    result, out, mirror = run_mirror(directory, now, backup, options_backup, factory_now)
+    assert result.returncode == 0, result.stderr
+    assert "write 1: " + str(out) in result.stdout, result.stdout
+
     # A calibration more than 25% from the factory values, an options dump without the copy image,
     # or a copy image without the sector as it is now: refused, nothing written.
     wild = dump(calibration(0.5)[:16] + struct.pack("<ff", -200.0, 60.0) + calibration(0.5)[24:],
