@@ -232,11 +232,40 @@ bool Codec::Start(
   // Enable the codec.
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;  
 
-  if (!StartDma(block_size)) {
-    Pause();
-    Stop();
-    return false;
-  }
+  block_size_ = block_size;
+  const size_t buffer_size_in_words = \
+      sizeof(Frame) / sizeof(uint32_t) * block_size * 2;
+
+  // Enable the DMA transfer for the data sent to the codec, read from
+  // the codec, and the data from GPIOB which contains the freeze/seed bits
+  // read in sync with the audio samples.
+
+  HAL_DMA_Start(
+      &dma_sai_idr_,
+      (uint32_t)&IDR_PORT->IDR,
+      (uint32_t)idr_buffer_,
+      buffer_size_in_words);
+  HAL_DMAEx_EnableMuxRequestGenerator(&dma_sai_idr_);
+
+  HAL_DMA_Start(
+      &dma_sai_tx_,
+      (uint32_t)(&tx_dma_buffer_[0]),
+      (uint32_t)&sai_tx_.Instance->DR,
+      buffer_size_in_words);
+
+  HAL_DMA_Start(
+      &dma_sai_rx_,
+      (uint32_t)&sai_rx_.Instance->DR,
+      (uint32_t)(&rx_dma_buffer_[0]),
+      buffer_size_in_words);
+
+  // Enable TC and HT interrupts for the DMA associated with data reception.
+  ((DMA_Stream_TypeDef *) dma_sai_rx_.Instance)->CR |= DMA_IT_TC | DMA_IT_HT;
+
+  // Enable the SAI peripherals (and their DMA requests) for TX and RX.
+  HAL_SAI_DMAResume(&sai_tx_);
+  HAL_SAI_DMAResume(&sai_rx_);
+  
   return true;
 }
 
