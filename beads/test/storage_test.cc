@@ -290,6 +290,22 @@ void TestCalibrationLost() {
   }
 }
 
+void TestAppendAfterBlankGap() {
+  test_checker.Start("TestAppendAfterBlankGap");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 3);
+  uint8_t blank[kStateChunk];
+  memset(blank, 255, sizeof(blank));
+  Poke(StateChunk(3), blank, sizeof(blank));
+
+  Settings s;
+  CHECK(s.Init(false) && !s.write_locked());
+  CHECK(s.state().gain == 1);
+  s.mutable_state()->gain = 99;
+  s.SaveState();
+  CHECK(StockLoads(calibration, s.state()));
+}
+
 void TestStateTerminator() {
   test_checker.Start("TestStateTerminator");
   const Saved defaults = Defaults();
@@ -1808,6 +1824,7 @@ int main() {
   TestCalibrationFromMirror();
   TestRestoredCalibrationChoice();
   TestCalibrationLost();
+  TestAppendAfterBlankGap();
   TestStateTerminator();
   TestInterruptedAppend();
   TestInterruptedRewrite();
