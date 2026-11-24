@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "00a4d630aa99bf084c1b3978ab046ed50e6486346504f1fc8274b998ad8b989a",
+  "manifest_sha256": "25ddb8ff5acd212343b8782c043e70a39f9181f3a5fdb12e8a6692892f562354",
   "record_version": 1,
   "features": [
     {
@@ -1166,7 +1166,8 @@
       "name": "Mix law",
       "values": [
         "Stock",
-        "Gentle"
+        "Gentle",
+        "Send"
       ],
       "states": [
         "Off",
@@ -1641,6 +1642,55 @@
       "id": 49,
       "name": "Resonator amount",
       "values": null,
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": false,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 50,
+      "name": "Synth output level",
+      "values": [
+        "Stock",
+        "Half",
+        "Quarter",
+        "Eighth"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 51,
+      "name": "Grain output division",
+      "values": [
+        "Stock",
+        "/2",
+        "/4",
+        "/8",
+        "/16"
+      ],
       "states": [
         "Off",
         "Fixed"

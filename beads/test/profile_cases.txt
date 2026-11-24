@@ -19,8 +19,16 @@ accept saved-without-control : 23 2 1 0 0 0
 accept time-modulation-on-freeze : 23 2 0 0 0 2
 accept rings-polyphony-four : 42 2 2 0 0 0
 accept synth-rings-fixed : 7 1 2 0 0 0
+accept send-mix : 32 1 2 0 0 0
+accept synth-level-eighth : 50 1 3 0 0 0
+accept grain-output-sixteenth : 51 1 4 0 0 0
+reject send-mix-value : 32 1 3 0 0 0
+reject synth-level-value : 50 1 4 0 0 0
+reject grain-output-value : 51 1 5 0 0 0
+reject synth-level-page : 50 2 1 1 0 0
+reject grain-output-page : 51 2 1 1 0 0
 reject id-zero : 0 1 0 0 0 0
-reject unknown-id : 50 1 0 0 0 0
+reject unknown-id : 254 1 0 0 0 0
 reject repeated-id : 2 1 1 0 0 0, 2 1 0 0 0 0
 reject state-3 : 2 3 0 0 0 0
 reject value-out-of-range : 2 1 2 0 0 0

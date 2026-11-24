@@ -471,6 +471,26 @@ void Process(
   }
 }
 
+// Selected only for synth profiles with an output trim.
+void ProcessSynthLevel(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  Process(events, in, out, size);
+  const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
+  if (settings.state().gate_output_mode) {
+    for (size_t i = 0; i < size; ++i) {
+      out[i].l /= divisor;
+    }
+  } else {
+    for (size_t i = 0; i < size; ++i) {
+      out[i].l /= divisor;
+      out[i].r /= divisor;
+    }
+  }
+}
+
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
   synth_mode = new_synth_mode;
@@ -495,7 +515,15 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  transition.Start(sr, &Process);
+  const Codec::FillBufferCallback callback = new_synth_mode &&
+      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
+  transition.Start(sr, callback);
+}
+
+void SwapPaused(SynthEngine owner, SynthEngine playing) {
+  const Codec::FillBufferCallback callback = synth_mode &&
+      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
+  transition.SwapPaused(owner, playing, callback);
 }
 
 void Init() {
@@ -561,7 +589,10 @@ void Init() {
   transition.set_playing_synth(EffectiveSynth(ui.synth(), playable_synths));
   ui.set_playing_synth(transition.playing_synth());
   cv_reader.set_smooth_pitch(settings.FeatureValue(FEATURE_PITCH_LAW));
-  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW));
+  processor.set_gentle_mix(settings.FeatureValue(FEATURE_MIX_LAW) == 1);
+  processor.set_send_mix(settings.FeatureValue(FEATURE_MIX_LAW) == 2);
+  processor.set_output_division(
+      1 << settings.FeatureValue(FEATURE_OUTPUT_DIVISION));
   processor.set_reverb_on_grains(settings.FeatureValue(FEATURE_REVERB_INPUT));
   // 0, the default, is the 2021/2024 grain stealing; 1 is the 2026 source's.
   const bool legacy_stealing = !settings.FeatureValue(FEATURE_GRAIN_STEALING);
@@ -642,7 +673,7 @@ void MonitorStateChange() {
       ui.ClearSelfPlayRequest();
     }
     if (transition.Fade()) {
-      transition.SwapPaused(SYNTH_SILENT, transition.playing_synth(), &Process);
+      SwapPaused(SYNTH_SILENT, transition.playing_synth());
     }
     return;
   }
@@ -662,7 +693,7 @@ void MonitorStateChange() {
       if (!transition.Fade()) {
         return;
       }
-      transition.SwapPaused(owner, wanted, &Process);
+      SwapPaused(owner, wanted);
       return;
     }
     transition.set_playing_synth(wanted);

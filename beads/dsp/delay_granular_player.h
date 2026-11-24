@@ -61,7 +61,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
       float amplitude, pan;
       ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &pan);
-      
+
       const int safety = DelayGrain::head_crossing_safety_zone + 1;
       const int max_delay = delay_line->duration() - 2 * safety;
 
@@ -92,6 +92,15 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
     Tick();  // Required to estimate the timing between grains.
   }
+
+  // Defined with the optional path to preserve stock code generation.
+  template<typename DelayLineType>
+  void RenderSend(
+      const DelayLineType* delay_line,
+      const TriggerGenerator::Output& trigger,
+      const Parameters& p,
+      float gain,
+      FloatFrame* out);
 
  private:
   const AttackDetector* attacks_;
