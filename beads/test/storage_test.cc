@@ -509,8 +509,10 @@ void TestFactoryPrimaryInterruptedRecalibration() {
       // Stock can rebuild the primary here, with factory values.
       PersistentData stock_calibration = Factory();
       State stock_state = defaults;
+      const int wide = TestFlash().wide_sectors;
       stmlib::ChunkStorage<15, PersistentData, State> stock;
       CHECK(!stock.Init(&stock_calibration, &stock_state));
+      TestFlash().wide_sectors = wide;  // stmlib names the sector 15.
       CHECK(stock_calibration.SameCalibration(Factory()));
       CHECK(MirrorHolds(old_calibration));
     }
