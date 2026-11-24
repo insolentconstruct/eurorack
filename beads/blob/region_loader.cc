@@ -51,9 +51,8 @@ bool RegionLoader::FlashEccOk() {
   return ok;
 }
 
-// Reads the region with data bus faults ignored: a double ECC error (an
-// interrupted write) reads as garbage and faults that section only. The
-// D-cache is off meanwhile, so no linefill raises an imprecise fault later.
+// Ignore data bus faults to isolate double ECC errors to the affected section.
+// Disable D-cache so a linefill cannot raise a later imprecise fault.
 uint8_t RegionLoader::Load(
     const Profile& profile,
     size_t synth_ram_size,

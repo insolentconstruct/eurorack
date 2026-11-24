@@ -39,9 +39,8 @@
 
 namespace beads {
 
-// A blob is rebuilt on every switch, where a compiled-in engine keeps its
-// state: its first two Plaits blocks of OUT (the voice plays no AUX) fade in
-// on a squared ramp, so a restart from zeroed filters never clicks.
+// Fade the first two blocks of OUT after a switch to mask the transient from
+// rebuilding blob state (see ABI.md).
 const size_t kPlaitsBlobFadeSize = 48;
 const float kPlaitsBlobFadeStep = 1.0f / float(kPlaitsBlobFadeSize);
 // (position * kPlaitsBlobFadeStep) squared, in single precision.
@@ -52,10 +51,8 @@ class PlaitsBlobEngine : public plaits::Engine {
   PlaitsBlobEngine() { }
   ~PlaitsBlobEngine() { }
 
-  // Only for a blob that passed PlaitsBlob::Check; Init must follow. model
-  // is the selected ID, which version 2 blobs get as reset's argument, with
-  // the libraries they list. Reads the header in place: a voice binds on
-  // every switch.
+  // Bind a checked blob in place on each switch, then call Init.
+  // Resolve dependencies from the initialized library registry (see ABI.md).
   void Bind(
       const uint8_t* blob,
       const PlaitsBlobServices* services,

@@ -125,9 +125,8 @@ void SpectralSpiral::Render(
     const float delayed_i = delay_i_[write_index_];
     const float delayed_q = delay_q_[write_index_];
 
-    // The delayed analytic signal is multiplied by a complex oscillator before
-    // returning to the loop. Each circulation therefore adds another signed
-    // frequency shift, building a geometric ladder of moving partials.
+    // Rotate the analytic return to add a signed frequency shift on each pass,
+    // building a ladder of moving partials.
     const float shifted_i = delayed_i * shift_cosine - \
         delayed_q * shift_sine;
     const float shifted_q = delayed_i * shift_sine + \
@@ -143,10 +142,8 @@ void SpectralSpiral::Render(
     }
 
     out[i] = LimitAudio(write_i * 1.05f);
-    // AUX listens to the quadrature component of a counter-rotated return.
-    // Quadrature source injection keeps it distinct even at the stationary
-    // macro midpoint, while the opposite rotation emphasizes complementary
-    // sideband motion once the shifter starts moving.
+    // AUX uses the counter-rotated quadrature return for complementary sidebands.
+    // Its quadrature source keeps it distinct at the stationary midpoint.
     const float counter_shift_q = -delayed_i * shift_sine + \
         delayed_q * shift_cosine;
     aux[i] = LimitAudio(
