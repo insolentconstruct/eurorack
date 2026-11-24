@@ -37,7 +37,7 @@ class FreshStartPolicyTest(unittest.TestCase):
                   any(isinstance(t, ast.Name) and t.id == "FRESH_ON_RESELECT"
                       for t in n.targets))
     self.assertEqual(set(policy),
-                     {51, 53, 56, 71, 76, 92, 93, 94, 95, 97, 98, 99})
+                     {28, 51, 53, 56, 67, 71, 76, 92, 93, 94, 95, 97, 98, 99})
 
 
 if __name__ == "__main__":
