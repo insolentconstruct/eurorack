@@ -30,7 +30,8 @@
 
 Each settings input is a dump of the settings sector (0x081E0000, 128 KB) from the same module, as
 RECOVERY.md's backup command makes. OUT holds the calibration record of the first and the latest
-settings record of the second, laid out as stmlib's ChunkStorage writes them after erasing the
+settings record of the second. Each dump needs only the requested record. The output uses
+stmlib's ChunkStorage layout after erasing the
 sector. OUT is only those two records (160 bytes): the restore command erases the whole sector and
 programs just them, so the firmware's later saves land on erased flash, as after its own rewrite.
 
@@ -75,13 +76,21 @@ def read_chunk(sector, address, tag, size):
     return data
 
 
-def parse(sector):
-    """Returns the calibration and the latest settings, as the firmware loads them."""
+def check_sector_size(sector):
     if len(sector) != SECTOR_SIZE:
         raise ValueError("a dump is %d bytes, not %d" % (len(sector), SECTOR_SIZE))
+
+
+def read_calibration(sector):
+    check_sector_size(sector)
     calibration = read_chunk(sector, 0, CALI, CALI_SIZE)
     if calibration is None:
-        raise ValueError("no valid calibration record: the firmware would not read this dump")
+        raise ValueError("no valid calibration record")
+    return calibration
+
+
+def read_state(sector):
+    check_sector_size(sector)
     state = None
     address = CALI_CHUNK
     while address + STATE_CHUNK <= SECTOR_SIZE:
@@ -91,8 +100,13 @@ def parse(sector):
         state = record
         address += STATE_CHUNK
     if state is None:
-        raise ValueError("no valid settings record: the firmware would not read this dump")
-    return calibration, state
+        raise ValueError("no valid settings record")
+    return state
+
+
+def parse(sector):
+    """Returns the calibration and the latest settings, as the firmware loads them."""
+    return read_calibration(sector), read_state(sector)
 
 
 def usable(calibration):
@@ -149,9 +163,9 @@ def main(argv):
         if name and os.path.exists(name):
             raise ValueError("%s exists" % name)
     with open(args.calibration, "rb") as f:
-        calibration, _ = parse(f.read())
+        calibration = read_calibration(f.read())
     with open(args.settings, "rb") as f:
-        _, state = parse(f.read())
+        state = read_state(f.read())
     if not usable(calibration):
         raise ValueError("the calibration is more than 25% from the factory values")
     image = build(calibration, state)

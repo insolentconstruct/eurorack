@@ -153,22 +153,32 @@ with tempfile.TemporaryDirectory() as directory:
         assert load(ss.erased(image), directory) == (True,) + expected
         assert ss.parse(ss.erased(image)) == expected
 
+    # Each input needs only the requested record.
+    cali_only = dump(calibration(0.5), [])
+    state_only = dump(calibration(0.5), [state(6)], cali_tag=ss.STAT)
+    result, out = run(directory, cali_only, state_only)
+    assert result.returncode == 0, result.stderr
+    assert load(ss.erased(out.read_bytes()), directory) == (
+        True, calibration(0.5), state(6))
+
     # A full sector: the last settings record wins.
     full = dump(calibration(0.5), [state(i) for i in range(4092)])
     assert ss.parse(full) == (calibration(0.5), state(4091))
     assert load(full, directory) == (True, calibration(0.5), state(4091))
 
-    # Dumps the firmware would not read are refused, and no image is written.
+    # Malformed sector sizes and damage to requested records are refused.
     bad_checksum = bytearray(backup)
     bad_checksum[8] ^= 1
-    for broken in (backup[:-1], dump(calibration(0.5), []),
-                   dump(calibration(0.5), [state(1)], cali_tag=ss.STAT),
-                   bytes(bad_checksum), b"\xff" * ss.SECTOR_SIZE):
+    blank = b"\xff" * ss.SECTOR_SIZE
+    for broken in (backup[:-1], blank, cali_only, state_only, bytes(bad_checksum)):
         if len(broken) == ss.SECTOR_SIZE:
             assert not load(broken, directory)[0]
-        for cali_dump, settings_dump in ((broken, now), (now, broken)):
-            result, out = run(directory, cali_dump, settings_dump)
-            assert result.returncode == 1 and not out.exists(), result
+    for broken in (backup[:-1], blank, state_only, bytes(bad_checksum)):
+        result, out = run(directory, broken, now)
+        assert result.returncode == 1 and not out.exists(), result
+    for broken in (backup[:-1], blank, cali_only):
+        result, out = run(directory, now, broken)
+        assert result.returncode == 1 and not out.exists(), result
 
     # An existing output is never overwritten.
     result, out = run(directory, backup, now)
