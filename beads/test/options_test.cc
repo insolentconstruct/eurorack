@@ -2223,6 +2223,7 @@ void TestOptionsPalette() {
       FEATURE_NONE);
   // Only page values light, and only the values a feature has.
   CHECK(FindOptionValue(FEATURE_REVERB, 4).setting == FEATURE_NONE);
+  CHECK(FindOptionValue(FEATURE_FROZEN, 2).setting == FEATURE_NONE);
   CHECK(FindOptionValue(FEATURE_ATTACK_SENSITIVITY, 0).setting ==
       FEATURE_NONE);
   for (size_t i = 0; i < count; ++i) {
