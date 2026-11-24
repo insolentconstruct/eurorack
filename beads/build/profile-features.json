@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "42d70b5f4519a0a0f63093bec17c73063bd37f24105e0fd1300efae7505387df",
+  "manifest_sha256": "91d8d20a0e6b87103ee07273bda0dc6f711b96f9b7ae40aef5cbd3ed643a7a1d",
   "record_version": 1,
   "features": [
     {
@@ -183,7 +183,8 @@
       "values": [
         "Granular (Stock)",
         "Spectral",
-        "Oliverb"
+        "Oliverb",
+        "Abyss"
       ],
       "states": [
         "Off",

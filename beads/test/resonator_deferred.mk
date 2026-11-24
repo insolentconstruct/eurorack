@@ -26,6 +26,7 @@ TARGET = resonator_deferred_test
 include beads/test/plaits_sources.mk
 CC_FILES       = 		resonator_deferred_test.cc \
 		beads.cc \
+		abyss.cc \
 		engine_transition.cc \
 		cv_reader.cc \
 		normalization_detector.cc \

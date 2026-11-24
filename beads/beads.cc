@@ -35,6 +35,7 @@
 #include "beads/drivers/seed_input.h"
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
+#include "beads/dsp/fx/abyss.h"
 #include "beads/dsp/fx/oliverb.h"
 #include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/rings_synth.h"
@@ -59,8 +60,10 @@ using namespace stmlib;
 
 const bool skip_factory_test = false;
 
-uint8_t delay_buffer_1[512 * 1024] __attribute__ ((section (".ramd1")));
-uint8_t delay_buffer_2[256 * 1024] __attribute__ ((section (".ramd2")));
+uint8_t delay_buffer_1[512 * 1024]
+    __attribute__ ((section (".ramd1"), aligned (4)));
+uint8_t delay_buffer_2[256 * 1024]
+    __attribute__ ((section (".ramd2"), aligned (4)));
 uint16_t reverb_buffer[32768] __attribute__ ((section (".ramd3")));
 
 // Plaits borrows bank 0; Configure clears it before other users return.
@@ -87,12 +90,15 @@ PlaitsRegion plaits_region;
 // What can play, what plays, and which synth's RAM is in bank 0.
 uint8_t playable_synths;
 EngineTransition transition;
+Abyss abyss;
+beads::Limiter abyss_limiter;
 Processor processor;
 Oliverb oliverb;
 beads::Limiter oliverb_limiter;
 bool oliverb_mode;
 bool oliverb_restore_pending;
 Processor::Media oliverb_media;
+uint8_t active_processor_mode;
 SeedInput seed_input;
 Settings settings;
 Synth synth;
@@ -392,6 +398,8 @@ inline void ProcessAudio(
         sizeof(reverb_buffer) / sizeof(reverb_buffer[0]),
         transition.clouds_style(), &synth_mode, &p, &d, &m, &seed_button_state,
         &seed_input, seed, freeze, float_in, size, &calibration_callback);
+    active_processor_mode = processor.spectral()
+        ? PROCESSOR_SPECTRAL : PROCESSOR_GRANULAR;
   }
 #endif  // DWT_CALIBRATION
   if (!play_oliverb) {
@@ -617,6 +625,135 @@ void ProcessManualDelayFixedDecay(
   ProcessAudio<true, true>(events, in, out, size);
 }
 
+RandomizedParameter AbyssParameter(PotsAdcChannel knob,
+    PotsAdcChannel amount, CvAdcChannel cv,
+    NormalizationDetectorChannel channel) {
+  RandomizedParameter parameter;
+  parameter.base = cv_reader.pot(knob);
+  parameter.attenuverter = cv_reader.pot(amount);
+  parameter.has_cv = !normalization_detector.normalized(channel);
+  parameter.cv = cv_reader.cv(cv);
+  return parameter;
+}
+
+float AbyssMix(Ui::MixParameter parameter, float cv) {
+  const State& state = settings.state();
+  float value = ui.mix_parameter(parameter) * 1.005f;
+  if (!settings.width_assigned() && !settings.diffusion_assigned()) {
+    const float amount = state.assignable_cv_destination == 3
+        ? float(state.assignable_cv_amount[parameter]) / 256.0f
+        : float(state.assignable_cv_destination == parameter);
+    value += cv * amount;
+  }
+  CONSTRAIN(value, 0.0f, 1.0f);
+  return value;
+}
+
+void ProcessAbyss(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* codec_out,
+    size_t size) {
+#ifdef PROFILE_INTERRUPT
+  ScopedDebugPinToggler toggler;
+#endif  // PROFILE_INTERRUPT
+#ifdef DWT_CALIBRATION
+  dwt_calibration::ScopedBlockTimer calibration_callback;
+#endif  // DWT_CALIBRATION
+  FloatFrame input[kMaxCodecBlockSize];
+  FloatFrame output[kMaxCodecBlockSize];
+  bool freeze[kMaxCodecBlockSize];
+  normalization_detector.Process(
+      events[size - 1], in[size - 1], cv_reader.cv_values());
+  cv_reader.Read();
+  for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
+    ui.ProcessPot(Ui::MixParameter(i), cv_reader.pot(
+        PotsAdcChannel(POTS_ADC_CHANNEL_FEEDBACK + i)));
+  }
+
+  bool frozen = false;
+  bool seeded = false;
+  for (size_t i = 0; i < size; ++i) {
+    freeze[i] = ui.freeze_button_state() || (events[i] & Codec::EVENT_FREEZE);
+    frozen |= freeze[i];
+    seeded |= events[i] & Codec::EVENT_SEED;
+  }
+  ui.set_freeze_led_state(frozen);
+  ui.set_seed_led_state(seeded && !transition.blanking() &&
+      !normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED));
+  ui.set_overwrite_reserve(1.0f);
+
+  gain_control.Process(
+      !transition.blanking(), settings.state().gain,
+      normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
+      normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT),
+      in, input, size);
+  if (transition.Blanking(codec_out, size)) {
+    return;
+  }
+
+  ui.ClearTrimFlag();
+  const bool change = ui.processor_mode() != PROCESSOR_ABYSS &&
+      !ui.should_ignore_state_change();
+  if (transition.Hold(ui.clouds_style(), change, &processor, &synth,
+      &plaits_synth, &rings_synth, codec_out, size)) {
+    return;
+  }
+
+  Abyss::Controls controls;
+  controls.room = AbyssParameter(POTS_ADC_CHANNEL_TIME,
+      POTS_ADC_CHANNEL_TIME_AMOUNT, CV_ADC_CHANNEL_TIME,
+      NORMALIZATION_DETECTOR_CHANNEL_TIME_CV).value();
+  controls.decay = AbyssParameter(POTS_ADC_CHANNEL_SIZE,
+      POTS_ADC_CHANNEL_SIZE_AMOUNT, CV_ADC_CHANNEL_SIZE,
+      NORMALIZATION_DETECTOR_CHANNEL_SIZE_CV).value();
+  controls.drift = AbyssParameter(POTS_ADC_CHANNEL_SHAPE,
+      POTS_ADC_CHANNEL_SHAPE_AMOUNT, CV_ADC_CHANNEL_SHAPE,
+      NORMALIZATION_DETECTOR_CHANNEL_SHAPE_CV).value();
+  ModulatedParameter diffusion;
+  diffusion.base = cv_reader.pot(POTS_ADC_CHANNEL_DENSITY);
+  diffusion.cv = normalization_detector.normalized(
+      NORMALIZATION_DETECTOR_CHANNEL_DENSITY_CV)
+      ? 0.0f : cv_reader.cv(CV_ADC_CHANNEL_DENSITY);
+  controls.diffusion = diffusion.value();
+  const float cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+  controls.gravity = AbyssMix(Ui::MIX_PARAMETER_FEEDBACK, cv);
+  controls.pitch = AbyssParameter(POTS_ADC_CHANNEL_PITCH,
+      POTS_ADC_CHANNEL_PITCH_AMOUNT, CV_ADC_CHANNEL_PITCH,
+      NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV).value(NULL, 0, 24.0f, false);
+  CONSTRAIN(controls.pitch, -24.0f, 24.0f);
+  controls.tone = AbyssMix(Ui::MIX_PARAMETER_REVERB, cv);
+  controls.mix = AbyssMix(Ui::MIX_PARAMETER_DRY_WET, cv);
+
+#ifdef DWT_CALIBRATION
+  const uint32_t start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+  abyss.Process(controls, freeze, input, output, size);
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+      dwt_calibration::Read() - start);
+#endif  // DWT_CALIBRATION
+  abyss_limiter.ProcessOutput(
+      output, size, ui.output_limiter_mode(), processor.sample_rate());
+  transition.Apply(output, size);
+
+  const bool gate_output = settings.state().gate_output_mode;
+  for (size_t i = 0; i < size; ++i) {
+    float left = output[i].l;
+    float right = output[i].r;
+    if (gate_output) {
+      left = (left + right) * 0.5f;
+      right = 0.0f;
+    }
+    CONSTRAIN(left, -1.0f, 0.999999f);
+    CONSTRAIN(right, -1.0f, 0.999999f);
+    codec_out[i].l = int32_t(left * 2147483648.0f);
+    codec_out[i].r = int32_t(right * 2147483648.0f);
+  }
+}
+
 // Selected only for synth profiles with an output trim.
 template<bool fixed_decay>
 void ProcessSynthLevel(
@@ -643,6 +780,9 @@ void ProcessSynthLevel(
 }
 
 Codec::FillBufferCallback AudioCallback(bool synth) {
+  if (active_processor_mode == PROCESSOR_ABYSS) {
+    return &ProcessAbyss;
+  }
   if (oliverb_mode) {
     return &ProcessAudio<false, false, true>;
   }
@@ -686,6 +826,12 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
+  if (active_processor_mode == PROCESSOR_ABYSS) {
+    processor.ResetDelayTransition();
+    processor.ClearReverb();
+    abyss.Init(delay_buffer_1, delay_buffer_2, float(sr));
+    abyss_limiter.Init(1.0f / (float(sr) * 6.0f), 0.9f);
+  }
   transition.Start(sr, AudioCallback(new_synth_mode), true);
 }
 
@@ -794,6 +940,7 @@ void Init() {
   ready = true;
   
   // A frozen buffer saved by the granular engine stays in flash.
+  active_processor_mode = ui.processor_mode();
   processor.set_spectral(ui.spectral());
   oliverb_mode = false;
   oliverb_restore_pending = ui.processor_mode() == PROCESSOR_OLIVERB;
@@ -809,7 +956,7 @@ void MonitorStateChange() {
   if (transition.RetryCodec()) {
     return;
   }
-  if (!oliverb_mode) {
+  if (!oliverb_mode && active_processor_mode != PROCESSOR_ABYSS) {
     UpdateResonator();
   }
   seed_latch_mode = ui.seed_latch();
@@ -870,8 +1017,10 @@ void MonitorStateChange() {
     return;
   }
 
-  const bool wants_oliverb = ui.processor_mode() == PROCESSOR_OLIVERB;
-  if (oliverb_mode || wants_oliverb) {
+  const ProcessorMode wanted_processor = ui.processor_mode();
+  const bool wants_oliverb = wanted_processor == PROCESSOR_OLIVERB;
+  if (wants_oliverb ||
+      (oliverb_mode && wanted_processor != PROCESSOR_ABYSS)) {
     const Processor::Media media = Processor::Media(settings.state().media);
     if (oliverb_mode == wants_oliverb && media == oliverb_media) {
       transition.Cancel();
@@ -884,11 +1033,17 @@ void MonitorStateChange() {
     transition.Pause();
     oliverb_mode = wants_oliverb;
     if (oliverb_mode) {
+      if (active_processor_mode == PROCESSOR_ABYSS) {
+        processor.Configure(media, normalization_detector.mono());
+        oliverb_restore_pending = true;
+      }
+      active_processor_mode = PROCESSOR_OLIVERB;
       oliverb_media = media;
       const float sr = Processor::SampleRate(media);
       oliverb.Init(reverb_buffer, int(sr));
       oliverb_limiter.Init(1.0f / (sr * 6.0f), 0.9f);
     } else {
+      active_processor_mode = wanted_processor;
       const bool resume_mono = normalization_detector.mono();
       // A compatible suspended recording stays in its delay bank.
       const bool reset = processor.spectral() != ui.spectral() ||
@@ -929,10 +1084,16 @@ void MonitorStateChange() {
 
   // Once faded out, swap the engine. This clears the recording; a frozen
   // buffer saved to flash returns with the granular engine.
-  if (ui.spectral() != processor.spectral() && transition.faded_out()) {
+  if (wanted_processor != active_processor_mode &&
+      (wanted_processor == PROCESSOR_ABYSS || transition.faded_out())) {
+    if (wanted_processor == PROCESSOR_ABYSS && !transition.Fade()) {
+      return;
+    }
     transition.Pause();
-    processor.set_spectral(ui.spectral());
-    if (processor.spectral()) {
+    oliverb_mode = false;
+    active_processor_mode = wanted_processor;
+    processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
+    if (active_processor_mode != PROCESSOR_GRANULAR) {
       background_buffer_backup.Init(&processor, &settings);
     }
     processor.Configure(Processor::Media(settings.state().media),
@@ -940,7 +1101,8 @@ void MonitorStateChange() {
     if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {
       processor.ClearReverb();
     }
-    if (!processor.spectral() && background_buffer_backup.Load()) {
+    if (active_processor_mode == PROCESSOR_GRANULAR &&
+        background_buffer_backup.Load()) {
       // The restored recording keeps the quality it was saved with.
       settings.mutable_state()->media = processor.media();
       ui.set_freeze_button_state(true);
@@ -949,8 +1111,9 @@ void MonitorStateChange() {
     return;
   }
   
-  // The wavetable synth does not start in spectral mode.
-  if (normalization_detector.no_input() && !processor.spectral()) {
+  // Self-play uses the granular engine only.
+  if (normalization_detector.no_input() &&
+      active_processor_mode == PROCESSOR_GRANULAR) {
     if (settings.self_play_on_request()) {
       synth_fade = false;
       // Self-play starts and stops only on a MEDIA hold.
@@ -1026,7 +1189,7 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     MonitorStateChange();
-    if (!oliverb_mode) {
+    if (!oliverb_mode && active_processor_mode != PROCESSOR_ABYSS) {
       if (!synth_mode && !processor.spectral()) {
         background_buffer_backup.Process(ui.freeze_led_state());
       }

@@ -21,6 +21,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - Retry an incomplete settings or calibration-copy sector erase.
 - A settings save no longer revives older settings past an empty slot.
 - Processor gains Oliverb, a dedicated modulated and pitch-shifting reverb based on Clouds Parasites (#216).
+- Abyss adds a large-space Processor mode with an infinite FREEZE tail, gravity shaping and optional shimmer.
 
 - Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
 

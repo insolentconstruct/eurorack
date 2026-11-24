@@ -146,6 +146,13 @@ enum ProfileFeature {
   FEATURE_LAST
 };
 
+enum ProcessorMode {
+  PROCESSOR_GRANULAR,
+  PROCESSOR_SPECTRAL,
+  PROCESSOR_OLIVERB,
+  PROCESSOR_ABYSS,
+};
+
 enum ProfileState {
   PROFILE_OFF,
   PROFILE_FIXED,
