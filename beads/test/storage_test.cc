@@ -306,6 +306,19 @@ void TestAppendAfterBlankGap() {
   CHECK(StockLoads(calibration, s.state()));
 }
 
+void TestRetryIncompleteErase() {
+  test_checker.Start("TestRetryIncompleteErase");
+  const PersistentData calibration = Calibration(0.1f);
+  Setup(calibration, 5);
+  Settings s;
+  CHECK(s.Init(false));
+  const uint32_t erases = TestFlashErases();
+  TestFlashStuckErases() = 1;
+  CHECK(s.SavePersistentData());
+  CHECK(TestFlashErases() == erases + 2);
+  CHECK(StockLoads(calibration, s.state()));
+}
+
 void TestStateTerminator() {
   test_checker.Start("TestStateTerminator");
   const Saved defaults = Defaults();
@@ -1825,6 +1838,7 @@ int main() {
   TestRestoredCalibrationChoice();
   TestCalibrationLost();
   TestAppendAfterBlankGap();
+  TestRetryIncompleteErase();
   TestStateTerminator();
   TestInterruptedAppend();
   TestInterruptedRewrite();

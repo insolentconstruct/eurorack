@@ -582,10 +582,11 @@ bool ChunkStorage<sector_index, mirror_sector_index,
     }
     if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK) {
       // The D-cache may still hold the records read before the erase.
-      SCB_InvalidateDCache_by_Addr(
-          (uint32_t*)(address),
-          FLASH_STORAGE_LAST - FLASH_STORAGE_BASE);
-      return true;
+      const size_t size = FLASH_STORAGE_LAST - FLASH_STORAGE_BASE;
+      SCB_InvalidateDCache_by_Addr((uint32_t*)(address), size);
+      if (Flash::IsBlank(address, size)) {
+        return true;
+      }
     }
   }
   return false;
