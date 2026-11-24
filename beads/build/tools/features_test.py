@@ -177,7 +177,7 @@ faults = [
   # The options record: each version's layout is frozen.
   ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 30,'),
   ('Record layout 1: ID 42', features.MANIFEST, '"saved": 27,',
-      '"saved": 28,'),
+      '"saved": 29,'),
   ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),
   ('Saved: PITCH', features.MANIFEST, '"saved": 8,\n', ''),
   ('Freeze record layout 2', features.MANIFEST,
