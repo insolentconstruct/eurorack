@@ -30,6 +30,10 @@
 
 #include <algorithm>
 
+#ifndef TEST
+#include <stm32h7xx_hal.h>
+#endif  // TEST
+
 namespace beads {
 
 using namespace std;
@@ -144,16 +148,28 @@ void Processor::ProcessResonatorLoop(
 
 void Processor::set_resonator_controls(const ResonatorControls& controls) {
   const ResonatorBound& bound = resonator_bounds_[resonator_bound_];
-  if (!resonator_controls_set_ || controls.structure != bound.structure ||
+  const bool changed = !resonator_controls_set_ ||
+      controls.structure != bound.structure ||
       controls.brightness != bound.brightness ||
-      controls.position != bound.position || controls.modes != bound.modes) {
-    const uint8_t next = resonator_bound_ ^ 1;
+      controls.position != bound.position || controls.modes != bound.modes;
+  const uint8_t next = resonator_bound_ ^ 1;
+  if (changed) {
     ModalResonator::Bound(controls.structure, controls.brightness,
         controls.position, controls.modes, &resonator_bounds_[next]);
+  }
+#ifndef TEST
+  const uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+#endif  // TEST
+  // Publish the controls and their completed bound between audio blocks.
+  if (changed) {
     resonator_bound_ = next;
   }
   resonator_controls_ = controls;
   resonator_controls_set_ = true;
+#ifndef TEST
+  __set_PRIMASK(primask);
+#endif  // TEST
 }
 
 float Processor::RecordResonance(
