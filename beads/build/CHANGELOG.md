@@ -7,6 +7,17 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE (#309).
 
 - Custom profiles can set a fixed reverb decay while REVERB still controls the mix (#38).
+- Retry a codec start or restart after a DMA failure instead of staying silent.
+- Cancel an unfinished frozen-buffer backup before entering synth mode.
+- Finish an automatic synth-entry fade after a late audio peak.
+- Ignore buttons held through a storage warning until they are released.
+- Resume jack detection when calibration is cancelled before the first measurement.
+- Recover calibration and settings independently from partially damaged dumps.
+- Guard writes and use RAM defaults when neither calibration copy is usable.
+- Preserve a measured calibration during recalibration after a stock factory reset.
+- Lock flash between frozen-buffer backup operations.
+- Retry an incomplete settings or calibration-copy sector erase.
+- A settings save no longer revives older settings past an empty slot.
 
 - Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
 

@@ -448,14 +448,14 @@ cases = [
     'p.pitch.pitch_value()'),
   ('TestOptionsSeed', 'options', 'beads/ui.cc',
     'const bool accept_switch_events = !was_active && !options_.active() &&\n'
-    '      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();',
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;',
     'const bool accept_switch_events = true;'),
   ('TestStockSettingsCarryOver', 'storage', 'beads/settings.cc',
     '  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);\n  LoadOptions();',
     '  LoadOptions();'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
     'const bool accept_switch_events = !was_active && !options_.active() &&\n'
-    '      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();',
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;',
     'const bool accept_switch_events = true;'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
     '    ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;',
@@ -1062,8 +1062,8 @@ cases = [
     '    if (freeze_state_) {',
     '    if (freeze_state_ && save_started_) {'),
   ('TestAutomaticSelfPlay', 'firmware', 'beads/beads.cc',
-    ') >= 10000)',
-    ') >= 9900)'),
+   'now - start >= 10000',
+   'now - start >= 9900'),
   ('TestRequestedSelfPlay', 'firmware', 'beads/beads.cc',
     'if (ui.self_play_requested()) {',
     'if (false) {'),
@@ -1252,9 +1252,8 @@ cases = [
     'const int kFlashAttempts = 3;',
     'const int kFlashAttempts = 1;'),
   ('TestStorageFailedProgram', 'options', 'beads/settings_storage.h',
-    '      if (WriteChunk(chunk_address(next_state_chunk_index_), state_data_)) {',
-    '      WriteChunk(chunk_address(next_state_chunk_index_), state_data_);\n'
-    '      if (true) {'),
+   '      if (WriteChunk(address, state_data_)) {',
+   '      WriteChunk(address, state_data_);\n      if (true) {'),
   ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
     '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;',
     '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk;'),
@@ -1294,8 +1293,8 @@ cases = [
     '      *reinterpret_cast<uint32_t*>(bytes) = word;'),
   # #317: a usable mirror is erased only with a usable calibration beside it.
   ('TestMirrorOnlyCopy', 'storage', 'beads/settings_storage.h',
-    '    if (valid && Usable(mirror) && !SectorUsable() && \\',
-    '    if (false && \\'),
+   '    if (valid && Usable(mirror) && !SectorProtects(mirror) && \\',
+   '    if (false && \\'),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
     '  if (calibration != CHUNK_VALID) {\n    return STORAGE_CALIBRATION_LOST;',
     '  if (calibration == CHUNK_UNREADABLE) {\n    return STORAGE_CALIBRATION_LOST;'),
@@ -1401,8 +1400,8 @@ cases = [
     '    if (recovery_mode && !profile_locked_) {\n      stored_state_ = defaults;\n    }\n    status = STORAGE_RESTORED;',
     '    status = STORAGE_RESTORED;'),
   ('TestCalibrationLost', 'storage', 'beads/settings.cc',
-    '  } else if (lost) {\n    status = STORAGE_DAMAGED;',
-    '  } else if (lost) {\n    status = STORAGE_OK;'),
+   '  } else if (lost || implausible) {\n    status = STORAGE_DAMAGED;',
+   '  } else if (lost || implausible) {\n    status = STORAGE_OK;'),
   ('TestCalibrationLost', 'storage', 'beads/settings.cc',
     '    chunk_storage_.Lock();\n',
     ''),
@@ -1486,8 +1485,16 @@ cases = [
     '      mode_ = MODE_STORAGE_WARNING;',
     '      mode_ = MODE_NORMAL;'),
   ('TestStorageWarning', 'firmware', 'beads/ui.cc',
-    '      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();',
-    '      options_.stage() != Options::STAGE_DRAIN;'),
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;\n'
+    '  for (int i = 0; i < SWITCH_LAST; ++i) {\n'
+    '    Switch s = Switch(i);\n\n'
+    '    if (switches_.just_pressed(s)) {\n'
+    '      ignore_release_[i] = !accept_switch_events || suppressed_press_[i];',
+    '      options_.stage() != Options::STAGE_DRAIN;\n'
+    '  for (int i = 0; i < SWITCH_LAST; ++i) {\n'
+    '    Switch s = Switch(i);\n\n'
+    '    if (switches_.just_pressed(s)) {\n'
+    '      ignore_release_[i] = !accept_switch_events;'),
   ('TestStorageWarning', 'firmware', 'beads/ui.cc',
     'const uint32_t kStorageStatusTime = 3000;',
     'const uint32_t kStorageStatusTime = 4000;'),
@@ -1904,16 +1911,8 @@ cases = [
     '      seed_input = NULL;', '      seed_input = seed;'),
 
   ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
-    '  HAL_SAI_DMAResume(&sai_tx_);\n'
-    '  HAL_SAI_DMAResume(&sai_rx_);\n'
-    '  // All clocks must run before the power-up sequence (PCM3060, p.16).\n'
-    '  HAL_Delay(1);\n'
-    '  // Release reset only after the clocks have stabilized (PCM3060, p.16).\n'
-    '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;',
-    '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;\n'
-    '  HAL_SAI_DMAResume(&sai_tx_);\n'
-    '  HAL_SAI_DMAResume(&sai_rx_);\n'
-    '  HAL_Delay(1);'),
+   '  if (!StartDma(block_size)) {\n    Stop();',
+   '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;\n  if (!StartDma(block_size)) {\n    Stop();'),
   ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
     '  HAL_Delay(kResetFrames * 1000 / previous_sample_rate + 2);',
     '  HAL_Delay(kResetFrames * 1000 / sample_rate + 2);'),
@@ -1927,10 +1926,8 @@ cases = [
   ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
     '    out_buffer_[0] = out_buffer_[block_size_];', ''),
   ('TestCodecKeepsClocks', 'firmware', 'beads/engine_transition.cc',
-    '    codec_->Restart(\n'
-    '        codec_sample_rate_, sample_rate, sample_rate / kBlockRate, callback);',
-    '    codec_->Stop();\n'
-    '    codec_->Start(sample_rate, sample_rate / kBlockRate, callback);'),
+   '      ? codec_->Restart(codec_sample_rate_, sample_rate, block_size, callback)',
+   '      ? (codec_->Stop(), codec_->Start(sample_rate, block_size, callback))'),
   ('TestProfileToggles', 'options', 'beads/gesture_controller.cc',
     '    settings_->SetFeatureValue(feature, value);\n'
     '    settings_->SaveOptions();\n'
@@ -2633,8 +2630,8 @@ cases = [
     '  for (size_t i = 1; i < 2; ++i) {\n'
     '    if (kOptionValues[i].setting == setting &&'),
   ('TestCompactionGuards', 'record', 'beads/settings_storage.h',
-    '    if (record_address(size_t(next_record_index_) + 1) <= MIRROR_LAST && \\\n        MirrorMatches()) {',
-    '    if (record_address(size_t(next_record_index_) + 1) <= MIRROR_LAST) {'),
+   '        MirrorMatches()) {',
+   '        true) {'),
   ('TestCompactionGuards', 'record', 'beads/settings_storage.h',
     '    PersistentData data;\n    if (ReadChunk(chunk_address(0), &data) != CHUNK_VALID || !Usable(data) || \\',
     '    PersistentData data = *persistent_data_;\n    if (!Usable(data) || \\'),
@@ -2680,9 +2677,9 @@ cases = [
   ('TestRecordVersions', 'record', 'beads/settings.cc',
     'record_.version == kOptionsRecordVersion;',
     'true;'),
-  ('TestImplausibleSaveKept', 'record', 'beads/settings_storage.h',
-    '  if (!Usable(*persistent_data_) && \\',
-    '  if (false && \\'),
+  ('TestImplausibleSaveKept', 'record', 'beads/settings.cc',
+    '    if (ReadPersistentData(&durable)) {',
+    '    if (false && ReadPersistentData(&durable)) {'),
   ('TestRecoveryRestoredStorage', 'record', 'beads/settings.cc',
     '  if (recovery_mode && !profile_locked_) {\n    record_ = default_record;',
     '  if (recovery_mode && status == STORAGE_OK && !profile_locked_) {\n    record_ = default_record;'),
@@ -2691,7 +2688,7 @@ cases = [
     '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/settings_storage.h',
     '        !memcmp(&requested, &durable, sizeof(PersistentData));',
-    '        requested.padding[0] == durable.padding[0];'),
+    '        memcmp(&requested, &durable, sizeof(PersistentData));'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
     '        queue_.Touch();  // A full second of it after the save\'s erase.\n',
     ''),
@@ -2732,8 +2729,8 @@ cases = [
     'const float kReverbStyleFadeStep = 1.0f / (0.01f * kBlockRate);',
     'const float kReverbStyleFadeStep = 1.0f / (0.0125f * kBlockRate);'),
   ('TestTransitionTraces', 'firmware', 'beads/engine_transition.cc',
-    '  codec_transition_frames_ = kBlockRate / 4;',
-    '  codec_transition_frames_ = kBlockRate / 5;'),
+   '  codec_transition_frames_ = blank_output ? kBlockRate / 4 : 0;',
+   '  codec_transition_frames_ = blank_output ? kBlockRate / 5 : 0;'),
   ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
     '      transition.Pause();\n'
     '      processor.Configure(media, mono);',
@@ -2784,8 +2781,8 @@ cases = [
     '    processor.set_delay_mode(ui.delay_mode());',
     '    processor.set_delay_mode(settings.delay_mode());'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
-    'void MonitorStateChange() {\n  UpdateResonator();',
-    'void MonitorStateChange() {'),
+   '  }\n  UpdateResonator();\n  seed_latch_mode = ui.seed_latch();',
+   '  }\n  seed_latch_mode = ui.seed_latch();'),
   # Gesture characterization: hold timing and release suppression.
   ('TestGestureCharacterization', 'options', 'beads/gesture_controller.cc',
     '  if (uint32_t(e.data) >= kSelfPlayHoldTime) {',
@@ -3057,6 +3054,51 @@ cases = [
   ('TestManualDelayAction', 'firmware', 'beads/dsp/processor_options.cc',
     'const float transition_direction = manual_delay',
     'const float transition_direction = false'),
+  ('TestAppendAfterBlankGap', 'storage', 'beads/settings_storage.h',
+   '            !Flash::IsBlank(address + size, size))) {',
+   '            false)) {'),
+  ('TestOptionsAppendAfterBlankGap', 'record', 'beads/settings_storage.h',
+   '            Flash::IsBlank(address + size, size)) &&',
+   '            true) &&'),
+  ('TestRetryIncompleteErase', 'storage', 'beads/settings_storage.h',
+   '      if (Flash::IsBlank(address, size)) {',
+   '      if (true) {'),
+  ('TestFactoryPrimaryInterruptedRecalibration', 'storage', 'beads/settings_storage.h',
+   '(!reference_ || !data.SameCalibration(*reference_) ||',
+   '(true || !data.SameCalibration(*reference_) ||'),
+  ('TestImplausibleCalibrationWithoutMirror', 'storage', 'beads/settings.cc',
+   '  } else if (lost || implausible) {',
+   '  } else if (lost) {'),
+  ('TestRefusedRecalibrationPreservesMeasuredMirror', 'storage', 'beads/settings.cc',
+   '  if (!CalibrationPlausible(persistent_data_, factory_)) {',
+   '  if (false) {'),
+  ('TestBackupLocksFlash', 'backup', 'beads/background_buffer_backup.cc',
+   '  ~FlashLock() { HAL_FLASH_Lock(); }',
+   '  ~FlashLock() { }'),
+  ('TestCalibrationExitResumesNormalization', 'firmware', 'beads/ui.cc',
+   '      calibrator_->ResumeNormalization();',
+   '      (void)calibrator_;'),
+  ('TestSuppressedStorageChord', 'firmware', 'beads/ui.h',
+   '    return switches_.pressed(s) && !suppressed_press_[s];',
+   '    return switches_.pressed(s);'),
+  ('TestSynthFadeSurvivesTimerReset', 'firmware', 'beads/beads.cc',
+   '      if (synth_fade || (start && now - start >= 10000)) {',
+   '      if (start && now - start >= 10000) {'),
+  ('TestSynthEntryCancelsBackup', 'firmware', 'beads/beads.cc',
+   '    background_buffer_backup.Process(false);',
+   '    (void)background_buffer_backup;'),
+  ('TestCodecRestartRetry', 'firmware', 'beads/beads.cc',
+   '  if (transition.RetryCodec()) {',
+   '  if (false) {'),
+  ('TestRestartDmaFailure', 'codec', 'beads/drivers/codec.cc',
+   '  if (!StartDma(block_size)) {\n    Stop();',
+   '  if (!StartDma(block_size) && false) {\n    Stop();'),
+  ('TestRestartDmaAbortTimeout', 'codec', 'beads/drivers/codec.cc',
+    '    if (!InitializeDMA() || !InitializeGPIODMA()) {',
+    '    if (false) {'),
+  ('TestWarningChordDebounceBoundary', 'firmware', 'beads/ui.cc',
+    '      suppressed_press_[i] = true;',
+    '      suppressed_press_[i] = false;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

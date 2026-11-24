@@ -153,6 +153,7 @@ void SysTick_Handler() {
 
 
 bool synth_mode;
+bool synth_fade;
 int synth_mode_start_time;
 
 GateFlags previous_seed;
@@ -602,7 +603,11 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
+  if (new_synth_mode && background_buffer_backup.busy()) {
+    background_buffer_backup.Process(false);
+  }
   synth_mode = new_synth_mode;
+  synth_fade = false;
   synth_mode_start_time = 0;
   if (synth_mode) {
     // Rings when it plays, else Plaits, so Beads <-> Plaits stays instant.
@@ -624,7 +629,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  transition.Start(sr, AudioCallback(new_synth_mode));
+  transition.Start(sr, AudioCallback(new_synth_mode), true);
 }
 
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
@@ -714,8 +719,7 @@ void Init() {
     factory_test.Start();
     ui.set_factory_test(true);
     normalization_detector.Init(2);
-    transition.set_codec_sample_rate(48000);
-    codec.Start(48000, 48000 / kBlockRate, &FactoryTest::ProcessFn);
+    transition.Start(48000, &FactoryTest::ProcessFn, false);
   } else {
 #ifdef PROFILE_INTERRUPT
     DebugPin::Init();
@@ -723,6 +727,7 @@ void Init() {
     ui.set_factory_test(false);
     ui.ShowStorageStatus();
     synth_mode_start_time = 0;
+    synth_fade = false;
     synth_mode = true;
   }
   ready = true;
@@ -737,6 +742,9 @@ void Init() {
 }
 
 void MonitorStateChange() {
+  if (transition.RetryCodec()) {
+    return;
+  }
   UpdateResonator();
   seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
@@ -787,6 +795,7 @@ void MonitorStateChange() {
     return;
   }
   if (ui.should_ignore_state_change() || transition.blanking()) {
+    synth_fade = false;
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
     transition.Cancel();
@@ -834,6 +843,7 @@ void MonitorStateChange() {
   // The wavetable synth does not start in spectral mode.
   if (normalization_detector.no_input() && !processor.spectral()) {
     if (settings.self_play_on_request()) {
+      synth_fade = false;
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
         if (!transition.Fade()) {
@@ -851,22 +861,22 @@ void MonitorStateChange() {
         ConfigureAndStartCodec(!synth_mode, true);
       }
     } else if (!synth_mode) {
-      if (!synth_mode_start_time) {
-        synth_mode_start_time = system_clock.milliseconds();
-        if (!synth_mode_start_time) synth_mode_start_time = 1;
-      } else {
-        if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
-          // If 10 seconds have elapsed with nothing patched in the audio
-          // inputs, enable the synth mode.
-          if (!transition.Fade()) {
-            return;
-          }
-          transition.Pause();
-          ConfigureAndStartCodec(true, true);
+      const uint32_t now = system_clock.milliseconds();
+      const int start = synth_mode_start_time;
+      if (synth_fade || (start && now - start >= 10000)) {
+        // Finish the fade even if the callback resets the idle timer.
+        synth_fade = true;
+        if (!transition.Fade()) {
+          return;
         }
+        transition.Pause();
+        ConfigureAndStartCodec(true, true);
+      } else if (!start) {
+        synth_mode_start_time = now ? now : 1;
       }
     }
   } else {
+    synth_fade = false;
     // Awful block of code to troubleshoot glitches related to changes of
     // sample rate and more general codec settings.
     //

@@ -227,6 +227,10 @@ class Ui {
   void UpdateLeds();
   void NextCalibrationStep();
 
+  inline bool chord_modifier(Switch s) const {
+    return switches_.pressed(s) && !suppressed_press_[s];
+  }
+
   inline bool showing_storage_status() const {
     return mode_ >= MODE_STORAGE_WARNING;
   }
@@ -243,6 +247,7 @@ class Ui {
   uint32_t press_time_[SWITCH_LAST];
   static const uint32_t long_press_duration[SWITCH_LAST];
   bool ignore_release_[SWITCH_LAST];
+  bool suppressed_press_[SWITCH_LAST];
   Mode mode_;
   
   bool no_input_;
