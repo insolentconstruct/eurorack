@@ -487,7 +487,7 @@ void TestImplausibleCalibrationWithoutMirror() {
 
 void TestFactoryPrimaryInterruptedRecalibration() {
   test_checker.Start("TestFactoryPrimaryInterruptedRecalibration");
-  Defaults();
+  const State defaults = Defaults();
   uint8_t factory[kCalibrationChunk];
   Peek(factory, kSector, sizeof(factory));
   const PersistentData old_calibration = Calibration(0.1f);
@@ -505,6 +505,15 @@ void TestFactoryPrimaryInterruptedRecalibration() {
     TestFlashBudget() = -1;
 
     Settings loaded;
+    if (cut >= 1 && cut <= 4) {
+      // Stock can rebuild the primary here, with factory values.
+      PersistentData stock_calibration = Factory();
+      State stock_state = defaults;
+      stmlib::ChunkStorage<15, PersistentData, State> stock;
+      CHECK(!stock.Init(&stock_calibration, &stock_state));
+      CHECK(stock_calibration.SameCalibration(Factory()));
+      CHECK(MirrorHolds(old_calibration));
+    }
     CHECK(loaded.Init(false) && !loaded.write_locked());
     CHECK(SameCalibration(
         loaded, cut <= 10 ? old_calibration : new_calibration));

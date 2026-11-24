@@ -122,11 +122,12 @@ with tempfile.TemporaryDirectory() as directory:
         assert result.returncode == 1 and not out.exists(), result
 
     # Keep the stock restore usable and flag calibration that Tuneup rejects.
-    wild = bytearray(calibration(0.5))
-    struct.pack_into("<f", wild, 20, float("nan"))
-    result, out = run(directory, dump(wild, []), now)
-    assert result.returncode == 0 and "outside the Tuneup range" in result.stderr
-    assert load(ss.erased(out.read_bytes()), directory) == (True, bytes(wild), state(4))
+    for outlier in (float("nan"), 3.4028234663852886e38):
+        wild = bytearray(calibration(0.5))
+        struct.pack_into("<f", wild, 4, outlier)
+        result, out = run(directory, dump(wild, []), now)
+        assert result.returncode == 0 and "outside the Tuneup range" in result.stderr
+        assert load(ss.erased(out.read_bytes()), directory) == (True, bytes(wild), state(4))
 
     # An existing output is never overwritten.
     result, out = run(directory, backup, now)

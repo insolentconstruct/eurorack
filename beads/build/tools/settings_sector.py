@@ -101,7 +101,10 @@ def plausible_for_tuneup(calibration):
         "<12f", -2, 1, -2, 1, -120, 60, -3.2, 1.6, -3.2, 1.6, -3.2, 1.6))
     values = struct.unpack_from("<12f", calibration)
     for value, reference in zip(values, factory):
-        ratio, = struct.unpack("<f", struct.pack("<f", value / reference))
+        ratio = value / reference
+        if not 0.5 <= ratio <= 1.5:
+            return False
+        ratio, = struct.unpack("<f", struct.pack("<f", ratio))
         if not 0.75 <= ratio <= 1.25:
             return False
     return True
