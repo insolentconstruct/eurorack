@@ -3946,8 +3946,8 @@ void TestOptionFanOut() {
   settings.set_clouds_style(false);
   r.Settle();
 
-  // Resonator: SysTick previews the page and sets the controls, the main
-  // loop moves the placement; Material and Ring time only while it is on.
+  // Resonator: SysTick previews the page; main publishes controls and bound.
+  // Material and Ring time only apply while it is on.
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 3);
   SysTick_Handler();
   CHECK(!processor.resonator_controls_set_);
@@ -3955,14 +3955,16 @@ void TestOptionFanOut() {
   MainLoopStep();
   CHECK(!(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS));
   SysTick_Handler();
+  CHECK(!processor.resonator_controls_set_);
+  CHECK(!(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS));
+  MainLoopStep();
   CHECK(processor.resonator_controls_set_);
   CHECK(processor.resonator_controls_.structure ==
       kResonatorMaterials[3].structure);
-  CHECK(!(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS));
-  MainLoopStep();
   CHECK(processor.options_ & Processor::OPTION_FLAG_RESONATOR_GRAINS);
   settings.SetFeatureValue(FEATURE_RESONATOR_RING, 3);
   SysTick_Handler();
+  MainLoopStep();
   CHECK(processor.resonator_controls_.damping == kResonatorRingTimes[3]);
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_OFF);
   SysTick_Handler();

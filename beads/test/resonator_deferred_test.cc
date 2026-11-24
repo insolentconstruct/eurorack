@@ -36,13 +36,23 @@ void TestDeferredResonatorBound() {
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_FEEDBACK);
   r.Tick(2, true);
   const uint8_t first = processor.resonator_bound_;
-  const ResonatorControls previous = processor.resonator_controls_;
+  ResonatorControls previous;
+  memcpy(&previous, &processor.resonator_controls_, sizeof(previous));
+  ResonatorBound pending[2];
+  memcpy(pending, processor.resonator_bounds_, sizeof(pending));
   settings.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, 4);
-  SysTick_Handler();
+  for (int i = 0; i < 3; ++i) {
+    SysTick_Handler();
+    CHECK(memcmp(pending, processor.resonator_bounds_, sizeof(pending)) == 0);
+    CHECK(memcmp(&previous, &processor.resonator_controls_,
+        sizeof(previous)) == 0);
+  }
   CHECK(processor.resonator_bound_ == first);
   CHECK(processor.resonator_controls_.modes == previous.modes);
   CHECK(processor.resonator_controls_.structure == previous.structure);
   r.Block();
+  CHECK(processor.resonator_bound_ == first);
+  CHECK(memcmp(pending, processor.resonator_bounds_, sizeof(pending)) == 0);
   MainLoopStep();
   CHECK(processor.resonator_bound_ != first);
   const ResonatorControls& controls = processor.resonator_controls_;
@@ -53,11 +63,13 @@ void TestDeferredResonatorBound() {
   CHECK(bound.structure == controls.structure);
   CHECK(bound.brightness == controls.brightness);
   CHECK(bound.position == controls.position);
+  memcpy(pending, processor.resonator_bounds_, sizeof(pending));
   settings.SetFeatureValue(FEATURE_RESONATOR_RING, 3);
   SysTick_Handler();
   MainLoopStep();
   CHECK(processor.resonator_bound_ != first);
   CHECK(processor.resonator_controls_.damping == kResonatorRingTimes[3]);
+  CHECK(memcmp(pending, processor.resonator_bounds_, sizeof(pending)) == 0);
 }
 
 int main() {
