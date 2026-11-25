@@ -415,18 +415,6 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
-  // One source for both blocks, each inlined in ProcessWithOptions.
-  template<bool resonator>
-  inline void ProcessOptions(
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
   // A flat notch at unity loop gain; both ends of the knob stay stock.
   static float UnityFeedback(float feedback, float tap_gain);
   // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.

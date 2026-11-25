@@ -340,8 +340,7 @@ void Processor::SetFeedbackCutoff(bool low) {
   SetOption(OPTION_FLAG_LOW_CUTOFF, low);
 }
 
-template<bool resonator>
-void Processor::ProcessOptions(
+void Processor::ProcessWithOptions(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -351,6 +350,8 @@ void Processor::ProcessOptions(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
+  const bool resonator =
+      options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);
   const float sr = sample_rate();
   Parameters scanned;
   const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&
@@ -592,29 +593,6 @@ void Processor::DivideOutput(
       }
     }
     gate[i] = triggers[i].gate && output_pulse_;
-  }
-}
-
-void Processor::ProcessWithOptions(
-    SeedButtonState seed_button_state,
-    const stmlib::GateFlags* seed_input,
-    const bool* freeze,
-    const ModulatedParameter& density,
-    const Parameters& parameters,
-    const MixParameters& mix_parameters,
-    const FloatFrame* in,
-    FloatFrame* out,
-    size_t size) {
-  // Resonator profiles run their own instance of the block.
-  if (options_ &
-      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
-    ProcessOptions<true>(
-        seed_button_state, seed_input, freeze, density, parameters,
-        mix_parameters, in, out, size);
-  } else {
-    ProcessOptions<false>(
-        seed_button_state, seed_input, freeze, density, parameters,
-        mix_parameters, in, out, size);
   }
 }
 
