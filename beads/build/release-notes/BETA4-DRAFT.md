@@ -113,6 +113,12 @@ saved. An automatically restored frozen recording keeps its original quality.
   Plaits and Rings audio without changing input gain or OUT R triggers.
 - **Divided grain triggers:** choose Stock, /2, /4, /8 or /16 on OUT R. Division
   keeps the first gate and its pulse width without changing grain timing or audio.
+- **LED brightness:** a new 15% setting joins 66% and 33%. At these levels,
+  measured light curves help preserve the quality LED's colour as it dims. The
+  curves were measured on one module, and colour and brightness can vary from
+  unit to unit and with temperature. Drizzlet's factory pitch-scale colours and
+  light-blue boot cue were retuned. At full brightness, stock LED colour values
+  are unchanged.
 
 These choices need a matching Beta 4 profile in Hygrostat. See the
 [options guide](../docs/OPTIONS.md) and [feature catalogue](../docs/FEATURES.md).
