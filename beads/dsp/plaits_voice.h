@@ -152,6 +152,9 @@ class PlaitsVoice {
 
   bool sustain_;
   bool unpatched_;
+#ifndef PLAITS_BLOBS
+  bool chiptune_tail_;
+#endif  // PLAITS_BLOBS
   float sustain_level_;
   float level_;
   plaits::LPGEnvelope lpg_envelope_;

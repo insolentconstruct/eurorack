@@ -214,6 +214,7 @@ void PlaitsVoice::Init(uint8_t* ram, const fm::Patch* fm_banks) {
   model_ = -1;
   sustain_ = false;
   unpatched_ = false;
+  chiptune_tail_ = false;
   sustain_level_ = 0.0f;
   level_ = 0.0f;
   lpg_envelope_.Init();
@@ -281,17 +282,25 @@ void PlaitsVoice::Render(
   sustain_ = sustain;
 
 #ifndef PLAITS_BLOBS
-  // The blob sets it itself.
+  // Keep Chiptune's drone voicing until its next note takes over.
   if (patch.model == 7) {
+    chiptune_tail_ = !unpatched && !(trigger & TRIGGER_RISING_EDGE) &&
+        (unpatched_ || chiptune_tail_);
     // Plaits' chiptune envelope, with the TIMBRE attenuverter at noon.
-    engines_->chiptune_engine.set_envelope_shape(unpatched
-        ? ChiptuneEngine::NO_ENVELOPE
-        : 0.0f);
+    engines_->chiptune_engine.set_envelope_shape(
+        unpatched || chiptune_tail_ ? ChiptuneEngine::NO_ENVELOPE : 0.0f);
+  } else {
+    chiptune_tail_ = false;
   }
 #endif  // PLAITS_BLOBS
 
   EngineParameters p;
   p.trigger = trigger;
+#ifndef PLAITS_BLOBS
+  if (chiptune_tail_) {
+    p.trigger = TRIGGER_UNPATCHED;
+  }
+#endif  // PLAITS_BLOBS
   p.note = patch.note;
   p.harmonics = patch.harmonics;
   p.timbre = patch.timbre;

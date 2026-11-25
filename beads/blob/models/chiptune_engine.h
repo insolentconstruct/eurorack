@@ -59,10 +59,6 @@ class Chiptune {
       size_t size,
       bool* already_enveloped);
 
-  inline void set_envelope_shape(float envelope_shape) {
-    envelope_shape_ = envelope_shape;
-  }
-
  private:
   const beads::PlaitsBlobLibrary* chord_bank_;
 

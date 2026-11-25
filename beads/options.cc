@@ -501,9 +501,11 @@ void Options::ApplySeedTaps() {
         : scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
             : PitchScale(scale_ + 1);
     preview_[FEATURE_PITCH] = scale_;
-    preview_knob_ = -1;
-    selected_ = FEATURE_PITCH;
-    indication_time_ = seed_action_time_;
+    if (PageHasPitch()) {
+      preview_knob_ = -1;
+      selected_ = FEATURE_PITCH;
+      indication_time_ = seed_action_time_;
+    }
     dirty_ = true;
     last_action_ = seed_action_time_;
   }

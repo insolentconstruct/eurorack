@@ -1773,9 +1773,10 @@ void TestProfileDormantAmounts() {
     CHECK(saved[kRecordOffsets[FEATURE_BRIGHTNESS]] == 0);
     CHECK(saved[kRecordOffsets[FEATURE_SEED_LATCH]] == 0);
     CHECK(saved[2] == 0xff && saved[3] == 0xff);
-    // Page 5 (bytes 24-26) and Rings' polyphony (27) are saved; the rest
-    // stays erased.
-    for (size_t i = 28; i < sizeof(OptionsRecord); ++i) {
+    CHECK(saved[28] == 0xff);  // Gain ceiling is off in this profile.
+    CHECK(saved[29] == (OptionsRecord::WIDTH_OVERRIDE |
+        OptionsRecord::DIFFUSION_OVERRIDE));
+    for (size_t i = 30; i < sizeof(OptionsRecord); ++i) {
       CHECK(saved[i] == 0xff);
     }
   }

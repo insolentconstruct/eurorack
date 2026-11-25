@@ -52,7 +52,7 @@ void Chiptune::Init(
 
   arpeggiator_pattern_selector_.Init(12, 0.075f, false);
 
-  envelope_shape_ = NO_ENVELOPE;
+  envelope_shape_ = 0.0f;
   envelope_state_ = 0.0f;
   aux_envelope_amount_ = 0.0f;
 }
@@ -69,7 +69,11 @@ void Chiptune::Render(
     bool* already_enveloped) {
   const float f0 = NoteToFrequency(parameters.note);
   const float shape = parameters.morph * 0.995f;
-  const bool clocked = !(parameters.trigger & TRIGGER_UNPATCHED);
+  // Keep the drone voicing through the voice's gate decay.
+  const bool clocked = !(parameters.trigger & TRIGGER_UNPATCHED) &&
+      (envelope_shape_ != NO_ENVELOPE ||
+          (parameters.trigger & TRIGGER_RISING_EDGE));
+  envelope_shape_ = clocked ? 0.0f : NO_ENVELOPE;
   float root_transposition = 1.0f;
 
   *already_enveloped = clocked;

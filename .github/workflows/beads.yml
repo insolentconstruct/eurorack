@@ -137,11 +137,11 @@ jobs:
           - shard: 1
             scenarios: steady media
           - shard: 2
-            scenarios: clouds_style processor
+            scenarios: clouds_style processor saved_clouds
           - shard: 3
             scenarios: freeze_fade gestures
           - shard: 4
-            scenarios: ui synth release_synth
+            scenarios: ui synth release_synth chiptune_drone
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

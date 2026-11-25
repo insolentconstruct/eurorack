@@ -493,7 +493,7 @@ void ProcessSynthLevel(
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
-  if (new_synth_mode && background_buffer_backup.busy()) {
+  if (new_synth_mode && background_buffer_backup.saving()) {
     background_buffer_backup.Process(false);
   }
   synth_mode = new_synth_mode;
@@ -579,6 +579,10 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  if (ui.clouds_style()) {
+    transition.SetCloudsStyle(true, &processor, &synth,
+        &plaits_synth, &rings_synth, true);
+  }
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;
   const Profile& profile = settings.profile();

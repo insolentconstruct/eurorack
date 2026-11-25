@@ -318,6 +318,54 @@ void TestInterruptedCompaction() {
   }
 }
 
+void TestPartialOptionsErase() {
+  test_checker.Start("TestPartialOptionsErase");
+  const Saved defaults = Defaults();
+  for (int slot = 1; slot <= 3; ++slot) {
+    Settings s;
+    const Saved saved = CompactionPending(&s);
+    s.set_pitch_scale(PITCH_SCALE_SHRI);
+    const uint32_t address = RecordChunk(slot);
+    TestFlash().partial_erase_word = address;
+    const uint32_t erases = TestFlashErases();
+    Keep(kCalibration, kCalibration);
+    s.SaveOptions();
+    CHECK(Release());
+    CHECK(TestFlashErases() == erases + 1);
+    CHECK(HoldsCalibration(kSector, kCalibration));
+    CHECK(HoldsCalibration(kMirror, kCalibration));
+    CHECK(!TestFlash().partial_erase_word);
+    TestFlashBudget() = -1;
+
+    Settings loaded;
+    CHECK(loaded.Init(false) && !loaded.write_locked());
+    CHECK(SameCalibration(loaded, kCalibration));
+    CHECK(SameState(loaded, saved));
+    OptionsRecord record;
+    if (slot == 1) {
+      CHECK(SameOptions(loaded, defaults));
+    } else {
+      CHECK(RecordAt(slot - 1, &record));
+      CHECK(loaded.pitch_scale() == record.values[0]);
+    }
+  }
+}
+
+void TestRefuseUnusableRewrite() {
+  test_checker.Start("TestRefuseUnusableRewrite");
+  Setup(kCalibration, 5);
+  Settings s;
+  CHECK(s.Init(false));
+  PersistentData wild = kCalibration;
+  wild.adc_calibration[CV_ADC_CHANNEL_SHAPE].offset *= 2.0f;
+  PokeChunk(kSector, PersistentData::tag, &wild, sizeof(wild));
+  PokeChunk(kMirror, PersistentData::tag, &wild, sizeof(wild));
+  *s.mutable_persistent_data() = wild;
+  Take(&snapshot);
+  CHECK(!s.chunk_storage_.RewriteSector());
+  CHECK(Unchanged(snapshot));
+}
+
 // Rules 3, 6 and 7: the mirror sector is erased only to copy the settings
 // sector's calibration, read from flash, usable and the one in use.
 void TestCompactionGuards() {
@@ -624,6 +672,106 @@ void TestGesturePersistence() {
   CHECK(s.Init(false));
   CHECK(s.FeatureValue(FEATURE_SEED_LATCH) == 3);
   CHECK(s.FeatureValue(FEATURE_BRIGHTNESS) == 2);
+}
+
+void FullByteDefaults(
+    uint8_t* block, uint8_t width, uint8_t diffusion, ProfileState state) {
+  ProfileTemplate(block);
+  for (int i = 0; i < block[5]; ++i) {
+    uint8_t* entry = block + 16 + i * 6;
+    if (entry[0] == FEATURE_WIDTH || entry[0] == FEATURE_DIFFUSION) {
+      entry[1] = state;
+      entry[2] = entry[0] == FEATURE_WIDTH ? width : diffusion;
+      if (state == PROFILE_FIXED) {
+        entry[4] = 0;
+      }
+    }
+  }
+  ProfileChecksum(block);
+}
+
+void TestFullByteProfileDefaults() {
+  test_checker.Start("TestFullByteProfileDefaults");
+  uint8_t a[kProfileSize];
+  uint8_t b[kProfileSize];
+  FullByteDefaults(a, 17, 199, PROFILE_ADJUSTABLE);
+  FullByteDefaults(b, 70, 99, PROFILE_ADJUSTABLE);
+  for (int edited = 0; edited < 4; ++edited) {
+    Wipe();
+    Settings s;
+    s.Init(false, a);
+    CHECK(s.stereo_width() == 17);
+    CHECK(s.FeatureValue(FEATURE_DIFFUSION) == 199);
+    if (edited & 1) {
+      s.set_stereo_width(17);
+    }
+    if (edited & 2) {
+      s.set_diffusion(1.0f);
+    }
+    s.SaveState();
+    Settings loaded;
+    CHECK(loaded.Init(false, b));
+    CHECK(loaded.stereo_width() == ((edited & 1) ? 17 : 70));
+    CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == ((edited & 2) ? 255 : 99));
+    loaded.SaveOptions();
+    CHECK(s.Init(false, a));
+    CHECK(s.stereo_width() == 17);
+    CHECK(s.FeatureValue(FEATURE_DIFFUSION) == ((edited & 2) ? 255 : 199));
+  }
+}
+
+void TestFullByteDefaultsThroughFixedProfile() {
+  test_checker.Start("TestFullByteDefaultsThroughFixedProfile");
+  uint8_t a[kProfileSize];
+  uint8_t b[kProfileSize];
+  uint8_t fixed[kProfileSize];
+  FullByteDefaults(a, 17, 199, PROFILE_ADJUSTABLE);
+  FullByteDefaults(b, 70, 99, PROFILE_ADJUSTABLE);
+  FullByteDefaults(fixed, 34, 117, PROFILE_FIXED);
+  Wipe();
+  Settings s;
+  s.Init(false, a);
+  s.SaveState();
+  Settings loaded;
+  CHECK(loaded.Init(false, fixed) && !loaded.profile_locked());
+  CHECK(loaded.stereo_width() == 34);
+  CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == 117);
+  loaded.SaveOptions();
+  CHECK(s.Init(false, fixed));
+  s.SaveOptions();
+  CHECK(loaded.Init(false, b));
+  CHECK(loaded.stereo_width() == 70);
+  CHECK(loaded.FeatureValue(FEATURE_DIFFUSION) == 99);
+}
+
+void TestEarlierFullByteOptions() {
+  test_checker.Start("TestEarlierFullByteOptions");
+  uint8_t a[kProfileSize];
+  uint8_t b[kProfileSize];
+  FullByteDefaults(a, 17, 199, PROFILE_ADJUSTABLE);
+  FullByteDefaults(b, 70, 99, PROFILE_ADJUSTABLE);
+  Wipe();
+  Settings s;
+  s.Init(false, a);
+  s.SaveState();
+  OptionsRecord legacy = s.record_;
+  legacy.amount_overrides = 0xff;
+  legacy.values[18 - 8] = 127;
+  PokeChunk(RecordChunk(2), OptionsRecord::tag, &legacy, sizeof(legacy));
+
+  Settings next_profile;
+  CHECK(next_profile.Init(false, b));
+  CHECK(next_profile.stereo_width() == 70);
+  CHECK(next_profile.FeatureValue(FEATURE_DIFFUSION) == 99);
+
+  Settings same_profile;
+  CHECK(same_profile.Init(false, a));
+  CHECK(same_profile.stereo_width() == 127);
+  CHECK(same_profile.FeatureValue(FEATURE_DIFFUSION) == 199);
+  same_profile.SaveOptions();
+  CHECK(next_profile.Init(false, b));
+  CHECK(next_profile.stereo_width() == 127);
+  CHECK(next_profile.FeatureValue(FEATURE_DIFFUSION) == 99);
 }
 
 // Beta 2 and 3 after a downgrade: their state saves leave the record, which
@@ -994,6 +1142,8 @@ int main() {
   TestRecordVersions();
   TestTornRecord();
   TestSector14Full();
+  TestPartialOptionsErase();
+  TestRefuseUnusableRewrite();
   TestInterruptedCompaction();
   TestCompactionGuards();
   TestFactoryCaliGuard();
@@ -1003,6 +1153,9 @@ int main() {
   TestRecoveryRestoredStorage();
   TestRecordAppendRefused();
   TestRecordLowSupply();
+  TestFullByteProfileDefaults();
+  TestFullByteDefaultsThroughFixedProfile();
+  TestEarlierFullByteOptions();
   TestGesturePersistence();
   TestEarlierFirmware();
   TestNoForeignTagInSector15();

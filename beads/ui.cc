@@ -449,12 +449,15 @@ void Ui::UpdateLeds() {
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {
           leds_.set(LED_FREEZE, state.disable_autosave ? 16 : 64);
-        } else {
+        } else if (freeze_led_state_) {
+          const bool saving = state.disable_autosave
+              ? background_buffer_backup_->busy()
+              : background_buffer_backup_->saving();
           leds_.set(LED_FREEZE,
-              freeze_led_state_
-                  ? (background_buffer_backup_->busy() &&
-                      !settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255)
-                  : 0);
+              saving && !settings_->FeatureValue(FEATURE_SAVE_FREEZE)
+                  ? 128 : 255);
+        } else {
+          leds_.set(LED_FREEZE, 0);
         }
         
         if (seed_button_locked_) {

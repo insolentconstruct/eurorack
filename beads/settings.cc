@@ -311,10 +311,10 @@ void Settings::NormalizeOptions() {
 }
 
 // The options first: a cut before the state leaves a pair stock reads.
-void Settings::SaveState() {
+bool Settings::SaveState() {
   SaveOptions();
   PackState();
-  chunk_storage_.SaveState();
+  return chunk_storage_.SaveState();
 }
 
 void Settings::SaveOptions() {
@@ -363,29 +363,49 @@ void Settings::DefaultRecord(OptionsRecord* record) const {
   record->version = kOptionsRecordVersion;
   record->cv_target = 0;
   record->profile_identity = profile_.identity();
-  // Full-byte options belong to the profile until they are set.
   uint8_t* bytes = reinterpret_cast<uint8_t*>(record);
-  for (int i = 1; i < FEATURE_LAST; ++i) {
-    if (kRecordOffsets[i] && !kFeatureDefinitions[i].values) {
-      bytes[kRecordOffsets[i]] = profile_.entry(ProfileFeature(i)).value;
-    }
-  }
+  bytes[kRecordOffsets[FEATURE_WIDTH]] = profile_.entry(FEATURE_WIDTH).value;
+  bytes[kRecordOffsets[FEATURE_DIFFUSION]] =
+      profile_.entry(FEATURE_DIFFUSION).value;
 }
 
 void Settings::LoadOptions() {
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&record_);
+  // Earlier records can identify edits only while their profile still matches.
+  amount_overrides_ = record_.amount_overrides;
+  if (amount_overrides_ == 0xff) {
+    amount_overrides_ = 0;
+    if (record_.profile_identity == profile_.identity()) {
+      if (bytes[kRecordOffsets[FEATURE_WIDTH]] !=
+          profile_.entry(FEATURE_WIDTH).value) {
+        amount_overrides_ |= OptionsRecord::WIDTH_OVERRIDE;
+      }
+      if (bytes[kRecordOffsets[FEATURE_DIFFUSION]] !=
+          profile_.entry(FEATURE_DIFFUSION).value) {
+        amount_overrides_ |= OptionsRecord::DIFFUSION_OVERRIDE;
+      }
+    }
+  }
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const ProfileFeature feature = ProfileFeature(i);
     const uint8_t offset = kRecordOffsets[i];
     uint8_t value = profile_.entry(feature).value;
     if (feature == FEATURE_MONOPHONIC) {
       value = state_.monophonic_mode;  // Stock State keeps it.
-    } else if (offset && (!kFeatureDefinitions[i].values ||
+    } else if (feature == FEATURE_WIDTH) {
+      if (amount_overrides_ & OptionsRecord::WIDTH_OVERRIDE) {
+        value = bytes[offset];
+      }
+    } else if (feature == FEATURE_DIFFUSION) {
+      if (amount_overrides_ & OptionsRecord::DIFFUSION_OVERRIDE) {
+        value = bytes[offset];
+      }
+    } else if (offset &&
 #ifdef PLAITS_BLOBS
         // A saved bank past this profile's banks takes its start bank.
-        bytes[offset] < profile_.Values(feature))) {
+        bytes[offset] < profile_.Values(feature)) {
 #else
-        bytes[offset] < kFeatureDefinitions[i].values)) {
+        bytes[offset] < kFeatureDefinitions[i].values) {
 #endif  // PLAITS_BLOBS
       value = bytes[offset];  // A byte past the values is not set.
     }
@@ -395,12 +415,33 @@ void Settings::LoadOptions() {
 }
 
 void Settings::PackRecord() {
+  record_.amount_overrides = amount_overrides_;
   uint8_t* bytes = reinterpret_cast<uint8_t*>(&record_);
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const uint8_t offset = kRecordOffsets[i];
     if (offset && profile_.adjustable(ProfileFeature(i))) {
-      bytes[offset] = FeatureValue(ProfileFeature(i));
+      const ProfileFeature feature = ProfileFeature(i);
+      const uint8_t value = FeatureValue(feature);
+      bytes[offset] = value;
+      if (value != profile_.entry(feature).value) {
+        if (feature == FEATURE_WIDTH) {
+          record_.amount_overrides |= OptionsRecord::WIDTH_OVERRIDE;
+        } else if (feature == FEATURE_DIFFUSION) {
+          record_.amount_overrides |= OptionsRecord::DIFFUSION_OVERRIDE;
+        }
+      }
     }
+  }
+  // A record with no override stores the named profile's defaults.
+  if (!(record_.amount_overrides & OptionsRecord::WIDTH_OVERRIDE)) {
+    bytes[kRecordOffsets[FEATURE_WIDTH]] = profile_.entry(FEATURE_WIDTH).value;
+  }
+  if (!(record_.amount_overrides & OptionsRecord::DIFFUSION_OVERRIDE)) {
+    bytes[kRecordOffsets[FEATURE_DIFFUSION]] =
+        profile_.entry(FEATURE_DIFFUSION).value;
+  }
+  if (!record_.amount_overrides) {
+    record_.amount_overrides = 0xff;
   }
   record_.version = kOptionsRecordVersion;
   record_.profile_identity = profile_.identity();

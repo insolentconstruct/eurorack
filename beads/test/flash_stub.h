@@ -119,6 +119,8 @@ struct TestFlashState {
   int supply_budget;
   // Erases and programs started while the supply was low.
   int low_supply_writes;
+  // Erase scattered bits from this word, then cut power during the erase.
+  uint32_t partial_erase_word;
   // Called after each erase or program, as a power cut could follow it.
   void (*after_operation)();
 };

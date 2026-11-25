@@ -104,11 +104,6 @@ extern "C" void plaits_blob_render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  Chiptune* chiptune = static_cast<Chiptune*>(object);
-  // As the voice set it: Plaits' envelope, TIMBRE attenuverter at noon.
-  chiptune->set_envelope_shape(
-      parameters->trigger & plaits::TRIGGER_UNPATCHED
-          ? plaits::Chiptune::NO_ENVELOPE
-          : 0.0f);
-  chiptune->Render(*parameters, out, aux, size, already_enveloped);
+  static_cast<Chiptune*>(object)->Render(
+      *parameters, out, aux, size, already_enveloped);
 }

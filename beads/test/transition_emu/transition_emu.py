@@ -93,7 +93,7 @@ MEMBERS = {
     'Codec': ('block_size_', 'callback_'),
     'NormalizationDetector': ('rng_state_',),
     'Settings': ('state_', 'values_'),
-    'Ui': ('freeze_button_state_',)}
+    'Ui': ('freeze_button_state_', 'clouds_style_')}
 # Functions whose inclusive counts are recorded, by symbol prefix.
 INNER = (('_Z7Process', 'Process'),
          ('_Z18MonitorStateChangev', 'MonitorStateChange'),
@@ -314,16 +314,18 @@ class Machine(object):
           what, pc, self.count - start))
     return self.count - start
 
-  def call(self, name, *args):
+  def call(self, name, *args, stack_args=()):
     uc = self.uc
     for i, a in enumerate(args):
       uc.reg_write(A.UC_ARM_REG_R0 + i, a & 0xffffffff)
+    for i, arg in enumerate(stack_args):
+      self.write(self.irq_stack + 4 * i, '<I', arg)
     uc.reg_write(A.UC_ARM_REG_SP, self.irq_stack)
     uc.reg_write(A.UC_ARM_REG_LR, STOP | 1)
     return self.run(self.image.address(name), STOP, name)
 
-  def boot(self):
-    """Reset_Handler to the main loop's head, with SEED held."""
+  def boot(self, recovery=True):
+    """Reset_Handler to the main loop's head."""
     uc = self.uc
     image = self.image
     main = image.address('main')
@@ -344,7 +346,7 @@ class Machine(object):
     sp, reset = struct.unpack('<II', uc.mem_read(
         image.address('g_pfnVectors'), 8))
     uc.reg_write(A.UC_ARM_REG_SP, sp)
-    self.press('seed', True)
+    self.press('seed', recovery)
     n = self.run(reset & ~1, self.loop_head, 'boot')
     self.head = 0
     self.press('seed', False)
@@ -385,8 +387,10 @@ class Machine(object):
 
 class Rig(object):
 
-  def __init__(self, image, region=None):
+  def __init__(self, image, region=None, storage=None):
     self.m = Machine(image)
+    if storage is not None:
+      self.m.uc.mem_write(0x081c0000, storage)
     # The region as an install leaves it, from the app's region start.
     if region:
       self.m.uc.mem_write(image.address('plaits_region_begin'), region)
@@ -408,7 +412,7 @@ class Rig(object):
     self.state = image.member('settings', 'Settings', 'state_')
     self.values = image.member('settings', 'Settings', 'values_')
     self.labels = all(n in image.sym for n in LABELS)
-    self.boot_count = self.m.boot()
+    self.boot_count = self.m.boot(storage is None)
     self.m.write(image.address('_ZN5beads7PotsAdc7values_E'), '<12H', *POTS)
 
   def probe(self):
@@ -532,6 +536,24 @@ class Rig(object):
       raise RuntimeError('gesture had no effect: %s' % what)
 
 
+def boot_saved_clouds(image, region):
+  warm = Rig(image, region)
+  warm.set_feature(FEATURE_REVERB, 1)
+  warm.m.call('_ZN5beads8Settings9SaveStateEv', image.address('settings'))
+  storage = bytes(warm.m.uc.mem_read(0x081c0000, 0x40000))
+  r = Rig(image, region, storage)
+  r.expect(r.ui_flag('clouds_style_'), 'saved Clouds reverb loaded')
+  r.recording = True
+  r.tick(350)
+  r.expect(any(c[0] == 'audio' and c[4] == 'blanking' for c in r.calls),
+           'codec boot blanking observed')
+  r.expect(any(c[0] == 'audio' and c[4] == 'steady' for c in r.calls),
+           'audio started after boot blanking')
+  r.expect(not any(c[0] == 'audio' and c[4] in ('fading', 'silent')
+                   for c in r.calls), 'saved Clouds reverb starts without a fade')
+  return r
+
+
 def scenario_steady(r):
   r.recording = True
   r.tick(50)
@@ -648,6 +670,43 @@ def scenario_synth(r):
 
 
 
+def scenario_chiptune_drone(r):
+  m = r.m
+  image = r.image
+  r.expect(m.read(image.address('playable_synths'), '<B')[0] & 2,
+           'the release region makes Plaits playable')
+  bank = next(n for n in image.sym if n.startswith(
+      '_ZN5beads16EngineTransition8TakeBank'))
+  render = next(n for n in image.sym if n.startswith(
+      '_ZN5beads11PlaitsVoice6Render'))
+  patch, out = STOP + 0x100, STOP + 0x200
+  m.write(patch, '<i4f', 7, 60.0, 0.5, 0.0, 0.5)
+  voice = image.member('plaits_synth', 'PlaitsSynth', 'voice_')
+  level = voice + image.offsets['PlaitsVoice']['level_']
+
+  def block(trigger):
+    # Hard-float ABI: decay in s0, then bit shift, buffer and size on stack.
+    m.uc.reg_write(A.UC_ARM_REG_S0, 0)
+    m.call(render, voice, patch, trigger, 0, stack_args=(16, out, 12))
+    return sum(x * x for x in m.read(out, '<12f'))
+
+  for played in (False, True):
+    m.call(bank, image.address('transition'), 1)
+    if played:
+      block(1)
+    for _ in range(64):
+      block(2)
+    early = block(0)
+    r.expect(early > 0.0 and m.read(level, '<f')[0] > 0.9,
+             'Chiptune tail starts with the gate open')
+    for _ in range(2000):
+      late = block(0)
+    r.expect(late < early * 1e-4 and m.read(level, '<f')[0] < 0.01,
+             'Chiptune tail decays')
+    r.expect(block(1) > 0.0 and m.read(level, '<f')[0] == 0.0,
+             'the next Chiptune note uses the clocked envelope')
+
+
 def scenario_release_synth(r):
   # Exercise the installed models and shared bank through both synth owners.
   r.expect(r.m.read(r.image.address('playable_synths'), '<B')[0] == 7,
@@ -717,15 +776,19 @@ SCENARIOS = (
     ('gestures', scenario_gestures),
     ('synth', scenario_synth),
     ('ui', scenario_ui),
-    ('release_synth', scenario_release_synth))
+    ('release_synth', scenario_release_synth),
+    ('chiptune_drone', scenario_chiptune_drone))
 
 
 def run(arguments):
   path, name, region = arguments
   start = time.time()
-  r = Rig(Image(path), region)
-  r.settle()
-  dict(SCENARIOS)[name](r)
+  if name == 'saved_clouds':
+    r = boot_saved_clouds(Image(path), region)
+  else:
+    r = Rig(Image(path), region)
+    r.settle()
+    dict(SCENARIOS)[name](r)
   phases = {}
   for fn, n, silent, repeat, phase, inner in r.calls:
     for function, count in [[fn, n]] + inner:
@@ -837,15 +900,7 @@ def compare(base_path, candidate_path):
         ' '.join(names), ' '.join(s['name'] for s in candidate)))
     return 1
   failures = 0
-  boots = (base[0]['boot'], candidate[0]['boot'])
-  if any(s['boot'] != boots[0] for s in base) or \
-      any(s['boot'] != boots[1] for s in candidate):
-    print('boot: counts differ between scenarios of one file')
-    failures += 1
-  print('boot: %s, %d instructions -> %d' % (
-      'identical' if boots[0] == boots[1] else 'differs', boots[0], boots[1]))
-  failures += boots[0] != boots[1]
-  keys = ('calls_sha256', 'out_sha256', 'total', 'phases')
+  keys = ('boot', 'calls_sha256', 'out_sha256', 'total', 'phases')
   for b, c in zip(base, candidate):
     name = b['name']
     same = [b[k] == c[k] for k in keys]
@@ -894,10 +949,11 @@ def main(argv):
     sys.stderr.write(USAGE)
     return 2
   path, out = argv[1], argv[2]
-  names = argv[3:] or [n for n, _ in SCENARIOS if n != 'release_synth']
-  if 'release_synth' in names:
+  names = argv[3:] or [n for n, _ in SCENARIOS
+                       if n not in ('release_synth', 'chiptune_drone')]
+  if 'release_synth' in names or 'chiptune_drone' in names:
     MEMBERS['PlaitsSynth'] = ('voice_', 'patch_')
-    MEMBERS['PlaitsVoice'] = ('model_',)
+    MEMBERS['PlaitsVoice'] = ('model_', 'level_')
   image = Image(path)
   pool = multiprocessing.Pool(min(len(names), multiprocessing.cpu_count()))
   results = pool.map(run, [(path, n, region) for n in names])

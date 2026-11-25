@@ -2386,6 +2386,35 @@ void TestCommitPublication() {
   CHECK(IsVolatile(&r.ui.options_.commit_));
 }
 
+void TestPendingSeedAcrossPages() {
+  test_checker.Start("TestPendingSeedAcrossPages");
+  Rig r(false);
+  r.settings.set_pitch_scale(PITCH_SCALE_FIFTHS);
+  r.Enter();
+  r.reverb = .9f;
+  r.Tick(1001, false);
+  CHECK(r.ui.options_.commit_requested());
+  test_down[SWITCH_SEED] = true;
+  r.Tick(20, false);
+  test_down[SWITCH_SEED] = false;
+  r.Tick(20, false);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(20, false);
+  test_down[SWITCH_ASSIGN] = false;
+  r.Tick(20, false);
+  CHECK(r.ui.options_.page() == 1);
+  const ProfileFeature selected = r.ui.options_.selected_;
+  const int preview_knob = r.ui.options_.preview_knob_;
+  CHECK(preview_knob >= 0);
+  r.ui.DoEvents();
+  r.Tick(1, true);
+  CHECK(r.ui.options_.Value(FEATURE_PITCH) == PITCH_SCALE_MAJOR);
+  CHECK(r.ui.options_.selected_ == selected);
+  CHECK(r.ui.options_.preview_knob_ == preview_knob);
+  r.Tick(1001, true);
+  CHECK(r.settings.pitch_scale() == PITCH_SCALE_MAJOR);
+}
+
 void TestPendingSeed() {
   test_checker.Start("TestPendingSeed");
   for (int hold = 0; hold < 3; ++hold) {
@@ -4534,6 +4563,7 @@ int main() {
   }
   TestGainCeilingPage();
   TestCommitPublication();
+  TestPendingSeedAcrossPages();
   TestPendingSeed();
   TestPendingExitButtons();
   TestBrightnessHoldsAfterClose();
