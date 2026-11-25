@@ -2345,12 +2345,36 @@ void TestResonatorChordGains() {
     CHECK(fabsf(frames[i].r) <= kResonatorPeak);
   }
   CHECK(drum.chord_peak_gain_[0] < 0.5f);
+  float loudest = kResonatorPeak;
+  int block = 0;
+  for (; block < 160000; ++block) {
+    ChordBlock(0.0f, 0, frames);
+    float peak = 0.0f;
+    for (size_t i = 0; i < chord_size; ++i) {
+      peak = std::max(peak, std::max(fabsf(frames[i].l), fabsf(frames[i].r)));
+    }
+    loudest = std::max(loudest, peak);
+    if (drum.chord_level_[0] < kChordRetuneLevel *
+        drum.chord_peak_[0] * drum.chord_peak_gain_[0]) {
+      CHECK(peak < loudest * 0.01f);
+      break;
+    }
+  }
+  CHECK(block < 160000);
+  // Keep the other two voices occupied when probing the eligible Drum.
+  drum.chord_ratio_[1] = 1.0f;
+  drum.chord_ratio_[2] = 2.0f;
+  drum.chord_peak_[1] = drum.chord_level_[1] = 1.0f;
+  drum.chord_peak_[2] = drum.chord_level_[2] = 1.0f;
+  memset(strikes, 0, sizeof(strikes));
+  drum.StrikeVoice(5.0f, 0, 1.0f, strikes, chord_size);
+  CHECK(drum.chord_ratio_[0] == 5.0f);
   ChordSetup(5, 3, 24000.0f);
   ChordBlock(88.0f, 0, frames);
   CHECK(drum.chord_ratio_[0] == 88.0f);
   CHECK(frames[0].l == 0.0f && frames[0].r == 0.0f);
   float peak = 0.0f;
-  for (int block = 0; block < 1200; ++block) {
+  for (int b = 0; b < 1200; ++b) {
     ChordBlock(0.0f, 0, frames);
     for (size_t i = 0; i < chord_size; ++i) {
       peak = std::max(peak, fabsf(frames[i].l));

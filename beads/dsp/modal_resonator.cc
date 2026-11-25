@@ -382,7 +382,9 @@ void ModalResonator::RenderChord(
       ? min(modes_->glide_rate * sample_period_ * float(size), 1.0f)
       : 0.0f;
   for (int v = 0; v < kNumChordVoices; ++v) {
-    if (chord_level_[v] <= kChordSilence * chord_peak_[v]) {
+    const float peak = chord_peak_[v] * chord_peak_gain_[v];
+    if (chord_level_[v] <= kChordSilence * peak) {
+      chord_level_[v] = 0.0f;
       continue;
     }
     const float rest_frequency = frequency_ * chord_ratio_[v];
@@ -438,7 +440,7 @@ void ModalResonator::RenderChord(
     frames[i].r += gain * right;
     const float before = kResonatorHeadroom * max(fabsf(l[i]), fabsf(r[i]));
     const float after = max(fabsf(left), fabsf(right));
-    if (after < before) {
+    if (after > 0.0f && after < before) {
       peak_gain = min(peak_gain, after / before);
     }
   }
