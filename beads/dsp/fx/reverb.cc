@@ -32,6 +32,9 @@
 
 namespace beads {
 
+/* static */
+float Reverb::fixed_decay_;
+
 const float kAllPassCoefficient = 0.625f;
 
 void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {

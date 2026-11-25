@@ -30,10 +30,3 @@
 
 #include "beads/dsp/processor.cc"
 #include "beads/dsp/processor_options.cc"
-
-namespace beads {
-
-/* static */
-float Reverb::fixed_decay_;
-
-}  // namespace beads
