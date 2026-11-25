@@ -499,6 +499,25 @@ void TestBackupRetryStateSave() {
   CHECK(after.Boot() && processor.write_ptr_ == 345 && Restored(24));
 }
 
+void TestBackupRetryStateExhausted() {
+  test_checker.Start("TestBackupRetryStateExhausted");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(25);
+  TestFlash().supply_budget = 24007;
+  CHECK(rig.Freeze());
+  CHECK(TestFlash().supply_low && kHeader->tag == 0x5a5a5246);
+  Run(rig, true, 70000);
+  CHECK(!rig.backup.saving() && !rig.settings.state().frozen);
+  TestFlash().supply_low = false;
+  // An unrelated settings save must not commit the abandoned frozen flag.
+  rig.Autosave(true);
+  Rig after;
+  CHECK(!after.Boot());
+}
+
 void TestModulatedFreeze() {
   test_checker.Start("TestModulatedFreeze");
   for (int on = 15000; on <= 25000; on += 10000) {
@@ -988,6 +1007,7 @@ int main() {
   TestBackupRetryLimit();
   TestBackupRetryThaw();
   TestBackupRetryStateSave();
+  TestBackupRetryStateExhausted();
   TestSettingsSaves();
   TestDamagedBuffer();
   TestFrozenNoReads();

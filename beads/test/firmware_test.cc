@@ -988,6 +988,11 @@ void TestSynthEntryCancelsBackupRetry() {
   CHECK(!background_buffer_backup.saving());
 }
 
+void CheckBackupRetryLedDuringWrite() {
+  SysTick_Handler();
+  CHECK(ui.leds_.intensity_[LED_FREEZE] == 128);
+}
+
 void TestBackupRetryLed() {
   test_checker.Start("TestBackupRetryLed");
   Rig r(false);
@@ -995,7 +1000,19 @@ void TestBackupRetryLed() {
   background_buffer_backup.retry_pending_ = true;
   SysTick_Handler();
   CHECK(ui.leds_.intensity_[LED_FREEZE] == 128);
-  background_buffer_backup.retry_pending_ = false;
+  settings.mutable_state()->disable_autosave = true;
+  SysTick_Handler();
+  CHECK(ui.leds_.intensity_[LED_FREEZE] == 255);
+  settings.mutable_state()->disable_autosave = false;
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.commit_pending_ = true;
+  background_buffer_backup.retry_start_time_ =
+      system_clock.milliseconds() - 10000;
+  const uint32_t writes = test_writes;
+  TestFlash().on_write = &CheckBackupRetryLedDuringWrite;
+  background_buffer_backup.Process(true);
+  TestFlash().on_write = NULL;
+  CHECK(test_writes > writes && settings.state().frozen);
   SysTick_Handler();
   CHECK(ui.leds_.intensity_[LED_FREEZE] == 255);
 }

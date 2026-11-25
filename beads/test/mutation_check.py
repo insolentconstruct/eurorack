@@ -112,8 +112,8 @@ cases = [
     'kMaxBackupDelay = 320000',
     'kMaxBackupDelay = 640000'),
   ('TestBackupCompletionReset', 'backup', 'beads/background_buffer_backup.cc',
-    '    save_started_ = false;\n    backup_delay_ = kBackupDelay;\n  } else {\n    ScheduleRetry();',
-    '    save_started_ = false;\n  } else {\n    ScheduleRetry();'),
+    '    save_started_ = false;\n    backup_delay_ = kBackupDelay;\n  } else {',
+    '    save_started_ = false;\n  } else {'),
   ('TestBackupThawReset', 'backup', 'beads/background_buffer_backup.cc',
     'kBackupResetDelay = 60000',
     'kBackupResetDelay = 59000'),
@@ -127,8 +127,8 @@ cases = [
     '    if (freeze_state_) {',
     '    if (freeze_state_ && save_started_) {'),
   ('TestBackupRetry', 'backup', 'beads/background_buffer_backup.cc',
-    '    retry_pending_ = true;',
-    '    retry_pending_ = false;'),
+    'retry_count_ < kMaxBackupRetries &&\n      !settings_->write_locked()',
+    'false'),
   ('TestBackupRetryLimit', 'backup', 'beads/background_buffer_backup.cc',
     '>= (kBackupDelay << retry_count_)',
     '>= kBackupDelay'),
@@ -144,6 +144,9 @@ cases = [
   ('TestBackupRetryStateSave', 'backup', 'beads/background_buffer_backup.cc',
     '      if (commit_pending_) {',
     '      if (false) {'),
+  ('TestBackupRetryStateExhausted', 'backup', 'beads/background_buffer_backup.cc',
+    '    settings_->mutable_state()->frozen = false;',
+    ''),
   # #35: the wavetable ends with a duplicated guard row.
   ('TestGuardRow', 'wavetable', 'beads/resources.cc', None, None),
   # Synth grains computed in pairs mix each grain's own sample.
@@ -574,6 +577,15 @@ cases = [
   ('TestBackupRetryLed', 'firmware', 'beads/ui.cc',
     'background_buffer_backup_->saving()',
     'background_buffer_backup_->busy()'),
+  ('TestBackupRetryLed', 'firmware', 'beads/ui.cc',
+    'const bool saving = state.disable_autosave',
+    'const bool saving = false'),
+  ('TestBackupRetryLed', 'firmware',
+    ('beads/background_buffer_backup.cc', 'beads/background_buffer_backup.cc'),
+    ('  retry_pending_ = true;  // Keep the save indicator active during the write.',
+     '      if (commit_pending_) {\n        CommitSave();'),
+    ('',
+     '      if (commit_pending_) {\n        retry_pending_ = false;\n        CommitSave();')),
 
 
 ]

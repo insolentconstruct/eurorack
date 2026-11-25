@@ -152,21 +152,25 @@ bool BackgroundBufferBackup::SaveState(bool frozen) {
 }
 
 void BackgroundBufferBackup::CommitSave() {
+  retry_pending_ = true;  // Keep the save indicator active during the write.
   if (SaveState(true)) {
+    retry_pending_ = false;
     commit_pending_ = false;
     save_started_ = false;
     backup_delay_ = kBackupDelay;
   } else {
+    settings_->mutable_state()->frozen = false;
     ScheduleRetry();
   }
 }
 
 void BackgroundBufferBackup::ScheduleRetry() {
-  remaining_sectors_ = remaining_bytes_ = 0;
-  if (retry_count_ < kMaxBackupRetries && !settings_->write_locked()) {
+  retry_pending_ = retry_count_ < kMaxBackupRetries &&
+      !settings_->write_locked();
+  if (retry_pending_) {
     retry_start_time_ = system_clock.milliseconds();
-    retry_pending_ = true;
   }
+  remaining_sectors_ = remaining_bytes_ = 0;
 }
 
 void BackgroundBufferBackup::EraseSector() {
@@ -286,12 +290,12 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
     } else if (retry_pending_ && !settings_->state().disable_autosave &&
         now - retry_start_time_ >= (kBackupDelay << retry_count_)) {
       ++retry_count_;
-      retry_pending_ = false;
       if (commit_pending_) {
         CommitSave();
       } else {
         // Erase again before programming any partially written flash word.
         remaining_sectors_ = kNumSectors;
+        retry_pending_ = false;
       }
     }
   }

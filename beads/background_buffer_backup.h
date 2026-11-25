@@ -89,7 +89,7 @@ class BackgroundBufferBackup {
   bool freeze_state_;
   bool save_started_;
   bool previous_freeze_state_;
-  bool retry_pending_;
+  volatile bool retry_pending_;
   bool commit_pending_;
   
   DISALLOW_COPY_AND_ASSIGN(BackgroundBufferBackup);

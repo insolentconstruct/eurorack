@@ -119,6 +119,7 @@ struct TestFlashState {
   int supply_budget;
   // Erases and programs started while the supply was low.
   int low_supply_writes;
+  void (*on_write)();
 };
 
 
@@ -219,6 +220,9 @@ inline void TestFlashBeginOperation() {
     ++TestFlash().low_supply_writes;
   }
   TestFlashExpose(true);
+  if (TestFlash().on_write) {
+    TestFlash().on_write();
+  }
 }
 
 inline void TestFlashEndOperation() {
