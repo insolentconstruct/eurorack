@@ -666,6 +666,16 @@ void Process(
       events, in, out, size);
 }
 
+#ifdef DWT_CALIBRATION
+void ProcessCalibrationSynth(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<false, false>(false, fixed_reverb_decay, events, in, out, size);
+}
+#endif  // DWT_CALIBRATION
+
 #endif  // BEADS_EXTENDED_AUDIO
 
 #ifdef BEADS_EXTENDED_AUDIO
@@ -838,7 +848,11 @@ void ProcessSynthLevel(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
+#ifdef DWT_CALIBRATION
+  ProcessCalibrationSynth(events, in, out, size);
+#else
   Process(events, in, out, size);
+#endif  // DWT_CALIBRATION
   const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
   ApplySynthLevel(out, size, divisor);
 }
@@ -856,6 +870,12 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
   if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
     return &ProcessSynthLevel;
   }
+#ifdef DWT_CALIBRATION
+  // Synthetic preparation can clear synth_mode while this callback is active.
+  if (synth) {
+    return &ProcessCalibrationSynth;
+  }
+#endif  // DWT_CALIBRATION
   return &Process;
 }
 
