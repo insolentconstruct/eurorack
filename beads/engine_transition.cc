@@ -92,6 +92,23 @@ void EngineTransition::Pause() {
   codec_->Pause();
 }
 
+void EngineTransition::SetReverbCharacter(
+    uint8_t character, Processor* processor, Synth* synth) {
+  reverb_character_ = character;
+  clouds_style_ = character == REVERB_CLOUDS;
+  processor->SetReverbCharacter(character);
+  synth->SetReverbCharacter(character, false);
+  plaits_synth_->SetReverbCharacter(character, false);
+  rings_synth_->SetReverbCharacter(character, false);
+}
+
+void EngineTransition::Resume(Codec::FillBufferCallback callback) {
+  if (codec_running_) {
+    codec_->Resume(callback);
+  }
+  codec_fade_ = false;
+}
+
 // Codec paused: one synth at a time owns delay bank 0, built from zero.
 void EngineTransition::TakeBank(SynthEngine owner) {
   if (owner == SYNTH_RINGS) {

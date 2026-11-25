@@ -34,25 +34,7 @@ namespace beads {
 
 const float kAllPassCoefficient = 0.625f;
 
-void Reverb::set_character(uint8_t character) {
-  switch (character) {
-    case REVERB_CLOUDS:
-      renderer_ = RenderClouds;
-      break;
-    case REVERB_PLATE:
-      renderer_ = RenderPlate;
-      break;
-    case REVERB_BLOOM:
-      renderer_ = RenderBloom;
-      break;
-    default:
-      renderer_ = 0;
-      break;
-  }
-}
-
-/* static */
-void Reverb::RenderClouds(Reverb* self, FloatFrame* in_out, size_t size) {
+void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
   // Dattorro/Griesinger: four input APs, then two 2AP+delay blocks in a loop.
   // Modulate the first diffuser for smear and long delays for shimmer.
   typedef E::Reserve<113,
@@ -77,21 +59,21 @@ void Reverb::RenderClouds(Reverb* self, FloatFrame* in_out, size_t size) {
   E::DelayLine<Memory, 9> del2;
   E::Context c;
 
-  const float klp = self->lp_;
-  const float krt = self->reverb_time_;
+  const float klp = lp_;
+  const float krt = reverb_time_;
 
-  const float input_gain = 0.2f * (1.0f - 0.333f * self->reverb_time_);
+  const float input_gain = 0.2f * (1.0f - 0.333f * reverb_time_);
   const float output_gain = 0.4f / input_gain;
 
-  const float send_amount_sqrt = self->mix_ * (2.0f - self->mix_);
+  const float send_amount_sqrt = mix_ * (2.0f - mix_);
   const float send_amount = send_amount_sqrt * (2.0f - send_amount_sqrt);
   const float wet = output_gain;
-  const float dry = (1.0f - self->mix_) * (1.0f + self->mix_);
+  const float dry = (1.0f - mix_) * (1.0f + mix_);
 
-  stmlib::ParameterInterpolator wet_modulation(&self->wet_, wet, size);
-  stmlib::ParameterInterpolator dry_modulation(&self->dry_, dry, size);
+  stmlib::ParameterInterpolator wet_modulation(&wet_, wet, size);
+  stmlib::ParameterInterpolator dry_modulation(&dry_, dry, size);
   stmlib::ParameterInterpolator send_modulation(
-      &self->send_,
+      &send_,
       send_amount * input_gain,
       size);
 
@@ -102,7 +84,7 @@ void Reverb::RenderClouds(Reverb* self, FloatFrame* in_out, size_t size) {
 
     float wet;
     float apout = 0.0f;
-    self->engine_.Start(&c);
+    engine_.Start(&c);
 
     // Smear AP1 inside the loop.
     c.Interpolate(ap1, 10.0f, LFO_1, 60.0f, 1.0f);
@@ -124,7 +106,7 @@ void Reverb::RenderClouds(Reverb* self, FloatFrame* in_out, size_t size) {
     // Main reverb loop.
     c.Load(apout);
     c.Interpolate(del2, 4680.0f, LFO_2, 100.0f, krt);
-    c.Lp(self->lp_1_, klp);
+    c.Lp(lp_1_, klp);
     c.Read(dap1a TAIL, -kAllPassCoefficient);
     c.WriteAllPass(dap1a, kAllPassCoefficient);
     c.Read(dap1b TAIL, kAllPassCoefficient);
@@ -136,7 +118,7 @@ void Reverb::RenderClouds(Reverb* self, FloatFrame* in_out, size_t size) {
 
     c.Load(apout);
     c.Read(del1 TAIL, krt);
-    c.Lp(self->lp_2_, klp);
+    c.Lp(lp_2_, klp);
     c.Read(dap2a TAIL, kAllPassCoefficient);
     c.WriteAllPass(dap2a, -kAllPassCoefficient);
     c.Read(dap2b TAIL, -kAllPassCoefficient);
@@ -149,13 +131,54 @@ void Reverb::RenderClouds(Reverb* self, FloatFrame* in_out, size_t size) {
   }
 }
 
-/* static */
-void Reverb::RenderBloom(Reverb* self, FloatFrame* in_out, size_t size) {
-  self->ProcessTank<true>(in_out, size);
+void Reverb::CharacterState::Init(uint8_t new_character, float sample_rate) {
+  character = new_character;
+  Reset(sample_rate);
 }
 
-/* static */
-void Reverb::RenderPlate(Reverb* self, FloatFrame* in_out, size_t size) {
+void Reverb::CharacterState::Reset(float sample_rate) {
+  onset = false;
+  peak = 0.0f;
+  baseline = 0.0f;
+  progress = 0.0f;
+  density = 0.0f;
+  tick = 1.0f / sample_rate;
+}
+
+float Reverb::CharacterState::Density(float level) {
+  // A new onset resets the ramp while a short slew protects a ringing tail.
+  peak = std::max(level, peak * (1.0f - 25.0f * tick));
+  ONE_POLE(baseline, peak, 18.0f * tick);
+  const float threshold = 0.004f + 0.2f * baseline;
+  const float rise = peak - baseline;
+  if (rise > threshold && !onset) {
+    progress = 0.0f;
+    onset = true;
+  } else if (rise < 0.5f * threshold) {
+    onset = false;
+  }
+  progress = std::min(1.0f, progress + 4.0f * tick);
+  ONE_POLE(density, progress, 350.0f * tick);
+  return density;
+}
+
+void Reverb::RenderCharacter(
+    CharacterState& state, FloatFrame* in_out, size_t size) {
+  if (state.character == REVERB_PLATE) {
+    ProcessPlate(in_out, size);
+  } else {
+    ProcessBloom(state, in_out, size);
+  }
+}
+
+void Reverb::ProcessBloom(
+    CharacterState& state, FloatFrame* in_out, size_t size) {
+#define BEADS_REVERB_BLOOM
+#include "beads/dsp/fx/reverb_tank.inc"
+#undef BEADS_REVERB_BLOOM
+}
+
+void Reverb::ProcessPlate(FloatFrame* in_out, size_t size) {
   // Figure-eight tank with damped long delays between decay diffusers.
   typedef E::Reserve<109,
     E::Reserve<173,
@@ -183,22 +206,22 @@ void Reverb::RenderPlate(Reverb* self, FloatFrame* in_out, size_t size) {
   E::DelayLine<Memory, 11> return2;
   E::Context c;
 
-  const float krt = self->reverb_time_;
-  const float damping = 0.3f + 0.7f * self->lp_;
+  const float krt = reverb_time_;
+  const float damping = 0.3f + 0.7f * lp_;
   const float input_gain = 0.2f * (1.0f - 0.333f * krt);
-  const float send_sqrt = self->mix_ * (2.0f - self->mix_);
+  const float send_sqrt = mix_ * (2.0f - mix_);
   stmlib::ParameterInterpolator send_modulation(
-      &self->send_, send_sqrt * (2.0f - send_sqrt) * input_gain, size);
+      &send_, send_sqrt * (2.0f - send_sqrt) * input_gain, size);
   stmlib::ParameterInterpolator dry_modulation(
-      &self->dry_, (1.0f - self->mix_) * (1.0f + self->mix_), size);
+      &dry_, (1.0f - mix_) * (1.0f + mix_), size);
   stmlib::ParameterInterpolator wet_modulation(
-      &self->wet_, 0.4f / input_gain, size);
+      &wet_, 0.4f / input_gain, size);
 
   while (size--) {
     const float send = send_modulation.Next();
     const float dry = dry_modulation.Next();
     const float wet = wet_modulation.Next();
-    self->engine_.Start(&c);
+    engine_.Start(&c);
 
     c.Load((in_out->l + in_out->r) * send);
     c.Read(ap1 TAIL, 0.75f);
@@ -217,7 +240,7 @@ void Reverb::RenderPlate(Reverb* self, FloatFrame* in_out, size_t size) {
     c.WriteAllPass(mod1, 0.7f);
     c.Write(delay1, 0.0f);
     c.Read(delay1 TAIL, 1.0f);
-    c.Lp(self->lp_1_, damping);
+    c.Lp(lp_1_, damping);
     c.Read(decay1 TAIL, 0.5f);
     c.WriteAllPass(decay1, -0.5f);
     c.Write(return1, 0.0f);
@@ -228,7 +251,7 @@ void Reverb::RenderPlate(Reverb* self, FloatFrame* in_out, size_t size) {
     c.WriteAllPass(mod2, 0.7f);
     c.Write(delay2, 0.0f);
     c.Read(delay2 TAIL, 1.0f);
-    c.Lp(self->lp_2_, damping);
+    c.Lp(lp_2_, damping);
     c.Read(decay2 TAIL, 0.5f);
     c.WriteAllPass(decay2, -0.5f);
     c.Write(return2, 0.0f);

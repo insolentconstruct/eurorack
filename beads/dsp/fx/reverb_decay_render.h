@@ -29,7 +29,9 @@
 #ifndef BEADS_DSP_FX_REVERB_DECAY_RENDER_H_
 #define BEADS_DSP_FX_REVERB_DECAY_RENDER_H_
 
-#ifdef BEADS_FIXED_REVERB_DECAY
+#if defined(BEADS_EXTENDED_REVERB)
+#define BEADS_DECAY_RENDER(name) name##Character
+#elif defined(BEADS_FIXED_REVERB_DECAY)
 #define BEADS_DECAY_RENDER(name) name##FixedDecay
 #else
 #define BEADS_DECAY_RENDER(name) name

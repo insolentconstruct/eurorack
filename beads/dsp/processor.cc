@@ -39,12 +39,11 @@ namespace beads {
 using namespace std;
 using namespace stmlib;
 
-#ifndef BEADS_FIXED_REVERB_DECAY
+#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
   options_ = 0;
-  suspended_ = false;
   time_scan_.Init();
   attack_input_.Init();
   attack_trigger_ = false;
@@ -80,9 +79,8 @@ void Processor::Init(
   delay_mode_ = DELAY_MODE_AUTO;
 }
 
-void Processor::SetReverbCharacter(uint8_t character) {
-  clouds_style_ = character == REVERB_CLOUDS;
-  reverb_.set_character(character);
+void Processor::SetCloudsStyle(bool clouds) {
+  clouds_style_ = clouds;
   diffuser_.Init(diffuser_buffer_);
   reverb_.Reset(sample_rate(), true);
 }
@@ -129,8 +127,27 @@ void Processor::Configure(Media media, bool mono) {
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
   reverb_.Reset(sr);
 }
-#endif  // BEADS_FIXED_REVERB_DECAY
+#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
+#ifdef BEADS_EXTENDED_REVERB
+/* static */
+float Processor::SampleRate(Media media) {
+#ifdef ENABLE_HARDWARE_24K
+  if (media == MEDIA_DIRTY_TAPE) {
+    return 24000.0f;
+  }
+#endif  // ENABLE_HARDWARE_24K
+  return media == MEDIA_VINTAGE_DIGITAL ? 32000.0f : 48000.0f;
+}
+
+void Processor::SetReverbCharacter(uint8_t character) {
+  reverb_character_.Init(character, sample_rate());
+  SetCloudsStyle(character == REVERB_CLOUDS);
+}
+
+void Processor::ProcessCharacter(
+    bool manual_delay, bool delay_requested,
+#else
 void Processor::BEADS_DECAY_RENDER(Process)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -163,6 +180,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessManualDelay)(
 template<bool manual_delay>
 void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
     bool delay_requested,
+#endif  // BEADS_EXTENDED_REVERB
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -173,6 +191,14 @@ void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
     FloatFrame* out,
     size_t size) {
   // TIME scan and the mix options run in their own copy of the block.
+#ifdef BEADS_EXTENDED_REVERB
+  if (options_) {
+    ProcessWithOptionsCharacter(manual_delay, delay_requested,
+        seed_button_state, seed_input, freeze, density, parameters,
+        mix_parameters, in, out, size);
+    return;
+  }
+#else
   if (manual_delay && options_) {
     BEADS_DECAY_RENDER(ProcessManualDelayWithOptions)(delay_requested,
         seed_button_state, seed_input, freeze, density, parameters,
@@ -185,6 +211,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
         mix_parameters, in, out, size);
     return;
   }
+#endif  // BEADS_EXTENDED_REVERB
   const float delay_mode = delay_mode_transition_ > 0.0f;
   const float threshold = delay_mode ? 0.98f : 0.99f;
   const float direction = !spectral_ && delay_mode_ != DELAY_MODE_NEVER &&
@@ -336,6 +363,11 @@ void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
   reverb_.set_mix(reverb_mix);
 #ifdef BEADS_FIXED_REVERB_DECAY
   reverb_.set_time(Reverb::fixed_decay());
+#elif defined(BEADS_EXTENDED_REVERB)
+  reverb_.set_time(Reverb::fixed_decay() ? Reverb::fixed_decay()
+      : caveman
+          ? (0.45f + 0.5f * reverb_time)
+          : (0.3f + 0.6f * reverb_time));
 #else
   reverb_.set_time(caveman
       ? (0.45f + 0.5f * reverb_time)
@@ -343,7 +375,15 @@ void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
 #endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
-  reverb_.Render(out, size);
+#ifdef BEADS_EXTENDED_REVERB
+  reverb_.RenderCharacter(reverb_character_, out, size);
+#else
+  if (clouds_style_) {
+    reverb_.ProcessClouds(out, size);
+  } else {
+    reverb_.Process(out, size);
+  }
+#endif  // BEADS_EXTENDED_REVERB
   
   // Final clipping/limiting
   output_limiter_.ProcessOutput(
@@ -357,7 +397,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessBlock)(
   }
 }
 
-#ifndef BEADS_FIXED_REVERB_DECAY
+#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void Processor::QuantizeDrySignal(
     const FloatFrame* in,
     FloatFrame* out,
@@ -387,6 +427,6 @@ void Processor::QuantizeDrySignal(
       break;
   }
 }
-#endif  // BEADS_FIXED_REVERB_DECAY
+#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
 }  // namespace beads

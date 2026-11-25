@@ -153,7 +153,7 @@ class Ui {
   
   OutputLimiterMode output_limiter_mode() const;
   inline uint8_t reverb_character() const { return reverb_character_; }
-  inline bool clouds_style() const { return reverb_character() == 1; }
+  inline bool clouds_style() const { return clouds_style_; }
   inline bool evolving_feedback() const { return evolving_feedback_; }
   // The selected synth, previewed while its page is open; a SynthEngine.
   inline uint8_t synth() const { return synth_; }
@@ -178,7 +178,7 @@ class Ui {
 
   // The saved engine, applied once the options page has closed.
   inline ProcessorMode processor_mode() const { return processor_mode_; }
-  inline bool spectral() const { return processor_mode_ == PROCESSOR_SPECTRAL; }
+  inline bool spectral() const { return spectral_; }
 
   void ProcessPot(MixParameter parameter, float value) {
     mix_pot_value_[parameter] = value;
@@ -284,12 +284,12 @@ class Ui {
   // Entry-only request: main discards events queued before options entry.
   volatile bool flush_options_events_;
   volatile OutputLimiterMode output_limiter_mode_;
-  volatile uint8_t reverb_character_;
+  volatile bool clouds_style_;
   volatile bool evolving_feedback_;
   volatile uint8_t synth_;
   volatile AttackMode attack_mode_;
   float attack_threshold_;
-  volatile ProcessorMode processor_mode_;
+  volatile bool spectral_;
   volatile PitchScale pitch_scale_;
   volatile bool random_intervals_;
   volatile RandomIntervals intervals_mode_;
@@ -307,7 +307,8 @@ class Ui {
   volatile uint8_t gain_ceiling_;
 
   GestureController gestures_;
-
+  volatile uint8_t reverb_character_;
+  volatile ProcessorMode processor_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

@@ -43,7 +43,7 @@ using namespace stmlib;
 const float kPlaitsVoiceGain = 2.0f / 3.0f;
 const float kModelHysteresis = 0.048f;
 
-#ifndef BEADS_FIXED_REVERB_DECAY
+#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 #ifdef PLAITS_BLOBS
 // Plaits' banks, until the profile's are set: green, red, yellow.
 const uint8_t kPlaitsStockBanks[kNumPlaitsBanks][kPlaitsBankSize] = {
@@ -62,6 +62,7 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
   const float sr = kSynthSampleRate;
 
   reverb_.Init(reverb_buffer, sr);
+  reverb_character_.Init(REVERB_STOCK, sr);
 
   trigger_generator_.Init(sr);
   pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
@@ -154,7 +155,7 @@ void PlaitsSynth::StartNote(const Parameters& p, int model) {
   gain_l_[active_voice_] = kPlaitsVoiceGain * (1.0f - pan) * (1.0f + pan);
   gain_r_[active_voice_] = kPlaitsVoiceGain * pan * (2.0f - pan);
 }
-#endif  // BEADS_FIXED_REVERB_DECAY
+#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
 void PlaitsSynth::BEADS_DECAY_RENDER(Render)(
     SeedButtonState seed_button_state,
@@ -265,11 +266,22 @@ void PlaitsSynth::BEADS_DECAY_RENDER(Render)(
   reverb_.set_mix(reverb_mix);
 #ifdef BEADS_FIXED_REVERB_DECAY
   reverb_.set_time(Reverb::fixed_decay());
+#elif defined(BEADS_EXTENDED_REVERB)
+  reverb_.set_time(Reverb::fixed_decay() ? Reverb::fixed_decay()
+      : 0.3f + 0.6f * reverb_time);
 #else
   reverb_.set_time(0.3f + 0.6f * reverb_time);
 #endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(0.6f);
-  reverb_.Render(out, size);
+#ifdef BEADS_EXTENDED_REVERB
+  reverb_.RenderCharacter(reverb_character_, out, size);
+#else
+  if (clouds_style_) {
+    reverb_.ProcessClouds(out, size);
+  } else {
+    reverb_.Process(out, size);
+  }
+#endif  // BEADS_EXTENDED_REVERB
 
   // Final clipping/limiting
   output_limiter_.ProcessOutput(

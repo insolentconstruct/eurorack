@@ -58,6 +58,35 @@ using namespace std;
 using namespace beads;
 using namespace stmlib;
 
+#ifdef BEADS_EXTENDED_AUDIO
+extern Abyss abyss;
+extern beads::Limiter abyss_limiter;
+extern CvReader cv_reader;
+extern GainControl gain_control;
+extern NormalizationDetector normalization_detector;
+extern Oliverb oliverb;
+extern beads::Limiter oliverb_limiter;
+extern Processor::Media oliverb_media;
+extern Processor processor;
+extern Settings settings;
+extern Synth synth;
+extern PlaitsSynth plaits_synth;
+extern RingsSynth rings_synth;
+extern Ui ui;
+extern EngineTransition transition;
+extern int synth_mode_start_time;
+extern bool synth_mode;
+extern uint8_t seed_latch_mode;
+extern bool seed_latch_enabled;
+extern GateFlags previous_seed;
+extern stmlib::DelayLine<Codec::Event, 256> event_delay;
+#ifdef DWT_CALIBRATION
+extern uint8_t active_processor_mode;
+extern uint8_t delay_buffer_1[512 * 1024];
+extern uint8_t delay_buffer_2[256 * 1024];
+extern uint16_t reverb_buffer[32768];
+#endif  // DWT_CALIBRATION
+#else
 const bool skip_factory_test = false;
 
 uint8_t delay_buffer_1[512 * 1024]
@@ -174,7 +203,9 @@ bool seed_latch_enabled;
 bool fixed_reverb_decay;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-float OliverbControl(const RandomizedParameter& control, float lo, float hi) {
+#endif  // BEADS_EXTENDED_AUDIO
+
+inline float OliverbControl(const RandomizedParameter& control, float lo, float hi) {
   float value = control.base;
   if (control.has_cv) {
     value += control.attenuverter * control.cv;
@@ -183,14 +214,16 @@ float OliverbControl(const RandomizedParameter& control, float lo, float hi) {
   return value;
 }
 
-template<bool manual_delay, bool fixed_decay, bool play_oliverb>
+template<bool manual_delay, bool fixed_decay, bool play_oliverb,
+    bool extended_reverb>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) __attribute__((always_inline));
 
-template<bool manual_delay, bool fixed_decay, bool play_oliverb>
+template<bool manual_delay, bool fixed_decay, bool play_oliverb,
+    bool extended_reverb>
 inline void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
@@ -380,11 +413,11 @@ inline void ProcessAudio(
   }
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
-  const uint8_t requested_style = play_oliverb
-      ? transition.reverb_character() : ui.reverb_character();
-  const ProcessorMode active_mode = play_oliverb ? PROCESSOR_OLIVERB
-      : ProcessorMode(processor.spectral());
-  const bool engine_change = ui.processor_mode() != active_mode &&
+  const bool requested_style = play_oliverb || extended_reverb
+      ? transition.clouds_style() : ui.clouds_style();
+  const bool engine_change = (play_oliverb
+      ? ui.processor_mode() != PROCESSOR_OLIVERB
+      : ui.spectral() != processor.spectral()) &&
       !ui.should_ignore_state_change();
   if (transition.Hold(requested_style, engine_change, &processor, &synth,
       &plaits_synth, &rings_synth, out, size)) {
@@ -426,7 +459,7 @@ inline void ProcessAudio(
 #endif  // DWT_CALIBRATION
     oliverb.Process(controls, freeze, float_in, float_out, size);
     oliverb_limiter.ProcessOutput(float_out, size, ui.output_limiter_mode(),
-        Processor::SampleRate(oliverb_media));
+        float(oliverb.sample_rate()));
     if (m.output_gate) {
       for (size_t i = 0; i < size; ++i) {
         float_out[i].l = (float_out[i].l + float_out[i].r) * 0.5f;
@@ -448,7 +481,10 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (fixed_decay) {
+    if (extended_reverb) {
+      rings_synth.RenderCharacter(seed_button_state, seed_input, freeze,
+          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+    } else if (fixed_decay) {
       rings_synth.RenderFixedDecay(
           seed_button_state,
           seed_input,
@@ -476,7 +512,10 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (fixed_decay) {
+    if (extended_reverb) {
+      plaits_synth.RenderCharacter(seed_button_state, seed_input, freeze,
+          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+    } else if (fixed_decay) {
       plaits_synth.RenderFixedDecay(
           seed_button_state,
           seed_input,
@@ -504,7 +543,10 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (fixed_decay) {
+    if (extended_reverb) {
+      synth.RenderCharacter(seed_button_state, seed_input, freeze,
+          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+    } else if (fixed_decay) {
       synth.RenderFixedDecay(
           seed_button_state,
           seed_input,
@@ -542,7 +584,12 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (manual_delay) {
+    if (extended_reverb) {
+      const bool manual = settings.profile().entry(FEATURE_MANUAL_DELAY).action;
+      processor.ProcessCharacter(manual, ui.manual_delay_requested(),
+          seed_button_state, seed_input, freeze, d, p, m,
+          float_in, float_out, size);
+    } else if (manual_delay) {
       if (fixed_decay) {
         processor.ProcessManualDelayFixedDecay(ui.manual_delay_requested(),
             seed_button_state, seed_input, freeze, d, p, m,
@@ -593,12 +640,27 @@ inline void ProcessAudio(
   }
 }
 
+inline void ApplySynthLevel(
+    Codec::Frame* out, size_t size, int32_t divisor) {
+  if (settings.state().gate_output_mode) {
+    for (size_t i = 0; i < size; ++i) {
+      out[i].l /= divisor;
+    }
+  } else {
+    for (size_t i = 0; i < size; ++i) {
+      out[i].l /= divisor;
+      out[i].r /= divisor;
+    }
+  }
+}
+
+#ifndef BEADS_EXTENDED_AUDIO
 void Process(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<false, false, false>(events, in, out, size);
+  ProcessAudio<false, false, false, false>(events, in, out, size);
 }
 
 void ProcessFixedDecay(
@@ -606,7 +668,7 @@ void ProcessFixedDecay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<false, true, false>(events, in, out, size);
+  ProcessAudio<false, true, false, false>(events, in, out, size);
 }
 
 void ProcessManualDelay(
@@ -614,7 +676,7 @@ void ProcessManualDelay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<true, false, false>(events, in, out, size);
+  ProcessAudio<true, false, false, false>(events, in, out, size);
 }
 
 void ProcessManualDelayFixedDecay(
@@ -622,7 +684,17 @@ void ProcessManualDelayFixedDecay(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<true, true, false>(events, in, out, size);
+  ProcessAudio<true, true, false, false>(events, in, out, size);
+}
+
+#endif  // BEADS_EXTENDED_AUDIO
+
+#ifdef BEADS_EXTENDED_AUDIO
+
+void ProcessOliverb(
+    const Codec::Event* events, const Codec::Frame* in,
+    Codec::Frame* out, size_t size) {
+  ProcessAudio<false, false, true, false>(events, in, out, size);
 }
 
 float AbyssPitchPosition() {
@@ -701,7 +773,7 @@ void ProcessAbyss(
   ui.ClearTrimFlag();
   const bool change = ui.processor_mode() != PROCESSOR_ABYSS &&
       !ui.should_ignore_state_change();
-  if (transition.Hold(transition.reverb_character(), change, &processor, &synth,
+  if (transition.Hold(transition.clouds_style(), change, &processor, &synth,
       &plaits_synth, &rings_synth, codec_out, size)) {
     return;
   }
@@ -759,6 +831,28 @@ void ProcessAbyss(
   }
 }
 
+void ProcessExtendedReverb(
+    const Codec::Event* events, const Codec::Frame* in,
+    Codec::Frame* out, size_t size) {
+  ProcessAudio<false, false, false, true>(events, in, out, size);
+  if (synth_mode) {
+    const uint8_t level = settings.FeatureValue(FEATURE_SYNTH_LEVEL);
+    if (level) {
+      ApplySynthLevel(out, size, 1 << level);
+    }
+  }
+}
+
+#else
+
+void ProcessOliverb(
+    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
+void ProcessAbyss(
+    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
+void ProcessExtendedReverb(
+    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
+float AbyssPitchPosition();
+
 // Selected only for synth profiles with an output trim.
 template<bool fixed_decay>
 void ProcessSynthLevel(
@@ -772,16 +866,7 @@ void ProcessSynthLevel(
     Process(events, in, out, size);
   }
   const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
-  if (settings.state().gate_output_mode) {
-    for (size_t i = 0; i < size; ++i) {
-      out[i].l /= divisor;
-    }
-  } else {
-    for (size_t i = 0; i < size; ++i) {
-      out[i].l /= divisor;
-      out[i].r /= divisor;
-    }
-  }
+  ApplySynthLevel(out, size, divisor);
 }
 
 Codec::FillBufferCallback AudioCallback(bool synth) {
@@ -789,7 +874,10 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
     return &ProcessAbyss;
   }
   if (oliverb_mode) {
-    return &ProcessAudio<false, false, true>;
+    return &ProcessOliverb;
+  }
+  if (transition.reverb_character() > REVERB_CLOUDS) {
+    return &ProcessExtendedReverb;
   }
   if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
     return fixed_reverb_decay ? &ProcessSynthLevel<true>
@@ -804,7 +892,8 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   const Processor::Media media = oliverb_mode ? oliverb_media : processor.media();
-  const int sr = new_synth_mode ? 48000 : int(Processor::SampleRate(media));
+  const int sr = new_synth_mode ? 48000
+      : oliverb_mode ? oliverb.sample_rate() : int(processor.sample_rate());
   if (new_synth_mode && background_buffer_backup.busy()) {
     background_buffer_backup.Process(false);
   }
@@ -841,6 +930,9 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
       oliverb_mode || active_processor_mode == PROCESSOR_ABYSS;
   processor.set_suspended(dedicated_reverb);
   background_buffer_backup.set_suspended(dedicated_reverb);
+  if (transition.reverb_character() > REVERB_CLOUDS) {
+    processor.ResetReverbCharacter();
+  }
   transition.Start(sr, AudioCallback(new_synth_mode), true);
 }
 
@@ -1020,6 +1112,24 @@ void MonitorStateChange() {
     }
     if (transition.Fade()) {
       SwapPaused(SYNTH_SILENT, transition.playing_synth());
+    }
+    return;
+  }
+  const uint8_t reverb_character = ui.reverb_character();
+  const uint8_t playing_character = transition.reverb_character();
+  if (!oliverb_mode && active_processor_mode != PROCESSOR_ABYSS &&
+      !factory_test.running() && !ui.calibrating_or_testing() &&
+      !transition.blanking() && reverb_character != playing_character &&
+      (reverb_character > REVERB_CLOUDS || playing_character > REVERB_CLOUDS)) {
+    if (ui.freeze_led_state()) {
+      ui.ClearSelfPlayRequest();
+      synth_fade = false;
+      synth_mode_start_time = 0;
+    }
+    if (transition.Fade()) {
+      transition.Pause();
+      transition.SetReverbCharacter(reverb_character, &processor, &synth);
+      transition.Resume(AudioCallback(synth_mode));
     }
     return;
   }
@@ -1219,3 +1329,5 @@ int main(void) {
   }
 }
 
+
+#endif  // BEADS_EXTENDED_AUDIO

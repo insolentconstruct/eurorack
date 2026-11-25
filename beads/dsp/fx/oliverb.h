@@ -55,6 +55,8 @@ class Oliverb {
   Oliverb() { }
   ~Oliverb() { }
 
+  inline int sample_rate() const { return sample_rate_; }
+
   void Init(uint16_t* buffer, int sample_rate) {
     sample_rate_ = sample_rate;
     switch (sample_rate_) {

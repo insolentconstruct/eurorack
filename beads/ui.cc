@@ -37,6 +37,7 @@
 #include "beads/background_buffer_backup.h"
 #include "beads/blob/synth_choice.h"
 #include "beads/calibrator.h"
+#include "beads/dsp/fx/reverb.h"
 #include "beads/gain_control.h"
 #include "beads/settings.h"
 
@@ -158,12 +159,14 @@ void Ui::LoadOptions() {
   gestures_.LoadOptions();
   output_limiter_mode_ = settings_->output_limiter_mode();
   reverb_character_ = settings_->reverb_character();
+  clouds_style_ = reverb_character_ == REVERB_CLOUDS;
   evolving_feedback_ = settings_->evolving_feedback();
   synth_ = settings_->synth();
   attack_mode_ = settings_->attack_mode();
   attack_threshold_ = kAttackThresholds[
       settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
   processor_mode_ = settings_->processor_mode();
+  spectral_ = processor_mode_ == PROCESSOR_SPECTRAL;
   pitch_scale_ = settings_->pitch_scale();
   intervals_mode_ = settings_->random_intervals();
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
@@ -291,6 +294,9 @@ void Ui::Poll() {
   const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
   reverb_character_ = previewing
       ? options_.Value(FEATURE_REVERB) : settings_->reverb_character();
+  if (reverb_character_ <= REVERB_CLOUDS) {
+    clouds_style_ = reverb_character_ == REVERB_CLOUDS;
+  }
   synth_ = previewing ? options_.Value(FEATURE_SYNTH) : settings_->synth();
   delay_mode_ = previewing
       ? DelayMode(options_.Value(FEATURE_DELAY)) : settings_->delay_mode();
@@ -332,6 +338,7 @@ void Ui::Poll() {
   }
   if (!previewing) {
     processor_mode_ = settings_->processor_mode();
+    spectral_ = processor_mode_ == PROCESSOR_SPECTRAL;
   }
   UpdateLeds();
 }

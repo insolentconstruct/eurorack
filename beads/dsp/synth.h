@@ -59,12 +59,12 @@ class Synth {
   void Init(uint16_t* reverb_buffer);
   void Reset();
   void SetCloudsStyle(bool clouds, bool clear) {
-    SetReverbCharacter(clouds, clear);
+    clouds_style_ = clouds;
+    reverb_.Reset(kSynthSampleRate, clear);
   }
   void SetReverbCharacter(uint8_t character, bool clear) {
-    clouds_style_ = character == REVERB_CLOUDS;
-    reverb_.set_character(character);
-    reverb_.Reset(kSynthSampleRate, clear);
+    reverb_character_.Init(character, kSynthSampleRate);
+    SetCloudsStyle(character == REVERB_CLOUDS, clear);
   }
   
   void Render(
@@ -78,6 +78,16 @@ class Synth {
       FloatFrame* out,
       size_t size);
   void RenderFixedDecay(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      Resolution quality,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const Processor::MixParameters& mix_parameters,
+      FloatFrame* out,
+      size_t size);
+  void RenderCharacter(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -125,6 +135,8 @@ class Synth {
   stmlib::HysteresisQuantizer2 bank_quantizer_;
   bool clouds_style_;
   
+  Reverb::CharacterState reverb_character_;
+
   DISALLOW_COPY_AND_ASSIGN(Synth);
 };
 

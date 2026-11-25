@@ -94,7 +94,7 @@ struct ResonatorControls {
 
 class Processor {
  public:
-  Processor() { }
+  Processor() : suspended_(false) { }
   ~Processor() { }
   
   enum Media {
@@ -112,7 +112,7 @@ class Processor {
   };
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
-  void SetCloudsStyle(bool clouds) { SetReverbCharacter(clouds); }
+  void SetCloudsStyle(bool clouds);
   void SetReverbCharacter(uint8_t character);
   // Attacks (#58, #47); changing the mode forgets the marks.
   void SetAttacks(int mode, float threshold) {
@@ -228,15 +228,15 @@ class Processor {
     }
   }
   
-  inline float sample_rate() const { return SampleRate(media_); }
+  static float SampleRate(Media media);
 
-  static inline float SampleRate(Media media) {
+  inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
     float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
 #else
     float sr[4] = { 48000.0f, 48000.0f, 32000.0f, 48000.0f };
 #endif  // ENABLE_HARDWARE_24K
-    return sr[media];
+    return sr[media_];
   }
   
   inline int ratio() const {
@@ -347,6 +347,17 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
+  void ProcessCharacter(
+      bool manual_delay, bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
   void ProcessManualDelay(
       bool delay_requested,
       SeedButtonState seed_button_state,
@@ -382,8 +393,13 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
+  inline void ResetReverbCharacter() {
+    reverb_character_.Reset(sample_rate());
+  }
+
   // Clears the reverb's memory, which the synths share.
   inline void ClearReverb() {
+    ResetReverbCharacter();
     reverb_.Reset(sample_rate(), true);
   }
 
@@ -529,6 +545,17 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
+  void ProcessWithOptionsCharacter(
+      bool manual_delay, bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
   void ProcessManualDelayWithOptions(
       bool delay_requested,
       SeedButtonState seed_button_state,
@@ -576,6 +603,18 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) __attribute__((always_inline));
+  template<bool resonator>
+  inline void ProcessOptionsCharacter(
+      bool manual_delay, bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size) __attribute__((always_inline));
   // A flat notch at unity loop gain; both ends of the knob stay stock.
   static float UnityFeedback(float feedback, float tap_gain);
   // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.
@@ -588,6 +627,7 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void ProcessReverbFixedDecay(float reverb, FloatFrame* out, size_t size);
+  void ProcessReverbCharacter(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
   // Struck by input hits, tuned by PITCH; adds its resonance to the frames.
   void ProcessResonator(
@@ -704,6 +744,8 @@ class Processor {
   int output_pulse_count_;
   bool output_pulse_;
   bool suspended_;
+
+  Reverb::CharacterState reverb_character_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

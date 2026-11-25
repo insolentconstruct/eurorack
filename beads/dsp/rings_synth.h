@@ -66,12 +66,12 @@ class RingsSynth {
   // The Beads-side chain, as the Plaits synth's, in its reverb buffer.
   void Init(uint16_t* reverb_buffer);
   void SetCloudsStyle(bool clouds, bool clear) {
-    SetReverbCharacter(clouds, clear);
+    clouds_style_ = clouds;
+    reverb_.Reset(kSynthSampleRate, clear);
   }
   void SetReverbCharacter(uint8_t character, bool clear) {
-    clouds_style_ = character == REVERB_CLOUDS;
-    reverb_.set_character(character);
-    reverb_.Reset(kSynthSampleRate, clear);
+    reverb_character_.Init(character, kSynthSampleRate);
+    SetCloudsStyle(character == REVERB_CLOUDS, clear);
   }
 
   // A blob the region checked (NULL: silent until one is bound).
@@ -107,6 +107,16 @@ class RingsSynth {
       FloatFrame* out,
       size_t size);
   void RenderFixedDecay(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      Synth::Resolution resolution,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const Processor::MixParameters& mix_parameters,
+      FloatFrame* out,
+      size_t size);
+  void RenderCharacter(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -176,6 +186,8 @@ class RingsSynth {
   RingsSynthControls controls_;
   // FEEDBACK as last rendered.
   float feedback_;
+
+  Reverb::CharacterState reverb_character_;
 
   DISALLOW_COPY_AND_ASSIGN(RingsSynth);
 };
