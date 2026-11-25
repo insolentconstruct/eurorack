@@ -34,6 +34,7 @@
 #include <string>
 #include <sys/mman.h>
 
+#include "beads/drivers/led_curve.h"
 #include "beads/test/test_checker.h"
 
 #define private public
@@ -82,16 +83,10 @@ void __cyg_profile_func_exit(void*, void*) {
 
 }  // extern "C"
 
-// A dimmed quality LED channel (0 red, 1 green, 2 blue) at percent: red *
-// level^1.5; lit green and blue at the level plus 12 * (1 - level), rounded.
+// The UI tests check that the requested level reaches the measured curve.
 int DimmedMedia(int channel, uint8_t c, int percent) {
-  const double p = percent / 100.0;
-  if (percent == 100) {
-    return c;
-  } else if (channel == 0) {
-    return int(c * pow(p, 1.5));
-  }
-  return c * percent / 100 + (c ? int(12.0 * (1.0 - p) + 0.5) : 0);
+  const LedCurvePoint* curves[] = { led_curve_r, led_curve_g, led_curve_b };
+  return DimLed(curves[channel], c, percent / 100.0f);
 }
 
 STATIC_ASSERT(sizeof(State) == 24, stat_size);
@@ -285,13 +280,13 @@ void TestMonophonicGesture() {
         r.ui.set_overwrite_reserve(1.0f);
         r.Tick(1, true);
         Leds::Color color = r.ui.media_palette_[media];
-        const float brightness = toggle ? 1.0f : 0.5f;
+        const int brightness = toggle ? 100 : 50;
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-            uint8_t(color.r * brightness * brightness));
+            DimmedMedia(0, color.r, brightness));
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-            uint8_t(color.g * brightness));
+            DimmedMedia(1, color.g, brightness));
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
-            uint8_t(color.b * brightness));
+            DimmedMedia(2, color.b, brightness));
       }
     }
   }
@@ -981,13 +976,13 @@ void TestOverwriteReserveDisplay() {
       r.ui.set_overwrite_reserve(reserve[i]);
       r.Tick(1, true);
       Leds::Color color = r.ui.media_palette_[media];
-      // LED conversion truncates; these binary fractions are exact.
+      const int percent = int(100 * reserve[i]);
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-          uint8_t(color.r * reserve[i] * reserve[i]));
+          DimmedMedia(0, color.r, percent));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-          uint8_t(color.g * reserve[i]));
+          DimmedMedia(1, color.g, percent));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
-          uint8_t(color.b * reserve[i]));
+          DimmedMedia(2, color.b, percent));
     }
   }
 }
@@ -3949,9 +3944,9 @@ void TestBetaOptionsLeds() {
     full.Tick(1, true);
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    // Bright digital white {192, 192, 208}, as judged on the module.
+    // White quality colour from the direct-drive verification sweep.
     const uint8_t white[3][3] = {
-      { 192, 192, 208 }, { 102, 130, 141 }, { 36, 71, 76 }
+      { 192, 192, 208 }, { 131, 151, 156 }, { 72, 107, 104 }
     };
     for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
       CHECK(full.ui.leds_.intensity_[i] == white[level][i - LED_MEDIA_R]);
@@ -3975,10 +3970,10 @@ void TestBetaOptionsLeds() {
     full.ui.UpdateLeds();
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    const uint8_t warning_red[3] = { 255, 136, 48 };
+    const uint8_t warning_red[3] = { 255, 181, 97 };
     CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] == warning_red[level]);
   }
-  // Red over every intensity at both levels, as the float rule truncates.
+  // Red over every intensity at both levels.
   for (int level = 1; level < 3; ++level) {
     for (int value = 0; value < 256; ++value) {
       Leds leds;

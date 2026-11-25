@@ -4,6 +4,8 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Preserve quality LED colours when dimming by using measured RGB light curves.
+
 - Save only edited page options and let later panel gestures take precedence.
 - Save a new profile's starting quality before recording its identity.
 - Return ASSIGN CV to FEEDBACK when the active engine cannot run the resonator.
