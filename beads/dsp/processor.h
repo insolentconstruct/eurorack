@@ -333,6 +333,12 @@ class Processor {
       FloatFrame* out,
       size_t size);
   
+#ifdef DWT_CALIBRATION
+  inline bool chord_enabled() const {
+    return options_ & OPTION_FLAG_RESONATOR_CHORD;
+  }
+#endif  // DWT_CALIBRATION
+
   void ProcessChordBlock(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,

@@ -443,7 +443,7 @@ void ProcessAudio(
     processor.set_diffusion(diffusion);
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
-    const bool render_chord = chord && !dwt_calibration::stats.synthetic;
+    const bool render_chord = chord && processor.chord_enabled();
 #else
     const bool render_chord = chord;
 #endif  // DWT_CALIBRATION
