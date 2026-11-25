@@ -2682,6 +2682,21 @@ cases = [
   ('TestRecoveryRestoredStorage', 'record', 'beads/settings.cc',
     '  if (recovery_mode && !profile_locked_) {\n    record_ = default_record;',
     '  if (recovery_mode && status == STORAGE_OK && !profile_locked_) {\n    record_ = default_record;'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/settings.cc',
+    '  return chunk_storage_.SavePersistentData();',
+    '  const PersistentData requested = persistent_data_;\n'
+    '  chunk_storage_.SavePersistentData();\n'
+    '  return !chunk_storage_.locked() &&\n'
+    '      !memcmp(&requested, &persistent_data_, sizeof(PersistentData));'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/ui.cc',
+    '      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {',
+    '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/calibrator.h',
+    '    if (!saved) {\n      if (settings_->ReadPersistentData(&durable)) {',
+    '    if (!saved) {\n      if (false) {'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/settings_storage.h',
+    '    if (valid && Usable(mirror) && !SectorProtects(mirror) &&',
+    '    if (false && valid && Usable(mirror) && !SectorProtects(mirror) &&'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
     '      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {',
     '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),

@@ -3459,6 +3459,110 @@ void Press(Rig* r, int first, int second) {
   r->Advance(20);
 }
 
+void TestFinalCalibrationPersistence() {
+  test_checker.Start("TestFinalCalibrationPersistence");
+  typedef beads::ChunkStorage<15, 14, PersistentData, State, OptionsRecord>
+      Storage;
+  Storage& storage = settings.chunk_storage_;
+  const size_t cali_bytes = storage.ChunkSize<PersistentData>();
+  const int cali_words = cali_bytes / storage.BLOCK_SIZE;
+  // S15 repair, then S14 CALI/options, then S15 CALI/STAT.
+  const int settings_erased = 3 + 2 * cali_words +
+      storage.ChunkSize<OptionsRecord>() / storage.BLOCK_SIZE;
+  const int complete = settings_erased + cali_words +
+      storage.ChunkSize<State>() / storage.BLOCK_SIZE;
+  for (int hal = 0; hal < 2; ++hal) {
+    for (int cut = 0; cut <= complete; ++cut) {
+      const int failures = test_checker.failures();
+      Rig r(false, false);
+      r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+      r.cv[CV_ADC_CHANNEL_DENSITY] = 16384;
+      r.Settle();
+
+      const uint8_t default_amount = settings.state().assignable_cv_amount[0];
+      const uint8_t old_amount = 64;
+      const uint8_t new_amount = 192;
+      PersistentData measured = settings.factory_;
+      measured.adc_calibration[CV_ADC_CHANNEL_TIME].offset += 0.1f;
+      *settings.mutable_persistent_data() = measured;
+      settings.mutable_state()->assignable_cv_amount[0] = old_amount;
+      CHECK(settings.SavePersistentData());
+
+      // Leave the measured CALI only in S14 and a distinct old STAT in S15.
+      memset(reinterpret_cast<void*>(storage.chunk_address(0)), 0xff,
+          cali_bytes);
+      PersistentData mirror;
+      State old_state;
+      CHECK(storage.ReadChunk(storage.chunk_address(0), &mirror) ==
+          Storage::CHUNK_INVALID);
+      CHECK(storage.ReadMirror(&mirror) && SameCalibration(mirror, measured));
+      CHECK(storage.ReadChunk(storage.chunk_address(1), &old_state) ==
+          Storage::CHUNK_VALID && old_state.assignable_cv_amount[0] == old_amount);
+      settings.mutable_state()->assignable_cv_amount[0] = new_amount;
+
+      calibrator.Start();
+      const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
+      calibrator.calibrator_[1].Acquire(0, u + 0.2f, 0.2f);
+      PersistentData attempt = measured;
+      attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
+      attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+      CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
+      CHECK(!SameCalibration(measured, attempt));
+
+      const bool success = cut == complete;
+      ui.mode_ = Ui::MODE_CALIBRATION_4;
+      const uint32_t operations = TestFlashErases() + test_writes;
+      if (!success) {
+        if (hal) {
+          TestFlashBudget() = cut;
+        } else {
+          TestFlash().supply_low = cut == 0;
+          TestFlash().supply_budget = cut;
+        }
+      }
+      test_down[SWITCH_MEDIA] = true;
+      r.Advance(40);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_4);
+      CHECK(TestFlashErases() + test_writes == operations);
+      test_down[SWITCH_MEDIA] = false;
+      r.Advance(20);
+      CHECK(TestFlashErases() + test_writes - operations == uint32_t(cut));
+      CHECK(!hal || success || TestFlashBudget() == 0);
+      CHECK(hal || success || TestFlash().supply_low);
+      const PersistentData& expected = cut >= settings_erased
+          ? attempt : measured;
+      CHECK(ui.mode_ == (success ? Ui::MODE_NORMAL : Ui::MODE_PANIC));
+      CHECK(SameCalibration(settings.persistent_data(), expected));
+      if (!success) {
+        for (int phase = 0; phase < 2; ++phase) {
+          ui.UpdateLeds();
+          const bool lit = system_clock.milliseconds() & 64;
+          CHECK((ui.leds_.intensity_[LED_MEDIA_R] != 0) == lit);
+          CHECK((ui.leds_.intensity_[LED_MEDIA_G] != 0) == lit);
+          CHECK((ui.leds_.intensity_[LED_MEDIA_B] != 0) == lit);
+          r.Advance(64);
+        }
+        r.Advance(372);
+        CHECK(ui.mode_ == Ui::MODE_PANIC);
+        r.Advance(600);
+        CHECK(ui.mode_ == Ui::MODE_NORMAL);
+      }
+      TestFlashBudget() = -1;
+      TestFlashPowerUp();
+      r.Reboot(false);
+      CHECK(SameCalibration(settings.persistent_data(), expected));
+      // The first erase removes the old STAT; the last word writes the new one.
+      const uint8_t expected_amount =
+          success ? new_amount : cut == 0 ? old_amount : default_amount;
+      CHECK(settings.state().assignable_cv_amount[0] == expected_amount);
+      if (test_checker.failures() != failures) {
+        printf("Calibration cut after %d operations (%s)\n",
+            cut, hal ? "HAL" : "PVD");
+      }
+    }
+  }
+}
+
 // The next save rewrites the settings sector, as when it is full.
 void RewriteOnNextSave() {
   settings.chunk_storage_.next_state_chunk_index_ = 0xffff;
@@ -4333,6 +4437,7 @@ int main() {
   TestCalibrationStepOnRelease();
   TestCalibrationExitResumesNormalization();
   TestRejectedCalibrationCue();
+  TestFinalCalibrationPersistence();
   TestUnfinishedCalibrationKept();
   TestLockedCalibrationCue();
   TestFactoryCalibrationRepeat();
