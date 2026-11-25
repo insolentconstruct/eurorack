@@ -36,7 +36,7 @@ Returning to Granular restores its saved frozen recording when available.
 | SHAPE | Increases modulation depth and rate. |
 | DENSITY | Blends in two input all-passes per channel. |
 | FEEDBACK | Counterclockwise blooms after each onset. Noon gives a conventional decay. Clockwise swells towards a cutoff. |
-| PITCH | Shifts part of the recirculating signal up or down. The centre notch disables shimmer. |
+| PITCH | Knob and CV sweep from off at centre through subtle loop detune, a fifth, then an octave. The fifth and octave shift up clockwise and down counterclockwise. |
 | REVERB | Tilts the feedback damping from dark to bright. |
 | DRY/WET | Crossfades input and reverb. |
 | FREEZE | Holds the tail at unity feedback with fixed taps. It releases back to the current controls. |
@@ -45,8 +45,11 @@ Abyss is an eight-line feedback delay network with an orthonormal Hadamard
 matrix, separately diffused stereo injection and a different modulation
 rate per line. Delays and control time constants scale with the codec rate.
 For moving taps the loop damps each line according to its round-trip time
-and a two-band tilt. The shimmer branch crossfades two shifting reads
-from one line back into that line's feedback path before the matrix.
+and a two-band tilt. With PITCH modulation at zero, PITCH is off within about 2.8% of knob
+travel on either side of centre, like the stock PITCH centre notch. Just outside it, the
+paired shifts rise to ±9 cents. Farther out the loop crossfades to a fifth
+and then an octave. The shifted reads replace up to 20% of one feedback
+tap before the matrix.
 Gravity shapes the wet output with a retriggerable onset envelope.
 During FREEZE the loop uses integer reads and bypasses damping and
 shimmer. The dry signal remains available through DRY/WET.

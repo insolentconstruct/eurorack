@@ -334,6 +334,11 @@ Switching between Granular and Spectral resets the recording. A saved
 frozen buffer returns with Granular. Processor changes fade and wait for
 FREEZE to be released.
 
+With PITCH modulation at zero, Abyss PITCH is off near noon. Either side
+adds subtle detune in both directions. Farther out, the fifth and octave
+shift up clockwise and down counterclockwise. PITCH CV follows the same
+sweep.
+
 Oliverb is Clouds Parasites' modulated pitch-shifting reverb. TIME sets
 pre-delay, SIZE sets tank size, PITCH shifts feedback, DENSITY sets
 decay and SHAPE sweeps the damping filters. DRY/WET crossfades, FEEDBACK

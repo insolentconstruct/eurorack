@@ -46,6 +46,18 @@ class Abyss {
     float mix;
   };
 
+  struct Pitch {
+    float detune;
+    float detune_mix;
+    float fifth;
+    float fifth_mix;
+    float octave;
+    float octave_mix;
+  };
+
+  static bool PitchOnNotch(float position);
+  static Pitch MapPitch(float position);
+
   Abyss() { }
   ~Abyss() { }
 
@@ -68,6 +80,7 @@ class Abyss {
 
   float Read(int line, float delay) const;
   float Diffuse(int stage, float input, int delay, float amount);
+  float Shift(float* phase, float step, float base, float width) const;
   void Mix(float* taps) const;
 
   float* lines_[kLines];
@@ -84,8 +97,9 @@ class Abyss {
   float frozen_;
   float onset_floor_;
   float elapsed_;
-  float pitch_phase_;
-  float pitch_mix_;
+  float pitch_phase_[6];
+  float pitch_mix_[5];
+  float detune_step_[2];
   float gravity_gain_;
   bool was_frozen_;
   int write_;

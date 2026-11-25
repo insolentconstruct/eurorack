@@ -40,6 +40,21 @@ using namespace std;
 
 namespace {
 
+const float kPitchDetent = 1.0f / 18.0f;
+const float kDetuneEnd = 0.33f;
+const float kFifthStart = 0.55f;
+const float kFifthEnd = 0.68f;
+const float kOctaveStart = 0.94f;
+const float kPitchMix = 0.2f;
+const float kFifth = 7.0f;
+const float kOctave = 12.0f;
+
+float Ramp(float value, float start, float end) {
+  float x = (value - start) / (end - start);
+  CONSTRAIN(x, 0.0f, 1.0f);
+  return stmlib::SmoothStep(x);
+}
+
 const float line_time[] = {
   0.151f, 0.181f, 0.203f, 0.239f, 0.277f, 0.313f, 0.359f, 0.409f
 };
@@ -77,8 +92,9 @@ void Abyss::Init(
   onset_coefficient_ = 1.0f / (0.22f * rate);
   onset_floor_ = 0.0f;
   elapsed_ = 8.0f;
-  pitch_phase_ = 0.0f;
-  pitch_mix_ = 0.0f;
+  fill(pitch_phase_, pitch_phase_ + 6, 0.0f);
+  detune_step_[0] = detune_step_[1] = 0.0f;
+  fill(pitch_mix_, pitch_mix_ + 5, 0.0f);
   gravity_gain_ = 1.0f;
   was_frozen_ = false;
   write_ = 0;
@@ -123,6 +139,42 @@ void Abyss::Mix(float* taps) const {
   }
 }
 
+/* static */
+bool Abyss::PitchOnNotch(float position) {
+  return fabsf(position) <= kPitchDetent;
+}
+
+/* static */
+Abyss::Pitch Abyss::MapPitch(float position) {
+  const float distance = fabsf(position);
+  const float detune = Ramp(distance, kPitchDetent, kDetuneEnd);
+  const float fifth = Ramp(distance, kDetuneEnd, kFifthStart);
+  const float octave = Ramp(distance, kFifthEnd, kOctaveStart);
+  const float sign = position < 0.0f ? -1.0f : 1.0f;
+  Pitch pitch;
+  pitch.detune = 0.09f * detune;
+  pitch.detune_mix = kPitchMix * detune * (1.0f - fifth);
+  pitch.fifth = kFifth * sign;
+  pitch.fifth_mix = kPitchMix * fifth * (1.0f - octave);
+  pitch.octave = kOctave * sign;
+  pitch.octave_mix = kPitchMix * octave;
+  return pitch;
+}
+
+float Abyss::Shift(float* phase, float step, float base, float width) const {
+  float p = *phase + step;
+  if (p < 0.0f) {
+    p += 1.0f;
+  } else if (p >= 1.0f) {
+    p -= 1.0f;
+  }
+  *phase = p;
+  const float other = p < 0.5f ? p + 0.5f : p - 0.5f;
+  const float blend = 1.0f - 2.0f * fabsf(p - 0.5f);
+  return blend * Read(0, base + width * p)
+      + (1.0f - blend) * Read(0, base + width * other);
+}
+
 void Abyss::Process(const Controls& c, const bool* freeze,
     const FloatFrame* in, FloatFrame* out, size_t size) {
   const float room_target = 0.24f + 0.76f * c.room;
@@ -144,10 +196,32 @@ void Abyss::Process(const Controls& c, const bool* freeze,
   const float high_gain = 0.91f - 0.54f * max(-tilt, 0.0f)
       + 0.08f * max(tilt, 0.0f);
   const float pitch_width = 0.035f * sample_rate_;
-  const float pitch_mix = min(0.64f, max(0.0f, fabsf(c.pitch) - 0.75f) * 0.2f);
-  const float ratio = stmlib::SemitonesToRatio(c.pitch);
-  const float pitch_step = (1.0f - ratio) / pitch_width;
-  const float pitch_gain = 0.8f * stmlib::Sqrt(min(1.0f, ratio));
+  const Pitch pitch = MapPitch(c.pitch);
+  const float target[] = {
+    pitch.detune_mix,
+    pitch.fifth > 0.0f ? pitch.fifth_mix : 0.0f,
+    pitch.fifth < 0.0f ? pitch.fifth_mix : 0.0f,
+    pitch.octave > 0.0f ? pitch.octave_mix : 0.0f,
+    pitch.octave < 0.0f ? pitch.octave_mix : 0.0f
+  };
+  const float intervals[] = { kFifth, -kFifth, kOctave, -kOctave };
+  float pitch_step[6] = { 0.0f };
+  bool pitch_active = false;
+  for (int i = 0; i < 5; ++i) {
+    pitch_active |= target[i] > 0.0f || pitch_mix_[i] > 0.0f;
+  }
+  if (pitch_active) {
+    // Approximate exp(x) - 1 for detune without quantizing either voice.
+    const float x = pitch.detune * 0.057762265f;
+    const float quadratic = 0.5f * x * x;
+    const float inverse_width = 1.0f / pitch_width;
+    pitch_step[0] = (-x - quadratic) * inverse_width;
+    pitch_step[1] = (x - quadratic) * inverse_width;
+    for (int i = 0; i < 4; ++i) {
+      pitch_step[i + 2] =
+          (1.0f - stmlib::SemitonesToRatio(intervals[i])) * inverse_width;
+    }
+  }
   float gain[kLines];
   float length[kLines];
   float phase_step[kLines];
@@ -165,10 +239,6 @@ void Abyss::Process(const Controls& c, const bool* freeze,
   for (size_t i = 0; i < size; ++i) {
     room_ += room_slew_ * (room_target - room_) * (1.0f - frozen_);
     wet_ += control_slew_ * (c.mix - wet_);
-    pitch_mix_ += control_slew_ * (pitch_mix - pitch_mix_);
-    if (pitch_mix_ < 1e-6f && pitch_mix == 0.0f) {
-      pitch_mix_ = 0.0f;
-    }
     frozen_ += freeze[i] ? 100.0f * seconds : -100.0f * seconds;
     CONSTRAIN(frozen_, 0.0f, 1.0f);
 
@@ -213,22 +283,37 @@ void Abyss::Process(const Controls& c, const bool* freeze,
     const float wet_l = (taps[0] - taps[2] + taps[5] + taps[7]) * 0.5f;
     const float wet_r = (taps[1] - taps[3] + taps[4] - taps[6]) * 0.5f;
 
-    if (pitch_mix_ > 0.0f && frozen_ < 1.0f) {
-      pitch_phase_ += pitch_step;
-      if (pitch_phase_ < 0.0f) {
-        pitch_phase_ += 1.0f;
-      } else if (pitch_phase_ >= 1.0f) {
-        pitch_phase_ -= 1.0f;
+    if (pitch_active) {
+      for (int j = 0; j < 2; ++j) {
+        detune_step_[j] += control_slew_ * (pitch_step[j] - detune_step_[j]);
       }
-      float other = pitch_phase_ + 0.5f;
-      if (other >= 1.0f) {
-        other -= 1.0f;
+      for (int j = 0; j < 5; ++j) {
+        pitch_mix_[j] += control_slew_ * (target[j] - pitch_mix_[j]);
+        if (pitch_mix_[j] < 1e-6f && target[j] == 0.0f) {
+          pitch_mix_[j] = 0.0f;
+        }
       }
       const float base = length[0] * room_;
-      const float blend = 1.0f - 2.0f * fabsf(pitch_phase_ - 0.5f);
-      const float shifted = blend * Read(0, base + pitch_width * pitch_phase_)
-          + (1.0f - blend) * Read(0, base + pitch_width * other);
-      taps[0] += pitch_mix_ * feedback_input * (pitch_gain * shifted - taps[0]);
+      float pitch_feedback = 0.0f;
+      if (frozen_ < 1.0f) {
+        if (pitch_mix_[0] > 0.0f) {
+          const float up = Shift(&pitch_phase_[0], detune_step_[0],
+              base, pitch_width);
+          const float down = Shift(&pitch_phase_[1], detune_step_[1],
+              base, pitch_width);
+          pitch_feedback += pitch_mix_[0] * (0.5f * (up + down) - taps[0]);
+        }
+        for (int j = 1; j < 5; ++j) {
+          if (pitch_mix_[j] > 0.0f) {
+            const float shifted = Shift(&pitch_phase_[j + 1], pitch_step[j + 1],
+                base, pitch_width);
+            pitch_feedback += pitch_mix_[j] * (shifted - taps[0]);
+          }
+        }
+      }
+      if (pitch_feedback != 0.0f) {
+        taps[0] += feedback_input * pitch_feedback;
+      }
     }
 
     Mix(taps);

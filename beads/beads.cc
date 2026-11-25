@@ -625,6 +625,10 @@ void ProcessManualDelayFixedDecay(
   ProcessAudio<true, true, false>(events, in, out, size);
 }
 
+float AbyssPitchPosition() {
+  return 2.0f * cv_reader.raw_pot(POTS_ADC_CHANNEL_PITCH) - 1.0f;
+}
+
 RandomizedParameter AbyssParameter(PotsAdcChannel knob,
     PotsAdcChannel amount, CvAdcChannel cv,
     NormalizationDetectorChannel channel) {
@@ -720,10 +724,11 @@ void ProcessAbyss(
   controls.diffusion = diffusion.value();
   const float cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
   controls.gravity = AbyssMix(Ui::MIX_PARAMETER_FEEDBACK, cv);
-  controls.pitch = AbyssParameter(POTS_ADC_CHANNEL_PITCH,
+  RandomizedParameter pitch = AbyssParameter(POTS_ADC_CHANNEL_PITCH,
       POTS_ADC_CHANNEL_PITCH_AMOUNT, CV_ADC_CHANNEL_PITCH,
-      NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV).value(NULL, 0, 24.0f, false);
-  CONSTRAIN(controls.pitch, -24.0f, 24.0f);
+      NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV);
+  pitch.base = AbyssPitchPosition() * 24.0f;
+  controls.pitch = pitch.value(NULL, 0, 24.0f, false) / 24.0f;
   controls.tone = AbyssMix(Ui::MIX_PARAMETER_REVERB, cv);
   controls.mix = AbyssMix(Ui::MIX_PARAMETER_DRY_WET, cv);
 
@@ -981,7 +986,9 @@ void MonitorStateChange() {
   ui.set_delay_active(!oliverb_mode && processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
       settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
-    ui.set_modulation_indication(cv_reader.pitch_on_notch(),
+    ui.set_modulation_indication(active_processor_mode == PROCESSOR_ABYSS
+        ? !settings.FeatureValue(FEATURE_PITCH_LAW) &&
+          Abyss::PitchOnNotch(AbyssPitchPosition()) : cv_reader.pitch_on_notch(),
         cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
   // Oliverb suspends the recent-note history with the recording.

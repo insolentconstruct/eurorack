@@ -101,10 +101,10 @@ void TestAbyss() {
     CHECK(inverse.energy[1] > inverse.energy[0]);
     CHECK(inverse.energy[4] < 1e-10);
     c.gravity = 0.5f;
-    c.pitch = 12.0f;
+    c.pitch = 0.6f;
     const Response shimmer = Render(rate, c, false);
     CHECK(shimmer.energy[2] != normal.energy[2]);
-    c.pitch = -24.0f;
+    c.pitch = -1.0f;
     c.room = 1.0f;
     c.drift = 1.0f;
     c.decay = 1.0f;
@@ -116,7 +116,33 @@ void TestAbyss() {
   }
 }
 
+void TestPitch() {
+  test_checker.Start("TestPitch");
+  for (int sign = -1; sign <= 1; sign += 2) {
+    CHECK(Abyss::PitchOnNotch(sign * 0.05f));
+    CHECK(!Abyss::PitchOnNotch(sign * 0.06f));
+    CHECK(!Abyss::PitchOnNotch(float(sign)));
+    const Abyss::Pitch centre = Abyss::MapPitch(sign * 0.05f);
+    CHECK(centre.detune_mix == 0.0f);
+    CHECK(centre.fifth_mix == 0.0f && centre.octave_mix == 0.0f);
+    const Abyss::Pitch detune = Abyss::MapPitch(sign * 0.33f);
+    CHECK(detune.detune == 0.09f && detune.detune_mix == 0.2f);
+    CHECK(detune.fifth_mix == 0.0f && detune.octave_mix == 0.0f);
+    const Abyss::Pitch fifth = Abyss::MapPitch(sign * 0.6f);
+    CHECK(fifth.fifth == sign * 7.0f && fifth.fifth_mix == 0.2f);
+    CHECK(fifth.detune_mix == 0.0f && fifth.octave_mix == 0.0f);
+    const Abyss::Pitch end = Abyss::MapPitch(sign);
+    CHECK(end.octave == sign * 12.0f && end.octave_mix == 0.2f);
+    CHECK(end.detune_mix == 0.0f && end.fifth_mix == 0.0f);
+  }
+  for (int i = -100; i <= 100; ++i) {
+    const Abyss::Pitch p = Abyss::MapPitch(float(i) / 100.0f);
+    CHECK(p.detune_mix + p.fifth_mix + p.octave_mix <= 0.200001f);
+  }
+}
+
 int main() {
   TestAbyss();
+  TestPitch();
   return test_checker.failures() ? 1 : 0;
 }
