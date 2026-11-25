@@ -472,7 +472,7 @@ void MonitorStateChange() {
         if (!FadedOut()) {
           return;
         }
-        if (background_buffer_backup.busy()) {
+        if (background_buffer_backup.saving()) {
           background_buffer_backup.Process(false);
         }
         codec.Pause();

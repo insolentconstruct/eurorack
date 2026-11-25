@@ -971,6 +971,23 @@ void TestSynthEntryCancelsBackup() {
   CHECK(!background_buffer_backup.busy());
 }
 
+void TestSynthEntryCancelsBackupRetry() {
+  test_checker.Start("TestSynthEntryCancelsBackupRetry");
+  Rig r(false);
+  r.Settle();
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  codec_fade_gain = 0.0f;
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.retry_pending_ = true;
+  MonitorStateChange();
+  CHECK(synth_mode);
+  CHECK(!background_buffer_backup.saving());
+}
+
 // Codec restarts fade out first (#53): the output steps down to silence
 // over about 10 ms instead of stopping at full level.
 void TestCodecRestartFade() {
@@ -1233,6 +1250,7 @@ int main() {
   TestCodecRestartRetry();
   TestSynthFadeSurvivesTimerReset();
   TestSynthEntryCancelsBackup();
+  TestSynthEntryCancelsBackupRetry();
   TestCodecRestartFade();
   TestSynthStopPreservesReverb();
   TestRejectedCalibrationCue();

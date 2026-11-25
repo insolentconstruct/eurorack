@@ -381,6 +381,90 @@ void Run(Rig& rig, bool freeze, uint32_t milliseconds) {
   }
 }
 
+void TestBackupRetry() {
+  test_checker.Start("TestBackupRetry");
+  const int failures[] = { 1, 7, 12000, 24007 };
+  for (size_t i = 0; i < sizeof(failures) / sizeof(failures[0]); ++i) {
+    Wipe();
+    Rig rig;
+    CHECK(!rig.Boot());
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    processor.write_ptr_ = 123;
+    Fill(21);
+    // Refuse an erase on low supply, an audio word or the final header.
+    TestFlash().supply_low = failures[i] == 1;
+    if (!TestFlash().supply_low) {
+      test_fail_at = test_ops + failures[i];
+    }
+    CHECK(rig.Freeze());
+    CHECK(!rig.settings.state().frozen && !rig.backup.busy());
+    CHECK(kHeader->tag == 0xffffffff);
+    TestFlash().supply_low = false;
+    test_fail_at = 0;
+    const int ops = test_ops;
+    Run(rig, true, 9999);
+    CHECK(test_ops == ops);
+    Run(rig, true, 1);
+    CHECK(rig.backup.busy());
+    Run(rig, true, 24006);
+    CHECK(rig.settings.state().frozen && !rig.backup.busy());
+    const int erases = test_erases;
+    Run(rig, true, 320000);
+    CHECK(test_erases == erases);
+    Rig after;
+    CHECK(after.Boot() && processor.write_ptr_ == 123 && Restored(21));
+  }
+}
+
+void TestBackupRetryLimit() {
+  test_checker.Start("TestBackupRetryLimit");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(22);
+  const int erases = test_erases;
+  test_fail_at = test_ops + 7;
+  CHECK(rig.Freeze());
+  uint32_t delay = 10000;
+  for (int retry = 1; retry <= 3; ++retry) {
+    const int ops = test_ops;
+    test_fail_at = ops + 7;
+    Run(rig, true, delay - 1);
+    CHECK(test_ops == ops);
+    Run(rig, true, 6);
+    CHECK(test_ops == ops + 7);
+    CHECK(test_erases == erases + 6 * (retry + 1));
+    CHECK(!rig.settings.state().frozen && !rig.backup.busy());
+    delay *= 2;
+  }
+  test_fail_at = 0;
+  Run(rig, true, 640000);
+  CHECK(test_erases == erases + 24);
+  CHECK(!rig.settings.state().frozen);
+}
+
+void TestBackupRetryThaw() {
+  test_checker.Start("TestBackupRetryThaw");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(23);
+  test_fail_at = test_ops + 7;
+  CHECK(rig.Freeze());
+  test_fail_at = 0;
+  rig.backup.Process(false);
+  const int ops = test_ops;
+  Run(rig, true, 19999);
+  CHECK(test_ops == ops && !rig.backup.busy());
+  Run(rig, true, 1);
+  CHECK(rig.backup.busy());
+  Run(rig, true, 24006);
+  Rig after;
+  CHECK(after.Boot() && Restored(23));
+}
+
 void TestModulatedFreeze() {
   test_checker.Start("TestModulatedFreeze");
   for (int on = 15000; on <= 25000; on += 10000) {
@@ -866,6 +950,9 @@ int main() {
   TestCorruption();
   TestPowerLoss();
   TestFailedOperations();
+  TestBackupRetry();
+  TestBackupRetryLimit();
+  TestBackupRetryThaw();
   TestSettingsSaves();
   TestDamagedBuffer();
   TestFrozenNoReads();

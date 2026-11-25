@@ -52,6 +52,7 @@ class BackgroundBufferBackup {
   void EraseDamagedSectors();
   
   inline bool busy() const { return remaining_bytes_ || remaining_sectors_; }
+  inline bool saving() const { return busy() || retry_pending_; }
   
   // One flash word; the stock firmware reads tag to mono only. padding and
   // reserved are zero: later uses must be safe for older firmware to ignore.
@@ -67,6 +68,7 @@ class BackgroundBufferBackup {
   };
 
  private:
+  void ScheduleRetry();
   bool Valid(const BufferBackupHeader& header) const;
   bool EraseBufferSector(uint32_t sector, int attempts);
 
@@ -81,10 +83,12 @@ class BackgroundBufferBackup {
   
   uint32_t backup_delay_;
   uint32_t thaw_start_time_;
+  uint32_t retry_start_time_;
+  int retry_count_;
   bool freeze_state_;
   bool save_started_;
   bool previous_freeze_state_;
-  bool busy_;
+  bool retry_pending_;
   
   DISALLOW_COPY_AND_ASSIGN(BackgroundBufferBackup);
 };

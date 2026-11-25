@@ -6,6 +6,7 @@ from the 2021 and 2024 firmware to the vanilla source are in the
 [beads-build-kit changelog](https://github.com/insolentconstruct/eurorack/blob/beads-build-kit/beads/build/CHANGELOG.md).
 
 ## Unreleased
+- A frozen-buffer backup retries after a failed erase or write while FREEZE stays on, with up to three waits of 10, 20 and 40 seconds.
 - Damaged calibration triggers the storage warning even if its checksum matches. An interrupted recalibration keeps the measured mirror until a measured copy has been staged in the settings sector.
 - Settings saves avoid reviving old records after a gap and retry erases that leave data behind. Frozen buffer saves lock flash between writes.
 - A failed codec restart retries without audio callbacks. The fade into synth mode completes once the required quiet interval has passed.

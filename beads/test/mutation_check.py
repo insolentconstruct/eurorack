@@ -126,6 +126,18 @@ cases = [
   ('TestBackupRestoredThaw', 'backup', 'beads/background_buffer_backup.cc',
     '    if (freeze_state_) {',
     '    if (freeze_state_ && save_started_) {'),
+  ('TestBackupRetry', 'backup', 'beads/background_buffer_backup.cc',
+    '    retry_pending_ = true;',
+    '    retry_pending_ = false;'),
+  ('TestBackupRetryLimit', 'backup', 'beads/background_buffer_backup.cc',
+    '>= (kBackupDelay << retry_count_)',
+    '>= kBackupDelay'),
+  ('TestBackupRetryLimit', 'backup', 'beads/background_buffer_backup.cc',
+    'kMaxBackupRetries = 3;',
+    'kMaxBackupRetries = 4;'),
+  ('TestBackupRetryThaw', 'backup', 'beads/background_buffer_backup.cc',
+    '    retry_count_ = 0;\n    retry_pending_ = false;',
+    '    retry_count_ = 0;'),
   # #35: the wavetable ends with a duplicated guard row.
   ('TestGuardRow', 'wavetable', 'beads/resources.cc', None, None),
   # Synth grains computed in pairs mix each grain's own sample.
@@ -199,12 +211,13 @@ cases = [
     ''),
   ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
     '    if (Flash::SupplyLow()) {\n'
-    '      remaining_sectors_ = remaining_bytes_ = 0;\n'
+    '      ScheduleRetry();\n'
     '      return;\n'
     '    }\n',
     ''),
   ('TestSupplyDropBackup', 'backup', 'beads/background_buffer_backup.cc',
     '      if (Flash::SupplyLow()) {\n'
+    '        ScheduleRetry();\n'
     '        return;\n'
     '      }\n',
     ''),
@@ -547,8 +560,11 @@ cases = [
     '      calibrator_->ResumeNormalization();',
     '      (void)0;'),
   ('TestSynthEntryCancelsBackup', 'firmware', 'beads/beads.cc',
-    '        if (background_buffer_backup.busy()) {',
+    '        if (background_buffer_backup.saving()) {',
     '        if (false) {'),
+  ('TestSynthEntryCancelsBackupRetry', 'firmware', 'beads/beads.cc',
+    '        if (background_buffer_backup.saving()) {',
+    '        if (background_buffer_backup.busy()) {'),
 
 
 ]
