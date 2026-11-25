@@ -79,6 +79,11 @@ class Codec {
   // Detach the callback while the converter keeps running on silence, so that
   // a change at the same sample rate does not stop its clocks (#53).
   void Pause();
+  void ReplaceCallback(FillBufferCallback previous, FillBufferCallback next) {
+    if (callback_ == previous) {
+      callback_ = next;
+    }
+  }
   void Resume(FillBufferCallback callback) { callback_ = callback; }
   
   void Fill(size_t offset);

@@ -2902,6 +2902,9 @@ void TestResonatorProfile() {
       } else {
         r.Settle();
       }
+      if (!engine) {
+        CHECK((codec.callback_ != &Process) == (placement == RESONATOR_CHORD));
+      }
       hashes[placement] = MixOptionsHash(&r);
     }
     if (engine) {
@@ -2978,11 +2981,14 @@ void TestResonatorPage() {
     Processor::OPTION_FLAG_RESONATOR_GRAINS |
         Processor::OPTION_FLAG_RESONATOR_CHORD
   };
+  const int restarts = codec.restarts_;
   for (int placement = 1; placement < 8; ++placement) {
     settings.SetFeatureValue(FEATURE_RESONATOR, placement % 5);
     r.Tick(2, true);
     CHECK(processor.options_ == flags[placement % 5]);
+    CHECK((codec.callback_ != &Process) == (placement % 5 == RESONATOR_CHORD));
   }
+  CHECK(codec.restarts_ == restarts);
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
   for (int material = 0; material < kNumResonatorMaterials; ++material) {
     for (int ring = 0; ring < 4; ++ring) {

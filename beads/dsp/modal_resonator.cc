@@ -141,7 +141,7 @@ const ResonatorModes kResonatorGong = {
 // Chord gains: a chord about as loud as After the grains on test clouds.
 const ResonatorMaterial kResonatorMaterials[kNumResonatorMaterials] = {
   { 0.5f, 0.3f, NULL, 1.03f },  // Wood: darker, mildly stretched.
-  { kResonatorStructure, kResonatorBrightness, NULL, 1.72f },  // String.
+  { kResonatorStructure, kResonatorBrightness, NULL, 0.688f },  // String.
   { 0.4f, 0.5f, NULL, 1.62f },  // Glass: stretched, brighter.
   { 0.8f, 0.15f, NULL, 3.22f },  // Bell: strongly stretched, dark.
   // Brightness shapes only their strike, kept under the limiter's ceiling.

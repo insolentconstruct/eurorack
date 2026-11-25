@@ -213,6 +213,13 @@ class ModalResonator {
   const ResonatorModes* modes_;
   float glide_;
   float sample_period_;
+  Limiter limiter_;
+
+  plaits::ResonatorSvf<plaits::kModeBatchSize> odd_[kNumResonatorModes / 8];
+  plaits::ResonatorSvf<plaits::kModeBatchSize> even_[kNumResonatorModes / 8];
+  // The loop's bound: it rises at once and falls as the slowest mode decays.
+  float peak_gain_;
+
   // Pitch ratio (0 before the first strike), estimated level and peak.
   float chord_ratio_[kNumChordVoices];
   float chord_level_[kNumChordVoices];
@@ -220,12 +227,6 @@ class ModalResonator {
   float chord_peak_gain_[kNumChordVoices];
   float chord_glide_[kNumChordVoices];
   const ResonatorModes* chord_modes_;
-  Limiter limiter_;
-
-  plaits::ResonatorSvf<plaits::kModeBatchSize> odd_[kNumResonatorModes / 8];
-  plaits::ResonatorSvf<plaits::kModeBatchSize> even_[kNumResonatorModes / 8];
-  // The loop's bound: it rises at once and falls as the slowest mode decays.
-  float peak_gain_;
 
   DISALLOW_COPY_AND_ASSIGN(ModalResonator);
 };

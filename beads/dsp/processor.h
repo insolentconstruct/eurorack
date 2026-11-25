@@ -333,6 +333,17 @@ class Processor {
       FloatFrame* out,
       size_t size);
   
+  void ProcessChordBlock(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
+
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
   }
@@ -435,8 +446,8 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
-  // One source for both blocks, each inlined in ProcessWithOptions.
-  template<bool resonator>
+  // Shared block for the stock options, legacy resonance and Chord.
+  template<bool resonator, bool chord>
   inline void ProcessOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -580,8 +591,6 @@ class Processor {
   volatile uint8_t resonator_bound_;
   // FEEDBACK at the last block, for the loop's gain while it moves.
   float resonator_loop_feedback_;
-  // The grains' level, which a grain's strike in a chord follows.
-  float grain_level_;
   bool seed_gate_;
   // SEED's pulse, low-passed as Rings' strum, while it still sounds.
   stmlib::Svf strike_filter_;
@@ -590,6 +599,9 @@ class Processor {
   int output_division_;
   int output_pulse_count_;
   bool output_pulse_;
+
+  // The grains' level, which a grain's strike in a chord follows.
+  float grain_level_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

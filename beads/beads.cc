@@ -162,7 +162,8 @@ uint8_t seed_latch_mode;
 bool seed_latch_enabled;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-void Process(
+template<bool chord>
+void ProcessAudio(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
@@ -442,14 +443,17 @@ void Process(
     processor.set_diffusion(diffusion);
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
+    const bool render_chord = chord && !dwt_calibration::stats.synthetic;
+#else
+    const bool render_chord = chord;
 #endif  // DWT_CALIBRATION
-    processor.Process(
-        seed_button_state,
-        seed_input,
-        freeze,
-        d, p, m,
-        float_in,
-        float_out, size);
+    if (render_chord) {
+      processor.ProcessChordBlock(seed_button_state, seed_input, freeze,
+          d, p, m, float_in, float_out, size);
+    } else {
+      processor.Process(seed_button_state, seed_input, freeze,
+          d, p, m, float_in, float_out, size);
+    }
 #ifdef DWT_CALIBRATION
     dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
         dwt_calibration::Read() - calibration_start);
@@ -472,13 +476,23 @@ void Process(
   }
 }
 
+#ifdef TEST
+void Process(const Codec::Event* events, const Codec::Frame* in,
+    Codec::Frame* out, size_t size) {
+  ProcessAudio<false>(events, in, out, size);
+}
+const Codec::FillBufferCallback kLegacyCallback = &Process;
+#else
+const Codec::FillBufferCallback kLegacyCallback = &ProcessAudio<false>;
+#endif  // TEST
+
 // Selected only for synth profiles with an output trim.
 void ProcessSynthLevel(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  Process(events, in, out, size);
+  ProcessAudio<false>(events, in, out, size);
   const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
   if (settings.state().gate_output_mode) {
     for (size_t i = 0; i < size; ++i) {
@@ -490,6 +504,15 @@ void ProcessSynthLevel(
       out[i].r /= divisor;
     }
   }
+}
+
+Codec::FillBufferCallback AudioCallback(bool for_synth) {
+  if (for_synth) {
+    return settings.FeatureValue(FEATURE_SYNTH_LEVEL)
+        ? &ProcessSynthLevel : kLegacyCallback;
+  }
+  return resonator_placement == RESONATOR_CHORD
+      ? &ProcessAudio<true> : kLegacyCallback;
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
@@ -520,15 +543,11 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  const Codec::FillBufferCallback callback = new_synth_mode &&
-      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
-  transition.Start(sr, callback, true);
+  transition.Start(sr, AudioCallback(new_synth_mode), true);
 }
 
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
-  const Codec::FillBufferCallback callback = synth_mode &&
-      settings.FeatureValue(FEATURE_SYNTH_LEVEL) ? &ProcessSynthLevel : &Process;
-  transition.SwapPaused(owner, playing, callback);
+  transition.SwapPaused(owner, playing, AudioCallback(synth_mode));
 }
 
 void Init() {
@@ -647,9 +666,25 @@ void MonitorStateChange() {
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   // The page moves the resonator; it restarts from silence.
-  if (ui.resonator() != resonator_placement) {
-    resonator_placement = ui.resonator();
+  const uint8_t placement = ui.resonator();
+  if (placement != resonator_placement) {
+    const bool was_chord = resonator_placement == RESONATOR_CHORD;
+    const bool chord = placement == RESONATOR_CHORD;
+#ifndef TEST
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+#endif  // TEST
+    resonator_placement = placement;
     processor.set_resonator(resonator_placement);
+    if (!synth_mode && chord != was_chord) {
+      // Keep the converter running and leave paused callbacks detached.
+      codec.ReplaceCallback(
+          was_chord ? &ProcessAudio<true> : kLegacyCallback,
+          chord ? &ProcessAudio<true> : kLegacyCallback);
+    }
+#ifndef TEST
+    __set_PRIMASK(primask);
+#endif  // TEST
   }
   ui.set_delay_active(processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
