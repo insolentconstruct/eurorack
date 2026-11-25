@@ -40,3 +40,5 @@ HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast $(PLAITS_FLAGS)
 include beads/test/host.mk
 
 $(BUILD_DIR)beads.o: EXTRA_FLAGS = -Dmain=BeadsMain
+# PowerOnObject clears storage before the replacement constructor runs.
+$(BUILD_DIR)firmware_test.o: EXTRA_FLAGS = -flifetime-dse=1
