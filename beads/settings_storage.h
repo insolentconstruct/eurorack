@@ -158,11 +158,11 @@ class ChunkStorage {
     next_state_chunk_index_ = REWRITE_NEEDED;
   }
 
-  void Recover(PersistentData* persistent_data, StateData* state_data) {
+  bool Recover(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
     ReadChunk(chunk_address(0), persistent_data_);
-    RewriteSector();
+    return RewriteSector();
   }
 
   // Rewrites a damaged sector from RAM, past the lock, and checks that it
@@ -267,10 +267,11 @@ class ChunkStorage {
     return ReadChunk(MIRROR_BASE, persistent_data) == CHUNK_VALID;
   }
 
-  void RestorePersistentData() {
+  bool RestorePersistentData() {
     recovering_ = true;
-    RewriteSector();
+    const bool saved = RewriteSector();
     recovering_ = false;
+    return saved;
   }
 
   inline bool locked() const {

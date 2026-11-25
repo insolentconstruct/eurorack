@@ -206,6 +206,7 @@ void Options::Init() {
   idle_timeout_ = idle_time_ = 0;
   for (int i = 0; i < FEATURE_LAST; ++i) {
     preview_[i] = 0;
+    edited_[i] = false;
   }
   scale_ = PITCH_SCALE_FIFTHS;
   playable_synths_ = SynthMask(true, true, false);
@@ -423,6 +424,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       }
 
       if (before != Value(setting)) {
+        edited_[setting] = true;
         dirty_ = true;
         last_action_ = now;
       }
@@ -501,6 +503,7 @@ void Options::ApplySeedTaps() {
         : scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
             : PitchScale(scale_ + 1);
     preview_[FEATURE_PITCH] = scale_;
+    edited_[FEATURE_PITCH] = true;
     if (PageHasPitch()) {
       preview_knob_ = -1;
       selected_ = FEATURE_PITCH;
@@ -509,6 +512,21 @@ void Options::ApplySeedTaps() {
     dirty_ = true;
     last_action_ = seed_action_time_;
   }
+}
+
+void Options::PublishGesture(ProfileFeature feature, uint8_t value) {
+  if (stage_ == STAGE_PENDING) {
+    preview_[feature] = value;
+    edited_[feature] = false;
+  }
+}
+
+void Options::ClearCommit() {
+  for (int i = 0; i < kNumPageFeatures; ++i) {
+    edited_[kPageFeatures[i]] = false;
+  }
+  dirty_ = false;
+  commit_ = false;
 }
 
 void Options::RequestCommit(uint32_t now) {

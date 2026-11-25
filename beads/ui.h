@@ -169,6 +169,15 @@ class Ui {
   inline uint8_t resonator_ring() const { return resonator_ring_; }
   // The assignable CV moves the resonator's damping; not saved yet.
   inline bool resonator_assigned() const { return resonator_assigned_; }
+  inline bool resonator_available() const {
+    return resonator_available_ && resonator_ && !synth_mode_;
+  }
+  inline void set_resonator_available(bool available) {
+    resonator_available_ = available;
+    if (!available) {
+      resonator_assigned_ = false;
+    }
+  }
   inline uint8_t seed_latch() const { return seed_latch_; }
   inline bool time_scan() const { return time_scan_; }
 
@@ -297,6 +306,7 @@ class Ui {
   volatile uint8_t resonator_material_;
   volatile uint8_t resonator_ring_;
   volatile bool resonator_assigned_;
+  volatile bool resonator_available_;
   volatile uint8_t seed_latch_;
   volatile bool time_scan_;
   volatile uint8_t gain_ceiling_;

@@ -325,6 +325,7 @@ class Settings {
   OptionsRecord stored_record_;
   Profile profile_;
   bool profile_locked_;
+  bool start_quality_pending_;
   bool led_features_;
   uint8_t dormant_destination_;
   volatile uint8_t amount_overrides_;

@@ -171,8 +171,16 @@ bool Settings::Init(bool recovery_mode,
   if (!chunk_storage_.record_found()) {
     stored_record_.version = 0;  // The first save writes one.
   }
+  const bool new_profile = !record_valid || \
+      stored_record_.profile_identity != profile_.identity();
+  bool start_quality_unsaved = new_profile && start_quality && \
+      stored_state_.media != 4 - start_quality;
   if (recovery_mode && !profile_locked_) {
     record_ = default_record;  // SEED at power-up resets the options.
+  }
+  if (start_quality_unsaved &&
+      record_.profile_identity == profile_.identity()) {
+    record_.profile_identity = ~profile_.identity();
   }
   
   // Restore the module's calibration before writing; keep loaded states.
@@ -199,8 +207,9 @@ bool Settings::Init(bool recovery_mode,
   } else if (lost || implausible) {
     status = STORAGE_DAMAGED;
   }
-  if (status == STORAGE_RESTORED) {
-    chunk_storage_.RestorePersistentData();
+  if (status == STORAGE_RESTORED && chunk_storage_.RestorePersistentData() &&
+      start_quality && stored_state_.media == 4 - start_quality) {
+    start_quality_unsaved = false;
   }
   
   if (status == STORAGE_DAMAGED) {
@@ -209,38 +218,47 @@ bool Settings::Init(bool recovery_mode,
     chunk_storage_.Lock();
     stored_state_ = defaults;
     record_ = default_record;
+    if (start_quality_unsaved) {
+      record_.profile_identity = ~profile_.identity();
+    }
     persistent_data_ = factory;
     if (recovery_mode) {
       repair_ = chunk_storage_.Repair()
           ? STORAGE_REPAIR_CALIBRATION_RESET
           : STORAGE_REPAIR_FAILED;
+      if (repair_ == STORAGE_REPAIR_CALIBRATION_RESET) {
+        start_quality_unsaved = false;
+      }
     }
   } else {
     if (recovery_mode && status == STORAGE_OK && !profile_locked_) {
       stored_state_ = defaults;
-      chunk_storage_.Recover(&persistent_data_, &stored_state_);
+      if (chunk_storage_.Recover(&persistent_data_, &stored_state_)) {
+        start_quality_unsaved = false;
+      }
     }
   }
   // Sanitize settings read from flash.
   state_ = stored_state_;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   LoadOptions();
-  const bool new_profile = !record_valid || \
-      record_.profile_identity != profile_.identity();
   CONSTRAIN(state_.media, 0, 3);
   CONSTRAIN(state_.assignable_cv_destination, 0, 3);
 
   NormalizeOptions();
   ApplyProfile();
-  if (recovery_mode && !profile_locked_) {
-    SaveOptions();
-  }
   // A newly installed profile starts in its quality once; a frozen recording
   // returning from flash keeps the quality it was made in.
   const bool restores = state_.frozen && !state_.disable_autosave && \
       !spectral();
+  start_quality_pending_ = false;
   if (new_profile && start_quality && !restores) {
     state_.media = 4 - start_quality;
+    start_quality_pending_ = start_quality_unsaved ||
+        state_.media != stored_state_.media;
+  }
+  if (recovery_mode && !profile_locked_) {
+    SaveOptions();
   }
   if (!state_.gain) {
     state_.gain = DefaultGain();
@@ -280,7 +298,12 @@ bool Settings::SavePersistentData() {
       0);
   PackRecord();
   PackState();
-  return chunk_storage_.SavePersistentData();
+  const bool saved = chunk_storage_.SavePersistentData();
+  if (saved && start_quality_pending_) {
+    start_quality_pending_ = false;
+    SaveOptions();
+  }
+  return saved;
 }
 
 bool Settings::ReadPersistentData(PersistentData* data) {
@@ -310,8 +333,19 @@ void Settings::NormalizeOptions() {
   }
 }
 
-// The options first: a cut before the state leaves a pair stock reads.
+// Usually write options first, then append the stock State.
 bool Settings::SaveState() {
+  if (start_quality_pending_) {
+    NormalizeOptions();
+    ApplyProfile();
+    PackState();
+    if (!chunk_storage_.SaveState()) {
+      return false;
+    }
+    start_quality_pending_ = false;
+    SaveOptions();
+    return true;
+  }
   SaveOptions();
   PackState();
   return chunk_storage_.SaveState();
@@ -320,6 +354,16 @@ bool Settings::SaveState() {
 void Settings::SaveOptions() {
   NormalizeOptions();
   ApplyProfile();
+  // Make the start quality durable before recording the new profile identity.
+  if (start_quality_pending_) {
+    const uint8_t media = stored_state_.media;
+    stored_state_.media = state_.media;
+    if (!chunk_storage_.SaveState()) {
+      stored_state_.media = media;
+      return;
+    }
+    start_quality_pending_ = false;
+  }
   PackRecord();
   if ((chunk_storage_.record_pending() || \
           memcmp(&record_, &stored_record_, sizeof(OptionsRecord))) && \
@@ -444,7 +488,9 @@ void Settings::PackRecord() {
     record_.amount_overrides = 0xff;
   }
   record_.version = kOptionsRecordVersion;
-  record_.profile_identity = profile_.identity();
+  if (!start_quality_pending_) {
+    record_.profile_identity = profile_.identity();
+  }
   // Any new CV assignment replaces the dormant one.
   if (cv_target_ || state_.assignable_cv_destination) {
     dormant_destination_ = 0;

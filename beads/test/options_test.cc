@@ -3155,6 +3155,57 @@ void TestOptionalPages() {
   CHECK(idle.ui.options_.page() == 6);
 }
 
+void TestOptionsPendingProfileGesture() {
+  test_checker.Start("TestOptionsPendingProfileGesture");
+  for (int same = 0; same < 2; ++same) {
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_REVERB, same ? 3 : 4, 0, ACTION_SEED);
+    if (!same) {
+      AppendEntry(b, FEATURE_ATTACKS, PROFILE_ADJUSTABLE, 0);
+      b[25] = 3;  // REVERB knob on page one.
+      ScaleChecksum(b);
+    }
+    Rig r(false);
+    ApplyCustomProfile(&r, b);
+    r.Enter();
+    r.reverb = 0.9f;
+    r.Tick(20, true);
+    CHECK(r.ui.options_.Value(same ? FEATURE_REVERB : FEATURE_ATTACKS) != 0);
+    r.Down(SWITCH_FREEZE);
+    r.Up(SWITCH_FREEZE);
+    CHECK(r.ui.options_.stage() == Options::STAGE_PENDING);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_SEED);
+    r.Up(SWITCH_SEED);
+    r.Up(SWITCH_MEDIA);
+    CHECK(r.settings.clouds_style() == !same);
+    CHECK(r.ui.options_.Value(FEATURE_REVERB) == !same);
+    r.Tick(1100, true);
+    CHECK(r.settings.clouds_style() == !same);
+    if (!same) {
+      CHECK(r.settings.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
+    }
+  }
+}
+
+void TestCommitKeepsUneditedOption() {
+  test_checker.Start("TestCommitKeepsUneditedOption");
+  Rig r(false);
+  r.Enter();
+  r.reverb = 0.9f;
+  r.Tick(20, true);
+  r.Down(SWITCH_FREEZE);
+  r.Up(SWITCH_FREEZE);
+  CHECK(r.ui.options_.stage() == Options::STAGE_PENDING);
+  // An unedited preview can still hold the value read when the page opened.
+  r.settings.set_clouds_style(true);
+  r.settings.SaveOptions();
+  CHECK(r.ui.options_.Value(FEATURE_REVERB) == 0);
+  r.Tick(1100, true);
+  CHECK(r.settings.clouds_style());
+  CHECK(r.settings.attack_mode() == ATTACK_MODE_SNAP_AND_TRIGGER);
+}
+
 void TestProfileActions() {
   test_checker.Start("TestProfileActions");
   uint8_t b[kProfileSize];
@@ -4633,6 +4684,8 @@ int main() {
   TestSynthFaultCue();
   TestBetaOptionsLeds();
   TestBetaOptionPages();
+  TestOptionsPendingProfileGesture();
+  TestCommitKeepsUneditedOption();
   TestProfileActions();
   TestPlaitsBankGesture();
   TestRingsPolyphonyGesture();

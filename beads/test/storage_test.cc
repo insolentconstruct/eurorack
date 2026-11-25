@@ -1803,6 +1803,55 @@ void TestProfileDiffusionOff() {
 
 // Start in quality (#287): a newly installed profile starts in its quality
 // once; the saved identity keeps the user's later choice.
+void TestStartQualityOptionsSave() {
+  test_checker.Start("TestStartQualityOptionsSave");
+  uint8_t profile[kProfileSize];
+  ProfileWithEntry(profile, FEATURE_START_QUALITY, PROFILE_FIXED, 4);
+  for (int cut = 0; cut <= 3; ++cut) {
+    Wipe();
+    Settings s;
+    s.Init(false);
+    s.mutable_state()->media = 2;
+    s.SaveState();
+    CHECK(s.Init(false, profile) && s.state().media == 0);
+    s.set_pitch_scale(PITCH_SCALE_MINOR);
+    TestFlashBudget() = cut;
+    s.SaveOptions();
+    TestFlashBudget() = -1;
+
+    Settings loaded;
+    CHECK(loaded.Init(false, profile) && loaded.state().media == 0);
+    if (cut == 3) {
+      CHECK(loaded.pitch_scale() == PITCH_SCALE_MINOR);
+    }
+    CHECK(s.Init(false));
+    CHECK(s.state().media == (cut ? 0 : 2));
+  }
+}
+
+void TestStartQualityCalibrationCut() {
+  test_checker.Start("TestStartQualityCalibrationCut");
+  uint8_t profile[kProfileSize];
+  ProfileWithEntry(profile, FEATURE_START_QUALITY, PROFILE_FIXED, 4);
+  Wipe();
+  Settings s;
+  s.Init(false);
+  s.persistent_data_ = Calibration(0.03f);
+  CHECK(s.SavePersistentData());
+  s.mutable_state()->media = 2;
+  CHECK(s.SaveState());
+
+  CHECK(s.Init(false, profile) && s.state().media == 0);
+  s.persistent_data_ = Calibration(0.07f);
+  TestFlashBudget() = 7;  // Mirror and record written, primary still intact.
+  CHECK(!s.SavePersistentData());
+  TestFlashBudget() = -1;
+
+  Settings loaded;
+  CHECK(loaded.Init(false) && loaded.state().media == 2);
+  CHECK(loaded.Init(false, profile) && loaded.state().media == 0);
+}
+
 void TestStartQuality() {
   test_checker.Start("TestStartQuality");
   CHECK(FEATURE_START_QUALITY == 39);
@@ -1974,6 +2023,8 @@ int main() {
   TestProfileDormantAmounts();
   TestProfileNewAssignment();
   TestProfileDiffusionOff();
+  TestStartQualityOptionsSave();
+  TestStartQualityCalibrationCut();
   TestStartQuality();
 #ifdef PLAITS_BLOBS
   TestPlaitsBanks();
