@@ -95,9 +95,9 @@ const float kResonatorBoundMargin = 1.001f;
 
 // Chord: each voice is one batch, the Material's first eight modes.
 const int kNumChordVoices = kNumResonatorModes / 8;
-// A voice is retuned only 41 dB under its loudest, so that a tail whose
+// A voice is retuned only 42 dB under its loudest, so that a tail whose
 // strikes partly cancelled is still 40 dB down.
-const float kChordRetuneLevel = 0.0089f;
+const float kChordRetuneLevel = 0.00794328f;
 const float kChordSilence = 1.0e-4f;
 // A grain within half a semitone of a voice strikes it as it is.
 const float kChordNoteTolerance = 0.9715319f;
@@ -117,6 +117,7 @@ class ModalResonator {
   ~ModalResonator() { }
 
   void Init(float sample_rate);
+  void InitChord(float sample_rate);
   // Odd modes go to out, even modes to aux; aux == out gives the mono sum.
   void Process(const float* in, float* out, float* aux, size_t size);
   // Adds the limited stereo resonance to the frames.
@@ -212,8 +213,7 @@ class ModalResonator {
   const ResonatorModes* modes_;
   float glide_;
   float sample_period_;
-  // Pitch ratio over frequency_ (0 before a first strike); level, a bound
-  // from the fundamental's poles, which decay slowest, and its peak.
+  // Pitch ratio (0 before the first strike), estimated level and peak.
   float chord_ratio_[kNumChordVoices];
   float chord_level_[kNumChordVoices];
   float chord_peak_[kNumChordVoices];

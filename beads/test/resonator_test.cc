@@ -1794,7 +1794,7 @@ ModalResonator& ChordSetup(int material, int ring, float rate) {
   Init(Processor::MEDIA_DIGITAL, false, RESONATOR_CHORD);
   const ResonatorControls c = Controls(material, ring);
   ModalResonator& r = processor.resonator_;
-  r.Init(rate);
+  r.InitChord(rate);
   chord_size = size_t(rate) / 4000;
   r.set_structure(c.structure);
   r.set_brightness(c.brightness);
@@ -2107,7 +2107,7 @@ void CheckGrainStrikes(const Source& source, const ModalResonator& before,
   // Silent grains strike silently; here every strike must show.
   const float grain_level = processor.grain_level_;
   processor.grain_level_ = 1.0f;
-  processor.StrikeChord(source, triggers, 1.0f, strikes, size);
+  processor.StrikeChord(&source.grain(0), ratio, triggers, 1.0f, strikes, size);
   processor.grain_level_ = grain_level;
   for (int v = 0; v < kNumChordVoices; ++v) {
     level += r.chord_level_[v];
@@ -2135,7 +2135,7 @@ void CheckGrainEdges(Source* source, const Line* line) {
   const size_t ratio = source->ratio_to_grains();
   processor.grain_level_ = 1.0f;
   for (size_t start = 0; start < size; start += size - ratio) {
-    processor.resonator_.Init(processor.sample_rate());
+    processor.resonator_.InitChord(processor.sample_rate());
     source->granular_player_.Reset();
     Parameters p = parameters;
     p.size.base = 0.5f;
@@ -2150,7 +2150,8 @@ void CheckGrainEdges(Source* source, const Line* line) {
       }
       float strikes[kNumChordVoices * 12];
       memset(strikes, 0, sizeof(strikes));
-      processor.StrikeChord(*source, triggers, 1.0f, strikes, size);
+      processor.StrikeChord(&source->grain(0), ratio, triggers, 1.0f,
+        strikes, size);
       int count = 0;
       for (size_t i = 0; i < kNumChordVoices * size; ++i) {
         count += strikes[i] != 0.0f;
@@ -2164,7 +2165,7 @@ void CheckGrainEdges(Source* source, const Line* line) {
   }
   // A grain on the last sample, then one on the next block's first: the
   // second strike takes the new grain's pitch.
-  processor.resonator_.Init(processor.sample_rate());
+  processor.resonator_.InitChord(processor.sample_rate());
   source->granular_player_.Reset();
   Parameters p = parameters;
   p.size.base = 0.5f;
@@ -2179,7 +2180,8 @@ void CheckGrainEdges(Source* source, const Line* line) {
     }
     float strikes[kNumChordVoices * 12];
     memset(strikes, 0, sizeof(strikes));
-    processor.StrikeChord(*source, triggers, 1.0f, strikes, size);
+    processor.StrikeChord(&source->grain(0), ratio, triggers, 1.0f,
+        strikes, size);
   }
   CHECK(fabsf(processor.resonator_.chord_ratio_[1] - 1.4983f) < 0.002f);
 }
@@ -2331,6 +2333,16 @@ void TestResonatorChordGains() {
     const float chord = CloudLevel(RESONATOR_CHORD, m);
     const float after = CloudLevel(RESONATOR_AFTER_GRAINS, m);
     CHECK(fabsf(chord - after) < 3.0f);
+  }
+  ModalResonator& drum = ChordSetup(5, 3, 24000.0f);
+  FloatFrame frames[12] = { };
+  float strikes[kNumChordVoices * 12] = { };
+  drum.StrikeVoice(32.0f, 0, 8.0f, strikes, chord_size);
+  CHECK(drum.chord_ratio_[0] == 32.0f);
+  drum.RenderChord(strikes, frames, chord_size);
+  for (size_t i = 0; i < chord_size; ++i) {
+    CHECK(fabsf(frames[i].l) <= kResonatorPeak);
+    CHECK(fabsf(frames[i].r) <= kResonatorPeak);
   }
 }
 

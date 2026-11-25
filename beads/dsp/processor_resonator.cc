@@ -215,7 +215,7 @@ void Processor::ProcessChord(
     size_t size) {
   const float sr = sample_rate();
   if (sr != resonator_sample_rate_) {
-    resonator_.Init(sr);
+    resonator_.InitChord(sr);
     grain_level_ = 0.0f;
     resonator_sample_rate_ = sr;
   }
@@ -240,33 +240,39 @@ void Processor::ProcessChord(
       SemitonesToRatio(kResonatorRootNote - 69.0f) * 440.0f / sr);
   float strikes[kNumChordVoices * size];
   fill(&strikes[0], &strikes[kNumChordVoices * size], 0.0f);
+  if (strike) {
+    resonator_.StrikeChord(strikes, size);
+  }
   // In delay mode the grains are idle.
   if (triggers) {
     switch (media_) {
       case MEDIA_DIGITAL:
-        StrikeChord(processor_digital_, triggers, gain, strikes, size);
+        StrikeChord(&processor_digital_.grain(0),
+            processor_digital_.ratio_to_grains(), triggers, gain, strikes, size);
         break;
       case MEDIA_VINTAGE_DIGITAL:
-        StrikeChord(processor_vintage_digital_, triggers, gain, strikes,
-            size);
+        StrikeChord(&processor_vintage_digital_.grain(0),
+            processor_vintage_digital_.ratio_to_grains(), triggers, gain,
+            strikes, size);
         break;
       case MEDIA_CLEAN_TAPE:
-        StrikeChord(processor_clean_tape_, triggers, gain, strikes, size);
+        StrikeChord(&processor_clean_tape_.grain(0),
+            processor_clean_tape_.ratio_to_grains(), triggers, gain, strikes,
+            size);
         break;
       case MEDIA_DIRTY_TAPE:
-        StrikeChord(processor_dirty_tape_, triggers, gain, strikes, size);
+        StrikeChord(&processor_dirty_tape_.grain(0),
+            processor_dirty_tape_.ratio_to_grains(), triggers, gain, strikes,
+            size);
         break;
     }
-  }
-  if (strike) {
-    resonator_.StrikeChord(strikes, size);
   }
   resonator_.RenderChord(strikes, frames, size);
 }
 
-template<typename GrainSource>
 void Processor::StrikeChord(
-    const GrainSource& source,
+    const DelayGrain* grains,
+    size_t ratio,
     const TriggerGenerator::Output* triggers,
     float gain,
     float* strikes,
@@ -275,7 +281,6 @@ void Processor::StrikeChord(
   const float level = gain * grain_level_;
   // Each trigger started one grain, whose envelope has counted its samples
   // since, from the trigger's fraction as DownsampleTriggers gives it.
-  const size_t ratio = source.ratio_to_grains();
   const size_t grain_size = size / ratio;
   uint32_t taken = 0;
   for (size_t j = 0; j < grain_size; ++j) {
@@ -293,7 +298,7 @@ void Processor::StrikeChord(
     }
     const float expected = float(grain_size - j) + fraction;
     for (int i = 0; i < DelayGranularPlayer::NUM_GRAINS; ++i) {
-      const DelayGrain& grain = source.grain(i);
+      const DelayGrain& grain = grains[i];
       float age;
       if (!(taken & (1 << i)) && grain.Age(expected + 0.001f, &age) &&
           age > expected - 0.001f) {

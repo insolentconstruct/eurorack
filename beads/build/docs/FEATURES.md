@@ -740,7 +740,7 @@ Chord (value 4) gives each grain start a strike at the grain's pitch, including
 pitch quantization and Recent notes. Three voices share the 24 modes, with
 eight modes per voice. A grain within half a semitone strikes the existing
 voice. Otherwise, the quietest voice can retune once its level estimate has
-fallen at least 41 dB from its peak, leaving a 1 dB margin for the 40 dB
+fallen at least 42 dB from its peak, leaving a 2 dB margin for the 40 dB
 retune rule. While all voices are ringing above that threshold, the grain
 strikes the nearest voice. SEED or an attack hit strikes the tuned voices.
 SEED remains the clock in delay mode.

@@ -487,9 +487,9 @@ class Processor {
       const TriggerGenerator::Output* triggers,
       FloatFrame* frames,
       size_t size);
-  template<typename GrainSource>
   void StrikeChord(
-      const GrainSource& source,
+      const DelayGrain* grains,
+      size_t ratio,
       const TriggerGenerator::Output* triggers,
       float gain,
       float* strikes,
