@@ -480,8 +480,6 @@ Polyphony and FEEDBACK changes also apply while FREEZE sustains Rings.
 
 ### Plaits bank
 
-Palette VOSIM starts fresh on each selection, with 4 ms of silence while its initial DC estimate is prepared.
-
 Plaits synth mode always plays one bank of eight models, in Plaits' own
 groups (#190): green is its first bank (virtual analog to speech, models
 9–16), red the second (swarm to hi-hat, 17–24), yellow the eight models
@@ -517,6 +515,22 @@ default Green) and is Adjustable only. Profiles without the entry start on
 green. A blank or stock settings sector, a SEED power-on reset or a saved
 value the firmware doesn't know starts on the profile's bank. More banks,
 such as Plaits Palette models (#194), would add values to this ID.
+
+### Model selection and reselection
+
+Beta 4 loads Plaits models from the installed sound collection. Each voice
+starts its model fresh when it switches, including a return to an earlier
+model. The first 48 samples fade in (1 ms at the synth rate). Earlier builds
+kept some filters and other state between selections; sustained textures,
+random sequences and modulation can therefore restart differently.
+
+This also applies to Palette's Granular Cloud, Vowel FOF, VA Variant,
+ZxPhase48k, ZxPulse48k, Saw Swarm, Supersaw Chords, BubbleTime, Noise Bank,
+Freshets Formant, Speech Sounds and LPC Words. These fresh starts are
+accepted differences from Palette. VOSIM starts fresh too, with about 4 ms
+of silence on selection while it prepares the sound over
+16 blocks. These are selection behaviours, not added delays on every note.
+Final release-image module qualification is still pending.
 
 ### Synth output level
 
