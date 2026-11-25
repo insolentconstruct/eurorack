@@ -86,7 +86,10 @@ class PlaitsSynth {
       const Parameters& parameters,
       const Processor::MixParameters& mix_parameters,
       FloatFrame* out,
-      size_t size);
+      size_t size) {
+    RenderBlock(false, false, seed_button_state, seed_input, freeze,
+        resolution, density, parameters, mix_parameters, out, size);
+  }
   void RenderFixedDecay(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -96,7 +99,10 @@ class PlaitsSynth {
       const Parameters& parameters,
       const Processor::MixParameters& mix_parameters,
       FloatFrame* out,
-      size_t size);
+      size_t size) {
+    RenderBlock(true, false, seed_button_state, seed_input, freeze,
+        resolution, density, parameters, mix_parameters, out, size);
+  }
   void RenderCharacter(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -106,7 +112,10 @@ class PlaitsSynth {
       const Parameters& parameters,
       const Processor::MixParameters& mix_parameters,
       FloatFrame* out,
-      size_t size);
+      size_t size) {
+    RenderBlock(true, true, seed_button_state, seed_input, freeze,
+        resolution, density, parameters, mix_parameters, out, size);
+  }
 
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
@@ -131,6 +140,18 @@ class PlaitsSynth {
 #endif  // PLAITS_BLOBS
 
  private:
+  void RenderBlock(
+      bool fixed_decay, bool character,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      Synth::Resolution resolution,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const Processor::MixParameters& mix_parameters,
+      FloatFrame* out,
+      size_t size);
+
   void StartNote(const Parameters& p, int model);
 
   TriggerGenerator trigger_generator_;

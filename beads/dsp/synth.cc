@@ -30,16 +30,11 @@
 
 #include <algorithm>
 
-#include "beads/dsp/fx/reverb_decay_render.h"
-
 namespace beads {
 
 using namespace std;
 using namespace stmlib;
 
-#if defined(BEADS_FIXED_REVERB_DECAY) || defined(BEADS_EXTENDED_REVERB)
-extern const int16_t* integrated_waves;
-#else
 #ifdef PLAITS_BLOBS
 // WAVE's rows, set at boot; Beads' synth does not play without them.
 const int16_t* integrated_waves = NULL;
@@ -65,9 +60,9 @@ void Synth::Init(uint16_t* reverb_buffer) {
   wavetable_voice_.Init(sr);
   bank_quantizer_.Init(kNumBanks, 0.048f, false);
 }
-#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
-void Synth::BEADS_DECAY_RENDER(Render)(
+void Synth::RenderBlock(
+    bool fixed_decay, bool character,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -140,28 +135,19 @@ void Synth::BEADS_DECAY_RENDER(Render)(
   // Reverb.
   const float reverb = mix_parameters.reverb_amount;
   const float reverb_mix = reverb * reverb * 0.8f;
-#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
-#endif  // BEADS_FIXED_REVERB_DECAY
+  const float decay = fixed_decay ? Reverb::fixed_decay() : 0.0f;
   reverb_.set_mix(reverb_mix);
-#ifdef BEADS_FIXED_REVERB_DECAY
-  reverb_.set_time(Reverb::fixed_decay());
-#elif defined(BEADS_EXTENDED_REVERB)
-  reverb_.set_time(Reverb::fixed_decay() ? Reverb::fixed_decay()
-      : 0.3f + 0.6f * reverb_time);
-#else
-  reverb_.set_time(0.3f + 0.6f * reverb_time);
-#endif  // BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(fixed_decay && (!character || decay)
+      ? decay : 0.3f + 0.6f * reverb_time);
   reverb_.set_lp(0.6f);
-#ifdef BEADS_EXTENDED_REVERB
-  reverb_.RenderCharacter(reverb_character_, out, size);
-#else
-  if (clouds_style_) {
+  if (character) {
+    reverb_.RenderCharacter(reverb_character_, out, size);
+  } else if (clouds_style_) {
     reverb_.ProcessClouds(out, size);
   } else {
     reverb_.Process(out, size);
   }
-#endif  // BEADS_EXTENDED_REVERB
 
   // Final clipping/limiting
   output_limiter_.ProcessOutput(

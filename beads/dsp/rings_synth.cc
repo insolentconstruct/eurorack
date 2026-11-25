@@ -34,8 +34,6 @@
 #include "beads/blob/plaits_blob.h"
 #include "beads/dsp/pitch_quantizer.h"
 
-#include "beads/dsp/fx/reverb_decay_render.h"
-
 namespace beads {
 
 using namespace rings;
@@ -44,7 +42,6 @@ using namespace std;
 // As the Plaits synth's model quantizer.
 const float kZoneHysteresis = 0.048f;
 
-#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void RingsSynth::Init() {
   zone_quantizer_.Init(kNumRingsZones, kZoneHysteresis, false);
   target_.core = RINGS_CORE_PART;
@@ -140,9 +137,9 @@ void RingsSynth::Configure() {
   }
   pending_ = false;
 }
-#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
-void RingsSynth::BEADS_DECAY_RENDER(Render)(
+void RingsSynth::RenderBlock(
+    bool fixed_decay, bool character,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -231,28 +228,19 @@ void RingsSynth::BEADS_DECAY_RENDER(Render)(
   pre_reverb_limiter_.Process(out, size);
   const float reverb = mix_parameters.reverb_amount;
   const float reverb_mix = reverb * reverb * 0.8f;
-#ifndef BEADS_FIXED_REVERB_DECAY
   const float reverb_time = reverb * reverb * reverb;
-#endif  // BEADS_FIXED_REVERB_DECAY
+  const float decay = fixed_decay ? Reverb::fixed_decay() : 0.0f;
   reverb_.set_mix(reverb_mix);
-#ifdef BEADS_FIXED_REVERB_DECAY
-  reverb_.set_time(Reverb::fixed_decay());
-#elif defined(BEADS_EXTENDED_REVERB)
-  reverb_.set_time(Reverb::fixed_decay() ? Reverb::fixed_decay()
-      : 0.3f + 0.6f * reverb_time);
-#else
-  reverb_.set_time(0.3f + 0.6f * reverb_time);
-#endif  // BEADS_FIXED_REVERB_DECAY
+  reverb_.set_time(fixed_decay && (!character || decay)
+      ? decay : 0.3f + 0.6f * reverb_time);
   reverb_.set_lp(0.6f);
-#ifdef BEADS_EXTENDED_REVERB
-  reverb_.RenderCharacter(reverb_character_, out, size);
-#else
-  if (clouds_style_) {
+  if (character) {
+    reverb_.RenderCharacter(reverb_character_, out, size);
+  } else if (clouds_style_) {
     reverb_.ProcessClouds(out, size);
   } else {
     reverb_.Process(out, size);
   }
-#endif  // BEADS_EXTENDED_REVERB
   output_limiter_.ProcessOutput(
       out, size, output_limiter_mode_, kSynthSampleRate);
 
@@ -264,7 +252,6 @@ void RingsSynth::BEADS_DECAY_RENDER(Render)(
   }
 }
 
-#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void RingsSynth::ComputeTarget(
     float feedback,
     int polyphony,
@@ -323,6 +310,5 @@ void RingsSynth::ComputeControls(
   CONSTRAIN(chord_, 0, kNumChords - 1);
   s->chord = chord_;
 }
-#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
 }  // namespace beads

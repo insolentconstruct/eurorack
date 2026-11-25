@@ -30,6 +30,3 @@
 
 #include "beads/dsp/processor.cc"
 #include "beads/dsp/processor_options.cc"
-#include "beads/dsp/synth.cc"
-#include "beads/dsp/plaits_synth.cc"
-#include "beads/dsp/rings_synth.cc"
