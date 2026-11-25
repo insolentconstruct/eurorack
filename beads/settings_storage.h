@@ -170,9 +170,9 @@ class ChunkStorage {
     return !locked_;
   }
 
-  void SaveState() {
+  bool SaveState() {
     if (Flash::SupplyLow()) {
-      return;  // Kept in RAM; the next save writes it.
+      return false;  // Kept in RAM; the next save writes it.
     }
     const uint32_t address = chunk_address(next_state_chunk_index_);
     const size_t size = ChunkSize<StateData>();
@@ -181,16 +181,17 @@ class ChunkStorage {
     if (address + size > FLASH_STORAGE_LAST ||
         (address + 2 * size <= FLASH_STORAGE_LAST &&
             ReadChunk(address + size, &stranded) == CHUNK_VALID)) {
-      RewriteSector();
+      return RewriteSector();
     } else {
       HAL_FLASH_Unlock();
       if (WriteChunk(address, state_data_)) {
         next_state_chunk_index_++;
         HAL_FLASH_Lock();
+        return true;
       } else {
         // The next free chunk can't take the record: start the sector over.
         HAL_FLASH_Lock();
-        RewriteSector();
+        return RewriteSector();
       }
     }
   }

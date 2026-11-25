@@ -83,7 +83,7 @@ class Settings {
   // True when the requested calibration was saved.
   bool SavePersistentData();
   bool ReadPersistentData(PersistentData* data);
-  void SaveState();
+  bool SaveState();
   
   inline State* mutable_state() {
     return &state_;

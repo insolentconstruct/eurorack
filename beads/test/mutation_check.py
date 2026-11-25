@@ -112,8 +112,8 @@ cases = [
     'kMaxBackupDelay = 320000',
     'kMaxBackupDelay = 640000'),
   ('TestBackupCompletionReset', 'backup', 'beads/background_buffer_backup.cc',
-    '      backup_delay_ = kBackupDelay;\n      SaveState(true);',
-    '      SaveState(true);'),
+    '    save_started_ = false;\n    backup_delay_ = kBackupDelay;\n  } else {\n    ScheduleRetry();',
+    '    save_started_ = false;\n  } else {\n    ScheduleRetry();'),
   ('TestBackupThawReset', 'backup', 'beads/background_buffer_backup.cc',
     'kBackupResetDelay = 60000',
     'kBackupResetDelay = 59000'),
@@ -138,6 +138,12 @@ cases = [
   ('TestBackupRetryThaw', 'backup', 'beads/background_buffer_backup.cc',
     '    retry_count_ = 0;\n    retry_pending_ = false;',
     '    retry_count_ = 0;'),
+  ('TestBackupRetryThaw', 'backup', 'beads/background_buffer_backup.cc',
+    '    retry_count_ = 0;\n    retry_pending_ = false;',
+    '    retry_pending_ = false;'),
+  ('TestBackupRetryStateSave', 'backup', 'beads/background_buffer_backup.cc',
+    '      if (commit_pending_) {',
+    '      if (false) {'),
   # #35: the wavetable ends with a duplicated guard row.
   ('TestGuardRow', 'wavetable', 'beads/resources.cc', None, None),
   # Synth grains computed in pairs mix each grain's own sample.
@@ -185,7 +191,7 @@ cases = [
     '    return false;'),
   ('TestLowSupply', 'storage', 'beads/settings_storage.h',
     '    if (Flash::SupplyLow()) {\n'
-    '      return;  // Kept in RAM; the next save writes it.\n'
+    '      return false;  // Kept in RAM; the next save writes it.\n'
     '    }\n',
     ''),
   ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
@@ -565,6 +571,9 @@ cases = [
   ('TestSynthEntryCancelsBackupRetry', 'firmware', 'beads/beads.cc',
     '        if (background_buffer_backup.saving()) {',
     '        if (background_buffer_backup.busy()) {'),
+  ('TestBackupRetryLed', 'firmware', 'beads/ui.cc',
+    'background_buffer_backup_->saving()',
+    'background_buffer_backup_->busy()'),
 
 
 ]

@@ -47,7 +47,7 @@ class BackgroundBufferBackup {
   
   void EraseSector();
   void WriteBlock();
-  void SaveState(bool freeze_state);
+  bool SaveState(bool freeze_state);
   // After a settings repair: erases the sectors holding an unreadable word.
   void EraseDamagedSectors();
   
@@ -68,6 +68,7 @@ class BackgroundBufferBackup {
   };
 
  private:
+  void CommitSave();
   void ScheduleRetry();
   bool Valid(const BufferBackupHeader& header) const;
   bool EraseBufferSector(uint32_t sector, int attempts);
@@ -89,6 +90,7 @@ class BackgroundBufferBackup {
   bool save_started_;
   bool previous_freeze_state_;
   bool retry_pending_;
+  bool commit_pending_;
   
   DISALLOW_COPY_AND_ASSIGN(BackgroundBufferBackup);
 };

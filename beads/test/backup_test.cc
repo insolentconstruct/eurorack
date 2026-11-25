@@ -453,16 +453,50 @@ void TestBackupRetryThaw() {
   Fill(23);
   test_fail_at = test_ops + 7;
   CHECK(rig.Freeze());
+  test_fail_at = test_ops + 7;
+  Run(rig, true, 10005);
   test_fail_at = 0;
   rig.backup.Process(false);
-  const int ops = test_ops;
+  int ops = test_ops;
   Run(rig, true, 19999);
   CHECK(test_ops == ops && !rig.backup.busy());
+  test_fail_at = ops + 7;
+  Run(rig, true, 6);
+  test_fail_at = 0;
+  CHECK(test_ops == ops + 7 && !rig.settings.state().frozen);
+  ops = test_ops;
+  Run(rig, true, 9999);
+  CHECK(test_ops == ops);
   Run(rig, true, 1);
   CHECK(rig.backup.busy());
   Run(rig, true, 24006);
   Rig after;
   CHECK(after.Boot() && Restored(23));
+}
+
+void TestBackupRetryStateSave() {
+  test_checker.Start("TestBackupRetryStateSave");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  processor.write_ptr_ = 345;
+  Fill(24);
+  // Supply falls after the header is programmed, before the settings flag.
+  const int erases = test_erases;
+  TestFlash().supply_budget = 24007;
+  CHECK(rig.Freeze());
+  CHECK(TestFlash().supply_low && kHeader->tag == 0x5a5a5246);
+  const int ops = test_ops;
+  Run(rig, true, 10000);
+  CHECK(test_ops == ops);  // The first retry still has low supply.
+  TestFlash().supply_low = false;
+  Run(rig, true, 19999);
+  CHECK(test_ops == ops);
+  Run(rig, true, 1);
+  CHECK(test_ops > ops && test_erases == erases + 6);
+  Rig after;
+  CHECK(after.Boot() && processor.write_ptr_ == 345 && Restored(24));
 }
 
 void TestModulatedFreeze() {
@@ -953,6 +987,7 @@ int main() {
   TestBackupRetry();
   TestBackupRetryLimit();
   TestBackupRetryThaw();
+  TestBackupRetryStateSave();
   TestSettingsSaves();
   TestDamagedBuffer();
   TestFrozenNoReads();

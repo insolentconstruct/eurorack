@@ -988,6 +988,18 @@ void TestSynthEntryCancelsBackupRetry() {
   CHECK(!background_buffer_backup.saving());
 }
 
+void TestBackupRetryLed() {
+  test_checker.Start("TestBackupRetryLed");
+  Rig r(false);
+  ui.set_freeze_led_state(true);
+  background_buffer_backup.retry_pending_ = true;
+  SysTick_Handler();
+  CHECK(ui.leds_.intensity_[LED_FREEZE] == 128);
+  background_buffer_backup.retry_pending_ = false;
+  SysTick_Handler();
+  CHECK(ui.leds_.intensity_[LED_FREEZE] == 255);
+}
+
 // Codec restarts fade out first (#53): the output steps down to silence
 // over about 10 ms instead of stopping at full level.
 void TestCodecRestartFade() {
@@ -1251,6 +1263,7 @@ int main() {
   TestSynthFadeSurvivesTimerReset();
   TestSynthEntryCancelsBackup();
   TestSynthEntryCancelsBackupRetry();
+  TestBackupRetryLed();
   TestCodecRestartFade();
   TestSynthStopPreservesReverb();
   TestRejectedCalibrationCue();

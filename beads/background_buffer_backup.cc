@@ -69,6 +69,7 @@ void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
   previous_freeze_state_ = false;
   retry_count_ = 0;
   retry_pending_ = false;
+  commit_pending_ = false;
   remaining_sectors_ = 0;
   remaining_bytes_ = 0;
   write_offset_ = 0;
@@ -145,9 +146,19 @@ bool BackgroundBufferBackup::Valid(const BufferBackupHeader& header) const {
   return crc32(crc, &h, sizeof(h)) == header.crc;
 }
 
-void BackgroundBufferBackup::SaveState(bool frozen) {
+bool BackgroundBufferBackup::SaveState(bool frozen) {
   settings_->mutable_state()->frozen = frozen;
-  settings_->SaveState();
+  return settings_->SaveState();
+}
+
+void BackgroundBufferBackup::CommitSave() {
+  if (SaveState(true)) {
+    commit_pending_ = false;
+    save_started_ = false;
+    backup_delay_ = kBackupDelay;
+  } else {
+    ScheduleRetry();
+  }
 }
 
 void BackgroundBufferBackup::ScheduleRetry() {
@@ -233,11 +244,10 @@ void BackgroundBufferBackup::WriteBlock() {
         ScheduleRetry();
         return;
       }
-      // We've saved everything, we are now sure that we can restart with
-      // the FREEZE button enabled!
-      save_started_ = false;
-      backup_delay_ = kBackupDelay;
-      SaveState(true);
+      // The buffer is complete; only the frozen flag still needs saving.
+      commit_pending_ = true;
+      retry_count_ = 0;
+      CommitSave();
     }
   }
 }
@@ -262,6 +272,7 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
     }
     retry_count_ = 0;
     retry_pending_ = false;
+    commit_pending_ = false;
     freeze_start_time_ = system_clock.milliseconds();
     previous_freeze_state_ = false;
   } else {
@@ -274,10 +285,14 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
       }
     } else if (retry_pending_ && !settings_->state().disable_autosave &&
         now - retry_start_time_ >= (kBackupDelay << retry_count_)) {
-      // Erase again before programming any partially written flash word.
       ++retry_count_;
       retry_pending_ = false;
-      remaining_sectors_ = kNumSectors;
+      if (commit_pending_) {
+        CommitSave();
+      } else {
+        // Erase again before programming any partially written flash word.
+        remaining_sectors_ = kNumSectors;
+      }
     }
   }
   freeze_state_ = freeze_state;

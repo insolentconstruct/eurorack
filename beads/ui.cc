@@ -229,7 +229,7 @@ void Ui::UpdateLeds() {
         } else {
           leds_.set(LED_FREEZE,
               freeze_led_state_
-                  ? (background_buffer_backup_->busy() ? 128 : 255)
+                  ? (background_buffer_backup_->saving() ? 128 : 255)
                   : 0);
         }
         

@@ -180,9 +180,9 @@ bool Settings::SavePersistentData() {
   return chunk_storage_.SavePersistentData();
 }
 
-void Settings::SaveState() {
+bool Settings::SaveState() {
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
-  chunk_storage_.SaveState();
+  return chunk_storage_.SaveState();
 }
 
 }  // namespace beads
