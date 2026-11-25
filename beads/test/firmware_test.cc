@@ -35,6 +35,8 @@
 #include <new>
 #include <sys/mman.h>
 
+#include "stmlib/system/system_clock.h"
+
 #include "beads/test/test_checker.h"
 
 #define private public
@@ -1159,6 +1161,89 @@ void TestSelfPlayFrozenBackup() {
   CHECK(!settings.state().frozen);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
+}
+
+void TestLegacyPackedStereoBackup() {
+  test_checker.Start("TestLegacyPackedStereoBackup");
+  const size_t kBankBytes = 256 * 1024;
+  const int kBankFrames = kBankBytes / 3;
+  const int kWritePtr = 123;
+  const uint32_t kCrcTag = 0x31435243;
+  const int indices[] = {
+    kBankFrames - 1, kBankFrames, 2 * kBankFrames - 1, 2 * kBankFrames
+  };
+  const size_t offsets[] = {
+    kBankBytes - 4, kBankBytes, 2 * kBankBytes - 4, 2 * kBankBytes
+  };
+  const uint8_t fixture[][3] = {
+    { 0x00, 0xf8, 0x7f }, { 0x01, 0xf0, 0xff },
+    { 0xff, 0x1f, 0x00 }, { 0x23, 0xb1, 0xcb }
+  };
+  const IntFrame samples[] = {
+    { -2048, 2047 }, { 1, -1 }, { -1, 1 }, { 291, -837 }
+  };
+  const FloatFrame replacement = { -291 / 2048.0f, 837 / 2048.0f };
+  const uint8_t replacement_bytes[] = { 0xdd, 0x5e, 0x34 };
+  static uint8_t expected[kDelayBufferSizeBits / 8];
+  typedef BackgroundBufferBackup::BufferBackupHeader Header;
+  typedef beads::DelayLine<RESOLUTION_12_BIT, kDelayBufferSizeBits / 24, 2> Line;
+  const size_t kSaveSteps = sizeof(expected) / sizeof(Header) + 8;
+  Header* header = reinterpret_cast<Header*>(0x08100000);
+  uint8_t* payload = reinterpret_cast<uint8_t*>(header + 1);
+
+  for (int crc = 0; crc < 2; ++crc) {
+    Rig r(false, false);
+    memset(header, 0, sizeof(*header));
+    memset(expected, 0, sizeof(expected));
+    header->tag = 0x5a5a5246;
+    header->write_ptr = kWritePtr;
+    header->media = Processor::MEDIA_VINTAGE_DIGITAL;
+    for (size_t i = 0; i < sizeof(fixture) / sizeof(fixture[0]); ++i) {
+      memcpy(expected + offsets[i], fixture[i], sizeof(fixture[i]));
+    }
+    memcpy(payload, expected, sizeof(expected));
+    if (crc) {
+      header->crc_tag = kCrcTag;
+      // CRC-32 of the legacy payload and header, with its CRC field zero.
+      header->crc = 0xdf616b0a;
+    }
+    settings.mutable_state()->frozen = true;
+    CHECK(settings.SaveState());
+    r.Reboot(false);
+    CHECK(ui.freeze_button_state());
+    CHECK(processor.media() == Processor::MEDIA_VINTAGE_DIGITAL);
+    CHECK(!processor.mono());
+    CHECK(*processor.mutable_delay_write_ptr() == kWritePtr);
+
+    Line& line = processor.processor_vintage_digital_.stereo_delay_line_;
+    for (size_t i = 0; i < sizeof(samples) / sizeof(samples[0]); ++i) {
+      const FloatFrame frame =
+          line.Read<INTERPOLATION_ZOH>(indices[i] - kWritePtr, 0.0f);
+      CHECK(frame.l == samples[i].l / 2048.0f
+          && frame.r == samples[i].r / 2048.0f);
+    }
+
+    background_buffer_backup.Process(false);
+    *processor.mutable_delay_write_ptr() = indices[3];
+    line.Write(replacement);
+    memcpy(expected + offsets[3], replacement_bytes, sizeof(replacement_bytes));
+    for (int i = 0; i < 10000; ++i) {
+      system_clock.Tick();
+    }
+    background_buffer_backup.Process(true);
+    for (size_t i = 0; background_buffer_backup.busy() &&
+         i < kSaveSteps; ++i) {
+      background_buffer_backup.Process(true);
+    }
+    CHECK(!background_buffer_backup.busy());
+    CHECK(settings.state().frozen && header->crc_tag == kCrcTag);
+    CHECK(memcmp(payload, expected, sizeof(expected)) == 0);
+    r.Reboot(false);
+    CHECK(ui.freeze_button_state());
+    CHECK(*processor.mutable_delay_write_ptr() == indices[3] - 1);
+    const FloatFrame restored = line.Read<INTERPOLATION_ZOH>(1, 0.0f);
+    CHECK(restored.l == replacement.l && restored.r == replacement.r);
+  }
 }
 
 // A frozen buffer whose audio can't be read: the module starts unfrozen,
@@ -4452,6 +4537,7 @@ int main() {
   TestRandomIntervalsChain();
   TestRecentNotesChain();
   TestSelfPlayFrozenBackup();
+  TestLegacyPackedStereoBackup();
   TestPlaitsSynthSelection();
   TestRingsSynthOwnership();
   TestFreezeGestureFollowsPlayingSynth();
