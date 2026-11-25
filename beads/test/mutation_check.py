@@ -1637,11 +1637,16 @@ cases = [
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     'const uint32_t kGestureCueTime = 500;',
     'const uint32_t kGestureCueTime = 0;'),
+  # Reintroduce the stale bank write through both commit guards.
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     'for (int i = 0; i < kNumPageFeatures; ++i) {\n'
-    '      const ProfileFeature f = kPageFeatures[i];',
+    '      const ProfileFeature f = kPageFeatures[i];\n'
+    '      // Pages commit their settings; a gesture saves the Plaits bank.\n'
+    '      if (options_.edited(f) && settings_->profile().adjustable(f) &&',
     'for (int i = 0; i < FEATURE_LAST; ++i) {\n'
-    '      const ProfileFeature f = ProfileFeature(i);'),
+    '      const ProfileFeature f = ProfileFeature(i);\n'
+    '      if ((f == FEATURE_PLAITS_BANK || options_.edited(f)) &&\n'
+    '          settings_->profile().adjustable(f) &&'),
   ('TestBankDetents', 'plaits_synth', 'beads/dsp/plaits_synth.cc',
     'model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, false);',
     'model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, true);'),
