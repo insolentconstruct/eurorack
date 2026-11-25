@@ -501,30 +501,6 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) __attribute__((always_inline));
-  template<bool manual_delay>
-  inline void ProcessOptionsBlock(
-      bool delay_requested,
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
-  template<bool manual_delay>
-  inline void ProcessOptionsBlockFixedDecay(
-      bool delay_requested,
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
   void ProcessWithOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -578,33 +554,7 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
-  // One source for both blocks, each inlined in ProcessWithOptions.
-  template<bool resonator, bool manual_delay>
-  inline void ProcessOptions(
-      bool delay_requested,
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
-  template<bool resonator, bool manual_delay>
-  inline void ProcessOptionsFixedDecay(
-      bool delay_requested,
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
-  template<bool resonator>
-  inline void ProcessOptionsCharacter(
+  void ProcessOptions(
       bool manual_delay, bool delay_requested,
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -614,7 +564,18 @@ class Processor {
       const MixParameters& mix_parameters,
       const FloatFrame* in,
       FloatFrame* out,
-      size_t size) __attribute__((always_inline));
+      size_t size);
+  void ProcessOptionsFixedDecay(
+      bool manual_delay, bool delay_requested,
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
   // A flat notch at unity loop gain; both ends of the knob stay stock.
   static float UnityFeedback(float feedback, float tap_gain);
   // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.

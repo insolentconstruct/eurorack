@@ -345,14 +345,11 @@ void Processor::SetFeedbackCutoff(bool low) {
 #endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
 #ifdef BEADS_EXTENDED_REVERB
-template<bool resonator>
-void Processor::ProcessOptionsCharacter(
-    bool manual_delay, bool delay_requested,
+void Processor::ProcessWithOptionsCharacter(
 #else
-template<bool resonator, bool manual_delay>
 void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
-    bool delay_requested,
 #endif  // BEADS_EXTENDED_REVERB
+    bool manual_delay, bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -362,6 +359,8 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
+  const bool resonator =
+      options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);
   const float sr = sample_rate();
   Parameters scanned;
   const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&
@@ -609,10 +608,7 @@ void Processor::DivideOutput(
 }
 #endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
-#ifdef BEADS_EXTENDED_REVERB
-void Processor::ProcessWithOptionsCharacter(
-    bool manual_delay, bool delay_requested,
-#else
+#ifndef BEADS_EXTENDED_REVERB
 void Processor::BEADS_DECAY_RENDER(ProcessWithOptions)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -623,7 +619,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessWithOptions)(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  BEADS_DECAY_RENDER(ProcessOptionsBlock)<false>(false, seed_button_state,
+  BEADS_DECAY_RENDER(ProcessOptions)(false, false, seed_button_state,
       seed_input, freeze, density, parameters, mix_parameters, in, out, size);
 }
 
@@ -638,44 +634,12 @@ void Processor::BEADS_DECAY_RENDER(ProcessManualDelayWithOptions)(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  BEADS_DECAY_RENDER(ProcessOptionsBlock)<true>(delay_requested,
+  BEADS_DECAY_RENDER(ProcessOptions)(true, delay_requested,
       seed_button_state, seed_input, freeze, density, parameters,
       mix_parameters, in, out, size);
 }
 
-template<bool manual_delay>
-void Processor::BEADS_DECAY_RENDER(ProcessOptionsBlock)(
-    bool delay_requested,
 #endif  // BEADS_EXTENDED_REVERB
-    SeedButtonState seed_button_state,
-    const stmlib::GateFlags* seed_input,
-    const bool* freeze,
-    const ModulatedParameter& density,
-    const Parameters& parameters,
-    const MixParameters& mix_parameters,
-    const FloatFrame* in,
-    FloatFrame* out,
-    size_t size) {
-  // Resonator profiles run their own instance of the block.
-  if (options_ &
-      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
-#ifdef BEADS_EXTENDED_REVERB
-    ProcessOptionsCharacter<true>(manual_delay, delay_requested,
-#else
-    BEADS_DECAY_RENDER(ProcessOptions)<true, manual_delay>(delay_requested,
-#endif  // BEADS_EXTENDED_REVERB
-        seed_button_state, seed_input, freeze, density, parameters,
-        mix_parameters, in, out, size);
-  } else {
-#ifdef BEADS_EXTENDED_REVERB
-    ProcessOptionsCharacter<false>(manual_delay, delay_requested,
-#else
-    BEADS_DECAY_RENDER(ProcessOptions)<false, manual_delay>(delay_requested,
-#endif  // BEADS_EXTENDED_REVERB
-        seed_button_state, seed_input, freeze, density, parameters,
-        mix_parameters, in, out, size);
-  }
-}
 
 #if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void Processor::MixDryWet(
