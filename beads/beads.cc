@@ -214,17 +214,17 @@ inline float OliverbControl(const RandomizedParameter& control, float lo, float 
   return value;
 }
 
-template<bool manual_delay, bool fixed_decay, bool play_oliverb,
-    bool extended_reverb>
+template<bool play_oliverb, bool extended_reverb>
 inline void ProcessAudio(
+    bool manual_delay, bool fixed_decay,
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) __attribute__((always_inline));
 
-template<bool manual_delay, bool fixed_decay, bool play_oliverb,
-    bool extended_reverb>
+template<bool play_oliverb, bool extended_reverb>
 inline void ProcessAudio(
+    bool manual_delay, bool fixed_decay,
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
@@ -660,31 +660,10 @@ void Process(
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  ProcessAudio<false, false, false, false>(events, in, out, size);
-}
-
-void ProcessFixedDecay(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<false, true, false, false>(events, in, out, size);
-}
-
-void ProcessManualDelay(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<true, false, false, false>(events, in, out, size);
-}
-
-void ProcessManualDelayFixedDecay(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<true, true, false, false>(events, in, out, size);
+  const bool manual_delay =
+      !synth_mode && settings.profile().entry(FEATURE_MANUAL_DELAY).action;
+  ProcessAudio<false, false>(manual_delay, fixed_reverb_decay,
+      events, in, out, size);
 }
 
 #endif  // BEADS_EXTENDED_AUDIO
@@ -694,7 +673,7 @@ void ProcessManualDelayFixedDecay(
 void ProcessOliverb(
     const Codec::Event* events, const Codec::Frame* in,
     Codec::Frame* out, size_t size) {
-  ProcessAudio<false, false, true, false>(events, in, out, size);
+  ProcessAudio<true, false>(false, false, events, in, out, size);
 }
 
 float AbyssPitchPosition() {
@@ -834,7 +813,7 @@ void ProcessAbyss(
 void ProcessExtendedReverb(
     const Codec::Event* events, const Codec::Frame* in,
     Codec::Frame* out, size_t size) {
-  ProcessAudio<false, false, false, true>(events, in, out, size);
+  ProcessAudio<false, true>(false, false, events, in, out, size);
   if (synth_mode) {
     const uint8_t level = settings.FeatureValue(FEATURE_SYNTH_LEVEL);
     if (level) {
@@ -854,17 +833,12 @@ void ProcessExtendedReverb(
 float AbyssPitchPosition();
 
 // Selected only for synth profiles with an output trim.
-template<bool fixed_decay>
 void ProcessSynthLevel(
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) {
-  if (fixed_decay) {
-    ProcessFixedDecay(events, in, out, size);
-  } else {
-    Process(events, in, out, size);
-  }
+  Process(events, in, out, size);
   const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
   ApplySynthLevel(out, size, divisor);
 }
@@ -880,14 +854,9 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
     return &ProcessExtendedReverb;
   }
   if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
-    return fixed_reverb_decay ? &ProcessSynthLevel<true>
-        : &ProcessSynthLevel<false>;
+    return &ProcessSynthLevel;
   }
-  if (!synth && settings.profile().entry(FEATURE_MANUAL_DELAY).action) {
-    return fixed_reverb_decay
-        ? &ProcessManualDelayFixedDecay : &ProcessManualDelay;
-  }
-  return fixed_reverb_decay ? &ProcessFixedDecay : &Process;
+  return &Process;
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
