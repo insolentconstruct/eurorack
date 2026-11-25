@@ -384,7 +384,11 @@ void ModalResonator::RenderChord(
   for (int v = 0; v < kNumChordVoices; ++v) {
     const float peak = chord_peak_[v] * chord_peak_gain_[v];
     if (chord_level_[v] <= kChordSilence * peak) {
-      chord_level_[v] = 0.0f;
+      if (chord_level_[v] > 0.0f) {
+        odd_[v].Init();
+        even_[v].Init();
+        chord_level_[v] = 0.0f;
+      }
       continue;
     }
     const float rest_frequency = frequency_ * chord_ratio_[v];
