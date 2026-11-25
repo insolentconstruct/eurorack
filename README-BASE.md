@@ -152,8 +152,9 @@ openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 ```
 
 Give `--calibration` or `--settings` a dump of the sector as it is now to
-restore only the other one. Each dump must hold a valid calibration and at
-least one settings record, as the firmware loads it. The image holds just
+restore only the other one. Supply a full-sized sector dump for each input.
+The calibration input needs a valid CALI record, and the settings input needs
+a valid settings record. The utility warns about CALI outside Tuneup’s range. The image holds just
 the two records, so later saves land on erased flash; don't write the
 128 KB dump back. Restoring this way also repairs a module showing the
 damaged-settings warning.
