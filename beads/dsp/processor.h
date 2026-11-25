@@ -70,7 +70,9 @@ enum ResonatorPlacement {
   RESONATOR_AFTER_GRAINS,
   RESONATOR_BEFORE_BUFFER,
   // After the grains, and FEEDBACK records its resonance.
-  RESONATOR_FEEDBACK
+  RESONATOR_FEEDBACK,
+  // After the grains, each grain striking one voice of a chord.
+  RESONATOR_CHORD
 };
 
 // 48 kHz at the 4 kHz block rate.
@@ -90,6 +92,7 @@ struct ResonatorControls {
   float feedback;
   bool hold_feedback;
   const ResonatorModes* modes;
+  float chord_gain;
 };
 
 class Processor {
@@ -151,17 +154,20 @@ class Processor {
   inline void set_resonator(int placement) {
     // One store: the audio interrupt never sees both placements. In the
     // feedback takes both flags: it records the resonance, and renders it.
-    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
+    const uint16_t flag = placement == RESONATOR_AFTER_GRAINS
         ? OPTION_FLAG_RESONATOR_GRAINS
         : (placement == RESONATOR_BEFORE_BUFFER
             ? OPTION_FLAG_RESONATOR_INPUT
             : (placement == RESONATOR_FEEDBACK
                 ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
-                : 0));
+                : (placement == RESONATOR_CHORD
+                    ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_CHORD
+                    : 0)));
     resonator_sample_rate_ = 0.0f;
     resonator_loop_feedback_ = 0.0f;
     options_ = (options_ &
-        ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
+        ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT |
+          OPTION_FLAG_RESONATOR_CHORD)) | flag;
     resonator_sample_rate_ = 0.0f;
     // A SEED held while it starts does not strike it.
     seed_gate_ = true;
@@ -408,7 +414,8 @@ class Processor {
     OPTION_FLAG_RESONATOR_GRAINS = 64,
     OPTION_FLAG_RESONATOR_INPUT = 128,
     OPTION_FLAG_OUTPUT_DIVISION = 256,
-    OPTION_FLAG_SEND_MIX = 512
+    OPTION_FLAG_SEND_MIX = 512,
+    OPTION_FLAG_RESONATOR_CHORD = 1024
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
@@ -452,6 +459,8 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  // The page's controls, once the UI has set them.
+  void ApplyResonatorControls();
   // Struck by input hits, tuned by PITCH; adds its resonance to the frames.
   void ProcessResonator(
       const RandomizedParameter& pitch,
@@ -471,6 +480,19 @@ class Processor {
       bool delay_mode,
       const FloatFrame* in,
       FloatFrame* recorded,
+      size_t size);
+  // Each grain started in the block strikes one voice of the chord.
+  void ProcessChord(
+      bool strike,
+      const TriggerGenerator::Output* triggers,
+      FloatFrame* frames,
+      size_t size);
+  template<typename GrainSource>
+  void StrikeChord(
+      const GrainSource& source,
+      const TriggerGenerator::Output* triggers,
+      float gain,
+      float* strikes,
       size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
@@ -558,6 +580,8 @@ class Processor {
   volatile uint8_t resonator_bound_;
   // FEEDBACK at the last block, for the loop's gain while it moves.
   float resonator_loop_feedback_;
+  // The grains' level, which a grain's strike in a chord follows.
+  float grain_level_;
   bool seed_gate_;
   // SEED's pulse, low-passed as Rings' strum, while it still sounds.
   stmlib::Svf strike_filter_;

@@ -191,7 +191,7 @@ for setting in ("Reverb character", "Frozen feedback", "Processor",
     assert len(values[setting]) == 2, setting
 assert len(values["LED brightness"]) == 3
 assert len(values["SEED latch"]) == 4
-assert len(values["Resonator"]) == 4
+assert len(values["Resonator"]) == 5
 assert len(values["Resonator material"]) == 8
 assert len(values["Resonator ring time"]) == 4
 assert len(values) == 15 and "Stereo width" not in values

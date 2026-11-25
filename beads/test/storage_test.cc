@@ -1393,7 +1393,7 @@ void TestResonatorSaved() {
   Wipe();
   Settings s;
   s.Init(false);
-  for (int placement = 0; placement < 4; ++placement) {
+  for (int placement = 0; placement < 5; ++placement) {
     for (int value = 0; value < 8; ++value) {
       s.SetFeatureValue(FEATURE_RESONATOR, placement);
       s.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, value);

@@ -129,6 +129,7 @@ void UpdateResonator() {
   // An exact structure is Rings' curve, even under a Drizzlet object.
   c.modes = settings.profile().entry(FEATURE_RESONATOR_STRUCTURE).state ==
       PROFILE_FIXED ? NULL : material.modes;
+  c.chord_gain = material.chord_gain;
   processor.set_resonator_controls(c);
 }
 
