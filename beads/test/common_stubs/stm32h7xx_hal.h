@@ -119,6 +119,17 @@ inline int HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef* e, uint32_t*) {
   }
   const uint32_t start = TestFlashSectorStart(e->Banks, e->Sector);
   TestFlashBeginOperation();
+  const uint32_t word = TestFlash().partial_erase_word;
+  if (word >= start && word < start + 0x20000 * e->NbSectors) {
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(word);
+    for (int i = 0; i < 32; ++i) {
+      bytes[i] |= uint8_t(0x55 ^ i);
+    }
+    TestFlash().partial_erase_word = 0;
+    TestFlashBudget() = 0;
+    TestFlashEndOperation();
+    return 1;
+  }
   memset(reinterpret_cast<void*>(start), 255, 0x20000 * e->NbSectors);
   TestFlashErased(start, 0x20000 * e->NbSectors);
   TestFlashEndOperation();

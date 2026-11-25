@@ -148,23 +148,9 @@ class Processor {
     SetOption(OPTION_FLAG_DELAY_CROSSFADE, crossfade);
   }
   // Rings' modal resonator on the grains, or on the input before the buffer.
-  inline void set_resonator(int placement) {
-    // One store: the audio interrupt never sees both placements. In the
-    // feedback takes both flags: it records the resonance, and renders it.
-    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
-        ? OPTION_FLAG_RESONATOR_GRAINS
-        : (placement == RESONATOR_BEFORE_BUFFER
-            ? OPTION_FLAG_RESONATOR_INPUT
-            : (placement == RESONATOR_FEEDBACK
-                ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
-                : 0));
-    resonator_sample_rate_ = 0.0f;
-    resonator_loop_feedback_ = 0.0f;
-    options_ = (options_ &
-        ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
-    resonator_sample_rate_ = 0.0f;
-    // A SEED held while it starts does not strike it.
-    seed_gate_ = true;
+  void set_resonator(int placement);
+  inline bool resonator_available() const {
+    return !spectral_ && (options_ & kResonatorFlags);
   }
   // Built in the main loop; until then the resonator keeps its controls.
   void set_resonator_controls(const ResonatorControls& controls);
@@ -408,7 +394,8 @@ class Processor {
     OPTION_FLAG_RESONATOR_GRAINS = 64,
     OPTION_FLAG_RESONATOR_INPUT = 128,
     OPTION_FLAG_OUTPUT_DIVISION = 256,
-    OPTION_FLAG_SEND_MIX = 512
+    OPTION_FLAG_SEND_MIX = 512,
+    kResonatorFlags = OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
@@ -566,6 +553,7 @@ class Processor {
   int output_division_;
   int output_pulse_count_;
   bool output_pulse_;
+  volatile bool resonator_reset_pending_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

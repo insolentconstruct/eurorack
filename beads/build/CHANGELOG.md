@@ -4,6 +4,18 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- Save only edited page options and let later panel gestures take precedence.
+- Save a new profile's starting quality before recording its identity.
+- Return ASSIGN CV to FEEDBACK when the active engine cannot run the resonator.
+- Reset the resonator once when its new placement starts rendering.
+- Begin the synth fade-in on the first resumed audio block.
+
+- Retry a failed frozen-buffer backup up to three times while FREEZE stays on, after waits of 10, 20 and 40 seconds. Once the buffer is saved, only the frozen flag is retried.
+- Let a Chiptune drone decay through the gate when it ends.
+- Apply saved Clouds-style reverb before audio starts.
+- Follow the installed profile's width and diffusion defaults until the amounts are edited.
+- Keep the current page's preview when an earlier page's SEED tap finishes saving.
+
 - Retry a codec start or restart after a DMA failure instead of staying silent.
 - Cancel an unfinished frozen-buffer backup before entering synth mode.
 - Finish an automatic synth-entry fade after a late audio peak.

@@ -567,6 +567,28 @@ void TestResonatorBeforeBuffer() {
   }
 }
 
+void TestResonatorPlacementPublication() {
+  test_checker.Start("TestResonatorPlacementPublication");
+  Init(Processor::MEDIA_DIGITAL, false, RESONATOR_AFTER_GRAINS);
+  processor.Process(SEED_BUTTON_STATE_OFF, NULL, freeze, density,
+      parameters, mix, input, output, BlockSize());
+  const float rate = processor.resonator_sample_rate_;
+  CHECK(rate == processor.sample_rate());
+  CHECK(!processor.seed_gate_);
+  processor.set_resonator(RESONATOR_BEFORE_BUFFER);
+  CHECK(processor.resonator_sample_rate_ == rate);
+  CHECK(!processor.seed_gate_);
+
+  GateFlags seed[sizeof(input) / sizeof(input[0])] = { GATE_FLAG_RISING };
+  processor.Process(SEED_BUTTON_STATE_LOCKED, seed, freeze, density,
+      parameters, mix, input, output, BlockSize());
+  CHECK(processor.resonator_sample_rate_ == rate);
+  CHECK(processor.strike_sounding_);
+  processor.Process(SEED_BUTTON_STATE_OFF, NULL, freeze, density,
+      parameters, mix, input, output, BlockSize());
+  CHECK(processor.strike_sounding_);
+}
+
 // Turning it off restores the stock block, bit for bit.
 void TestResonatorOff() {
   test_checker.Start("TestResonatorOff");
@@ -1800,6 +1822,7 @@ int main() {
   TestResonatorTonalLevel();
   TestResonatorAfterGrains();
   TestResonatorBeforeBuffer();
+  TestResonatorPlacementPublication();
   TestResonatorOff();
   TestResonatorStrike();
   TestResonatorQualities();

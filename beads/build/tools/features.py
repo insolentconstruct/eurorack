@@ -146,6 +146,8 @@ def check_record(manifest, frozen):
   for feature_id, offset in layout.items():
     assert saved.get(feature_id) == offset, (
         'Record layout %d: ID %d' % (version, feature_id))
+  assert version != 1 or 29 not in offsets, (
+      'Record layout 1: byte 29 stores amount overrides')
   for feature_id, offset in saved.items():
     if feature_id not in layout:
       assert by_id[feature_id]['values'], (

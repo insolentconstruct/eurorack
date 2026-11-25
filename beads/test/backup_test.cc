@@ -926,6 +926,106 @@ void TestSupplyDropBackup() {
   CHECK(TestFlash().low_supply_writes == 0);
 }
 
+void TestRetryWhileFrozen() {
+  test_checker.Start("TestRetryWhileFrozen");
+  const int drops[] = { 1, 6, 24006 };
+  for (size_t i = 0; i < sizeof(drops) / sizeof(drops[0]); ++i) {
+    Wipe();
+    Rig r;
+    CHECK(!r.Boot());
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    Fill(23);
+    TestFlash().supply_budget = drops[i];
+    r.Freeze(0);
+    CHECK(TestFlash().supply_low && !r.backup.busy());
+    CHECK(!r.settings.state().frozen);
+    TestFlash().supply_low = false;
+    const int erases = test_erases;
+    for (int ms = 0; ms < 9999; ++ms) {
+      system_clock.Tick();
+      r.backup.Process(true);
+    }
+    CHECK(test_erases == erases);
+    system_clock.Tick();
+    r.backup.Process(true);
+    CHECK(test_erases == erases + 1);
+    while (r.backup.busy()) {
+      r.backup.Process(true);
+    }
+    CHECK(r.settings.state().frozen);
+    Rig after;
+    CHECK(after.Boot() && Restored(23));
+  }
+}
+
+void TestBackupRetryLimit() {
+  test_checker.Start("TestBackupRetryLimit");
+  Wipe();
+  Rig r;
+  CHECK(!r.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  test_fail_at = test_ops + 7;
+  CHECK(r.Freeze(0));
+  for (int delay = 10000; delay <= 40000; delay *= 2) {
+    const int ops = test_ops;
+    test_fail_at = ops + 7;
+    Run(r, true, delay - 1);
+    CHECK(test_ops == ops);
+    Run(r, true, 6);
+    CHECK(test_ops == ops + 7);
+    CHECK(!r.backup.busy() && !r.settings.state().frozen);
+  }
+  const int ops = test_ops;
+  test_fail_at = 0;
+  Run(r, true, 640000);
+  CHECK(test_ops == ops);
+  CHECK(!r.settings.state().frozen);
+}
+
+void TestBackupRetryStateSave() {
+  test_checker.Start("TestBackupRetryStateSave");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  processor.write_ptr_ = 345;
+  Fill(24);
+  // Supply falls after the header is programmed, before the settings flag.
+  const int erases = test_erases;
+  TestFlash().supply_budget = 24007;
+  CHECK(rig.Freeze(0));
+  CHECK(TestFlash().supply_low && kHeader->tag == 0x5a5a5246);
+  const int ops = test_ops;
+  Run(rig, true, 10000);
+  CHECK(test_ops == ops);  // The first retry still has low supply.
+  TestFlash().supply_low = false;
+  Run(rig, true, 19999);
+  CHECK(test_ops == ops);
+  Run(rig, true, 1);
+  CHECK(test_ops > ops && test_erases == erases + 6);
+  Rig after;
+  CHECK(after.Boot() && processor.write_ptr_ == 345 && Restored(24));
+}
+
+void TestBackupRetryStateExhausted() {
+  test_checker.Start("TestBackupRetryStateExhausted");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(25);
+  TestFlash().supply_budget = 24007;
+  CHECK(rig.Freeze(0));
+  CHECK(TestFlash().supply_low && kHeader->tag == 0x5a5a5246);
+  Run(rig, true, 70000);
+  CHECK(!rig.backup.saving() && !rig.settings.state().frozen);
+  TestFlash().supply_low = false;
+  // An unrelated settings save must not commit the abandoned frozen flag.
+  rig.Autosave(true);
+  Rig after;
+  CHECK(!after.Boot());
+}
+
 void OnUnmaskedRead(int) {
   printf("ERROR: %s: unmasked read of a damaged flash word\n",
       test_checker.test());
@@ -965,6 +1065,10 @@ int main() {
   TestRetriedBufferErase();
   TestStuckBufferErase();
   TestLowSupplyBackup();
+  TestRetryWhileFrozen();
+  TestBackupRetryLimit();
+  TestBackupRetryStateSave();
+  TestBackupRetryStateExhausted();
   TestSupplyDropBackup();
   return test_checker.failures() ? 1 : 0;
 }

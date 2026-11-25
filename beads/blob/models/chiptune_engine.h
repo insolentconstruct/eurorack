@@ -59,6 +59,11 @@ class Chiptune {
       size_t size,
       bool* already_enveloped);
 
+  void RenderDroneTail(const EngineParameters& parameters,
+      float* out, float* aux, size_t size, bool* already_enveloped);
+
+  inline bool drone() const { return envelope_shape_ == NO_ENVELOPE; }
+
   inline void set_envelope_shape(float envelope_shape) {
     envelope_shape_ = envelope_shape;
   }
@@ -75,7 +80,6 @@ class Chiptune {
 
   float envelope_shape_;
   float envelope_state_;
-  float aux_envelope_amount_;
 
   DISALLOW_COPY_AND_ASSIGN(Chiptune);
 };

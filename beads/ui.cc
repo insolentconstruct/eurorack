@@ -121,6 +121,7 @@ void Ui::Init(
   seed_button_locked_ = true;
   seed_led_state_ = false;
   resonator_assigned_ = false;
+  resonator_available_ = false;
   gestures_.Init(this, settings);
   no_input_ = false;
   synth_mode_ = false;
@@ -326,8 +327,8 @@ void Ui::Poll() {
   time_scan_ = previewing
       ? options_.Value(FEATURE_TIME_SCAN)
       : settings_->FeatureValue(FEATURE_TIME_SCAN);
-  // Off, or in the synths, the CV goes back to FEEDBACK.
-  if (!resonator_ || synth_mode_) {
+  // Where the resonator cannot run, the CV goes back to FEEDBACK.
+  if (!resonator_available()) {
     resonator_assigned_ = false;
   }
   if (!previewing) {
@@ -449,12 +450,15 @@ void Ui::UpdateLeds() {
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {
           leds_.set(LED_FREEZE, state.disable_autosave ? 16 : 64);
-        } else {
+        } else if (freeze_led_state_) {
+          const bool saving = state.disable_autosave
+              ? background_buffer_backup_->busy()
+              : background_buffer_backup_->saving();
           leds_.set(LED_FREEZE,
-              freeze_led_state_
-                  ? (background_buffer_backup_->busy() &&
-                      !settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255)
-                  : 0);
+              saving && !settings_->FeatureValue(FEATURE_SAVE_FREEZE)
+                  ? 128 : 255);
+        } else {
+          leds_.set(LED_FREEZE, 0);
         }
         
         if (seed_button_locked_) {
@@ -794,7 +798,7 @@ void Ui::DoEvents() {
     for (int i = 0; i < kNumPageFeatures; ++i) {
       const ProfileFeature f = kPageFeatures[i];
       // Pages commit their settings; a gesture saves the Plaits bank.
-      if (settings_->profile().adjustable(f) &&
+      if (options_.edited(f) && settings_->profile().adjustable(f) &&
           options_.Value(f) != settings_->FeatureValue(f)) {
         settings_->SetFeatureValue(f, options_.Value(f));
         changed = true;

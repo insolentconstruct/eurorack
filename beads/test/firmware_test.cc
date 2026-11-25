@@ -304,6 +304,23 @@ void TestSynthFadeSurvivesTimerReset() {
   CHECK(synth_mode);
 }
 
+void FillAtSynthResume() {
+  RigBlock(current_rig);
+  CHECK(reverb_style_gain > 0.0f);
+}
+
+void TestSynthSwapResume() {
+  test_checker.Start("TestSynthSwapResume");
+  Rig r(false, false);
+  r.audio = 0x20000000;
+  r.Settle();
+  codec_fade = true;
+  reverb_style_gain = transition.reverb_style_previous_gain_ = 0.0f;
+  codec.on_resume_ = &FillAtSynthResume;
+  SwapPaused(SYNTH_PLAITS, SYNTH_BEADS);
+  codec.on_resume_ = NULL;
+}
+
 void TestSynthEntryCancelsBackup() {
   test_checker.Start("TestSynthEntryCancelsBackup");
   extern float& reverb_style_gain;
@@ -3063,6 +3080,39 @@ void TestResonatorPage() {
 
 // [A] taps reach resonator damping after the other destinations, while the
 // resonator is on; the CV then moves damping and no mix knob.
+void TestSpectralResonatorAssignment() {
+  test_checker.Start("TestSpectralResonatorAssignment");
+  Rig r(false, false);
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  r.Settle();
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  r.Tick(10, true);
+  for (int i = 0; i < 3; ++i) {
+    TapAssign(&r);
+  }
+  CHECK(ui.resonator_assigned());
+  ui.set_freeze_button_state(true);
+  settings.set_spectral(true);
+  r.Tick(20, true);
+  CHECK(!processor.spectral());
+  CHECK(ui.resonator_assigned());
+  ui.set_freeze_button_state(false);
+  r.Settle();
+  CHECK(processor.spectral());
+  CHECK(!ui.resonator_assigned());
+  settings.mutable_state()->assignable_cv_destination = 2;
+  TapAssign(&r);
+  CHECK(!ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+
+  // A control snapshot from the last granular block may still hold feedback.
+  processor.resonator_controls_.hold_feedback = true;
+  processor.resonator_controls_.feedback = 0.0f;
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 10000;
+  r.Tick(10, false);
+  CHECK(processor.spectral_processor_.feedback_ > 0.0f);
+}
+
 void TestResonatorDampingCv() {
   test_checker.Start("TestResonatorDampingCv");
   Rig r(false, false);
@@ -4382,6 +4432,7 @@ int main() {
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
   TestSynthFadeSurvivesTimerReset();
+  TestSynthSwapResume();
   TestSynthEntryCancelsBackup();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();
@@ -4427,6 +4478,7 @@ int main() {
   TestDelayOptionsProfile();
   TestResonatorProfile();
   TestResonatorPage();
+  TestSpectralResonatorAssignment();
   TestResonatorDampingCv();
   TestResonatorSeedCallback();
   TestHoldActionRestartsAutoGain();

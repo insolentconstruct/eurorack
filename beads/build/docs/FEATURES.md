@@ -91,15 +91,19 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
 | 27 | Rings polyphony |
 | 28 | Gain ceiling |
-| 29–55 | Reserved, 0xFF |
+| 29 | Amount overrides: bit 0 stereo width, bit 1 diffusion. 0xFF if unset or written by earlier firmware |
+| 30–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
-profile's default applies. Off and Fixed features keep their saved byte.
+profile's default applies. Width and diffusion follow the installed profile
+until their amount is edited. If an earlier record has the same profile,
+amounts that differ from the defaults carry over. With a
+different profile, those earlier amounts start from the new defaults. Off and
+Fixed features keep their saved byte.
 Options are not promised across betas: Beta 2 and 3 options start from the
 profile's defaults, and their packed bytes 10–23 are ignored and cleared at the
-next state save. A new layout changes the version; within a version only new
-enumerated options take reserved bytes. `resources/features-frozen.json`
+next state save. A new layout changes the version. `resources/features-frozen.json`
 freezes each version's offsets.
 
 | Feature ID | Feature | Saved in |
@@ -170,7 +174,7 @@ Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, b
 Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Drizzlet writes State the same way; its options are in sector 14, which stock never reads or writes. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
-Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded; an out-of-range CALI with no such mirror loads as stock loads it. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. Only a lost CALI with no usable mirror, or a blank sector with a mirror that isn't blank but holds no CALI, is damage: every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. Each erase and program first checks the programmable voltage detector (level 6, 2.69-2.83 V falling) and is refused while it shows VDD low: a state save is skipped, and any other refused operation fails like a flash error, so a save cut short loads as a power cut at that point would. The detector is set at each start-up; no option byte is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/drivers/flash.h; beads/test/storage_test.cc -->
+Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. A lost or out-of-range CALI without a usable mirror, or a blank settings sector with a nonblank mirror that holds no CALI, triggers the storage guard. Every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. Each erase and program first checks the programmable voltage detector (level 6, 2.69-2.83 V falling) and is refused while it shows VDD low: a state save is skipped, and any other refused operation fails like a flash error, so a save cut short loads as a power cut at that point would. The detector is set at each start-up; no option byte is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/drivers/flash.h; beads/test/storage_test.cc -->
 
 | Flash area | TAKEN | FREE / limit |
 |---|---|---|

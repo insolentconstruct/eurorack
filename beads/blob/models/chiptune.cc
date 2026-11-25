@@ -105,10 +105,15 @@ extern "C" void plaits_blob_render(
     size_t size,
     bool* already_enveloped) {
   Chiptune* chiptune = static_cast<Chiptune*>(object);
-  // As the voice set it: Plaits' envelope, TIMBRE attenuverter at noon.
-  chiptune->set_envelope_shape(
-      parameters->trigger & plaits::TRIGGER_UNPATCHED
-          ? plaits::Chiptune::NO_ENVELOPE
-          : 0.0f);
+  const int trigger = parameters->trigger;
+  if (trigger & plaits::TRIGGER_UNPATCHED) {
+    chiptune->set_envelope_shape(Chiptune::NO_ENVELOPE);
+  } else if ((trigger & plaits::TRIGGER_RISING_EDGE) || !chiptune->drone()) {
+    chiptune->set_envelope_shape(0.0f);
+  } else {
+    // Keep the chord through the Beads gate decay.
+    chiptune->RenderDroneTail(*parameters, out, aux, size, already_enveloped);
+    return;
+  }
   chiptune->Render(*parameters, out, aux, size, already_enveloped);
 }

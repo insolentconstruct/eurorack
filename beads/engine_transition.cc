@@ -120,10 +120,10 @@ void EngineTransition::SwapPaused(SynthEngine owner, SynthEngine playing,
   }
   playing_synth_ = playing;
   ui_->set_playing_synth(playing);
+  codec_fade_ = false;
   if (codec_running_) {
     codec_->Resume(callback);
   }
-  codec_fade_ = false;
 }
 
 }  // namespace beads

@@ -120,11 +120,11 @@ void GestureController::StepAssignment() {
     settings_->set_diffusion_assigned(true);
     if (!settings_->diffusion_assigned()) {
       settings_->set_width_assigned(false);
-      ui_->resonator_assigned_ = ui_->resonator_ != 0;
+      ui_->resonator_assigned_ = ui_->resonator_available();
     }
   } else if (settings_->diffusion_assigned()) {
     settings_->set_diffusion_assigned(false);
-    ui_->resonator_assigned_ = ui_->resonator_ != 0;
+    ui_->resonator_assigned_ = ui_->resonator_available();
   } else if (state->assignable_cv_destination == 2 && ui_->stereo_width_ &&
              settings_->profile().adjustable(FEATURE_WIDTH)) {
     settings_->set_width_assigned(true);
@@ -132,7 +132,7 @@ void GestureController::StepAssignment() {
              settings_->diffusion_assignable() &&
              settings_->profile().adjustable(FEATURE_DIFFUSION)) {
     settings_->set_diffusion_assigned(true);
-  } else if (state->assignable_cv_destination == 2 && ui_->resonator_) {
+  } else if (state->assignable_cv_destination == 2 && ui_->resonator_available()) {
     state->assignable_cv_destination = 0;
     ui_->resonator_assigned_ = true;
   } else {
@@ -218,10 +218,13 @@ bool GestureController::DoAction(uint8_t slot) {
   } else if (kFeatureDefinitions[feature].field != kNoField &&
       !kFeatureDefinitions[feature].stateless) {
     // Saved as from its options page, with that page's colour.
-    const uint8_t current = settings_->FeatureValue(feature);
+    // A later gesture acts on the pending page value and replaces its edit.
+    const uint8_t current = ui_->options_.edited(feature)
+        ? ui_->options_.Value(feature) : settings_->FeatureValue(feature);
     const uint8_t value = feature == FEATURE_SYNTH
         ? NextSynth(current, ui_->playable_synths_) : !current;
     settings_->SetFeatureValue(feature, value);
+    ui_->options_.PublishGesture(feature, value);
     settings_->SaveOptions();
     const OptionValue cue = FindOptionValue(feature, value);
     cue_.color = cue.color;

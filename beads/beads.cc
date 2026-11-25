@@ -493,7 +493,7 @@ void ProcessSynthLevel(
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
-  if (new_synth_mode && background_buffer_backup.busy()) {
+  if (new_synth_mode && background_buffer_backup.saving()) {
     background_buffer_backup.Process(false);
   }
   synth_mode = new_synth_mode;
@@ -579,6 +579,13 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  if (ui.clouds_style()) {
+    transition.set_clouds_style(true);
+    processor.SetCloudsStyle(true);
+    synth.SetCloudsStyle(true, true);
+    plaits_synth.SetCloudsStyle(true, true);
+    rings_synth.SetCloudsStyle(true, true);
+  }
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;
   const Profile& profile = settings.profile();
@@ -626,6 +633,7 @@ void Init() {
   
   // A frozen buffer saved by the granular engine stays in flash.
   processor.set_spectral(ui.spectral());
+  ui.set_resonator_available(processor.resonator_available());
   bool was_frozen = !processor.spectral() && background_buffer_backup.Load();
   if (was_frozen) {
     ui.set_freeze_button_state(was_frozen);
@@ -649,6 +657,7 @@ void MonitorStateChange() {
   if (ui.resonator() != resonator_placement) {
     resonator_placement = ui.resonator();
     processor.set_resonator(resonator_placement);
+    ui.set_resonator_available(processor.resonator_available());
   }
   ui.set_delay_active(processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
@@ -715,6 +724,7 @@ void MonitorStateChange() {
   if (ui.spectral() != processor.spectral() && transition.faded_out()) {
     transition.Pause();
     processor.set_spectral(ui.spectral());
+    ui.set_resonator_available(processor.resonator_available());
     if (processor.spectral()) {
       background_buffer_backup.Init(&processor, &settings);
     }

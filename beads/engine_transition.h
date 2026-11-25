@@ -126,6 +126,9 @@ class EngineTransition {
   inline bool blanking() const { return codec_transition_frames_ != 0; }
   inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
   inline bool clouds_style() const { return clouds_style_; }
+  inline void set_clouds_style(bool clouds_style) {
+    clouds_style_ = clouds_style;
+  }
   inline SynthEngine playing_synth() const { return playing_synth_; }
   inline void set_playing_synth(SynthEngine synth) { playing_synth_ = synth; }
   inline SynthEngine bank_owner() const { return bank_owner_; }

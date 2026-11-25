@@ -186,10 +186,10 @@ class Options {
 
   inline bool commit_requested() const { return commit_; }
 
-  inline void ClearCommit() {
-    dirty_ = false;
-    commit_ = false;
-  }
+  inline bool edited(ProfileFeature feature) const { return edited_[feature]; }
+
+  void PublishGesture(ProfileFeature feature, uint8_t value);
+  void ClearCommit();
 
  private:
   bool PageHasPitch() const;
@@ -207,6 +207,7 @@ class Options {
   bool any_page_;
   // The values on the pages, committed together.
   uint8_t preview_[FEATURE_LAST];
+  bool edited_[FEATURE_LAST];
 
   // SysTick publishes transitions and a stable batch to main.
   volatile Stage stage_;
