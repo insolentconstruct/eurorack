@@ -184,6 +184,7 @@ void ModalResonator::InitChord(float sample_rate) {
     chord_ratio_[v] = 0.0f;
     chord_level_[v] = 0.0f;
     chord_peak_[v] = 0.0f;
+    chord_peak_gain_[v] = 1.0f;
     chord_glide_[v] = 0.0f;
   }
   chord_modes_ = NULL;
@@ -281,8 +282,9 @@ void ModalResonator::StrikeVoice(
       }
     }
     // Under its own loudest; a voice never struck audibly is silent.
-    const float relative = chord_peak_[v] > 0.0f
-        ? chord_level_[v] / chord_peak_[v]
+    const float peak = chord_peak_[v] * chord_peak_gain_[v];
+    const float relative = peak > 0.0f
+        ? chord_level_[v] / peak
         : 0.0f;
     if (relative < quiet) {
       quiet = relative;
@@ -297,6 +299,7 @@ void ModalResonator::StrikeVoice(
     chord_ratio_[quietest] = ratio;
     chord_level_[quietest] = 0.0f;
     chord_peak_[quietest] = 0.0f;
+    chord_peak_gain_[quietest] = 1.0f;
     voice = quietest;
   }
   Strike(voice, offset, gain, strikes, size);
@@ -382,8 +385,8 @@ void ModalResonator::RenderChord(
     if (chord_level_[v] <= kChordSilence * chord_peak_[v]) {
       continue;
     }
-    const float frequency =
-        frequency_ * chord_ratio_[v] * (1.0f + chord_glide_[v]);
+    const float rest_frequency = frequency_ * chord_ratio_[v];
+    const float frequency = rest_frequency * (1.0f + chord_glide_[v]);
     chord_glide_[v] -= chord_glide_[v] * glide_decay;
     float decay = 0.5f;
     const float* in = &strikes[v * size];
@@ -398,7 +401,8 @@ void ModalResonator::RenderChord(
           partial_frequency = 0.49f;
           a = 0.0f;
         }
-        if (a != 0.0f) {
+        if (amplitude[side][i] != 0.0f &&
+            (a != 0.0f || rest_frequency * ratio[side][i] < 0.49f)) {
           decay = min(decay, ModeDecay(partial_frequency, quality[side][i]));
         }
         mode_f[i] = partial_frequency;
@@ -425,12 +429,24 @@ void ModalResonator::RenderChord(
   limiter_.Process(resonance, size);
   const float peak = kResonatorPeak * kResonatorHeadroom;
   const float gain = amount_ / kResonatorHeadroom;
+  float peak_gain = 1.0f;
   for (size_t i = 0; i < size; ++i) {
     // The limiter can take several samples to reach a loud strike.
     const float left = min(max(resonance[i].l, -peak), peak);
     const float right = min(max(resonance[i].r, -peak), peak);
     frames[i].l += gain * left;
     frames[i].r += gain * right;
+    const float before = kResonatorHeadroom * max(fabsf(l[i]), fabsf(r[i]));
+    const float after = max(fabsf(left), fabsf(right));
+    if (after < before) {
+      peak_gain = min(peak_gain, after / before);
+    }
+  }
+  // A compressed onset needs a quieter tail before a voice can retune.
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    if (chord_level_[v] > 0.0f) {
+      chord_peak_gain_[v] = min(chord_peak_gain_[v], peak_gain);
+    }
   }
 }
 

@@ -1926,7 +1926,7 @@ void TestResonatorChordVoices() {
     const int struck = StruckVoice(strikes, &offset);
     if (r.chord_ratio_[struck] == 3.0f) {
       CHECK(struck == quietest);
-      CHECK(before[struck] < 0.0112f * loudest[struck]);  // -39 dB
+      CHECK(before[struck] < 0.01f * loudest[struck]);  // -40 dB
       for (int v = 0; v < kNumChordVoices; ++v) {
         CHECK(v == struck || r.chord_ratio_[v] == 1.0f + 0.5f * float(v));
       }
@@ -2337,13 +2337,26 @@ void TestResonatorChordGains() {
   ModalResonator& drum = ChordSetup(5, 3, 24000.0f);
   FloatFrame frames[12] = { };
   float strikes[kNumChordVoices * 12] = { };
-  drum.StrikeVoice(32.0f, 0, 8.0f, strikes, chord_size);
-  CHECK(drum.chord_ratio_[0] == 32.0f);
+  drum.StrikeVoice(16.0f, 0, 8.0f, strikes, chord_size);
+  CHECK(drum.chord_ratio_[0] == 16.0f);
   drum.RenderChord(strikes, frames, chord_size);
   for (size_t i = 0; i < chord_size; ++i) {
     CHECK(fabsf(frames[i].l) <= kResonatorPeak);
     CHECK(fabsf(frames[i].r) <= kResonatorPeak);
   }
+  CHECK(drum.chord_peak_gain_[0] < 0.5f);
+  ChordSetup(5, 3, 24000.0f);
+  ChordBlock(88.0f, 0, frames);
+  CHECK(drum.chord_ratio_[0] == 88.0f);
+  CHECK(frames[0].l == 0.0f && frames[0].r == 0.0f);
+  float peak = 0.0f;
+  for (int block = 0; block < 1200; ++block) {
+    ChordBlock(0.0f, 0, frames);
+    for (size_t i = 0; i < chord_size; ++i) {
+      peak = std::max(peak, fabsf(frames[i].l));
+    }
+  }
+  CHECK(peak > 0.0f);
 }
 
 int main() {

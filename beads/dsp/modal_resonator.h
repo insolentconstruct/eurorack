@@ -217,6 +217,7 @@ class ModalResonator {
   float chord_ratio_[kNumChordVoices];
   float chord_level_[kNumChordVoices];
   float chord_peak_[kNumChordVoices];
+  float chord_peak_gain_[kNumChordVoices];
   float chord_glide_[kNumChordVoices];
   const ResonatorModes* chord_modes_;
   Limiter limiter_;
