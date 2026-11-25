@@ -53,17 +53,19 @@ After a power cut during a save, let Tuneup start once before installing other f
 
 ## Verification
 
-Host tests covered storage compatibility, calibration and reference audio. The build reproduced the pinned firmware and WAV hashes, and the reference decoder recovered the update payload at its native 48 kHz and after resampling to 44.1 kHz. Qualification of this exact build on a Beads module is pending.
+Host tests covered storage compatibility, calibration and reference audio. The build reproduced the pinned firmware and WAV hashes, and the reference decoder recovered the update payload at its native 48 kHz and after resampling to 44.1 kHz. This exact build was installed by audio on a Beads module. The application readback matched the build pin, and calibration was unchanged. Broader module qualification is pending.
 
 ## Downloads
 
-- `beads-tuneup-2026.11.24-wav.zip`
-- `beads-tuneup-2026.11.24-combo.zip`
-- `beads-tuneup-2026.11.24-combo.hex`
-- `NOTICE.txt`
-- `SHA256SUMS`
+| Download | SHA-256 |
+| --- | --- |
+| `beads-tuneup-2026.11.24-wav.zip` | `897a09efba0848ddb51057a55c1bcd9b7cb423431002399d0d45b29ccb38c7c2` |
+| `beads-tuneup-2026.11.24-combo.zip` | `b64b51fc0f9d72914156b21d0f47bf0c55f078dff410e448f0feb88d768e3641` |
+| `beads-tuneup-2026.11.24-combo.hex` | `2290747e426a952e8bfe6e0f13a3b9e7ea8706063122632f93ac1f71858c3163` |
+| `NOTICE.txt` | `0d38efed916a9e1ae0d9a0151436a2e728bb3a052caeef458397886df5dfab5a` |
+| `SHA256SUMS` | `130a5c97a985273eeb9429d51db9009bc12c82e963fb360dc1345c0344038c34` |
 
-`SHA256SUMS` verifies the downloads. The build pins below verify the firmware files and the WAV inside the ZIP.
+The build pins below verify the firmware files and the WAV inside the ZIP.
 
 | Build file | SHA-256 |
 | --- | --- |
