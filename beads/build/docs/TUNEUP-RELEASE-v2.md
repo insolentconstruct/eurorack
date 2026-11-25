@@ -33,6 +33,7 @@ This is an unofficial community build based on the Beads source Mutable Instrume
 - **Calibration backup.** Tuneup verifies a usable primary copy before replacing a usable backup. If the backup is the only measured copy, Tuneup saves and verifies it in the primary location first. This also protects it when an interrupted save is followed by a boot into stock firmware that writes factory values.
 - **Damaged calibration.** An out-of-range record can trigger the storage warning even when its checksum is valid. Buttons held through the warning have to be released and pressed again before they can modify another button's action.
 - **Settings and frozen audio.** When an old record immediately follows a blank slot, saving rewrites the settings area to keep the old record from resurfacing. Tuneup verifies that the settings area is blank after erasing and retries if needed. Frozen-buffer backups relock flash after each erase or write, and any backup still in progress is cancelled on entry to synth mode.
+- **Frozen audio backup retries.** If a backup fails, Beads retries while FREEZE stays on. The FREEZE LED stays dim while a retry is pending.
 - **Audio restart and synth mode.** Beads retries a detected audio start or restart failure even when audio has stopped. After ten quiet seconds with the inputs unplugged, a late output peak no longer stalls a synth fade already in progress.
 - **Settings recovery utility.** The utility can take calibration and settings from separate saved sectors even when each holds only one usable record. It warns if the extracted calibration is outside Tuneup's accepted range.
 - **Delay processing.** The delay taps share one SHAPE envelope per sample. The busiest delay blocks in development-board tests used 4–8% fewer cycles, and reference audio matched. The previous release’s clean-audio limits were 96.9% of the audio block at 48 kHz, 97.3% at 32 kHz and 97.7% at 24 kHz.
@@ -59,19 +60,19 @@ Host tests covered storage compatibility, calibration and reference audio. The b
 
 | Download | SHA-256 |
 | --- | --- |
-| `beads-tuneup-2026.11.24-wav.zip` | `897a09efba0848ddb51057a55c1bcd9b7cb423431002399d0d45b29ccb38c7c2` |
-| `beads-tuneup-2026.11.24-combo.zip` | `b64b51fc0f9d72914156b21d0f47bf0c55f078dff410e448f0feb88d768e3641` |
-| `beads-tuneup-2026.11.24-combo.hex` | `2290747e426a952e8bfe6e0f13a3b9e7ea8706063122632f93ac1f71858c3163` |
+| `beads-tuneup-2026.11.24-wav.zip` | `38d9a038f0fbc5dd6e5a2580b5bade914deb9ccecdb44b0c7896b06e15695491` |
+| `beads-tuneup-2026.11.24-combo.zip` | `17aaa48966b26f1bb3fcd4f9ab928f37fec48c755f456f7b49a7de4b0bdca0fd` |
+| `beads-tuneup-2026.11.24-combo.hex` | `13069060a4fd3c5aad3e42593f4e284c69dd89b0085766df799dc48fca4190a3` |
 | `NOTICE.txt` | `0d38efed916a9e1ae0d9a0151436a2e728bb3a052caeef458397886df5dfab5a` |
-| `SHA256SUMS` | `130a5c97a985273eeb9429d51db9009bc12c82e963fb360dc1345c0344038c34` |
+| `SHA256SUMS` | `2cb5affe6ec0ae45940f364f8b47dce48dbf37fc83bc02f3abca287e68bd4695` |
 
 The build pins below verify the firmware files and the WAV inside the ZIP.
 
 | Build file | SHA-256 |
 | --- | --- |
 | `bootloader-padded.bin` | `014564367cf482122183c6e63c39f20cefed39c194c8a4b55dbe31a8855165de` |
-| `app.bin` | `c7bc5dbae130600aeadad813f7bf239a9f1c74c958754a4c00c2716b5a473ea0` |
-| `combo.bin` | `2218a9c9f0747c53edbfe0b7b0a7e72d6d543bbe7a8f249b4a792a2625dfb379` |
+| `app.bin` | `eeedbf93cb31aa414b3fb68e4067aa4b4a7312cef7b1fa5f9b546fd0fa49c1b3` |
+| `combo.bin` | `c7f145c25a050337b7ad80ef106dab109d3920cc868b7d2c85ef476af48a11ac` |
 | `bootloader.bin` | `9bff9f97fac6162d9c29620113186aae5ab4d4723b98fb1daf2b95d32b80da72` |
-| `app.elf` | `c6c5a6a9bdae5cf1e6ed888835fcdd7d319b3a14bd016c6cf45fdef251c0b19f` |
-| `beads-tuneup-2026.11.24.wav` | `b4974277adb83e58d87f7a6b68d414099dd854d58c8bd64d2d567a0289cba9b1` |
+| `app.elf` | `5d0d46aa7e8ba97ccad4a827072f980f7bcaefd4199024f748c4bb845f871777` |
+| `beads-tuneup-2026.11.24.wav` | `79b42279e7ab2ac29450892e1a20378f6e52cbe4ebf9175ddc1a03473dd47574` |
