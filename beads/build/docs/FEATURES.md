@@ -342,9 +342,10 @@ selected in quarters of a page knob when Adjustable or set in the profile
 when Fixed. There is no power-on brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
 Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
 frame, including options and warning displays, and previews while turning. Off
-and Fixed 100% preserve every stock LED value. At 66%, 33% and 15%, the
-quality LED dims along measured red, green and blue light curves to preserve
-its colour. Monophonic mode and overwrite reserve use the same curves. White LEDs, including the assignment
+and Fixed 100% preserve every stock LED value. At 66%, 33% and 15%, measured
+red, green and blue light curves help preserve the quality LED's colour as it
+dims. The curves were measured on one module. Colour and brightness can vary
+from unit to unit and with temperature. Monophonic mode and overwrite reserve use the same curves. White LEDs, including the assignment
 LEDs, scale their PWM by the selected percentage. UI priority
 is options and storage indications, manual meters, boot cue, delay cue, pitch notch, then
 quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
