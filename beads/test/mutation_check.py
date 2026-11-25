@@ -2360,12 +2360,12 @@ cases = [
     '        ProcessResonator(parameters.pitch, strike, out, size);\n',
     '      } else {\n'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
-    '    BEADS_DECAY_RENDER(ProcessOptions)<true, manual_delay>(',
-    '    BEADS_DECAY_RENDER(ProcessOptions)<false, manual_delay>('),
+    '  const bool resonator =\n'
+    '      options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);',
+    '  const bool resonator = false;'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
-    '  if (options_ &\n'
-    '      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {',
-    '  if (false) {'),
+    'options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);',
+    'options_ & OPTION_FLAG_RESONATOR_INPUT;'),
   ('TestResonatorBeforeBuffer', 'resonator', 'beads/dsp/processor_options.cc',
     '        ProcessResonator(parameters.pitch, strike, resonated, size);\n'
     '      }\n      recorded = resonated;',
