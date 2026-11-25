@@ -2382,6 +2382,28 @@ void TestResonatorChordGains() {
     }
   }
   CHECK(peak > 0.0f);
+
+  ChordSetup(5, 3, 24000.0f);
+  ChordBlock(16.0f, 0, frames);
+  drum.chord_peak_gain_[0] = 0.25f;
+  drum.chord_level_[0] = 0.5f * kChordRetuneLevel;
+  drum.chord_ratio_[1] = 1.0f;
+  drum.chord_ratio_[2] = 2.0f;
+  drum.chord_peak_[1] = drum.chord_level_[1] = 1.0f;
+  drum.chord_peak_[2] = drum.chord_level_[2] = 1.0f;
+  memset(strikes, 0, sizeof(strikes));
+  drum.StrikeVoice(5.0f, 0, 1.0f, strikes, chord_size);
+  CHECK(drum.chord_ratio_[0] == 16.0f);
+
+  ChordSetup(5, 3, 24000.0f);
+  ChordBlock(16.0f, 0, frames);
+  drum.chord_peak_gain_[0] = 0.25f;
+  drum.chord_level_[0] = 0.5f * kChordSilence;
+  ChordBlock(0.0f, 0, frames);
+  CHECK(drum.chord_level_[0] > 0.0f);
+  drum.chord_level_[0] = 0.125f * kChordSilence;
+  ChordBlock(0.0f, 0, frames);
+  CHECK(drum.chord_level_[0] == 0.0f);
 }
 
 int main() {
