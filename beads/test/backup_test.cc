@@ -40,6 +40,7 @@
 #include "beads/settings.h"
 #undef private
 
+#include "beads/dsp/delay_line.h"
 #include "beads/dsp/processor.h"
 
 bool test_locked = true;
@@ -240,6 +241,56 @@ void WriteStock(int media, int mono, int write_ptr, uint8_t seed) {
   kHeader->write_ptr = write_ptr;
   kHeader->media = media;
   kHeader->mono = mono;
+}
+
+typedef Item<RESOLUTION_12_BIT, 2> PackedStereoItem;
+
+struct LegacyStereoItem {
+  int16_t l : 12;
+  int16_t r : 12;
+} __attribute__((packed));
+
+STATIC_ASSERT(sizeof(LegacyStereoItem) == 3, legacy_stereo_item_size);
+STATIC_ASSERT(sizeof(PackedStereoItem) == 3, packed_stereo_item_size);
+
+void TestPackedStereoFormat() {
+  test_checker.Start("TestPackedStereoFormat");
+  for (int l = -2048; l < 2048; ++l) {
+    for (int r = -2048; r < 2048; ++r) {
+      LegacyStereoItem legacy;
+      legacy.l = l;
+      legacy.r = r;
+      FloatFrame frame;
+      frame.l = l / 2048.0f;
+      frame.r = r / 2048.0f;
+      PackedStereoItem packed;
+      packed.Store(0, frame);
+      if (!CHECK(memcmp(&packed, &legacy, sizeof(legacy)) == 0)) {
+        return;
+      }
+      memcpy(&packed, &legacy, sizeof(legacy));
+      const IntFrame raw = packed.raw(0);
+      const FloatFrame scaled = packed.value(0);
+      if (!CHECK(raw.l == l && raw.r == r)
+          || !CHECK(scaled.l == frame.l && scaled.r == frame.r)) {
+        return;
+      }
+    }
+  }
+  const FloatFrame inputs[] = {
+    { -1.0f / 32768.0f, 15.0f / 32768.0f },
+    { -17.0f / 32768.0f, 1.25f },
+    { -1.25f, -1.0f }
+  };
+  for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); ++i) {
+    LegacyStereoItem legacy;
+    legacy.l = Clip16(static_cast<int32_t>(inputs[i].l * 32768.0f)) >> 4;
+    legacy.r = Clip16(static_cast<int32_t>(inputs[i].r * 32768.0f)) >> 4;
+    PackedStereoItem packed;
+    packed.Store(0, inputs[i]);
+    CHECK(memcmp(&packed, &legacy, sizeof(legacy)) == 0);
+  }
+  printf("PASS all 16,777,216 packed stereo pairs\n");
 }
 
 void TestFrozenTrimBackup() {
@@ -1052,6 +1103,7 @@ int main() {
   TestFrozenTrimBackup();
   TestFormat();
   TestStock();
+  TestPackedStereoFormat();
   TestCorruption();
   TestPowerLoss();
   TestFailedOperations();
