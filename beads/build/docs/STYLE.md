@@ -5,7 +5,7 @@ Follow upstream Mutable Instruments master: Beads (2021) first, then Plaits, Sta
 ## Layout
 
 - Indent C and C++ with two spaces and no tabs. `public:` and `private:` get one space. Put braces on the same line; empty bodies are `{ }`. Aim for 80 columns.
-- Bodies of `if`, `for` and `while` are braced on their own lines, one statement per line, and each data member has its own line. Beads has a few one-line `if`s (e.g. `drivers/codec.cc:221`, `beads.cc:361`, `dsp/mu_law.h:61`); don't add more.
+- Brace nonempty `if`, `for` and `while` bodies and put each statement on its own line. Keep an empty loop body on the same line as its condition, as in Beads (upstream `beads/bootloader/bootloader.cc:388`) and Plaits (upstream `plaits/plaits.cc:171`). Put each data member on its own line. Leave existing one-line `if`s in place (e.g. `drivers/codec.cc:221`, `beads.cc:361`, `dsp/mu_law.h:61`).
 - Put module code in `namespace beads` and close it with `}  // namespace beads`. Entry points (`beads.cc`, the bootloader) and host test functions stay global; specializations of stmlib templates go in `namespace stmlib` (`dsp/sample_rate_conversion_filters.h`).
 - New headers use `BEADS_<PATH>_H_` guards, closed by `#endif  // BEADS_<PATH>_H_`.
 - Usually include the file's own header first, then `<system>`, `stmlib/...` and `beads/...`, with blank lines between groups. Upstream grouping varies (`stmlib/stmlib.h` alone, HAL headers last in drivers); follow the nearby or ported file. `using namespace std;` / `stmlib` go inside the module namespace in module `.cc` files; entry points and host tests put them at global scope.
