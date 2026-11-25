@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4297b65d15cc59ca90a8fc96d2d9f9ca3bdc1b623ab86b2702474885ef153365",
+  "manifest_sha256": "bc80e51a82822452b3054a859604069cbaf1a2cf4998100bdf21ed949f5f5776",
   "record_version": 1,
   "features": [
     {
@@ -759,7 +759,8 @@
       "values": [
         "100%",
         "66%",
-        "33%"
+        "33%",
+        "15%"
       ],
       "states": [
         "Off",

@@ -86,12 +86,12 @@ COLOURS = {
     "green": "#247443",
     "yellow": "#a87900",
     "red": "#bd3030",
-    "coral": "#ff4020",
-    "amber": "#ffa000",
-    "blue": "#2060ff",
-    "teal": "#00dca0",
-    "violet": "#a030ff",
-    "pink": "#ff2090",
+    "coral": "#ff595c",
+    "amber": "#ffd100",
+    "blue": "#5fdeff",
+    "teal": "#00fffd",
+    "violet": "#f000ff",
+    "pink": "#ff00aa",
     "meter": "#777",
     "unchanged": "#777",
 }
@@ -244,8 +244,8 @@ DETAILS = [
     "and always open on the first page instead of the last one used "
     "([opening page](FEATURES.md#options-page-on-opening)).",
     "Move a knob more than a tenth of its travel to take it over; smaller "
-    "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
-    "brightness use the knob's three thirds; SEED latch uses four quarters; "
+    "bumps are ignored. Pitch scale, Delay mode, Attacks and Limiter use "
+    "thirds. LED brightness and SEED latch use quarters. "
     "Synth uses thirds with the Rings synth installed, halves without; "
     "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
@@ -257,7 +257,8 @@ DETAILS = [
     "and when a change is saved.",
     "After the stored values, [A] shows the page's first setting, then "
     "the last knob you took over. The first value of every setting is steady green. Other "
-    "values use yellow and red. The factory scale bank uses warm major and "
+    "values use yellow and red, with a slow red blink for 15% brightness. "
+    "The factory scale bank uses warm major and "
     "cool minor colours, with slow blinks for pentatonics. Raag Shri is two "
     "pink pulses and a pause. Unused knobs "
     "leave the LED alone.",

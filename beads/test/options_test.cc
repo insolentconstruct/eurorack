@@ -34,6 +34,7 @@
 #include <string>
 #include <sys/mman.h>
 
+#include "beads/drivers/led_curve.h"
 #include "beads/test/test_checker.h"
 
 #define private public
@@ -82,16 +83,10 @@ void __cyg_profile_func_exit(void*, void*) {
 
 }  // extern "C"
 
-// A dimmed quality LED channel (0 red, 1 green, 2 blue) at percent: red *
-// level^1.5; lit green and blue at the level plus 12 * (1 - level), rounded.
+// The UI tests check that the requested level reaches the measured curve.
 int DimmedMedia(int channel, uint8_t c, int percent) {
-  const double p = percent / 100.0;
-  if (percent == 100) {
-    return c;
-  } else if (channel == 0) {
-    return int(c * pow(p, 1.5));
-  }
-  return c * percent / 100 + (c ? int(12.0 * (1.0 - p) + 0.5) : 0);
+  const LedCurvePoint* curves[] = { led_curve_r, led_curve_g, led_curve_b };
+  return DimLed(curves[channel], c, percent / 100.0f);
 }
 
 STATIC_ASSERT(sizeof(State) == 24, stat_size);
@@ -285,13 +280,13 @@ void TestMonophonicGesture() {
         r.ui.set_overwrite_reserve(1.0f);
         r.Tick(1, true);
         Leds::Color color = r.ui.media_palette_[media];
-        const float brightness = toggle ? 1.0f : 0.5f;
+        const int brightness = toggle ? 100 : 50;
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-            uint8_t(color.r * brightness * brightness));
+            DimmedMedia(0, color.r, brightness));
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-            uint8_t(color.g * brightness));
+            DimmedMedia(1, color.g, brightness));
         CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
-            uint8_t(color.b * brightness));
+            DimmedMedia(2, color.b, brightness));
       }
     }
   }
@@ -981,13 +976,13 @@ void TestOverwriteReserveDisplay() {
       r.ui.set_overwrite_reserve(reserve[i]);
       r.Tick(1, true);
       Leds::Color color = r.ui.media_palette_[media];
-      // LED conversion truncates; these binary fractions are exact.
+      const int percent = int(100 * reserve[i]);
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-          uint8_t(color.r * reserve[i] * reserve[i]));
+          DimmedMedia(0, color.r, percent));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-          uint8_t(color.g * reserve[i]));
+          DimmedMedia(1, color.g, percent));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
-          uint8_t(color.b * reserve[i]));
+          DimmedMedia(2, color.b, percent));
     }
   }
 }
@@ -2205,6 +2200,11 @@ void TestOptionsZonesAndSaveBatch() {
 
 void TestOptionsPalette() {
   test_checker.Start("TestOptionsPalette");
+  const Leds::Color scale_colors[] = {
+    { 255, 89, 92 }, { 255, 209, 0 }, { 95, 222, 255 }, { 255, 209, 0 },
+    { 95, 222, 255 }, { 0, 255, 253 }, { 240, 0, 255 }, { 255, 0, 170 }
+  };
+  const int percent[] = { 100, 66, 33, 15 };
   // Every page value lights, shared colours included; pitch up to Raag Shri.
   OptionValue values[64];
   size_t count = 0;
@@ -2232,7 +2232,11 @@ void TestOptionsPalette() {
       CHECK(v.color.r == 0 && v.color.g == 255 &&
           v.color.b == 0 && v.pulses == 0);
     }
-    if (v.setting != FEATURE_PITCH) {
+    if (v.setting == FEATURE_PITCH && v.value >= PITCH_SCALE_FIFTHS) {
+      const Leds::Color& color = scale_colors[v.value - PITCH_SCALE_FIFTHS];
+      CHECK(v.color.r == color.r && v.color.g == color.g &&
+          v.color.b == color.b);
+    } else {
       CHECK(v.color.b == 0);
       CHECK((v.color.r == 0 && v.color.g == 255) ||
           (v.color.r == 255 && (v.color.g == 0 || v.color.g == 255)));
@@ -2268,13 +2272,12 @@ void TestOptionsPalette() {
           (v.pulses == 2 && now % 256 < 128) ||
           (v.pulses == 3 && (phase < 128 || (phase >= 256 && phase < 384)));
       const uint8_t level = r.ui.options_.Value(FEATURE_BRIGHTNESS);
-      const int percent = level == 0 ? 100 : level == 1 ? 66 : 33;
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
-          (lit ? DimmedMedia(0, v.color.r, percent) : 0));
+          (lit ? DimmedMedia(0, v.color.r, percent[level]) : 0));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==
-          (lit ? DimmedMedia(1, v.color.g, percent) : 0));
+          (lit ? DimmedMedia(1, v.color.g, percent[level]) : 0));
       CHECK(r.ui.leds_.intensity_[LED_MEDIA_B] ==
-          (lit ? DimmedMedia(2, v.color.b, percent) : 0));
+          (lit ? DimmedMedia(2, v.color.b, percent[level]) : 0));
     }
   }
 }
@@ -2464,7 +2467,7 @@ void TestBrightnessHoldsAfterClose() {
   test_checker.Start("TestBrightnessHoldsAfterClose");
   Rig r(false);
   r.EnterPage(3);
-  r.feedback = 0.9f;  // 33%.
+  r.feedback = 0.65f;  // 33%.
   r.Tick(40, true);
   CHECK(r.ui.options_.Value(FEATURE_BRIGHTNESS) == 2);
   r.Down(SWITCH_FREEZE);
@@ -3860,9 +3863,11 @@ void TestBetaOptionsLeds() {
   Rig version(false);
   SetFixed(&version, FEATURE_VERSION, 1);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
-  CHECK(version.ui.leds_.intensity_[LED_MEDIA_G] == 128);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_G] == 211);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] == 0);
   version.Tick(100, true);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_R] == 0);
+  CHECK(version.ui.leds_.intensity_[LED_MEDIA_G] == 0);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 0);
   version.Tick(100, true);
   CHECK(version.ui.leds_.intensity_[LED_MEDIA_B] == 255);
@@ -3940,8 +3945,8 @@ void TestBetaOptionsLeds() {
   freeze.Tick(1, true);
   CHECK(freeze.ui.leds_.intensity_[LED_FREEZE] == 255);
 
-  const int percentages[] = { 100, 66, 33 };
-  for (int level = 0; level < 3; ++level) {
+  const int percentages[] = { 100, 66, 33, 15 };
+  for (int level = 0; level < 4; ++level) {
     Rig full(false);
     SetFixed(&full, FEATURE_BRIGHTNESS, level);
     full.settings.mutable_state()->media = 3;
@@ -3949,9 +3954,9 @@ void TestBetaOptionsLeds() {
     full.Tick(1, true);
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    // Bright digital white {192, 192, 208}, as judged on the module.
-    const uint8_t white[3][3] = {
-      { 192, 192, 208 }, { 102, 130, 141 }, { 36, 71, 76 }
+    // White quality colour, including the table inverse at 15%.
+    const uint8_t white[4][3] = {
+      { 192, 192, 208 }, { 131, 151, 156 }, { 72, 107, 104 }, { 39, 78, 72 }
     };
     for (int i = LED_MEDIA_R; i <= LED_MEDIA_B; ++i) {
       CHECK(full.ui.leds_.intensity_[i] == white[level][i - LED_MEDIA_R]);
@@ -3975,11 +3980,11 @@ void TestBetaOptionsLeds() {
     full.ui.UpdateLeds();
     CHECK(full.ui.leds_.intensity_[LED_FREEZE] ==
           255 * percentages[level] / 100);
-    const uint8_t warning_red[3] = { 255, 136, 48 };
+    const uint8_t warning_red[] = { 255, 181, 97, 51 };
     CHECK(full.ui.leds_.intensity_[LED_MEDIA_R] == warning_red[level]);
   }
-  // Red over every intensity at both levels, as the float rule truncates.
-  for (int level = 1; level < 3; ++level) {
+  // Red over every intensity at all dim levels.
+  for (int level = 1; level < 4; ++level) {
     for (int value = 0; value < 256; ++value) {
       Leds leds;
       leds.Clear();
@@ -4007,10 +4012,10 @@ void TestBetaOptionsLeds() {
   CustomProfile(b, FEATURE_BRIGHTNESS, 2, 0, 0);
   ApplyCustomProfile(&preview, b);
   preview.Enter();
-  const int preview_values[] = { 2, 1, 0 };
-  for (int i = 0; i < 3; ++i) {
+  const int preview_values[] = { 3, 2, 1, 0 };
+  for (int i = 0; i < 4; ++i) {
     const int level = preview_values[i];
-    preview.pot = (float(level) + 0.5f) / 3.0f;
+    preview.pot = (float(level) + 0.5f) / 4.0f;
     preview.Tick(40, true);
     CHECK(preview.settings.FeatureValue(FEATURE_BRIGHTNESS) ==
           (i ? preview_values[i - 1] : 0));
@@ -4046,7 +4051,7 @@ void TestBetaOptionPages() {
         r.reverb = 1.0f;
       }
       r.Tick(1002, true);
-      const uint8_t expected = f == 1 ? 3 : f == 0 ? 2 : 1;
+      const uint8_t expected = f < 2 ? 3 : 1;
       CHECK(r.settings.FeatureValue(features[f]) == expected);
       Settings loaded;
       CHECK(loaded.Init(false, b));
@@ -4075,7 +4080,7 @@ void TestBetaOptionPages() {
         r.Tick(40, true);
         if (f == 0) {
           CHECK(r.ui.options_.Value(FEATURE_BRIGHTNESS) == value);
-          const int percent[] = { 100, 66, 33 };
+          const int percent[] = { 100, 66, 33, 15 };
           CHECK(r.ui.leds_.intensity_[LED_MEDIA_R] ==
               DimmedMedia(0, value ? 255 : 0, percent[value]));
           CHECK(r.ui.leds_.intensity_[LED_MEDIA_G] ==

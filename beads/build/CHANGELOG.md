@@ -4,6 +4,9 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 
+- LED brightness adds a 15% level on page 4. Measured RGB light curves preserve quality LED colours while dimming.
+- Refresh the factory pitch-scale colours and the light-blue boot cue using measured LED output.
+
 - Save only edited page options and let later panel gestures take precedence.
 - Save a new profile's starting quality before recording its identity.
 - Return ASSIGN CV to FEEDBACK when the active engine cannot run the resonator.

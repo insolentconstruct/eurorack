@@ -17,7 +17,7 @@
     {"id": 15, "symbol": "VERSION", "values": ["Off", "On"]},
     {"id": 16, "symbol": "ATTENUATION", "values": ["Off", "On"]},
     {"id": 17, "symbol": "DELAY_CUE", "values": ["Off", "On"]},
-    {"id": 18, "symbol": "BRIGHTNESS", "values": ["100%", "66%", "33%"]},
+    {"id": 18, "symbol": "BRIGHTNESS", "values": ["100%", "66%", "33%", "15%"]},
     {"id": 19, "symbol": "LIVE_ASSIGN", "values": ["Off", "On"]},
     {"id": 20, "symbol": "SAVE_FREEZE", "values": ["Off", "On"]},
     {"id": 21, "symbol": "SEED_LATCH", "values": ["Off", "Ignore", "Sync", "Add"]},
