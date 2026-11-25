@@ -110,7 +110,7 @@ Profiles, custom scales, LED indications and tail choices are checked by host te
 
 Page 4 controls:
 
-- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds with preview; warnings dim too. The default is 100%; select it with FEEDBACK on page 4. There is no power-on gesture.
+- LED brightness selects 100%, 66%, 33% or 15%, fixed or adjustable in quarters with preview; warnings dim too. The default is 100%; select it with FEEDBACK on page 4. There is no power-on gesture.
 - SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with DRY/WET on page 4. With a cable patched and SEED latched, Off retains the divider; Ignore free-runs without cable triggers or flashes; Sync starts a grain and restarts the grain clock at each edge; Add adds a grain per edge. Synth clocks follow these modes; delay free-runs outside Off. Snap and trigger hits add grains in every mode.
 
 The factory layout is a starting point. Customize it with Hygrostat and share

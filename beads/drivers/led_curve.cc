@@ -80,11 +80,11 @@ void Leds::Scale(uint8_t level) {
   if (!level) {
     return;
   }
-  const uint8_t percent = level == 1 ? 66 : 33;
+  const uint8_t percent = level == 1 ? 66 : level == 3 ? 15 : 33;
   const Color color = {
     intensity_[LED_MEDIA_R], intensity_[LED_MEDIA_G], intensity_[LED_MEDIA_B]
   };
-  set_media(color, level == 1 ? 0.66f : 0.33f);
+  set_media(color, float(percent) / 100.0f);
   for (int i = LED_FREEZE; i < LED_LAST; ++i) {
     intensity_[i] = uint16_t(intensity_[i]) * percent / 100;
   }

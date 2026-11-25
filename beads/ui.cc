@@ -435,7 +435,7 @@ void Ui::UpdateLeds() {
             const bool lit = elapsed < 100 || (elapsed >= 200 &&
                 ((elapsed - 200) / 150) % 2 == 0);
             const Leds::Color cue = {
-              0, uint8_t(lit ? 128 : 0), uint8_t(lit ? 255 : 0)
+              0, uint8_t(lit ? 211 : 0), uint8_t(lit ? 255 : 0)
             };
             leds_.set_media(cue);
           }

@@ -132,8 +132,8 @@ in standard firmware:
 
 Page 4 controls:
 
-- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds
-  with preview; warnings dim too. The default is 100%; use FEEDBACK on
+- LED brightness selects 100%, 66%, 33% or 15%, fixed or adjustable in
+  quarters with preview; warnings dim too. The default is 100%; use FEEDBACK on
   page 4. There is no power-on gesture.
 - SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with
   DRY/WET on page 4. With a cable patched and SEED latched, Off retains
@@ -405,6 +405,7 @@ page	LED	knob	setting	value	colour	pulse
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	100%	green	steady
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	66%	yellow	steady
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	33%	red	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	15%	red	slow (0.98 Hz)
 4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Off	green	steady
 4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Ignore	yellow	steady
 4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Sync	red	steady

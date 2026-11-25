@@ -45,17 +45,18 @@ void TestLevels() {
     { 128, 0, 48 }, { 255, 144, 0 }, { 0, 255, 192 }, { 192, 192, 208 }
   };
   // Q4 at 50% is +1 red and -1 blue versus the direct-drive sweep.
-  const Leds::Color expected[][3] = {
-    { { 89, 0, 43 }, { 70, 0, 40 }, { 51, 0, 37 } },
-    { { 181, 117, 0 }, { 140, 103, 0 }, { 97, 86, 0 } },
-    { { 0, 226, 144 }, { 0, 200, 122 }, { 0, 158, 98 } },
-    { { 131, 151, 156 }, { 103, 131, 130 }, { 72, 107, 104 } }
+  // At 15%, the table inverse is within one PWM step of the sweep.
+  const Leds::Color expected[][4] = {
+    { { 89, 0, 43 }, { 70, 0, 40 }, { 51, 0, 37 }, { 29, 0, 34 } },
+    { { 181, 117, 0 }, { 140, 103, 0 }, { 97, 86, 0 }, { 51, 65, 0 } },
+    { { 0, 226, 144 }, { 0, 200, 122 }, { 0, 158, 98 }, { 0, 106, 69 } },
+    { { 131, 151, 156 }, { 103, 131, 130 }, { 72, 107, 104 }, { 39, 78, 72 } }
   };
-  const uint8_t levels[] = { 1, 0, 2 };
-  const uint8_t percent[] = { 66, 100, 33 };
+  const uint8_t levels[] = { 1, 0, 2, 3 };
+  const uint8_t percent[] = { 66, 100, 33, 15 };
   Leds leds;
   for (int q = 0; q < 4; ++q) {
-    for (int dim = 0; dim < 3; ++dim) {
+    for (int dim = 0; dim < 4; ++dim) {
       const uint8_t white = 137;
       for (int i = LED_FREEZE; i < LED_LAST; ++i) {
         leds.set(Led(i), white);

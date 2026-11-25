@@ -89,5 +89,5 @@ Each slot holds one setting.
 
 Firmware before Beta 4 refuses amount slot 3, feature 40 and these actions,
 so it plays the factory layout and saves nothing with such a profile.
-Hygrostat marks them as needing Beta 4. Every other profile parses exactly as
-before, so the profile format stays 1.
+Hygrostat marks them as needing Beta 4. LED brightness (feature 18) at 15%
+(value 3) also requires Beta 4. The profile format stays 1.
