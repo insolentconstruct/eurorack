@@ -580,8 +580,11 @@ void Init() {
   }
   ui.LoadOptions();
   if (ui.clouds_style()) {
-    transition.SetCloudsStyle(true, &processor, &synth,
-        &plaits_synth, &rings_synth, true);
+    transition.set_clouds_style(true);
+    processor.SetCloudsStyle(true);
+    synth.SetCloudsStyle(true, true);
+    plaits_synth.SetCloudsStyle(true, true);
+    rings_synth.SetCloudsStyle(true, true);
   }
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;

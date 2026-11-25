@@ -68,15 +68,6 @@ class EngineTransition {
     return true;
   }
 
-  inline void SetCloudsStyle(bool clouds, Processor* processor, Synth* synth,
-      PlaitsSynth* plaits_synth, RingsSynth* rings_synth, bool clear) {
-    clouds_style_ = clouds;
-    processor->SetCloudsStyle(clouds);
-    synth->SetCloudsStyle(clouds, clear);
-    plaits_synth->SetCloudsStyle(clouds, clear);
-    rings_synth->SetCloudsStyle(clouds, clear);
-  }
-
   inline bool Hold(bool requested_style, bool engine_change,
       Processor* processor, Synth* synth, PlaitsSynth* plaits_synth,
       RingsSynth* rings_synth, Codec::Frame* out, size_t size) {
@@ -86,8 +77,11 @@ class EngineTransition {
           0.0f, reverb_style_gain_ - kReverbStyleFadeStep);
       if (reverb_style_previous_gain_ == 0.0f) {
         if (requested_style != clouds_style_) {
-          SetCloudsStyle(requested_style, processor, synth,
-              plaits_synth, rings_synth, false);
+          clouds_style_ = requested_style;
+          processor->SetCloudsStyle(clouds_style_);
+          synth->SetCloudsStyle(clouds_style_, false);
+          plaits_synth->SetCloudsStyle(clouds_style_, false);
+          rings_synth->SetCloudsStyle(clouds_style_, false);
         }
         Codec::Frame silence;
         silence.l = 0;
@@ -132,6 +126,9 @@ class EngineTransition {
   inline bool blanking() const { return codec_transition_frames_ != 0; }
   inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
   inline bool clouds_style() const { return clouds_style_; }
+  inline void set_clouds_style(bool clouds_style) {
+    clouds_style_ = clouds_style;
+  }
   inline SynthEngine playing_synth() const { return playing_synth_; }
   inline void set_playing_synth(SynthEngine synth) { playing_synth_ = synth; }
   inline SynthEngine bank_owner() const { return bank_owner_; }
