@@ -160,7 +160,9 @@ void ZxPulse48k::Render(
 
   float traffic = 0.0f;
   for (int v = 0; v < n; ++v) {
-    if (v == echo_slot) continue;
+    if (v == echo_slot) {
+      continue;
+    }
     CONSTRAIN(dts[v], 0.0f, kMaxDt);
     duties[v] = ClampDuty(width * dts[v], dts[v]);
     traffic += duties[v];
@@ -170,7 +172,9 @@ void ZxPulse48k::Render(
   pull_ += 0.02f * (pull_depth * load - pull_);
   const float pull_ratio = SemitonesToRatio(-pull_);
   for (int v = 0; v < n; ++v) {
-    if (v == echo_slot) continue;
+    if (v == echo_slot) {
+      continue;
+    }
     dts[v] *= pull_ratio;
   }
 
