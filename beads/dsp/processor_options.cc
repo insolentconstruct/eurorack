@@ -340,7 +340,7 @@ void Processor::SetFeedbackCutoff(bool low) {
   SetOption(OPTION_FLAG_LOW_CUTOFF, low);
 }
 
-template<bool resonator, bool chord>
+template<bool resonator>
 void Processor::ProcessOptions(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -434,8 +434,7 @@ void Processor::ProcessOptions(
   const bool send = (options_ & OPTION_FLAG_SEND_MIX) &&
       !delay_mode && !spectral_;
   FloatFrame dry_signal[size];
-  const bool resonance = resonator || chord;
-  const float feedback = resonance && resonator_controls_.hold_feedback
+  const float feedback = resonator && resonator_controls_.hold_feedback
       ? resonator_controls_.feedback : mix_parameters.feedback;
   float loop_feedback = feedback;
   if (unity) {
@@ -451,16 +450,16 @@ void Processor::ProcessOptions(
     spectral_processor_.Process(
         seed_button_state, seed_input, freeze, density, parameters, feedback,
         dry_signal, out, size);
-    if (resonance) {
+    if (resonator) {
       // No old tail when the grains return.
       resonator_sample_rate_ = 0.0f;
     }
   } else {
     // Hits, read before the grains take their mark, and SEED strike it;
     // in delay mode SEED is the clock.
-    const bool seed = resonance &&
+    const bool seed = resonator &&
         SeedStrike(seed_button_state, seed_input, size) && !delay_mode;
-    const bool strike = resonance &&
+    const bool strike = resonator &&
         (seed || attack_trigger_ || AttackOnset());
     FloatFrame resonated[resonator ? size : 1];
     const FloatFrame* recorded = in;
@@ -521,12 +520,11 @@ void Processor::ProcessOptions(
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
       if (options_ & OPTION_FLAG_RESONATOR_INPUT) {
         ProcessResonatorLoop(parameters.pitch, strike, out, size);
+      } else if (options_ & OPTION_FLAG_RESONATOR_CHORD) {
+        ProcessChord(strike, grain_triggers, out, size);
       } else {
         ProcessResonator(parameters.pitch, strike, out, size);
       }
-    }
-    if (chord) {
-      ProcessChord(strike, grain_triggers, out, size);
     }
     if (evolving_feedback_ || !feedback_diffuser_.idle()) {
       feedback_diffuser_.Process(
@@ -611,28 +609,14 @@ void Processor::ProcessWithOptions(
   // Resonator profiles run their own instance of the block.
   if (options_ &
       (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
-    ProcessOptions<true, false>(
+    ProcessOptions<true>(
         seed_button_state, seed_input, freeze, density, parameters,
         mix_parameters, in, out, size);
   } else {
-    ProcessOptions<false, false>(
+    ProcessOptions<false>(
         seed_button_state, seed_input, freeze, density, parameters,
         mix_parameters, in, out, size);
   }
-}
-
-void Processor::ProcessChordBlock(
-    SeedButtonState seed_button_state,
-    const stmlib::GateFlags* seed_input,
-    const bool* freeze,
-    const ModulatedParameter& density,
-    const Parameters& parameters,
-    const MixParameters& mix_parameters,
-    const FloatFrame* in,
-    FloatFrame* out,
-    size_t size) {
-  ProcessOptions<false, true>(seed_button_state, seed_input, freeze, density,
-      parameters, mix_parameters, in, out, size);
 }
 
 void Processor::MixDryWet(

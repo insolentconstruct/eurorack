@@ -333,23 +333,6 @@ class Processor {
       FloatFrame* out,
       size_t size);
   
-#ifdef DWT_CALIBRATION
-  inline bool chord_enabled() const {
-    return options_ & OPTION_FLAG_RESONATOR_CHORD;
-  }
-#endif  // DWT_CALIBRATION
-
-  void ProcessChordBlock(
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size);
-
   inline void set_output_limiter_mode(OutputLimiterMode mode) {
     output_limiter_mode_ = mode;
   }
@@ -452,8 +435,8 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
-  // Shared block for the stock options, legacy resonance and Chord.
-  template<bool resonator, bool chord>
+  // One source for both blocks, each inlined in ProcessWithOptions.
+  template<bool resonator>
   inline void ProcessOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,

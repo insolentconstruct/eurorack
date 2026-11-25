@@ -135,13 +135,6 @@ void Processor::Process(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-#ifdef TEST
-  if (options_ & OPTION_FLAG_RESONATOR_CHORD) {
-    ProcessChordBlock(seed_button_state, seed_input, freeze, density,
-        parameters, mix_parameters, in, out, size);
-    return;
-  }
-#endif  // TEST
   // TIME scan and the mix options run in their own copy of the block.
   if (options_) {
     ProcessWithOptions(

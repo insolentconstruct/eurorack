@@ -110,8 +110,6 @@ void MonitorStateChange();
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control);
 void SwapPaused(SynthEngine owner, SynthEngine playing);
 void Process(const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
-template<bool chord> void ProcessAudio(
-    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
 extern "C" void SysTick_Handler();
 
 // Only the cache warming/timing call WasteCPUCycles is skipped.
@@ -2905,8 +2903,7 @@ void TestResonatorProfile() {
         r.Settle();
       }
       if (!engine) {
-        CHECK(codec.callback_ == (placement == RESONATOR_CHORD
-            ? &ProcessAudio<true> : &Process));
+        CHECK(codec.callback_ == &Process);
       }
       hashes[placement] = MixOptionsHash(&r);
     }
@@ -2989,8 +2986,7 @@ void TestResonatorPage() {
     settings.SetFeatureValue(FEATURE_RESONATOR, placement % 5);
     r.Tick(2, true);
     CHECK(processor.options_ == flags[placement % 5]);
-    CHECK(codec.callback_ == (placement % 5 == RESONATOR_CHORD
-        ? &ProcessAudio<true> : &Process));
+    CHECK(codec.callback_ == &Process);
   }
   CHECK(codec.restarts_ == restarts);
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);

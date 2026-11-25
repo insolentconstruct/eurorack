@@ -93,11 +93,6 @@ class Codec {
     callback_ = NULL;
     Observe(CALL_PAUSE);
   }
-  void ReplaceCallback(FillBufferCallback previous, FillBufferCallback next) {
-    if (callback_ == previous) {
-      callback_ = next;
-    }
-  }
   // A test may run a block the moment the callback is back, as the DMA can.
   void Resume(FillBufferCallback callback) {
     callback_ = callback;
