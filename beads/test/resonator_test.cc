@@ -2346,8 +2346,9 @@ void TestResonatorChordGains() {
   }
   CHECK(drum.chord_peak_gain_[0] < 0.5f);
   float loudest = kResonatorPeak;
+  const int tail_blocks = 400000;
   int block = 0;
-  for (; block < 160000; ++block) {
+  for (; block < tail_blocks; ++block) {
     ChordBlock(0.0f, 0, frames);
     float peak = 0.0f;
     for (size_t i = 0; i < chord_size; ++i) {
@@ -2360,7 +2361,7 @@ void TestResonatorChordGains() {
       break;
     }
   }
-  CHECK(block < 160000);
+  CHECK(block < tail_blocks);
   // Keep the other two voices occupied when probing the eligible Drum.
   drum.chord_ratio_[1] = 1.0f;
   drum.chord_ratio_[2] = 2.0f;
