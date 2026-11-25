@@ -360,9 +360,9 @@ pass rings the modes again, while the level stays near After the
 grains'. Where After the grains dies away, so does it.
 In Chord, each new grain strikes one of three voices at the grain's pitch.
 DRY/WET picks its Material in eighths: Wood, String, Glass, Bell, Marimba,
-Drum, Bowl or
-Gong (a Drum strike starts sharp and bends down, a Gong strike starts
-flat and bends up; Bowl and Gong beat between left and right); REVERB
+Drum, Bowl or Gong (a Drum strike starts sharp and bends down, a Gong
+strike starts flat and bends up; Bowl and Gong beat between left and
+right); REVERB
 its Ring time: Short, Medium, Long or Very long, each about four times
 longer. String and Medium are the defaults; page 5 saves like the other
 pages. PITCH tunes it and Pitch scale snaps it. Attacks hits strike it,
