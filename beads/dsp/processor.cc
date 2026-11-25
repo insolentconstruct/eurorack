@@ -44,6 +44,7 @@ void Processor::Init(
     uint8_t* buffers[],
     uint16_t* reverb_buffer) {
   options_ = 0;
+  suspended_ = false;
   time_scan_.Init();
   attack_input_.Init();
   attack_trigger_ = false;

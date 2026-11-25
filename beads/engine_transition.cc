@@ -103,10 +103,10 @@ void EngineTransition::SetReverbCharacter(
 }
 
 void EngineTransition::Resume(Codec::FillBufferCallback callback) {
+  codec_fade_ = false;
   if (codec_running_) {
     codec_->Resume(callback);
   }
-  codec_fade_ = false;
 }
 
 // Codec paused: one synth at a time owns delay bank 0, built from zero.

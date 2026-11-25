@@ -94,7 +94,7 @@ struct ResonatorControls {
 
 class Processor {
  public:
-  Processor() : suspended_(false) { }
+  Processor() { }
   ~Processor() { }
   
   enum Media {
