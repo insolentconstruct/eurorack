@@ -3214,6 +3214,10 @@ cases = [
   ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor.h',
    'return !spectral_ && (options_ & kResonatorFlags);',
    'return options_ & kResonatorFlags;'),
+  ('TestEffectResonatorAssignment', 'firmware', 'beads/beads.cc',
+   '  ui.set_resonator_available(active_processor_mode == PROCESSOR_GRANULAR &&\n'
+   '      processor.resonator_available());',
+   '  ui.set_resonator_available(processor.resonator_available());'),
   ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor_options.cc',
    'resonator && !spectral_ && resonator_controls_.hold_feedback',
    'resonator && resonator_controls_.hold_feedback'),
@@ -3222,7 +3226,9 @@ cases = [
    '    resonator_reset_pending_ = false;',
    '    resonator_reset_pending_ = true;'),
   ('TestSynthSwapResume', 'firmware', 'beads/engine_transition.cc',
-   '  codec_fade_ = false;\n  if (codec_running_) {\n    codec_->Resume(callback);\n  }',
+   '  ui_->set_playing_synth(playing);\n  codec_fade_ = false;\n'
+   '  if (codec_running_) {\n    codec_->Resume(callback);\n  }',
+   '  ui_->set_playing_synth(playing);\n'
    '  if (codec_running_) {\n    codec_->Resume(callback);\n  }\n  codec_fade_ = false;'),
   ('TestOptionsAppendAfterBlankGap', 'record', 'beads/settings_storage.h',
    '            Flash::IsBlank(address + size, size)) &&',
@@ -3252,8 +3258,8 @@ cases = [
    '      if (synth_fade || (start && now - start >= 10000)) {',
    '      if (start && now - start >= 10000) {'),
   ('TestSynthEntryCancelsBackup', 'firmware', 'beads/beads.cc',
-   '  if (new_synth_mode && background_buffer_backup.busy()) {\n    background_buffer_backup.Process(false);',
-   '  if (new_synth_mode && background_buffer_backup.busy()) {\n    (void)background_buffer_backup;'),
+   '  if (new_synth_mode && background_buffer_backup.saving()) {\n    background_buffer_backup.Process(false);',
+   '  if (new_synth_mode && background_buffer_backup.saving()) {\n    (void)background_buffer_backup;'),
   ('TestCodecRestartRetry', 'firmware', 'beads/beads.cc',
    '  if (transition.RetryCodec()) {',
    '  if (false) {'),

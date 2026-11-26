@@ -3269,6 +3269,38 @@ void TestSpectralResonatorAssignment() {
   CHECK(processor.spectral_processor_.feedback_ > 0.0f);
 }
 
+void TestEffectResonatorAssignment() {
+  test_checker.Start("TestEffectResonatorAssignment");
+  extern uint8_t active_processor_mode;
+  const ProcessorMode modes[2] = { PROCESSOR_OLIVERB, PROCESSOR_ABYSS };
+  for (int i = 0; i < 2; ++i) {
+    Rig r(false, false);
+    r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+    r.Settle();
+    settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+    r.Tick(10, true);
+    for (int tap = 0; tap < 3; ++tap) {
+      TapAssign(&r);
+    }
+    CHECK(ui.resonator_assigned());
+    // The reverbs replace the granular engine: the CV returns to FEEDBACK.
+    settings.SetFeatureValue(FEATURE_PROCESSOR, modes[i]);
+    r.Settle();
+    CHECK(active_processor_mode == modes[i]);
+    CHECK(!ui.resonator_assigned());
+    settings.mutable_state()->assignable_cv_destination = 2;
+    TapAssign(&r);
+    CHECK(!ui.resonator_assigned());
+    CHECK(settings.state().assignable_cv_destination == 0);
+    settings.SetFeatureValue(FEATURE_PROCESSOR, PROCESSOR_GRANULAR);
+    r.Settle();
+    CHECK(active_processor_mode == PROCESSOR_GRANULAR);
+    settings.mutable_state()->assignable_cv_destination = 2;
+    TapAssign(&r);
+    CHECK(ui.resonator_assigned());
+  }
+}
+
 void TestResonatorDampingCv() {
   test_checker.Start("TestResonatorDampingCv");
   Rig r(false, false);
@@ -4700,6 +4732,7 @@ int main() {
   TestResonatorProfile();
   TestResonatorPage();
   TestSpectralResonatorAssignment();
+  TestEffectResonatorAssignment();
   TestResonatorDampingCv();
   TestResonatorSeedCallback();
   TestManualDelayAction();
