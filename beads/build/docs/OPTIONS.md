@@ -95,7 +95,7 @@ When a page opens, the quality LED [A] shows each stored value in turn, left to 
 
 A Hygrostat profile can skip the stored values, so [A] shows the page's first setting at once ([preview](FEATURES.md#options-page-preview)), and always open on the first page instead of the last one used ([opening page](FEATURES.md#options-page-on-opening)).
 
-Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks and Limiter use thirds. LED brightness, Processor, Reverb character and SEED latch use quarters. Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
+Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds. LED brightness, Processor, Reverb character, SEED latch and Resonator ring time use quarters; Resonator uses fifths and Resonator material eighths. Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 

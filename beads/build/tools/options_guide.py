@@ -246,9 +246,11 @@ DETAILS = [
     "and always open on the first page instead of the last one used "
     "([opening page](FEATURES.md#options-page-on-opening)).",
     "Move a knob more than a tenth of its travel to take it over; smaller "
-    "bumps are ignored. Pitch scale, Delay mode, Attacks and Limiter use "
-    "thirds. LED brightness, Processor, Reverb character and SEED latch use "
-    "quarters. "
+    "bumps are ignored. Pitch scale, Random pitch steps, Delay mode, Attacks "
+    "and Limiter use thirds. "
+    "LED brightness, Processor, Reverb character, SEED latch and "
+    "Resonator ring time use quarters; Resonator uses fifths and Resonator "
+    "material eighths. "
     "Synth uses thirds with the Rings synth installed, halves without; "
     "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
