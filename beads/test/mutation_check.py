@@ -3215,9 +3215,12 @@ cases = [
    'return !spectral_ && (options_ & kResonatorFlags);',
    'return options_ & kResonatorFlags;'),
   ('TestEffectResonatorAssignment', 'firmware', 'beads/beads.cc',
-   '  ui.set_resonator_available(active_processor_mode == PROCESSOR_GRANULAR &&\n'
+   '  ui.set_resonator_available(active_processor_mode != PROCESSOR_OLIVERB &&\n',
+   '  ui.set_resonator_available(\n'),
+  ('TestEffectResonatorAssignment', 'firmware', 'beads/beads.cc',
+   '      active_processor_mode != PROCESSOR_ABYSS &&\n'
    '      processor.resonator_available());',
-   '  ui.set_resonator_available(processor.resonator_available());'),
+   '      processor.resonator_available());'),
   ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor_options.cc',
    'resonator && !spectral_ && resonator_controls_.hold_feedback',
    'resonator && resonator_controls_.hold_feedback'),

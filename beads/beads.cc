@@ -142,9 +142,10 @@ float ResonatorValue(ProfileFeature feature, float curated, float scale) {
   return e.state == PROFILE_FIXED ? float(e.value) * scale : curated;
 }
 
-// Only the granular engine runs the resonator.
+// Oliverb and Abyss replace the engine that runs the resonator.
 void SetResonatorAvailable() {
-  ui.set_resonator_available(active_processor_mode == PROCESSOR_GRANULAR &&
+  ui.set_resonator_available(active_processor_mode != PROCESSOR_OLIVERB &&
+      active_processor_mode != PROCESSOR_ABYSS &&
       processor.resonator_available());
 }
 
