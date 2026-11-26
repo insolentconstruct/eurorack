@@ -5,7 +5,9 @@ on:
     branches: ['**']
     tags: ['drizzlet-*']
     # Docs-only pushes skip the firmware build; tag pushes ignore paths and always build.
-    paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
+    # OPTIONS.md is the one Markdown file the release zip packs.
+    paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml',
+            '!**/*.md', 'beads/build/docs/OPTIONS.md']
   pull_request:
     paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
 permissions:
