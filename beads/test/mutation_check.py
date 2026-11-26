@@ -3186,15 +3186,57 @@ for name, suite, source, before, after in cases:
   assert (root / source).read_text().count(pattern) == 1, (name, pattern)
 
 
-def shard_indices(count, shard, shards):
-  # Shard K of N runs every case whose 1-based index is K modulo N, so the
-  # N shards together run each case exactly once.
-  return [i for i in range(1, count + 1) if (i - 1) % shards == shard - 1]
+# Seconds on a GitHub runner, from CI logs: a suite's first build, then a
+# case's rebuild and test for most sources and for heavy ones (below).
+# Unlisted suites are small.
+suite_costs = {
+  'attack': (27, 2, 13), 'clouds': (28, 24, 14), 'delay': (4, 4, 4),
+  'delay_mode': (26, 8, 23), 'firmware': (32, 5, 27), 'granular': (25, 2, 21),
+  'mix': (27, 2, 18), 'options': (4, 3, 4), 'plaits_synth': (6, 2, 2),
+  'processor': (24, 18, 17), 'resonator': (23, 3, 21), 'spectral': (38, 11, 11),
+}
+
+
+def case_cost(suite, source):
+  # DSP headers and the processor sources rebuild most of the DSP code.
+  build, light, heavy = suite_costs.get(suite, (2, 2, 2))
+  if source.startswith('beads/dsp/') and (source.endswith('.h') or
+      source in ('beads/dsp/processor.cc', 'beads/dsp/processor_options.cc')):
+    return heavy
+  return light
+
+
+def run_order(cases):
+  # A suite's cases run together, grouped by source, so a shard builds few
+  # programs and rebuilds the same objects.
+  return sorted(range(1, len(cases) + 1),
+      key=lambda i: (cases[i - 1][1], cases[i - 1][2], i))
+
+
+def shard_indices(cases, shard, shards):
+  # Shard K of N runs the Kth of N spans of the run order with equal
+  # measured cost, so the N shards together run each case exactly once.
+  weights = []
+  previous = None
+  for i in run_order(cases):
+    suite, source = cases[i - 1][1:3]
+    build = suite_costs.get(suite, (2, 2, 2))[0]
+    weights.append((i, case_cost(suite, source) +
+        (build if suite != previous else 0)))
+    previous = suite
+  total = sum(weight for i, weight in weights)
+  selected = []
+  spent = 0
+  for i, weight in weights:
+    if min(shards, int((spent + weight / 2) * shards / total) + 1) == shard:
+      selected.append(i)
+    spent += weight
+  return selected
 
 
 for shards in range(1, 17):
   indices = sorted(i for shard in range(1, shards + 1)
-      for i in shard_indices(len(cases), shard, shards))
+      for i in shard_indices(cases, shard, shards))
   assert indices == list(range(1, len(cases) + 1)), shards
 if '--patterns-only' in sys.argv:
   print('All %d mutation patterns occur exactly once' % len(cases))
@@ -3233,7 +3275,7 @@ if '--shard' in sys.argv:
   shard, shards = map(int,
       sys.argv[sys.argv.index('--shard') + 1].split('/'))
   assert 1 <= shard <= shards, (shard, shards)
-  selected_indices = set(shard_indices(len(cases), shard, shards))
+  selected_indices = set(shard_indices(cases, shard, shards))
   del sys.argv[sys.argv.index('--shard'):sys.argv.index('--shard') + 2]
 
 out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
@@ -3267,9 +3309,10 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   # A program's first case builds it from scratch; later cases rebuild at
   # most that, so they get twice its build time plus 60 s for their tests.
   limits = {}
-  for index, (name, suite, source, before, after) in enumerate(cases, 1):
+  for index in run_order(cases):
     if index not in selected_indices:
       continue
+    name, suite, source, before, after = cases[index - 1]
     path = work / source
     original = path.read_text()
     if before is not None:
