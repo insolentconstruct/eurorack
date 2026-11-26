@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="390" height="7335.102362204724"
- viewBox="0 0 390 7335.102362204724" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="7355.102362204724"
+ viewBox="0 0 390 7355.102362204724" role="img" aria-labelledby="title desc">
 <title id="title">Drizzlet hidden options guide</title>
 <desc id="desc">Five pages of mix knob settings with quality LED [A] colour and blink
 indications. Full text version in OPTIONS.md.</desc>
@@ -283,14 +283,17 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="22" y="3909.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Reverb character</text>
 <circle cx="195.0" cy="3981.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 3981.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 4005.745 A 37 37 0 0 1 164.203 3960.595" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.13" y="3989.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
-<path d="M 174.492 3950.306 A 37 37 0 0 1 215.508 3950.306" fill="none" stroke="#555" stroke-width="3"/>
-<text x="195.0" y="3933.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Clouds</text>
-<path d="M 225.797 3960.595 A 37 37 0 0 1 222.600 4005.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="247.87" y="3989.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Plate</text>
-<path d="M 165.412 3958.887 A 37 37 0 0 1 172.784 3951.514" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 217.216 3951.514 A 37 37 0 0 1 224.588 3958.887" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 167.400 4005.745 A 37 37 0 0 1 158.878 3973.088" fill="none" stroke="#555" stroke-width="3"/>
+<text x="143.72" y="3999.48" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Stock</text>
+<path d="M 163.791 3961.228 A 37 37 0 0 1 188.581 3944.663" fill="none" stroke="#555" stroke-width="3"/>
+<text x="165.55" y="3942.03" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Clouds</text>
+<path d="M 201.419 3944.663 A 37 37 0 0 1 226.209 3961.228" fill="none" stroke="#555" stroke-width="3"/>
+<text x="224.45" y="3942.03" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Plate</text>
+<path d="M 231.122 3973.088 A 37 37 0 0 1 222.600 4005.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="246.28" y="3999.48" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bloom</text>
+<path d="M 159.389 3971.059 A 37 37 0 0 1 162.718 3963.023" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 190.651 3944.359 A 37 37 0 0 1 199.349 3944.359" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 227.282 3963.023 A 37 37 0 0 1 230.611 3971.059" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="31" cy="4021.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
 <text x="47" y="4026.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Stock</text>
 <text x="47" y="4045.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
@@ -314,14 +317,17 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="22" y="4256.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Processor</text>
 <circle cx="195.0" cy="4328.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 4328.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 4352.745 A 37 37 0 0 1 164.203 4307.595" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.13" y="4336.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Granular</text>
-<path d="M 174.492 4297.306 A 37 37 0 0 1 215.508 4297.306" fill="none" stroke="#555" stroke-width="3"/>
-<text x="195.0" y="4280.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Spectral</text>
-<path d="M 225.797 4307.595 A 37 37 0 0 1 222.600 4352.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="247.87" y="4336.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Oliverb</text>
-<path d="M 165.412 4305.887 A 37 37 0 0 1 172.784 4298.514" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 217.216 4298.514 A 37 37 0 0 1 224.588 4305.887" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 167.400 4352.745 A 37 37 0 0 1 158.878 4320.088" fill="none" stroke="#555" stroke-width="3"/>
+<text x="143.72" y="4346.48" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Granular</text>
+<path d="M 163.791 4308.228 A 37 37 0 0 1 188.581 4291.663" fill="none" stroke="#555" stroke-width="3"/>
+<text x="165.55" y="4289.03" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Spectral</text>
+<path d="M 201.419 4291.663 A 37 37 0 0 1 226.209 4308.228" fill="none" stroke="#555" stroke-width="3"/>
+<text x="224.45" y="4289.03" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Oliverb</text>
+<path d="M 231.122 4320.088 A 37 37 0 0 1 222.600 4352.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="246.28" y="4346.48" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Abyss</text>
+<path d="M 159.389 4318.059 A 37 37 0 0 1 162.718 4310.023" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 190.651 4291.359 A 37 37 0 0 1 199.349 4291.359" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 227.282 4310.023 A 37 37 0 0 1 230.611 4318.059" fill="none" stroke="#aaa" stroke-width="8"/>
 <circle cx="31" cy="4368.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
 <text x="47" y="4373.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Granular (Stock)</text>
 <text x="47" y="4392.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
@@ -460,91 +466,115 @@ indications. Full text version in OPTIONS.md.</desc>
 <text x="22" y="6052.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">FEEDBACK: Resonator</text>
 <circle cx="195.0" cy="6124.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
 <path d="M 195.0 6124.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 6148.745 A 37 37 0 0 1 164.203 6103.595" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.13" y="6132.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Off</text>
-<path d="M 174.492 6093.306 A 37 37 0 0 1 215.508 6093.306" fill="none" stroke="#555" stroke-width="3"/>
-<text x="195.0" y="6076.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">After</text>
-<path d="M 225.797 6103.595 A 37 37 0 0 1 222.600 6148.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="247.87" y="6132.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Before</text>
-<path d="M 165.412 6101.887 A 37 37 0 0 1 172.784 6094.514" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 217.216 6094.514 A 37 37 0 0 1 224.588 6101.887" fill="none" stroke="#aaa" stroke-width="8"/>
-<circle cx="31" cy="6164.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="47" y="6169.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Off (stock)</text>
-<text x="47" y="6188.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
-<circle cx="31" cy="6208.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="47" y="6213.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">After the grains</text>
-<text x="47" y="6232.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
-<circle cx="31" cy="6252.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="47" y="6257.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Before the buffer</text>
-<text x="47" y="6276.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
-<circle cx="31" cy="6296.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="6301.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">In the feedback</text>
-<text x="47" y="6320.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; slow blink</text>
-<circle cx="31" cy="6340.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="6345.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Chord</text>
-<text x="47" y="6364.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
-<text x="22" y="6389.102362204724" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">SEED and hits strike it.</text>
-<text x="22" y="6435.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Resonator material</text>
-<circle cx="195.0" cy="6507.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
-<path d="M 195.0 6507.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 6531.745 A 37 37 0 0 1 164.203 6486.595" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.13" y="6515.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Wood</text>
-<path d="M 174.492 6476.306 A 37 37 0 0 1 215.508 6476.306" fill="none" stroke="#555" stroke-width="3"/>
-<text x="195.0" y="6459.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">String</text>
-<path d="M 225.797 6486.595 A 37 37 0 0 1 222.600 6531.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="247.87" y="6515.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Glass</text>
-<path d="M 165.412 6484.887 A 37 37 0 0 1 172.784 6477.514" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 217.216 6477.514 A 37 37 0 0 1 224.588 6484.887" fill="none" stroke="#aaa" stroke-width="8"/>
-<circle cx="31" cy="6547.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="47" y="6552.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wood</text>
-<text x="47" y="6571.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
-<circle cx="31" cy="6591.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="47" y="6596.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">String</text>
-<text x="47" y="6615.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
-<circle cx="31" cy="6635.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="47" y="6640.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Glass</text>
-<text x="47" y="6659.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
-<circle cx="31" cy="6679.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="6684.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bell</text>
-<text x="47" y="6703.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
-<circle cx="31" cy="6723.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="6728.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Marimba</text>
-<text x="47" y="6747.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; slow blink</text>
-<circle cx="31" cy="6767.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="6772.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Drum</text>
-<text x="47" y="6791.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; slow blink</text>
-<circle cx="31" cy="6811.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
-<text x="47" y="6816.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bowl</text>
-<text x="47" y="6835.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; fast blink</text>
-<circle cx="31" cy="6855.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
-<text x="47" y="6860.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Gong</text>
-<text x="47" y="6879.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; fast blink</text>
-<text x="22" y="6924.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Resonator ring time</text>
-<circle cx="195.0" cy="6996.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
-<path d="M 195.0 6996.102362204724 v -16" stroke="#222" stroke-width="2"/>
-<path d="M 167.400 7020.745 A 37 37 0 0 1 164.203 6975.595" fill="none" stroke="#555" stroke-width="3"/>
-<text x="142.13" y="7004.85" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Short</text>
-<path d="M 174.492 6965.306 A 37 37 0 0 1 215.508 6965.306" fill="none" stroke="#555" stroke-width="3"/>
-<text x="195.0" y="6948.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Medium</text>
-<path d="M 225.797 6975.595 A 37 37 0 0 1 222.600 7020.745" fill="none" stroke="#555" stroke-width="3"/>
-<text x="247.87" y="7004.85" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Long</text>
-<path d="M 165.412 6973.887 A 37 37 0 0 1 172.784 6966.514" fill="none" stroke="#aaa" stroke-width="8"/>
-<path d="M 217.216 6966.514 A 37 37 0 0 1 224.588 6973.887" fill="none" stroke="#aaa" stroke-width="8"/>
-<circle cx="31" cy="7036.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
-<text x="47" y="7041.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Short</text>
-<text x="47" y="7060.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
-<circle cx="31" cy="7080.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
-<text x="47" y="7085.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Medium</text>
-<text x="47" y="7104.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
-<circle cx="31" cy="7124.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
-<text x="47" y="7129.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Long</text>
-<text x="47" y="7148.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
-<circle cx="31" cy="7168.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="47" y="7173.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Very long</text>
-<text x="47" y="7192.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
-<text x="22" y="7242.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control</text>
-<text x="22" y="7263.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">sketch • Panel layout from the Mutable</text>
-<text x="22" y="7284.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Instruments Beads panel file, geometry</text>
-<text x="22" y="7305.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">only (CC BY-SA 3.0).</text>
+<path d="M 167.400 6148.745 A 37 37 0 0 1 158.006 6124.742" fill="none" stroke="#555" stroke-width="3"/>
+<text x="145.65" y="6148.42" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Off</text>
+<path d="M 160.014 6112.062 A 37 37 0 0 1 172.738 6094.549" fill="none" stroke="#555" stroke-width="3"/>
+<text x="152.12" y="6097.95" font-size="15" font-weight="normal" fill="#222" text-anchor="end">After</text>
+<path d="M 184.176 6088.721 A 37 37 0 0 1 205.824 6088.721" fill="none" stroke="#555" stroke-width="3"/>
+<text x="195.0" y="6076.1" font-size="15" font-weight="normal" fill="#222" text-anchor="middle">Before</text>
+<path d="M 217.262 6094.549 A 37 37 0 0 1 229.986 6112.062" fill="none" stroke="#555" stroke-width="3"/>
+<text x="237.88" y="6097.95" font-size="15" font-weight="normal" fill="#222" text-anchor="start">In the feedback</text>
+<path d="M 231.994 6124.742 A 37 37 0 0 1 222.600 6148.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="244.35" y="6148.42" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Chord</text>
+<path d="M 158.029 6122.650 A 37 37 0 0 1 159.389 6114.059" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 174.444 6093.338 A 37 37 0 0 1 182.194 6089.389" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 207.806 6089.389 A 37 37 0 0 1 215.556 6093.338" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 230.611 6114.059 A 37 37 0 0 1 231.971 6122.650" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="31" cy="6170.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="47" y="6175.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Off (stock)</text>
+<text x="47" y="6194.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
+<circle cx="31" cy="6214.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="47" y="6219.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">After the grains</text>
+<text x="47" y="6238.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
+<circle cx="31" cy="6258.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="47" y="6263.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Before the buffer</text>
+<text x="47" y="6282.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
+<circle cx="31" cy="6302.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="6307.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">In the feedback</text>
+<text x="47" y="6326.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; slow blink</text>
+<circle cx="31" cy="6346.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="6351.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Chord</text>
+<text x="47" y="6370.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
+<text x="22" y="6395.102362204724" font-size="15" font-weight="bold" fill="#bd3030" text-anchor="start">SEED and hits strike it.</text>
+<text x="22" y="6441.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">DRY/WET: Resonator material</text>
+<circle cx="195.0" cy="6513.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 195.0 6513.102362204724 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 167.400 6537.745 A 37 37 0 0 1 160.513 6526.507" fill="none" stroke="#555" stroke-width="3"/>
+<text x="149.81" y="6545.79" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Wood</text>
+<path d="M 158.009 6513.916 A 37 37 0 0 1 158.878 6505.088" fill="none" stroke="#555" stroke-width="3"/>
+<text x="142.26" y="6512.91" font-size="15" font-weight="normal" fill="#222" text-anchor="end">String</text>
+<path d="M 163.791 6493.228 A 37 37 0 0 1 169.419 6486.370" fill="none" stroke="#555" stroke-width="3"/>
+<text x="154.03" y="6484.48" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Glass</text>
+<path d="M 180.092 6479.238 A 37 37 0 0 1 188.581 6476.663" fill="none" stroke="#555" stroke-width="3"/>
+<text x="179.61" y="6467.38" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Bell</text>
+<path d="M 201.419 6476.663 A 37 37 0 0 1 209.908 6479.238" fill="none" stroke="#555" stroke-width="3"/>
+<text x="210.39" y="6467.38" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Marimba</text>
+<path d="M 220.581 6486.370 A 37 37 0 0 1 226.209 6493.228" fill="none" stroke="#555" stroke-width="3"/>
+<text x="235.97" y="6484.48" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Drum</text>
+<path d="M 231.122 6505.088 A 37 37 0 0 1 231.991 6513.916" fill="none" stroke="#555" stroke-width="3"/>
+<text x="247.74" y="6512.91" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bowl</text>
+<path d="M 229.487 6526.507 A 37 37 0 0 1 222.600 6537.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="240.19" y="6545.79" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Gong</text>
+<path d="M 159.811 6524.536 A 37 37 0 0 1 158.114 6516.005" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 159.389 6503.059 A 37 37 0 0 1 162.718 6495.023" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 170.970 6484.967 A 37 37 0 0 1 178.202 6480.135" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 190.651 6476.359 A 37 37 0 0 1 199.349 6476.359" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 211.798 6480.135 A 37 37 0 0 1 219.030 6484.967" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 227.282 6495.023 A 37 37 0 0 1 230.611 6503.059" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 231.886 6516.005 A 37 37 0 0 1 230.189 6524.536" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="31" cy="6567.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="47" y="6572.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Wood</text>
+<text x="47" y="6591.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
+<circle cx="31" cy="6611.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="47" y="6616.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">String</text>
+<text x="47" y="6635.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
+<circle cx="31" cy="6655.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="47" y="6660.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Glass</text>
+<text x="47" y="6679.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
+<circle cx="31" cy="6699.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="6704.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bell</text>
+<text x="47" y="6723.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
+<circle cx="31" cy="6743.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="6748.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Marimba</text>
+<text x="47" y="6767.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; slow blink</text>
+<circle cx="31" cy="6787.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="6792.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Drum</text>
+<text x="47" y="6811.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; slow blink</text>
+<circle cx="31" cy="6831.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="47" y="6836.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Bowl</text>
+<text x="47" y="6855.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; fast blink</text>
+<circle cx="31" cy="6875.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2" stroke-dasharray="1 3"/>
+<text x="47" y="6880.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Gong</text>
+<text x="47" y="6899.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; fast blink</text>
+<text x="22" y="6944.102362204724" font-size="17" font-weight="bold" fill="#222" text-anchor="start">REVERB: Resonator ring time</text>
+<circle cx="195.0" cy="7016.102362204724" r="22" fill="white" stroke="#333" stroke-width="2"/>
+<path d="M 195.0 7016.102362204724 v -16" stroke="#222" stroke-width="2"/>
+<path d="M 167.400 7040.745 A 37 37 0 0 1 158.878 7008.088" fill="none" stroke="#555" stroke-width="3"/>
+<text x="143.72" y="7034.48" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Short</text>
+<path d="M 163.791 6996.228 A 37 37 0 0 1 188.581 6979.663" fill="none" stroke="#555" stroke-width="3"/>
+<text x="165.55" y="6977.03" font-size="15" font-weight="normal" fill="#222" text-anchor="end">Medium</text>
+<path d="M 201.419 6979.663 A 37 37 0 0 1 226.209 6996.228" fill="none" stroke="#555" stroke-width="3"/>
+<text x="224.45" y="6977.03" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Long</text>
+<path d="M 231.122 7008.088 A 37 37 0 0 1 222.600 7040.745" fill="none" stroke="#555" stroke-width="3"/>
+<text x="246.28" y="7034.48" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Very long</text>
+<path d="M 159.389 7006.059 A 37 37 0 0 1 162.718 6998.023" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 190.651 6979.359 A 37 37 0 0 1 199.349 6979.359" fill="none" stroke="#aaa" stroke-width="8"/>
+<path d="M 227.282 6998.023 A 37 37 0 0 1 230.611 7006.059" fill="none" stroke="#aaa" stroke-width="8"/>
+<circle cx="31" cy="7056.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2"/>
+<text x="47" y="7061.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Short</text>
+<text x="47" y="7080.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; steady</text>
+<circle cx="31" cy="7100.102362204724" r="8" fill="#a87900" stroke="#333" stroke-width="2"/>
+<text x="47" y="7105.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Medium</text>
+<text x="47" y="7124.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">yellow; steady</text>
+<circle cx="31" cy="7144.102362204724" r="8" fill="#bd3030" stroke="#333" stroke-width="2"/>
+<text x="47" y="7149.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Long</text>
+<text x="47" y="7168.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">red; steady</text>
+<circle cx="31" cy="7188.102362204724" r="8" fill="#247443" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="47" y="7193.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Very long</text>
+<text x="47" y="7212.102362204724" font-size="15" font-weight="normal" fill="#555" text-anchor="start">green; slow blink</text>
+<text x="22" y="7262.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Author: Insolent Construct • Control</text>
+<text x="22" y="7283.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">sketch • Panel layout from the Mutable</text>
+<text x="22" y="7304.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">Instruments Beads panel file, geometry</text>
+<text x="22" y="7325.102362204724" font-size="15" font-weight="normal" fill="#222" text-anchor="start">only (CC BY-SA 3.0).</text>
 </g>
 </svg>

@@ -201,7 +201,9 @@ def zone_bands(rows):
     if setting == "Stereo width":
         return [(CONSTANTS["kWidthStockThreshold"],
                  CONSTANTS["kWidthEnabledThreshold"])]
-    if setting in ("LED brightness", "SEED latch"):
+    # More than three values are always equal steps in the firmware.
+    if setting in ("LED brightness", "SEED latch") or (
+            len(rows) > 3 and setting != "Pitch scale"):
         count = len(rows)
         band = CONSTANTS["kOptionsProfileZoneBand"]
         return [(i / count - band, i / count + band)
