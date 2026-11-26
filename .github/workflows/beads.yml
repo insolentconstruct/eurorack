@@ -4,6 +4,10 @@ on:
   push:
     branches: ['**']
     tags: ['drizzlet-*']
+    # Docs-only pushes skip the firmware build; tag pushes ignore paths and always build.
+    # Of the Markdown under beads/, the release zip packs only OPTIONS.md; vanilla trees stay in.
+    paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml',
+            '!beads/**/*.md', 'beads/build/docs/OPTIONS.md']
   pull_request:
     paths: ['beads/**', 'clouds/**', 'plaits/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
 permissions:
@@ -15,6 +19,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      # Published by the image job below from drizzlet 90496334, whose recipe hash this is;
+      # used only while this checkout's recipe matches. Update both from the image job's summary.
+      TOOLCHAIN_IMAGE: ghcr.io/insolentconstruct/mi-toolchain@sha256:193a7cd574a9bbda350d4c7006e45263d1210369d307dd56e55a95482e706568
+      TOOLCHAIN_RECIPE: 7881893d9984543c63e0bf89398317ef224ce7f1af1500d53c9253c8016935fa
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -23,8 +32,23 @@ jobs:
           persist-credentials: false
       - name: Initialize only Beads dependencies
         run: git submodule update --init stmlib stm_audio_bootloader
+      # The recipe is the Dockerfile and .dockerignore, which fix the base image, packages and archive hashes.
+      - name: Pull the published compiler image if this recipe built it
+        id: pull
+        shell: bash
+        run: |
+          recipe=$( (cd beads/build && sha256sum Dockerfile .dockerignore) | sha256sum | cut -c1-64)
+          if [[ "$recipe" != "$TOOLCHAIN_RECIPE" ]]; then
+            echo "The recipe changed ($recipe); building the image."
+          elif docker pull --platform linux/amd64 "$TOOLCHAIN_IMAGE"; then
+            docker tag "$TOOLCHAIN_IMAGE" drizzlet
+            echo "pulled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The pull failed; building the image."
+          fi
       # Toolchain archives are cached by their pinned sha256, so a Launchpad outage does not fail CI.
       - name: Read the pinned toolchain hashes
+        if: steps.pull.outputs.pulled != 'true'
         id: toolchains
         run: |
           tc=$(sed -n 's/^ARG TC_SHA256=//p' beads/build/Dockerfile)
@@ -32,12 +56,13 @@ jobs:
           echo "key=toolchains-$tc-$gcc9" >> "$GITHUB_OUTPUT"
       - name: Restore the toolchain archives
         id: restore-toolchains
+        if: steps.pull.outputs.pulled != 'true'
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: beads/build/.toolchains
           key: ${{ steps.toolchains.outputs.key }}
       - name: Download the toolchain archives
-        if: steps.restore-toolchains.outputs.cache-hit != 'true'
+        if: steps.pull.outputs.pulled != 'true' && steps.restore-toolchains.outputs.cache-hit != 'true'
         run: |
           mkdir -p beads/build/.toolchains
           for name in TC GCC9; do
@@ -48,12 +73,13 @@ jobs:
             echo "$sha  beads/build/.toolchains/$name.tar.bz2" | sha256sum -c -
           done
       - name: Save the toolchain archives
-        if: steps.restore-toolchains.outputs.cache-hit != 'true'
+        if: steps.pull.outputs.pulled != 'true' && steps.restore-toolchains.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: beads/build/.toolchains
           key: ${{ steps.toolchains.outputs.key }}
       - name: Build pinned amd64 compiler and encoder
+        if: steps.pull.outputs.pulled != 'true'
         run: |
           docker build --platform linux/amd64 --target compiler \
             --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
@@ -113,12 +139,20 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          fetch-depth: 0
           submodules: false
           persist-credentials: false
-          sparse-checkout: beads/build
+      - name: Initialize only Beads dependencies
+        run: git submodule update --init stmlib stm_audio_bootloader
       # No local archives: the Dockerfile downloads both toolchains and checks their pinned hashes.
       - name: Build the image
-        run: docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
+        run: |
+          recipe=$( (cd beads/build && sha256sum Dockerfile .dockerignore) | sha256sum | cut -c1-64)
+          docker build --platform linux/amd64 --target compiler --label "org.beads.recipe=$recipe" -t drizzlet beads/build
+          echo "Recipe \`$recipe\`" >> "$GITHUB_STEP_SUMMARY"
+      # The build job may use a pulled image, so prove this one reproduces the pinned hashes.
+      - name: Check the image reproduces the firmware and WAV hashes
+        run: bash beads/build/build.sh "$PWD/image-check" --wav
       - name: Push to GitHub Container Registry
         env:
           GH_TOKEN: ${{ github.token }}
