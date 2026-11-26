@@ -1393,7 +1393,7 @@ void TestResonatorSaved() {
   Wipe();
   Settings s;
   s.Init(false);
-  for (int placement = 0; placement < 4; ++placement) {
+  for (int placement = 0; placement < 5; ++placement) {
     for (int value = 0; value < 8; ++value) {
       s.SetFeatureValue(FEATURE_RESONATOR, placement);
       s.SetFeatureValue(FEATURE_RESONATOR_MATERIAL, value);
@@ -1411,7 +1411,7 @@ void TestResonatorSaved() {
     }
   }
   // A byte past the values is not set: the profile's default.
-  const uint8_t bad[3][2] = { { 4, 8 }, { 0x80, 0x80 }, { 0xff, 0xff } };
+  const uint8_t bad[3][2] = { { 5, 8 }, { 0x80, 0x80 }, { 0xff, 0xff } };
   for (int i = 0; i < 3; ++i) {
     uint8_t* bytes = reinterpret_cast<uint8_t*>(&s.record_);
     bytes[24] = bytes[26] = bad[i][0];

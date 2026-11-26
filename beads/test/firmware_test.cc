@@ -3035,16 +3035,18 @@ float ResonatorEnergy() {
 // The resonator is a power-on profile choice; both synths are unchanged.
 void TestResonatorProfile() {
   test_checker.Start("TestResonatorProfile");
-  const uint8_t expected[4] = {
+  const uint16_t expected[] = {
     0,
     Processor::OPTION_FLAG_RESONATOR_GRAINS,
     Processor::OPTION_FLAG_RESONATOR_INPUT,
     Processor::OPTION_FLAG_RESONATOR_GRAINS |
-        Processor::OPTION_FLAG_RESONATOR_INPUT
+        Processor::OPTION_FLAG_RESONATOR_INPUT,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS |
+        Processor::OPTION_FLAG_RESONATOR_CHORD
   };
   for (int engine = 0; engine < 3; ++engine) {
-    uint64_t hashes[4];
-    for (int placement = 0; placement < 4; ++placement) {
+    uint64_t hashes[5];
+    for (int placement = 0; placement < 5; ++placement) {
       Rig r(false, engine > 0);
       settings.set_synth(engine == 2);
       settings.SaveState();
@@ -3062,12 +3064,16 @@ void TestResonatorProfile() {
       } else {
         r.Settle();
       }
+      if (!engine) {
+        CHECK(codec.callback_ == &Process);
+      }
       hashes[placement] = MixOptionsHash(&r);
     }
     if (engine) {
       CHECK(hashes[1] == hashes[0]);
       CHECK(hashes[2] == hashes[0]);
       CHECK(hashes[3] == hashes[0]);
+      CHECK(hashes[4] == hashes[0]);
     }
   }
   // Through the audio callback: the input rings it before the buffer, and
@@ -3128,18 +3134,23 @@ void TestResonatorPage() {
   CHECK(settings.FeatureValue(FEATURE_RESONATOR_RING) == 1);
   CHECK(processor.options_ == 0);
   CHECK(!processor.resonator_controls_set_);
-  const uint8_t flags[4] = {
+  const uint16_t flags[] = {
     0,
     Processor::OPTION_FLAG_RESONATOR_GRAINS,
     Processor::OPTION_FLAG_RESONATOR_INPUT,
     Processor::OPTION_FLAG_RESONATOR_GRAINS |
-        Processor::OPTION_FLAG_RESONATOR_INPUT
+        Processor::OPTION_FLAG_RESONATOR_INPUT,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS |
+        Processor::OPTION_FLAG_RESONATOR_CHORD
   };
-  for (int placement = 1; placement < 7; ++placement) {
-    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 4);
+  const int restarts = codec.restarts_;
+  for (int placement = 1; placement < 8; ++placement) {
+    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 5);
     r.Tick(2, true);
-    CHECK(processor.options_ == flags[placement % 4]);
+    CHECK(processor.options_ == flags[placement % 5]);
+    CHECK(codec.callback_ == &Process);
   }
+  CHECK(codec.restarts_ == restarts);
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
   for (int material = 0; material < kNumResonatorMaterials; ++material) {
     for (int ring = 0; ring < 4; ++ring) {

@@ -725,8 +725,8 @@ or saved choice; the audio path is unchanged.
 ### Resonator
 
 Options page 5 (FEEDBACK and REVERB LEDs) holds Hygrostat feature ID 41,
-Off (stock) / After the grains / Before the buffer / In the feedback
-(#88), on FEEDBACK in quarters. It adds Rings' modal resonator,
+Off (stock) / After the grains / Before the buffer / In the feedback /
+Chord (#88), on FEEDBACK in fifths. It adds Rings' modal resonator,
 24 modes in stereo (odd modes
 left, even modes right), computed in Plaits' batched form with its tuning
 and pickup position updated once per 0.25 ms block, so it is close to
@@ -790,6 +790,15 @@ At FEEDBACK 0 it is After the grains exactly; at 0.3 and 0.5 its output
 stays within 2 dB of After
 the grains' on the same renders. Frozen, nothing is recorded and it is
 After the grains. The recording's own input limiter is still the ceiling.
+
+Chord (value 4) gives each grain start a strike at the grain's pitch, including
+pitch quantization and Recent notes. Three voices share the 24 modes, with
+eight modes per voice. A grain within half a semitone strikes the existing
+voice. Otherwise, the quietest voice can retune once its level estimate has
+fallen at least 42 dB from its peak, leaving a 2 dB margin for the 40 dB
+retune rule. While all voices are ringing above that threshold, the grain
+strikes the nearest voice. SEED or an attack hit strikes the tuned voices.
+SEED remains the clock in delay mode.
 
 Material (ID 43, DRY/WET, eighths) sets structure and brightness: Wood
 (0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They

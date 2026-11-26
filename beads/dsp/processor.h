@@ -70,7 +70,9 @@ enum ResonatorPlacement {
   RESONATOR_AFTER_GRAINS,
   RESONATOR_BEFORE_BUFFER,
   // After the grains, and FEEDBACK records its resonance.
-  RESONATOR_FEEDBACK
+  RESONATOR_FEEDBACK,
+  // After the grains, each grain striking one voice of a chord.
+  RESONATOR_CHORD
 };
 
 // 48 kHz at the 4 kHz block rate.
@@ -90,6 +92,7 @@ struct ResonatorControls {
   float feedback;
   bool hold_feedback;
   const ResonatorModes* modes;
+  float chord_gain;
 };
 
 class Processor {
@@ -454,6 +457,7 @@ class Processor {
     OPTION_FLAG_RESONATOR_INPUT = 128,
     OPTION_FLAG_OUTPUT_DIVISION = 256,
     OPTION_FLAG_SEND_MIX = 512,
+    OPTION_FLAG_RESONATOR_CHORD = 1024,
     kResonatorFlags = OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
   };
 
@@ -577,6 +581,8 @@ class Processor {
   void ProcessReverbFixedDecay(float reverb, FloatFrame* out, size_t size);
   void ProcessReverbCharacter(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  // The page's controls, once the UI has set them.
+  void ApplyResonatorControls();
   // Struck by input hits, tuned by PITCH; adds its resonance to the frames.
   void ProcessResonator(
       const RandomizedParameter& pitch,
@@ -596,6 +602,19 @@ class Processor {
       bool delay_mode,
       const FloatFrame* in,
       FloatFrame* recorded,
+      size_t size);
+  // Each grain started in the block strikes one voice of the chord.
+  void ProcessChord(
+      bool strike,
+      const TriggerGenerator::Output* triggers,
+      FloatFrame* frames,
+      size_t size);
+  void StrikeChord(
+      const DelayGrain* grains,
+      size_t ratio,
+      const TriggerGenerator::Output* triggers,
+      float gain,
+      float* strikes,
       size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
@@ -695,6 +714,9 @@ class Processor {
   bool suspended_;
 
   Reverb::CharacterState reverb_character_;
+
+  // The grains' level, which a grain's strike in a chord follows.
+  float grain_level_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

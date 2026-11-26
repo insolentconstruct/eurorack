@@ -176,6 +176,7 @@ void UpdateResonator() {
   // An exact structure is Rings' curve, even under a Drizzlet object.
   c.modes = settings.profile().entry(FEATURE_RESONATOR_STRUCTURE).state ==
       PROFILE_FIXED ? NULL : material.modes;
+  c.chord_gain = material.chord_gain;
   processor.set_resonator_controls(c);
 }
 
@@ -1074,8 +1075,9 @@ void MonitorStateChange() {
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   // The page moves the resonator; it restarts from silence.
-  if (ui.resonator() != resonator_placement) {
-    resonator_placement = ui.resonator();
+  const uint8_t placement = ui.resonator();
+  if (placement != resonator_placement) {
+    resonator_placement = placement;
     processor.set_resonator(resonator_placement);
     SetResonatorAvailable();
   }

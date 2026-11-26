@@ -533,6 +533,8 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
       if (options_ & OPTION_FLAG_RESONATOR_INPUT) {
         ProcessResonatorLoop(parameters.pitch, strike, out, size);
+      } else if (options_ & OPTION_FLAG_RESONATOR_CHORD) {
+        ProcessChord(strike, grain_triggers, out, size);
       } else {
         ProcessResonator(parameters.pitch, strike, out, size);
       }

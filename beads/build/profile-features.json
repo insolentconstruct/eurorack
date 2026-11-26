@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "c38d0fd23996fdd50aacddea95f144b68ea83501a3e30514c126577dc826084c",
+  "manifest_sha256": "897e1386727d915beb86d1c054fbee244aa4baba02ff9c832a46cdda43209034",
   "record_version": 1,
   "features": [
     {
@@ -1379,7 +1379,8 @@
         "Off (stock)",
         "After the grains",
         "Before the buffer",
-        "In the feedback"
+        "In the feedback",
+        "Chord"
       ],
       "states": [
         "Off",

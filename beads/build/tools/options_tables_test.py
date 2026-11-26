@@ -195,7 +195,7 @@ assert values["LED brightness"] == {
     ("red", "slow (0.98 Hz)"),
 }
 assert len(values["SEED latch"]) == 4
-assert len(values["Resonator"]) == 4
+assert len(values["Resonator"]) == 5
 assert len(values["Resonator material"]) == 8
 assert len(values["Resonator ring time"]) == 4
 assert len(values) == 15 and "Stereo width" not in values

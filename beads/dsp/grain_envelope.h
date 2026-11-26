@@ -132,6 +132,16 @@ class GrainEnvelope {
     return stage_ >= STAGE_DONE;
   }
 
+  // Samples played since the start, while that is under limit.
+  inline bool Age(float limit, float* age) const {
+    if (stage_ != STAGE_ATTACK ||
+        phase_ >= limit * phase_increment_[STAGE_ATTACK]) {
+      return false;
+    }
+    *age = phase_ / phase_increment_[STAGE_ATTACK];
+    return true;
+  }
+
  private:
   enum Stage {
     STAGE_ATTACK,
