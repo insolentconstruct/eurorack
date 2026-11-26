@@ -46,6 +46,7 @@ const size_t kFlashWordSize = 32;
 const uint32_t kBackupDelay = 10000; // milliseconds
 const uint32_t kMaxBackupDelay = 320000;
 const uint32_t kBackupResetDelay = 60000;
+const int kMaxBackupRetries = 3;
 const size_t kNumSectors = 6;
 const uint32_t kSectorSize = Sector<9>::start - Sector<8>::start;
 const uint32_t kCrcTag = 0x31435243;  // CRC1
@@ -69,6 +70,9 @@ void BackgroundBufferBackup::Init(Processor* processor, Settings* settings) {
   freeze_state_ = false;
   save_started_ = false;
   previous_freeze_state_ = false;
+  retry_count_ = 0;
+  retry_pending_ = false;
+  commit_pending_ = false;
   remaining_sectors_ = 0;
   remaining_bytes_ = 0;
   write_offset_ = 0;
@@ -156,9 +160,31 @@ bool BackgroundBufferBackup::Valid(const BufferBackupHeader& header) const {
   return crc32(crc, &h, sizeof(h)) == header.crc;
 }
 
-void BackgroundBufferBackup::SaveState(bool frozen) {
+bool BackgroundBufferBackup::SaveState(bool frozen) {
   settings_->mutable_state()->frozen = frozen;
-  settings_->SaveState();
+  return settings_->SaveState();
+}
+
+void BackgroundBufferBackup::CommitSave() {
+  retry_pending_ = true;  // Keep the save indicator active during the write.
+  if (SaveState(true)) {
+    retry_pending_ = false;
+    commit_pending_ = false;
+    save_started_ = false;
+    backup_delay_ = kBackupDelay;
+  } else {
+    settings_->mutable_state()->frozen = false;
+    ScheduleRetry();
+  }
+}
+
+void BackgroundBufferBackup::ScheduleRetry() {
+  retry_pending_ = retry_count_ < kMaxBackupRetries &&
+      !settings_->write_locked();
+  if (retry_pending_) {
+    retry_start_time_ = system_clock.milliseconds();
+  }
+  remaining_sectors_ = remaining_bytes_ = 0;
 }
 
 void BackgroundBufferBackup::EraseSector() {
@@ -167,7 +193,7 @@ void BackgroundBufferBackup::EraseSector() {
     // The header's sector first: an interrupted backup is never loaded.
     const uint32_t sector = kNumSectors - remaining_sectors_;
     if (!EraseBufferSector(sector, kFlashAttempts, false)) {
-      remaining_sectors_ = remaining_bytes_ = 0;
+      ScheduleRetry();
       return;
     }
     --remaining_sectors_;
@@ -197,7 +223,7 @@ void BackgroundBufferBackup::WriteBlock() {
     uint32_t flash_address = \
         Sector<8>::start + uint32_t(write_offset_) + kFlashWordSize;
     if (Flash::SupplyLow()) {
-      remaining_sectors_ = remaining_bytes_ = 0;
+      ScheduleRetry();
       return;
     }
     Flash::ClearErrors();
@@ -205,7 +231,7 @@ void BackgroundBufferBackup::WriteBlock() {
         FLASH_TYPEPROGRAM_FLASHWORD,
         flash_address,
         (uint64_t)(&buffer[0])) != HAL_OK) {
-      remaining_sectors_ = remaining_bytes_ = 0;
+      ScheduleRetry();
       return;
     }
     crc_ = crc32(crc_, &buffer[0], kFlashWordSize);
@@ -227,6 +253,7 @@ void BackgroundBufferBackup::WriteBlock() {
       fill(&header.reserved[0], &header.reserved[sizeof(header.reserved)], 0);
       header.crc = crc32(crc_, &header, sizeof(header));
       if (Flash::SupplyLow()) {
+        ScheduleRetry();
         return;
       }
       Flash::ClearErrors();
@@ -234,14 +261,14 @@ void BackgroundBufferBackup::WriteBlock() {
           FLASH_TYPEPROGRAM_FLASHWORD,
           Sector<8>::start,
           (uint64_t)(&header)) != HAL_OK) {
+        ScheduleRetry();
         return;
       }
-      // We've saved everything, we are now sure that we can restart with
-      // the FREEZE button enabled!
       saved_trimmed_frames_ = header.trimmed_frames;
-      save_started_ = false;
-      backup_delay_ = kBackupDelay;
-      SaveState(true);
+      // The buffer is complete; only the frozen flag still needs saving.
+      commit_pending_ = true;
+      retry_count_ = 0;
+      CommitSave();
     }
   }
 }
@@ -267,6 +294,9 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
       remaining_sectors_ = remaining_bytes_ = 0;
       SaveState(false);
     }
+    retry_count_ = 0;
+    retry_pending_ = false;
+    commit_pending_ = false;
     freeze_start_time_ = system_clock.milliseconds();
     previous_freeze_state_ = false;
   } else {
@@ -287,6 +317,16 @@ void BackgroundBufferBackup::Process(bool freeze_state) {
       remaining_sectors_ = kNumSectors;
       if (settings_->state().frozen) {
         SaveState(false);  // Stale: its backup was not loaded at boot.
+      }
+    } else if (retry_pending_ && !settings_->state().disable_autosave &&
+        now - retry_start_time_ >= (kBackupDelay << retry_count_)) {
+      ++retry_count_;
+      if (commit_pending_) {
+        CommitSave();
+      } else {
+        // Erase again before programming any partially written flash word.
+        remaining_sectors_ = kNumSectors;
+        retry_pending_ = false;
       }
     }
   }

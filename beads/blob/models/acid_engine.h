@@ -249,13 +249,17 @@ class AcidShaper {
 
   static inline float Curve(float x) {
     if (x >= 0.0f) {
-      if (x >= kAcidClipKneePositive) return kAcidClipPositive;
+      if (x >= kAcidClipKneePositive) {
+        return kAcidClipPositive;
+      }
       const float u = x * kAcidClipKneePositiveInverse;
       const float u2 = u * u;
       return kAcidClipKneePositive * u *
           (1.0f - u2 * (2.0f / 3.0f) + u2 * u2 * 0.2f);
     }
-    if (x <= -kAcidClipKneeNegative) return -1.0f;
+    if (x <= -kAcidClipKneeNegative) {
+      return -1.0f;
+    }
     const float u = x * kAcidClipKneeNegativeInverse;
     const float u2 = u * u;
     return kAcidClipKneeNegative * u *

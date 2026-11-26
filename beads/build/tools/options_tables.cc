@@ -145,6 +145,7 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_BRIGHTNESS, 0, "100%" },
   { beads::FEATURE_BRIGHTNESS, 1, "66%" },
   { beads::FEATURE_BRIGHTNESS, 2, "33%" },
+  { beads::FEATURE_BRIGHTNESS, 3, "15%" },
   { beads::FEATURE_SEED_LATCH, 0, "Off" },
   { beads::FEATURE_SEED_LATCH, 1, "Ignore" },
   { beads::FEATURE_SEED_LATCH, 2, "Sync" },
@@ -183,12 +184,12 @@ const char* ColorName(const beads::Leds::Color& color) {
     { { 0, 255, 0 }, "green" },
     { { 255, 255, 0 }, "yellow" },
     { { 255, 0, 0 }, "red" },
-    { { 255, 64, 32 }, "coral" },
-    { { 255, 160, 0 }, "amber" },
-    { { 32, 96, 255 }, "blue" },
-    { { 0, 220, 160 }, "teal" },
-    { { 160, 48, 255 }, "violet" },
-    { { 255, 32, 144 }, "pink" },
+    { { 255, 89, 92 }, "coral" },
+    { { 255, 209, 0 }, "amber" },
+    { { 95, 222, 255 }, "blue" },
+    { { 0, 255, 253 }, "teal" },
+    { { 240, 0, 255 }, "violet" },
+    { { 255, 0, 170 }, "pink" },
   };
   for (size_t i = 0; i < sizeof(colors) / sizeof(colors[0]); ++i) {
     const beads::Leds::Color& candidate = colors[i].color;

@@ -142,6 +142,12 @@ float ResonatorValue(ProfileFeature feature, float curated, float scale) {
   return e.state == PROFILE_FIXED ? float(e.value) * scale : curated;
 }
 
+// Only the granular engine runs the resonator.
+void SetResonatorAvailable() {
+  ui.set_resonator_available(active_processor_mode == PROCESSOR_GRANULAR &&
+      processor.resonator_available());
+}
+
 void UpdateResonator() {
   if (!ui.resonator()) {
     return;
@@ -883,7 +889,7 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
   const Processor::Media media = oliverb_mode ? oliverb_media : processor.media();
   const int sr = new_synth_mode ? 48000
       : oliverb_mode ? oliverb.sample_rate() : int(processor.sample_rate());
-  if (new_synth_mode && background_buffer_backup.busy()) {
+  if (new_synth_mode && background_buffer_backup.saving()) {
     background_buffer_backup.Process(false);
   }
   synth_mode = new_synth_mode;
@@ -984,6 +990,13 @@ void Init() {
   }
   fixed_reverb_decay = Reverb::InitFixedDecay(
       settings.FeatureValue(FEATURE_REVERB_DECAY));
+  if (ui.clouds_style()) {
+    transition.set_clouds_style(true);
+    processor.SetCloudsStyle(true);
+    synth.SetCloudsStyle(true, true);
+    plaits_synth.SetCloudsStyle(true, true);
+    rings_synth.SetCloudsStyle(true, true);
+  }
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;
   const Profile& profile = settings.profile();
@@ -1035,6 +1048,7 @@ void Init() {
   
   // A frozen buffer saved by the granular engine stays in flash.
   processor.set_spectral(ui.spectral());
+  SetResonatorAvailable();
   oliverb_mode = false;
   oliverb_restore_pending = ui.processor_mode() == PROCESSOR_OLIVERB;
   bool was_frozen = ui.processor_mode() == PROCESSOR_GRANULAR &&
@@ -1063,6 +1077,7 @@ void MonitorStateChange() {
   if (ui.resonator() != resonator_placement) {
     resonator_placement = ui.resonator();
     processor.set_resonator(resonator_placement);
+    SetResonatorAvailable();
   }
   ui.set_delay_active(!oliverb_mode && processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
@@ -1146,7 +1161,7 @@ void MonitorStateChange() {
     transition.Pause();
     oliverb_mode = wants_oliverb;
     if (oliverb_mode) {
-      if (background_buffer_backup.busy()) {
+      if (background_buffer_backup.saving()) {
         background_buffer_backup.Process(false);
       }
       if (active_processor_mode == PROCESSOR_ABYSS) {
@@ -1178,6 +1193,7 @@ void MonitorStateChange() {
       oliverb_restore_pending = false;
       processor.ClearReverb();
     }
+    SetResonatorAvailable();
     ConfigureAndStartCodec(false, true);
     return;
   }
@@ -1209,10 +1225,11 @@ void MonitorStateChange() {
     oliverb_mode = false;
     active_processor_mode = wanted_processor;
     if (active_processor_mode == PROCESSOR_ABYSS &&
-        background_buffer_backup.busy()) {
+        background_buffer_backup.saving()) {
       background_buffer_backup.Process(false);
     }
     processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
+    SetResonatorAvailable();
     if (active_processor_mode != PROCESSOR_GRANULAR) {
       background_buffer_backup.Init(&processor, &settings);
     }

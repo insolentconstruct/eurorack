@@ -63,3 +63,8 @@ synth mode, switches Plaits/Rings/Plaits/Beads, checks shared bank ownership,
 steps the Plaits bank and model control, then checks exit on plugged inputs.
 It is excluded from the default erased-region scenarios. Release publication
 waits for these checks; JSON evidence is retained per shard.
+
+CI also checks `saved_clouds`, which boots with a saved Clouds-style reverb
+record and verifies that audio starts at full fade gain. With the release
+region installed, `chiptune_drone` checks the gate and output on Chiptune drone
+exit, with and without a preceding note.

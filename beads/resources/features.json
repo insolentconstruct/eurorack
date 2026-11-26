@@ -8,14 +8,14 @@
       "values": [
         {"name": "Off", "led": [0, 255, 0]},
         {"name": "Chromatic", "led": [255, 255, 0]},
-        {"name": "Fifths", "led": [255, 64, 32]},
-        {"name": "Major", "led": [255, 160, 0]},
-        {"name": "Minor", "led": [32, 96, 255]},
-        {"name": "Pentatonic major", "led": [255, 160, 0], "pulse": "slow"},
-        {"name": "Pentatonic minor", "led": [32, 96, 255], "pulse": "slow"},
-        {"name": "Pelog", "led": [0, 220, 160]},
-        {"name": "Raag Bhairav", "led": [160, 48, 255]},
-        {"name": "Raag Shri", "led": [255, 32, 144], "pulse": "double"},
+        {"name": "Fifths", "led": [255, 89, 92]},
+        {"name": "Major", "led": [255, 209, 0]},
+        {"name": "Minor", "led": [95, 222, 255]},
+        {"name": "Pentatonic major", "led": [255, 209, 0], "pulse": "slow"},
+        {"name": "Pentatonic minor", "led": [95, 222, 255], "pulse": "slow"},
+        {"name": "Pelog", "led": [0, 255, 253]},
+        {"name": "Raag Bhairav", "led": [240, 0, 255]},
+        {"name": "Raag Shri", "led": [255, 0, 170], "pulse": "double"},
         {"name": "User scale 10"},
         {"name": "User scale 11"},
         {"name": "User scale 12"},
@@ -407,7 +407,8 @@
       "values": [
         {"name": "100%", "led": [0, 255, 0]},
         {"name": "66%", "led": [255, 255, 0]},
-        {"name": "33%", "led": [255, 0, 0]}
+        {"name": "33%", "led": [255, 0, 0]},
+        {"name": "15%", "led": [255, 0, 0], "pulse": "slow"}
       ],
       "field": 10,
       "saved": 20,

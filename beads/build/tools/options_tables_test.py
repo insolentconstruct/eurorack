@@ -133,7 +133,7 @@ user_sections.append(
 )
 # Brightness percentages are the owner-selected public level names.
 for text in user_sections:
-    text = re.sub(r"(?<![0-9])(100|66|33)%", "", text)
+    text = re.sub(r"(?<![0-9])(100|66|33|15)%", "", text)
     for banned in STYLE_BANNED:
         assert banned not in text, banned
 rich_width = markdown_readme.split("## Stereo width\n", 1)[1].split("\n## ", 1)[0]
@@ -190,7 +190,10 @@ for setting in ("Frozen feedback", "Synth start"):
     assert len(values[setting]) == 2, setting
 for setting in ("Reverb character", "Processor"):
     assert len(values[setting]) == 4, setting
-assert len(values["LED brightness"]) == 3
+assert values["LED brightness"] == {
+    ("green", "steady"), ("yellow", "steady"), ("red", "steady"),
+    ("red", "slow (0.98 Hz)"),
+}
 assert len(values["SEED latch"]) == 4
 assert len(values["Resonator"]) == 4
 assert len(values["Resonator material"]) == 8
@@ -279,7 +282,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
                 f"{' / '.join(indications)} |"
             ) in page_text
     # User-facing prose carries no exact numbers; those live in FEATURES.md.
-    prose = re.sub(r"(?<![0-9])(100|66|33)%", "", markdown)
+    prose = re.sub(r"(?<![0-9])(100|66|33|15)%", "", markdown)
     for banned in STYLE_BANNED:
         assert banned not in prose, ("OPTIONS.md", banned)
     for phrase in ("Wide/smooth filter", "Raag Shri", "about a second and a half",
@@ -336,7 +339,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
         assert "Scale (tap SEED to step through):" in labels
         assert all(float(node.attrib["font-size"]) >= 15 for node in texts)
         flat = " ".join(labels)
-        flat = re.sub(r"(?<![0-9])(100|66|33)%", "", flat)
+        flat = re.sub(r"(?<![0-9])(100|66|33|15)%", "", flat)
         for phrase in STYLE_BANNED:
             assert phrase not in flat, (name, phrase)
         assert {"[A]", "CV assign", "[M]"} <= set(labels)
@@ -356,7 +359,7 @@ with tempfile.TemporaryDirectory(prefix="options-guide-") as directory:
     ):
         assert phrase in section, phrase
     _, pages = read_tsv(export)
-    for knob, count in (("FEEDBACK", 3), ("DRY/WET", 4)):
+    for knob, count in (("FEEDBACK", 4), ("DRY/WET", 4)):
         bands = zone_bands(pages["4"][knob])
         assert len(bands) == count - 1
         for index, (low, high) in enumerate(bands, 1):
@@ -524,7 +527,7 @@ assert decay["states"] == ["Off", "Fixed"] and decay["saved"] is None
 assert time_cv["id"] == 55 and time_cv["values"] == ["Stock", "Fine (1/8)"]
 assert time_cv["states"] == ["Off", "Fixed"] and time_cv["saved"] is None
 assert next(f for f in catalog["features"] if f["id"] == 18)["values"] == [
-    "100%", "66%", "33%"]
+    "100%", "66%", "33%", "15%"]
 manifest = json.loads(Path("beads/resources/features.json").read_text())
 states = ["Off", "Fixed", "Adjustable"]
 for feature, row, source in zip(catalog["features"], exported,

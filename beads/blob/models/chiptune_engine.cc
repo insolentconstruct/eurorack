@@ -52,13 +52,19 @@ void Chiptune::Init(
 
   arpeggiator_pattern_selector_.Init(12, 0.075f, false);
 
-  envelope_shape_ = NO_ENVELOPE;
+  envelope_shape_ = 0.0f;
   envelope_state_ = 0.0f;
-  aux_envelope_amount_ = 0.0f;
 }
 
 void Chiptune::Reset() {
   plaits_blob_import_chord_bank_reset(chord_bank_, &chords_);
+}
+
+void Chiptune::RenderDroneTail(const EngineParameters& parameters,
+    float* out, float* aux, size_t size, bool* already_enveloped) {
+  EngineParameters drone = parameters;
+  drone.trigger = TRIGGER_UNPATCHED;
+  Render(drone, out, aux, size, already_enveloped);
 }
 
 void Chiptune::Render(
@@ -101,8 +107,11 @@ void Chiptune::Render(
       amplitudes[j] = -amplitudes[j];
     }
 
-    fill(&out[0], &out[size], 0.0f);
-    for (int voice = 0; voice < kChordNumVoices; ++voice) {
+    voice_[0].Render(f0 * ratios[0], shape, out, size);
+    for (size_t j = 0; j < size; ++j) {
+      out[j] = 0.0f + out[j] * amplitudes[0];  // Sum from zero as before.
+    }
+    for (int voice = 1; voice < kChordNumVoices; ++voice) {
       const float voice_f0 = f0 * ratios[voice];
       voice_[voice].Render(voice_f0, shape, aux, size);
       for (size_t j = 0; j < size; ++j) {
@@ -114,19 +123,11 @@ void Chiptune::Render(
   // Render bass note.
   bass_.Render(f0 * 0.5f * root_transposition, aux, size);
 
-  // Apply envelope if necessary.
+  // The clocked gain is fixed, as with the TIMBRE attenuverter at noon.
   if (envelope_shape_ != NO_ENVELOPE) {
-    const float shape = fabsf(envelope_shape_);
-    const float decay = 1.0f - \
-        2.0f / kSampleRate * SemitonesToRatio(60.0f * shape) * shape;
-    float aux_envelope_amount = envelope_shape_ * 20.0f;
-    CONSTRAIN(aux_envelope_amount, 0.0f, 1.0f);
-
+    const float gain = envelope_state_;
     for (size_t i = 0; i < size; ++i) {
-      ONE_POLE(aux_envelope_amount_, aux_envelope_amount, 0.01f);
-      envelope_state_ *= decay;
-      out[i] *= envelope_state_;
-      aux[i] *= 1.0f + aux_envelope_amount_ * (envelope_state_ - 1.0f);
+      out[i] *= gain;
     }
   }
 }

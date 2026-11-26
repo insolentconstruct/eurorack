@@ -446,7 +446,8 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
   const bool send = (options_ & OPTION_FLAG_SEND_MIX) &&
       !delay_mode && !spectral_;
   FloatFrame dry_signal[size];
-  const float feedback = resonator && resonator_controls_.hold_feedback
+  const float feedback =
+      resonator && !spectral_ && resonator_controls_.hold_feedback
       ? resonator_controls_.feedback : mix_parameters.feedback;
   float loop_feedback = feedback;
   if (unity) {

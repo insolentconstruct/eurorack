@@ -31,6 +31,10 @@ CC_FILES += random.cc
 endif
 endif
 
+ifneq ($(filter ui.cc,$(CC_FILES)),)
+CC_FILES += led_curve.cc
+endif
+
 OBJ_FILES = $(CC_FILES:.cc=.o)
 OBJS = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
 DEPS = $(OBJS:.o=.d)

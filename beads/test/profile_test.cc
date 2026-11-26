@@ -351,7 +351,7 @@ void TestProfileKinds() {
 void TestBetaProfileDefinitions() {
   test_checker.Start("TestBetaProfileDefinitions");
   uint8_t b[kProfileSize];
-  CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
+  CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 4);
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -712,6 +712,18 @@ uint32_t Beta3Digest(uint32_t* accepted) {
       }
       Profile gentle;
       CHECK(ok == gentle.Init(b));
+      results.push_back(false);
+      continue;
+    }
+    // Beta 3 refused 15%; its valid placements match the 33% value.
+    if (cases[i] == FEATURE_BRIGHTNESS && cases[i + 2] == 3) {
+      b[18] = 2;
+      Checksum(b);
+      Profile third;
+      CHECK(ok == third.Init(b));
+      if (ok) {
+        CHECK(parsed.entry(FEATURE_BRIGHTNESS).value == 3);
+      }
       results.push_back(false);
       continue;
     }

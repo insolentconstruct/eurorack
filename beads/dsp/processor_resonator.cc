@@ -146,6 +146,24 @@ void Processor::ProcessResonatorLoop(
   }
 }
 
+void Processor::set_resonator(int placement) {
+  const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
+      ? OPTION_FLAG_RESONATOR_GRAINS
+      : (placement == RESONATOR_BEFORE_BUFFER
+          ? OPTION_FLAG_RESONATOR_INPUT
+          : (placement == RESONATOR_FEEDBACK ? kResonatorFlags : 0));
+#ifndef TEST
+  const uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+#endif  // TEST
+  // Publish the placement and its one-shot reset between audio blocks.
+  options_ = (options_ & ~kResonatorFlags) | flag;
+  resonator_reset_pending_ = flag != 0;
+#ifndef TEST
+  __set_PRIMASK(primask);
+#endif  // TEST
+}
+
 void Processor::set_resonator_controls(const ResonatorControls& controls) {
   const ResonatorBound& bound = resonator_bounds_[resonator_bound_];
   const bool changed = !resonator_controls_set_ ||
@@ -208,6 +226,11 @@ bool Processor::SeedStrike(
     SeedButtonState seed_button_state,
     const GateFlags* seed_input,
     size_t size) {
+  if (resonator_reset_pending_) {
+    resonator_reset_pending_ = false;
+    resonator_sample_rate_ = resonator_loop_feedback_ = 0.0f;
+    seed_gate_ = true;  // A SEED held during the change does not strike.
+  }
   bool strike = false;
   if (seed_button_state >= SEED_BUTTON_STATE_LOCKED) {
     // Latched, each edge at the jack strikes it.

@@ -131,6 +131,9 @@ class EngineTransition {
   }
   void SetReverbCharacter(uint8_t character, Processor* processor, Synth* synth);
   void Resume(Codec::FillBufferCallback callback);
+  inline void set_clouds_style(bool clouds_style) {
+    clouds_style_ = clouds_style;
+  }
   inline SynthEngine playing_synth() const { return playing_synth_; }
   inline void set_playing_synth(SynthEngine synth) { playing_synth_ = synth; }
   inline SynthEngine bank_owner() const { return bank_owner_; }

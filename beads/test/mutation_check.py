@@ -88,14 +88,14 @@ cases = [
     'if (start_quality) {\n    state_.media = 4 - start_quality;\n  }\n  stored_state_ = state_;',
     'stored_state_ = state_;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool new_profile = !record_valid || \\\n      record_.profile_identity != profile_.identity();',
+    'const bool new_profile = !record_valid || \\\n      stored_record_.profile_identity != profile_.identity();',
     'const bool new_profile = !record_valid;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool new_profile = !record_valid || \\\n      record_.profile_identity != profile_.identity();',
-    'const bool new_profile = \\\n      record_.profile_identity != profile_.identity();'),
+    'const bool new_profile = !record_valid || \\\n      stored_record_.profile_identity != profile_.identity();',
+    'const bool new_profile = \\\n      stored_record_.profile_identity != profile_.identity();'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    '  record_.profile_identity = profile_.identity();\n  // Any new',
-    '  record_.profile_identity = 0;\n  // Any new'),
+    '    record_.profile_identity = profile_.identity();\n  }\n  // Any new',
+    '    record_.profile_identity = 0;\n  }\n  // Any new'),
   ('TestStartQuality', 'storage', 'beads/profile.cc',
     'identity_ = Read32(b + 16 + bytes);',
     'identity_ = 0;'),
@@ -218,24 +218,24 @@ cases = [
     'ConfigurePitchScales(NULL, 0, false);'),
   ('TestCustomPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
     'to.notes[j] = from.notes[j];', 'to.notes[j] = 0.0f;'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    '(level == 1 ? 0.5361865f : 0.1895706f));',
-    '(level == 1 ? 0.66f : 0.33f));'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'const uint8_t offset = level == 1 ? 4 : 8;',
-    'const uint8_t offset = 0;'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'const bool blue = intensity_[LED_MEDIA_B] != 0;',
-    'const bool blue = true;'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'const bool green = intensity_[LED_MEDIA_G] != 0;',
-    'const bool green = true;'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'set_media(color, float(percent) / 100.0f);',
+    'set_media(color, float(percent) / 255.0f);'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'color.r = DimLed(led_curve_r, color.r, a);',
+    'color.r = uint8_t(color.r * a);'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'color.g = DimLed(led_curve_g, color.g, a);',
+    'color.g = uint8_t(color.g * a);'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'color.b = DimLed(led_curve_b, color.b, a);',
+    'color.b = uint8_t(color.b * a);'),
   ('TestCustomScalePersistenceAndLeds', 'options', 'beads/profile.cc',
     'return PitchScale(scales_[(i + 1) % scale_count_].id);',
     'return PitchScale(current + 1);'),
   ('TestStockSettingsCarryOver', 'storage', 'beads/settings.cc',
-    'bytes[kRecordOffsets[i]] = profile_.entry(ProfileFeature(i)).value;',
-    'bytes[kRecordOffsets[i]] = 111;'),
+    '    uint8_t value = profile_.entry(feature).value;',
+    '    uint8_t value = feature == FEATURE_WIDTH ? 111 : profile_.entry(feature).value;'),
   ('TestStockSettingsCarryOver', 'storage', 'beads/settings.cc',
     'value = state_.monophonic_mode;  // Stock State keeps it.',
     'value = 0;'),
@@ -243,8 +243,8 @@ cases = [
     '  if (!record_valid) {\n    record_ = default_record;\n  }\n',
     '\n'),
   ('TestProfileLocks', 'storage', 'beads/settings_storage.h',
-    '    ReadChunk(chunk_address(0), persistent_data_);\n    RewriteSector();',
-    '    ReadChunk(chunk_address(0), persistent_data_);\n    RestorePersistentData();'),
+    '    ReadChunk(chunk_address(0), persistent_data_);\n    return RewriteSector();',
+    '    ReadChunk(chunk_address(0), persistent_data_);\n    return RestorePersistentData();'),
   ('TestProfilePages', 'options', 'beads/ui.cc',
     'if (!settings_->storage_damaged())', 'if (!settings_->write_locked())'),
   ('TestEraseDamagedSectors', 'backup', 'beads/background_buffer_backup.cc',
@@ -276,14 +276,14 @@ cases = [
     'if (cv_target_ || state_.assignable_cv_destination) {',
     'if (false) {'),
   ('TestSavedFeatures', 'storage', 'beads/settings.cc',
-    '        bytes[offset] < kFeatureDefinitions[i].values)) {',
-    '        bytes[offset] < 255)) {'),
+    '        bytes[offset] < kFeatureDefinitions[i].values) {',
+    '        bytes[offset] < 255) {'),
   ('TestSavedFeatures', 'storage', 'beads/settings.cc',
     '  9,  // Reverb.',
     '  10,  // Reverb.'),
   ('TestGesturePersistence', 'record', 'beads/settings.cc',
-    '} else if (offset && (!kFeatureDefinitions[i].values ||',
-    '} else if (offset && ('),
+    '      if (amount_overrides_ & OptionsRecord::WIDTH_OVERRIDE) {',
+    '      if (false) {'),
   ('TestProfileLocks', 'storage', 'beads/settings_storage.h',
     '    recovering_ = false;\n    return !locked_;',
     '    recovering_ = false;\n    protected_ = false;\n    return !locked_;'),
@@ -329,8 +329,9 @@ cases = [
     'status == STORAGE_OK && !profile_locked_',
     'status == STORAGE_OK'),
   ('TestProfileLocks', 'storage', 'beads/settings.cc',
-    'if (status == STORAGE_RESTORED) {',
-    'if (status == STORAGE_RESTORED) { stored_state_ = defaults;'),
+    'if (status == STORAGE_RESTORED && chunk_storage_.RestorePersistentData() &&',
+    'if (status == STORAGE_RESTORED && (stored_state_ = defaults, '
+    'chunk_storage_.RestorePersistentData()) &&'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
     'SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : e.value);',
     'SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : 0);'),
@@ -409,7 +410,7 @@ cases = [
     'return PitchScale(scales_[(i + 1) % scale_count_].id);',
     'return PitchScale(current + 1);'),
   ('TestOptionsPalette', 'options', 'beads/options.cc',
-    '{ FEATURE_PITCH, 4, { 32, 96, 255 }, PULSE_STEADY },',
+    '{ FEATURE_PITCH, 4, { 95, 222, 255 }, PULSE_STEADY },',
     '{ FEATURE_PITCH, 4, { 0, 255, 255 }, PULSE_STEADY },'),
   ('TestCloudsStorage', 'options', 'beads/settings.h',
     'inline uint8_t reverb_character() const { return values_[FEATURE_REVERB]; }',
@@ -539,8 +540,8 @@ cases = [
     'kBackupDelay = 10000;',
     'kBackupDelay = 9999;'),
   ('TestBackupLedAndRestore', 'options', 'beads/ui.cc',
-    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255',
-    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 255 : 255'),
+    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE)\n                  ? 128 : 255',
+    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE)\n                  ? 255 : 255'),
   ('TestFrozenSliceBoundarySelection', 'delay', 'beads/dsp/delay_controller.cc',
     'if (play_head_[i].done()) {',
     'if (true) {'),
@@ -1052,8 +1053,8 @@ cases = [
     'kMaxBackupDelay = 320000',
     'kMaxBackupDelay = 640000'),
   ('TestBackupCompletionReset', 'backup', 'beads/background_buffer_backup.cc',
-    '      backup_delay_ = kBackupDelay;\n      SaveState(true);',
-    '      SaveState(true);'),
+    '    save_started_ = false;\n    backup_delay_ = kBackupDelay;',
+    '    save_started_ = false;'),
   ('TestBackupThawReset', 'backup', 'beads/background_buffer_backup.cc',
     'kBackupResetDelay = 60000',
     'kBackupResetDelay = 59000'),
@@ -1364,7 +1365,7 @@ cases = [
     '    return false;'),
   ('TestLowSupply', 'storage', 'beads/settings_storage.h',
     '    if (Flash::SupplyLow()) {\n'
-    '      return;  // Kept in RAM; the next save writes it.\n'
+    '      return false;  // Kept in RAM; the next save writes it.\n'
     '    }\n',
     ''),
   ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
@@ -1380,12 +1381,13 @@ cases = [
     ''),
   ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
     '    if (Flash::SupplyLow()) {\n'
-    '      remaining_sectors_ = remaining_bytes_ = 0;\n'
+    '      ScheduleRetry();\n'
     '      return;\n'
     '    }\n',
     ''),
   ('TestSupplyDropBackup', 'backup', 'beads/background_buffer_backup.cc',
     '      if (Flash::SupplyLow()) {\n'
+    '        ScheduleRetry();\n'
     '        return;\n'
     '      }\n',
     ''),
@@ -1393,8 +1395,8 @@ cases = [
     'const bool loaded = status == STORAGE_OK || status == STORAGE_RESTORED;',
     'const bool loaded = false;'),
   ('TestCalibrationWithoutState', 'storage', 'beads/settings.cc',
-    '    chunk_storage_.RestorePersistentData();',
-    '    (void)0;'),
+    'if (status == STORAGE_RESTORED && chunk_storage_.RestorePersistentData() &&',
+    'if (status == STORAGE_RESTORED && false &&'),
   ('TestRetriedBufferErase', 'backup', 'beads/background_buffer_backup.cc',
     '    if (!EraseBufferSector(sector, kFlashAttempts, false)) {',
     '    if (!EraseBufferSector(sector, 1, false)) {'),
@@ -1544,18 +1546,18 @@ cases = [
     'led_features && settings_->FeatureValue(FEATURE_LIVE_ASSIGN))',
     'false)'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
-    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255',
+    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE)\n                  ? 128 : 255',
     'true ? 128 : 255'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'leds_.Scale(level);',
     '(void)level; leds_.Scale(0);'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'level == 1 ? 66 : 33',
-    'level == 1 ? 50 : 33'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'level == 1 ? 66 : 33',
-    'level == 1 ? 66 : 25'),
-  ('TestDefaultLedIdentity', 'options', 'beads/drivers/leds.h',
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'level == 1 ? 66 : level == 3 ? 15 : 33',
+    'level == 1 ? 50 : level == 3 ? 15 : 33'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'level == 1 ? 66 : level == 3 ? 15 : 33',
+    'level == 1 ? 66 : level == 3 ? 15 : 25'),
+  ('TestDefaultLedIdentity', 'options', 'beads/drivers/led_curve.cc',
     'if (!level) {',
     'if (false) {'),
   ('TestBetaOptionPages', 'options', 'beads/options.cc',
@@ -1565,7 +1567,7 @@ cases = [
     'leds_.Scale(level);',
     'if (mode_ != MODE_STORAGE_WARNING) leds_.Scale(level);'),
   ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
-    '{ 3, 10, true, false, false, false }',
+    '{ 4, 10, true, false, false, false }',
     '{ 2, 10, true, false, false, false }'),
   ('TestBetaOptionPages', 'options', 'beads/settings.cc',
     '  values_[feature] = value;',
@@ -1640,11 +1642,16 @@ cases = [
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     'const uint32_t kGestureCueTime = 500;',
     'const uint32_t kGestureCueTime = 0;'),
+  # Reintroduce the stale bank write through both commit guards.
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     'for (int i = 0; i < kNumPageFeatures; ++i) {\n'
-    '      const ProfileFeature f = kPageFeatures[i];',
+    '      const ProfileFeature f = kPageFeatures[i];\n'
+    '      // Pages commit their settings; a gesture saves the Plaits bank.\n'
+    '      if (options_.edited(f) && settings_->profile().adjustable(f) &&',
     'for (int i = 0; i < FEATURE_LAST; ++i) {\n'
-    '      const ProfileFeature f = ProfileFeature(i);'),
+    '      const ProfileFeature f = ProfileFeature(i);\n'
+    '      if ((f == FEATURE_PLAITS_BANK || options_.edited(f)) &&\n'
+    '          settings_->profile().adjustable(f) &&'),
   ('TestBankDetents', 'plaits_synth', 'beads/dsp/plaits_synth.cc',
     'model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, false);',
     'model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, true);'),
@@ -1853,8 +1860,8 @@ cases = [
     '{ 2, kNoField, false, false, false, false },  // Grain stealing.',
     '{ 2, 15, false, false, false, false },  // Grain stealing.'),
   ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
-    '{ 3, 10, true, false, false, false }',
-    '{ 3, 13, true, false, false, false }'),
+    '{ 4, 10, true, false, false, false }',
+    '{ 4, 13, true, false, false, false }'),
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
     'gain_setting < 120', 'gain_setting < 121'),
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
@@ -1901,6 +1908,10 @@ cases = [
 
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'options_.Value(FEATURE_BRIGHTNESS)', '0'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'level == 1 ? 66 : level == 3 ? 15 : 33', 'level == 1 ? 66 : 33'),
+  ('TestOptionsPalette', 'options', 'beads/profile.cc',
+    '{ 4, 7, { 95, 222, 255 }, 0,', '{ 4, 7, { 32, 96, 255 }, 0,'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     '? 0.25f : 0.05f', '? 0.5f : 0.05f'),
 
@@ -1935,9 +1946,11 @@ cases = [
    '      ? (codec_->Stop(), codec_->Start(sample_rate, block_size, callback))'),
   ('TestProfileToggles', 'options', 'beads/gesture_controller.cc',
     '    settings_->SetFeatureValue(feature, value);\n'
+    '    ui_->options_.PublishGesture(feature, value);\n'
     '    settings_->SaveOptions();\n'
     '    const OptionValue cue',
     '    settings_->SetFeatureValue(feature, value);\n'
+    '    ui_->options_.PublishGesture(feature, value);\n'
     '    const OptionValue cue'),
   ('TestProfileToggles', 'options', 'beads/gesture_controller.cc',
     'FindOptionValue(feature, value);',
@@ -2318,8 +2331,9 @@ cases = [
   ('TestResonatorSeedEdges', 'resonator', 'beads/dsp/processor_resonator.cc',
     'strike = strike || (seed_input[i] & GATE_FLAG_RISING);',
     'strike = strike || false;'),
-  ('TestResonatorSeedEdges', 'resonator', 'beads/dsp/processor.h',
-    '    seed_gate_ = true;\n', ''),
+  ('TestResonatorSeedEdges', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '    seed_gate_ = true;  // A SEED held during the change does not strike.\n',
+    ''),
   ('TestResonatorStrikeLevel', 'resonator', 'beads/dsp/processor_resonator.cc',
     'strike_pulse = 0.25f * SemitonesToRatio',
     'strike_pulse = 1.0f * SemitonesToRatio'),
@@ -2385,12 +2399,12 @@ cases = [
   ('TestResonatorStrike', 'resonator', 'beads/dsp/processor_resonator.cc',
     '  if (strike) {\n    // Rings',
     '  if (false) {\n    // Rings'),
-  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor.h',
-    '        ? OPTION_FLAG_RESONATOR_GRAINS\n',
-    '        ? OPTION_FLAG_RESONATOR_INPUT\n'),
-  ('TestResonatorOff', 'resonator', 'beads/dsp/processor.h',
-    '                : 0));',
-    '                : OPTION_FLAG_RESONATOR_GRAINS));'),
+  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '      ? OPTION_FLAG_RESONATOR_GRAINS\n',
+    '      ? OPTION_FLAG_RESONATOR_INPUT\n'),
+  ('TestResonatorOff', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'placement == RESONATOR_FEEDBACK ? kResonatorFlags : 0',
+    'placement == RESONATOR_FEEDBACK ? kResonatorFlags : OPTION_FLAG_RESONATOR_GRAINS'),
   ('TestResonatorSpectralReset', 'resonator', 'beads/dsp/processor_options.cc',
     '      resonator_sample_rate_ = 0.0f;\n', ''),
   ('TestResonatorLimiterAtRest', 'resonator', 'beads/dsp/modal_resonator.cc',
@@ -2536,9 +2550,9 @@ cases = [
     '        ProcessResonatorLoop(',
     '      if (true) {\n'
     '        ProcessResonatorLoop('),
-  ('TestResonatorFeedback', 'resonator', 'beads/dsp/processor.h',
-    '                ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT\n',
-    '                ? OPTION_FLAG_RESONATOR_GRAINS\n'),
+  ('TestResonatorFeedback', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'placement == RESONATOR_FEEDBACK ? kResonatorFlags : 0',
+    'placement == RESONATOR_FEEDBACK ? OPTION_FLAG_RESONATOR_GRAINS : 0'),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/processor_resonator.cc',
     '    resonator_.Strike();\n', ''),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.h',
@@ -2601,15 +2615,16 @@ cases = [
     '  c.hold_feedback = ui.resonator_assigned();',
     '  c.hold_feedback = false;'),
   ('TestResonatorDampingCv', 'firmware', 'beads/dsp/processor_options.cc',
-    'const float feedback = resonator && resonator_controls_.hold_feedback',
-    'const float feedback = false && resonator_controls_.hold_feedback'),
-  ('TestResonatorDampingCv', 'firmware', 'beads/ui.cc',
-    '  if (!resonator_ || synth_mode_) {', '  if (!resonator_) {'),
+    'resonator && !spectral_ && resonator_controls_.hold_feedback',
+    'false && resonator_controls_.hold_feedback'),
+  ('TestResonatorDampingCv', 'firmware', 'beads/ui.h',
+    'resonator_available_ && resonator_ && !synth_mode_',
+    'resonator_available_ && resonator_'),
   ('TestResonatorDampingCv', 'firmware', 'beads/gesture_controller.cc',
     '    ui_->resonator_assigned_ = true;',
     '    ui_->resonator_assigned_ = false;'),
   ('TestResonatorDampingCv', 'firmware', 'beads/ui.cc',
-    '  if (!resonator_ || synth_mode_) {\n    resonator_assigned_ = false;\n  }\n',
+    '  if (!resonator_available()) {\n    resonator_assigned_ = false;\n  }\n',
     ''),
   ('TestResonatorDampingCv', 'firmware', 'beads/ui.cc',
     '          leds_.set(Led(LED_ASSIGN_1 + MIX_PARAMETER_REVERB), triangle);\n'
@@ -2662,8 +2677,9 @@ cases = [
     'const uint8_t* bytes = static_cast<const uint8_t*>(data);',
     'const int8_t* bytes = static_cast<const int8_t*>(data);'),
   ('TestRecordJournal', 'record', 'beads/settings.cc',
-    '  SaveOptions();\n  PackState();\n  chunk_storage_.SaveState();',
-    '  PackState();\n  chunk_storage_.SaveState();\n  SaveOptions();'),
+    '  SaveOptions();\n  PackState();\n  return chunk_storage_.SaveState();',
+    '  PackState();\n  const bool saved = chunk_storage_.SaveState();\n'
+    '  SaveOptions();\n  return saved;'),
   ('TestFactoryCaliGuard', 'record', 'beads/settings.cc',
     'const bool factory_values = loaded && \\',
     'const bool factory_values = false && \\'),
@@ -2688,6 +2704,21 @@ cases = [
   ('TestRecoveryRestoredStorage', 'record', 'beads/settings.cc',
     '  if (recovery_mode && !profile_locked_) {\n    record_ = default_record;',
     '  if (recovery_mode && status == STORAGE_OK && !profile_locked_) {\n    record_ = default_record;'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/settings.cc',
+    '  const bool saved = chunk_storage_.SavePersistentData();',
+    '  const PersistentData requested = persistent_data_;\n'
+    '  chunk_storage_.SavePersistentData();\n'
+    '  const bool saved = !chunk_storage_.locked() &&\n'
+    '      !memcmp(&requested, &persistent_data_, sizeof(PersistentData));'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/ui.cc',
+    '      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {',
+    '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/calibrator.h',
+    '    if (!saved) {\n      if (settings_->ReadPersistentData(&durable)) {',
+    '    if (!saved) {\n      if (false) {'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/settings_storage.h',
+    '    if (valid && Usable(mirror) && !SectorProtects(mirror) &&',
+    '    if (false && valid && Usable(mirror) && !SectorProtects(mirror) &&'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
     '      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {',
     '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
@@ -2718,11 +2749,11 @@ cases = [
     '      settings_->mutable_persistent_data()->adc_calibration[channel].scale '
     '= c->scale();'),
   ('TestLockedCalibrationCue', 'firmware', 'beads/settings.cc',
-    '  return chunk_storage_.SavePersistentData();',
-    '  return (chunk_storage_.SavePersistentData(), true);'),
+    '  const bool saved = chunk_storage_.SavePersistentData();',
+    '  const bool saved = (chunk_storage_.SavePersistentData(), true);'),
   ('TestLockedCalibrationRefused', 'storage', 'beads/settings.cc',
-    '  return chunk_storage_.SavePersistentData();',
-    '  return (chunk_storage_.SavePersistentData(), true);'),
+    '  const bool saved = chunk_storage_.SavePersistentData();',
+    '  const bool saved = (chunk_storage_.SavePersistentData(), true);'),
   ('TestStuckRecordSlot', 'record', 'beads/settings_storage.h',
     '        compaction_failed_) {',
     '        false) {'),
@@ -2834,12 +2865,12 @@ cases = [
     '    settings_->set_diffusion_assigned(true);\n'
     '    if (!settings_->diffusion_assigned()) {\n'
     '      settings_->set_width_assigned(false);\n'
-    '      ui_->resonator_assigned_ = ui_->resonator_ != 0;\n'
+    '      ui_->resonator_assigned_ = ui_->resonator_available();\n'
     '    }\n',
     '    settings_->set_width_assigned(false);\n'
     '    settings_->set_diffusion_assigned(true);\n'
     '    ui_->resonator_assigned_ = !settings_->diffusion_assigned() &&\n'
-    '        ui_->resonator_ != 0;\n'),
+    '        ui_->resonator_available();\n'),
   # An [A] gesture saves the knob edit whose release it consumes.
   ('TestAmountSavedByAction', 'options', 'beads/gesture_controller.cc',
     '    if (pot_touched) {\n'
@@ -3044,8 +3075,10 @@ cases = [
   ('TestRingsSynthOwnership', 'firmware', 'beads/engine_transition.cc',
     '  playing_synth_ = playing;\n'
     '  ui_->set_playing_synth(playing);\n'
+    '  codec_fade_ = false;\n'
     '  if (codec_running_) {',
     '  ui_->set_playing_synth(playing);\n'
+    '  codec_fade_ = false;\n'
     '  if (codec_running_) {'),
   ('TestRingsSynthApp', 'rings_synth', 'beads/dsp/rings_synth.cc',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down * kRingsGain;',
@@ -3068,6 +3101,61 @@ cases = [
   ('TestAppendAfterBlankGap', 'storage', 'beads/settings_storage.h',
    '            !Flash::IsBlank(address + size, size))) {',
    '            false)) {'),
+  ('TestRetryWhileFrozen', 'backup', 'beads/background_buffer_backup.cc',
+   '  retry_pending_ = retry_count_ < kMaxBackupRetries &&',
+   '  retry_pending_ = false && retry_count_ < kMaxBackupRetries &&'),
+  ('TestBackupRetryStateSave', 'backup', 'beads/background_buffer_backup.cc',
+   '      if (commit_pending_) {',
+   '      if (false) {'),
+  ('TestBackupRetryStateExhausted', 'backup', 'beads/background_buffer_backup.cc',
+   '    settings_->mutable_state()->frozen = false;\n    ScheduleRetry();',
+   '    ScheduleRetry();'),
+  ('TestBackupRetryLimit', 'backup', 'beads/background_buffer_backup.cc',
+   'retry_count_ < kMaxBackupRetries', 'retry_count_ <= kMaxBackupRetries'),
+  ('TestPendingSeedAcrossPages', 'options', 'beads/options.cc',
+   '    if (PageHasPitch()) {\n      preview_knob_ = -1;',
+   '    if (true) {\n      preview_knob_ = -1;'),
+  ('TestFullByteProfileDefaults', 'record', 'beads/settings.cc',
+   '      if (amount_overrides_ & OptionsRecord::WIDTH_OVERRIDE) {',
+   '      if (true) {'),
+  ('TestFullByteProfileDefaults', 'record', 'beads/settings.cc',
+   '      if (amount_overrides_ & OptionsRecord::DIFFUSION_OVERRIDE) {',
+   '      if (true) {'),
+  ('TestFullByteDefaultsThroughFixedProfile', 'record', 'beads/settings.cc',
+   '  if (!(record_.amount_overrides & OptionsRecord::WIDTH_OVERRIDE)) {',
+   '  if (false) {'),
+  ('TestRefuseUnusableRewrite', 'record', 'beads/settings_storage.h',
+   '        (ReadChunk(MIRROR_BASE, &data) != CHUNK_VALID || !Usable(data))) {',
+   '        (ReadChunk(MIRROR_BASE, &data) != CHUNK_VALID || !Usable(data)) &&\n'
+   '        false) {'),
+  ('TestChiptuneDroneEnd', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
+   '        (unpatched_ || chiptune_tail_);',
+   '        (unpatched_ || chiptune_tail_) && false;'),
+  ('TestOptionsPendingProfileGesture', 'options', 'beads/gesture_controller.cc',
+   '    const uint8_t current = ui_->options_.edited(feature)',
+   '    const uint8_t current = false'),
+  ('TestCommitKeepsUneditedOption', 'options', 'beads/ui.cc',
+   'if (options_.edited(f) && settings_->profile().adjustable(f) &&',
+   'if (settings_->profile().adjustable(f) &&'),
+  ('TestStartQualityOptionsSave', 'storage', 'beads/settings.cc',
+   '  if (start_quality_pending_) {\n    const uint8_t media',
+   '  if (start_quality_pending_ && false) {\n    const uint8_t media'),
+  ('TestStartQualityCalibrationCut', 'storage', 'beads/settings.cc',
+   '  if (!start_quality_pending_) {\n    record_.profile_identity',
+   '  if (true) {\n    record_.profile_identity'),
+  ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor.h',
+   'return !spectral_ && (options_ & kResonatorFlags);',
+   'return options_ & kResonatorFlags;'),
+  ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor_options.cc',
+   'resonator && !spectral_ && resonator_controls_.hold_feedback',
+   'resonator && resonator_controls_.hold_feedback'),
+  ('TestResonatorPlacementPublication', 'resonator',
+   'beads/dsp/processor_resonator.cc',
+   '    resonator_reset_pending_ = false;',
+   '    resonator_reset_pending_ = true;'),
+  ('TestSynthSwapResume', 'firmware', 'beads/engine_transition.cc',
+   '  codec_fade_ = false;\n  if (codec_running_) {\n    codec_->Resume(callback);\n  }',
+   '  if (codec_running_) {\n    codec_->Resume(callback);\n  }\n  codec_fade_ = false;'),
   ('TestOptionsAppendAfterBlankGap', 'record', 'beads/settings_storage.h',
    '            Flash::IsBlank(address + size, size)) &&',
    '            true) &&'),
@@ -3118,15 +3206,57 @@ for name, suite, source, before, after in cases:
   assert (root / source).read_text().count(pattern) == 1, (name, pattern)
 
 
-def shard_indices(count, shard, shards):
-  # Shard K of N runs every case whose 1-based index is K modulo N, so the
-  # N shards together run each case exactly once.
-  return [i for i in range(1, count + 1) if (i - 1) % shards == shard - 1]
+# Seconds on a GitHub runner, from CI logs: a suite's first build, then a
+# case's rebuild and test for most sources and for heavy ones (below).
+# Unlisted suites are small.
+suite_costs = {
+  'attack': (27, 2, 13), 'clouds': (28, 24, 14), 'delay': (4, 4, 4),
+  'delay_mode': (26, 8, 23), 'firmware': (32, 5, 27), 'granular': (25, 2, 21),
+  'mix': (27, 2, 18), 'options': (4, 3, 4), 'plaits_synth': (6, 2, 2),
+  'processor': (24, 18, 17), 'resonator': (23, 3, 21), 'spectral': (38, 11, 11),
+}
+
+
+def case_cost(suite, source):
+  # DSP headers and the processor sources rebuild most of the DSP code.
+  build, light, heavy = suite_costs.get(suite, (2, 2, 2))
+  if source.startswith('beads/dsp/') and (source.endswith('.h') or
+      source in ('beads/dsp/processor.cc', 'beads/dsp/processor_options.cc')):
+    return heavy
+  return light
+
+
+def run_order(cases):
+  # A suite's cases run together, grouped by source, so a shard builds few
+  # programs and rebuilds the same objects.
+  return sorted(range(1, len(cases) + 1),
+      key=lambda i: (cases[i - 1][1], cases[i - 1][2], i))
+
+
+def shard_indices(cases, shard, shards):
+  # Shard K of N runs the Kth of N spans of the run order with equal
+  # measured cost, so the N shards together run each case exactly once.
+  weights = []
+  previous = None
+  for i in run_order(cases):
+    suite, source = cases[i - 1][1:3]
+    build = suite_costs.get(suite, (2, 2, 2))[0]
+    weights.append((i, case_cost(suite, source) +
+        (build if suite != previous else 0)))
+    previous = suite
+  total = sum(weight for i, weight in weights)
+  selected = []
+  spent = 0
+  for i, weight in weights:
+    if min(shards, int((spent + weight / 2) * shards / total) + 1) == shard:
+      selected.append(i)
+    spent += weight
+  return selected
 
 
 for shards in range(1, 17):
   indices = sorted(i for shard in range(1, shards + 1)
-      for i in shard_indices(len(cases), shard, shards))
+      for i in shard_indices(cases, shard, shards))
   assert indices == list(range(1, len(cases) + 1)), shards
 if '--patterns-only' in sys.argv:
   print('All %d mutation patterns occur exactly once' % len(cases))
@@ -3165,7 +3295,7 @@ if '--shard' in sys.argv:
   shard, shards = map(int,
       sys.argv[sys.argv.index('--shard') + 1].split('/'))
   assert 1 <= shard <= shards, (shard, shards)
-  selected_indices = set(shard_indices(len(cases), shard, shards))
+  selected_indices = set(shard_indices(cases, shard, shards))
   del sys.argv[sys.argv.index('--shard'):sys.argv.index('--shard') + 2]
 
 out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
@@ -3199,9 +3329,10 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   # A program's first case builds it from scratch; later cases rebuild at
   # most that, so they get twice its build time plus 60 s for their tests.
   limits = {}
-  for index, (name, suite, source, before, after) in enumerate(cases, 1):
+  for index in run_order(cases):
     if index not in selected_indices:
       continue
+    name, suite, source, before, after = cases[index - 1]
     path = work / source
     original = path.read_text()
     if before is not None:

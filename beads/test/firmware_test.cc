@@ -35,6 +35,8 @@
 #include <new>
 #include <sys/mman.h>
 
+#include "stmlib/system/system_clock.h"
+
 #include "beads/test/test_checker.h"
 
 #define private public
@@ -302,6 +304,23 @@ void TestSynthFadeSurvivesTimerReset() {
   reverb_style_gain = 0.0f;
   MonitorStateChange();
   CHECK(synth_mode);
+}
+
+void FillAtSynthResume() {
+  RigBlock(current_rig);
+  CHECK(reverb_style_gain > 0.0f);
+}
+
+void TestSynthSwapResume() {
+  test_checker.Start("TestSynthSwapResume");
+  Rig r(false, false);
+  r.audio = 0x20000000;
+  r.Settle();
+  codec_fade = true;
+  reverb_style_gain = transition.reverb_style_previous_gain_ = 0.0f;
+  codec.on_resume_ = &FillAtSynthResume;
+  SwapPaused(SYNTH_PLAITS, SYNTH_BEADS);
+  codec.on_resume_ = NULL;
 }
 
 void TestSynthEntryCancelsBackup() {
@@ -1142,6 +1161,89 @@ void TestSelfPlayFrozenBackup() {
   CHECK(!settings.state().frozen);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
+}
+
+void TestLegacyPackedStereoBackup() {
+  test_checker.Start("TestLegacyPackedStereoBackup");
+  const size_t kBankBytes = 256 * 1024;
+  const int kBankFrames = kBankBytes / 3;
+  const int kWritePtr = 123;
+  const uint32_t kCrcTag = 0x31435243;
+  const int indices[] = {
+    kBankFrames - 1, kBankFrames, 2 * kBankFrames - 1, 2 * kBankFrames
+  };
+  const size_t offsets[] = {
+    kBankBytes - 4, kBankBytes, 2 * kBankBytes - 4, 2 * kBankBytes
+  };
+  const uint8_t fixture[][3] = {
+    { 0x00, 0xf8, 0x7f }, { 0x01, 0xf0, 0xff },
+    { 0xff, 0x1f, 0x00 }, { 0x23, 0xb1, 0xcb }
+  };
+  const IntFrame samples[] = {
+    { -2048, 2047 }, { 1, -1 }, { -1, 1 }, { 291, -837 }
+  };
+  const FloatFrame replacement = { -291 / 2048.0f, 837 / 2048.0f };
+  const uint8_t replacement_bytes[] = { 0xdd, 0x5e, 0x34 };
+  static uint8_t expected[kDelayBufferSizeBits / 8];
+  typedef BackgroundBufferBackup::BufferBackupHeader Header;
+  typedef beads::DelayLine<RESOLUTION_12_BIT, kDelayBufferSizeBits / 24, 2> Line;
+  const size_t kSaveSteps = sizeof(expected) / sizeof(Header) + 8;
+  Header* header = reinterpret_cast<Header*>(0x08100000);
+  uint8_t* payload = reinterpret_cast<uint8_t*>(header + 1);
+
+  for (int crc = 0; crc < 2; ++crc) {
+    Rig r(false, false);
+    memset(header, 0, sizeof(*header));
+    memset(expected, 0, sizeof(expected));
+    header->tag = 0x5a5a5246;
+    header->write_ptr = kWritePtr;
+    header->media = Processor::MEDIA_VINTAGE_DIGITAL;
+    for (size_t i = 0; i < sizeof(fixture) / sizeof(fixture[0]); ++i) {
+      memcpy(expected + offsets[i], fixture[i], sizeof(fixture[i]));
+    }
+    memcpy(payload, expected, sizeof(expected));
+    if (crc) {
+      header->crc_tag = kCrcTag;
+      // CRC-32 of the legacy payload and header, with its CRC field zero.
+      header->crc = 0xdf616b0a;
+    }
+    settings.mutable_state()->frozen = true;
+    CHECK(settings.SaveState());
+    r.Reboot(false);
+    CHECK(ui.freeze_button_state());
+    CHECK(processor.media() == Processor::MEDIA_VINTAGE_DIGITAL);
+    CHECK(!processor.mono());
+    CHECK(*processor.mutable_delay_write_ptr() == kWritePtr);
+
+    Line& line = processor.processor_vintage_digital_.stereo_delay_line_;
+    for (size_t i = 0; i < sizeof(samples) / sizeof(samples[0]); ++i) {
+      const FloatFrame frame =
+          line.Read<INTERPOLATION_ZOH>(indices[i] - kWritePtr, 0.0f);
+      CHECK(frame.l == samples[i].l / 2048.0f
+          && frame.r == samples[i].r / 2048.0f);
+    }
+
+    background_buffer_backup.Process(false);
+    *processor.mutable_delay_write_ptr() = indices[3];
+    line.Write(replacement);
+    memcpy(expected + offsets[3], replacement_bytes, sizeof(replacement_bytes));
+    for (int i = 0; i < 10000; ++i) {
+      system_clock.Tick();
+    }
+    background_buffer_backup.Process(true);
+    for (size_t i = 0; background_buffer_backup.busy() &&
+         i < kSaveSteps; ++i) {
+      background_buffer_backup.Process(true);
+    }
+    CHECK(!background_buffer_backup.busy());
+    CHECK(settings.state().frozen && header->crc_tag == kCrcTag);
+    CHECK(memcmp(payload, expected, sizeof(expected)) == 0);
+    r.Reboot(false);
+    CHECK(ui.freeze_button_state());
+    CHECK(*processor.mutable_delay_write_ptr() == indices[3] - 1);
+    const FloatFrame restored = line.Read<INTERPOLATION_ZOH>(1, 0.0f);
+    CHECK(restored.l == replacement.l && restored.r == replacement.r);
+  }
 }
 
 // A frozen buffer whose audio can't be read: the module starts unfrozen,
@@ -3123,6 +3225,39 @@ void TestResonatorPage() {
 
 // [A] taps reach resonator damping after the other destinations, while the
 // resonator is on; the CV then moves damping and no mix knob.
+void TestSpectralResonatorAssignment() {
+  test_checker.Start("TestSpectralResonatorAssignment");
+  Rig r(false, false);
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  r.Settle();
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  r.Tick(10, true);
+  for (int i = 0; i < 3; ++i) {
+    TapAssign(&r);
+  }
+  CHECK(ui.resonator_assigned());
+  ui.set_freeze_button_state(true);
+  settings.set_spectral(true);
+  r.Tick(20, true);
+  CHECK(!processor.spectral());
+  CHECK(ui.resonator_assigned());
+  ui.set_freeze_button_state(false);
+  r.Settle();
+  CHECK(processor.spectral());
+  CHECK(!ui.resonator_assigned());
+  settings.mutable_state()->assignable_cv_destination = 2;
+  TapAssign(&r);
+  CHECK(!ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+
+  // A control snapshot from the last granular block may still hold feedback.
+  processor.resonator_controls_.hold_feedback = true;
+  processor.resonator_controls_.feedback = 0.0f;
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 10000;
+  r.Tick(10, false);
+  CHECK(processor.spectral_processor_.feedback_ > 0.0f);
+}
+
 void TestResonatorDampingCv() {
   test_checker.Start("TestResonatorDampingCv");
   Rig r(false, false);
@@ -3580,6 +3715,110 @@ void Press(Rig* r, int first, int second) {
   r->Advance(20);
   test_down[first] = test_down[second] = false;
   r->Advance(20);
+}
+
+void TestFinalCalibrationPersistence() {
+  test_checker.Start("TestFinalCalibrationPersistence");
+  typedef beads::ChunkStorage<15, 14, PersistentData, State, OptionsRecord>
+      Storage;
+  Storage& storage = settings.chunk_storage_;
+  const size_t cali_bytes = storage.ChunkSize<PersistentData>();
+  const int cali_words = cali_bytes / storage.BLOCK_SIZE;
+  // S15 repair, then S14 CALI/options, then S15 CALI/STAT.
+  const int settings_erased = 3 + 2 * cali_words +
+      storage.ChunkSize<OptionsRecord>() / storage.BLOCK_SIZE;
+  const int complete = settings_erased + cali_words +
+      storage.ChunkSize<State>() / storage.BLOCK_SIZE;
+  for (int hal = 0; hal < 2; ++hal) {
+    for (int cut = 0; cut <= complete; ++cut) {
+      const int failures = test_checker.failures();
+      Rig r(false, false);
+      r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+      r.cv[CV_ADC_CHANNEL_DENSITY] = 16384;
+      r.Settle();
+
+      const uint8_t default_amount = settings.state().assignable_cv_amount[0];
+      const uint8_t old_amount = 64;
+      const uint8_t new_amount = 192;
+      PersistentData measured = settings.factory_;
+      measured.adc_calibration[CV_ADC_CHANNEL_TIME].offset += 0.1f;
+      *settings.mutable_persistent_data() = measured;
+      settings.mutable_state()->assignable_cv_amount[0] = old_amount;
+      CHECK(settings.SavePersistentData());
+
+      // Leave the measured CALI only in S14 and a distinct old STAT in S15.
+      memset(reinterpret_cast<void*>(storage.chunk_address(0)), 0xff,
+          cali_bytes);
+      PersistentData mirror;
+      State old_state;
+      CHECK(storage.ReadChunk(storage.chunk_address(0), &mirror) ==
+          Storage::CHUNK_INVALID);
+      CHECK(storage.ReadMirror(&mirror) && SameCalibration(mirror, measured));
+      CHECK(storage.ReadChunk(storage.chunk_address(1), &old_state) ==
+          Storage::CHUNK_VALID && old_state.assignable_cv_amount[0] == old_amount);
+      settings.mutable_state()->assignable_cv_amount[0] = new_amount;
+
+      calibrator.Start();
+      const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
+      calibrator.calibrator_[1].Acquire(0, u + 0.2f, 0.2f);
+      PersistentData attempt = measured;
+      attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
+      attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+      CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
+      CHECK(!SameCalibration(measured, attempt));
+
+      const bool success = cut == complete;
+      ui.mode_ = Ui::MODE_CALIBRATION_4;
+      const uint32_t operations = TestFlashErases() + test_writes;
+      if (!success) {
+        if (hal) {
+          TestFlashBudget() = cut;
+        } else {
+          TestFlash().supply_low = cut == 0;
+          TestFlash().supply_budget = cut;
+        }
+      }
+      test_down[SWITCH_MEDIA] = true;
+      r.Advance(40);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_4);
+      CHECK(TestFlashErases() + test_writes == operations);
+      test_down[SWITCH_MEDIA] = false;
+      r.Advance(20);
+      CHECK(TestFlashErases() + test_writes - operations == uint32_t(cut));
+      CHECK(!hal || success || TestFlashBudget() == 0);
+      CHECK(hal || success || TestFlash().supply_low);
+      const PersistentData& expected = cut >= settings_erased
+          ? attempt : measured;
+      CHECK(ui.mode_ == (success ? Ui::MODE_NORMAL : Ui::MODE_PANIC));
+      CHECK(SameCalibration(settings.persistent_data(), expected));
+      if (!success) {
+        for (int phase = 0; phase < 2; ++phase) {
+          ui.UpdateLeds();
+          const bool lit = system_clock.milliseconds() & 64;
+          CHECK((ui.leds_.intensity_[LED_MEDIA_R] != 0) == lit);
+          CHECK((ui.leds_.intensity_[LED_MEDIA_G] != 0) == lit);
+          CHECK((ui.leds_.intensity_[LED_MEDIA_B] != 0) == lit);
+          r.Advance(64);
+        }
+        r.Advance(372);
+        CHECK(ui.mode_ == Ui::MODE_PANIC);
+        r.Advance(600);
+        CHECK(ui.mode_ == Ui::MODE_NORMAL);
+      }
+      TestFlashBudget() = -1;
+      TestFlashPowerUp();
+      r.Reboot(false);
+      CHECK(SameCalibration(settings.persistent_data(), expected));
+      // The first erase removes the old STAT; the last word writes the new one.
+      const uint8_t expected_amount =
+          success ? new_amount : cut == 0 ? old_amount : default_amount;
+      CHECK(settings.state().assignable_cv_amount[0] == expected_amount);
+      if (test_checker.failures() != failures) {
+        printf("Calibration cut after %d operations (%s)\n",
+            cut, hal ? "HAL" : "PVD");
+      }
+    }
+  }
 }
 
 // The next save rewrites the settings sector, as when it is full.
@@ -4401,6 +4640,7 @@ int main() {
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
   TestSynthFadeSurvivesTimerReset();
+  TestSynthSwapResume();
   TestSynthEntryCancelsBackup();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();
@@ -4421,6 +4661,7 @@ int main() {
   TestRandomIntervalsChain();
   TestRecentNotesChain();
   TestSelfPlayFrozenBackup();
+  TestLegacyPackedStereoBackup();
   TestPlaitsSynthSelection();
   TestRingsSynthOwnership();
   TestFreezeGestureFollowsPlayingSynth();
@@ -4447,6 +4688,7 @@ int main() {
   TestDelayOptionsProfile();
   TestResonatorProfile();
   TestResonatorPage();
+  TestSpectralResonatorAssignment();
   TestResonatorDampingCv();
   TestResonatorSeedCallback();
   TestManualDelayAction();
@@ -4458,6 +4700,7 @@ int main() {
   TestCalibrationStepOnRelease();
   TestCalibrationExitResumesNormalization();
   TestRejectedCalibrationCue();
+  TestFinalCalibrationPersistence();
   TestUnfinishedCalibrationKept();
   TestLockedCalibrationCue();
   TestFactoryCalibrationRepeat();

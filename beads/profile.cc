@@ -51,7 +51,7 @@ const FeatureDefinition kFeatureDefinitions[FEATURE_LAST] = {
   { 2, kNoField, false, false, false, false },  // Version.
   { 2, kNoField, false, false, false, false },  // Attenuation.
   { 2, kNoField, false, false, false, false },  // Delay cue.
-  { 3, 10, true, false, false, false },  // Brightness.
+  { 4, 10, true, false, false, false },  // Brightness.
   { 2, kNoField, false, false, false, false },  // Live assign.
   { 2, kNoField, false, false, false, false },  // Save freeze.
   { 4, 11, true, false, false, false },  // Seed latch.
@@ -689,21 +689,21 @@ static bool ScaleName(const volatile uint8_t* p) {
 
 void Profile::FactoryScales() {
   const PitchScaleDefinition factory[] = {
-    { 2, 2, { 255, 64, 32 }, 0, 12.0f, "Fifths",
+    { 2, 2, { 255, 89, 92 }, 0, 12.0f, "Fifths",
       { 0.0f, 7.0f } },
-    { 3, 7, { 255, 160, 0 }, 0, 12.0f, "Major",
+    { 3, 7, { 255, 209, 0 }, 0, 12.0f, "Major",
       { 0.0f, 2.0004f, 3.9996f, 5.0004f, 6.9996f, 9.0f, 11.0004f } },
-    { 4, 7, { 32, 96, 255 }, 0, 12.0f, "Minor",
+    { 4, 7, { 95, 222, 255 }, 0, 12.0f, "Minor",
       { 0.0f, 2.0004f, 3.0f, 5.0004f, 6.9996f, 8.0004f, 9.9996f } },
-    { 5, 5, { 255, 160, 0 }, 1, 12.0f, "Pentatonic major",
+    { 5, 5, { 255, 209, 0 }, 1, 12.0f, "Pentatonic major",
       { 0.0f, 2.0004f, 3.9996f, 6.9996f, 9.0f } },
-    { 6, 5, { 32, 96, 255 }, 1, 12.0f, "Pentatonic minor",
+    { 6, 5, { 95, 222, 255 }, 1, 12.0f, "Pentatonic minor",
       { 0.0f, 3.0f, 5.0004f, 6.9996f, 9.9996f } },
-    { 7, 4, { 0, 220, 160 }, 0, 12.0f, "Pelog",
+    { 7, 4, { 0, 255, 253 }, 0, 12.0f, "Pelog",
       { 0.0f, 1.53f, 7.0596f, 8.4804f } },
-    { 8, 7, { 160, 48, 255 }, 0, 12.0f, "Raag Bhairav",
+    { 8, 7, { 240, 0, 255 }, 0, 12.0f, "Raag Bhairav",
       { 0.0f, 0.9024f, 3.8628f, 4.98f, 7.02f, 7.9212f, 10.8828f } },
-    { 9, 7, { 255, 32, 144 }, 3, 12.0f, "Raag Shri",
+    { 9, 7, { 255, 0, 170 }, 3, 12.0f, "Raag Shri",
       { 0.0f, 2.0388f, 3.156f, 4.98f, 7.02f, 9.0588f, 10.1748f } },
   };
   scale_count_ = sizeof(factory) / sizeof(factory[0]);
