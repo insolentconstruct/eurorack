@@ -86,12 +86,12 @@ COLOURS = {
     "green": "#247443",
     "yellow": "#a87900",
     "red": "#bd3030",
-    "coral": "#ff4020",
-    "amber": "#ffa000",
-    "blue": "#2060ff",
-    "teal": "#00dca0",
-    "violet": "#a030ff",
-    "pink": "#ff2090",
+    "coral": "#ff595c",
+    "amber": "#ffd100",
+    "blue": "#5fdeff",
+    "teal": "#00fffd",
+    "violet": "#f000ff",
+    "pink": "#ff00aa",
     "meter": "#777",
     "unchanged": "#777",
 }
@@ -143,7 +143,7 @@ PAGE_GESTURES = ("Manual gain",)
 OFF_PAGES = "Off the pages: "
 # A line under a setting's card in the guides.
 CARD_NOTES = {
-    "Processor": "Switching clears the recording.",
+    "Processor": "Granular ↔ Spectral resets the recording.",
     "Resonator": "SEED and hits strike it.",
     "Random pitch steps": "Relative to PITCH; scale follows.",
 }
@@ -201,7 +201,9 @@ def zone_bands(rows):
     if setting == "Stereo width":
         return [(CONSTANTS["kWidthStockThreshold"],
                  CONSTANTS["kWidthEnabledThreshold"])]
-    if setting in ("LED brightness", "SEED latch"):
+    # More than three values are always equal steps in the firmware.
+    if setting in ("LED brightness", "SEED latch") or (
+            len(rows) > 3 and setting != "Pitch scale"):
         count = len(rows)
         band = CONSTANTS["kOptionsProfileZoneBand"]
         return [(i / count - band, i / count + band)
@@ -244,8 +246,11 @@ DETAILS = [
     "and always open on the first page instead of the last one used "
     "([opening page](FEATURES.md#options-page-on-opening)).",
     "Move a knob more than a tenth of its travel to take it over; smaller "
-    "bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED "
-    "brightness use the knob's three thirds; SEED latch uses four quarters; "
+    "bumps are ignored. Pitch scale, Random pitch steps, Delay mode, Attacks "
+    "and Limiter use thirds. "
+    "LED brightness, Processor, Reverb character, SEED latch and "
+    "Resonator ring time use quarters; Resonator uses fifths and Resonator "
+    "material eighths. "
     "Synth uses thirds with the Rings synth installed, halves without; "
     "the remaining settings use two halves. Near a boundary, "
     "turn a little past it to switch.",
@@ -257,7 +262,8 @@ DETAILS = [
     "and when a change is saved.",
     "After the stored values, [A] shows the page's first setting, then "
     "the last knob you took over. The first value of every setting is steady green. Other "
-    "values use yellow and red. The factory scale bank uses warm major and "
+    "values use yellow and red, with a slow red blink for 15% brightness. "
+    "The factory scale bank uses warm major and "
     "cool minor colours, with slow blinks for pentatonics. Raag Shri is two "
     "pink pulses and a pause. Unused knobs "
     "leave the LED alone.",
@@ -322,9 +328,9 @@ DETAILS = [
     "sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make "
     "DENSITY crossfade to a new delay time instead of bending the pitch "
     "([Delay time](FEATURES.md#delay-time)).",
-    "Resonator, on page 5, places Rings' modal resonator after the grains or "
-    "before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it "
-    "and Attacks hits strike it.",
+    "On page 5, choose where the resonator sits in the signal path. In Chord, "
+    "each new grain strikes one of three voices at its own pitch "
+    "([Resonator](FEATURES.md#resonator)).",
     "Frozen feedback Evolving runs frozen grains, or frozen delay slices in "
     "delay mode, through a slowly moving all-pass loop; FEEDBACK sets how "
     "far they drift.",
@@ -336,9 +342,26 @@ DETAILS = [
     "diffusion, stereo width, monophonic grains, Evolving, Attacks, Random "
     "pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or "
     "wavetable synth; the R gate follows the grain clock DENSITY would set. "
-    "A new processor takes over when the page closes and FREEZE is off, "
-    "clearing the recording; until then the current one plays on. A frozen "
-    "buffer saved to flash comes back with Granular.",
+    "The new processor takes over when the page closes and FREEZE is off. "
+    "A frozen buffer saved to flash comes back with Granular.",
+    "Processor Oliverb uses Clouds Parasites' pitch-shifting reverb. TIME sets "
+    "pre-delay, SIZE sets tank size, PITCH shifts the feedback by "
+    "up to two octaves each way. DENSITY and DENSITY CV set decay. SHAPE sweeps "
+    "from low-pass to high-pass through noon. The Diffusion setting and assigned Diffusion CV "
+    "set diffusion, with noon as the default. TIME, SIZE, PITCH and SHAPE "
+    "attenuverters set signed CV depth. Unpatched, the controls stay steady.",
+    "In Oliverb, DRY/WET crossfades, FEEDBACK sets modulation rate and "
+    "REVERB sets modulation depth. Assign CV can still reach those knobs. "
+    "FREEZE mutes the reverb input, sets loop gain to one and opens the "
+    "damping filters. Pitch shift and modulation continue. SEED has no audio "
+    "effect, and OUT R is silent in gate mode.",
+    "Oliverb runs at the quality's native codec rate. Release FREEZE to "
+    "change Processor or quality. The shared reverb tail resets at handoff. "
+    "Returning from Oliverb keeps a suspended recording when its engine, "
+    "quality and input channel count still match. A Processor gesture cycles "
+    "all four modes when the profile has no Processor page slot. With a page and "
+    "a gesture assigned, the shortcut switches Granular and Spectral. See [Abyss](ABYSS.md) "
+    "for its controls.",
     "Synth Plaits plays six Plaits voices instead of the wavetable "
     "synth: FEEDBACK picks one of the eight models in the current bank, "
     "TIME, SIZE and SHAPE set "

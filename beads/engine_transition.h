@@ -106,7 +106,9 @@ class EngineTransition {
     }
   }
 
-  void Start(int sample_rate, Codec::FillBufferCallback callback);
+  void Start(int sample_rate, Codec::FillBufferCallback callback,
+      bool blank_output);
+  bool RetryCodec();
   void Pause();
   void TakeBank(SynthEngine owner);
   void SwapPaused(SynthEngine owner, SynthEngine playing,
@@ -124,22 +126,36 @@ class EngineTransition {
   inline bool blanking() const { return codec_transition_frames_ != 0; }
   inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
   inline bool clouds_style() const { return clouds_style_; }
+  inline uint8_t reverb_character() const {
+    return reverb_character_ > REVERB_CLOUDS ? reverb_character_ : clouds_style_;
+  }
+  void SetReverbCharacter(uint8_t character, Processor* processor, Synth* synth);
+  void Resume(Codec::FillBufferCallback callback);
+  inline void set_clouds_style(bool clouds_style) {
+    clouds_style_ = clouds_style;
+  }
   inline SynthEngine playing_synth() const { return playing_synth_; }
   inline void set_playing_synth(SynthEngine synth) { playing_synth_ = synth; }
   inline SynthEngine bank_owner() const { return bank_owner_; }
   inline void set_bank_owner(SynthEngine owner) { bank_owner_ = owner; }
-  inline void set_codec_sample_rate(int value) { codec_sample_rate_ = value; }
 
  private:
+  void StartCodec(int sample_rate, Codec::FillBufferCallback callback);
+
   // Blank codec output while normalization detection catches up with a restart.
   int codec_transition_frames_;
   bool clouds_style_;
+  // Plate and Bloom are selected by main after the fade.
+  uint8_t reverb_character_;
   float reverb_style_gain_;
   // Set by main before it restarts the codec: the output fades out first.
   volatile bool codec_fade_;
   bool codec_running_;
   // The rate the converter runs at; 0 before its first start.
   int codec_sample_rate_;
+  int codec_retry_rate_;
+  uint32_t codec_retry_time_;
+  Codec::FillBufferCallback codec_retry_callback_;
   float reverb_style_previous_gain_;
   SynthEngine playing_synth_;
   SynthEngine bank_owner_;

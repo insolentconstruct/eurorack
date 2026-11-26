@@ -232,6 +232,14 @@ bool Codec::Start(
   // Enable the codec.
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;  
 
+#ifdef APPLICATION
+  if (!StartDma(block_size)) {
+    Pause();
+    CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN << 16U;
+    Stop();
+    return false;
+  }
+#else
   block_size_ = block_size;
   const size_t buffer_size_in_words = \
       sizeof(Frame) / sizeof(uint32_t) * block_size * 2;
@@ -266,7 +274,39 @@ bool Codec::Start(
   HAL_SAI_DMAResume(&sai_tx_);
   HAL_SAI_DMAResume(&sai_rx_);
   
+#endif  // APPLICATION
+
   return true;
+}
+
+bool Codec::StartDma(size_t block_size) {
+  block_size_ = block_size;
+  const size_t buffer_size_in_words =
+      sizeof(Frame) / sizeof(uint32_t) * block_size * 2;
+
+  if (HAL_DMA_Start(
+          &dma_sai_idr_,
+          (uint32_t)&IDR_PORT->IDR,
+          (uint32_t)idr_buffer_,
+          buffer_size_in_words) != HAL_OK ||
+      HAL_DMAEx_EnableMuxRequestGenerator(&dma_sai_idr_) != HAL_OK ||
+      HAL_DMA_Start(
+          &dma_sai_tx_,
+          (uint32_t)(&tx_dma_buffer_[0]),
+          (uint32_t)&sai_tx_.Instance->DR,
+          buffer_size_in_words) != HAL_OK ||
+      HAL_DMA_Start(
+          &dma_sai_rx_,
+          (uint32_t)&sai_rx_.Instance->DR,
+          (uint32_t)(&rx_dma_buffer_[0]),
+          buffer_size_in_words) != HAL_OK) {
+    return false;
+  }
+
+  ((DMA_Stream_TypeDef*) dma_sai_rx_.Instance)->CR |= DMA_IT_TC | DMA_IT_HT;
+
+  return HAL_SAI_DMAResume(&sai_tx_) == HAL_OK &&
+      HAL_SAI_DMAResume(&sai_rx_) == HAL_OK;
 }
 
 bool Codec::Restart(
@@ -282,49 +322,34 @@ bool Codec::Restart(
   Pause();
   // Assert reset with synchronized clocks (PCM3060, p.16).
   CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN << 16U;
-  // Hold reset over 2048 frames at the old rate, with 1 ms to spare (p.16).
-  const int32_t kResetFrames = 2048;
-  HAL_Delay(kResetFrames * 1000 / previous_sample_rate + 2);
+  if (previous_sample_rate) {
+    // Hold reset over 2048 frames at the old rate, with 1 ms to spare (p.16).
+    const int32_t kResetFrames = 2048;
+    HAL_Delay(kResetFrames * 1000 / previous_sample_rate + 2);
 
-  // Clocks may halt once the converter is powered down (PCM3060, p.16).
-  HAL_DMA_Abort(&dma_sai_tx_);
-  HAL_DMA_Abort(&dma_sai_rx_);
-  HAL_DMA_Abort(&dma_sai_idr_);
+    // Clocks may halt once the converter is powered down (PCM3060, p.16).
+    HAL_DMA_Abort(&dma_sai_tx_);
+    HAL_DMA_Abort(&dma_sai_rx_);
+    HAL_DMA_Abort(&dma_sai_idr_);
 
-  HAL_SAI_DeInit(&sai_tx_);
-  HAL_SAI_DeInit(&sai_rx_);
+    HAL_SAI_DeInit(&sai_tx_);
+    HAL_SAI_DeInit(&sai_rx_);
+  } else {
+    // An abort timeout can leave the HAL DMA handles in the error state.
+    if (!InitializeDMA() || !InitializeGPIODMA()) {
+      return false;
+    }
+    instance_ = this;
+  }
 
   // Resume the new clocks while reset remains asserted (PCM3060, p.16).
   if (!InitializeCodec(sample_rate)) {
     return false;
   }
-  block_size_ = block_size;
-  const size_t buffer_size_in_words =
-      sizeof(Frame) / sizeof(uint32_t) * block_size * 2;
-
-  HAL_DMA_Start(
-      &dma_sai_idr_,
-      (uint32_t)&IDR_PORT->IDR,
-      (uint32_t)idr_buffer_,
-      buffer_size_in_words);
-  HAL_DMAEx_EnableMuxRequestGenerator(&dma_sai_idr_);
-
-  HAL_DMA_Start(
-      &dma_sai_tx_,
-      (uint32_t)(&tx_dma_buffer_[0]),
-      (uint32_t)&sai_tx_.Instance->DR,
-      buffer_size_in_words);
-
-  HAL_DMA_Start(
-      &dma_sai_rx_,
-      (uint32_t)&sai_rx_.Instance->DR,
-      (uint32_t)(&rx_dma_buffer_[0]),
-      buffer_size_in_words);
-
-  ((DMA_Stream_TypeDef *) dma_sai_rx_.Instance)->CR |= DMA_IT_TC | DMA_IT_HT;
-
-  HAL_SAI_DMAResume(&sai_tx_);
-  HAL_SAI_DMAResume(&sai_rx_);
+  if (!StartDma(block_size)) {
+    Stop();
+    return false;
+  }
   // All clocks must run before the power-up sequence (PCM3060, p.16).
   HAL_Delay(1);
   // Release reset only after the clocks have stabilized (PCM3060, p.16).

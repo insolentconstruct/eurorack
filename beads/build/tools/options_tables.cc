@@ -95,6 +95,7 @@ const char* const kOptionNames[] = {
   "Gain ceiling",
   "Manual delay toggle",
   "Reverb decay",
+  "TIME CV range",
 };
 const char* const kOptionKnobNames[] = { "FEEDBACK", "DRY/WET", "REVERB" };
 // Each indicated page value, in page order.
@@ -116,11 +117,15 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_PITCH, 9, "Raag Shri" },
   { beads::FEATURE_REVERB, 0, "Stock" },
   { beads::FEATURE_REVERB, 1, "Clouds-style" },
+  { beads::FEATURE_REVERB, 2, "Plate" },
+  { beads::FEATURE_REVERB, 3, "Bloom" },
   { beads::FEATURE_DELAY, 0, "Auto (Stock)" },
   { beads::FEATURE_DELAY, 1, "Disabled" },
   { beads::FEATURE_DELAY, 2, "Wide/smooth filter" },
   { beads::FEATURE_PROCESSOR, 0, "Granular (Stock)" },
   { beads::FEATURE_PROCESSOR, 1, "Spectral" },
+  { beads::FEATURE_PROCESSOR, 2, "Oliverb" },
+  { beads::FEATURE_PROCESSOR, 3, "Abyss" },
   { beads::FEATURE_LIMITER, 0, "Stock" },
   { beads::FEATURE_LIMITER, 1, "Fast release" },
   { beads::FEATURE_LIMITER, 2, "Off" },
@@ -140,6 +145,7 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_BRIGHTNESS, 0, "100%" },
   { beads::FEATURE_BRIGHTNESS, 1, "66%" },
   { beads::FEATURE_BRIGHTNESS, 2, "33%" },
+  { beads::FEATURE_BRIGHTNESS, 3, "15%" },
   { beads::FEATURE_SEED_LATCH, 0, "Off" },
   { beads::FEATURE_SEED_LATCH, 1, "Ignore" },
   { beads::FEATURE_SEED_LATCH, 2, "Sync" },
@@ -150,6 +156,7 @@ const NamedValue kValueNames[] = {
   { beads::FEATURE_RESONATOR, 1, "After the grains" },
   { beads::FEATURE_RESONATOR, 2, "Before the buffer" },
   { beads::FEATURE_RESONATOR, 3, "In the feedback" },
+  { beads::FEATURE_RESONATOR, 4, "Chord" },
   { beads::FEATURE_RESONATOR_MATERIAL, 0, "Wood" },
   { beads::FEATURE_RESONATOR_MATERIAL, 1, "String" },
   { beads::FEATURE_RESONATOR_MATERIAL, 2, "Glass" },
@@ -178,12 +185,12 @@ const char* ColorName(const beads::Leds::Color& color) {
     { { 0, 255, 0 }, "green" },
     { { 255, 255, 0 }, "yellow" },
     { { 255, 0, 0 }, "red" },
-    { { 255, 64, 32 }, "coral" },
-    { { 255, 160, 0 }, "amber" },
-    { { 32, 96, 255 }, "blue" },
-    { { 0, 220, 160 }, "teal" },
-    { { 160, 48, 255 }, "violet" },
-    { { 255, 32, 144 }, "pink" },
+    { { 255, 89, 92 }, "coral" },
+    { { 255, 209, 0 }, "amber" },
+    { { 95, 222, 255 }, "blue" },
+    { { 0, 255, 253 }, "teal" },
+    { { 240, 0, 255 }, "violet" },
+    { { 255, 0, 170 }, "pink" },
   };
   for (size_t i = 0; i < sizeof(colors) / sizeof(colors[0]); ++i) {
     const beads::Leds::Color& candidate = colors[i].color;

@@ -3,10 +3,42 @@
 Put new changes under an `## Unreleased` heading. For a release, replace it with a dated heading.
 
 ## Unreleased
+- Page 2 Reverb character adds Plate and Bloom.
+
+- Custom profiles can reduce TIME CV sensitivity to one eighth (#39).
 
 - A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE (#309).
 
 - Custom profiles can set a fixed reverb decay while REVERB still controls the mix (#38).
+
+- LED brightness adds a 15% level on page 4. Measured RGB light curves preserve quality LED colours while dimming.
+- Refresh the factory pitch-scale colours and the light-blue boot cue using measured LED output.
+
+- Save only edited page options and let later panel gestures take precedence.
+- Save a new profile's starting quality before recording its identity.
+- Return ASSIGN CV to FEEDBACK when the active engine cannot run the resonator.
+- Reset the resonator once when its new placement starts rendering.
+- Begin the synth fade-in on the first resumed audio block.
+
+- Retry a failed frozen-buffer backup up to three times while FREEZE stays on, after waits of 10, 20 and 40 seconds. Once the buffer is saved, only the frozen flag is retried.
+- Let a Chiptune drone decay through the gate when it ends.
+- Apply saved Clouds-style reverb before audio starts.
+- Follow the installed profile's width and diffusion defaults until the amounts are edited.
+- Keep the current page's preview when an earlier page's SEED tap finishes saving.
+
+- Retry a codec start or restart after a DMA failure instead of staying silent.
+- Cancel an unfinished frozen-buffer backup before entering synth mode.
+- Finish an automatic synth-entry fade after a late audio peak.
+- Ignore buttons held through a storage warning until they are released.
+- Resume jack detection when calibration is cancelled before the first measurement.
+- Recover calibration and settings independently from partially damaged dumps.
+- Guard writes and use RAM defaults when neither calibration copy is usable.
+- Preserve a measured calibration during recalibration after a stock factory reset.
+- Lock flash between frozen-buffer backup operations.
+- Retry an incomplete settings or calibration-copy sector erase.
+- A settings save no longer revives older settings past an empty slot.
+- Processor gains Oliverb, a dedicated modulated and pitch-shifting reverb based on Clouds Parasites (#216).
+- Abyss adds a large-space Processor mode with an infinite FREEZE tail, gravity shaping and a PITCH sweep from off through subtle detune to fifth and octave shimmer.
 
 - Palette blob models gain ZxPulse48k; each selection starts its oscillators and chord state afresh.
 
@@ -50,6 +82,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - The pitch notch cue lights [A] pure blue instead of green (#313), apart from every quality colour.
 - Resonator (#88): Rings' modal resonator, 24 modes in stereo, after the grains or before the buffer; Off by default, on options page 5 with its Material (Wood, String, Glass, Bell, and Drizzlet's own Marimba, Drum, Bowl and Gong: a Drum or Gong strike bends the pitch, Bowl and Gong beat between left and right) and Ring time (Short to Very long). PITCH tunes it with Pitch scale and Recent notes; Attacks hits and SEED strike it as Rings' strum does (SEED stays the clock in delay mode). [M] can send the CV input to its damping. Hygrostat can set exact structure, brightness, damping, pickup position and amount. All 32 grains still play.
 - Resonator: a fourth placement, In the feedback (#88): After the grains, with half of FEEDBACK's loop through the resonator, so each pass rings its modes again. The resonance is scaled by a bound on the bank's own peak gain, never by its level, so its loop gain never exceeds the grains' own; in tests it never sustained where After the grains dies away. Placement now takes quarters of FEEDBACK on page 5.
+- Resonator: Chord adds three voices of eight modes each. Each new grain strikes a voice at its own pitch, and a voice can change pitch once its tail falls 40 dB. Page 5 selects the five placements in fifths of FEEDBACK.
 - Resonator: its limiter starts at rest, so the first strikes after it starts are no longer about 24 dB quiet for two seconds (#352).
 - Custom profiles can put a two-value setting on [A]+SEED or [A]+FREEZE (#301): Reverb character, Processor, Frozen feedback, Synth (on [A]+SEED only) or TIME modulation. The gesture flips and saves it, and [A] shows the new value's options colour. Processor clears the recording, as from its page. [A]+FREEZE still steps the Plaits bank in Plaits synth play.
 - Custom profiles can put Manual gain, Stereo width or Diffusion on any of [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB, or leave manual gain off the knobs (#301). Without a choice, manual gain stays on FEEDBACK. Older firmware refuses these profiles.

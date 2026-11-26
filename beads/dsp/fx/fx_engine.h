@@ -238,6 +238,34 @@ class FxEngine {
       accumulator_ += x * scale;
     }
     
+    inline void SoftLimit() {
+      accumulator_ = stmlib::SoftLimit(accumulator_);
+    }
+
+    template<typename D>
+    inline void InterpolateHermite(D& d, float offset, float scale) {
+      STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
+      MAKE_INTEGRAL_FRACTIONAL(offset);
+      float xm1 = DataType<format>::Decompress(
+          buffer_[(write_ptr_ + offset_integral + D::base - 1) & MASK]);
+      float x0 = DataType<format>::Decompress(
+          buffer_[(write_ptr_ + offset_integral + D::base + 0) & MASK]);
+      float x1 = DataType<format>::Decompress(
+          buffer_[(write_ptr_ + offset_integral + D::base + 1) & MASK]);
+      float x2 = DataType<format>::Decompress(
+          buffer_[(write_ptr_ + offset_integral + D::base + 2) & MASK]);
+
+      float c = (x1 - xm1) * 0.5f;
+      float v = x0 - x1;
+      float w = c + v;
+      float a = w + v + (x2 - x0) * 0.5f;
+      float b_neg = w + a;
+      float t = offset_fractional;
+      float x = (((a * t) - b_neg) * t + c) * t + x0;
+      previous_read_ = x;
+      accumulator_ += x * scale;
+    }
+
     template<typename D>
     inline void Interpolate(
         D& d, float offset, LFOIndex index, float amplitude, float scale) {

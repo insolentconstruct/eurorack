@@ -35,6 +35,8 @@
 #include "beads/drivers/seed_input.h"
 #include "beads/drivers/system.h"
 #include "beads/drivers/watchdog.h"
+#include "beads/dsp/fx/abyss.h"
+#include "beads/dsp/fx/oliverb.h"
 #include "beads/dsp/plaits_synth.h"
 #include "beads/dsp/rings_synth.h"
 #ifdef PLAITS_BLOBS
@@ -56,10 +58,41 @@ using namespace std;
 using namespace beads;
 using namespace stmlib;
 
+#ifdef BEADS_EXTENDED_AUDIO
+extern Abyss abyss;
+extern beads::Limiter abyss_limiter;
+extern CvReader cv_reader;
+extern GainControl gain_control;
+extern NormalizationDetector normalization_detector;
+extern Oliverb oliverb;
+extern beads::Limiter oliverb_limiter;
+extern Processor::Media oliverb_media;
+extern Processor processor;
+extern Settings settings;
+extern Synth synth;
+extern PlaitsSynth plaits_synth;
+extern RingsSynth rings_synth;
+extern Ui ui;
+extern EngineTransition transition;
+extern int synth_mode_start_time;
+extern bool synth_mode;
+extern uint8_t seed_latch_mode;
+extern bool seed_latch_enabled;
+extern GateFlags previous_seed;
+extern stmlib::DelayLine<Codec::Event, 256> event_delay;
+#ifdef DWT_CALIBRATION
+extern uint8_t active_processor_mode;
+extern uint8_t delay_buffer_1[512 * 1024];
+extern uint8_t delay_buffer_2[256 * 1024];
+extern uint16_t reverb_buffer[32768];
+#endif  // DWT_CALIBRATION
+#else
 const bool skip_factory_test = false;
 
-uint8_t delay_buffer_1[512 * 1024] __attribute__ ((section (".ramd1")));
-uint8_t delay_buffer_2[256 * 1024] __attribute__ ((section (".ramd2")));
+uint8_t delay_buffer_1[512 * 1024]
+    __attribute__ ((section (".ramd1"), aligned (4)));
+uint8_t delay_buffer_2[256 * 1024]
+    __attribute__ ((section (".ramd2"), aligned (4)));
 uint16_t reverb_buffer[32768] __attribute__ ((section (".ramd3")));
 
 // Plaits borrows bank 0; Configure clears it before other users return.
@@ -86,7 +119,15 @@ PlaitsRegion plaits_region;
 // What can play, what plays, and which synth's RAM is in bank 0.
 uint8_t playable_synths;
 EngineTransition transition;
+Abyss abyss;
+beads::Limiter abyss_limiter;
 Processor processor;
+Oliverb oliverb;
+beads::Limiter oliverb_limiter;
+bool oliverb_mode;
+bool oliverb_restore_pending;
+Processor::Media oliverb_media;
+uint8_t active_processor_mode;
 SeedInput seed_input;
 Settings settings;
 Synth synth;
@@ -99,6 +140,13 @@ uint8_t resonator_placement;
 float ResonatorValue(ProfileFeature feature, float curated, float scale) {
   const ProfileEntry& e = settings.profile().entry(feature);
   return e.state == PROFILE_FIXED ? float(e.value) * scale : curated;
+}
+
+// Oliverb and Abyss replace the engine that runs the resonator.
+void SetResonatorAvailable() {
+  ui.set_resonator_available(active_processor_mode != PROCESSOR_OLIVERB &&
+      active_processor_mode != PROCESSOR_ABYSS &&
+      processor.resonator_available());
 }
 
 void UpdateResonator() {
@@ -129,6 +177,7 @@ void UpdateResonator() {
   // An exact structure is Rings' curve, even under a Drizzlet object.
   c.modes = settings.profile().entry(FEATURE_RESONATOR_STRUCTURE).state ==
       PROFILE_FIXED ? NULL : material.modes;
+  c.chord_gain = material.chord_gain;
   processor.set_resonator_controls(c);
 }
 
@@ -153,6 +202,7 @@ void SysTick_Handler() {
 
 
 bool synth_mode;
+bool synth_fade;
 int synth_mode_start_time;
 
 GateFlags previous_seed;
@@ -161,15 +211,28 @@ bool seed_latch_enabled;
 bool fixed_reverb_decay;
 stmlib::DelayLine<Codec::Event, 256> event_delay;
 
-template<bool manual_delay, bool fixed_decay>
+#endif  // BEADS_EXTENDED_AUDIO
+
+inline float OliverbControl(const RandomizedParameter& control, float lo, float hi) {
+  float value = control.base;
+  if (control.has_cv) {
+    value += control.attenuverter * control.cv;
+  }
+  CONSTRAIN(value, lo, hi);
+  return value;
+}
+
+template<bool play_oliverb, bool extended_reverb>
 inline void ProcessAudio(
+    bool manual_delay, bool fixed_decay,
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
     size_t size) __attribute__((always_inline));
 
-template<bool manual_delay, bool fixed_decay>
+template<bool play_oliverb, bool extended_reverb>
 inline void ProcessAudio(
+    bool manual_delay, bool fixed_decay,
     const Codec::Event* events,
     const Codec::Frame* in,
     Codec::Frame* out,
@@ -209,13 +272,13 @@ inline void ProcessAudio(
   ui.set_freeze_led_state(freeze_block);
   
   const AttackMode attack_mode = ui.attack_mode();
-  if (attack_mode != processor.attack_input()->mode()) {
+  if (!play_oliverb && attack_mode != processor.attack_input()->mode()) {
     processor.SetAttacks(attack_mode, ui.attack_threshold());
   }
   // Snap and trigger keeps listening while frozen, only to start grains.
   const bool attack_trigger_mode = attack_mode == ATTACK_MODE_SNAP_AND_TRIGGER;
   bool attack_onset = false;
-  if (attack_mode && !transition.blanking() &&
+  if (!play_oliverb && attack_mode && !transition.blanking() &&
       (!freeze_block || attack_trigger_mode) &&
       !synth_mode && processor.attack_recording()) {
     attack_onset = processor.attack_input()->Process(
@@ -234,7 +297,9 @@ inline void ProcessAudio(
   }
   // Hits add grains apart from SEED, in granular playback only.
   const bool attack_trigger = attack_onset && attack_trigger_mode;
-  processor.set_attack_trigger(attack_trigger);
+  if (!play_oliverb) {
+    processor.set_attack_trigger(attack_trigger);
+  }
   bool seed_block = attack_trigger;
   GateFlags* seed_input = NULL;
   if (!normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED)) {
@@ -251,7 +316,7 @@ inline void ProcessAudio(
     previous_seed = GATE_FLAG_LOW;
   }
   ui.set_seed_led_state(seed_block && !transition.blanking());
-  ui.set_overwrite_reserve(synth_mode || processor.spectral()
+  ui.set_overwrite_reserve(play_oliverb || synth_mode || processor.spectral()
       ? 1.0f : processor.overwrite_reserve());
   
   // Conversion of input samples into floats, (with automatic gain control).
@@ -349,33 +414,71 @@ inline void ProcessAudio(
   }
 
   if (ui.trim_flag()) {
-    if (!processor.spectral()) {
+    if (!play_oliverb && !processor.spectral()) {
       processor.Trim();
     }
     ui.ClearTrimFlag();
   }
   // Fade to silence before changing delay topology in the shared buffer,
   // and before main swaps the engine, which waits for FREEZE to be released.
-  const bool requested_style = ui.clouds_style();
-  const bool engine_change = ui.spectral() != processor.spectral() &&
+  const bool requested_style = play_oliverb || extended_reverb
+      ? transition.clouds_style() : ui.clouds_style();
+  const bool engine_change = (play_oliverb
+      ? ui.processor_mode() != PROCESSOR_OLIVERB
+      : ui.spectral() != processor.spectral()) &&
       !ui.should_ignore_state_change();
   if (transition.Hold(requested_style, engine_change, &processor, &synth,
       &plaits_synth, &rings_synth, out, size)) {
     return;
   }
 #ifdef DWT_CALIBRATION
-  if (dwt_calibration::stats.synthetic) {
+  if (!play_oliverb && dwt_calibration::stats.synthetic) {
     dwt_calibration::PrepareSynthetic(
         &processor, delay_buffer_1, sizeof(delay_buffer_1),
         delay_buffer_2, sizeof(delay_buffer_2), reverb_buffer,
         sizeof(reverb_buffer) / sizeof(reverb_buffer[0]),
-        transition.clouds_style(), &synth_mode, &p, &d, &m, &seed_button_state,
+        transition.reverb_character(), &synth_mode, &p, &d, &m, &seed_button_state,
         &seed_input, seed, freeze, float_in, size, &calibration_callback);
+    active_processor_mode = processor.spectral()
+        ? PROCESSOR_SPECTRAL : PROCESSOR_GRANULAR;
   }
 #endif  // DWT_CALIBRATION
-  processor.set_output_limiter_mode(ui.output_limiter_mode());
-  synth.set_output_limiter_mode(ui.output_limiter_mode());
-  if (synth_mode && transition.playing_synth() == SYNTH_SILENT) {
+  if (!play_oliverb) {
+    processor.set_output_limiter_mode(ui.output_limiter_mode());
+    synth.set_output_limiter_mode(ui.output_limiter_mode());
+  }
+  if (play_oliverb) {
+    Oliverb::Controls controls;
+    controls.pre_delay = 0.018f + 0.132f * OliverbControl(p.time, 0.0f, 1.0f);
+    controls.size = OliverbControl(p.size, 0.0f, 1.0f);
+    controls.pitch = OliverbControl(p.pitch, -24.0f, 24.0f);
+    controls.decay = d.value();
+    controls.texture = OliverbControl(p.shape, 0.0f, 1.0f);
+    controls.diffusion = settings.diffusion_set() ? settings.diffusion() : 0.5f;
+    if (diffusion_assigned) {
+      controls.diffusion += assign_cv;
+      CONSTRAIN(controls.diffusion, 0.0f, 1.0f);
+    }
+    controls.mod_rate = m.feedback;
+    controls.mod_depth = m.reverb_amount;
+    controls.mix = m.dry_wet;
+#ifdef DWT_CALIBRATION
+    const uint32_t calibration_start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+    oliverb.Process(controls, freeze, float_in, float_out, size);
+    oliverb_limiter.ProcessOutput(float_out, size, ui.output_limiter_mode(),
+        float(oliverb.sample_rate()));
+    if (m.output_gate) {
+      for (size_t i = 0; i < size; ++i) {
+        float_out[i].l = (float_out[i].l + float_out[i].r) * 0.5f;
+        float_out[i].r = 0.0f;
+      }
+    }
+#ifdef DWT_CALIBRATION
+    dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+        dwt_calibration::Read() - calibration_start);
+#endif  // DWT_CALIBRATION
+  } else if (synth_mode && transition.playing_synth() == SYNTH_SILENT) {
     FloatFrame silence;
     silence = 0.0f;
     fill(&float_out[0], &float_out[size], silence);
@@ -386,7 +489,10 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (fixed_decay) {
+    if (extended_reverb) {
+      rings_synth.RenderCharacter(seed_button_state, seed_input, freeze,
+          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+    } else if (fixed_decay) {
       rings_synth.RenderFixedDecay(
           seed_button_state,
           seed_input,
@@ -414,7 +520,10 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (fixed_decay) {
+    if (extended_reverb) {
+      plaits_synth.RenderCharacter(seed_button_state, seed_input, freeze,
+          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+    } else if (fixed_decay) {
       plaits_synth.RenderFixedDecay(
           seed_button_state,
           seed_input,
@@ -442,7 +551,10 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (fixed_decay) {
+    if (extended_reverb) {
+      synth.RenderCharacter(seed_button_state, seed_input, freeze,
+          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+    } else if (fixed_decay) {
       synth.RenderFixedDecay(
           seed_button_state,
           seed_input,
@@ -480,7 +592,12 @@ inline void ProcessAudio(
 #ifdef DWT_CALIBRATION
     const uint32_t calibration_start = dwt_calibration::Read();
 #endif  // DWT_CALIBRATION
-    if (manual_delay) {
+    if (extended_reverb) {
+      const bool manual = settings.profile().entry(FEATURE_MANUAL_DELAY).action;
+      processor.ProcessCharacter(manual, ui.manual_delay_requested(),
+          seed_button_state, seed_input, freeze, d, p, m,
+          float_in, float_out, size);
+    } else if (manual_delay) {
       if (fixed_decay) {
         processor.ProcessManualDelayFixedDecay(ui.manual_delay_requested(),
             seed_button_state, seed_input, freeze, d, p, m,
@@ -531,51 +648,8 @@ inline void ProcessAudio(
   }
 }
 
-void Process(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<false, false>(events, in, out, size);
-}
-
-void ProcessFixedDecay(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<false, true>(events, in, out, size);
-}
-
-void ProcessManualDelay(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<true, false>(events, in, out, size);
-}
-
-void ProcessManualDelayFixedDecay(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  ProcessAudio<true, true>(events, in, out, size);
-}
-
-// Selected only for synth profiles with an output trim.
-template<bool fixed_decay>
-void ProcessSynthLevel(
-    const Codec::Event* events,
-    const Codec::Frame* in,
-    Codec::Frame* out,
-    size_t size) {
-  if (fixed_decay) {
-    ProcessFixedDecay(events, in, out, size);
-  } else {
-    Process(events, in, out, size);
-  }
-  const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
+inline void ApplySynthLevel(
+    Codec::Frame* out, size_t size, int32_t divisor) {
   if (settings.state().gate_output_mode) {
     for (size_t i = 0; i < size; ++i) {
       out[i].l /= divisor;
@@ -588,43 +662,275 @@ void ProcessSynthLevel(
   }
 }
 
+#ifndef BEADS_EXTENDED_AUDIO
+void Process(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  const bool manual_delay =
+      !synth_mode && settings.profile().entry(FEATURE_MANUAL_DELAY).action;
+  ProcessAudio<false, false>(manual_delay, fixed_reverb_decay,
+      events, in, out, size);
+}
+
+#ifdef DWT_CALIBRATION
+void ProcessCalibrationSynth(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+  ProcessAudio<false, false>(false, fixed_reverb_decay, events, in, out, size);
+}
+#endif  // DWT_CALIBRATION
+
+#endif  // BEADS_EXTENDED_AUDIO
+
+#ifdef BEADS_EXTENDED_AUDIO
+
+void ProcessOliverb(
+    const Codec::Event* events, const Codec::Frame* in,
+    Codec::Frame* out, size_t size) {
+  ProcessAudio<true, false>(false, false, events, in, out, size);
+}
+
+float AbyssPitchPosition() {
+  return 2.0f * cv_reader.raw_pot(POTS_ADC_CHANNEL_PITCH) - 1.0f;
+}
+
+RandomizedParameter AbyssParameter(PotsAdcChannel knob,
+    PotsAdcChannel amount, CvAdcChannel cv,
+    NormalizationDetectorChannel channel) {
+  RandomizedParameter parameter;
+  parameter.base = cv_reader.pot(knob);
+  parameter.attenuverter = cv_reader.pot(amount);
+  parameter.has_cv = !normalization_detector.normalized(channel);
+  parameter.cv = cv_reader.cv(cv);
+  return parameter;
+}
+
+float AbyssMix(Ui::MixParameter parameter, float cv) {
+  const State& state = settings.state();
+  float value = ui.mix_parameter(parameter) * 1.005f;
+  if (!settings.width_assigned() && !settings.diffusion_assigned()) {
+    const float amount = state.assignable_cv_destination == 3
+        ? float(state.assignable_cv_amount[parameter]) / 256.0f
+        : float(state.assignable_cv_destination == parameter);
+    value += cv * amount;
+  }
+  CONSTRAIN(value, 0.0f, 1.0f);
+  return value;
+}
+
+void ProcessAbyss(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* codec_out,
+    size_t size) {
+#ifdef PROFILE_INTERRUPT
+  ScopedDebugPinToggler toggler;
+#endif  // PROFILE_INTERRUPT
+#ifdef DWT_CALIBRATION
+  dwt_calibration::ScopedBlockTimer calibration_callback;
+#endif  // DWT_CALIBRATION
+  FloatFrame input[kMaxCodecBlockSize];
+  FloatFrame output[kMaxCodecBlockSize];
+  bool freeze[kMaxCodecBlockSize];
+  normalization_detector.Process(
+      events[size - 1], in[size - 1], cv_reader.cv_values());
+  cv_reader.Read();
+  for (int i = 0; i < Ui::MIX_PARAMETER_LAST; ++i) {
+    ui.ProcessPot(Ui::MixParameter(i), cv_reader.pot(
+        PotsAdcChannel(POTS_ADC_CHANNEL_FEEDBACK + i)));
+  }
+
+  bool frozen = false;
+  bool seeded = false;
+  for (size_t i = 0; i < size; ++i) {
+    freeze[i] = ui.freeze_button_state() || (events[i] & Codec::EVENT_FREEZE);
+    frozen |= freeze[i];
+    seeded |= events[i] & Codec::EVENT_SEED;
+  }
+  ui.set_freeze_led_state(frozen);
+  ui.set_seed_led_state(seeded && !transition.blanking() &&
+      !normalization_detector.normalized(NORMALIZATION_DETECTOR_CHANNEL_SEED));
+  ui.set_overwrite_reserve(1.0f);
+
+  gain_control.Process(
+      !transition.blanking(), settings.state().gain,
+      normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_AUDIO_LEFT),
+      normalization_detector.normalized(
+          NORMALIZATION_DETECTOR_CHANNEL_AUDIO_RIGHT),
+      in, input, size);
+  if (transition.Blanking(codec_out, size)) {
+    return;
+  }
+
+  ui.ClearTrimFlag();
+  const bool change = ui.processor_mode() != PROCESSOR_ABYSS &&
+      !ui.should_ignore_state_change();
+  if (transition.Hold(transition.clouds_style(), change, &processor, &synth,
+      &plaits_synth, &rings_synth, codec_out, size)) {
+    return;
+  }
+
+  Abyss::Controls controls;
+  controls.room = AbyssParameter(POTS_ADC_CHANNEL_TIME,
+      POTS_ADC_CHANNEL_TIME_AMOUNT, CV_ADC_CHANNEL_TIME,
+      NORMALIZATION_DETECTOR_CHANNEL_TIME_CV).value();
+  controls.decay = AbyssParameter(POTS_ADC_CHANNEL_SIZE,
+      POTS_ADC_CHANNEL_SIZE_AMOUNT, CV_ADC_CHANNEL_SIZE,
+      NORMALIZATION_DETECTOR_CHANNEL_SIZE_CV).value();
+  controls.drift = AbyssParameter(POTS_ADC_CHANNEL_SHAPE,
+      POTS_ADC_CHANNEL_SHAPE_AMOUNT, CV_ADC_CHANNEL_SHAPE,
+      NORMALIZATION_DETECTOR_CHANNEL_SHAPE_CV).value();
+  ModulatedParameter diffusion;
+  diffusion.base = cv_reader.pot(POTS_ADC_CHANNEL_DENSITY);
+  diffusion.cv = normalization_detector.normalized(
+      NORMALIZATION_DETECTOR_CHANNEL_DENSITY_CV)
+      ? 0.0f : cv_reader.cv(CV_ADC_CHANNEL_DENSITY);
+  controls.diffusion = diffusion.value();
+  const float cv = cv_reader.cv(CV_ADC_CHANNEL_ASSIGN) - 0.002f;
+  controls.gravity = AbyssMix(Ui::MIX_PARAMETER_FEEDBACK, cv);
+  RandomizedParameter pitch = AbyssParameter(POTS_ADC_CHANNEL_PITCH,
+      POTS_ADC_CHANNEL_PITCH_AMOUNT, CV_ADC_CHANNEL_PITCH,
+      NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV);
+  pitch.base = AbyssPitchPosition() * 24.0f;
+  controls.pitch = pitch.value(NULL, 0, 24.0f, false) / 24.0f;
+  controls.tone = AbyssMix(Ui::MIX_PARAMETER_REVERB, cv);
+  controls.mix = AbyssMix(Ui::MIX_PARAMETER_DRY_WET, cv);
+
+#ifdef DWT_CALIBRATION
+  const uint32_t start = dwt_calibration::Read();
+#endif  // DWT_CALIBRATION
+  abyss.Process(controls, freeze, input, output, size);
+#ifdef DWT_CALIBRATION
+  dwt_calibration::Record(dwt_calibration::BRACKET_INNER,
+      dwt_calibration::Read() - start);
+#endif  // DWT_CALIBRATION
+  abyss_limiter.ProcessOutput(
+      output, size, ui.output_limiter_mode(), processor.sample_rate());
+  transition.Apply(output, size);
+
+  const bool gate_output = settings.state().gate_output_mode;
+  for (size_t i = 0; i < size; ++i) {
+    float left = output[i].l;
+    float right = output[i].r;
+    if (gate_output) {
+      left = (left + right) * 0.5f;
+      right = 0.0f;
+    }
+    CONSTRAIN(left, -1.0f, 0.999999f);
+    CONSTRAIN(right, -1.0f, 0.999999f);
+    codec_out[i].l = int32_t(left * 2147483648.0f);
+    codec_out[i].r = int32_t(right * 2147483648.0f);
+  }
+}
+
+void ProcessExtendedReverb(
+    const Codec::Event* events, const Codec::Frame* in,
+    Codec::Frame* out, size_t size) {
+  ProcessAudio<false, true>(false, false, events, in, out, size);
+  if (synth_mode) {
+    const uint8_t level = settings.FeatureValue(FEATURE_SYNTH_LEVEL);
+    if (level) {
+      ApplySynthLevel(out, size, 1 << level);
+    }
+  }
+}
+
+#else
+
+void ProcessOliverb(
+    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
+void ProcessAbyss(
+    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
+void ProcessExtendedReverb(
+    const Codec::Event*, const Codec::Frame*, Codec::Frame*, size_t);
+float AbyssPitchPosition();
+
+// Selected only for synth profiles with an output trim.
+void ProcessSynthLevel(
+    const Codec::Event* events,
+    const Codec::Frame* in,
+    Codec::Frame* out,
+    size_t size) {
+#ifdef DWT_CALIBRATION
+  ProcessCalibrationSynth(events, in, out, size);
+#else
+  Process(events, in, out, size);
+#endif  // DWT_CALIBRATION
+  const int32_t divisor = 1 << settings.FeatureValue(FEATURE_SYNTH_LEVEL);
+  ApplySynthLevel(out, size, divisor);
+}
+
 Codec::FillBufferCallback AudioCallback(bool synth) {
+  if (active_processor_mode == PROCESSOR_ABYSS) {
+    return &ProcessAbyss;
+  }
+  if (oliverb_mode) {
+    return &ProcessOliverb;
+  }
+  if (transition.reverb_character() > REVERB_CLOUDS) {
+    return &ProcessExtendedReverb;
+  }
   if (synth && settings.FeatureValue(FEATURE_SYNTH_LEVEL)) {
-    return fixed_reverb_decay ? &ProcessSynthLevel<true>
-        : &ProcessSynthLevel<false>;
+    return &ProcessSynthLevel;
   }
-  if (!synth && settings.profile().entry(FEATURE_MANUAL_DELAY).action) {
-    return fixed_reverb_decay
-        ? &ProcessManualDelayFixedDecay : &ProcessManualDelay;
+#ifdef DWT_CALIBRATION
+  // Synthetic preparation can clear synth_mode while this callback is active.
+  if (synth) {
+    return &ProcessCalibrationSynth;
   }
-  return fixed_reverb_decay ? &ProcessFixedDecay : &Process;
+#endif  // DWT_CALIBRATION
+  return &Process;
 }
 
 void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
-  int sr = new_synth_mode ? 48000 : int(processor.sample_rate());
+  const Processor::Media media = oliverb_mode ? oliverb_media : processor.media();
+  const int sr = new_synth_mode ? 48000
+      : oliverb_mode ? oliverb.sample_rate() : int(processor.sample_rate());
+  if (new_synth_mode && background_buffer_backup.saving()) {
+    background_buffer_backup.Process(false);
+  }
   synth_mode = new_synth_mode;
+  synth_fade = false;
   synth_mode_start_time = 0;
   if (synth_mode) {
     // Rings when it plays, else Plaits, so Beads <-> Plaits stays instant.
     transition.TakeBank(transition.playing_synth() == SYNTH_RINGS
         ? SYNTH_RINGS : SYNTH_PLAITS);
-  } else {
+  } else if (!oliverb_mode) {
     // The granular processor's Configure clears the bank.
     transition.set_bank_owner(SYNTH_SILENT);
   }
 
   gain_control.Init(
       float(sr),
-      processor.media() == Processor::MEDIA_DIRTY_TAPE
+      media == Processor::MEDIA_DIRTY_TAPE
           ? GainControl::SOFT_CLIPPING_MODE_ON
-          : (processor.media() == Processor::MEDIA_CLEAN_TAPE
+          : (media == Processor::MEDIA_CLEAN_TAPE
                 ? GainControl::SOFT_CLIPPING_MODE_DYNAMIC
                 : GainControl::SOFT_CLIPPING_MODE_OFF),
       reset_gain_control);
   normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
   event_delay.Init();
 
-  transition.Start(sr, AudioCallback(new_synth_mode));
+  if (active_processor_mode == PROCESSOR_ABYSS) {
+    processor.ResetDelayTransition();
+    processor.ClearReverb();
+    abyss.Init(delay_buffer_1, delay_buffer_2, float(sr));
+    abyss_limiter.Init(1.0f / (float(sr) * 6.0f), 0.9f);
+  }
+  const bool dedicated_reverb =
+      oliverb_mode || active_processor_mode == PROCESSOR_ABYSS;
+  processor.set_suspended(dedicated_reverb);
+  background_buffer_backup.set_suspended(dedicated_reverb);
+  if (transition.reverb_character() > REVERB_CLOUDS) {
+    processor.ResetReverbCharacter();
+  }
+  transition.Start(sr, AudioCallback(new_synth_mode), true);
 }
 
 void SwapPaused(SynthEngine owner, SynthEngine playing) {
@@ -680,8 +986,19 @@ void Init() {
     background_buffer_backup.EraseDamagedSectors();
   }
   ui.LoadOptions();
+  if (settings.FeatureValue(FEATURE_TIME_CV_RANGE)) {
+    cv_reader.UseFineTimeCv(
+        settings.persistent_data().adc_calibration[CV_ADC_CHANNEL_TIME]);
+  }
   fixed_reverb_decay = Reverb::InitFixedDecay(
       settings.FeatureValue(FEATURE_REVERB_DECAY));
+  if (ui.clouds_style()) {
+    transition.set_clouds_style(true);
+    processor.SetCloudsStyle(true);
+    synth.SetCloudsStyle(true, true);
+    plaits_synth.SetCloudsStyle(true, true);
+    rings_synth.SetCloudsStyle(true, true);
+  }
 #ifdef PLAITS_BLOBS
   RegionLoader region_loader;
   const Profile& profile = settings.profile();
@@ -714,8 +1031,7 @@ void Init() {
     factory_test.Start();
     ui.set_factory_test(true);
     normalization_detector.Init(2);
-    transition.set_codec_sample_rate(48000);
-    codec.Start(48000, 48000 / kBlockRate, &FactoryTest::ProcessFn);
+    transition.Start(48000, &FactoryTest::ProcessFn, false);
   } else {
 #ifdef PROFILE_INTERRUPT
     DebugPin::Init();
@@ -723,13 +1039,22 @@ void Init() {
     ui.set_factory_test(false);
     ui.ShowStorageStatus();
     synth_mode_start_time = 0;
+    synth_fade = false;
     synth_mode = true;
   }
+  active_processor_mode = ui.processor_mode();
+  const bool abyss_selected = active_processor_mode == PROCESSOR_ABYSS;
+  processor.set_suspended(abyss_selected);
+  background_buffer_backup.set_suspended(abyss_selected);
   ready = true;
   
   // A frozen buffer saved by the granular engine stays in flash.
   processor.set_spectral(ui.spectral());
-  bool was_frozen = !processor.spectral() && background_buffer_backup.Load();
+  SetResonatorAvailable();
+  oliverb_mode = false;
+  oliverb_restore_pending = ui.processor_mode() == PROCESSOR_OLIVERB;
+  bool was_frozen = ui.processor_mode() == PROCESSOR_GRANULAR &&
+      background_buffer_backup.Load();
   if (was_frozen) {
     ui.set_freeze_button_state(was_frozen);
     ConfigureAndStartCodec(false, true);
@@ -737,7 +1062,12 @@ void Init() {
 }
 
 void MonitorStateChange() {
-  UpdateResonator();
+  if (transition.RetryCodec()) {
+    return;
+  }
+  if (!oliverb_mode && active_processor_mode != PROCESSOR_ABYSS) {
+    UpdateResonator();
+  }
   seed_latch_mode = ui.seed_latch();
   seed_latch_enabled = seed_latch_mode != 0;
   gain_control.set_attenuation(settings.FeatureValue(FEATURE_ATTENUATION));
@@ -746,23 +1076,29 @@ void MonitorStateChange() {
   processor.set_seed_latch_fade(
       settings.FeatureValue(FEATURE_SEED_LATCH_FADE));
   // The page moves the resonator; it restarts from silence.
-  if (ui.resonator() != resonator_placement) {
-    resonator_placement = ui.resonator();
+  const uint8_t placement = ui.resonator();
+  if (placement != resonator_placement) {
+    resonator_placement = placement;
     processor.set_resonator(resonator_placement);
+    SetResonatorAvailable();
   }
-  ui.set_delay_active(processor.delay_active());
+  ui.set_delay_active(!oliverb_mode && processor.delay_active());
   if (settings.FeatureValue(FEATURE_PITCH_NOTCH) ||
       settings.FeatureValue(FEATURE_LIVE_ASSIGN)) {
-    ui.set_modulation_indication(cv_reader.pitch_on_notch(),
+    ui.set_modulation_indication(active_processor_mode == PROCESSOR_ABYSS
+        ? !settings.FeatureValue(FEATURE_PITCH_LAW) &&
+          Abyss::PitchOnNotch(AbyssPitchPosition()) : cv_reader.pitch_on_notch(),
         cv_reader.cv(CV_ADC_CHANNEL_ASSIGN));
   }
-  // The wavetable synth adds the PITCH CV to the knob: no recent notes there.
-  RememberNote(ui.intervals_mode(), !synth_mode &&
-      !normalization_detector.normalized(
-          NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV),
-      cv_reader.cv(CV_ADC_CHANNEL_PITCH),
-      -cv_reader.pot(POTS_ADC_CHANNEL_PITCH_AMOUNT),
-      system_clock.milliseconds());
+  // Oliverb suspends the recent-note history with the recording.
+  if (!oliverb_mode) {
+    RememberNote(ui.intervals_mode(), !synth_mode &&
+        !normalization_detector.normalized(
+            NORMALIZATION_DETECTOR_CHANNEL_PITCH_CV),
+        cv_reader.cv(CV_ADC_CHANNEL_PITCH),
+        -cv_reader.pot(POTS_ADC_CHANNEL_PITCH_AMOUNT),
+        system_clock.milliseconds());
+  }
   ui.set_no_input(normalization_detector.no_input());
   ui.set_synth_mode(synth_mode);
   plaits_synth.set_bank(settings.FeatureValue(FEATURE_PLAITS_BANK));
@@ -786,10 +1122,82 @@ void MonitorStateChange() {
     }
     return;
   }
+  const uint8_t reverb_character = ui.reverb_character();
+  const uint8_t playing_character = transition.reverb_character();
+  if (!oliverb_mode && active_processor_mode != PROCESSOR_ABYSS &&
+      !factory_test.running() && !ui.calibrating_or_testing() &&
+      !transition.blanking() && reverb_character != playing_character &&
+      (reverb_character > REVERB_CLOUDS || playing_character > REVERB_CLOUDS)) {
+    if (ui.freeze_led_state()) {
+      ui.ClearSelfPlayRequest();
+      synth_fade = false;
+      synth_mode_start_time = 0;
+    }
+    if (transition.Fade()) {
+      transition.Pause();
+      transition.SetReverbCharacter(reverb_character, &processor, &synth);
+      transition.Resume(AudioCallback(synth_mode));
+    }
+    return;
+  }
   if (ui.should_ignore_state_change() || transition.blanking()) {
+    synth_fade = false;
     synth_mode_start_time = 0;
     ui.ClearSelfPlayRequest();
     transition.Cancel();
+    return;
+  }
+
+  const ProcessorMode wanted_processor = ui.processor_mode();
+  const bool wants_oliverb = wanted_processor == PROCESSOR_OLIVERB;
+  if (wants_oliverb ||
+      (oliverb_mode && wanted_processor != PROCESSOR_ABYSS)) {
+    const Processor::Media media = Processor::Media(settings.state().media);
+    if (oliverb_mode == wants_oliverb && media == oliverb_media) {
+      transition.Cancel();
+      return;
+    }
+    if (!transition.Fade()) {
+      return;
+    }
+
+    transition.Pause();
+    oliverb_mode = wants_oliverb;
+    if (oliverb_mode) {
+      if (background_buffer_backup.saving()) {
+        background_buffer_backup.Process(false);
+      }
+      if (active_processor_mode == PROCESSOR_ABYSS) {
+        processor.Configure(media, normalization_detector.mono());
+        oliverb_restore_pending = true;
+      }
+      active_processor_mode = PROCESSOR_OLIVERB;
+      oliverb_media = media;
+      const float sr = Processor::SampleRate(media);
+      oliverb.Init(reverb_buffer, int(sr));
+      oliverb_limiter.Init(1.0f / (sr * 6.0f), 0.9f);
+    } else {
+      active_processor_mode = wanted_processor;
+      const bool resume_mono = normalization_detector.mono();
+      // A compatible suspended recording stays in its delay bank.
+      const bool reset = processor.spectral() != ui.spectral() ||
+          processor.media() != media || processor.mono() != resume_mono ||
+          transition.bank_owner() != SYNTH_SILENT;
+      if (reset) {
+        processor.set_spectral(ui.spectral());
+        background_buffer_backup.Init(&processor, &settings);
+        processor.Configure(media, resume_mono);
+      }
+      if (!ui.spectral() && (reset || oliverb_restore_pending) &&
+          background_buffer_backup.Load()) {
+        settings.mutable_state()->media = processor.media();
+        ui.set_freeze_button_state(true);
+      }
+      oliverb_restore_pending = false;
+      processor.ClearReverb();
+    }
+    SetResonatorAvailable();
+    ConfigureAndStartCodec(false, true);
     return;
   }
 
@@ -811,10 +1219,21 @@ void MonitorStateChange() {
 
   // Once faded out, swap the engine. This clears the recording; a frozen
   // buffer saved to flash returns with the granular engine.
-  if (ui.spectral() != processor.spectral() && transition.faded_out()) {
+  if (wanted_processor != active_processor_mode &&
+      (wanted_processor == PROCESSOR_ABYSS || transition.faded_out())) {
+    if (wanted_processor == PROCESSOR_ABYSS && !transition.Fade()) {
+      return;
+    }
     transition.Pause();
-    processor.set_spectral(ui.spectral());
-    if (processor.spectral()) {
+    oliverb_mode = false;
+    active_processor_mode = wanted_processor;
+    if (active_processor_mode == PROCESSOR_ABYSS &&
+        background_buffer_backup.saving()) {
+      background_buffer_backup.Process(false);
+    }
+    processor.set_spectral(active_processor_mode == PROCESSOR_SPECTRAL);
+    SetResonatorAvailable();
+    if (active_processor_mode != PROCESSOR_GRANULAR) {
       background_buffer_backup.Init(&processor, &settings);
     }
     processor.Configure(Processor::Media(settings.state().media),
@@ -822,7 +1241,8 @@ void MonitorStateChange() {
     if (synth_mode && settings.FeatureValue(FEATURE_SYNTH_TAIL)) {
       processor.ClearReverb();
     }
-    if (!processor.spectral() && background_buffer_backup.Load()) {
+    if (active_processor_mode == PROCESSOR_GRANULAR &&
+        background_buffer_backup.Load()) {
       // The restored recording keeps the quality it was saved with.
       settings.mutable_state()->media = processor.media();
       ui.set_freeze_button_state(true);
@@ -831,9 +1251,11 @@ void MonitorStateChange() {
     return;
   }
   
-  // The wavetable synth does not start in spectral mode.
-  if (normalization_detector.no_input() && !processor.spectral()) {
+  // Self-play uses the granular engine only.
+  if (normalization_detector.no_input() &&
+      active_processor_mode == PROCESSOR_GRANULAR) {
     if (settings.self_play_on_request()) {
+      synth_fade = false;
       // Self-play starts and stops only on a MEDIA hold.
       if (ui.self_play_requested()) {
         if (!transition.Fade()) {
@@ -851,22 +1273,22 @@ void MonitorStateChange() {
         ConfigureAndStartCodec(!synth_mode, true);
       }
     } else if (!synth_mode) {
-      if (!synth_mode_start_time) {
-        synth_mode_start_time = system_clock.milliseconds();
-        if (!synth_mode_start_time) synth_mode_start_time = 1;
-      } else {
-        if ((system_clock.milliseconds() - synth_mode_start_time) >= 10000) {
-          // If 10 seconds have elapsed with nothing patched in the audio
-          // inputs, enable the synth mode.
-          if (!transition.Fade()) {
-            return;
-          }
-          transition.Pause();
-          ConfigureAndStartCodec(true, true);
+      const uint32_t now = system_clock.milliseconds();
+      const int start = synth_mode_start_time;
+      if (synth_fade || (start && now - start >= 10000)) {
+        // Finish the fade even if the callback resets the idle timer.
+        synth_fade = true;
+        if (!transition.Fade()) {
+          return;
         }
+        transition.Pause();
+        ConfigureAndStartCodec(true, true);
+      } else if (!start) {
+        synth_mode_start_time = now ? now : 1;
       }
     }
   } else {
+    synth_fade = false;
     // Awful block of code to troubleshoot glitches related to changes of
     // sample rate and more general codec settings.
     //
@@ -880,7 +1302,8 @@ void MonitorStateChange() {
     Processor::Media media = Processor::Media(settings.state().media);
     bool mono = normalization_detector.mono();
     bool media_changed = media != processor.media();
-    bool mono_changed = mono != processor.mono();
+    bool mono_changed = active_processor_mode != PROCESSOR_ABYSS &&
+        mono != processor.mono();
     
     if (synth_mode || mono_changed || media_changed) {
       if (!transition.Fade()) {
@@ -915,3 +1338,5 @@ int main(void) {
   }
 }
 
+
+#endif  // BEADS_EXTENDED_AUDIO

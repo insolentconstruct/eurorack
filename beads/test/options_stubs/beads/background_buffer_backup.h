@@ -36,6 +36,7 @@ class BackgroundBufferBackup {
   BackgroundBufferBackup() : busy_(false) { }
   bool busy_;
   bool busy() const { return busy_; }
+  bool saving() const { return busy_; }
 };
 
 }  // namespace beads

@@ -38,6 +38,7 @@ class Calibrator {
   Calibrator() : starts(0) { }
   int starts;
   void Start() { ++starts; }
+  void ResumeNormalization() { }
   void CalibrateOffsets() { }
   bool Calibrate(CvAdcChannel, int, float) { return true; }
   bool Save() { return true; }

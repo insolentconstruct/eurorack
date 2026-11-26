@@ -2,6 +2,7 @@ TARGET = firmware_test
 include beads/test/plaits_sources.mk
 CC_FILES       = 		firmware_test.cc \
 		beads.cc \
+		abyss.cc \
 		engine_transition.cc \
 		cv_reader.cc \
 		normalization_detector.cc \
@@ -21,6 +22,8 @@ CC_FILES       = 		firmware_test.cc \
 		diffuser.cc \
 		reverb.cc \
 		reverb_decay.cc \
+		reverb_characters.cc \
+		extended_audio.cc \
 		mu_law.cc \
 		delay_controller.cc \
 		delay_clock.cc \
@@ -41,3 +44,5 @@ HOST_FLAGS = -DSTM32H7XX -Wno-int-to-pointer-cast $(PLAITS_FLAGS)
 include beads/test/host.mk
 
 $(BUILD_DIR)beads.o: EXTRA_FLAGS = -Dmain=BeadsMain
+# PowerOnObject clears storage before the replacement constructor runs.
+$(BUILD_DIR)firmware_test.o: EXTRA_FLAGS = -flifetime-dse=1

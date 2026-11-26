@@ -383,7 +383,7 @@ void LPCSpeechSynthController::Render(
   if (bank == -1 && playback_bank_ != -1 && remaining_frame_samples_ == 0) {
     playback_frame_ = -1;
   }
-  
+
   if (loading) {
     // Keep playing the current frame.
   } else if (playback_frame_ == -1 && remaining_frame_samples_ == 0) {

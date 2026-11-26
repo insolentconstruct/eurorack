@@ -70,7 +70,9 @@ enum ResonatorPlacement {
   RESONATOR_AFTER_GRAINS,
   RESONATOR_BEFORE_BUFFER,
   // After the grains, and FEEDBACK records its resonance.
-  RESONATOR_FEEDBACK
+  RESONATOR_FEEDBACK,
+  // After the grains, each grain striking one voice of a chord.
+  RESONATOR_CHORD
 };
 
 // 48 kHz at the 4 kHz block rate.
@@ -90,6 +92,7 @@ struct ResonatorControls {
   float feedback;
   bool hold_feedback;
   const ResonatorModes* modes;
+  float chord_gain;
 };
 
 class Processor {
@@ -113,6 +116,7 @@ class Processor {
   
   void Init(uint8_t* buffers[], uint16_t* reverb_buffer);
   void SetCloudsStyle(bool clouds);
+  void SetReverbCharacter(uint8_t character);
   // Attacks (#58, #47); changing the mode forgets the marks.
   void SetAttacks(int mode, float threshold) {
     attack_input_.Configure(mode, threshold);
@@ -148,23 +152,9 @@ class Processor {
     SetOption(OPTION_FLAG_DELAY_CROSSFADE, crossfade);
   }
   // Rings' modal resonator on the grains, or on the input before the buffer.
-  inline void set_resonator(int placement) {
-    // One store: the audio interrupt never sees both placements. In the
-    // feedback takes both flags: it records the resonance, and renders it.
-    const uint8_t flag = placement == RESONATOR_AFTER_GRAINS
-        ? OPTION_FLAG_RESONATOR_GRAINS
-        : (placement == RESONATOR_BEFORE_BUFFER
-            ? OPTION_FLAG_RESONATOR_INPUT
-            : (placement == RESONATOR_FEEDBACK
-                ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
-                : 0));
-    resonator_sample_rate_ = 0.0f;
-    resonator_loop_feedback_ = 0.0f;
-    options_ = (options_ &
-        ~(OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) | flag;
-    resonator_sample_rate_ = 0.0f;
-    // A SEED held while it starts does not strike it.
-    seed_gate_ = true;
+  void set_resonator(int placement);
+  inline bool resonator_available() const {
+    return !spectral_ && (options_ & kResonatorFlags);
   }
   // Built in the main loop; until then the resonator keeps its controls.
   void set_resonator_controls(const ResonatorControls& controls);
@@ -175,6 +165,10 @@ class Processor {
 
   inline bool delay_active() const {
     return delay_mode_transition_ > 0.0f && !spectral_;
+  }
+
+  inline void ResetDelayTransition() {
+    delay_mode_transition_ = -kDelayModeTransitionTime;
   }
 
   inline AttackInput* attack_input() { return &attack_input_; }
@@ -214,13 +208,17 @@ class Processor {
   inline void set_spectral(bool spectral) { spectral_ = spectral; }
   inline bool spectral() const { return spectral_; }
 
+  inline void set_suspended(bool suspended) { suspended_ = suspended; }
+
   // Main loop: the spectral engine's frames.
   inline void Buffer() {
-    if (spectral_) {
+    if (spectral_ && !suspended_) {
       spectral_processor_.Buffer();
     }
   }
   
+  static float SampleRate(Media media);
+
   inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
     float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
@@ -313,7 +311,9 @@ class Processor {
   
   void WasteCPUCycles(size_t size) {
     // The one with the most convoluted memory access!
-    processor_vintage_digital_.WasteCPUCycles(size);
+    if (!suspended_) {
+      processor_vintage_digital_.WasteCPUCycles(size);
+    }
   }
 
   void Process(
@@ -327,6 +327,17 @@ class Processor {
       FloatFrame* out,
       size_t size);
   void ProcessFixedDecay(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
+  void ProcessCharacter(
+      bool manual_delay, bool delay_requested,
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -371,8 +382,13 @@ class Processor {
     processor_dirty_tape_.set_delay_mode(mode);
   }
 
+  inline void ResetReverbCharacter() {
+    reverb_character_.Reset(sample_rate());
+  }
+
   // Clears the reverb's memory, which the synths share.
   inline void ClearReverb() {
+    ResetReverbCharacter();
     reverb_.Reset(sample_rate(), true);
   }
 
@@ -440,7 +456,9 @@ class Processor {
     OPTION_FLAG_RESONATOR_GRAINS = 64,
     OPTION_FLAG_RESONATOR_INPUT = 128,
     OPTION_FLAG_OUTPUT_DIVISION = 256,
-    OPTION_FLAG_SEND_MIX = 512
+    OPTION_FLAG_SEND_MIX = 512,
+    OPTION_FLAG_RESONATOR_CHORD = 1024,
+    kResonatorFlags = OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT
   };
 
   inline void SetOption(OptionFlags flag, bool enabled) {
@@ -474,30 +492,6 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size) __attribute__((always_inline));
-  template<bool manual_delay>
-  inline void ProcessOptionsBlock(
-      bool delay_requested,
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
-  template<bool manual_delay>
-  inline void ProcessOptionsBlockFixedDecay(
-      bool delay_requested,
-      SeedButtonState seed_button_state,
-      const stmlib::GateFlags* seed_input,
-      const bool* freeze,
-      const ModulatedParameter& density,
-      const Parameters& parameters,
-      const MixParameters& mix_parameters,
-      const FloatFrame* in,
-      FloatFrame* out,
-      size_t size) __attribute__((always_inline));
   void ProcessWithOptions(
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
@@ -509,6 +503,17 @@ class Processor {
       FloatFrame* out,
       size_t size);
   void ProcessWithOptionsFixedDecay(
+      SeedButtonState seed_button_state,
+      const stmlib::GateFlags* seed_input,
+      const bool* freeze,
+      const ModulatedParameter& density,
+      const Parameters& parameters,
+      const MixParameters& mix_parameters,
+      const FloatFrame* in,
+      FloatFrame* out,
+      size_t size);
+  void ProcessWithOptionsCharacter(
+      bool manual_delay, bool delay_requested,
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -540,10 +545,8 @@ class Processor {
       const FloatFrame* in,
       FloatFrame* out,
       size_t size);
-  // One source for both blocks, each inlined in ProcessWithOptions.
-  template<bool resonator, bool manual_delay>
-  inline void ProcessOptions(
-      bool delay_requested,
+  void ProcessOptions(
+      bool manual_delay, bool delay_requested,
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -552,10 +555,9 @@ class Processor {
       const MixParameters& mix_parameters,
       const FloatFrame* in,
       FloatFrame* out,
-      size_t size) __attribute__((always_inline));
-  template<bool resonator, bool manual_delay>
-  inline void ProcessOptionsFixedDecay(
-      bool delay_requested,
+      size_t size);
+  void ProcessOptionsFixedDecay(
+      bool manual_delay, bool delay_requested,
       SeedButtonState seed_button_state,
       const stmlib::GateFlags* seed_input,
       const bool* freeze,
@@ -564,7 +566,7 @@ class Processor {
       const MixParameters& mix_parameters,
       const FloatFrame* in,
       FloatFrame* out,
-      size_t size) __attribute__((always_inline));
+      size_t size);
   // A flat notch at unity loop gain; both ends of the knob stay stock.
   static float UnityFeedback(float feedback, float tap_gain);
   // 10 Hz in the unity delay loop, stock 40 Hz everywhere else.
@@ -577,7 +579,10 @@ class Processor {
       size_t size);
   void ProcessReverb(float reverb, FloatFrame* out, size_t size);
   void ProcessReverbFixedDecay(float reverb, FloatFrame* out, size_t size);
+  void ProcessReverbCharacter(float reverb, FloatFrame* out, size_t size);
   void QuantizeDrySignal(const FloatFrame* in, FloatFrame* out, size_t size);
+  // The page's controls, once the UI has set them.
+  void ApplyResonatorControls();
   // Struck by input hits, tuned by PITCH; adds its resonance to the frames.
   void ProcessResonator(
       const RandomizedParameter& pitch,
@@ -597,6 +602,19 @@ class Processor {
       bool delay_mode,
       const FloatFrame* in,
       FloatFrame* recorded,
+      size_t size);
+  // Each grain started in the block strikes one voice of the chord.
+  void ProcessChord(
+      bool strike,
+      const TriggerGenerator::Output* triggers,
+      FloatFrame* frames,
+      size_t size);
+  void StrikeChord(
+      const DelayGrain* grains,
+      size_t ratio,
+      const TriggerGenerator::Output* triggers,
+      float gain,
+      float* strikes,
       size_t size);
   // A hit marked for this block's grains, read before they take it.
   bool AttackOnset() const;
@@ -692,6 +710,13 @@ class Processor {
   int output_division_;
   int output_pulse_count_;
   bool output_pulse_;
+  volatile bool resonator_reset_pending_;
+  bool suspended_;
+
+  Reverb::CharacterState reverb_character_;
+
+  // The grains' level, which a grain's strike in a chord follows.
+  float grain_level_;
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

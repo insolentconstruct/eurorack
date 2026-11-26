@@ -75,9 +75,9 @@ const ProfileFeature kPageFeatures[kNumPageFeatures] = {
 const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_NONE,  // None.
   PAGE_CONTROL_SCALE,  // Pitch.
-  PAGE_CONTROL_HALVES,  // Reverb.
+  PAGE_CONTROL_STEPS,  // Reverb.
   PAGE_CONTROL_ZONES,  // Delay.
-  PAGE_CONTROL_HALVES,  // Processor.
+  PAGE_CONTROL_STEPS,  // Processor.
   PAGE_CONTROL_ZONES,  // Limiter.
   PAGE_CONTROL_HALVES,  // Frozen.
   PAGE_CONTROL_ZONES,  // Synth.
@@ -128,6 +128,7 @@ const uint8_t kPageControls[FEATURE_LAST] = {
   PAGE_CONTROL_STEPS,  // Gain ceiling.
   PAGE_CONTROL_NONE,  // Manual delay.
   PAGE_CONTROL_NONE,  // Reverb decay.
+  PAGE_CONTROL_NONE,  // Time cv range.
 };
 const Leds::Color kOptionColors[kNumOptionColors] = {
   { 0, 255, 0 },
@@ -136,16 +137,20 @@ const Leds::Color kOptionColors[kNumOptionColors] = {
 };
 const OptionValue kOptionValues[] = {
   { FEATURE_NONE, 0, { 0, 0, 0 }, PULSE_STEADY },
-  { FEATURE_PITCH, 2, { 255, 64, 32 }, PULSE_STEADY },
-  { FEATURE_PITCH, 3, { 255, 160, 0 }, PULSE_STEADY },
-  { FEATURE_PITCH, 4, { 32, 96, 255 }, PULSE_STEADY },
-  { FEATURE_PITCH, 5, { 255, 160, 0 }, PULSE_SLOW },
-  { FEATURE_PITCH, 6, { 32, 96, 255 }, PULSE_SLOW },
-  { FEATURE_PITCH, 7, { 0, 220, 160 }, PULSE_STEADY },
-  { FEATURE_PITCH, 8, { 160, 48, 255 }, PULSE_STEADY },
-  { FEATURE_PITCH, 9, { 255, 32, 144 }, PULSE_DOUBLE },
+  { FEATURE_PITCH, 2, { 255, 89, 92 }, PULSE_STEADY },
+  { FEATURE_PITCH, 3, { 255, 209, 0 }, PULSE_STEADY },
+  { FEATURE_PITCH, 4, { 95, 222, 255 }, PULSE_STEADY },
+  { FEATURE_PITCH, 5, { 255, 209, 0 }, PULSE_SLOW },
+  { FEATURE_PITCH, 6, { 95, 222, 255 }, PULSE_SLOW },
+  { FEATURE_PITCH, 7, { 0, 255, 253 }, PULSE_STEADY },
+  { FEATURE_PITCH, 8, { 240, 0, 255 }, PULSE_STEADY },
+  { FEATURE_PITCH, 9, { 255, 0, 170 }, PULSE_DOUBLE },
+  { FEATURE_REVERB, 3, { 0, 255, 0 }, PULSE_SLOW },
+  { FEATURE_PROCESSOR, 3, { 255, 0, 0 }, PULSE_SLOW },
+  { FEATURE_BRIGHTNESS, 3, { 255, 0, 0 }, PULSE_SLOW },
   { FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR, 3, { 255, 255, 0 }, PULSE_SLOW },
+  { FEATURE_RESONATOR, 4, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 3, { 0, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 4, { 255, 255, 0 }, PULSE_SLOW },
   { FEATURE_RESONATOR_MATERIAL, 5, { 255, 0, 0 }, PULSE_SLOW },
@@ -208,6 +213,7 @@ void Options::Init() {
   idle_timeout_ = idle_time_ = 0;
   for (int i = 0; i < FEATURE_LAST; ++i) {
     preview_[i] = 0;
+    edited_[i] = false;
   }
   scale_ = PITCH_SCALE_FIFTHS;
   playable_synths_ = SynthMask(true, true, false);
@@ -425,6 +431,7 @@ void Options::Poll(uint32_t now, bool assign, bool other, bool all_up,
       }
 
       if (before != Value(setting)) {
+        edited_[setting] = true;
         dirty_ = true;
         last_action_ = now;
       }
@@ -503,12 +510,30 @@ void Options::ApplySeedTaps() {
         : scale_ == PITCH_SCALE_SHRI ? PITCH_SCALE_FIFTHS
             : PitchScale(scale_ + 1);
     preview_[FEATURE_PITCH] = scale_;
-    preview_knob_ = -1;
-    selected_ = FEATURE_PITCH;
-    indication_time_ = seed_action_time_;
+    edited_[FEATURE_PITCH] = true;
+    if (PageHasPitch()) {
+      preview_knob_ = -1;
+      selected_ = FEATURE_PITCH;
+      indication_time_ = seed_action_time_;
+    }
     dirty_ = true;
     last_action_ = seed_action_time_;
   }
+}
+
+void Options::PublishGesture(ProfileFeature feature, uint8_t value) {
+  if (stage_ == STAGE_PENDING) {
+    preview_[feature] = value;
+    edited_[feature] = false;
+  }
+}
+
+void Options::ClearCommit() {
+  for (int i = 0; i < kNumPageFeatures; ++i) {
+    edited_[kPageFeatures[i]] = false;
+  }
+  dirty_ = false;
+  commit_ = false;
 }
 
 void Options::RequestCommit(uint32_t now) {

@@ -37,6 +37,7 @@
 #include "beads/background_buffer_backup.h"
 #include "beads/blob/synth_choice.h"
 #include "beads/calibrator.h"
+#include "beads/dsp/fx/reverb.h"
 #include "beads/gain_control.h"
 #include "beads/settings.h"
 
@@ -107,6 +108,7 @@ void Ui::Init(
   
   fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
+  fill(&suppressed_press_[0], &suppressed_press_[SWITCH_LAST], false);
   
   freeze_button_state_ = false;
   freeze_led_state_ = false;
@@ -120,6 +122,7 @@ void Ui::Init(
   seed_button_locked_ = true;
   seed_led_state_ = false;
   resonator_assigned_ = false;
+  resonator_available_ = false;
   gestures_.Init(this, settings);
   no_input_ = false;
   synth_mode_ = false;
@@ -156,13 +159,15 @@ void Ui::LoadOptions() {
   options_.Configure(settings_->profile());
   gestures_.LoadOptions();
   output_limiter_mode_ = settings_->output_limiter_mode();
-  clouds_style_ = settings_->clouds_style();
+  reverb_character_ = settings_->reverb_character();
+  clouds_style_ = reverb_character_ == REVERB_CLOUDS;
   evolving_feedback_ = settings_->evolving_feedback();
   synth_ = settings_->synth();
   attack_mode_ = settings_->attack_mode();
   attack_threshold_ = kAttackThresholds[
       settings_->FeatureValue(FEATURE_ATTACK_SENSITIVITY)];
-  spectral_ = settings_->spectral();
+  processor_mode_ = settings_->processor_mode();
+  spectral_ = processor_mode_ == PROCESSOR_SPECTRAL;
   pitch_scale_ = settings_->pitch_scale();
   intervals_mode_ = settings_->random_intervals();
   random_intervals_ = intervals_mode_ != RANDOM_INTERVALS_OFF;
@@ -184,12 +189,18 @@ void Ui::Poll() {
   
   const Options::Stage previous_stage = options_.stage();
   const bool was_active = options_.active();
+  const bool storage_status = showing_storage_status();
   bool other = false;
   bool all_up = true;
   bool pot_touched = false;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     const Switch s = Switch(i);
     const bool down = switches_.pressed_immediate(s);
+    if (storage_status && down) {
+      suppressed_press_[i] = true;
+    } else if (!down && switches_.up(s)) {
+      suppressed_press_[i] = false;
+    }
     const bool scale_seed = s == SWITCH_SEED && options_.seed_allowed() &&
         !switches_.pressed_immediate(SWITCH_ASSIGN);
     other = other || (s != SWITCH_ASSIGN && !scale_seed && down);
@@ -201,9 +212,10 @@ void Ui::Poll() {
         assignable_cv_pot_[i].editing_hidden_parameter();
   }
   options_.Poll(
-      system_clock.milliseconds(), switches_.pressed(SWITCH_ASSIGN) &&
+      system_clock.milliseconds(), chord_modifier(SWITCH_ASSIGN) &&
       switches_.pressed_immediate(SWITCH_ASSIGN),
-      other, all_up, switches_.just_pressed(SWITCH_ASSIGN),
+      other, all_up, switches_.just_pressed(SWITCH_ASSIGN) &&
+      !suppressed_press_[SWITCH_ASSIGN],
       mode_ == MODE_NORMAL, pot_touched, mix_pot_value_,
       !switches_.up(SWITCH_SEED) && !switches_.released(SWITCH_SEED),
       switches_.just_pressed(SWITCH_SEED), *settings_);
@@ -231,16 +243,16 @@ void Ui::Poll() {
   // Ignore switch events while options are open or draining, and buttons
   // held through the storage status shown at power-up.
   const bool accept_switch_events = !was_active && !options_.active() &&
-      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();
+      options_.stage() != Options::STAGE_DRAIN && !storage_status;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     Switch s = Switch(i);
 
     if (switches_.just_pressed(s)) {
-      if (accept_switch_events) {
+      ignore_release_[i] = !accept_switch_events || suppressed_press_[i];
+      if (!ignore_release_[i]) {
         queue_.AddEvent(CONTROL_SWITCH, i, 0);
       }
       press_time_[i] = system_clock.milliseconds();
-      ignore_release_[i] = !accept_switch_events;
     }
 
     if (switches_.pressed(s) && !ignore_release_[i]) {
@@ -268,10 +280,10 @@ void Ui::Poll() {
     PotController* p = &assignable_cv_pot_[i];
     if (!was_active && !options_.active() && p->editing_hidden_parameter()) {
       State* state = settings_->mutable_state();
-      if (switches_.pressed(SWITCH_MEDIA)) {
+      if (chord_modifier(SWITCH_MEDIA)) {
         gestures_.ProcessAmount(i, p,
             &press_time_[SWITCH_MEDIA]);
-      } else if (switches_.pressed(SWITCH_ASSIGN)) {
+      } else if (chord_modifier(SWITCH_ASSIGN)) {
         settings_->set_width_assigned(false);
         resonator_assigned_ = false;
         state->assignable_cv_destination = 3;
@@ -281,8 +293,11 @@ void Ui::Poll() {
   }
   
   const bool previewing = options_.stage() != Options::STAGE_INACTIVE;
-  clouds_style_ = previewing
-      ? options_.Value(FEATURE_REVERB) : settings_->clouds_style();
+  reverb_character_ = previewing
+      ? options_.Value(FEATURE_REVERB) : settings_->reverb_character();
+  if (reverb_character_ <= REVERB_CLOUDS) {
+    clouds_style_ = reverb_character_ == REVERB_CLOUDS;
+  }
   synth_ = previewing ? options_.Value(FEATURE_SYNTH) : settings_->synth();
   delay_mode_ = previewing
       ? DelayMode(options_.Value(FEATURE_DELAY)) : settings_->delay_mode();
@@ -318,12 +333,13 @@ void Ui::Poll() {
   time_scan_ = previewing
       ? options_.Value(FEATURE_TIME_SCAN)
       : settings_->FeatureValue(FEATURE_TIME_SCAN);
-  // Off, or in the synths, the CV goes back to FEEDBACK.
-  if (!resonator_ || synth_mode_) {
+  // Where the resonator cannot run, the CV goes back to FEEDBACK.
+  if (!resonator_available()) {
     resonator_assigned_ = false;
   }
   if (!previewing) {
-    spectral_ = settings_->spectral();
+    processor_mode_ = settings_->processor_mode();
+    spectral_ = processor_mode_ == PROCESSOR_SPECTRAL;
   }
   UpdateLeds();
 }
@@ -347,7 +363,7 @@ void Ui::UpdateLeds() {
   bool adjusting_width = false;
   bool adjusting_diffusion = false;
   for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
-    if (switches_.pressed(SWITCH_MEDIA) &&
+    if (chord_modifier(SWITCH_MEDIA) &&
         assignable_cv_pot_[i].editing_hidden_parameter()) {
       adjusting_manual_gain |= gestures_.amount_feature(i) == FEATURE_GAIN_KNOB;
       adjusting_width |= gestures_.amount_feature(i) == FEATURE_WIDTH;
@@ -426,7 +442,7 @@ void Ui::UpdateLeds() {
             const bool lit = elapsed < 100 || (elapsed >= 200 &&
                 ((elapsed - 200) / 150) % 2 == 0);
             const Leds::Color cue = {
-              0, uint8_t(lit ? 128 : 0), uint8_t(lit ? 255 : 0)
+              0, uint8_t(lit ? 211 : 0), uint8_t(lit ? 255 : 0)
             };
             leds_.set_media(cue);
           }
@@ -441,12 +457,15 @@ void Ui::UpdateLeds() {
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {
           leds_.set(LED_FREEZE, state.disable_autosave ? 16 : 64);
-        } else {
+        } else if (freeze_led_state_) {
+          const bool saving = state.disable_autosave
+              ? background_buffer_backup_->busy()
+              : background_buffer_backup_->saving();
           leds_.set(LED_FREEZE,
-              freeze_led_state_
-                  ? (background_buffer_backup_->busy() &&
-                      !settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255)
-                  : 0);
+              saving && !settings_->FeatureValue(FEATURE_SAVE_FREEZE)
+                  ? 128 : 255);
+        } else {
+          leds_.set(LED_FREEZE, 0);
         }
         
         if (seed_button_locked_) {
@@ -582,7 +601,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // SEED + FREEZE = seed lock.
   //
-  if (switches_.pressed(SWITCH_SEED) && e.control_id == SWITCH_FREEZE) {
+  if (chord_modifier(SWITCH_SEED) && e.control_id == SWITCH_FREEZE) {
     seed_button_locked_ = true;
     seed_button_state_ = false;
     ignore_release_[SWITCH_SEED] = ignore_release_[SWITCH_FREEZE] = true;
@@ -593,7 +612,7 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + SEED = toggle gate output mode.
   //
-  if (switches_.pressed(SWITCH_ASSIGN) && e.control_id == SWITCH_SEED) {
+  if (chord_modifier(SWITCH_ASSIGN) && e.control_id == SWITCH_SEED) {
     State* state = settings_->mutable_state();
     state->gate_output_mode = !state->gate_output_mode;
     settings_->SaveState();
@@ -608,19 +627,22 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + FREEZE = toggle autosave.
   //
-  if (switches_.pressed(SWITCH_ASSIGN) && e.control_id == SWITCH_FREEZE) {
+  if (chord_modifier(SWITCH_ASSIGN) && e.control_id == SWITCH_FREEZE) {
     State* state = settings_->mutable_state();
     state->disable_autosave = !state->disable_autosave;
     settings_->SaveState();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
       assignable_cv_pot_[i].Unlock();
     }
+    if (mode_ == MODE_CALIBRATION_1) {
+      calibrator_->ResumeNormalization();
+    }
     mode_ = MODE_DISPLAY_AUTOSAVE;
     ignore_release_[SWITCH_ASSIGN] = ignore_release_[SWITCH_FREEZE] = true;
     return;
   }
 
-  if (gestures_.OnPressed(e, switches_)) {
+  if (chord_modifier(SWITCH_MEDIA) && gestures_.OnPressed(e, switches_)) {
     ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;
     return;
   }
@@ -629,8 +651,8 @@ void Ui::OnSwitchPressed(const Event& e) {
   //
   // Assign + Media = calibration mode.
   //
-  if ((e.control_id == SWITCH_ASSIGN && switches_.pressed(SWITCH_MEDIA)) || \
-      (e.control_id == SWITCH_MEDIA && switches_.pressed(SWITCH_ASSIGN))) {
+  if ((e.control_id == SWITCH_ASSIGN && chord_modifier(SWITCH_MEDIA)) || \
+      (e.control_id == SWITCH_MEDIA && chord_modifier(SWITCH_ASSIGN))) {
     mode_ = MODE_CALIBRATION_1;
     calibrator_->Start();
     for (int i = 0; i < MIX_PARAMETER_LAST; ++i) {
@@ -783,7 +805,7 @@ void Ui::DoEvents() {
     for (int i = 0; i < kNumPageFeatures; ++i) {
       const ProfileFeature f = kPageFeatures[i];
       // Pages commit their settings; a gesture saves the Plaits bank.
-      if (settings_->profile().adjustable(f) &&
+      if (options_.edited(f) && settings_->profile().adjustable(f) &&
           options_.Value(f) != settings_->FeatureValue(f)) {
         settings_->SetFeatureValue(f, options_.Value(f));
         changed = true;

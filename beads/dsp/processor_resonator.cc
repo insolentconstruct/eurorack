@@ -44,6 +44,17 @@ using namespace stmlib;
 const float kGrainsFeedbackLowPass[4] = { 0.75f, 0.9f, 0.9f, 0.999f };
 const float kGrainsSoftLimit[4] = { 1.75f, 1.3f, 1.3f, 0.0f };
 
+inline void Processor::ApplyResonatorControls() {
+  if (resonator_controls_set_) {
+    resonator_.set_structure(resonator_controls_.structure);
+    resonator_.set_brightness(resonator_controls_.brightness);
+    resonator_.set_damping(resonator_controls_.damping);
+    resonator_.set_position(resonator_controls_.position);
+    resonator_.set_amount(resonator_controls_.amount);
+    resonator_.set_modes(resonator_controls_.modes);
+  }
+}
+
 void Processor::ProcessResonator(
     const RandomizedParameter& pitch,
     bool strike,
@@ -56,14 +67,7 @@ void Processor::ProcessResonator(
     strike_sounding_ = false;
     resonator_sample_rate_ = sr;
   }
-  if (resonator_controls_set_) {
-    resonator_.set_structure(resonator_controls_.structure);
-    resonator_.set_brightness(resonator_controls_.brightness);
-    resonator_.set_damping(resonator_controls_.damping);
-    resonator_.set_position(resonator_controls_.position);
-    resonator_.set_amount(resonator_controls_.amount);
-    resonator_.set_modes(resonator_controls_.modes);
-  }
+  ApplyResonatorControls();
   // PITCH and its CV, not its randomness; Recent notes plays the newest.
   float note = pitch.base;
   if (pitch.has_cv) {
@@ -146,6 +150,29 @@ void Processor::ProcessResonatorLoop(
   }
 }
 
+void Processor::set_resonator(int placement) {
+  const uint16_t flag = placement == RESONATOR_AFTER_GRAINS
+      ? OPTION_FLAG_RESONATOR_GRAINS
+      : (placement == RESONATOR_BEFORE_BUFFER
+          ? OPTION_FLAG_RESONATOR_INPUT
+          : (placement == RESONATOR_FEEDBACK
+              ? kResonatorFlags
+              : (placement == RESONATOR_CHORD
+                  ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_CHORD
+                  : 0)));
+#ifndef TEST
+  const uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+#endif  // TEST
+  // Publish the placement and its one-shot reset between audio blocks.
+  options_ = (options_ &
+      ~(kResonatorFlags | OPTION_FLAG_RESONATOR_CHORD)) | flag;
+  resonator_reset_pending_ = flag != 0;
+#ifndef TEST
+  __set_PRIMASK(primask);
+#endif  // TEST
+}
+
 void Processor::set_resonator_controls(const ResonatorControls& controls) {
   const ResonatorBound& bound = resonator_bounds_[resonator_bound_];
   const bool changed = !resonator_controls_set_ ||
@@ -204,10 +231,119 @@ float Processor::RecordResonance(
   return dry;
 }
 
+void Processor::ProcessChord(
+    bool strike,
+    const TriggerGenerator::Output* triggers,
+    FloatFrame* frames,
+    size_t size) {
+  const float sr = sample_rate();
+  if (sr != resonator_sample_rate_) {
+    resonator_.InitChord(sr);
+    grain_level_ = 0.0f;
+    resonator_sample_rate_ = sr;
+  }
+  ApplyResonatorControls();
+  // The grains' level, held for a while.
+  float power = 0.0f;
+  for (size_t i = 0; i < size; ++i) {
+    power += frames[i].l * frames[i].l + frames[i].r * frames[i].r;
+  }
+  const float level = Sqrt(power / float(2 * size));
+  if (level > grain_level_) {
+    grain_level_ = level;
+  } else {
+    grain_level_ += (level - grain_level_) * float(size) /
+        (kChordLevelRelease * sr);
+  }
+  const float gain = resonator_controls_set_
+      ? resonator_controls_.chord_gain
+      : kResonatorMaterials[1].chord_gain;
+  // Voices are tuned by the grains' own pitch ratios, over C3.
+  resonator_.set_frequency(
+      SemitonesToRatio(kResonatorRootNote - 69.0f) * 440.0f / sr);
+  float strikes[kNumChordVoices * size];
+  fill(&strikes[0], &strikes[kNumChordVoices * size], 0.0f);
+  if (strike) {
+    resonator_.StrikeChord(strikes, size);
+  }
+  // In delay mode the grains are idle.
+  if (triggers) {
+    switch (media_) {
+      case MEDIA_DIGITAL:
+        StrikeChord(&processor_digital_.grain(0),
+            processor_digital_.ratio_to_grains(), triggers, gain, strikes, size);
+        break;
+      case MEDIA_VINTAGE_DIGITAL:
+        StrikeChord(&processor_vintage_digital_.grain(0),
+            processor_vintage_digital_.ratio_to_grains(), triggers, gain,
+            strikes, size);
+        break;
+      case MEDIA_CLEAN_TAPE:
+        StrikeChord(&processor_clean_tape_.grain(0),
+            processor_clean_tape_.ratio_to_grains(), triggers, gain, strikes,
+            size);
+        break;
+      case MEDIA_DIRTY_TAPE:
+        StrikeChord(&processor_dirty_tape_.grain(0),
+            processor_dirty_tape_.ratio_to_grains(), triggers, gain, strikes,
+            size);
+        break;
+    }
+  }
+  resonator_.RenderChord(strikes, frames, size);
+}
+
+void Processor::StrikeChord(
+    const DelayGrain* grains,
+    size_t ratio,
+    const TriggerGenerator::Output* triggers,
+    float gain,
+    float* strikes,
+    size_t size) {
+  // A grain strikes as loud as the grains have been playing.
+  const float level = gain * grain_level_;
+  // Each trigger started one grain, whose envelope has counted its samples
+  // since, from the trigger's fraction as DownsampleTriggers gives it.
+  const size_t grain_size = size / ratio;
+  uint32_t taken = 0;
+  for (size_t j = 0; j < grain_size; ++j) {
+    bool trigger = false;
+    float fraction = 0.0f;
+    for (size_t k = 0; k < ratio; ++k) {
+      const TriggerGenerator::Output& t = triggers[j * ratio + k];
+      if (t.trigger && !trigger) {
+        trigger = true;
+        fraction = (t.fractional_sample + float(k)) * (1.0f / float(ratio));
+      }
+    }
+    if (!trigger) {
+      continue;
+    }
+    const float expected = float(grain_size - j) + fraction;
+    for (int i = 0; i < DelayGranularPlayer::NUM_GRAINS; ++i) {
+      const DelayGrain& grain = grains[i];
+      float age;
+      if (!(taken & (1 << i)) && grain.Age(expected + 0.001f, &age) &&
+          age > expected - 0.001f) {
+        taken |= 1 << i;
+        resonator_.StrikeVoice(
+            fabsf(float(grain.speed())) * (1.0f / 1024.0f),
+            j * ratio, level, strikes, size);
+        break;
+      }
+    }
+  }
+}
+
 bool Processor::SeedStrike(
     SeedButtonState seed_button_state,
     const GateFlags* seed_input,
     size_t size) {
+  if (resonator_reset_pending_) {
+    resonator_reset_pending_ = false;
+    resonator_sample_rate_ = resonator_loop_feedback_ = 0.0f;
+    seed_gate_ = true;  // A SEED held during the change does not strike.
+  }
   bool strike = false;
   if (seed_button_state >= SEED_BUTTON_STATE_LOCKED) {
     // Latched, each edge at the jack strikes it.

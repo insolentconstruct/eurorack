@@ -35,6 +35,7 @@
 #include "stmlib/dsp/cosine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/filter.h"
+#include "stmlib/dsp/units.h"
 
 #include "rings/resources.h"
 
@@ -137,16 +138,17 @@ const ResonatorModes kResonatorGong = {
 };
 
 /* extern */
+// Chord gains: a chord about as loud as After the grains on test clouds.
 const ResonatorMaterial kResonatorMaterials[kNumResonatorMaterials] = {
-  { 0.5f, 0.3f, NULL },  // Wood: darker, mildly stretched.
-  { kResonatorStructure, kResonatorBrightness, NULL },  // String.
-  { 0.4f, 0.5f, NULL },  // Glass: stretched, brighter.
-  { 0.8f, 0.15f, NULL },  // Bell: strongly stretched, dark.
+  { 0.5f, 0.3f, NULL, 1.03f },  // Wood: darker, mildly stretched.
+  { kResonatorStructure, kResonatorBrightness, NULL, 0.688f },  // String.
+  { 0.4f, 0.5f, NULL, 1.62f },  // Glass: stretched, brighter.
+  { 0.8f, 0.15f, NULL, 3.22f },  // Bell: strongly stretched, dark.
   // Brightness shapes only their strike, kept under the limiter's ceiling.
-  { kResonatorStructure, 0.7f, &kResonatorMarimba },
-  { kResonatorStructure, 0.85f, &kResonatorDrum },  // Pitch falls at a strike.
-  { kResonatorStructure, 0.5f, &kResonatorBowl },  // Pairs beat left-right.
-  { kResonatorStructure, 0.75f, &kResonatorGong },  // Pitch rises at a strike.
+  { kResonatorStructure, 0.7f, &kResonatorMarimba, 6.44f },
+  { kResonatorStructure, 0.85f, &kResonatorDrum, 15.5f },  // Pitch falls.
+  { kResonatorStructure, 0.5f, &kResonatorBowl, 2.61f },  // Pairs beat.
+  { kResonatorStructure, 0.75f, &kResonatorGong, 8.65f },  // Pitch rises.
 };
 
 // Each step rings four times longer; 2.3 s at Medium, 48 kHz.
@@ -174,6 +176,18 @@ void ModalResonator::Init(float sample_rate) {
   // Init leaves its peak 24 dB over the threshold.
   limiter_.Rest();
   peak_gain_ = 0.0f;
+}
+
+void ModalResonator::InitChord(float sample_rate) {
+  Init(sample_rate);
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    chord_ratio_[v] = 0.0f;
+    chord_level_[v] = 0.0f;
+    chord_peak_[v] = 0.0f;
+    chord_peak_gain_[v] = 1.0f;
+    chord_glide_[v] = 0.0f;
+  }
+  chord_modes_ = NULL;
 }
 
 void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
@@ -221,6 +235,225 @@ float ModalResonator::LoopGain(const ResonatorBound& bound, size_t size) {
       bound.brightness == brightness_ && bound.position == position_ &&
       bound.modes == modes_ && amount_ > 0.0f && peak_gain_ > 0.0f;
   return known ? 1.0f / (amount_ * peak_gain_) : 0.0f;
+}
+
+// Gain of the strum's two-pole low-pass at (f / cutoff)^2 = x2.
+static inline float StrikeLowPass(float x2, float damping) {
+  const float d = 1.0f - x2;
+  return 1.0f / Sqrt(d * d + x2 * damping);
+}
+
+void ModalResonator::Strike(
+    int voice,
+    size_t offset,
+    float gain,
+    float* strikes,
+    size_t size) {
+  UpdateChordModes();
+  // Rings' strum level; its low-pass is folded into the mode amplitudes.
+  const float brightness = brightness_ * (2.0f - brightness_);
+  const float cutoff = min(frequency_ * chord_ratio_[voice] *
+      SemitonesToRatio((brightness - 0.5f) * 96.0f), 0.499f);
+  strikes[voice * size + offset] +=
+      gain * 0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;
+  chord_level_[voice] += gain;
+  chord_peak_[voice] = max(chord_peak_[voice], chord_level_[voice]);
+  chord_glide_[voice] = modes_ ? modes_->glide : 0.0f;
+}
+
+void ModalResonator::StrikeVoice(
+    float ratio,
+    size_t offset,
+    float gain,
+    float* strikes,
+    size_t size) {
+  ratio = max(ratio, 1.0f / 1024.0f);
+  int nearest = -1;
+  int quietest = 0;
+  float closest = 0.0f;
+  float quiet = 2.0f;
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    const float r = chord_ratio_[v];
+    if (r != 0.0f) {
+      const float closeness = r > ratio ? ratio / r : r / ratio;
+      if (closeness > closest) {
+        closest = closeness;
+        nearest = v;
+      }
+    }
+    // Under its own loudest; a voice never struck audibly is silent.
+    const float peak = chord_peak_[v] * chord_peak_gain_[v];
+    const float relative = peak > 0.0f
+        ? chord_level_[v] / peak
+        : 0.0f;
+    if (relative < quiet) {
+      quiet = relative;
+      quietest = v;
+    }
+  }
+  int voice = nearest;
+  if (closest < kChordNoteTolerance && quiet < kChordRetuneLevel) {
+    // Clear the quiet voice before reusing its filters at the new pitch.
+    odd_[quietest].Init();
+    even_[quietest].Init();
+    chord_ratio_[quietest] = ratio;
+    chord_level_[quietest] = 0.0f;
+    chord_peak_[quietest] = 0.0f;
+    chord_peak_gain_[quietest] = 1.0f;
+    voice = quietest;
+  }
+  Strike(voice, offset, gain, strikes, size);
+}
+
+void ModalResonator::StrikeChord(float* strikes, size_t size) {
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    if (chord_ratio_[v] != 0.0f) {
+      Strike(v, 0, 1.0f, strikes, size);
+    }
+  }
+}
+
+void ModalResonator::RenderChord(
+    const float* strikes,
+    FloatFrame* frames,
+    size_t size) {
+  UpdateChordModes();
+  float l[size];
+  float r[size];
+  fill(&l[0], &l[size], 0.0f);
+  fill(&r[0], &r[size], 0.0f);
+
+  // One voice's modes over its frequency, with Rings' strum low-pass.
+  const float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);
+  const float brightness = brightness_ * (2.0f - brightness_);
+  const float cutoff = SemitonesToRatio((brightness - 0.5f) * 96.0f);
+  const float rolloff = 1.0f / (cutoff * cutoff);
+  const float strum_damping = 1.0f / (1.5f * 1.5f);
+  float ratio[2][plaits::kModeBatchSize];
+  float quality[2][plaits::kModeBatchSize];
+  float amplitude[2][plaits::kModeBatchSize];
+  CosineOscillator amplitudes;
+  amplitudes.Init<COSINE_OSCILLATOR_APPROXIMATE>(position_);
+  if (modes_) {
+    const ResonatorModes& modes = *modes_;
+    for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+      const float pickup = amplitudes.Next() * 0.125f;
+      for (int side = 0; side < 2; ++side) {
+        const int mode = 2 * i + side;
+        const float n = modes.ratio[mode];
+        ratio[side][i] = n;
+        quality[side][i] = q * modes.decay[mode];
+        amplitude[side][i] = pickup * modes.gain[mode] *
+            StrikeLowPass(n * n * rolloff, strum_damping);
+      }
+    }
+  } else {
+    // Rings' Resonator::ComputeFilters, its first batch over the frequency.
+    float stiffness = Interpolate(rings::lut_stiffness, structure_, 256.0f);
+    float harmonic = 1.0f;
+    float stretch_factor = 1.0f;
+    float mode_quality = q;
+    float brightness_attenuation = 1.0f - structure_;
+    brightness_attenuation *= brightness_attenuation;
+    brightness_attenuation *= brightness_attenuation;
+    brightness_attenuation *= brightness_attenuation;
+    const float b = brightness_ * (1.0f - 0.2f * brightness_attenuation);
+    float q_loss = b * (2.0f - b) * 0.85f + 0.15f;
+    const float q_loss_damping_rate = structure_ * (2.0f - structure_) * 0.1f;
+    for (int i = 0; i < 8; ++i) {
+      const float n = harmonic * stretch_factor;
+      ratio[i & 1][i >> 1] = n;
+      quality[i & 1][i >> 1] = mode_quality;
+      amplitude[i & 1][i >> 1] = amplitudes.Next() * 0.125f *
+          StrikeLowPass(n * n * rolloff, strum_damping);
+      stretch_factor += stiffness;
+      if (stiffness < 0.0f) {
+        stiffness *= 0.93f;
+      } else {
+        stiffness *= 0.98f;
+      }
+      q_loss += q_loss_damping_rate * (1.0f - q_loss);
+      harmonic += 1.0f;
+      mode_quality *= q_loss;
+    }
+  }
+
+  const float glide_decay = modes_
+      ? min(modes_->glide_rate * sample_period_ * float(size), 1.0f)
+      : 0.0f;
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    const float peak = chord_peak_[v] * chord_peak_gain_[v];
+    if (chord_level_[v] <= kChordSilence * peak) {
+      if (chord_level_[v] > 0.0f) {
+        odd_[v].Init();
+        even_[v].Init();
+        chord_level_[v] = 0.0f;
+      }
+      continue;
+    }
+    const float rest_frequency = frequency_ * chord_ratio_[v];
+    const float frequency = rest_frequency * (1.0f + chord_glide_[v]);
+    chord_glide_[v] -= chord_glide_[v] * glide_decay;
+    float decay = 0.5f;
+    const float* in = &strikes[v * size];
+    for (int side = 0; side < 2; ++side) {
+      float mode_f[plaits::kModeBatchSize];
+      float mode_q[plaits::kModeBatchSize];
+      float mode_a[plaits::kModeBatchSize];
+      for (int i = 0; i < plaits::kModeBatchSize; ++i) {
+        float partial_frequency = frequency * ratio[side][i];
+        float a = amplitude[side][i];
+        if (partial_frequency >= 0.49f) {
+          partial_frequency = 0.49f;
+          a = 0.0f;
+        }
+        if (amplitude[side][i] != 0.0f &&
+            (a != 0.0f || rest_frequency * ratio[side][i] < 0.49f)) {
+          decay = min(decay, ModeDecay(partial_frequency, quality[side][i]));
+        }
+        mode_f[i] = partial_frequency;
+        mode_q[i] = 1.0f + partial_frequency * quality[side][i];
+        mode_a[i] = a;
+      }
+      plaits::ResonatorSvf<plaits::kModeBatchSize>& bank =
+          side ? even_[v] : odd_[v];
+      bank.Process<FILTER_MODE_BAND_PASS, true>(
+          mode_f, mode_q, mode_a, in, side ? r : l, size);
+    }
+    // Use the slowest audible mode's squared pole radius, with a 2% margin.
+    const float radius = 1.0f - 0.98f * 2.0f * decay;
+    for (size_t i = 0; i < size; i += 2) {
+      chord_level_[v] *= radius;
+    }
+  }
+  // Limited at the headroom as Render does, then back to unity.
+  FloatFrame resonance[size];
+  for (size_t i = 0; i < size; ++i) {
+    resonance[i].l = kResonatorHeadroom * l[i];
+    resonance[i].r = kResonatorHeadroom * r[i];
+  }
+  limiter_.Process(resonance, size);
+  const float peak = kResonatorPeak * kResonatorHeadroom;
+  const float gain = amount_ / kResonatorHeadroom;
+  float peak_gain = 1.0f;
+  for (size_t i = 0; i < size; ++i) {
+    // The limiter can take several samples to reach a loud strike.
+    const float left = min(max(resonance[i].l, -peak), peak);
+    const float right = min(max(resonance[i].r, -peak), peak);
+    frames[i].l += gain * left;
+    frames[i].r += gain * right;
+    const float before = kResonatorHeadroom * max(fabsf(l[i]), fabsf(r[i]));
+    const float after = max(fabsf(left), fabsf(right));
+    if (after > 0.0f && after < before) {
+      peak_gain = min(peak_gain, after / before);
+    }
+  }
+  // A compressed onset needs a quieter tail before a voice can retune.
+  for (int v = 0; v < kNumChordVoices; ++v) {
+    if (chord_level_[v] > 0.0f) {
+      chord_peak_gain_[v] = min(chord_peak_gain_[v], peak_gain);
+    }
+  }
 }
 
 void ModalResonator::Process(

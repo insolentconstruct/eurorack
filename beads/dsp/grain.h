@@ -48,6 +48,11 @@ class Grain {
   inline int remaining_samples() const {
     return remaining_samples_;
   }
+
+  // A grain started within the last limit samples gives its age.
+  inline bool Age(float limit, float* age) const {
+    return !voice_stealing_envelope_.done() && envelope_.Age(limit, age);
+  }
   
   inline void FadeOut(int duration) {
     if (remaining_samples_ > duration) {

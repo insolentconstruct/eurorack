@@ -40,6 +40,10 @@ import time
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
 cases = [
+  ('TestAbyss', 'abyss', 'beads/dsp/fx/abyss.cc',
+    'frozen_ * tap;', 'frozen_ * 0.95f * tap;'),
+  ('TestAbyss', 'abyss', 'beads/dsp/fx/abyss.cc',
+    'const float inverse = bloom * cutoff;', 'const float inverse = bloom + 0.0f * cutoff;'),
   ('TestSendMix', 'mix', 'beads/dsp/processor_options.cc',
     'stereo_delay_line_.Write(s, *freeze);\n      if (grain_triggers)',
     'stereo_delay_line_.Write(s * 0.0f, *freeze);\n      if (grain_triggers)'),
@@ -69,13 +73,13 @@ cases = [
     'if (new_profile && start_quality && !restores) {',
     'if (new_profile && start_quality && (restores || true)) {'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      !spectral();',
+    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      processor_mode() == PROCESSOR_GRANULAR;',
     'const bool restores = state_.frozen;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      !spectral();',
-    'const bool restores = state_.frozen && !spectral();'),
+    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      processor_mode() == PROCESSOR_GRANULAR;',
+    'const bool restores = state_.frozen && processor_mode() == PROCESSOR_GRANULAR;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      !spectral();',
+    'const bool restores = state_.frozen && !state_.disable_autosave && \\\n      processor_mode() == PROCESSOR_GRANULAR;',
     'const bool restores = state_.frozen && !state_.disable_autosave;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
     'if (new_profile && start_quality && !restores) {',
@@ -84,14 +88,14 @@ cases = [
     'if (start_quality) {\n    state_.media = 4 - start_quality;\n  }\n  stored_state_ = state_;',
     'stored_state_ = state_;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool new_profile = !record_valid || \\\n      record_.profile_identity != profile_.identity();',
+    'const bool new_profile = !record_valid || \\\n      stored_record_.profile_identity != profile_.identity();',
     'const bool new_profile = !record_valid;'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    'const bool new_profile = !record_valid || \\\n      record_.profile_identity != profile_.identity();',
-    'const bool new_profile = \\\n      record_.profile_identity != profile_.identity();'),
+    'const bool new_profile = !record_valid || \\\n      stored_record_.profile_identity != profile_.identity();',
+    'const bool new_profile = \\\n      stored_record_.profile_identity != profile_.identity();'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
-    '  record_.profile_identity = profile_.identity();\n  // Any new',
-    '  record_.profile_identity = 0;\n  // Any new'),
+    '    record_.profile_identity = profile_.identity();\n  }\n  // Any new',
+    '    record_.profile_identity = 0;\n  }\n  // Any new'),
   ('TestStartQuality', 'storage', 'beads/profile.cc',
     'identity_ = Read32(b + 16 + bytes);',
     'identity_ = 0;'),
@@ -214,24 +218,24 @@ cases = [
     'ConfigurePitchScales(NULL, 0, false);'),
   ('TestCustomPitchGrids', 'pitch_quantizer', 'beads/dsp/pitch_quantizer.cc',
     'to.notes[j] = from.notes[j];', 'to.notes[j] = 0.0f;'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    '(level == 1 ? 0.5361865f : 0.1895706f));',
-    '(level == 1 ? 0.66f : 0.33f));'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'const uint8_t offset = level == 1 ? 4 : 8;',
-    'const uint8_t offset = 0;'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'const bool blue = intensity_[LED_MEDIA_B] != 0;',
-    'const bool blue = true;'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'const bool green = intensity_[LED_MEDIA_G] != 0;',
-    'const bool green = true;'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'set_media(color, float(percent) / 100.0f);',
+    'set_media(color, float(percent) / 255.0f);'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'color.r = DimLed(led_curve_r, color.r, a);',
+    'color.r = uint8_t(color.r * a);'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'color.g = DimLed(led_curve_g, color.g, a);',
+    'color.g = uint8_t(color.g * a);'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'color.b = DimLed(led_curve_b, color.b, a);',
+    'color.b = uint8_t(color.b * a);'),
   ('TestCustomScalePersistenceAndLeds', 'options', 'beads/profile.cc',
     'return PitchScale(scales_[(i + 1) % scale_count_].id);',
     'return PitchScale(current + 1);'),
   ('TestStockSettingsCarryOver', 'storage', 'beads/settings.cc',
-    'bytes[kRecordOffsets[i]] = profile_.entry(ProfileFeature(i)).value;',
-    'bytes[kRecordOffsets[i]] = 111;'),
+    '    uint8_t value = profile_.entry(feature).value;',
+    '    uint8_t value = feature == FEATURE_WIDTH ? 111 : profile_.entry(feature).value;'),
   ('TestStockSettingsCarryOver', 'storage', 'beads/settings.cc',
     'value = state_.monophonic_mode;  // Stock State keeps it.',
     'value = 0;'),
@@ -239,8 +243,8 @@ cases = [
     '  if (!record_valid) {\n    record_ = default_record;\n  }\n',
     '\n'),
   ('TestProfileLocks', 'storage', 'beads/settings_storage.h',
-    '    ReadChunk(chunk_address(0), persistent_data_);\n    RewriteSector();',
-    '    ReadChunk(chunk_address(0), persistent_data_);\n    RestorePersistentData();'),
+    '    ReadChunk(chunk_address(0), persistent_data_);\n    return RewriteSector();',
+    '    ReadChunk(chunk_address(0), persistent_data_);\n    return RestorePersistentData();'),
   ('TestProfilePages', 'options', 'beads/ui.cc',
     'if (!settings_->storage_damaged())', 'if (!settings_->write_locked())'),
   ('TestEraseDamagedSectors', 'backup', 'beads/background_buffer_backup.cc',
@@ -272,14 +276,14 @@ cases = [
     'if (cv_target_ || state_.assignable_cv_destination) {',
     'if (false) {'),
   ('TestSavedFeatures', 'storage', 'beads/settings.cc',
-    '        bytes[offset] < kFeatureDefinitions[i].values)) {',
-    '        bytes[offset] < 255)) {'),
+    '        bytes[offset] < kFeatureDefinitions[i].values) {',
+    '        bytes[offset] < 255) {'),
   ('TestSavedFeatures', 'storage', 'beads/settings.cc',
     '  9,  // Reverb.',
     '  10,  // Reverb.'),
   ('TestGesturePersistence', 'record', 'beads/settings.cc',
-    '} else if (offset && (!kFeatureDefinitions[i].values ||',
-    '} else if (offset && ('),
+    '      if (amount_overrides_ & OptionsRecord::WIDTH_OVERRIDE) {',
+    '      if (false) {'),
   ('TestProfileLocks', 'storage', 'beads/settings_storage.h',
     '    recovering_ = false;\n    return !locked_;',
     '    recovering_ = false;\n    protected_ = false;\n    return !locked_;'),
@@ -325,8 +329,9 @@ cases = [
     'status == STORAGE_OK && !profile_locked_',
     'status == STORAGE_OK'),
   ('TestProfileLocks', 'storage', 'beads/settings.cc',
-    'if (status == STORAGE_RESTORED) {',
-    'if (status == STORAGE_RESTORED) { stored_state_ = defaults;'),
+    'if (status == STORAGE_RESTORED && chunk_storage_.RestorePersistentData() &&',
+    'if (status == STORAGE_RESTORED && (stored_state_ = defaults, '
+    'chunk_storage_.RestorePersistentData()) &&'),
   ('TestStartQuality', 'storage', 'beads/settings.cc',
     'SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : e.value);',
     'SetFeatureValue(ProfileFeature(i), e.state == PROFILE_OFF ? 0 : 0);'),
@@ -405,11 +410,11 @@ cases = [
     'return PitchScale(scales_[(i + 1) % scale_count_].id);',
     'return PitchScale(current + 1);'),
   ('TestOptionsPalette', 'options', 'beads/options.cc',
-    '{ FEATURE_PITCH, 4, { 32, 96, 255 }, PULSE_STEADY },',
+    '{ FEATURE_PITCH, 4, { 95, 222, 255 }, PULSE_STEADY },',
     '{ FEATURE_PITCH, 4, { 0, 255, 255 }, PULSE_STEADY },'),
   ('TestCloudsStorage', 'options', 'beads/settings.h',
-    'inline bool clouds_style() const { return values_[FEATURE_REVERB]; }',
-    'inline bool clouds_style() const { return values_[FEATURE_PITCH]; }'),
+    'inline uint8_t reverb_character() const { return values_[FEATURE_REVERB]; }',
+    'inline uint8_t reverb_character() const { return values_[FEATURE_PITCH]; }'),
   ('TestOptionsZonesAndSaveBatch', 'options', 'beads/options.cc',
     'if (pot > kOptionsHalfHigh) {\n            *value = 1;',
     'if (pot > 0.93f) {\n            *value = 1;'),
@@ -448,14 +453,14 @@ cases = [
     'p.pitch.pitch_value()'),
   ('TestOptionsSeed', 'options', 'beads/ui.cc',
     'const bool accept_switch_events = !was_active && !options_.active() &&\n'
-    '      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();',
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;',
     'const bool accept_switch_events = true;'),
   ('TestStockSettingsCarryOver', 'storage', 'beads/settings.cc',
     '  fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);\n  LoadOptions();',
     '  LoadOptions();'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
     'const bool accept_switch_events = !was_active && !options_.active() &&\n'
-    '      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();',
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;',
     'const bool accept_switch_events = true;'),
   ('TestTrimGesture', 'options', 'beads/ui.cc',
     '    ignore_release_[SWITCH_MEDIA] = ignore_release_[e.control_id] = true;',
@@ -529,13 +534,14 @@ cases = [
     '(e.state == PROFILE_ADJUSTABLE ||\n                (e.state',
     '(false ||\n                (e.state'),
   ('TestEngineChangeWhileFrozen', 'firmware', 'beads/beads.cc',
-    ' &&\n      !ui.should_ignore_state_change();', ';'),
+    'ui.spectral() != processor.spectral()) &&\n      !ui.should_ignore_state_change();',
+    'ui.spectral() != processor.spectral());'),
   ('TestFreezeDeadlineAndCancel', 'backup', 'beads/background_buffer_backup.cc',
     'kBackupDelay = 10000;',
     'kBackupDelay = 9999;'),
   ('TestBackupLedAndRestore', 'options', 'beads/ui.cc',
-    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255',
-    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 255 : 255'),
+    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE)\n                  ? 128 : 255',
+    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE)\n                  ? 255 : 255'),
   ('TestFrozenSliceBoundarySelection', 'delay', 'beads/dsp/delay_controller.cc',
     'if (play_head_[i].done()) {',
     'if (true) {'),
@@ -752,7 +758,7 @@ cases = [
   ('TestReverbAfterDryWet', 'mix', 'beads/dsp/processor.cc',
     'const float reverb_mix = reverb * reverb * 0.9f;',
     'const float reverb_mix = 0.0f;'),
-  ('TestReverbSendOff', 'mix', 'beads/dsp/fx/reverb.h',
+  ('TestReverbSendOff', 'mix', 'beads/dsp/fx/reverb_tank.inc',
     'const float wet = output_gain;',
     'const float wet = mix_ == 0.0f ? 0.0f : output_gain;'),
   ('TestFeedbackQualityCurves', 'mix', 'beads/dsp/granular_processor.h',
@@ -891,7 +897,7 @@ cases = [
     'if (monophonic_mode) {',
     'if (false && monophonic_mode) {'),
   ('TestEngineOption', 'options', 'beads/options.cc',
-    '  PAGE_CONTROL_HALVES,  // Processor.',
+    '  PAGE_CONTROL_STEPS,  // Processor.',
     '  PAGE_CONTROL_NONE,  // Processor.'),
   ('TestSynthStartOption', 'options', 'beads/options.cc',
     '  PAGE_CONTROL_HALVES,  // Synth start.',
@@ -1032,8 +1038,8 @@ cases = [
     '  if (pot < kWidthStockThreshold) {',
     '  if (pot < 0.05f) {'),
   ('TestEngineStorage', 'options', 'beads/settings.h',
-    'inline bool spectral() const { return values_[FEATURE_PROCESSOR]; }',
-    'inline bool spectral() const { return values_[FEATURE_SYNTH_START]; }'),
+    'return processor_mode() == PROCESSOR_SPECTRAL;',
+    'return values_[FEATURE_SYNTH_START];'),
   ('TestSelfPlayStorage', 'options', 'beads/settings.h',
     'return values_[FEATURE_SYNTH_START];',
     'return values_[FEATURE_PROCESSOR];'),
@@ -1047,8 +1053,8 @@ cases = [
     'kMaxBackupDelay = 320000',
     'kMaxBackupDelay = 640000'),
   ('TestBackupCompletionReset', 'backup', 'beads/background_buffer_backup.cc',
-    '      backup_delay_ = kBackupDelay;\n      SaveState(true);',
-    '      SaveState(true);'),
+    '    save_started_ = false;\n    backup_delay_ = kBackupDelay;',
+    '    save_started_ = false;'),
   ('TestBackupThawReset', 'backup', 'beads/background_buffer_backup.cc',
     'kBackupResetDelay = 60000',
     'kBackupResetDelay = 59000'),
@@ -1062,8 +1068,8 @@ cases = [
     '    if (freeze_state_) {',
     '    if (freeze_state_ && save_started_) {'),
   ('TestAutomaticSelfPlay', 'firmware', 'beads/beads.cc',
-    ') >= 10000)',
-    ') >= 9900)'),
+   'now - start >= 10000',
+   'now - start >= 9900'),
   ('TestRequestedSelfPlay', 'firmware', 'beads/beads.cc',
     'if (ui.self_play_requested()) {',
     'if (false) {'),
@@ -1080,13 +1086,13 @@ cases = [
     'if (ui.should_ignore_state_change() || transition.blanking()) {',
     'if ((ui.should_ignore_state_change() && !ui.freeze_led_state()) || transition.blanking()) {'),
   ('TestOverwriteIndicator', 'firmware', 'beads/beads.cc',
-    'synth_mode || processor.spectral()\n      ? 1.0f : processor.overwrite_reserve()',
+    'play_oliverb || synth_mode || processor.spectral()\n      ? 1.0f : processor.overwrite_reserve()',
     '1.0f'),
   ('TestSpectralEngine', 'firmware', 'beads/beads.cc',
-    'if (!processor.spectral() && background_buffer_backup.Load()) {',
+    'if (active_processor_mode == PROCESSOR_GRANULAR &&\n        background_buffer_backup.Load()) {',
     'if (false) {'),
   ('TestSpectralEngine', 'firmware', 'beads/beads.cc',
-    'if (normalization_detector.no_input() && !processor.spectral()) {',
+    'if (normalization_detector.no_input() &&\n      active_processor_mode == PROCESSOR_GRANULAR) {',
     'if (normalization_detector.no_input()) {'),
   ('TestCloudsReference', 'spectral', 'beads/dsp/pvoc/stft.cc',
     'fft_out_[i + fft_size_ / 2] = i ? -fft_in_[2 * i + 1] : fft_in_[1];',
@@ -1252,9 +1258,8 @@ cases = [
     'const int kFlashAttempts = 3;',
     'const int kFlashAttempts = 1;'),
   ('TestStorageFailedProgram', 'options', 'beads/settings_storage.h',
-    '      if (WriteChunk(chunk_address(next_state_chunk_index_), state_data_)) {',
-    '      WriteChunk(chunk_address(next_state_chunk_index_), state_data_);\n'
-    '      if (true) {'),
+   '      if (WriteChunk(address, state_data_)) {',
+   '      WriteChunk(address, state_data_);\n      if (true) {'),
   ('TestMaskedReader', 'storage', 'beads/drivers/flash.h',
     '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk | SCB_CFSR_BFARVALID_Msk;',
     '      SCB->CFSR = SCB_CFSR_PRECISERR_Msk;'),
@@ -1294,8 +1299,8 @@ cases = [
     '      *reinterpret_cast<uint32_t*>(bytes) = word;'),
   # #317: a usable mirror is erased only with a usable calibration beside it.
   ('TestMirrorOnlyCopy', 'storage', 'beads/settings_storage.h',
-    '    if (valid && Usable(mirror) && !SectorUsable() && \\',
-    '    if (false && \\'),
+   '    if (valid && Usable(mirror) && !SectorProtects(mirror) && \\',
+   '    if (false && \\'),
   ('TestCalibrationFromMirror', 'storage', 'beads/settings_storage.h',
     '  if (calibration != CHUNK_VALID) {\n    return STORAGE_CALIBRATION_LOST;',
     '  if (calibration == CHUNK_UNREADABLE) {\n    return STORAGE_CALIBRATION_LOST;'),
@@ -1360,7 +1365,7 @@ cases = [
     '    return false;'),
   ('TestLowSupply', 'storage', 'beads/settings_storage.h',
     '    if (Flash::SupplyLow()) {\n'
-    '      return;  // Kept in RAM; the next save writes it.\n'
+    '      return false;  // Kept in RAM; the next save writes it.\n'
     '    }\n',
     ''),
   ('TestSupplyDrop', 'storage', 'beads/settings_storage.h',
@@ -1376,12 +1381,13 @@ cases = [
     ''),
   ('TestLowSupplyBackup', 'backup', 'beads/background_buffer_backup.cc',
     '    if (Flash::SupplyLow()) {\n'
-    '      remaining_sectors_ = remaining_bytes_ = 0;\n'
+    '      ScheduleRetry();\n'
     '      return;\n'
     '    }\n',
     ''),
   ('TestSupplyDropBackup', 'backup', 'beads/background_buffer_backup.cc',
     '      if (Flash::SupplyLow()) {\n'
+    '        ScheduleRetry();\n'
     '        return;\n'
     '      }\n',
     ''),
@@ -1389,8 +1395,8 @@ cases = [
     'const bool loaded = status == STORAGE_OK || status == STORAGE_RESTORED;',
     'const bool loaded = false;'),
   ('TestCalibrationWithoutState', 'storage', 'beads/settings.cc',
-    '    chunk_storage_.RestorePersistentData();',
-    '    (void)0;'),
+    'if (status == STORAGE_RESTORED && chunk_storage_.RestorePersistentData() &&',
+    'if (status == STORAGE_RESTORED && false &&'),
   ('TestRetriedBufferErase', 'backup', 'beads/background_buffer_backup.cc',
     '    if (!EraseBufferSector(sector, kFlashAttempts, false)) {',
     '    if (!EraseBufferSector(sector, 1, false)) {'),
@@ -1401,8 +1407,8 @@ cases = [
     '    if (recovery_mode && !profile_locked_) {\n      stored_state_ = defaults;\n    }\n    status = STORAGE_RESTORED;',
     '    status = STORAGE_RESTORED;'),
   ('TestCalibrationLost', 'storage', 'beads/settings.cc',
-    '  } else if (lost) {\n    status = STORAGE_DAMAGED;',
-    '  } else if (lost) {\n    status = STORAGE_OK;'),
+   '  } else if (lost || implausible) {\n    status = STORAGE_DAMAGED;',
+   '  } else if (lost || implausible) {\n    status = STORAGE_OK;'),
   ('TestCalibrationLost', 'storage', 'beads/settings.cc',
     '    chunk_storage_.Lock();\n',
     ''),
@@ -1486,8 +1492,16 @@ cases = [
     '      mode_ = MODE_STORAGE_WARNING;',
     '      mode_ = MODE_NORMAL;'),
   ('TestStorageWarning', 'firmware', 'beads/ui.cc',
-    '      options_.stage() != Options::STAGE_DRAIN && !showing_storage_status();',
-    '      options_.stage() != Options::STAGE_DRAIN;'),
+    '      options_.stage() != Options::STAGE_DRAIN && !storage_status;\n'
+    '  for (int i = 0; i < SWITCH_LAST; ++i) {\n'
+    '    Switch s = Switch(i);\n\n'
+    '    if (switches_.just_pressed(s)) {\n'
+    '      ignore_release_[i] = !accept_switch_events || suppressed_press_[i];',
+    '      options_.stage() != Options::STAGE_DRAIN;\n'
+    '  for (int i = 0; i < SWITCH_LAST; ++i) {\n'
+    '    Switch s = Switch(i);\n\n'
+    '    if (switches_.just_pressed(s)) {\n'
+    '      ignore_release_[i] = !accept_switch_events;'),
   ('TestStorageWarning', 'firmware', 'beads/ui.cc',
     'const uint32_t kStorageStatusTime = 3000;',
     'const uint32_t kStorageStatusTime = 4000;'),
@@ -1532,18 +1546,18 @@ cases = [
     'led_features && settings_->FeatureValue(FEATURE_LIVE_ASSIGN))',
     'false)'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
-    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE) ? 128 : 255',
+    '!settings_->FeatureValue(FEATURE_SAVE_FREEZE)\n                  ? 128 : 255',
     'true ? 128 : 255'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'leds_.Scale(level);',
     '(void)level; leds_.Scale(0);'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'level == 1 ? 66 : 33',
-    'level == 1 ? 50 : 33'),
-  ('TestBetaOptionsLeds', 'options', 'beads/drivers/leds.h',
-    'level == 1 ? 66 : 33',
-    'level == 1 ? 66 : 25'),
-  ('TestDefaultLedIdentity', 'options', 'beads/drivers/leds.h',
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'level == 1 ? 66 : level == 3 ? 15 : 33',
+    'level == 1 ? 50 : level == 3 ? 15 : 33'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'level == 1 ? 66 : level == 3 ? 15 : 33',
+    'level == 1 ? 66 : level == 3 ? 15 : 25'),
+  ('TestDefaultLedIdentity', 'options', 'beads/drivers/led_curve.cc',
     'if (!level) {',
     'if (false) {'),
   ('TestBetaOptionPages', 'options', 'beads/options.cc',
@@ -1553,7 +1567,7 @@ cases = [
     'leds_.Scale(level);',
     'if (mode_ != MODE_STORAGE_WARNING) leds_.Scale(level);'),
   ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
-    '{ 3, 10, true, false, false, false }',
+    '{ 4, 10, true, false, false, false }',
     '{ 2, 10, true, false, false, false }'),
   ('TestBetaOptionPages', 'options', 'beads/settings.cc',
     '  values_[feature] = value;',
@@ -1628,11 +1642,16 @@ cases = [
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     'const uint32_t kGestureCueTime = 500;',
     'const uint32_t kGestureCueTime = 0;'),
+  # Reintroduce the stale bank write through both commit guards.
   ('TestPlaitsBankGesture', 'options', 'beads/ui.cc',
     'for (int i = 0; i < kNumPageFeatures; ++i) {\n'
-    '      const ProfileFeature f = kPageFeatures[i];',
+    '      const ProfileFeature f = kPageFeatures[i];\n'
+    '      // Pages commit their settings; a gesture saves the Plaits bank.\n'
+    '      if (options_.edited(f) && settings_->profile().adjustable(f) &&',
     'for (int i = 0; i < FEATURE_LAST; ++i) {\n'
-    '      const ProfileFeature f = ProfileFeature(i);'),
+    '      const ProfileFeature f = ProfileFeature(i);\n'
+    '      if ((f == FEATURE_PLAITS_BANK || options_.edited(f)) &&\n'
+    '          settings_->profile().adjustable(f) &&'),
   ('TestBankDetents', 'plaits_synth', 'beads/dsp/plaits_synth.cc',
     'model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, false);',
     'model_quantizer_.Init(kPlaitsBankSize, kModelHysteresis, true);'),
@@ -1841,8 +1860,8 @@ cases = [
     '{ 2, kNoField, false, false, false, false },  // Grain stealing.',
     '{ 2, 15, false, false, false, false },  // Grain stealing.'),
   ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
-    '{ 3, 10, true, false, false, false }',
-    '{ 3, 13, true, false, false, false }'),
+    '{ 4, 10, true, false, false, false }',
+    '{ 4, 13, true, false, false, false }'),
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
     'gain_setting < 120', 'gain_setting < 121'),
   ('TestInputAttenuation', 'gain', 'beads/gain_control.cc',
@@ -1889,6 +1908,10 @@ cases = [
 
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     'options_.Value(FEATURE_BRIGHTNESS)', '0'),
+  ('TestBetaOptionsLeds', 'options', 'beads/drivers/led_curve.cc',
+    'level == 1 ? 66 : level == 3 ? 15 : 33', 'level == 1 ? 66 : 33'),
+  ('TestOptionsPalette', 'options', 'beads/profile.cc',
+    '{ 4, 7, { 95, 222, 255 }, 0,', '{ 4, 7, { 32, 96, 255 }, 0,'),
   ('TestBetaOptionsLeds', 'options', 'beads/ui.cc',
     '? 0.25f : 0.05f', '? 0.5f : 0.05f'),
 
@@ -1904,16 +1927,8 @@ cases = [
     '      seed_input = NULL;', '      seed_input = seed;'),
 
   ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
-    '  HAL_SAI_DMAResume(&sai_tx_);\n'
-    '  HAL_SAI_DMAResume(&sai_rx_);\n'
-    '  // All clocks must run before the power-up sequence (PCM3060, p.16).\n'
-    '  HAL_Delay(1);\n'
-    '  // Release reset only after the clocks have stabilized (PCM3060, p.16).\n'
-    '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;',
-    '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;\n'
-    '  HAL_SAI_DMAResume(&sai_tx_);\n'
-    '  HAL_SAI_DMAResume(&sai_rx_);\n'
-    '  HAL_Delay(1);'),
+   '  if (!StartDma(block_size)) {\n    Stop();',
+   '  CODEC_RESET_GPIO_PORT->BSRR = CODEC_RESET_GPIO_PIN;\n  if (!StartDma(block_size)) {\n    Stop();'),
   ('TestRestartOrder', 'codec', 'beads/drivers/codec.cc',
     '  HAL_Delay(kResetFrames * 1000 / previous_sample_rate + 2);',
     '  HAL_Delay(kResetFrames * 1000 / sample_rate + 2);'),
@@ -1927,15 +1942,15 @@ cases = [
   ('TestOneFrameDelay', 'codec', 'beads/drivers/codec.cc',
     '    out_buffer_[0] = out_buffer_[block_size_];', ''),
   ('TestCodecKeepsClocks', 'firmware', 'beads/engine_transition.cc',
-    '    codec_->Restart(\n'
-    '        codec_sample_rate_, sample_rate, sample_rate / kBlockRate, callback);',
-    '    codec_->Stop();\n'
-    '    codec_->Start(sample_rate, sample_rate / kBlockRate, callback);'),
+   '      ? codec_->Restart(codec_sample_rate_, sample_rate, block_size, callback)',
+   '      ? (codec_->Stop(), codec_->Start(sample_rate, block_size, callback))'),
   ('TestProfileToggles', 'options', 'beads/gesture_controller.cc',
     '    settings_->SetFeatureValue(feature, value);\n'
+    '    ui_->options_.PublishGesture(feature, value);\n'
     '    settings_->SaveOptions();\n'
     '    const OptionValue cue',
     '    settings_->SetFeatureValue(feature, value);\n'
+    '    ui_->options_.PublishGesture(feature, value);\n'
     '    const OptionValue cue'),
   ('TestProfileToggles', 'options', 'beads/gesture_controller.cc',
     'FindOptionValue(feature, value);',
@@ -1947,8 +1962,8 @@ cases = [
     '? NextSynth(current, ui_->playable_synths_) : !current;',
     '? NextSynth(current, ui_->playable_synths_) : current;'),
   ('TestProcessorToggle', 'firmware', 'beads/profile.cc',
-    '{ 2, 3, true, false, true, false },  // Processor.',
-    '{ 2, 3, true, false, false, false },  // Processor.'),
+    '{ 4, 3, true, false, true, false },  // Processor.',
+    '{ 4, 3, true, false, false, false },  // Processor.'),
   ('TestProfileToggles', 'options', 'beads/profile.cc',
     'if (id == FEATURE_SYNTH && e.action == ACTION_FREEZE) {',
     'if (false) {'),
@@ -2290,16 +2305,17 @@ cases = [
   ('TestResonatorBank', 'resonator', 'beads/dsp/modal_resonator.cc',
     '  float q = 500.0f * Interpolate', '  float q = 5000.0f * Interpolate'),
   ('TestResonatorDefaults', 'resonator', 'beads/dsp/modal_resonator.cc',
-    '{ kResonatorStructure, kResonatorBrightness, NULL },  // String.',
-    '{ kResonatorStructure, 0.51f, NULL },  // String.'),
+    '{ kResonatorStructure, kResonatorBrightness, NULL, 0.688f },',
+    '{ kResonatorStructure, 0.51f, NULL, 0.688f },'),
   ('TestResonatorDefaults', 'resonator', 'beads/dsp/modal_resonator.cc',
     '0.35f, kResonatorDamping, 0.65f, 0.8f',
     '0.35f, 0.51f, 0.65f, 0.8f'),
   ('TestResonatorDefaults', 'resonator', 'beads/dsp/modal_resonator.cc',
     '  set_amount(1.0f);', '  set_amount(1.01f);'),
   ('TestResonatorControls', 'resonator', 'beads/dsp/modal_resonator.cc',
-    'Interpolate(rings::lut_stiffness, structure_, 256.0f);',
-    'Interpolate(rings::lut_stiffness, kResonatorStructure, 256.0f);'),
+    'Interpolate(rings::lut_stiffness, structure_, 256.0f);\n  float harmonic',
+    'Interpolate(rings::lut_stiffness, kResonatorStructure, 256.0f);\n'
+    '  float harmonic'),
   ('TestResonatorControls', 'resonator', 'beads/dsp/modal_resonator.cc',
     '  float q = 500.0f * Interpolate(rings::lut_4_decades, damping_, 256.0f);',
     '  float q = 500.0f * Interpolate(rings::lut_4_decades, kResonatorDamping,'
@@ -2316,8 +2332,9 @@ cases = [
   ('TestResonatorSeedEdges', 'resonator', 'beads/dsp/processor_resonator.cc',
     'strike = strike || (seed_input[i] & GATE_FLAG_RISING);',
     'strike = strike || false;'),
-  ('TestResonatorSeedEdges', 'resonator', 'beads/dsp/processor.h',
-    '    seed_gate_ = true;\n', ''),
+  ('TestResonatorSeedEdges', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '    seed_gate_ = true;  // A SEED held during the change does not strike.\n',
+    ''),
   ('TestResonatorStrikeLevel', 'resonator', 'beads/dsp/processor_resonator.cc',
     'strike_pulse = 0.25f * SemitonesToRatio',
     'strike_pulse = 1.0f * SemitonesToRatio'),
@@ -2352,18 +2369,20 @@ cases = [
   ('TestResonatorTonalLevel', 'resonator', 'beads/dsp/modal_resonator.h',
     'const float kResonatorPeak = 0.5f;', 'const float kResonatorPeak = 0.9f;'),
   ('TestResonatorLevel', 'resonator', 'beads/dsp/modal_resonator.cc',
-    '  limiter_.Process(resonance, size);\n', ''),
+    '    resonance[i].r = r[i] * kResonatorHeadroom;\n  }\n'
+    '  limiter_.Process(resonance, size);\n',
+    '    resonance[i].r = r[i] * kResonatorHeadroom;\n  }\n'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
     '      } else {\n'
     '        ProcessResonator(parameters.pitch, strike, out, size);\n',
     '      } else {\n'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
-    '    BEADS_DECAY_RENDER(ProcessOptions)<true, manual_delay>(',
-    '    BEADS_DECAY_RENDER(ProcessOptions)<false, manual_delay>('),
+    '  const bool resonator =\n'
+    '      options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);',
+    '  const bool resonator = false;'),
   ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_options.cc',
-    '  if (options_ &\n'
-    '      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {',
-    '  if (false) {'),
+    'options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);',
+    'options_ & OPTION_FLAG_RESONATOR_INPUT;'),
   ('TestResonatorBeforeBuffer', 'resonator', 'beads/dsp/processor_options.cc',
     '        ProcessResonator(parameters.pitch, strike, resonated, size);\n'
     '      }\n      recorded = resonated;',
@@ -2383,14 +2402,79 @@ cases = [
   ('TestResonatorStrike', 'resonator', 'beads/dsp/processor_resonator.cc',
     '  if (strike) {\n    // Rings',
     '  if (false) {\n    // Rings'),
-  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor.h',
-    '        ? OPTION_FLAG_RESONATOR_GRAINS\n',
-    '        ? OPTION_FLAG_RESONATOR_INPUT\n'),
-  ('TestResonatorOff', 'resonator', 'beads/dsp/processor.h',
-    '                : 0));',
-    '                : OPTION_FLAG_RESONATOR_GRAINS));'),
+  ('TestResonatorAfterGrains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '      ? OPTION_FLAG_RESONATOR_GRAINS\n',
+    '      ? OPTION_FLAG_RESONATOR_INPUT\n'),
+  ('TestResonatorOff', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '                  : 0)));',
+    '                  : OPTION_FLAG_RESONATOR_GRAINS)));'),
   ('TestResonatorSpectralReset', 'resonator', 'beads/dsp/processor_options.cc',
     '      resonator_sample_rate_ = 0.0f;\n', ''),
+  # Chord placement (resonator_test).
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '  if (closest < kChordNoteTolerance && quiet < kChordRetuneLevel) {',
+    '  if (closest < kChordNoteTolerance) {'),
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '  if (closest < kChordNoteTolerance && quiet',
+    '  if (closest <= 1.0f && quiet'),
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'strikes[voice * size + offset] +=', 'strikes[voice * size] +='),
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '    chord_level_[quietest] = 0.0f;\n', ''),
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '  chord_level_[voice] += gain;\n', ''),
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '      Strike(v, 0, 1.0f, strikes, size);\n', ''),
+  ('TestResonatorChordVoices', 'resonator', 'beads/dsp/modal_resonator.h',
+    '      std::fill(&chord_glide_[0], &chord_glide_[kNumChordVoices], 0.0f);\n',
+    ''),
+  ('TestResonatorChordLevel', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '      chord_level_[v] *= radius;', '      chord_level_[v] *= radius * radius;'),
+  ('TestResonatorChordLevel', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'gain * 0.25f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;',
+    'gain * 0.5f * SemitonesToRatio(cutoff * cutoff * 24.0f) / cutoff;'),
+  ('TestResonatorChordLevel', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '  return 1.0f / Sqrt(d * d + x2 * damping);',
+    '  return 1.0f / Sqrt(d * d + 0.25f * x2 * damping);'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'grain.Age(expected + 0.001f, &age)', 'grain.Age(expected + 1.001f, &age)'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    'fraction = (t.fractional_sample + float(k)) * (1.0f / float(ratio));',
+    'fraction = t.fractional_sample * (1.0f / float(ratio));'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '            j * ratio, level, strikes, size);',
+    '            j, level, strikes, size);'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '            fabsf(float(grain.speed())) * (1.0f / 1024.0f),',
+    '            float(grain.speed()) * (1.0f / 1024.0f),'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/processor_options.cc',
+    '        ProcessChord(strike, grain_triggers, out, size);',
+    '        ProcessChord(strike, NULL, out, size);'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/processor_options.cc',
+    '      } else if (options_ & OPTION_FLAG_RESONATOR_CHORD) {',
+    '      } else if (false) {'),
+  ('TestResonatorChordGrains', 'resonator', 'beads/dsp/grain_envelope.h',
+    '        phase_ >= limit * phase_increment_[STAGE_ATTACK]) {',
+    '        phase_ >= 2.0f * limit * phase_increment_[STAGE_ATTACK]) {'),
+  ('TestResonatorChordGains', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '&kResonatorDrum, 15.5f }', '&kResonatorDrum, 1.0f }'),
+  ('TestResonatorChordGains', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '  const float level = gain * grain_level_;',
+    '  const float level = gain;'),
+  ('TestResonatorChordGains', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'chord_peak_gain_[v] = min(chord_peak_gain_[v], peak_gain);',
+    'chord_peak_gain_[v] = 1.0f;'),
+  ('TestResonatorChordGains', 'resonator', 'beads/dsp/modal_resonator.cc',
+    '(a != 0.0f || rest_frequency * ratio[side][i] < 0.49f)) {',
+    'a != 0.0f) {'),
+  ('TestResonatorChordGains', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'chord_level_[v] / peak', 'chord_level_[v] / chord_peak_[v]'),
+  ('TestResonatorChordGains', 'resonator', 'beads/dsp/modal_resonator.cc',
+    'chord_level_[v] <= kChordSilence * peak',
+    'chord_level_[v] <= kChordSilence * chord_peak_[v] + 0.0f * peak'),
+  ('TestResonatorProfile', 'firmware', 'beads/dsp/processor_resonator.cc',
+    '? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_CHORD',
+    '? OPTION_FLAG_RESONATOR_GRAINS'),
   ('TestResonatorLimiterAtRest', 'resonator', 'beads/dsp/modal_resonator.cc',
     '  limiter_.Rest();\n', ''),
   # In the feedback (#88): the bank's bound, its publication, the loop.
@@ -2534,13 +2618,13 @@ cases = [
     '        ProcessResonatorLoop(',
     '      if (true) {\n'
     '        ProcessResonatorLoop('),
-  ('TestResonatorFeedback', 'resonator', 'beads/dsp/processor.h',
-    '                ? OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT\n',
-    '                ? OPTION_FLAG_RESONATOR_GRAINS\n'),
+  ('TestResonatorFeedback', 'resonator', 'beads/dsp/processor_resonator.cc',
+    '              ? kResonatorFlags\n',
+    '              ? OPTION_FLAG_RESONATOR_GRAINS\n'),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/processor_resonator.cc',
     '    resonator_.Strike();\n', ''),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.h',
-    '    if (modes != modes_) {\n      glide_ = 0.0f;\n    }\n', ''),
+    '    if (modes != modes_) {\n      glide_ = 0.0f;\n', '    if (false) {\n'),
   ('TestResonatorMaterials', 'resonator', 'beads/dsp/modal_resonator.h',
     'glide_ = modes_ ? modes_->glide : 0.0f;',
     'glide_ = modes_ ? 2.0f * modes_->glide : 0.0f;'),
@@ -2584,7 +2668,7 @@ cases = [
     'resonator_placement = settings.FeatureValue(FEATURE_RESONATOR);',
     'resonator_placement = RESONATOR_OFF;'),
   ('TestResonatorPage', 'firmware', 'beads/beads.cc',
-    '  if (ui.resonator() != resonator_placement) {', '  if (false) {'),
+    '  if (placement != resonator_placement) {', '  if (false) {'),
   ('TestResonatorPage', 'firmware', 'beads/beads.cc',
     'return e.state == PROFILE_FIXED ? float(e.value) * scale : curated;',
     'return e.state == PROFILE_OFF ? float(e.value) * scale : curated;'),
@@ -2599,23 +2683,24 @@ cases = [
     '  c.hold_feedback = ui.resonator_assigned();',
     '  c.hold_feedback = false;'),
   ('TestResonatorDampingCv', 'firmware', 'beads/dsp/processor_options.cc',
-    'const float feedback = resonator && resonator_controls_.hold_feedback',
-    'const float feedback = false && resonator_controls_.hold_feedback'),
-  ('TestResonatorDampingCv', 'firmware', 'beads/ui.cc',
-    '  if (!resonator_ || synth_mode_) {', '  if (!resonator_) {'),
+    'resonator && !spectral_ && resonator_controls_.hold_feedback',
+    'false && resonator_controls_.hold_feedback'),
+  ('TestResonatorDampingCv', 'firmware', 'beads/ui.h',
+    'resonator_available_ && resonator_ && !synth_mode_',
+    'resonator_available_ && resonator_'),
   ('TestResonatorDampingCv', 'firmware', 'beads/gesture_controller.cc',
     '    ui_->resonator_assigned_ = true;',
     '    ui_->resonator_assigned_ = false;'),
   ('TestResonatorDampingCv', 'firmware', 'beads/ui.cc',
-    '  if (!resonator_ || synth_mode_) {\n    resonator_assigned_ = false;\n  }\n',
+    '  if (!resonator_available()) {\n    resonator_assigned_ = false;\n  }\n',
     ''),
   ('TestResonatorDampingCv', 'firmware', 'beads/ui.cc',
     '          leds_.set(Led(LED_ASSIGN_1 + MIX_PARAMETER_REVERB), triangle);\n'
     '        } else if (settings_->width_assigned()) {',
     '        } else if (settings_->width_assigned()) {'),
   ('TestBetaProfileDefinitions', 'profile', 'beads/profile.cc',
-    '{ 4, kNoField, true, false, false, false },  // Resonator.',
-    '{ 5, 15, true, false, false, false },  // Resonator.'),
+    '{ 5, kNoField, true, false, false, false },  // Resonator.',
+    '{ 6, 15, true, false, false, false },  // Resonator.'),
   ('TestOptionalPages', 'options', 'beads/options.cc',
     '  FEATURE_TIME_SCAN,\n  FEATURE_RESONATOR,',
     '  FEATURE_NONE,\n  FEATURE_RESONATOR,'),
@@ -2633,8 +2718,8 @@ cases = [
     '  for (size_t i = 1; i < 2; ++i) {\n'
     '    if (kOptionValues[i].setting == setting &&'),
   ('TestCompactionGuards', 'record', 'beads/settings_storage.h',
-    '    if (record_address(size_t(next_record_index_) + 1) <= MIRROR_LAST && \\\n        MirrorMatches()) {',
-    '    if (record_address(size_t(next_record_index_) + 1) <= MIRROR_LAST) {'),
+   '        MirrorMatches()) {',
+   '        true) {'),
   ('TestCompactionGuards', 'record', 'beads/settings_storage.h',
     '    PersistentData data;\n    if (ReadChunk(chunk_address(0), &data) != CHUNK_VALID || !Usable(data) || \\',
     '    PersistentData data = *persistent_data_;\n    if (!Usable(data) || \\'),
@@ -2660,8 +2745,9 @@ cases = [
     'const uint8_t* bytes = static_cast<const uint8_t*>(data);',
     'const int8_t* bytes = static_cast<const int8_t*>(data);'),
   ('TestRecordJournal', 'record', 'beads/settings.cc',
-    '  SaveOptions();\n  PackState();\n  chunk_storage_.SaveState();',
-    '  PackState();\n  chunk_storage_.SaveState();\n  SaveOptions();'),
+    '  SaveOptions();\n  PackState();\n  return chunk_storage_.SaveState();',
+    '  PackState();\n  const bool saved = chunk_storage_.SaveState();\n'
+    '  SaveOptions();\n  return saved;'),
   ('TestFactoryCaliGuard', 'record', 'beads/settings.cc',
     'const bool factory_values = loaded && \\',
     'const bool factory_values = false && \\'),
@@ -2680,18 +2766,33 @@ cases = [
   ('TestRecordVersions', 'record', 'beads/settings.cc',
     'record_.version == kOptionsRecordVersion;',
     'true;'),
-  ('TestImplausibleSaveKept', 'record', 'beads/settings_storage.h',
-    '  if (!Usable(*persistent_data_) && \\',
-    '  if (false && \\'),
+  ('TestImplausibleSaveKept', 'record', 'beads/settings.cc',
+    '    if (ReadPersistentData(&durable)) {',
+    '    if (false && ReadPersistentData(&durable)) {'),
   ('TestRecoveryRestoredStorage', 'record', 'beads/settings.cc',
     '  if (recovery_mode && !profile_locked_) {\n    record_ = default_record;',
     '  if (recovery_mode && status == STORAGE_OK && !profile_locked_) {\n    record_ = default_record;'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/settings.cc',
+    '  const bool saved = chunk_storage_.SavePersistentData();',
+    '  const PersistentData requested = persistent_data_;\n'
+    '  chunk_storage_.SavePersistentData();\n'
+    '  const bool saved = !chunk_storage_.locked() &&\n'
+    '      !memcmp(&requested, &persistent_data_, sizeof(PersistentData));'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/ui.cc',
+    '      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {',
+    '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/calibrator.h',
+    '    if (!saved) {\n      if (settings_->ReadPersistentData(&durable)) {',
+    '    if (!saved) {\n      if (false) {'),
+  ('TestFinalCalibrationPersistence', 'firmware', 'beads/settings_storage.h',
+    '    if (valid && Usable(mirror) && !SectorProtects(mirror) &&',
+    '    if (false && valid && Usable(mirror) && !SectorProtects(mirror) &&'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
     '      if (mode_ == MODE_NORMAL && !calibrator_->Save()) {',
     '      if (mode_ == MODE_NORMAL && (calibrator_->Save(), false)) {'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/settings_storage.h',
     '        !memcmp(&requested, &durable, sizeof(PersistentData));',
-    '        requested.padding[0] == durable.padding[0];'),
+    '        memcmp(&requested, &durable, sizeof(PersistentData));'),
   ('TestRejectedCalibrationCue', 'firmware', 'beads/ui.cc',
     '        queue_.Touch();  // A full second of it after the save\'s erase.\n',
     ''),
@@ -2716,11 +2817,11 @@ cases = [
     '      settings_->mutable_persistent_data()->adc_calibration[channel].scale '
     '= c->scale();'),
   ('TestLockedCalibrationCue', 'firmware', 'beads/settings.cc',
-    '  return chunk_storage_.SavePersistentData();',
-    '  return (chunk_storage_.SavePersistentData(), true);'),
+    '  const bool saved = chunk_storage_.SavePersistentData();',
+    '  const bool saved = (chunk_storage_.SavePersistentData(), true);'),
   ('TestLockedCalibrationRefused', 'storage', 'beads/settings.cc',
-    '  return chunk_storage_.SavePersistentData();',
-    '  return (chunk_storage_.SavePersistentData(), true);'),
+    '  const bool saved = chunk_storage_.SavePersistentData();',
+    '  const bool saved = (chunk_storage_.SavePersistentData(), true);'),
   ('TestStuckRecordSlot', 'record', 'beads/settings_storage.h',
     '        compaction_failed_) {',
     '        false) {'),
@@ -2732,8 +2833,8 @@ cases = [
     'const float kReverbStyleFadeStep = 1.0f / (0.01f * kBlockRate);',
     'const float kReverbStyleFadeStep = 1.0f / (0.0125f * kBlockRate);'),
   ('TestTransitionTraces', 'firmware', 'beads/engine_transition.cc',
-    '  codec_transition_frames_ = kBlockRate / 4;',
-    '  codec_transition_frames_ = kBlockRate / 5;'),
+   '  codec_transition_frames_ = blank_output ? kBlockRate / 4 : 0;',
+   '  codec_transition_frames_ = blank_output ? kBlockRate / 5 : 0;'),
   ('TestTransitionTraces', 'firmware', 'beads/beads.cc',
     '      transition.Pause();\n'
     '      processor.Configure(media, mono);',
@@ -2784,8 +2885,8 @@ cases = [
     '    processor.set_delay_mode(ui.delay_mode());',
     '    processor.set_delay_mode(settings.delay_mode());'),
   ('TestOptionFanOut', 'firmware', 'beads/beads.cc',
-    'void MonitorStateChange() {\n  UpdateResonator();',
-    'void MonitorStateChange() {'),
+    '    UpdateResonator();',
+    ''),
   # Gesture characterization: hold timing and release suppression.
   ('TestGestureCharacterization', 'options', 'beads/gesture_controller.cc',
     '  if (uint32_t(e.data) >= kSelfPlayHoldTime) {',
@@ -2832,12 +2933,12 @@ cases = [
     '    settings_->set_diffusion_assigned(true);\n'
     '    if (!settings_->diffusion_assigned()) {\n'
     '      settings_->set_width_assigned(false);\n'
-    '      ui_->resonator_assigned_ = ui_->resonator_ != 0;\n'
+    '      ui_->resonator_assigned_ = ui_->resonator_available();\n'
     '    }\n',
     '    settings_->set_width_assigned(false);\n'
     '    settings_->set_diffusion_assigned(true);\n'
     '    ui_->resonator_assigned_ = !settings_->diffusion_assigned() &&\n'
-    '        ui_->resonator_ != 0;\n'),
+    '        ui_->resonator_available();\n'),
   # An [A] gesture saves the knob edit whose release it consumes.
   ('TestAmountSavedByAction', 'options', 'beads/gesture_controller.cc',
     '    if (pot_touched) {\n'
@@ -3042,12 +3143,20 @@ cases = [
   ('TestRingsSynthOwnership', 'firmware', 'beads/engine_transition.cc',
     '  playing_synth_ = playing;\n'
     '  ui_->set_playing_synth(playing);\n'
+    '  codec_fade_ = false;\n'
     '  if (codec_running_) {',
     '  ui_->set_playing_synth(playing);\n'
+    '  codec_fade_ = false;\n'
     '  if (codec_running_) {'),
   ('TestRingsSynthApp', 'rings_synth', 'beads/dsp/rings_synth.cc',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down * kRingsGain;',
     '    const float b = float(int32_t(r[i] * scale_up)) * scale_down;'),
+  ('TestFineTimeCvProfile', 'firmware', 'beads/cv_reader.h',
+    'const float scale = calibration.scale * 0.125f;',
+    'const float scale = calibration.scale;'),
+  ('TestFineTimeCvProfile', 'firmware', 'beads/calibrator.h',
+    '      cv_reader_->RefreshFineTimeCv(c[CV_ADC_CHANNEL_TIME]);',
+    '      (void)c;'),
   ('TestManualDelayAction', 'firmware', 'beads/gesture_controller.cc',
     'manual_delay_requested_ = !manual_delay_requested_;',
     'manual_delay_requested_ = true;'),
@@ -3057,6 +3166,115 @@ cases = [
   ('TestManualDelayAction', 'firmware', 'beads/dsp/processor_options.cc',
     'const float transition_direction = manual_delay',
     'const float transition_direction = false'),
+  ('TestAppendAfterBlankGap', 'storage', 'beads/settings_storage.h',
+   '            !Flash::IsBlank(address + size, size))) {',
+   '            false)) {'),
+  ('TestRetryWhileFrozen', 'backup', 'beads/background_buffer_backup.cc',
+   '  retry_pending_ = retry_count_ < kMaxBackupRetries &&',
+   '  retry_pending_ = false && retry_count_ < kMaxBackupRetries &&'),
+  ('TestBackupRetryStateSave', 'backup', 'beads/background_buffer_backup.cc',
+   '      if (commit_pending_) {',
+   '      if (false) {'),
+  ('TestBackupRetryStateExhausted', 'backup', 'beads/background_buffer_backup.cc',
+   '    settings_->mutable_state()->frozen = false;\n    ScheduleRetry();',
+   '    ScheduleRetry();'),
+  ('TestBackupRetryLimit', 'backup', 'beads/background_buffer_backup.cc',
+   'retry_count_ < kMaxBackupRetries', 'retry_count_ <= kMaxBackupRetries'),
+  ('TestPendingSeedAcrossPages', 'options', 'beads/options.cc',
+   '    if (PageHasPitch()) {\n      preview_knob_ = -1;',
+   '    if (true) {\n      preview_knob_ = -1;'),
+  ('TestFullByteProfileDefaults', 'record', 'beads/settings.cc',
+   '      if (amount_overrides_ & OptionsRecord::WIDTH_OVERRIDE) {',
+   '      if (true) {'),
+  ('TestFullByteProfileDefaults', 'record', 'beads/settings.cc',
+   '      if (amount_overrides_ & OptionsRecord::DIFFUSION_OVERRIDE) {',
+   '      if (true) {'),
+  ('TestFullByteDefaultsThroughFixedProfile', 'record', 'beads/settings.cc',
+   '  if (!(record_.amount_overrides & OptionsRecord::WIDTH_OVERRIDE)) {',
+   '  if (false) {'),
+  ('TestRefuseUnusableRewrite', 'record', 'beads/settings_storage.h',
+   '        (ReadChunk(MIRROR_BASE, &data) != CHUNK_VALID || !Usable(data))) {',
+   '        (ReadChunk(MIRROR_BASE, &data) != CHUNK_VALID || !Usable(data)) &&\n'
+   '        false) {'),
+  ('TestChiptuneDroneEnd', 'plaits_synth', 'beads/dsp/plaits_voice.cc',
+   '        (unpatched_ || chiptune_tail_);',
+   '        (unpatched_ || chiptune_tail_) && false;'),
+  ('TestOptionsPendingProfileGesture', 'options', 'beads/gesture_controller.cc',
+   '    const uint8_t current = ui_->options_.edited(feature)',
+   '    const uint8_t current = false'),
+  ('TestCommitKeepsUneditedOption', 'options', 'beads/ui.cc',
+   'if (options_.edited(f) && settings_->profile().adjustable(f) &&',
+   'if (settings_->profile().adjustable(f) &&'),
+  ('TestStartQualityOptionsSave', 'storage', 'beads/settings.cc',
+   '  if (start_quality_pending_) {\n    const uint8_t media',
+   '  if (start_quality_pending_ && false) {\n    const uint8_t media'),
+  ('TestStartQualityCalibrationCut', 'storage', 'beads/settings.cc',
+   '  if (!start_quality_pending_) {\n    record_.profile_identity',
+   '  if (true) {\n    record_.profile_identity'),
+  ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor.h',
+   'return !spectral_ && (options_ & kResonatorFlags);',
+   'return options_ & kResonatorFlags;'),
+  ('TestEffectResonatorAssignment', 'firmware', 'beads/beads.cc',
+   '  ui.set_resonator_available(active_processor_mode != PROCESSOR_OLIVERB &&\n',
+   '  ui.set_resonator_available(\n'),
+  ('TestEffectResonatorAssignment', 'firmware', 'beads/beads.cc',
+   '      active_processor_mode != PROCESSOR_ABYSS &&\n'
+   '      processor.resonator_available());',
+   '      processor.resonator_available());'),
+  ('TestSpectralResonatorAssignment', 'firmware', 'beads/dsp/processor_options.cc',
+   'resonator && !spectral_ && resonator_controls_.hold_feedback',
+   'resonator && resonator_controls_.hold_feedback'),
+  ('TestResonatorPlacementPublication', 'resonator',
+   'beads/dsp/processor_resonator.cc',
+   '    resonator_reset_pending_ = false;',
+   '    resonator_reset_pending_ = true;'),
+  ('TestSynthSwapResume', 'firmware', 'beads/engine_transition.cc',
+   '  ui_->set_playing_synth(playing);\n  codec_fade_ = false;\n'
+   '  if (codec_running_) {\n    codec_->Resume(callback);\n  }',
+   '  ui_->set_playing_synth(playing);\n'
+   '  if (codec_running_) {\n    codec_->Resume(callback);\n  }\n  codec_fade_ = false;'),
+  ('TestOptionsAppendAfterBlankGap', 'record', 'beads/settings_storage.h',
+   '            Flash::IsBlank(address + size, size)) &&',
+   '            true) &&'),
+  ('TestRetryIncompleteErase', 'storage', 'beads/settings_storage.h',
+   '      if (Flash::IsBlank(address, size)) {',
+   '      if (true) {'),
+  ('TestFactoryPrimaryInterruptedRecalibration', 'storage', 'beads/settings_storage.h',
+   '(!reference_ || !data.SameCalibration(*reference_) ||',
+   '(true || !data.SameCalibration(*reference_) ||'),
+  ('TestImplausibleCalibrationWithoutMirror', 'storage', 'beads/settings.cc',
+   '  } else if (lost || implausible) {',
+   '  } else if (lost) {'),
+  ('TestRefusedRecalibrationPreservesMeasuredMirror', 'storage', 'beads/settings.cc',
+   '  if (!CalibrationPlausible(persistent_data_, factory_)) {',
+   '  if (false) {'),
+  ('TestBackupLocksFlash', 'backup', 'beads/background_buffer_backup.cc',
+   '  ~FlashLock() { HAL_FLASH_Lock(); }',
+   '  ~FlashLock() { }'),
+  ('TestCalibrationExitResumesNormalization', 'firmware', 'beads/ui.cc',
+   '      calibrator_->ResumeNormalization();',
+   '      (void)calibrator_;'),
+  ('TestSuppressedStorageChord', 'firmware', 'beads/ui.h',
+   '    return switches_.pressed(s) && !suppressed_press_[s];',
+   '    return switches_.pressed(s);'),
+  ('TestSynthFadeSurvivesTimerReset', 'firmware', 'beads/beads.cc',
+   '      if (synth_fade || (start && now - start >= 10000)) {',
+   '      if (start && now - start >= 10000) {'),
+  ('TestSynthEntryCancelsBackup', 'firmware', 'beads/beads.cc',
+   '  if (new_synth_mode && background_buffer_backup.saving()) {\n    background_buffer_backup.Process(false);',
+   '  if (new_synth_mode && background_buffer_backup.saving()) {\n    (void)background_buffer_backup;'),
+  ('TestCodecRestartRetry', 'firmware', 'beads/beads.cc',
+   '  if (transition.RetryCodec()) {',
+   '  if (false) {'),
+  ('TestRestartDmaFailure', 'codec', 'beads/drivers/codec.cc',
+   '  if (!StartDma(block_size)) {\n    Stop();',
+   '  if (!StartDma(block_size) && false) {\n    Stop();'),
+  ('TestRestartDmaAbortTimeout', 'codec', 'beads/drivers/codec.cc',
+    '    if (!InitializeDMA() || !InitializeGPIODMA()) {',
+    '    if (false) {'),
+  ('TestWarningChordDebounceBoundary', 'firmware', 'beads/ui.cc',
+    '      suppressed_press_[i] = true;',
+    '      suppressed_press_[i] = false;'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:
@@ -3065,15 +3283,57 @@ for name, suite, source, before, after in cases:
   assert (root / source).read_text().count(pattern) == 1, (name, pattern)
 
 
-def shard_indices(count, shard, shards):
-  # Shard K of N runs every case whose 1-based index is K modulo N, so the
-  # N shards together run each case exactly once.
-  return [i for i in range(1, count + 1) if (i - 1) % shards == shard - 1]
+# Seconds on a GitHub runner, from CI logs: a suite's first build, then a
+# case's rebuild and test for most sources and for heavy ones (below).
+# Unlisted suites are small.
+suite_costs = {
+  'attack': (27, 2, 13), 'clouds': (28, 24, 14), 'delay': (4, 4, 4),
+  'delay_mode': (26, 8, 23), 'firmware': (32, 5, 27), 'granular': (25, 2, 21),
+  'mix': (27, 2, 18), 'options': (4, 3, 4), 'plaits_synth': (6, 2, 2),
+  'processor': (24, 18, 17), 'resonator': (23, 3, 21), 'spectral': (38, 11, 11),
+}
+
+
+def case_cost(suite, source):
+  # DSP headers and the processor sources rebuild most of the DSP code.
+  build, light, heavy = suite_costs.get(suite, (2, 2, 2))
+  if source.startswith('beads/dsp/') and (source.endswith('.h') or
+      source in ('beads/dsp/processor.cc', 'beads/dsp/processor_options.cc')):
+    return heavy
+  return light
+
+
+def run_order(cases):
+  # A suite's cases run together, grouped by source, so a shard builds few
+  # programs and rebuilds the same objects.
+  return sorted(range(1, len(cases) + 1),
+      key=lambda i: (cases[i - 1][1], cases[i - 1][2], i))
+
+
+def shard_indices(cases, shard, shards):
+  # Shard K of N runs the Kth of N spans of the run order with equal
+  # measured cost, so the N shards together run each case exactly once.
+  weights = []
+  previous = None
+  for i in run_order(cases):
+    suite, source = cases[i - 1][1:3]
+    build = suite_costs.get(suite, (2, 2, 2))[0]
+    weights.append((i, case_cost(suite, source) +
+        (build if suite != previous else 0)))
+    previous = suite
+  total = sum(weight for i, weight in weights)
+  selected = []
+  spent = 0
+  for i, weight in weights:
+    if min(shards, int((spent + weight / 2) * shards / total) + 1) == shard:
+      selected.append(i)
+    spent += weight
+  return selected
 
 
 for shards in range(1, 17):
   indices = sorted(i for shard in range(1, shards + 1)
-      for i in shard_indices(len(cases), shard, shards))
+      for i in shard_indices(cases, shard, shards))
   assert indices == list(range(1, len(cases) + 1)), shards
 if '--patterns-only' in sys.argv:
   print('All %d mutation patterns occur exactly once' % len(cases))
@@ -3112,7 +3372,7 @@ if '--shard' in sys.argv:
   shard, shards = map(int,
       sys.argv[sys.argv.index('--shard') + 1].split('/'))
   assert 1 <= shard <= shards, (shard, shards)
-  selected_indices = set(shard_indices(len(cases), shard, shards))
+  selected_indices = set(shard_indices(cases, shard, shards))
   del sys.argv[sys.argv.index('--shard'):sys.argv.index('--shard') + 2]
 
 out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
@@ -3146,9 +3406,10 @@ with tempfile.TemporaryDirectory(prefix='.mutation-', dir='beads/test') as tmp:
   # A program's first case builds it from scratch; later cases rebuild at
   # most that, so they get twice its build time plus 60 s for their tests.
   limits = {}
-  for index, (name, suite, source, before, after) in enumerate(cases, 1):
+  for index in run_order(cases):
     if index not in selected_indices:
       continue
+    name, suite, source, before, after = cases[index - 1]
     path = work / source
     original = path.read_text()
     if before is not None:

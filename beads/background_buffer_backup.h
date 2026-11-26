@@ -44,14 +44,16 @@ class BackgroundBufferBackup {
   void Init(Processor* processor, Settings* settings);
   bool Load();
   void Process(bool freeze_state);
+  inline void set_suspended(bool suspended) { suspended_ = suspended; }
   
   void EraseSector();
   void WriteBlock();
-  void SaveState(bool freeze_state);
+  bool SaveState(bool freeze_state);
   // After a settings repair: erases the sectors holding an unreadable word.
   void EraseDamagedSectors();
   
   inline bool busy() const { return remaining_bytes_ || remaining_sectors_; }
+  inline bool saving() const { return busy() || retry_pending_; }
   
   // One flash word; the stock firmware reads tag to mono only. padding and
   // reserved are zero; trimmed_frames is ignored by stock firmware.
@@ -68,6 +70,8 @@ class BackgroundBufferBackup {
   };
 
  private:
+  void CommitSave();
+  void ScheduleRetry();
   bool Valid(const BufferBackupHeader& header) const;
   bool EraseBufferSector(uint32_t sector, int attempts, bool recovery);
 
@@ -84,10 +88,14 @@ class BackgroundBufferBackup {
   
   uint32_t backup_delay_;
   uint32_t thaw_start_time_;
+  uint32_t retry_start_time_;
+  int retry_count_;
   bool freeze_state_;
   bool save_started_;
   bool previous_freeze_state_;
-  bool busy_;
+  volatile bool retry_pending_;
+  bool commit_pending_;
+  bool suspended_;
   
   DISALLOW_COPY_AND_ASSIGN(BackgroundBufferBackup);
 };

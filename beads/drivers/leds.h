@@ -74,29 +74,7 @@ class Leds {
     }
   }
 
-  void Scale(uint8_t level) {
-    if (!level) {
-      return;
-    }
-    const uint8_t percent = level == 1 ? 66 : 33;
-    // Quality LED, chosen by eye: red dims as level^1.5, and lit green and
-    // blue keep 12 * (1 - level) more.
-    const uint8_t red = uint8_t(float(intensity_[LED_MEDIA_R]) *
-        (level == 1 ? 0.5361865f : 0.1895706f));
-    const uint8_t offset = level == 1 ? 4 : 8;
-    const bool green = intensity_[LED_MEDIA_G] != 0;
-    const bool blue = intensity_[LED_MEDIA_B] != 0;
-    for (int i = 0; i < LED_LAST; ++i) {
-      intensity_[i] = uint16_t(intensity_[i]) * percent / 100;
-    }
-    intensity_[LED_MEDIA_R] = red;
-    if (green) {
-      intensity_[LED_MEDIA_G] += offset;
-    }
-    if (blue) {
-      intensity_[LED_MEDIA_B] += offset;
-    }
-  }
+  void Scale(uint8_t level);
 
   inline void set(Led led, uint8_t intensity) {
     intensity_[led] = intensity;
@@ -126,14 +104,8 @@ class Leds {
     set_media(c);
   }
 
-  inline void set_media(Color color, float a) {
-    if (a != 1.0f) {
-      color.r = uint8_t(float(color.r) * a * a);
-      color.g = uint8_t(float(color.g) * a);
-      color.b = uint8_t(float(color.b) * a);
-    }
-    set_media(color);
-  }
+  void set_media(Color color, float a);
+
   
  private:
   bool InitializeGPIO();
