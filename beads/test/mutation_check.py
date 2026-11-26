@@ -1582,14 +1582,24 @@ for name, suite, source, before, after in cases:
   assert (root / source).read_text().count(pattern) == 1, (name, pattern)
 
 
-# Seconds on a GitHub runner, from CI logs: a suite's first build, then each
-# case's rebuild and test. Unlisted suites are small.
+# Seconds on a GitHub runner, from CI logs: a suite's first build, then a
+# case's rebuild and test for most sources and for heavy ones (below).
+# Unlisted suites are small.
 suite_costs = {
-  'firmware': (28, 11), 'resonator': (23, 8), 'delay_mode': (22, 19),
-  'granular': (23, 16), 'mix': (25, 13), 'processor': (23, 10),
-  'spectral': (39, 4), 'clouds': (23, 3), 'attack': (22, 1),
-  'plaits_synth': (6, 2), 'options': (3, 3),
+  'attack': (27, 2, 13), 'clouds': (28, 24, 14), 'delay': (4, 4, 4),
+  'delay_mode': (26, 8, 23), 'firmware': (32, 5, 27), 'granular': (25, 2, 21),
+  'mix': (27, 2, 18), 'options': (4, 3, 4), 'plaits_synth': (6, 2, 2),
+  'processor': (24, 18, 17), 'resonator': (23, 3, 21), 'spectral': (38, 11, 11),
 }
+
+
+def case_cost(suite, source):
+  # DSP headers and the processor sources rebuild most of the DSP code.
+  build, light, heavy = suite_costs.get(suite, (2, 2, 2))
+  if source.startswith('beads/dsp/') and (source.endswith('.h') or
+      source in ('beads/dsp/processor.cc', 'beads/dsp/processor_options.cc')):
+    return heavy
+  return light
 
 
 def run_order(cases):
@@ -1605,9 +1615,10 @@ def shard_indices(cases, shard, shards):
   weights = []
   previous = None
   for i in run_order(cases):
-    suite = cases[i - 1][1]
-    build, case = suite_costs.get(suite, (2, 2))
-    weights.append((i, case + (build if suite != previous else 0)))
+    suite, source = cases[i - 1][1:3]
+    build = suite_costs.get(suite, (2, 2, 2))[0]
+    weights.append((i, case_cost(suite, source) +
+        (build if suite != previous else 0)))
     previous = suite
   total = sum(weight for i, weight in weights)
   selected = []
