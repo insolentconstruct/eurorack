@@ -363,12 +363,12 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
       options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);
   const float sr = sample_rate();
 #ifdef BEADS_EXTENDED_REVERB
-  const bool resonator_after_bloom = sr == 48000.0f && !spectral_ &&
+  const bool resonator_before_bloom = sr == 48000.0f && !spectral_ &&
       reverb_character_.character == REVERB_BLOOM &&
       (options_ & kResonatorFlags) == kResonatorFlags;
   const int kBloomResonatorModes = 16;
 #else
-  const bool resonator_after_bloom = false;
+  const bool resonator_before_bloom = false;
 #endif  // BEADS_EXTENDED_REVERB
   bool strike = false;
   Parameters scanned;
@@ -485,7 +485,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
         (seed || attack_trigger_ || AttackOnset());
     FloatFrame resonated[resonator ? size : 1];
     const FloatFrame* recorded = in;
-    if (resonator && !resonator_after_bloom &&
+    if (resonator && !resonator_before_bloom &&
         (options_ & OPTION_FLAG_RESONATOR_INPUT)) {
       // Both flags: in the feedback.
       if (options_ & OPTION_FLAG_RESONATOR_GRAINS) {
@@ -540,7 +540,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
         break;
     }
     QuantizeDrySignal(in, dry_signal, size);
-    if (resonator && !resonator_after_bloom &&
+    if (resonator && !resonator_before_bloom &&
         (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
       if (options_ & OPTION_FLAG_RESONATOR_INPUT) {
         ProcessResonatorLoop(parameters.pitch, strike, out, size);
@@ -574,24 +574,24 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
   if (send || (options_ & OPTION_FLAG_REVERB_ON_GRAINS)) {
     // Clouds' order: the reverb returns with the grains.
     pre_reverb_limiter_.Process(out, size);
-    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);
 #ifdef BEADS_EXTENDED_REVERB
-    if (resonator_after_bloom) {
+    if (resonator_before_bloom) {
       ProcessResonator(
           parameters.pitch, strike, out, size, kBloomResonatorModes);
     }
 #endif  // BEADS_EXTENDED_REVERB
+    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);
     MixDryWet(dry_signal, dry, wet, out, size);
   } else {
     MixDryWet(dry_signal, dry, wet, out, size);
     pre_reverb_limiter_.Process(out, size);
-    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);
 #ifdef BEADS_EXTENDED_REVERB
-    if (resonator_after_bloom) {
+    if (resonator_before_bloom) {
       ProcessResonator(
           parameters.pitch, strike, out, size, kBloomResonatorModes);
     }
 #endif  // BEADS_EXTENDED_REVERB
+    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);
   }
 
   output_limiter_.ProcessOutput(out, size, output_limiter_mode_, sr);

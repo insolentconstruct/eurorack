@@ -313,8 +313,8 @@ Bloom uses the stock tank. An onset on the mono reverb send restarts a
 while the preceding tail is still ringing.
 
 At 48 kHz, when Bloom and the Feedback resonator are selected together,
-the resonator rings after the reverb. Its tail stays out of the recording
-buffer and uses 16 partials for a lighter sound.
+the 16-partial resonator feeds the reverb send and its onset detector.
+The recording buffer continues to bypass the resonant tail.
 
 ## Stereo width
 

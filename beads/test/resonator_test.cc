@@ -735,7 +735,8 @@ uint64_t RunBloomResonator(
     int material,
     float amount,
     bool reverb_on_grains,
-    float* bloom_peak) {
+    float* bloom_peak,
+    uint64_t* recording_hash) {
   Init(media, false, placement);
   processor.SetReverbCharacter(REVERB_BLOOM);
   processor.SetOption(Processor::OPTION_FLAG_REVERB_ON_GRAINS, reverb_on_grains);
@@ -755,6 +756,12 @@ uint64_t RunBloomResonator(
     hash = Hash(hash, output, BlockSize());
   }
   *bloom_peak = processor.reverb_character_.peak;
+  uint64_t recording = 14695981039346656037ull;
+  const uint8_t* bytes = &banks[0][0];
+  for (size_t i = 0; i < sizeof(banks); ++i) {
+    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  }
+  *recording_hash = recording;
   return hash;
 }
 
@@ -764,12 +771,17 @@ void TestBloomFeedbackResonator() {
     for (int material : { 0, 1 }) {
       float silent_peak;
       float ringing_peak;
+      uint64_t silent_recording;
+      uint64_t ringing_recording;
       const uint64_t silent = RunBloomResonator(Processor::MEDIA_DIGITAL,
-          RESONATOR_FEEDBACK, material, 0.0f, reverb_on_grains, &silent_peak);
+          RESONATOR_FEEDBACK, material, 0.0f, reverb_on_grains,
+          &silent_peak, &silent_recording);
       const uint64_t ringing = RunBloomResonator(Processor::MEDIA_DIGITAL,
-          RESONATOR_FEEDBACK, material, 1.0f, reverb_on_grains, &ringing_peak);
+          RESONATOR_FEEDBACK, material, 1.0f, reverb_on_grains,
+          &ringing_peak, &ringing_recording);
       CHECK(ringing != silent);
-      CHECK(ringing_peak == silent_peak);
+      CHECK(ringing_peak != silent_peak);
+      CHECK(ringing_recording == silent_recording);
       CHECK(processor.resonator_loop_feedback_ == 0.0f);
       CHECK(processor.resonator_.odd_[1].state_1_[0] != 0.0f);
       CHECK(processor.resonator_.odd_[2].state_1_[0] == 0.0f);
@@ -779,12 +791,13 @@ void TestBloomFeedbackResonator() {
     }
   }
   float peak;
+  uint64_t recording;
   RunBloomResonator(Processor::MEDIA_VINTAGE_DIGITAL, RESONATOR_FEEDBACK,
-      0, 1.0f, false, &peak);
+      0, 1.0f, false, &peak, &recording);
   CHECK(processor.resonator_loop_feedback_ == mix.feedback);
   CHECK(processor.resonator_.odd_[2].state_1_[0] != 0.0f);
   RunBloomResonator(Processor::MEDIA_DIGITAL, RESONATOR_AFTER_GRAINS,
-      0, 1.0f, false, &peak);
+      0, 1.0f, false, &peak, &recording);
   CHECK(processor.resonator_.odd_[2].state_1_[0] != 0.0f);
 }
 

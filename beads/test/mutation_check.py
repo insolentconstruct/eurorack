@@ -39,10 +39,10 @@ import time
 
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 root = pathlib.Path.cwd()
-# The expanded reverb has a post-reverb render in both mix orders.
+# The expanded reverb has a pre-reverb render in both mix orders.
 bloom_resonator = (
     '#ifdef BEADS_EXTENDED_REVERB\n'
-    '    if (resonator_after_bloom) {\n'
+    '    if (resonator_before_bloom) {\n'
     '      ProcessResonator(\n'
     '          parameters.pitch, strike, out, size, kBloomResonatorModes);\n'
     '    }\n'
@@ -1726,13 +1726,13 @@ cases = [
   ('TestReverbOnGrains', 'mix', 'beads/dsp/processor_options.cc',
     'if (send || (options_ & OPTION_FLAG_REVERB_ON_GRAINS)) {', 'if (false) {'),
   ('TestReverbOnGrains', 'mix', 'beads/dsp/processor_options.cc',
-    render_reverb + bloom_resonator + mix_dry_wet,
-    mix_dry_wet + render_reverb + bloom_resonator),
+    bloom_resonator + render_reverb + mix_dry_wet,
+    mix_dry_wet + bloom_resonator + render_reverb),
   ('TestReverbOnGrains', 'mix', 'beads/dsp/processor_options.cc',
     "    // Clouds' order: the reverb returns with the grains.\n"
     '    pre_reverb_limiter_.Process(out, size);\n'
-    '    BEADS_DECAY_RENDER(ProcessReverb)(mix_parameters.reverb_amount, out, size);',
-    '    pre_reverb_limiter_.Process(out, size);'),
+    + bloom_resonator + render_reverb,
+    '    pre_reverb_limiter_.Process(out, size);\n' + bloom_resonator),
   ('TestOptionsBlockMatchesStock', 'mix', 'beads/dsp/processor_options.cc',
     '    if (diffusion_ > 0.0f && !delay_mode) {',
     '    if (diffusion_ > 0.0f) {'),
@@ -2399,10 +2399,10 @@ cases = [
     '      }\n      recorded = in;'),
   ('TestResonatorBeforeBuffer', 'resonator', 'beads/dsp/processor_options.cc',
     '    QuantizeDrySignal(in, dry_signal, size);\n'
-    '    if (resonator && !resonator_after_bloom &&\n'
+    '    if (resonator && !resonator_before_bloom &&\n'
     '        (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {',
     '    QuantizeDrySignal(recorded, dry_signal, size);\n'
-    '    if (resonator && !resonator_after_bloom &&\n'
+    '    if (resonator && !resonator_before_bloom &&\n'
     '        (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {'),
   ('TestResonatorStrike', 'resonator', 'beads/dsp/processor_options.cc',
     '(seed || attack_trigger_ || AttackOnset());',
@@ -2541,22 +2541,22 @@ cases = [
     '  const int kBloomResonatorModes = 16;',
     '  const int kBloomResonatorModes = 24;'),
   ('TestBloomFeedbackResonator', 'resonator', 'beads/dsp/processor_options.cc',
-    'resonator_after_bloom = sr == 48000.0f && !spectral_ &&',
-    'resonator_after_bloom = !spectral_ &&'),
+    'resonator_before_bloom = sr == 48000.0f && !spectral_ &&',
+    'resonator_before_bloom = !spectral_ &&'),
   ('TestBloomFeedbackResonator', 'resonator', 'beads/dsp/processor_options.cc',
-    'if (resonator && !resonator_after_bloom &&\n'
+    'if (resonator && !resonator_before_bloom &&\n'
     '        (options_ & OPTION_FLAG_RESONATOR_INPUT)) {',
     'if (resonator && (options_ & OPTION_FLAG_RESONATOR_INPUT)) {'),
   ('TestBloomFeedbackResonator', 'resonator', 'beads/dsp/processor_options.cc',
-    'if (resonator && !resonator_after_bloom &&\n'
+    'if (resonator && !resonator_before_bloom &&\n'
     '        (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {',
     'if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {'),
   ('TestBloomFeedbackResonator', 'resonator', 'beads/dsp/processor_options.cc',
-    render_reverb + bloom_resonator + mix_dry_wet,
-    bloom_resonator + render_reverb + mix_dry_wet),
+    bloom_resonator + render_reverb + mix_dry_wet,
+    render_reverb + bloom_resonator + mix_dry_wet),
   ('TestBloomFeedbackResonator', 'resonator', 'beads/dsp/processor_options.cc',
-    render_reverb + bloom_resonator + '  }\n',
-    bloom_resonator + render_reverb + '  }\n'),
+    bloom_resonator + render_reverb + '  }\n',
+    render_reverb + bloom_resonator + '  }\n'),
   ('TestBloomFeedbackResonator', 'resonator', 'beads/dsp/processor_options.cc',
     '(options_ & kResonatorFlags) == kResonatorFlags;',
     '(options_ & kResonatorFlags);'),
