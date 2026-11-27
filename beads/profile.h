@@ -80,6 +80,13 @@ enum AmountSlot {
   AMOUNT_LAST
 };
 
+enum ProcessorMode {
+  PROCESSOR_GRANULAR = 0,
+  PROCESSOR_SPECTRAL = 1,
+  PROCESSOR_OLIVERB = 2,
+  PROCESSOR_ABYSS = 3
+};
+
 enum ProfileFeature {
   FEATURE_NONE = 0,
   FEATURE_PITCH = 1,
@@ -136,6 +143,7 @@ enum ProfileFeature {
   FEATURE_GAIN_CEILING = 52,
   FEATURE_MANUAL_DELAY = 53,
   FEATURE_REVERB_DECAY = 54,
+  FEATURE_TIME_CV_RANGE = 55,
   FEATURE_LAST
 };
 

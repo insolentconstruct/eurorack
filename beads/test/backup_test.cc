@@ -40,6 +40,7 @@
 #include "beads/settings.h"
 #undef private
 
+#include "beads/dsp/delay_line.h"
 #include "beads/dsp/processor.h"
 
 bool test_locked = true;
@@ -240,6 +241,56 @@ void WriteStock(int media, int mono, int write_ptr, uint8_t seed) {
   kHeader->write_ptr = write_ptr;
   kHeader->media = media;
   kHeader->mono = mono;
+}
+
+typedef Item<RESOLUTION_12_BIT, 2> PackedStereoItem;
+
+struct LegacyStereoItem {
+  int16_t l : 12;
+  int16_t r : 12;
+} __attribute__((packed));
+
+STATIC_ASSERT(sizeof(LegacyStereoItem) == 3, legacy_stereo_item_size);
+STATIC_ASSERT(sizeof(PackedStereoItem) == 3, packed_stereo_item_size);
+
+void TestPackedStereoFormat() {
+  test_checker.Start("TestPackedStereoFormat");
+  for (int l = -2048; l < 2048; ++l) {
+    for (int r = -2048; r < 2048; ++r) {
+      LegacyStereoItem legacy;
+      legacy.l = l;
+      legacy.r = r;
+      FloatFrame frame;
+      frame.l = l / 2048.0f;
+      frame.r = r / 2048.0f;
+      PackedStereoItem packed;
+      packed.Store(0, frame);
+      if (!CHECK(memcmp(&packed, &legacy, sizeof(legacy)) == 0)) {
+        return;
+      }
+      memcpy(&packed, &legacy, sizeof(legacy));
+      const IntFrame raw = packed.raw(0);
+      const FloatFrame scaled = packed.value(0);
+      if (!CHECK(raw.l == l && raw.r == r)
+          || !CHECK(scaled.l == frame.l && scaled.r == frame.r)) {
+        return;
+      }
+    }
+  }
+  const FloatFrame inputs[] = {
+    { -1.0f / 32768.0f, 15.0f / 32768.0f },
+    { -17.0f / 32768.0f, 1.25f },
+    { -1.25f, -1.0f }
+  };
+  for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); ++i) {
+    LegacyStereoItem legacy;
+    legacy.l = Clip16(static_cast<int32_t>(inputs[i].l * 32768.0f)) >> 4;
+    legacy.r = Clip16(static_cast<int32_t>(inputs[i].r * 32768.0f)) >> 4;
+    PackedStereoItem packed;
+    packed.Store(0, inputs[i]);
+    CHECK(memcmp(&packed, &legacy, sizeof(legacy)) == 0);
+  }
+  printf("PASS all 16,777,216 packed stereo pairs\n");
 }
 
 void TestFrozenTrimBackup() {
@@ -748,6 +799,25 @@ void TestLockedBackup() {
   TestFlashRepairAll();
 }
 
+void TestBackupLocksFlash() {
+  test_checker.Start("TestBackupLocksFlash");
+  for (int low_supply = 0; low_supply < 2; ++low_supply) {
+    Wipe();
+    Rig r;
+    r.Boot();
+    test_locked = true;
+    TestFlash().supply_low = low_supply;
+    r.backup.remaining_sectors_ = 6;
+    r.backup.EraseSector();
+    CHECK(test_locked);
+    r.backup.remaining_bytes_ = kAudio;
+    r.backup.write_offset_ = 0;
+    r.backup.WriteBlock();
+    CHECK(test_locked);
+    TestFlash().supply_low = false;
+  }
+}
+
 void TestEraseDamagedSectors() {
   test_checker.Start("TestEraseDamagedSectors");
   Wipe();
@@ -907,6 +977,106 @@ void TestSupplyDropBackup() {
   CHECK(TestFlash().low_supply_writes == 0);
 }
 
+void TestRetryWhileFrozen() {
+  test_checker.Start("TestRetryWhileFrozen");
+  const int drops[] = { 1, 6, 24006 };
+  for (size_t i = 0; i < sizeof(drops) / sizeof(drops[0]); ++i) {
+    Wipe();
+    Rig r;
+    CHECK(!r.Boot());
+    processor.Configure(Processor::MEDIA_DIGITAL, false);
+    Fill(23);
+    TestFlash().supply_budget = drops[i];
+    r.Freeze(0);
+    CHECK(TestFlash().supply_low && !r.backup.busy());
+    CHECK(!r.settings.state().frozen);
+    TestFlash().supply_low = false;
+    const int erases = test_erases;
+    for (int ms = 0; ms < 9999; ++ms) {
+      system_clock.Tick();
+      r.backup.Process(true);
+    }
+    CHECK(test_erases == erases);
+    system_clock.Tick();
+    r.backup.Process(true);
+    CHECK(test_erases == erases + 1);
+    while (r.backup.busy()) {
+      r.backup.Process(true);
+    }
+    CHECK(r.settings.state().frozen);
+    Rig after;
+    CHECK(after.Boot() && Restored(23));
+  }
+}
+
+void TestBackupRetryLimit() {
+  test_checker.Start("TestBackupRetryLimit");
+  Wipe();
+  Rig r;
+  CHECK(!r.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  test_fail_at = test_ops + 7;
+  CHECK(r.Freeze(0));
+  for (int delay = 10000; delay <= 40000; delay *= 2) {
+    const int ops = test_ops;
+    test_fail_at = ops + 7;
+    Run(r, true, delay - 1);
+    CHECK(test_ops == ops);
+    Run(r, true, 6);
+    CHECK(test_ops == ops + 7);
+    CHECK(!r.backup.busy() && !r.settings.state().frozen);
+  }
+  const int ops = test_ops;
+  test_fail_at = 0;
+  Run(r, true, 640000);
+  CHECK(test_ops == ops);
+  CHECK(!r.settings.state().frozen);
+}
+
+void TestBackupRetryStateSave() {
+  test_checker.Start("TestBackupRetryStateSave");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  processor.write_ptr_ = 345;
+  Fill(24);
+  // Supply falls after the header is programmed, before the settings flag.
+  const int erases = test_erases;
+  TestFlash().supply_budget = 24007;
+  CHECK(rig.Freeze(0));
+  CHECK(TestFlash().supply_low && kHeader->tag == 0x5a5a5246);
+  const int ops = test_ops;
+  Run(rig, true, 10000);
+  CHECK(test_ops == ops);  // The first retry still has low supply.
+  TestFlash().supply_low = false;
+  Run(rig, true, 19999);
+  CHECK(test_ops == ops);
+  Run(rig, true, 1);
+  CHECK(test_ops > ops && test_erases == erases + 6);
+  Rig after;
+  CHECK(after.Boot() && processor.write_ptr_ == 345 && Restored(24));
+}
+
+void TestBackupRetryStateExhausted() {
+  test_checker.Start("TestBackupRetryStateExhausted");
+  Wipe();
+  Rig rig;
+  CHECK(!rig.Boot());
+  processor.Configure(Processor::MEDIA_DIGITAL, false);
+  Fill(25);
+  TestFlash().supply_budget = 24007;
+  CHECK(rig.Freeze(0));
+  CHECK(TestFlash().supply_low && kHeader->tag == 0x5a5a5246);
+  Run(rig, true, 70000);
+  CHECK(!rig.backup.saving() && !rig.settings.state().frozen);
+  TestFlash().supply_low = false;
+  // An unrelated settings save must not commit the abandoned frozen flag.
+  rig.Autosave(true);
+  Rig after;
+  CHECK(!after.Boot());
+}
+
 void OnUnmaskedRead(int) {
   printf("ERROR: %s: unmasked read of a damaged flash word\n",
       test_checker.test());
@@ -933,6 +1103,7 @@ int main() {
   TestFrozenTrimBackup();
   TestFormat();
   TestStock();
+  TestPackedStereoFormat();
   TestCorruption();
   TestPowerLoss();
   TestFailedOperations();
@@ -941,10 +1112,15 @@ int main() {
   TestFrozenNoReads();
   TestStaleFlags();
   TestLockedBackup();
+  TestBackupLocksFlash();
   TestEraseDamagedSectors();
   TestRetriedBufferErase();
   TestStuckBufferErase();
   TestLowSupplyBackup();
+  TestRetryWhileFrozen();
+  TestBackupRetryLimit();
+  TestBackupRetryStateSave();
+  TestBackupRetryStateExhausted();
   TestSupplyDropBackup();
   return test_checker.failures() ? 1 : 0;
 }

@@ -29,6 +29,7 @@
 #include "beads/engine_transition.h"
 
 #include "beads/ui.h"
+#include "stmlib/system/system_clock.h"
 
 namespace beads {
 
@@ -42,34 +43,70 @@ void EngineTransition::Init(Codec* codec, PlaitsSynth* plaits_synth,
   bank_size_ = bank_size;
   bank_owner_ = SYNTH_SILENT;
   clouds_style_ = false;
+  reverb_character_ = REVERB_STOCK;
   reverb_style_gain_ = 1.0f;
   reverb_style_previous_gain_ = 1.0f;
   codec_fade_ = false;
   codec_running_ = false;
   codec_sample_rate_ = 0;
+  codec_retry_rate_ = 0;
 }
 
 void EngineTransition::Start(
-    int sample_rate, Codec::FillBufferCallback callback) {
-  codec_transition_frames_ = kBlockRate / 4;
+    int sample_rate, Codec::FillBufferCallback callback, bool blank_output) {
+  codec_transition_frames_ = blank_output ? kBlockRate / 4 : 0;
   codec_fade_ = false;
   if (codec_running_ && sample_rate == codec_sample_rate_) {
     // Same clocks: the converter played silence while paused.
     codec_->Resume(callback);
     return;
   }
-  if (codec_sample_rate_) {
-    codec_->Restart(
-        codec_sample_rate_, sample_rate, sample_rate / kBlockRate, callback);
-  } else {
-    codec_->Start(sample_rate, sample_rate / kBlockRate, callback);
+  StartCodec(sample_rate, callback);
+}
+
+void EngineTransition::StartCodec(
+    int sample_rate, Codec::FillBufferCallback callback) {
+  const size_t block_size = sample_rate / kBlockRate;
+  codec_running_ = codec_sample_rate_ || codec_retry_rate_
+      ? codec_->Restart(codec_sample_rate_, sample_rate, block_size, callback)
+      : codec_->Start(sample_rate, block_size, callback);
+  codec_sample_rate_ = codec_running_ ? sample_rate : 0;
+  codec_retry_rate_ = codec_running_ ? 0 : sample_rate;
+  if (!codec_running_) {
+    codec_retry_callback_ = callback;
+    codec_retry_time_ = stmlib::system_clock.milliseconds();
   }
-  codec_running_ = true;
-  codec_sample_rate_ = sample_rate;
+}
+
+bool EngineTransition::RetryCodec() {
+  if (!codec_retry_rate_) {
+    return false;
+  }
+  if (stmlib::system_clock.milliseconds() - codec_retry_time_ >= 100) {
+    StartCodec(codec_retry_rate_, codec_retry_callback_);
+  }
+  return true;
 }
 
 void EngineTransition::Pause() {
   codec_->Pause();
+}
+
+void EngineTransition::SetReverbCharacter(
+    uint8_t character, Processor* processor, Synth* synth) {
+  reverb_character_ = character;
+  clouds_style_ = character == REVERB_CLOUDS;
+  processor->SetReverbCharacter(character);
+  synth->SetReverbCharacter(character, false);
+  plaits_synth_->SetReverbCharacter(character, false);
+  rings_synth_->SetReverbCharacter(character, false);
+}
+
+void EngineTransition::Resume(Codec::FillBufferCallback callback) {
+  codec_fade_ = false;
+  if (codec_running_) {
+    codec_->Resume(callback);
+  }
 }
 
 // Codec paused: one synth at a time owns delay bank 0, built from zero.
@@ -101,10 +138,10 @@ void EngineTransition::SwapPaused(SynthEngine owner, SynthEngine playing,
   }
   playing_synth_ = playing;
   ui_->set_playing_synth(playing);
+  codec_fade_ = false;
   if (codec_running_) {
     codec_->Resume(callback);
   }
-  codec_fade_ = false;
 }
 
 }  // namespace beads

@@ -37,6 +37,10 @@
 #include "beads/drivers/pots_adc.h"
 #include "beads/settings.h"
 
+#ifndef TEST
+#include <stm32h7xx_hal.h>
+#endif  // TEST
+
 namespace beads {
 
 class CvChannel {
@@ -156,6 +160,21 @@ class CvReader {
   
   void Init(const Settings* settings);
   void Read();
+  void UseFineTimeCv(const AdcCalibrationData& calibration);
+
+  void RefreshFineTimeCv(const AdcCalibrationData& calibration) {
+    const float scale = calibration.scale * 0.125f;
+    const float offset = calibration.offset * 0.125f;
+#ifndef TEST
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+#endif  // TEST
+    fine_time_cv_.scale = scale;
+    fine_time_cv_.offset = offset;
+#ifndef TEST
+    __set_PRIMASK(primask);
+#endif  // TEST
+  }
   
   inline const uint16_t* cv_values() { return cv_.values(); }
   
@@ -203,6 +222,7 @@ class CvReader {
   
  private:
   bool pitch_on_notch_;
+  AdcCalibrationData fine_time_cv_;
   CvAdc cv_;
   PotsAdc pots_;
   

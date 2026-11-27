@@ -50,19 +50,19 @@ const int kNumOptionPages = 7;
 // Value counts of the page features, checked against their enums.
 enum PageValues {
   PAGE_VALUES_PITCH = 16,
-  PAGE_VALUES_REVERB = 2,
+  PAGE_VALUES_REVERB = 4,
   PAGE_VALUES_DELAY = 3,
-  PAGE_VALUES_PROCESSOR = 2,
+  PAGE_VALUES_PROCESSOR = 4,
   PAGE_VALUES_LIMITER = 3,
   PAGE_VALUES_FROZEN = 2,
   PAGE_VALUES_SYNTH = 3,
   PAGE_VALUES_ATTACKS = 3,
   PAGE_VALUES_SYNTH_START = 2,
   PAGE_VALUES_INTERVALS = 3,
-  PAGE_VALUES_BRIGHTNESS = 3,
+  PAGE_VALUES_BRIGHTNESS = 4,
   PAGE_VALUES_SEED_LATCH = 4,
   PAGE_VALUES_TIME_SCAN = 2,
-  PAGE_VALUES_RESONATOR = 4,
+  PAGE_VALUES_RESONATOR = 5,
   PAGE_VALUES_RESONATOR_MATERIAL = 8,
   PAGE_VALUES_RESONATOR_RING = 4,
   PAGE_VALUES_GAIN_CEILING = 4,
@@ -128,7 +128,7 @@ struct OptionValue {
 };
 const int kNumOptionColors = 3;
 extern const Leds::Color kOptionColors[kNumOptionColors];
-const size_t kNumOptionValues = 18;
+const size_t kNumOptionValues = 22;
 // The indications other than the shared colours, then none.
 extern const OptionValue kOptionValues[kNumOptionValues];
 // A value's colour and pattern on its options page.
@@ -186,10 +186,10 @@ class Options {
 
   inline bool commit_requested() const { return commit_; }
 
-  inline void ClearCommit() {
-    dirty_ = false;
-    commit_ = false;
-  }
+  inline bool edited(ProfileFeature feature) const { return edited_[feature]; }
+
+  void PublishGesture(ProfileFeature feature, uint8_t value);
+  void ClearCommit();
 
  private:
   bool PageHasPitch() const;
@@ -207,6 +207,7 @@ class Options {
   bool any_page_;
   // The values on the pages, committed together.
   uint8_t preview_[FEATURE_LAST];
+  bool edited_[FEATURE_LAST];
 
   // SysTick publishes transitions and a stable batch to main.
   volatile Stage stage_;

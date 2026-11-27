@@ -96,6 +96,7 @@ const uint8_t kRecordOffsets[FEATURE_LAST] = {
   28,  // Gain ceiling.
   0,  // Manual delay.
   0,  // Reverb decay.
+  0,  // Time cv range.
 };
 
 bool Settings::Init(bool recovery_mode) {
@@ -173,8 +174,16 @@ bool Settings::Init(bool recovery_mode,
   if (!chunk_storage_.record_found()) {
     stored_record_.version = 0;  // The first save writes one.
   }
+  const bool new_profile = !record_valid || \
+      stored_record_.profile_identity != profile_.identity();
+  bool start_quality_unsaved = new_profile && start_quality && \
+      stored_state_.media != 4 - start_quality;
   if (recovery_mode && !profile_locked_) {
     record_ = default_record;  // SEED at power-up resets the options.
+  }
+  if (start_quality_unsaved &&
+      record_.profile_identity == profile_.identity()) {
+    record_.profile_identity = ~profile_.identity();
   }
   
   // Restore the module's calibration before writing; keep loaded states.
@@ -198,11 +207,12 @@ bool Settings::Init(bool recovery_mode,
       stored_state_ = defaults;
     }
     status = STORAGE_RESTORED;
-  } else if (lost) {
+  } else if (lost || implausible) {
     status = STORAGE_DAMAGED;
   }
-  if (status == STORAGE_RESTORED) {
-    chunk_storage_.RestorePersistentData();
+  if (status == STORAGE_RESTORED && chunk_storage_.RestorePersistentData() &&
+      start_quality && stored_state_.media == 4 - start_quality) {
+    start_quality_unsaved = false;
   }
   
   if (status == STORAGE_DAMAGED) {
@@ -211,38 +221,47 @@ bool Settings::Init(bool recovery_mode,
     chunk_storage_.Lock();
     stored_state_ = defaults;
     record_ = default_record;
+    if (start_quality_unsaved) {
+      record_.profile_identity = ~profile_.identity();
+    }
     persistent_data_ = factory;
     if (recovery_mode) {
       repair_ = chunk_storage_.Repair()
           ? STORAGE_REPAIR_CALIBRATION_RESET
           : STORAGE_REPAIR_FAILED;
+      if (repair_ == STORAGE_REPAIR_CALIBRATION_RESET) {
+        start_quality_unsaved = false;
+      }
     }
   } else {
     if (recovery_mode && status == STORAGE_OK && !profile_locked_) {
       stored_state_ = defaults;
-      chunk_storage_.Recover(&persistent_data_, &stored_state_);
+      if (chunk_storage_.Recover(&persistent_data_, &stored_state_)) {
+        start_quality_unsaved = false;
+      }
     }
   }
   // Sanitize settings read from flash.
   state_ = stored_state_;
   fill(&state_.padding[0], &state_.padding[sizeof(state_.padding)], 0);
   LoadOptions();
-  const bool new_profile = !record_valid || \
-      record_.profile_identity != profile_.identity();
   CONSTRAIN(state_.media, 0, 3);
   CONSTRAIN(state_.assignable_cv_destination, 0, 3);
 
   NormalizeOptions();
   ApplyProfile();
-  if (recovery_mode && !profile_locked_) {
-    SaveOptions();
-  }
   // A newly installed profile starts in its quality once; a frozen recording
   // returning from flash keeps the quality it was made in.
   const bool restores = state_.frozen && !state_.disable_autosave && \
-      !spectral();
+      processor_mode() == PROCESSOR_GRANULAR;
+  start_quality_pending_ = false;
   if (new_profile && start_quality && !restores) {
     state_.media = 4 - start_quality;
+    start_quality_pending_ = start_quality_unsaved ||
+        state_.media != stored_state_.media;
+  }
+  if (recovery_mode && !profile_locked_) {
+    SaveOptions();
   }
   if (!state_.gain) {
     state_.gain = DefaultGain();
@@ -269,13 +288,25 @@ bool Settings::CalibrationPlausible(
 }
 
 bool Settings::SavePersistentData() {
+  if (!CalibrationPlausible(persistent_data_, factory_)) {
+    PersistentData durable;
+    if (ReadPersistentData(&durable)) {
+      persistent_data_ = durable;
+    }
+    return false;
+  }
   fill(
       &persistent_data_.padding[0],
       &persistent_data_.padding[sizeof(persistent_data_.padding)],
       0);
   PackRecord();
   PackState();
-  return chunk_storage_.SavePersistentData();
+  const bool saved = chunk_storage_.SavePersistentData();
+  if (saved && start_quality_pending_) {
+    start_quality_pending_ = false;
+    SaveOptions();
+  }
+  return saved;
 }
 
 bool Settings::ReadPersistentData(PersistentData* data) {
@@ -305,16 +336,37 @@ void Settings::NormalizeOptions() {
   }
 }
 
-// The options first: a cut before the state leaves a pair stock reads.
-void Settings::SaveState() {
+// Usually write options first, then append the stock State.
+bool Settings::SaveState() {
+  if (start_quality_pending_) {
+    NormalizeOptions();
+    ApplyProfile();
+    PackState();
+    if (!chunk_storage_.SaveState()) {
+      return false;
+    }
+    start_quality_pending_ = false;
+    SaveOptions();
+    return true;
+  }
   SaveOptions();
   PackState();
-  chunk_storage_.SaveState();
+  return chunk_storage_.SaveState();
 }
 
 void Settings::SaveOptions() {
   NormalizeOptions();
   ApplyProfile();
+  // Make the start quality durable before recording the new profile identity.
+  if (start_quality_pending_) {
+    const uint8_t media = stored_state_.media;
+    stored_state_.media = state_.media;
+    if (!chunk_storage_.SaveState()) {
+      stored_state_.media = media;
+      return;
+    }
+    start_quality_pending_ = false;
+  }
   PackRecord();
   if ((chunk_storage_.record_pending() || \
           memcmp(&record_, &stored_record_, sizeof(OptionsRecord))) && \
@@ -358,29 +410,49 @@ void Settings::DefaultRecord(OptionsRecord* record) const {
   record->version = kOptionsRecordVersion;
   record->cv_target = 0;
   record->profile_identity = profile_.identity();
-  // Full-byte options belong to the profile until they are set.
   uint8_t* bytes = reinterpret_cast<uint8_t*>(record);
-  for (int i = 1; i < FEATURE_LAST; ++i) {
-    if (kRecordOffsets[i] && !kFeatureDefinitions[i].values) {
-      bytes[kRecordOffsets[i]] = profile_.entry(ProfileFeature(i)).value;
-    }
-  }
+  bytes[kRecordOffsets[FEATURE_WIDTH]] = profile_.entry(FEATURE_WIDTH).value;
+  bytes[kRecordOffsets[FEATURE_DIFFUSION]] =
+      profile_.entry(FEATURE_DIFFUSION).value;
 }
 
 void Settings::LoadOptions() {
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&record_);
+  // Earlier records can identify edits only while their profile still matches.
+  amount_overrides_ = record_.amount_overrides;
+  if (amount_overrides_ == 0xff) {
+    amount_overrides_ = 0;
+    if (record_.profile_identity == profile_.identity()) {
+      if (bytes[kRecordOffsets[FEATURE_WIDTH]] !=
+          profile_.entry(FEATURE_WIDTH).value) {
+        amount_overrides_ |= OptionsRecord::WIDTH_OVERRIDE;
+      }
+      if (bytes[kRecordOffsets[FEATURE_DIFFUSION]] !=
+          profile_.entry(FEATURE_DIFFUSION).value) {
+        amount_overrides_ |= OptionsRecord::DIFFUSION_OVERRIDE;
+      }
+    }
+  }
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const ProfileFeature feature = ProfileFeature(i);
     const uint8_t offset = kRecordOffsets[i];
     uint8_t value = profile_.entry(feature).value;
     if (feature == FEATURE_MONOPHONIC) {
       value = state_.monophonic_mode;  // Stock State keeps it.
-    } else if (offset && (!kFeatureDefinitions[i].values ||
+    } else if (feature == FEATURE_WIDTH) {
+      if (amount_overrides_ & OptionsRecord::WIDTH_OVERRIDE) {
+        value = bytes[offset];
+      }
+    } else if (feature == FEATURE_DIFFUSION) {
+      if (amount_overrides_ & OptionsRecord::DIFFUSION_OVERRIDE) {
+        value = bytes[offset];
+      }
+    } else if (offset &&
 #ifdef PLAITS_BLOBS
         // A saved bank past this profile's banks takes its start bank.
-        bytes[offset] < profile_.Values(feature))) {
+        bytes[offset] < profile_.Values(feature)) {
 #else
-        bytes[offset] < kFeatureDefinitions[i].values)) {
+        bytes[offset] < kFeatureDefinitions[i].values) {
 #endif  // PLAITS_BLOBS
       value = bytes[offset];  // A byte past the values is not set.
     }
@@ -390,15 +462,38 @@ void Settings::LoadOptions() {
 }
 
 void Settings::PackRecord() {
+  record_.amount_overrides = amount_overrides_;
   uint8_t* bytes = reinterpret_cast<uint8_t*>(&record_);
   for (int i = 1; i < FEATURE_LAST; ++i) {
     const uint8_t offset = kRecordOffsets[i];
     if (offset && profile_.adjustable(ProfileFeature(i))) {
-      bytes[offset] = FeatureValue(ProfileFeature(i));
+      const ProfileFeature feature = ProfileFeature(i);
+      const uint8_t value = FeatureValue(feature);
+      bytes[offset] = value;
+      if (value != profile_.entry(feature).value) {
+        if (feature == FEATURE_WIDTH) {
+          record_.amount_overrides |= OptionsRecord::WIDTH_OVERRIDE;
+        } else if (feature == FEATURE_DIFFUSION) {
+          record_.amount_overrides |= OptionsRecord::DIFFUSION_OVERRIDE;
+        }
+      }
     }
   }
+  // A record with no override stores the named profile's defaults.
+  if (!(record_.amount_overrides & OptionsRecord::WIDTH_OVERRIDE)) {
+    bytes[kRecordOffsets[FEATURE_WIDTH]] = profile_.entry(FEATURE_WIDTH).value;
+  }
+  if (!(record_.amount_overrides & OptionsRecord::DIFFUSION_OVERRIDE)) {
+    bytes[kRecordOffsets[FEATURE_DIFFUSION]] =
+        profile_.entry(FEATURE_DIFFUSION).value;
+  }
+  if (!record_.amount_overrides) {
+    record_.amount_overrides = 0xff;
+  }
   record_.version = kOptionsRecordVersion;
-  record_.profile_identity = profile_.identity();
+  if (!start_quality_pending_) {
+    record_.profile_identity = profile_.identity();
+  }
   // Any new CV assignment replaces the dormant one.
   if (cv_target_ || state_.assignable_cv_destination) {
     dormant_destination_ = 0;

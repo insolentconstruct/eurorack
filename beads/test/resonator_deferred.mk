@@ -26,6 +26,7 @@ TARGET = resonator_deferred_test
 include beads/test/plaits_sources.mk
 CC_FILES       = 		resonator_deferred_test.cc \
 		beads.cc \
+		abyss.cc \
 		engine_transition.cc \
 		cv_reader.cc \
 		normalization_detector.cc \
@@ -45,6 +46,8 @@ CC_FILES       = 		resonator_deferred_test.cc \
 		diffuser.cc \
 		reverb.cc \
 		reverb_decay.cc \
+		reverb_characters.cc \
+		extended_audio.cc \
 		mu_law.cc \
 		delay_controller.cc \
 		delay_clock.cc \

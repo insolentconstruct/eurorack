@@ -34,6 +34,8 @@
 
 #include "stmlib/stmlib.h"
 
+#include <algorithm>
+
 #include "beads/dsp/frame.h"
 #include "beads/dsp/limiter.h"
 #include "plaits/dsp/physical_modelling/resonator.h"
@@ -66,6 +68,7 @@ struct ResonatorMaterial {
   float structure;
   float brightness;
   const ResonatorModes* modes;  // NULL: Rings' stiffness curve.
+  float chord_gain;  // A grain's strike over the grains' level.
 };
 
 // Per side, each mode's |level| a, ratio r and Q factor d over the base Q,
@@ -90,6 +93,17 @@ const float kResonatorNoSpill = 1.0e9f;
 // Outward rounding of the bound.
 const float kResonatorBoundMargin = 1.001f;
 
+// Chord: each voice is one batch, the Material's first eight modes.
+const int kNumChordVoices = kNumResonatorModes / 8;
+// A voice is retuned only 42 dB under its loudest, so that a tail whose
+// strikes partly cancelled is still 40 dB down.
+const float kChordRetuneLevel = 0.00794328f;
+const float kChordSilence = 1.0e-4f;
+// A grain within half a semitone of a voice strikes it as it is.
+const float kChordNoteTolerance = 0.9715319f;
+// A grain's strike follows the grains' level, held for half a second.
+const float kChordLevelRelease = 0.5f;
+
 const int kNumResonatorMaterials = 8;
 const int kNumResonatorRingTimes = 4;
 
@@ -103,6 +117,7 @@ class ModalResonator {
   ~ModalResonator() { }
 
   void Init(float sample_rate);
+  void InitChord(float sample_rate);
   // Odd modes go to out, even modes to aux; aux == out gives the mono sum.
   void Process(const float* in, float* out, float* aux, size_t size);
   // Adds the limited stereo resonance to the frames.
@@ -160,8 +175,34 @@ class ModalResonator {
     glide_ = modes_ ? modes_->glide : 0.0f;
   }
 
+  // Chord: strikes[v * size + i] excites voice v at sample i. A grain at
+  // this pitch ratio strikes its nearest voice, at gain times Rings' strum;
+  // only a quiet voice is retuned.
+  void StrikeVoice(
+      float ratio,
+      size_t offset,
+      float gain,
+      float* strikes,
+      size_t size);
+  // SEED and hits strike every tuned voice, as Rings' strum.
+  void StrikeChord(float* strikes, size_t size);
+  void RenderChord(const float* strikes, FloatFrame* frames, size_t size);
+
  private:
   void ProcessModes(const float* in, float* out, float* aux, size_t size);
+  void Strike(
+      int voice,
+      size_t offset,
+      float gain,
+      float* strikes,
+      size_t size);
+  // Another object starts the voices unbent.
+  inline void UpdateChordModes() {
+    if (modes_ != chord_modes_) {
+      std::fill(&chord_glide_[0], &chord_glide_[kNumChordVoices], 0.0f);
+      chord_modes_ = modes_;
+    }
+  }
 
   float frequency_;
   float structure_;
@@ -178,6 +219,14 @@ class ModalResonator {
   plaits::ResonatorSvf<plaits::kModeBatchSize> even_[kNumResonatorModes / 8];
   // The loop's bound: it rises at once and falls as the slowest mode decays.
   float peak_gain_;
+
+  // Pitch ratio (0 before the first strike), estimated level and peak.
+  float chord_ratio_[kNumChordVoices];
+  float chord_level_[kNumChordVoices];
+  float chord_peak_[kNumChordVoices];
+  float chord_peak_gain_[kNumChordVoices];
+  float chord_glide_[kNumChordVoices];
+  const ResonatorModes* chord_modes_;
 
   DISALLOW_COPY_AND_ASSIGN(ModalResonator);
 };

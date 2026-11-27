@@ -37,7 +37,7 @@ reject id-zero : 0 1 0 0 0 0
 reject unknown-id : 254 1 0 0 0 0
 reject repeated-id : 2 1 1 0 0 0, 2 1 0 0 0 0
 reject state-3 : 2 3 0 0 0 0
-reject value-out-of-range : 2 1 2 0 0 0
+reject value-out-of-range : 2 1 4 0 0 0
 reject page-slot-22 : 1 2 0 22 0 0
 reject page-while-fixed : 1 1 0 1 0 0
 reject page-without-page : 11 2 0 1 0 0

@@ -4,6 +4,10 @@ on:
   push:
     branches: ['**']
     tags: ['drizzlet-*']
+    # Docs-only pushes skip the firmware build; tag pushes ignore paths and always build.
+    # Of the Markdown under beads/, the release zip packs only OPTIONS.md; vanilla trees stay in.
+    paths: ['beads/**', 'clouds/**', 'plaits/**', 'rings/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml',
+            '!beads/**/*.md', 'beads/build/docs/OPTIONS.md']
   pull_request:
     paths: ['beads/**', 'clouds/**', 'plaits/**', 'rings/**', 'stmlib', 'stm_audio_bootloader', '.gitmodules', '.github/workflows/beads.yml']
 permissions:
@@ -15,6 +19,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      blob-out: ${{ steps.emulator-inputs.outputs.blob-out }}
+      rings-out: ${{ steps.emulator-inputs.outputs.rings-out }}
+    env:
+      # Published by the image job below from drizzlet 90496334, whose recipe hash this is;
+      # used only while this checkout's recipe matches. Update both from the image job's summary.
+      TOOLCHAIN_IMAGE: ghcr.io/insolentconstruct/mi-toolchain@sha256:193a7cd574a9bbda350d4c7006e45263d1210369d307dd56e55a95482e706568
+      TOOLCHAIN_RECIPE: 7881893d9984543c63e0bf89398317ef224ce7f1af1500d53c9253c8016935fa
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -23,8 +35,23 @@ jobs:
           persist-credentials: false
       - name: Initialize only Beads dependencies
         run: git submodule update --init stmlib stm_audio_bootloader
+      # The recipe is the Dockerfile and .dockerignore, which fix the base image, packages and archive hashes.
+      - name: Pull the published compiler image if this recipe built it
+        id: pull
+        shell: bash
+        run: |
+          recipe=$( (cd beads/build && sha256sum Dockerfile .dockerignore) | sha256sum | cut -c1-64)
+          if [[ "$recipe" != "$TOOLCHAIN_RECIPE" ]]; then
+            echo "The recipe changed ($recipe); building the image."
+          elif docker pull --platform linux/amd64 "$TOOLCHAIN_IMAGE"; then
+            docker tag "$TOOLCHAIN_IMAGE" drizzlet
+            echo "pulled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The pull failed; building the image."
+          fi
       # Toolchain archives are cached by their pinned sha256, so a Launchpad outage does not fail CI.
       - name: Read the pinned toolchain hashes
+        if: steps.pull.outputs.pulled != 'true'
         id: toolchains
         run: |
           tc=$(sed -n 's/^ARG TC_SHA256=//p' beads/build/Dockerfile)
@@ -32,12 +59,13 @@ jobs:
           echo "key=toolchains-$tc-$gcc9" >> "$GITHUB_OUTPUT"
       - name: Restore the toolchain archives
         id: restore-toolchains
+        if: steps.pull.outputs.pulled != 'true'
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: beads/build/.toolchains
           key: ${{ steps.toolchains.outputs.key }}
       - name: Download the toolchain archives
-        if: steps.restore-toolchains.outputs.cache-hit != 'true'
+        if: steps.pull.outputs.pulled != 'true' && steps.restore-toolchains.outputs.cache-hit != 'true'
         run: |
           mkdir -p beads/build/.toolchains
           for name in TC GCC9; do
@@ -48,12 +76,13 @@ jobs:
             echo "$sha  beads/build/.toolchains/$name.tar.bz2" | sha256sum -c -
           done
       - name: Save the toolchain archives
-        if: steps.restore-toolchains.outputs.cache-hit != 'true'
+        if: steps.pull.outputs.pulled != 'true' && steps.restore-toolchains.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: beads/build/.toolchains
           key: ${{ steps.toolchains.outputs.key }}
       - name: Build pinned amd64 compiler and encoder
+        if: steps.pull.outputs.pulled != 'true'
         run: |
           docker build --platform linux/amd64 --target compiler \
             --build-arg TC_LOCAL=.toolchains/TC.tar.bz2 --build-arg GCC9_LOCAL=.toolchains/GCC9.tar.bz2 \
@@ -70,20 +99,28 @@ jobs:
           docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
             --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/blob-out,dst=/out" drizzlet \
             bash -c 'bash beads/test/blob_emu/build.sh /out/emu && bash beads/build/tools/blob_gate_test.sh /out/negative && bash beads/test/libm_blob_emu/build.sh /out/libm'
-      - name: Compare blob and compiled-in renders under the Cortex-M7 emulator
-        run: |
-          python3 -m venv "$RUNNER_TEMP/emu"
-          "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
-          "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/run_profiles.py blob-out/emu
-          "$RUNNER_TEMP/emu/bin/python" beads/test/libm_blob_emu/compare.py blob-out/libm
       - name: Check the Rings synth's source against vanilla Rings, gate its blob, build the references
         run: |
           mkdir -p rings-out
           docker run --rm --platform linux/amd64 --network none --user "$(id -u):$(id -g)" -w /src \
             --mount "type=bind,src=$PWD,dst=/src,readonly" --mount "type=bind,src=$PWD/rings-out,dst=/out" drizzlet \
             bash -c 'python3 beads/build/tools/rings_vanilla.py self-test --cpp arm-none-eabi-g++ && bash beads/test/rings_emu/build.sh /out'
-      - name: Compare the Rings synth blob with vanilla Rings under the Cortex-M7 emulator
-        run: '"$RUNNER_TEMP/emu/bin/python" beads/test/rings_emu/rings_compare.py rings-out'
+      # The emulator jobs compare these exact bytes; each checks the tar's hash before use.
+      - name: Pack the emulator inputs
+        id: emulator-inputs
+        run: |
+          for name in blob-out rings-out; do
+            tar --sort=name -cf "$name.tar" "$name"
+            echo "$name=$(sha256sum "$name.tar" | cut -c1-64)" >> "$GITHUB_OUTPUT"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: emulator-inputs
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            blob-out.tar
+            rings-out.tar
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: drizzlet-release-assets
@@ -125,6 +162,51 @@ jobs:
             artifacts/objects/*/objects.txt
             artifacts/objects/*/link.txt
             artifacts/objects/*/*.map
+  compare-emulator:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: blob
+            input: blob-out
+          - name: rings
+            input: rings-out
+    name: compare-emulator (${{ matrix.name }})
+    steps:
+      # The same checkout and submodules as the build job.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Initialize only Beads dependencies
+        run: git submodule update --init stmlib stm_audio_bootloader
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: emulator-inputs
+      - name: Check the inputs are the build job's bytes
+        env:
+          INPUT: ${{ matrix.input }}
+          EXPECTED: ${{ matrix.input == 'blob-out' && needs.build.outputs.blob-out || needs.build.outputs.rings-out }}
+        run: |
+          [[ "$EXPECTED" =~ ^[0-9a-f]{64}$ ]]
+          echo "$EXPECTED  $INPUT.tar" | sha256sum --strict -c -
+          tar -xf "$INPUT.tar"
+      - name: Install the Cortex-M7 emulator
+        run: |
+          python3 -m venv "$RUNNER_TEMP/emu"
+          "$RUNNER_TEMP/emu/bin/pip" install --no-cache-dir unicorn==2.1.4
+      - name: Compare blob and compiled-in renders under the Cortex-M7 emulator
+        if: matrix.name == 'blob'
+        run: |
+          "$RUNNER_TEMP/emu/bin/python" beads/test/blob_emu/run_profiles.py blob-out/emu
+          "$RUNNER_TEMP/emu/bin/python" beads/test/libm_blob_emu/compare.py blob-out/libm
+      - name: Compare the Rings synth blob with vanilla Rings under the Cortex-M7 emulator
+        if: matrix.name == 'rings'
+        run: '"$RUNNER_TEMP/emu/bin/python" beads/test/rings_emu/rings_compare.py rings-out'
   release-emulator:
     needs: build
     runs-on: ubuntu-24.04
@@ -137,11 +219,11 @@ jobs:
           - shard: 1
             scenarios: steady media
           - shard: 2
-            scenarios: clouds_style processor
+            scenarios: clouds_style processor saved_clouds
           - shard: 3
             scenarios: freeze_fade gestures
           - shard: 4
-            scenarios: ui synth release_synth
+            scenarios: ui synth release_synth chiptune_drone
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -165,7 +247,7 @@ jobs:
       - name: Check fixed reverb decay profiles
         if: matrix.shard == 4
         run: |
-          timeout 180 "$RUNNER_TEMP/emu/bin/python" beads/test/transition_emu/reverb_decay.py \
+          timeout 600 "$RUNNER_TEMP/emu/bin/python" beads/test/transition_emu/reverb_decay.py \
             artifacts/app.elf --region artifacts/region.bin
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
@@ -177,7 +259,7 @@ jobs:
   image:
     # Publishes the build image after a green build on drizzlet, so users can pull it.
     if: github.event_name == 'push' && github.ref == 'refs/heads/drizzlet' && github.repository == 'insolentconstruct/eurorack'
-    needs: build
+    needs: [build, compare-emulator, release-emulator]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -185,12 +267,20 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          fetch-depth: 0
           submodules: false
           persist-credentials: false
-          sparse-checkout: beads/build
+      - name: Initialize only Beads dependencies
+        run: git submodule update --init stmlib stm_audio_bootloader
       # No local archives: the Dockerfile downloads both toolchains and checks their pinned hashes.
       - name: Build the image
-        run: docker build --platform linux/amd64 --target compiler -t drizzlet beads/build
+        run: |
+          recipe=$( (cd beads/build && sha256sum Dockerfile .dockerignore) | sha256sum | cut -c1-64)
+          docker build --platform linux/amd64 --target compiler --label "org.beads.recipe=$recipe" -t drizzlet beads/build
+          echo "Recipe \`$recipe\`" >> "$GITHUB_STEP_SUMMARY"
+      # The build job may use a pulled image, so prove this one reproduces the pinned hashes.
+      - name: Check the image reproduces the firmware and WAV hashes
+        run: bash beads/build/build.sh "$PWD/image-check" --wav
       - name: Push to GitHub Container Registry
         env:
           GH_TOKEN: ${{ github.token }}
@@ -208,7 +298,7 @@ jobs:
           echo "Pushed \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
   release:
     if: startsWith(github.ref, 'refs/tags/drizzlet-')
-    needs: [build, release-emulator]
+    needs: [build, compare-emulator, release-emulator]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

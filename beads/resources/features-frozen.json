@@ -1,9 +1,9 @@
 {
   "features": [
     {"id": 1, "symbol": "PITCH", "values": ["Off", "Chromatic", "Fifths", "Major", "Minor", "Pentatonic major", "Pentatonic minor", "Pelog", "Raag Bhairav", "Raag Shri", "User scale 10", "User scale 11", "User scale 12", "User scale 13", "User scale 14", "User scale 15"]},
-    {"id": 2, "symbol": "REVERB", "values": ["Stock", "Clouds-style"]},
+    {"id": 2, "symbol": "REVERB", "values": ["Stock", "Clouds-style", "Plate", "Bloom"]},
     {"id": 3, "symbol": "DELAY", "values": ["Auto (Stock)", "Disabled", "Wide/smooth filter"]},
-    {"id": 4, "symbol": "PROCESSOR", "values": ["Granular (Stock)", "Spectral"]},
+    {"id": 4, "symbol": "PROCESSOR", "values": ["Granular (Stock)", "Spectral", "Oliverb", "Abyss"]},
     {"id": 5, "symbol": "LIMITER", "values": ["Stock", "Fast release", "Off"]},
     {"id": 6, "symbol": "FROZEN", "values": ["Stock", "Evolving"]},
     {"id": 7, "symbol": "SYNTH", "values": ["Beads (Stock)", "Plaits", "Rings"]},
@@ -17,7 +17,7 @@
     {"id": 15, "symbol": "VERSION", "values": ["Off", "On"]},
     {"id": 16, "symbol": "ATTENUATION", "values": ["Off", "On"]},
     {"id": 17, "symbol": "DELAY_CUE", "values": ["Off", "On"]},
-    {"id": 18, "symbol": "BRIGHTNESS", "values": ["100%", "66%", "33%"]},
+    {"id": 18, "symbol": "BRIGHTNESS", "values": ["100%", "66%", "33%", "15%"]},
     {"id": 19, "symbol": "LIVE_ASSIGN", "values": ["Off", "On"]},
     {"id": 20, "symbol": "SAVE_FREEZE", "values": ["Off", "On"]},
     {"id": 21, "symbol": "SEED_LATCH", "values": ["Off", "Ignore", "Sync", "Add"]},
@@ -40,7 +40,7 @@
     {"id": 38, "symbol": "FIRST_PAGE", "values": ["Last used", "First page"]},
     {"id": 39, "symbol": "START_QUALITY", "values": ["Keep current", "Bright digital", "Cold digital", "Sunny tape", "Scorched cassette"]},
     {"id": 40, "symbol": "GAIN_KNOB", "values": ["Not on a knob"]},
-    {"id": 41, "symbol": "RESONATOR", "values": ["Off (stock)", "After the grains", "Before the buffer", "In the feedback"]},
+    {"id": 41, "symbol": "RESONATOR", "values": ["Off (stock)", "After the grains", "Before the buffer", "In the feedback", "Chord"]},
     {"id": 42, "symbol": "RINGS_POLYPHONY", "values": ["1", "2", "4"]},
     {"id": 43, "symbol": "RESONATOR_MATERIAL", "values": ["Wood", "String", "Glass", "Bell", "Marimba", "Drum", "Bowl", "Gong"]},
     {"id": 44, "symbol": "RESONATOR_RING", "values": ["Short", "Medium", "Long", "Very long"]},
@@ -53,7 +53,8 @@
     {"id": 51, "symbol": "OUTPUT_DIVISION", "values": ["Stock", "/2", "/4", "/8", "/16"]},
     {"id": 52, "symbol": "GAIN_CEILING", "values": ["Stock (+32 dB)", "+24 dB", "+18 dB", "+12 dB"]},
     {"id": 53, "symbol": "MANUAL_DELAY", "values": ["Off", "On"]},
-    {"id": 54, "symbol": "REVERB_DECAY", "values": ["Coupled (stock)", "Short", "Medium", "Long"]}
+    {"id": 54, "symbol": "REVERB_DECAY", "values": ["Coupled (stock)", "Short", "Medium", "Long"]},
+    {"id": 55, "symbol": "TIME_CV_RANGE", "values": ["Stock", "Fine (1/8)"]}
   ],
   "records": [
     {"version": 1, "saved": [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13], [7, 14], [8, 15], [9, 16], [10, 17], [11, 18], [12, 19], [18, 20], [21, 21], [23, 22], [31, 23], [41, 24], [43, 25], [44, 26], [42, 27], [52, 28]]}

@@ -51,6 +51,11 @@ struct AdcCalibrationData {
 struct PersistentData {
   AdcCalibrationData adc_calibration[CV_ADC_CHANNEL_LAST];
   uint8_t padding[72];
+  bool SameCalibration(const PersistentData& other) const {
+    return !memcmp(adc_calibration, other.adc_calibration,
+        sizeof(adc_calibration));
+  }
+
   enum { tag = 0x494C4143 };  // CALI
 };
 
@@ -74,7 +79,10 @@ struct OptionsRecord {
   uint8_t cv_target;  // 0 none, 1 width, 2 diffusion.
   uint8_t reserved[2];
   uint32_t profile_identity;
-  uint8_t values[48];
+  uint8_t values[21];
+  uint8_t amount_overrides;
+  uint8_t reserved_tail[26];
+  enum { WIDTH_OVERRIDE = 1, DIFFUSION_OVERRIDE = 2 };
   enum { tag = 0x4C5A5244 };  // DRZL
 };
 
@@ -85,6 +93,8 @@ struct StateLayoutAssertions {
   STATIC_ASSERT(offsetof(State, padding) == 10, state_padding_offset);
   STATIC_ASSERT(sizeof(OptionsRecord) == 56, record_size);
   STATIC_ASSERT(offsetof(OptionsRecord, values) == 8, record_values_offset);
+  STATIC_ASSERT(offsetof(OptionsRecord, amount_overrides) == 29,
+      record_amount_overrides_offset);
 };
 
 const uint8_t kOptionsRecordVersion = 1;
@@ -113,7 +123,7 @@ class Settings {
   // False when the requested calibration rewrite did not complete.
   bool SavePersistentData();
   bool ReadPersistentData(PersistentData* data);
-  void SaveState();
+  bool SaveState();
 
   // Saves only the options, if they changed.
   void SaveOptions();
@@ -134,13 +144,20 @@ class Settings {
     values_[FEATURE_SYNTH_START] = on_request;
   }
 
-  inline bool spectral() const { return values_[FEATURE_PROCESSOR]; }
+  inline ProcessorMode processor_mode() const {
+    return ProcessorMode(values_[FEATURE_PROCESSOR]);
+  }
+
+  inline bool spectral() const {
+    return processor_mode() == PROCESSOR_SPECTRAL;
+  }
 
   inline void set_spectral(bool spectral) {
     values_[FEATURE_PROCESSOR] = spectral;
   }
 
-  inline bool clouds_style() const { return values_[FEATURE_REVERB]; }
+  inline uint8_t reverb_character() const { return values_[FEATURE_REVERB]; }
+  inline bool clouds_style() const { return reverb_character() == 1; }
 
   inline void set_clouds_style(bool clouds) {
     values_[FEATURE_REVERB] = clouds;
@@ -160,6 +177,7 @@ class Settings {
 
   inline void set_stereo_width(StereoWidth width) {
     values_[FEATURE_WIDTH] = width;
+    amount_overrides_ |= OptionsRecord::WIDTH_OVERRIDE;
     if (!width && width_assigned()) {
       set_width_assigned(false);
     }
@@ -229,6 +247,7 @@ class Settings {
 
   inline void set_diffusion(float amount) {
     CONSTRAIN(amount, 0.0f, 1.0f);
+    amount_overrides_ |= OptionsRecord::DIFFUSION_OVERRIDE;
     values_[FEATURE_DIFFUSION] = 1 + static_cast<uint8_t>(
         amount * 254.0f + 0.5f);
     if (values_[FEATURE_DIFFUSION] == 1) {
@@ -313,8 +332,10 @@ class Settings {
   OptionsRecord stored_record_;
   Profile profile_;
   bool profile_locked_;
+  bool start_quality_pending_;
   bool led_features_;
   uint8_t dormant_destination_;
+  volatile uint8_t amount_overrides_;
   // Bank 2: the settings in sector 7, the calibration mirror and the
   // options in sector 6.
   ChunkStorage<15, 14, PersistentData, State, OptionsRecord> chunk_storage_;

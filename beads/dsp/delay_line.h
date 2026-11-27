@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 
 #include "stmlib/stmlib.h"
 
@@ -105,26 +106,34 @@ struct Item<RESOLUTION_16_BIT, 2> {
 template<>
 struct Item<RESOLUTION_12_BIT, 2> {
   void Store(int i, FloatFrame s) {
-    l = stmlib::Clip16(static_cast<int32_t>(s.l * 32768.0f)) >> 4;
-    r = stmlib::Clip16(static_cast<int32_t>(s.r * 32768.0f)) >> 4;
+    const uint32_t l = stmlib::Clip16(static_cast<int32_t>(s.l * 32768.0f));
+    const uint32_t r = stmlib::Clip16(static_cast<int32_t>(s.r * 32768.0f));
+    data[0] = l >> 4;
+    data[1] = (l >> 12 & 0x0f) | (r & 0xf0);
+    data[2] = r >> 8;
   }
   inline FloatFrame value(int i) const {
+    const IntFrame samples = raw(i);
     FloatFrame result;
-    result.l = static_cast<float>(l) / 2048.0f;
-    result.r = static_cast<float>(r) / 2048.0f;
+    result.l = static_cast<float>(samples.l) * raw_scale();
+    result.r = static_cast<float>(samples.r) * raw_scale();
     return result;
   }
   inline IntFrame raw(int i) const {
+    uint16_t l;
+    uint16_t r;
+    memcpy(&l, data, sizeof(l));
+    memcpy(&r, data + 1, sizeof(r));
     IntFrame result;
-    result.l = l;
-    result.r = r;
+    result.l = static_cast<int16_t>(l << 4) >> 4;
+    result.r = static_cast<int16_t>(r) >> 4;
     return result;
   }
   static inline float raw_scale() { return 1.0f / 2048.0f; }
   enum { bundle_size = 1, has_raw = 1 };
-  int16_t l : 12;
-  int16_t r : 12;
-} __attribute__((packed));
+  // Explicit bytes keep the backup layout and let GCC use halfword reads.
+  uint8_t data[3];
+};
 
 template<>
 struct Item<RESOLUTION_12_BIT, 1> {

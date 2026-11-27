@@ -130,6 +130,9 @@ class DelayGrain : public Grain {
     voice_stealing_envelope_.ResetAndPause();
   }
   
+  // Playback speed, negative in reverse; 1024 is the recorded pitch.
+  inline int32_t speed() const { return speed_; }
+
   template<
       HeadCrossingPolicy head_crossing_policy,
       bool fade_out,

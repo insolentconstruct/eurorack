@@ -545,6 +545,47 @@ void TestDroneEndDecays() {
   }
 }
 
+void TestChiptuneDroneEnd() {
+  test_checker.Start("TestChiptuneDroneEnd");
+  for (int played = 0; played < 2; ++played) {
+    for (int ending = 0; ending < 2; ++ending) {
+      Reset();
+      Controls c;
+      c.mix.feedback = ModelCentre(7);
+      c.mix.reverb_amount = 0.0f;
+      c.mix.dry_wet = 0.0f;
+      c.p.size.base = 0.0f;
+      FloatFrame out[kBlockSize];
+      if (played) {
+        c.density.base = 0.3f;
+        c.seed = SEED_BUTTON_STATE_ON;
+        Block(c, out);
+      }
+      c.density.base = 0.5f;
+      c.seed = SEED_BUTTON_STATE_OFF;
+      for (int block = 0; block < 500; ++block) {
+        Block(c, out);
+      }
+      CHECK(synth.drone_);
+      const int voice = synth.active_voice_;
+      CHECK(synth.voice_[voice].model_ == 7);
+      if (ending) {
+        c.seed = SEED_BUTTON_STATE_ON;
+      } else {
+        c.density.base = 0.3f;
+      }
+      Block(c, out);
+      CHECK(!synth.drone_);
+      CHECK(synth.voice_[voice].level_ > 0.9f);
+      c.seed = SEED_BUTTON_STATE_OFF;
+      for (int block = 0; block < 2000; ++block) {
+        Block(c, out);
+      }
+      CHECK(synth.voice_[voice].level_ < 0.01f);
+    }
+  }
+}
+
 // Speech word banks as Mutable Instruments' synchronous Load decodes them:
 // frames, words, FNV-1a of the frames and word boundaries; then the blocks
 // the sliced load takes.
@@ -826,6 +867,7 @@ int main() {
   TestVoiceAllocation();
   TestBankDetents();
   TestFreezeSustains();
+  TestChiptuneDroneEnd();
   TestDroneEndDecays();
   TestEveryModelRenders();
   TestQuantizationBounds();

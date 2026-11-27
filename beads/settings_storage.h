@@ -158,11 +158,11 @@ class ChunkStorage {
     next_state_chunk_index_ = REWRITE_NEEDED;
   }
 
-  void Recover(PersistentData* persistent_data, StateData* state_data) {
+  bool Recover(PersistentData* persistent_data, StateData* state_data) {
     persistent_data_ = persistent_data;
     state_data_ = state_data;
     ReadChunk(chunk_address(0), persistent_data_);
-    RewriteSector();
+    return RewriteSector();
   }
 
   // Rewrites a damaged sector from RAM, past the lock, and checks that it
@@ -188,23 +188,30 @@ class ChunkStorage {
     return !locked_;
   }
 
-  void SaveState() {
+  bool SaveState() {
     if (locked()) {
-      return;
+      return false;
     }
     if (Flash::SupplyLow()) {
-      return;  // Kept in RAM; the next save writes it.
+      return false;  // Kept in RAM; the next save writes it.
     }
-    if (chunk_address(next_state_chunk_index_ + 1) > FLASH_STORAGE_LAST) {
-      RewriteSector();
+    const uint32_t address = chunk_address(next_state_chunk_index_);
+    const size_t size = ChunkSize<StateData>();
+    // Do not append in a gap ahead of data stock could read or fault on.
+    if (address + size > FLASH_STORAGE_LAST ||
+        (address + 2 * size <= FLASH_STORAGE_LAST &&
+            !Flash::IsBlank(address + size, size))) {
+      return RewriteSector();
     } else {
       HAL_FLASH_Unlock();
-      if (WriteChunk(chunk_address(next_state_chunk_index_), state_data_)) {
+      if (WriteChunk(address, state_data_)) {
         next_state_chunk_index_++;
         HAL_FLASH_Lock();
+        return true;
       } else {
         // The next free chunk can't take the record: start the sector over.
-        RewriteSector();
+        HAL_FLASH_Lock();
+        return RewriteSector();
       }
     }
   }
@@ -231,9 +238,13 @@ class ChunkStorage {
     }
     HAL_FLASH_Unlock();
     bool saved = false;
-    if (record_address(size_t(next_record_index_) + 1) <= MIRROR_LAST && \
+    const uint32_t address = record_address(next_record_index_);
+    const size_t size = ChunkSize<RecordData>();
+    if (address + size <= MIRROR_LAST &&
+        (address + 2 * size > MIRROR_LAST ||
+            Flash::IsBlank(address + size, size)) &&
         MirrorMatches()) {
-      saved = WriteChunk(record_address(next_record_index_), record_data_);
+      saved = WriteChunk(address, record_data_);
       next_record_index_ = saved ? next_record_index_ + 1 : REWRITE_NEEDED;
     }
     if (!saved) {
@@ -256,10 +267,11 @@ class ChunkStorage {
     return ReadChunk(MIRROR_BASE, persistent_data) == CHUNK_VALID;
   }
 
-  void RestorePersistentData() {
+  bool RestorePersistentData() {
     recovering_ = true;
-    RewriteSector();
+    const bool saved = RewriteSector();
     recovering_ = false;
+    return saved;
   }
 
   inline bool locked() const {
@@ -350,7 +362,7 @@ class ChunkStorage {
         !memcmp(&mirror, persistent_data_, sizeof(PersistentData))) {
       return true;
     }
-    if (valid && Usable(mirror) && !SectorUsable() && \
+    if (valid && Usable(mirror) && !SectorProtects(mirror) && \
         !WriteCalibration(sector_index, FLASH_STORAGE_BASE, mirror)) {
       return false;
     }
@@ -372,10 +384,12 @@ class ChunkStorage {
     return !check_ || check_(data, *reference_);
   }
 
-  // The sector's calibration, read from flash, is usable.
-  bool SectorUsable() {
+  // Factory values cannot protect the only measured calibration.
+  bool SectorProtects(const PersistentData& mirror) {
     PersistentData data;
-    return ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data);
+    return ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data) &&
+        (!reference_ || !data.SameCalibration(*reference_) ||
+            mirror.SameCalibration(*reference_));
   }
 
   bool EraseSector(uint32_t index, uint32_t address);
@@ -505,10 +519,12 @@ template<
 bool ChunkStorage<sector_index, mirror_sector_index,
     PersistentData, StateData, RecordData>::RewriteSector() {
   // A calibration out of range never replaces a usable one: that one stays.
-  PersistentData data;
-  if (!Usable(*persistent_data_) && \
-      ((ReadChunk(chunk_address(0), &data) == CHUNK_VALID && Usable(data)) ||
-          (ReadChunk(MIRROR_BASE, &data) == CHUNK_VALID && Usable(data)))) {
+  if (!Usable(*persistent_data_)) {
+    PersistentData data;
+    if ((ReadChunk(chunk_address(0), &data) != CHUNK_VALID || !Usable(data)) &&
+        (ReadChunk(MIRROR_BASE, &data) != CHUNK_VALID || !Usable(data))) {
+      return false;
+    }
     *persistent_data_ = data;
   }
   HAL_FLASH_Unlock();
@@ -575,10 +591,11 @@ bool ChunkStorage<sector_index, mirror_sector_index,
     }
     if (HAL_FLASHEx_Erase(&erase_params, &sector_error) == HAL_OK) {
       // The D-cache may still hold the records read before the erase.
-      SCB_InvalidateDCache_by_Addr(
-          (uint32_t*)(address),
-          FLASH_STORAGE_LAST - FLASH_STORAGE_BASE);
-      return true;
+      const size_t size = FLASH_STORAGE_LAST - FLASH_STORAGE_BASE;
+      SCB_InvalidateDCache_by_Addr((uint32_t*)(address), size);
+      if (Flash::IsBlank(address, size)) {
+        return true;
+      }
     }
   }
   return false;

@@ -96,10 +96,12 @@ print('Catalogue format 2, manifest digest and record bytes: PASS')
 DIGEST = '"manifest_sha256": "%s"' % catalogue['manifest_sha256']
 
 frozen = json.loads((ROOT / features.FROZEN).read_text())
-assert [r['id'] for r in frozen['features'][:-1]] == list(range(1, 54))
-assert frozen['features'][-1] == {
+assert [r['id'] for r in frozen['features'][:53]] == list(range(1, 54))
+assert frozen['features'][53] == {
     'id': 54, 'symbol': 'REVERB_DECAY',
     'values': ['Coupled (stock)', 'Short', 'Medium', 'Long']}
+assert frozen['features'][54:] == [{
+    'id': 55, 'symbol': 'TIME_CV_RANGE', 'values': ['Stock', 'Fine (1/8)']}]
 assert not frozen['reserved']
 RESONATOR = '"id": 41,\n      "symbol": "RESONATOR"'
 faults = [
@@ -117,6 +119,8 @@ faults = [
       '"name": "/2"', '"name": "/3"'),
   ('Frozen ID 54: value meanings', features.MANIFEST,
       '{"name": "Coupled (stock)"}', '{"name": "Separate"}'),
+  ('Frozen ID 55: value meanings', features.MANIFEST,
+      '{"name": "Fine (1/8)"}', '{"name": "Fine (1/4)"}'),
   ('Frozen ID 29', features.MANIFEST,
       '"symbol": "SEED_START"', '"symbol": "SEED_BEGIN"'),
   ('Frozen ID 5: value meanings', features.MANIFEST,
@@ -138,7 +142,7 @@ faults = [
   ('without gaps', features.MANIFEST, '"id": 49,\n      "symbol"',
       '"id": 51,\n      "symbol"'),
   ('stale', 'beads/profile.cc',
-      '{ 4, kNoField, true, false, false, false },  // Resonator.',
+      '{ 5, kNoField, true, false, false, false },  // Resonator.',
       '{ 6, kNoField, true, false, false, false },  // Resonator.'),
   ('stale', 'beads/profile.cc',
       '{ 3, kNoField, false, false, false, false },  // Rings polyphony.',
@@ -157,7 +161,7 @@ faults = [
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_SLOW },',
       '{ FEATURE_SEED_LATCH, 3, { 0, 255, 0 }, PULSE_FAST },'),
   ('stale', 'beads/options.h',
-      'kNumOptionValues = 18;', 'kNumOptionValues = 19;'),
+      'kNumOptionValues = 22;', 'kNumOptionValues = 23;'),
   ('stale', 'beads/options.h',
       'PAGE_VALUES_DELAY = 3,', 'PAGE_VALUES_DELAY = 4,'),
   ('stale', 'beads/options.cc',
@@ -171,7 +175,7 @@ faults = [
   ('Zones: REVERB', features.MANIFEST,
       '"field": 1,\n      "saved": 9,\n'
       '      "states": ["Off", "Fixed", "Adjustable"],\n'
-      '      "page": true,\n      "page_control": "halves",',
+      '      "page": true,\n      "page_control": "steps",',
       '"field": 1,\n      "saved": 9,\n'
       '      "states": ["Off", "Fixed", "Adjustable"],\n'
       '      "page": true,\n      "page_control": "zones",'),
@@ -185,6 +189,9 @@ faults = [
   ('Record layout 1: ID 2', features.MANIFEST, '"saved": 9,', '"saved": 30,'),
   ('Record layout 1: ID 42', features.MANIFEST, '"saved": 27,',
       '"saved": 29,'),
+  ('Record layout 1: byte 29', features.MANIFEST,
+      '"symbol": "START_QUALITY",',
+      '"symbol": "START_QUALITY",\n      "saved": 29,'),
   ('Record offsets overlap', features.MANIFEST, '"saved": 9,', '"saved": 8,'),
   ('Saved: PITCH', features.MANIFEST, '"saved": 8,\n', ''),
   ('Freeze record layout 2', features.MANIFEST,

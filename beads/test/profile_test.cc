@@ -205,7 +205,7 @@ void TestProfileParser() {
   CHECK(!p.Init(b));
   const uint8_t bad[][2] = {
     { 16, 0 }, { 16, FEATURE_LAST }, { 22, FEATURE_PITCH },
-    { 17, 3 }, { 18, 10 }, { 24, 2 }, { 19, 22 }, { 20, 3 }, { 21, 4 },
+    { 17, 3 }, { 18, 10 }, { 24, 4 }, { 19, 22 }, { 20, 3 }, { 21, 4 },
     { 17, PROFILE_OFF }, { 17, PROFILE_FIXED },
     { 20, 1 }, { 21, 1 }, { 25, 1 },
     { 79, 1 }, { 86, 1 }, { 93, 2 }, { 95, 0 }, { 96, 0 }
@@ -351,14 +351,15 @@ void TestProfileKinds() {
 void TestBetaProfileDefinitions() {
   test_checker.Start("TestBetaProfileDefinitions");
   uint8_t b[kProfileSize];
-  CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 3);
+  CHECK(kFeatureDefinitions[FEATURE_BRIGHTNESS].values == 4);
   const uint8_t fields[] = {
     255, 255, 255, 10, 255, 255, 11, 255, 12, 255, 255, 255,
     255, 255, 255, 255, 14, 255, 255, 255, 255, 255, 255, 255, 255, 255,
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    kNoField, kNoField  // Manual delay toggle and reverb decay.
+    kNoField, kNoField, kNoField  // Manual delay, reverb decay, TIME CV.
   };
-  CHECK(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION);
+  STATIC_ASSERT(sizeof(fields) == FEATURE_LAST - FEATURE_VERSION,
+      missing_expected_feature_field);
   // The factory profile lists the Plaits bank and Rings' polyphony; older
   // profiles imply them.
   Template(b);
@@ -677,6 +678,19 @@ uint32_t Beta3Digest(uint32_t* accepted) {
     }
     Profile parsed;
     const bool ok = parsed.Init(b);
+    // The RC1 choices have the same placements as the legacy values.
+    if ((cases[i] == FEATURE_PROCESSOR || cases[i] == FEATURE_REVERB) &&
+        (cases[i + 2] == 2 || cases[i + 2] == 3)) {
+      b[18] = 1;
+      const uint32_t legacy_crc = Profile::Crc32(b, 16 + 6 * count);
+      for (int j = 0; j < 4; ++j) {
+        b[16 + 6 * count + j] = legacy_crc >> (8 * j);
+      }
+      Profile legacy;
+      CHECK(ok == legacy.Init(b));
+      results.push_back(false);
+      continue;
+    }
     // Beta 3 refused Synth value 2; as Rings it is accepted where Plaits is.
     if (cases[i] == FEATURE_SYNTH && cases[i + 2] == 2) {
       b[18] = 1;
@@ -698,6 +712,18 @@ uint32_t Beta3Digest(uint32_t* accepted) {
       }
       Profile gentle;
       CHECK(ok == gentle.Init(b));
+      results.push_back(false);
+      continue;
+    }
+    // Beta 3 refused 15%; its valid placements match the 33% value.
+    if (cases[i] == FEATURE_BRIGHTNESS && cases[i + 2] == 3) {
+      b[18] = 2;
+      Checksum(b);
+      Profile third;
+      CHECK(ok == third.Init(b));
+      if (ok) {
+        CHECK(parsed.entry(FEATURE_BRIGHTNESS).value == 3);
+      }
       results.push_back(false);
       continue;
     }

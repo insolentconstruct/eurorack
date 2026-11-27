@@ -32,6 +32,9 @@
 
 namespace beads {
 
+/* static */
+float Reverb::fixed_decay_;
+
 const float kAllPassCoefficient = 0.625f;
 
 void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
@@ -127,6 +130,151 @@ void Reverb::ProcessClouds(FloatFrame* in_out, size_t size) {
     c.Write(wet, 0.0f);
 
     in_out->r = in_out->r * dry_amount + wet * wet_amount;
+    ++in_out;
+  }
+}
+
+void Reverb::CharacterState::Init(uint8_t new_character, float sample_rate) {
+  character = new_character;
+  Reset(sample_rate);
+}
+
+void Reverb::CharacterState::Reset(float sample_rate) {
+  onset = false;
+  peak = 0.0f;
+  baseline = 0.0f;
+  progress = 0.0f;
+  density = 0.0f;
+  tick = 1.0f / sample_rate;
+}
+
+float Reverb::CharacterState::Density(float level) {
+  // A new onset resets the ramp while a short slew protects a ringing tail.
+  peak = std::max(level, peak * (1.0f - 25.0f * tick));
+  ONE_POLE(baseline, peak, 18.0f * tick);
+  const float threshold = 0.004f + 0.2f * baseline;
+  const float rise = peak - baseline;
+  if (rise > threshold && !onset) {
+    progress = 0.0f;
+    onset = true;
+  } else if (rise < 0.5f * threshold) {
+    onset = false;
+  }
+  progress = std::min(1.0f, progress + 4.0f * tick);
+  ONE_POLE(density, progress, 350.0f * tick);
+  return density;
+}
+
+void Reverb::RenderCharacter(
+    CharacterState& state, FloatFrame* in_out, size_t size) {
+  if (state.character == REVERB_PLATE) {
+    ProcessPlate(in_out, size);
+  } else {
+    ProcessBloom(state, in_out, size);
+  }
+}
+
+void Reverb::ProcessBloom(
+    CharacterState& state, FloatFrame* in_out, size_t size) {
+#define BEADS_REVERB_BLOOM
+#include "beads/dsp/fx/reverb_tank.inc"
+#undef BEADS_REVERB_BLOOM
+}
+
+void Reverb::ProcessPlate(FloatFrame* in_out, size_t size) {
+  // Figure-eight tank with damped long delays between decay diffusers.
+  typedef E::Reserve<109,
+    E::Reserve<173,
+    E::Reserve<263,
+    E::Reserve<397,
+    E::Reserve<809,
+    E::Reserve<3319,
+    E::Reserve<1801,
+    E::Reserve<4817,
+    E::Reserve<1013,
+    E::Reserve<3767,
+    E::Reserve<2203,
+    E::Reserve<4337> > > > > > > > > > > > Memory;
+  E::DelayLine<Memory, 0> ap1;
+  E::DelayLine<Memory, 1> ap2;
+  E::DelayLine<Memory, 2> ap3;
+  E::DelayLine<Memory, 3> ap4;
+  E::DelayLine<Memory, 4> mod1;
+  E::DelayLine<Memory, 5> delay1;
+  E::DelayLine<Memory, 6> decay1;
+  E::DelayLine<Memory, 7> return1;
+  E::DelayLine<Memory, 8> mod2;
+  E::DelayLine<Memory, 9> delay2;
+  E::DelayLine<Memory, 10> decay2;
+  E::DelayLine<Memory, 11> return2;
+  E::Context c;
+
+  const float krt = reverb_time_;
+  const float damping = 0.3f + 0.7f * lp_;
+  const float input_gain = 0.2f * (1.0f - 0.333f * krt);
+  const float send_sqrt = mix_ * (2.0f - mix_);
+  stmlib::ParameterInterpolator send_modulation(
+      &send_, send_sqrt * (2.0f - send_sqrt) * input_gain, size);
+  stmlib::ParameterInterpolator dry_modulation(
+      &dry_, (1.0f - mix_) * (1.0f + mix_), size);
+  stmlib::ParameterInterpolator wet_modulation(
+      &wet_, 0.4f / input_gain, size);
+
+  while (size--) {
+    const float send = send_modulation.Next();
+    const float dry = dry_modulation.Next();
+    const float wet = wet_modulation.Next();
+    engine_.Start(&c);
+
+    c.Load((in_out->l + in_out->r) * send);
+    c.Read(ap1 TAIL, 0.75f);
+    c.WriteAllPass(ap1, -0.75f);
+    c.Read(ap2 TAIL, 0.75f);
+    c.WriteAllPass(ap2, -0.75f);
+    c.Read(ap3 TAIL, 0.625f);
+    c.WriteAllPass(ap3, -0.625f);
+    c.Read(ap4 TAIL, 0.625f);
+    c.WriteAllPass(ap4, -0.625f);
+    float input;
+    c.Write(input);
+
+    c.Read(return2 TAIL, krt);
+    c.Interpolate(mod1, 785.0f, LFO_1, 19.0f, -0.7f);
+    c.WriteAllPass(mod1, 0.7f);
+    c.Write(delay1, 0.0f);
+    c.Read(delay1 TAIL, 1.0f);
+    c.Lp(lp_1_, damping);
+    c.Read(decay1 TAIL, 0.5f);
+    c.WriteAllPass(decay1, -0.5f);
+    c.Write(return1, 0.0f);
+
+    c.Load(input);
+    c.Read(return1 TAIL, krt);
+    c.Interpolate(mod2, 985.0f, LFO_2, 23.0f, -0.7f);
+    c.WriteAllPass(mod2, 0.7f);
+    c.Write(delay2, 0.0f);
+    c.Read(delay2 TAIL, 1.0f);
+    c.Lp(lp_2_, damping);
+    c.Read(decay2 TAIL, 0.5f);
+    c.WriteAllPass(decay2, -0.5f);
+    c.Write(return2, 0.0f);
+
+    // Read staggered, signed taps from both sides of the tank.
+    float left;
+    float right;
+    c.Read(delay1, 127, 0.45f);
+    c.Read(delay1, 2153, 0.35f);
+    c.Read(decay2, 907, -0.25f);
+    c.Read(return2, 3109, 0.3f);
+    c.Write(left, 0.0f);
+    c.Read(delay2, 193, 0.45f);
+    c.Read(delay2, 2741, 0.35f);
+    c.Read(decay1, 1207, -0.25f);
+    c.Read(return1, 3593, 0.3f);
+    c.Write(right);
+
+    in_out->l = in_out->l * dry + left * wet;
+    in_out->r = in_out->r * dry + right * wet;
     ++in_out;
   }
 }

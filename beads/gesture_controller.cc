@@ -43,6 +43,10 @@ void GestureController::Init(Ui* ui, Settings* settings) {
   ui_ = ui;
   settings_ = settings;
   cue_time_ = 0;
+  ui_->return_processor_ = PROCESSOR_GRANULAR;
+  ui_->active_processor_ = settings_->processor_mode();
+  ui_->processor_busy_ = false;
+  ui_->processor_cue_pending_ = false;
   cue_ = plaits_bank_cues_[0];
   manual_delay_requested_ = false;
   trim_flag_ = false;
@@ -121,11 +125,11 @@ void GestureController::StepAssignment() {
     settings_->set_diffusion_assigned(true);
     if (!settings_->diffusion_assigned()) {
       settings_->set_width_assigned(false);
-      ui_->resonator_assigned_ = ui_->resonator_ != 0;
+      ui_->resonator_assigned_ = ui_->resonator_available();
     }
   } else if (settings_->diffusion_assigned()) {
     settings_->set_diffusion_assigned(false);
-    ui_->resonator_assigned_ = ui_->resonator_ != 0;
+    ui_->resonator_assigned_ = ui_->resonator_available();
   } else if (state->assignable_cv_destination == 2 && ui_->stereo_width_ &&
              settings_->profile().adjustable(FEATURE_WIDTH)) {
     settings_->set_width_assigned(true);
@@ -133,7 +137,7 @@ void GestureController::StepAssignment() {
              settings_->diffusion_assignable() &&
              settings_->profile().adjustable(FEATURE_DIFFUSION)) {
     settings_->set_diffusion_assigned(true);
-  } else if (state->assignable_cv_destination == 2 && ui_->resonator_) {
+  } else if (state->assignable_cv_destination == 2 && ui_->resonator_available()) {
     state->assignable_cv_destination = 0;
     ui_->resonator_assigned_ = true;
   } else {
@@ -183,6 +187,52 @@ void GestureController::StepRingsPolyphony() {
   cue_time_ = system_clock.milliseconds();
 }
 
+void GestureController::ObserveProcessor(ProcessorMode active, bool busy) {
+  ui_->active_processor_ = active;
+  ui_->processor_busy_ = busy;
+  if (ui_->processor_cue_pending_ && !busy &&
+      active == settings_->processor_mode()) {
+    const uint32_t now = system_clock.milliseconds();
+    // Let both warning flashes finish before showing the destination.
+    if (cue_time_ && cue_.pulses == PULSE_DOUBLE &&
+        uint32_t(now - cue_time_) < kOptionsFastPeriod * 3 / 2) {
+      return;
+    }
+    const OptionValue cue = FindOptionValue(FEATURE_PROCESSOR, active);
+    cue_.color = cue.color;
+    cue_.pulses = cue.pulses;
+    cue_time_ = now;
+    ui_->processor_cue_pending_ = false;
+  }
+}
+
+void GestureController::WarnProcessor() {
+  const Leds::Color red = { 255, 0, 0 };
+  cue_.color = red;
+  cue_.pulses = PULSE_DOUBLE;
+  cue_time_ = system_clock.milliseconds();
+}
+
+void GestureController::ToggleSpectral() {
+  if (ui_->mode_ != Ui::MODE_NORMAL ||
+      ui_->options_.stage() != Options::STAGE_INACTIVE ||
+      ui_->options_.commit_requested() || ui_->freeze_button_state_ ||
+      ui_->freeze_led_state_ || ui_->processor_busy_ ||
+      ui_->active_processor_ != settings_->processor_mode()) {
+    WarnProcessor();
+    return;
+  }
+
+  const ProcessorMode next = ui_->active_processor_ == PROCESSOR_SPECTRAL
+      ? ui_->return_processor_ : PROCESSOR_SPECTRAL;
+  ui_->return_processor_ = next == PROCESSOR_SPECTRAL
+      ? ui_->active_processor_ : PROCESSOR_GRANULAR;
+  settings_->SetFeatureValue(FEATURE_PROCESSOR, next);
+  settings_->SaveOptions();
+  ui_->processor_cue_pending_ = true;
+  cue_time_ = 0;
+}
+
 bool GestureController::DoAction(uint8_t slot) {
   const bool fallback = settings_->synth() == SYNTH_BEADS &&
       ui_->playing_synth_ == SYNTH_PLAITS &&
@@ -208,7 +258,7 @@ bool GestureController::DoAction(uint8_t slot) {
     }
     return true;
   } else if (feature == FEATURE_MANUAL_DELAY) {
-    if (!ui_->synth_mode_ && !ui_->spectral_) {
+    if (!ui_->synth_mode_ && ui_->processor_mode() == PROCESSOR_GRANULAR) {
       manual_delay_requested_ = !manual_delay_requested_;
       cue_.color = kOptionColors[manual_delay_requested_ ? 1 : 0];
       cue_.pulses = PULSE_STEADY;
@@ -220,17 +270,24 @@ bool GestureController::DoAction(uint8_t slot) {
     ui_->freeze_button_state_ = false;
     return true;
   } else if (feature == FEATURE_SYNTH_START &&
-      settings_->self_play_on_request() && !ui_->spectral_ && ui_->no_input_ &&
+      settings_->self_play_on_request() && ui_->no_input_ &&
+      ui_->processor_mode() == PROCESSOR_GRANULAR &&
       !ui_->should_ignore_state_change()) {
     self_play_requested_ = true;
+    return true;
+  } else if (feature == FEATURE_PROCESSOR) {
+    ToggleSpectral();
     return true;
   } else if (kFeatureDefinitions[feature].field != kNoField &&
       !kFeatureDefinitions[feature].stateless) {
     // Saved as from its options page, with that page's colour.
-    const uint8_t current = settings_->FeatureValue(feature);
+    // A later gesture acts on the pending page value and replaces its edit.
+    const uint8_t current = ui_->options_.edited(feature)
+        ? ui_->options_.Value(feature) : settings_->FeatureValue(feature);
     const uint8_t value = feature == FEATURE_SYNTH
         ? NextSynth(current, ui_->playable_synths_) : !current;
     settings_->SetFeatureValue(feature, value);
+    ui_->options_.PublishGesture(feature, value);
     settings_->SaveOptions();
     const OptionValue cue = FindOptionValue(feature, value);
     cue_.color = cue.color;

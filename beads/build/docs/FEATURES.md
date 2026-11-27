@@ -79,7 +79,7 @@ Enter with [M] alone for 3 s, mix knobs still, then release; entry needs normal 
 | 4 / FEEDBACK and DRY/WET | LED brightness | SEED latch | Limiter |
 | 5 / FEEDBACK and REVERB | Resonator | Resonator material | Resonator ring time |
 
-Custom profiles can leave knobs unused; unused knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green. Other settings follow the green/yellow/red ladder. The factory scale bank uses coral Fifths, amber Major, blue Minor, amber/blue pentatonics with slow blinking, teal Pelog, violet Bhairav and two pink pulses for Shri. Slow is 0.98 Hz, fast is 3.91 Hz, and a two-pulse group repeats every 2.048 s. Hygrostat profiles can replace the scale definitions, order, colours and patterns; [Scale profiles](SCALE-PROFILES.md) specifies their format. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
+Custom profiles can leave knobs unused; unused knobs have no effect on [A] or saving. On entry and on each page change, [A] shows each stored value for 2.048 s, left to right, skipping reserved knobs, with that knob's mix LED lit steady; a qualified knob or a SEED scale step ends it. [A] then shows the first available setting, then the last qualified knob moved. Blink patterns start when the shown setting changes. Every first value, including Pitch Off, is steady green. Other settings follow the green/yellow/red ladder, with a slow red blink for 15% LED brightness. The measured factory palette uses coral Fifths, amber Major, blue Minor, amber/blue pentatonics with slow blinking, teal Pelog, violet Bhairav and two pink pulses for Shri. Slow is 0.98 Hz, fast is 3.91 Hz, and a two-pulse group repeats every 2.048 s. Hygrostat profiles can replace the scale definitions, order, colours and patterns; [Scale profiles](SCALE-PROFILES.md) specifies their format. The page LED flashes for 100 ms on entry, close and after a changed batch is written. README.txt's Options reference lists every colour and pulse; `make -f beads/build/tools/options_tables.mk test` checks it and `./build/options_tables` prints its TSV from the firmware tables. Pitch scale values and grain behaviour: [options guide](OPTIONS.md).
 
 ## Saved data
 
@@ -103,15 +103,19 @@ and checksum loads. Stock, the alphas and Beta 1 never touch sector 14.
 | 24, 25, 26 | Resonator, Resonator material, Resonator ring time |
 | 27 | Rings polyphony |
 | 28 | Gain ceiling |
-| 29–55 | Reserved, 0xFF |
+| 29 | Amount overrides: bit 0 stereo width, bit 1 diffusion. 0xFF if unset or written by earlier firmware |
+| 30–55 | Reserved, 0xFF |
 
 A latest record of another version gives the profile's defaults; no older slot
 is read instead. A byte at or past its option's value count is not set, so the
-profile's default applies. Off and Fixed features keep their saved byte.
+profile's default applies. Width and diffusion follow the installed profile
+until their amount is edited. If an earlier record has the same profile,
+amounts that differ from the defaults carry over. With a
+different profile, those earlier amounts start from the new defaults. Off and
+Fixed features keep their saved byte.
 Options are not promised across betas: Beta 2 and 3 options start from the
 profile's defaults, and their packed bytes 10–23 are ignored and cleared at the
-next state save. A new layout changes the version; within a version only new
-enumerated options take reserved bytes. `resources/features-frozen.json`
+next state save. A new layout changes the version. `resources/features-frozen.json`
 freezes each version's offsets.
 
 | Feature ID | Feature | Saved in |
@@ -182,7 +186,7 @@ Stock (2021 and 2024 releases) keeps byte 9 and shows the half-bright [A] cue, b
 Stock loads and checksums the whole State, ignores padding semantically, then clears all 14 padding bytes on SaveState, which appends the full State (or rewrites the sector when full). Drizzlet writes State the same way; its options are in sector 14, which stock never reads or writes. <!-- stock:beads/settings.cc:75-83,94-96; stmlib/system/sector_storage_h7xx.h:133-141,168-209; beads/settings.cc:84,96-99 -->
 Keep size, tags, offsets and checksum format compatible: records require matching tag and `sizeof(T)`, with an 8-byte header, 32-byte flash-word rounding, and latest valid sequential State loading. No general migration exists here. <!-- stmlib/system/sector_storage_h7xx.h:86-99,106-123,168-175,213-233 -->
 
-Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded; an out-of-range CALI with no such mirror loads as stock loads it. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. Only a lost CALI with no usable mirror, or a blank sector with a mirror that isn't blank but holds no CALI, is damage: every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. Each erase and program first checks the programmable voltage detector (level 6, 2.69-2.83 V falling) and is refused while it shows VDD low: a state save is skipped, and any other refused operation fails like a flash error, so a save cut short loads as a power cut at that point would. The detector is set at each start-up; no option byte is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/drivers/flash.h; beads/test/storage_test.cc -->
+Damaged storage (boot guard). Bank 2 is read with faults masked and the ECC error flag checked (`beads/drivers/flash.h`), so an uncorrectable word no longer crashes the module. At power-up the settings sector is read as stock reads it: the CALI record, then STAT records up to the first that fails its checks or reads with an uncorrectable error, as an interrupted save leaves it; nothing after that one is read, and the next save rewrites the sector. A CALI that is unreadable or fails its checks in a sector that isn't blank, or reads clean but is more than 25% from the factory values, is restored from the mirror if the mirror reads clean, passes its checks, and is within 25%, keeping the states that loaded. A blank sector takes the calibration from the mirror (a power cut after an erase); with a blank mirror it is a new module (factory test). A valid CALI with no valid STAT keeps the calibration, resets the state and never starts the factory test. A lost or out-of-range CALI without a usable mirror, or a blank settings sector with a nonblank mirror that holds no CALI, triggers the storage guard. Every bank-2 erase and program is locked and the module plays on the factory calibration and default settings. Only SEED at power-up writes then: the mirror first, then the sector, read back as the firmware loads it; damaged frozen-buffer sectors are erased after a successful repair. A repaired sector is in the stock format. Erases name the sector within bank 2 (settings 7, mirror 6, buffer 0-5) and are checked blank, masked, before anything is written. Each erase and program first checks the programmable voltage detector (level 6, 2.69-2.83 V falling) and is refused while it shows VDD low: a state save is skipped, and any other refused operation fails like a flash error, so a save cut short loads as a power cut at that point would. The detector is set at each start-up; no option byte is written. <!-- beads/settings_storage.h; beads/settings.cc; beads/background_buffer_backup.cc; beads/drivers/flash.h; beads/test/storage_test.cc -->
 
 | Flash area | TAKEN | FREE / limit |
 |---|---|---|
@@ -293,6 +297,21 @@ changes, including settled option changes. Module listening done; module CPU 105
 
 Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality; delay lengths remain in samples.
 
+Page 2 Reverb character uses four equal steps. Stock is green, the existing
+second value is yellow, Plate is red and Bloom pulses green. All four use
+the same REVERB amount and decay mapping and share the 64 KiB tank buffer.
+The legacy profile toggle returns Plate or Bloom to Stock, then toggles
+between Stock and the second value.
+
+Plate uses four input diffusers and a figure-eight tank with modulated decay
+diffusers, damping and staggered stereo output taps. Its tank follows the
+published figure-eight structure with its own delay lengths and tap mix.
+[Jon Dattorro, Effect Design, Part 1 (1997)](https://aes.org/publications/elibrary/elibrary-page/?id=10160)
+
+Bloom uses the stock tank. An onset on the mono reverb send restarts a
+250 ms ramp for diffusion and feedback. A short slew smooths the reset
+while the preceding tail is still ringing.
+
 ## Stereo width
 
 | Allocation | Use |
@@ -314,12 +333,13 @@ Free and clockwise remain continuous before Pitch scale; subsequent scale quanti
 
 The user guides (OPTIONS.md, README) describe positions and timing in words. The numbers behind them are below; `tools/options_tables_test.py` checks each against the firmware export.
 
-- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. Synth uses those thirds with three playable synths and those halves with two. LED brightness uses thirds at 1/3 ± 2.5% and 2/3 ± 2.5%; SEED latch uses quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
+- **Open and close:** hold [M] 3 s. A knob must move more than 10% of its travel to take over. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds with a 3% dead band: thirds switch at 1/3 ± 3% and 2/3 ± 3%; ordinary two-value settings use halves, switching below 47% and above 53%. Synth uses those thirds with three playable synths and those halves with two. LED brightness, Processor, Reverb character, SEED latch and Resonator ring time use quarters at 1/4 ± 2.5%, 1/2 ± 2.5% and 3/4 ± 2.5%; Resonator uses fifths and Resonator material eighths, with the same ± 2.5%. A button press that closes options is consumed until release. On page 1 with Scale selected, SEED taps step the scale instead of closing. All three mix LEDs pulse while entry is held. Opening a page shows each stored value for 2.048 s each.
 - **Stereo width ([A] + DRY/WET):** Stock below 7%; leaves Stock above 13%, returns below 7%. Enabled width runs from zero spread at 13% to full spread at 100%, saved as 1..255 (0 = Stock). Releasing [A] saves it. The assignable CV input (7) adds to the saved width, clamped to zero and full spread.
 - **Saving and LEDs:** changes save after 1 second without movement that changes the setting or passes the movement threshold; pending changes also save on close. The page LED flashes for 100 ms on entry, close and saving. Slow blink is 0.98 Hz; fast blink is 3.91 Hz; two yellow pulses repeat as a 2.048 s group.
 - **Delay mode, Wide/smooth filter:** unfiltered zone from 40% to 60% of the SIZE attenurandomizer plus SIZE CV range.
 - **Synth start, Manual:** hold [A] 1.5 s and release to start or stop (the manual says 1 s).
 - **Processor, Spectral:** takes effect once the page has closed and FREEZE is off (until then the current engine plays on): a 10 ms fade out, the codec restarts with 250 ms of silence, then a 10 ms fade in. Spectral frames are 4096 samples with a 1024-sample hop at the quality's rate (48, 32 or 24 kHz).
+- **Processor, Oliverb:** TIME sets pre-delay from 18 to 150 ms.
 - **Monophonic grains:** the [A] LED is half as bright when on; the recording reserve can dim it further.
 - **Frozen-buffer autosave:** a save cut short after erasing doubles the next wait, up to 320 s.
 
@@ -345,17 +365,16 @@ block is unchanged. The page-facing catalogue is
 format 2 adds the manifest's SHA-256, the record version, and each feature's
 record byte and factory entry; each release publishes it.
 
-Brightness uses 100% / 66% / 33% (0 / 1 / 2), selected in thirds of a page knob
-when Adjustable or set via Hygrostat when Fixed. There is no power-on
-brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
+Brightness uses 100% / 66% / 33% / 15% (saved values 0 / 1 / 2 / 3),
+selected in quarters of a page knob when Adjustable or set in the profile
+when Fixed. There is no power-on brightness gesture. SEED latch uses Off / Ignore / Sync / Add (0 / 1 / 2 / 3). TIME modulation uses Random / Scan (0 / 1).
 Fixed-only features use Off / On (0 / 1). Brightness scales the final LED
 frame, including options and warning displays, and previews while turning. Off
-and Fixed 100% preserve every stock LED value. At 66% and 33%, white is no
-longer halved (#240): the quality LED's red scales by level^1.5 (truncated),
-and its lit green and blue by the level plus 12 x (1 - level), i.e. +4 at 66%
-and +8 at 33%; the other LEDs scale by the level. The rule was chosen by eye on
-a module (white 102/130/141 at 66%, 36/71/76 at 33%); a light-sensor check is
-planned for Beta 4. UI priority
+and Fixed 100% preserve every stock LED value. At 66%, 33% and 15%, measured
+red, green and blue light curves help preserve the quality LED's colour as it
+dims. The curves were measured on one module. Colour and brightness can vary
+from unit to unit and with temperature. Monophonic mode and overwrite reserve use the same curves. White LEDs, including the assignment
+LEDs, scale their PWM by the selected percentage. UI priority
 is options and storage indications, manual meters, boot cue, delay cue, pitch notch, then
 quality/overwrite. Delay cues last 150 ms on both actual transitions. The boot
 cue is a 100 ms light-blue flash identifying Drizzlet, followed by 150 ms
@@ -596,6 +615,15 @@ resulting tail length depends on sample rate and reverb character. The
 existing mix limits are 0.90 for the processor and 0.80 for the synths.
 An optional full-wet range would need a separate choice.
 
+### TIME CV range
+
+Hygrostat feature ID 55 chooses Stock or Fine (1/8) (#39). Fine scales the
+calibrated TIME jack signal to one eighth of its stock value, in every mode
+that uses that jack. TIME and its attenurandomizer keep their existing
+roles and travel. Unpatched TIME behaves as before. A calibration save
+keeps its original units. The choice is Fixed only, with no panel slot
+or saved byte. Earlier firmware uses its fallback profile if ID 55 is present.
+
 ### Grain stealing
 
 Hygrostat feature ID 34 chooses 2021/2024 (value 0, the default) or 2026
@@ -697,8 +725,8 @@ or saved choice; the audio path is unchanged.
 ### Resonator
 
 Options page 5 (FEEDBACK and REVERB LEDs) holds Hygrostat feature ID 41,
-Off (stock) / After the grains / Before the buffer / In the feedback
-(#88), on FEEDBACK in quarters. It adds Rings' modal resonator,
+Off (stock) / After the grains / Before the buffer / In the feedback /
+Chord (#88), on FEEDBACK in fifths. It adds Rings' modal resonator,
 24 modes in stereo (odd modes
 left, even modes right), computed in Plaits' batched form with its tuning
 and pickup position updated once per 0.25 ms block, so it is close to
@@ -762,6 +790,15 @@ At FEEDBACK 0 it is After the grains exactly; at 0.3 and 0.5 its output
 stays within 2 dB of After
 the grains' on the same renders. Frozen, nothing is recorded and it is
 After the grains. The recording's own input limiter is still the ceiling.
+
+Chord (value 4) gives each grain start a strike at the grain's pitch, including
+pitch quantization and Recent notes. Three voices share the 24 modes, with
+eight modes per voice. A grain within half a semitone strikes the existing
+voice. Otherwise, the quietest voice can retune once its level estimate has
+fallen at least 42 dB from its peak, leaving a 2 dB margin for the 40 dB
+retune rule. While all voices are ringing above that threshold, the grain
+strikes the nearest voice. SEED or an attack hit strikes the tuned voices.
+SEED remains the clock in delay mode.
 
 Material (ID 43, DRY/WET, eighths) sets structure and brightness: Wood
 (0.5, 0.3), String (0.25, 0.5), Glass (0.4, 0.5), Bell (0.8, 0.15). They
@@ -828,18 +865,21 @@ estimated 88.9% on a module against the 90% limit then in force.
 ### [A] gestures in profiles
 
 A Hygrostat profile chooses what the [A] gestures do (#301). The factory
-layout and every earlier profile keep their gestures.
+layout keeps its existing gestures.
 
 - [A]+SEED and [A]+FREEZE can take Monophonic grains, Buffer trim, Synth
-  start or a two-value toggle: Reverb character, Processor, Frozen feedback,
-  Synth or TIME modulation. A toggle flips its setting (Synth steps through
-  the playable synths), saves it, and [A]
-  shows the new value's options page colour for half a second (green first
-  value, yellow second). Processor clears the recording, as from its page;
-  while FREEZE is on, the change waits for its release. In Plaits synth
-  play [A]+FREEZE still steps the bank, so a toggle there waits for the
-  synth to stop, and Synth goes on [A]+SEED only. The [A] hold stays Synth
-  start only.
+  start, Processor, Reverb character, Frozen feedback, Synth or TIME
+  modulation. Synth goes on [A]+SEED and steps through the playable synths.
+  The [A] hold stays reserved for Synth start.
+- An assigned Processor gesture switches Granular, Oliverb or Abyss to
+  Spectral and back to the previous engine. After booting into Spectral,
+  it returns to Granular. The selection saves and the return engine lives
+  in RAM. After the handoff, [A] shows steady yellow for Spectral, green
+  for Granular, red for Oliverb or slow blinking red for Abyss, then
+  resumes the quality display. Two red flashes indicate a refusal while
+  FREEZE is held by latch or CV, options are open, calibration or service
+  is active, or a handoff is in progress. During Plaits or Rings play,
+  [A]+FREEZE still steps the bank or polyphony.
 - [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB can each take Manual gain,
   Stereo width or Diffusion, one per knob. Hygrostat feature ID 40, Manual
   gain knob, places the gain: Off keeps it on FEEDBACK; Fixed takes it off

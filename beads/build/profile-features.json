@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "manifest_sha256": "4e70861e39ddac015a0af386ca8ee70a41d01aec947a49d59b3c6431df895671",
+  "manifest_sha256": "897e1386727d915beb86d1c054fbee244aa4baba02ff9c832a46cdda43209034",
   "record_version": 1,
   "features": [
     {
@@ -74,7 +74,9 @@
       "name": "Reverb character",
       "values": [
         "Stock",
-        "Clouds-style"
+        "Clouds-style",
+        "Plate",
+        "Bloom"
       ],
       "states": [
         "Off",
@@ -182,7 +184,9 @@
       "name": "Processor",
       "values": [
         "Granular (Stock)",
-        "Spectral"
+        "Spectral",
+        "Oliverb",
+        "Abyss"
       ],
       "states": [
         "Off",
@@ -759,7 +763,8 @@
       "values": [
         "100%",
         "66%",
-        "33%"
+        "33%",
+        "15%"
       ],
       "states": [
         "Off",
@@ -1374,7 +1379,8 @@
         "Off (stock)",
         "After the grains",
         "Before the buffer",
-        "In the feedback"
+        "In the feedback",
+        "Chord"
       ],
       "states": [
         "Off",
@@ -1786,6 +1792,28 @@
         "Short",
         "Medium",
         "Long"
+      ],
+      "states": [
+        "Off",
+        "Fixed"
+      ],
+      "page_slots": [],
+      "amount_slots": [],
+      "actions": [],
+      "stateless": false,
+      "default_state": "Off",
+      "default": 0,
+      "factory": null,
+      "touches_synth": true,
+      "cpu_cost": null,
+      "saved": null
+    },
+    {
+      "id": 55,
+      "name": "TIME CV range",
+      "values": [
+        "Stock",
+        "Fine (1/8)"
       ],
       "states": [
         "Off",

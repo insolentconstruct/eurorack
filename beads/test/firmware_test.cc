@@ -35,6 +35,8 @@
 #include <new>
 #include <sys/mman.h>
 
+#include "stmlib/system/system_clock.h"
+
 #include "beads/test/test_checker.h"
 
 #define private public
@@ -284,6 +286,59 @@ struct Rig {
 };
 
 void RigBlock(Rig* r) { r->Block(); }
+
+void TestSynthFadeSurvivesTimerReset() {
+  test_checker.Start("TestSynthFadeSurvivesTimerReset");
+  extern volatile bool& codec_fade;
+  extern float& reverb_style_gain;
+  Rig r(false, true);
+  r.left = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  reverb_style_gain = 1.0f;
+  MonitorStateChange();
+  CHECK(codec_fade && !synth_mode);
+  synth_mode_start_time = 0;  // A late output peak in the callback.
+  reverb_style_gain = 0.0f;
+  MonitorStateChange();
+  CHECK(synth_mode);
+}
+
+void FillAtSynthResume() {
+  RigBlock(current_rig);
+  CHECK(reverb_style_gain > 0.0f);
+}
+
+void TestSynthSwapResume() {
+  test_checker.Start("TestSynthSwapResume");
+  Rig r(false, false);
+  r.audio = 0x20000000;
+  r.Settle();
+  codec_fade = true;
+  reverb_style_gain = transition.reverb_style_previous_gain_ = 0.0f;
+  codec.on_resume_ = &FillAtSynthResume;
+  SwapPaused(SYNTH_PLAITS, SYNTH_BEADS);
+  codec.on_resume_ = NULL;
+}
+
+void TestSynthEntryCancelsBackup() {
+  test_checker.Start("TestSynthEntryCancelsBackup");
+  extern float& reverb_style_gain;
+  Rig r(false, true);
+  r.left = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input() && !synth_mode);
+  synth_mode_start_time = system_clock.milliseconds();
+  for (int i = 0; i < 10000; ++i) SysTick_Handler();
+  reverb_style_gain = 0.0f;
+  background_buffer_backup.previous_freeze_state_ = true;
+  background_buffer_backup.remaining_sectors_ = 1;
+  MonitorStateChange();
+  CHECK(synth_mode);
+  CHECK(!background_buffer_backup.busy());
+}
 
 void TestAutomaticSelfPlay() {
   test_checker.Start("TestAutomaticSelfPlay");
@@ -604,6 +659,38 @@ void LoseCalibration() {
   }
   TestFlashDamage(0x081e0000 + 32);
   TestFlashDamage(0x081c0000 + 32);
+}
+
+void TestSuppressedStorageChord() {
+  test_checker.Start("TestSuppressedStorageChord");
+  Rig r(false, true);
+  LoseCalibration();
+  r.Reboot(false);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(3010, true);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
+}
+
+void TestWarningChordDebounceBoundary() {
+  test_checker.Start("TestWarningChordDebounceBoundary");
+  Rig r(false, true);
+  LoseCalibration();
+  r.Reboot(false);
+  while (system_clock.milliseconds() - ui.storage_status_time_ < 2998) {
+    r.Advance(1);
+  }
+  CHECK(ui.mode_ == Ui::MODE_STORAGE_WARNING);
+  test_down[SWITCH_ASSIGN] = true;
+  r.Tick(20, true);
+  CHECK(ui.mode_ == Ui::MODE_NORMAL);
+  test_down[SWITCH_FREEZE] = true;
+  r.Tick(20, true);
+  CHECK(ui.freeze_button_state_);
+  CHECK(!settings.state().disable_autosave);
 }
 
 void TestStorageWarning() {
@@ -1074,6 +1161,89 @@ void TestSelfPlayFrozenBackup() {
   CHECK(!settings.state().frozen);
   CHECK(!background_buffer_backup.previous_freeze_state_);
   CHECK(header->tag == 0x5a5a5246);  // Old flash remains until next save.
+}
+
+void TestLegacyPackedStereoBackup() {
+  test_checker.Start("TestLegacyPackedStereoBackup");
+  const size_t kBankBytes = 256 * 1024;
+  const int kBankFrames = kBankBytes / 3;
+  const int kWritePtr = 123;
+  const uint32_t kCrcTag = 0x31435243;
+  const int indices[] = {
+    kBankFrames - 1, kBankFrames, 2 * kBankFrames - 1, 2 * kBankFrames
+  };
+  const size_t offsets[] = {
+    kBankBytes - 4, kBankBytes, 2 * kBankBytes - 4, 2 * kBankBytes
+  };
+  const uint8_t fixture[][3] = {
+    { 0x00, 0xf8, 0x7f }, { 0x01, 0xf0, 0xff },
+    { 0xff, 0x1f, 0x00 }, { 0x23, 0xb1, 0xcb }
+  };
+  const IntFrame samples[] = {
+    { -2048, 2047 }, { 1, -1 }, { -1, 1 }, { 291, -837 }
+  };
+  const FloatFrame replacement = { -291 / 2048.0f, 837 / 2048.0f };
+  const uint8_t replacement_bytes[] = { 0xdd, 0x5e, 0x34 };
+  static uint8_t expected[kDelayBufferSizeBits / 8];
+  typedef BackgroundBufferBackup::BufferBackupHeader Header;
+  typedef beads::DelayLine<RESOLUTION_12_BIT, kDelayBufferSizeBits / 24, 2> Line;
+  const size_t kSaveSteps = sizeof(expected) / sizeof(Header) + 8;
+  Header* header = reinterpret_cast<Header*>(0x08100000);
+  uint8_t* payload = reinterpret_cast<uint8_t*>(header + 1);
+
+  for (int crc = 0; crc < 2; ++crc) {
+    Rig r(false, false);
+    memset(header, 0, sizeof(*header));
+    memset(expected, 0, sizeof(expected));
+    header->tag = 0x5a5a5246;
+    header->write_ptr = kWritePtr;
+    header->media = Processor::MEDIA_VINTAGE_DIGITAL;
+    for (size_t i = 0; i < sizeof(fixture) / sizeof(fixture[0]); ++i) {
+      memcpy(expected + offsets[i], fixture[i], sizeof(fixture[i]));
+    }
+    memcpy(payload, expected, sizeof(expected));
+    if (crc) {
+      header->crc_tag = kCrcTag;
+      // CRC-32 of the legacy payload and header, with its CRC field zero.
+      header->crc = 0xdf616b0a;
+    }
+    settings.mutable_state()->frozen = true;
+    CHECK(settings.SaveState());
+    r.Reboot(false);
+    CHECK(ui.freeze_button_state());
+    CHECK(processor.media() == Processor::MEDIA_VINTAGE_DIGITAL);
+    CHECK(!processor.mono());
+    CHECK(*processor.mutable_delay_write_ptr() == kWritePtr);
+
+    Line& line = processor.processor_vintage_digital_.stereo_delay_line_;
+    for (size_t i = 0; i < sizeof(samples) / sizeof(samples[0]); ++i) {
+      const FloatFrame frame =
+          line.Read<INTERPOLATION_ZOH>(indices[i] - kWritePtr, 0.0f);
+      CHECK(frame.l == samples[i].l / 2048.0f
+          && frame.r == samples[i].r / 2048.0f);
+    }
+
+    background_buffer_backup.Process(false);
+    *processor.mutable_delay_write_ptr() = indices[3];
+    line.Write(replacement);
+    memcpy(expected + offsets[3], replacement_bytes, sizeof(replacement_bytes));
+    for (int i = 0; i < 10000; ++i) {
+      system_clock.Tick();
+    }
+    background_buffer_backup.Process(true);
+    for (size_t i = 0; background_buffer_backup.busy() &&
+         i < kSaveSteps; ++i) {
+      background_buffer_backup.Process(true);
+    }
+    CHECK(!background_buffer_backup.busy());
+    CHECK(settings.state().frozen && header->crc_tag == kCrcTag);
+    CHECK(memcmp(payload, expected, sizeof(expected)) == 0);
+    r.Reboot(false);
+    CHECK(ui.freeze_button_state());
+    CHECK(*processor.mutable_delay_write_ptr() == indices[3] - 1);
+    const FloatFrame restored = line.Read<INTERPOLATION_ZOH>(1, 0.0f);
+    CHECK(restored.l == replacement.l && restored.r == replacement.r);
+  }
 }
 
 // A frozen buffer whose audio can't be read: the module starts unfrozen,
@@ -1798,6 +1968,28 @@ void TestCodecRestartFade() {
 
 // A change at the same sample rate keeps the converter clocked (#53): only
 // rate changes use the reset-held restart sequence.
+void TestCodecRestartRetry() {
+  test_checker.Start("TestCodecRestartRetry");
+  Rig r(false, false);
+  r.Settle();
+  const int restarts = codec.restarts_;
+  codec.fail_restart_ = true;
+  settings.mutable_state()->media = Processor::MEDIA_VINTAGE_DIGITAL;
+  for (int i = 0; i < 200 && codec.running_; ++i) {
+    r.Tick(1, true);
+  }
+  CHECK(!codec.running_ && codec.callback_ == NULL);
+  codec.fail_restart_ = false;
+  r.Tick(50, true);
+  CHECK(!codec.running_);
+  r.Tick(350, true);
+  CHECK(codec.running_ && codec.callback_ == &Process);
+  CHECK(codec.restarts_ == restarts + 1);
+  CHECK(codec.previous_sample_rate_ == 0);
+  CHECK(codec.sample_rate_ == int(processor.sample_rate()));
+  CHECK(codec_transition_frames == 0);
+}
+
 void TestCodecKeepsClocks() {
   test_checker.Start("TestCodecKeepsClocks");
   Rig r(false, false);
@@ -1894,6 +2086,66 @@ void BootWithProfile(Rig* r, const uint8_t* pairs, size_t count) {
   FlashProfile(block);
   r->Reboot(false);
   FlashProfile(factory_profile);
+}
+
+void TestFineTimeCvProfile() {
+  test_checker.Start("TestFineTimeCvProfile");
+  Rig r(false, false);
+  const uint8_t time_cv_range = 55;
+  for (uint8_t value = 0; value < 2; ++value) {
+    const uint8_t pair[] = { time_cv_range, value };
+    BootWithProfile(&r, pair, 1);
+    CHECK(!settings.profile_locked());
+    r.cv_patched[CV_ADC_CHANNEL_TIME] = true;
+    r.cv_patched[CV_ADC_CHANNEL_SIZE] = true;
+    const uint16_t steps[] = { 16384, 32768, 49152 };
+    for (size_t i = 0; i < sizeof(steps) / sizeof(steps[0]); ++i) {
+      r.cv[CV_ADC_CHANNEL_TIME] = r.cv[CV_ADC_CHANNEL_SIZE] = steps[i];
+      r.Tick(16, true);
+      const AdcCalibrationData* c = settings.persistent_data().adc_calibration;
+      const float raw = float(steps[i]) / 65536.0f;
+      const float time = raw * c[CV_ADC_CHANNEL_TIME].scale +
+          c[CV_ADC_CHANNEL_TIME].offset;
+      const float size = raw * c[CV_ADC_CHANNEL_SIZE].scale +
+          c[CV_ADC_CHANNEL_SIZE].offset;
+      CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_TIME) -
+          time * (value ? 0.125f : 1.0f)) < 1.0e-6f);
+      CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_SIZE) - size) < 1.0e-6f);
+    }
+    const float previous = cv_reader.cv(CV_ADC_CHANNEL_TIME);
+    calibrator.Start();
+    normalization_detector.Start();
+    AdcCalibrationData& c =
+        calibrator.calibration_data_[CV_ADC_CHANNEL_TIME];
+    c.offset += 0.0625f;
+    CHECK(calibrator.Save());
+    r.Tick(16, true);
+    CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_TIME) - previous -
+        0.0625f * (value ? 0.125f : 1.0f)) < 1.0e-6f);
+    Settings loaded;
+    CHECK(loaded.Init(false));
+    CHECK(loaded.persistent_data().adc_calibration[CV_ADC_CHANNEL_TIME].
+        offset == c.offset);
+    calibrator.Start();
+    normalization_detector.Start();
+    c.offset += 0.0625f;
+    TestFlash().supply_low = true;
+    CHECK(!calibrator.Save());
+    TestFlash().supply_low = false;
+    r.Tick(16, true);
+    CHECK(fabsf(cv_reader.cv(CV_ADC_CHANNEL_TIME) - previous -
+        0.0625f * (value ? 0.125f : 1.0f)) < 1.0e-6f);
+    r.cv[CV_ADC_CHANNEL_TIME] = 0;
+    r.Tick(16, true);
+    CHECK(cv_reader.cv(CV_ADC_CHANNEL_TIME) == (value ? 0.2f : 1.6f));
+    calibrator.Start();
+    normalization_detector.Start();
+    c.scale = -3.4f;
+    CHECK(calibrator.Save());
+    r.cv[CV_ADC_CHANNEL_TIME] = 65535;
+    r.Tick(16, true);
+    CHECK(cv_reader.cv(CV_ADC_CHANNEL_TIME) == (value ? -0.2f : -1.6f));
+  }
 }
 
 // Loads the factory profile plus Fixed entries, as feature/value pairs.
@@ -2783,16 +3035,18 @@ float ResonatorEnergy() {
 // The resonator is a power-on profile choice; both synths are unchanged.
 void TestResonatorProfile() {
   test_checker.Start("TestResonatorProfile");
-  const uint8_t expected[4] = {
+  const uint16_t expected[] = {
     0,
     Processor::OPTION_FLAG_RESONATOR_GRAINS,
     Processor::OPTION_FLAG_RESONATOR_INPUT,
     Processor::OPTION_FLAG_RESONATOR_GRAINS |
-        Processor::OPTION_FLAG_RESONATOR_INPUT
+        Processor::OPTION_FLAG_RESONATOR_INPUT,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS |
+        Processor::OPTION_FLAG_RESONATOR_CHORD
   };
   for (int engine = 0; engine < 3; ++engine) {
-    uint64_t hashes[4];
-    for (int placement = 0; placement < 4; ++placement) {
+    uint64_t hashes[5];
+    for (int placement = 0; placement < 5; ++placement) {
       Rig r(false, engine > 0);
       settings.set_synth(engine == 2);
       settings.SaveState();
@@ -2810,12 +3064,16 @@ void TestResonatorProfile() {
       } else {
         r.Settle();
       }
+      if (!engine) {
+        CHECK(codec.callback_ == &Process);
+      }
       hashes[placement] = MixOptionsHash(&r);
     }
     if (engine) {
       CHECK(hashes[1] == hashes[0]);
       CHECK(hashes[2] == hashes[0]);
       CHECK(hashes[3] == hashes[0]);
+      CHECK(hashes[4] == hashes[0]);
     }
   }
   // Through the audio callback: the input rings it before the buffer, and
@@ -2876,18 +3134,23 @@ void TestResonatorPage() {
   CHECK(settings.FeatureValue(FEATURE_RESONATOR_RING) == 1);
   CHECK(processor.options_ == 0);
   CHECK(!processor.resonator_controls_set_);
-  const uint8_t flags[4] = {
+  const uint16_t flags[] = {
     0,
     Processor::OPTION_FLAG_RESONATOR_GRAINS,
     Processor::OPTION_FLAG_RESONATOR_INPUT,
     Processor::OPTION_FLAG_RESONATOR_GRAINS |
-        Processor::OPTION_FLAG_RESONATOR_INPUT
+        Processor::OPTION_FLAG_RESONATOR_INPUT,
+    Processor::OPTION_FLAG_RESONATOR_GRAINS |
+        Processor::OPTION_FLAG_RESONATOR_CHORD
   };
-  for (int placement = 1; placement < 7; ++placement) {
-    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 4);
+  const int restarts = codec.restarts_;
+  for (int placement = 1; placement < 8; ++placement) {
+    settings.SetFeatureValue(FEATURE_RESONATOR, placement % 5);
     r.Tick(2, true);
-    CHECK(processor.options_ == flags[placement % 4]);
+    CHECK(processor.options_ == flags[placement % 5]);
+    CHECK(codec.callback_ == &Process);
   }
+  CHECK(codec.restarts_ == restarts);
   settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
   for (int material = 0; material < kNumResonatorMaterials; ++material) {
     for (int ring = 0; ring < 4; ++ring) {
@@ -2973,6 +3236,71 @@ void TestResonatorPage() {
 
 // [A] taps reach resonator damping after the other destinations, while the
 // resonator is on; the CV then moves damping and no mix knob.
+void TestSpectralResonatorAssignment() {
+  test_checker.Start("TestSpectralResonatorAssignment");
+  Rig r(false, false);
+  r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+  r.Settle();
+  settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+  r.Tick(10, true);
+  for (int i = 0; i < 3; ++i) {
+    TapAssign(&r);
+  }
+  CHECK(ui.resonator_assigned());
+  ui.set_freeze_button_state(true);
+  settings.set_spectral(true);
+  r.Tick(20, true);
+  CHECK(!processor.spectral());
+  CHECK(ui.resonator_assigned());
+  ui.set_freeze_button_state(false);
+  r.Settle();
+  CHECK(processor.spectral());
+  CHECK(!ui.resonator_assigned());
+  settings.mutable_state()->assignable_cv_destination = 2;
+  TapAssign(&r);
+  CHECK(!ui.resonator_assigned());
+  CHECK(settings.state().assignable_cv_destination == 0);
+
+  // A control snapshot from the last granular block may still hold feedback.
+  processor.resonator_controls_.hold_feedback = true;
+  processor.resonator_controls_.feedback = 0.0f;
+  r.cv[CV_ADC_CHANNEL_ASSIGN] = 10000;
+  r.Tick(10, false);
+  CHECK(processor.spectral_processor_.feedback_ > 0.0f);
+}
+
+void TestEffectResonatorAssignment() {
+  test_checker.Start("TestEffectResonatorAssignment");
+  extern uint8_t active_processor_mode;
+  const ProcessorMode modes[2] = { PROCESSOR_OLIVERB, PROCESSOR_ABYSS };
+  for (int i = 0; i < 2; ++i) {
+    Rig r(false, false);
+    r.cv_patched[CV_ADC_CHANNEL_ASSIGN] = true;
+    r.Settle();
+    settings.SetFeatureValue(FEATURE_RESONATOR, RESONATOR_AFTER_GRAINS);
+    r.Tick(10, true);
+    for (int tap = 0; tap < 3; ++tap) {
+      TapAssign(&r);
+    }
+    CHECK(ui.resonator_assigned());
+    // The reverbs replace the granular engine: the CV returns to FEEDBACK.
+    settings.SetFeatureValue(FEATURE_PROCESSOR, modes[i]);
+    r.Settle();
+    CHECK(active_processor_mode == modes[i]);
+    CHECK(!ui.resonator_assigned());
+    settings.mutable_state()->assignable_cv_destination = 2;
+    TapAssign(&r);
+    CHECK(!ui.resonator_assigned());
+    CHECK(settings.state().assignable_cv_destination == 0);
+    settings.SetFeatureValue(FEATURE_PROCESSOR, PROCESSOR_GRANULAR);
+    r.Settle();
+    CHECK(active_processor_mode == PROCESSOR_GRANULAR);
+    settings.mutable_state()->assignable_cv_destination = 2;
+    TapAssign(&r);
+    CHECK(ui.resonator_assigned());
+  }
+}
+
 void TestResonatorDampingCv() {
   test_checker.Start("TestResonatorDampingCv");
   Rig r(false, false);
@@ -3105,7 +3433,7 @@ void MoveAction(uint8_t* block, uint8_t feature, uint8_t action) {
   }
 }
 
-void ToggleManualDelay(Rig* r, Switch button) {
+void PressMediaChord(Rig* r, Switch button) {
   test_down[SWITCH_MEDIA] = true;
   r->Tick(20, true);
   test_down[button] = true;
@@ -3139,13 +3467,13 @@ void TestManualDelayAction() {
     CHECK(!processor.delay_active());
 
     PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 32768;
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     CHECK(!processor.delay_active());
     CHECK(processor.delay_mode_transition_ > -kDelayModeTransitionTime);
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     r.Tick(300, true);
     CHECK(processor.delay_mode_transition_ == -kDelayModeTransitionTime);
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     r.Tick(2300, true);
     CHECK(processor.delay_active());
     CHECK(!ui.freeze_button_state() && !ui.trim_flag());
@@ -3153,12 +3481,12 @@ void TestManualDelayAction() {
         (mode == DELAY_MODE_WIDE_DETENT));
 
     PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     CHECK(processor.delay_active());
     CHECK(processor.delay_mode_transition_ < kDelayModeTransitionTime);
     r.Tick(2300, true);
     CHECK(!processor.delay_active());
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     r.Tick(2300, true);
     CHECK(processor.delay_active());
     r.Reboot(false);
@@ -3343,8 +3671,7 @@ void TestEngineChangeWhileFrozen() {
   PotsAdc::values_[POTS_ADC_CHANNEL_TIME] = 32768;
 }
 
-// In calibration, holding [A] confirms a step only on release, once. The
-// stopped normalization probe counts down from INT_MIN, so no audio runs.
+// In calibration, holding [A] confirms a step only on release, once.
 void TestCalibrationStepOnRelease() {
   test_checker.Start("TestCalibrationStepOnRelease");
   Rig r(false, false);
@@ -3433,6 +3760,110 @@ void Press(Rig* r, int first, int second) {
   r->Advance(20);
 }
 
+void TestFinalCalibrationPersistence() {
+  test_checker.Start("TestFinalCalibrationPersistence");
+  typedef beads::ChunkStorage<15, 14, PersistentData, State, OptionsRecord>
+      Storage;
+  Storage& storage = settings.chunk_storage_;
+  const size_t cali_bytes = storage.ChunkSize<PersistentData>();
+  const int cali_words = cali_bytes / storage.BLOCK_SIZE;
+  // S15 repair, then S14 CALI/options, then S15 CALI/STAT.
+  const int settings_erased = 3 + 2 * cali_words +
+      storage.ChunkSize<OptionsRecord>() / storage.BLOCK_SIZE;
+  const int complete = settings_erased + cali_words +
+      storage.ChunkSize<State>() / storage.BLOCK_SIZE;
+  for (int hal = 0; hal < 2; ++hal) {
+    for (int cut = 0; cut <= complete; ++cut) {
+      const int failures = test_checker.failures();
+      Rig r(false, false);
+      r.cv_patched[CV_ADC_CHANNEL_DENSITY] = true;
+      r.cv[CV_ADC_CHANNEL_DENSITY] = 16384;
+      r.Settle();
+
+      const uint8_t default_amount = settings.state().assignable_cv_amount[0];
+      const uint8_t old_amount = 64;
+      const uint8_t new_amount = 192;
+      PersistentData measured = settings.factory_;
+      measured.adc_calibration[CV_ADC_CHANNEL_TIME].offset += 0.1f;
+      *settings.mutable_persistent_data() = measured;
+      settings.mutable_state()->assignable_cv_amount[0] = old_amount;
+      CHECK(settings.SavePersistentData());
+
+      // Leave the measured CALI only in S14 and a distinct old STAT in S15.
+      memset(reinterpret_cast<void*>(storage.chunk_address(0)), 0xff,
+          cali_bytes);
+      PersistentData mirror;
+      State old_state;
+      CHECK(storage.ReadChunk(storage.chunk_address(0), &mirror) ==
+          Storage::CHUNK_INVALID);
+      CHECK(storage.ReadMirror(&mirror) && SameCalibration(mirror, measured));
+      CHECK(storage.ReadChunk(storage.chunk_address(1), &old_state) ==
+          Storage::CHUNK_VALID && old_state.assignable_cv_amount[0] == old_amount);
+      settings.mutable_state()->assignable_cv_amount[0] = new_amount;
+
+      calibrator.Start();
+      const float u = cv_reader.unscaled_cv(CV_ADC_CHANNEL_DENSITY);
+      calibrator.calibrator_[1].Acquire(0, u + 0.2f, 0.2f);
+      PersistentData attempt = measured;
+      attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].scale = -2.0f;
+      attempt.adc_calibration[CV_ADC_CHANNEL_DENSITY].offset = 0.6f + 2.0f * u;
+      CHECK(Settings::CalibrationPlausible(attempt, settings.factory_));
+      CHECK(!SameCalibration(measured, attempt));
+
+      const bool success = cut == complete;
+      ui.mode_ = Ui::MODE_CALIBRATION_4;
+      const uint32_t operations = TestFlashErases() + test_writes;
+      if (!success) {
+        if (hal) {
+          TestFlashBudget() = cut;
+        } else {
+          TestFlash().supply_low = cut == 0;
+          TestFlash().supply_budget = cut;
+        }
+      }
+      test_down[SWITCH_MEDIA] = true;
+      r.Advance(40);
+      CHECK(ui.mode_ == Ui::MODE_CALIBRATION_4);
+      CHECK(TestFlashErases() + test_writes == operations);
+      test_down[SWITCH_MEDIA] = false;
+      r.Advance(20);
+      CHECK(TestFlashErases() + test_writes - operations == uint32_t(cut));
+      CHECK(!hal || success || TestFlashBudget() == 0);
+      CHECK(hal || success || TestFlash().supply_low);
+      const PersistentData& expected = cut >= settings_erased
+          ? attempt : measured;
+      CHECK(ui.mode_ == (success ? Ui::MODE_NORMAL : Ui::MODE_PANIC));
+      CHECK(SameCalibration(settings.persistent_data(), expected));
+      if (!success) {
+        for (int phase = 0; phase < 2; ++phase) {
+          ui.UpdateLeds();
+          const bool lit = system_clock.milliseconds() & 64;
+          CHECK((ui.leds_.intensity_[LED_MEDIA_R] != 0) == lit);
+          CHECK((ui.leds_.intensity_[LED_MEDIA_G] != 0) == lit);
+          CHECK((ui.leds_.intensity_[LED_MEDIA_B] != 0) == lit);
+          r.Advance(64);
+        }
+        r.Advance(372);
+        CHECK(ui.mode_ == Ui::MODE_PANIC);
+        r.Advance(600);
+        CHECK(ui.mode_ == Ui::MODE_NORMAL);
+      }
+      TestFlashBudget() = -1;
+      TestFlashPowerUp();
+      r.Reboot(false);
+      CHECK(SameCalibration(settings.persistent_data(), expected));
+      // The first erase removes the old STAT; the last word writes the new one.
+      const uint8_t expected_amount =
+          success ? new_amount : cut == 0 ? old_amount : default_amount;
+      CHECK(settings.state().assignable_cv_amount[0] == expected_amount);
+      if (test_checker.failures() != failures) {
+        printf("Calibration cut after %d operations (%s)\n",
+            cut, hal ? "HAL" : "PVD");
+      }
+    }
+  }
+}
+
 // The next save rewrites the settings sector, as when it is full.
 void RewriteOnNextSave() {
   settings.chunk_storage_.next_state_chunk_index_ = 0xffff;
@@ -3441,6 +3872,18 @@ void RewriteOnNextSave() {
 
 // Incomplete calibration changes neither live nor saved values (#346),
 // including rejected offsets/pitch and exit via the autosave chord.
+void TestCalibrationExitResumesNormalization() {
+  test_checker.Start("TestCalibrationExitResumesNormalization");
+  Rig r(false, false);
+  r.Settle();
+  Press(&r, SWITCH_ASSIGN, SWITCH_MEDIA);
+  CHECK(ui.mode_ == Ui::MODE_CALIBRATION_1);
+  Press(&r, SWITCH_ASSIGN, SWITCH_FREEZE);
+  r.left = r.right = false;
+  r.Settle();
+  CHECK(normalization_detector.no_input());
+}
+
 void TestUnfinishedCalibrationKept() {
   test_checker.Start("TestUnfinishedCalibrationKept");
   for (int exit = 0; exit < 3; ++exit) {
@@ -3605,6 +4048,130 @@ void TestProcessorToggle() {
   CHECK(processor.spectral());
   PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
   FlashProfile(factory_profile);
+}
+
+void ConfigureProcessorAction(Rig* r, Switch button, ProcessorMode start,
+    bool page) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  MoveAction(block, button == SWITCH_SEED ? FEATURE_MONOPHONIC : FEATURE_TRIM,
+      ACTION_NONE);
+  for (int i = 0; i < block[5]; ++i) {
+    uint8_t* entry = block + 16 + 6 * i;
+    if (entry[0] == FEATURE_PROCESSOR) {
+      entry[2] = start;
+      if (!page) {
+        entry[3] = 0;
+      }
+    }
+  }
+  MoveAction(block, FEATURE_PROCESSOR,
+      button == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
+  FlashProfile(block);
+  r->Reboot(false);
+  CHECK(!settings.profile_locked());
+  settings.SetFeatureValue(FEATURE_PROCESSOR, start);
+  settings.SaveOptions();
+  r->Reboot(false);
+  r->Settle();
+  CHECK(ui.active_processor_ == start);
+}
+
+void TestSpectralRoundTrips() {
+  test_checker.Start("TestSpectralRoundTrips");
+  const ProcessorMode starts[] = {
+    PROCESSOR_GRANULAR, PROCESSOR_OLIVERB, PROCESSOR_ABYSS, PROCESSOR_SPECTRAL
+  };
+  for (int page = 0; page < 2; ++page) {
+    for (int chord = 0; chord < 2; ++chord) {
+      const Switch button = chord ? SWITCH_FREEZE : SWITCH_SEED;
+      for (size_t i = 0; i < sizeof(starts) / sizeof(starts[0]); ++i) {
+        Rig r(false, false);
+        const ProcessorMode start = starts[i];
+        ConfigureProcessorAction(&r, button, start, page);
+        const bool boot_spectral = start == PROCESSOR_SPECTRAL;
+        const ProcessorMode targets[] = {
+          boot_spectral ? PROCESSOR_GRANULAR : PROCESSOR_SPECTRAL, start
+        };
+        for (int pass = 0; pass < (boot_spectral ? 1 : 2); ++pass) {
+          const ProcessorMode target = targets[pass];
+          const uint32_t writes = test_writes;
+          PressMediaChord(&r, button);
+          CHECK(settings.processor_mode() == target);
+          CHECK(test_writes == writes + 2);
+          CHECK(ui.processor_cue_pending_ && !ui.gestures_.cue_time());
+          r.Tick(300, true);
+          CHECK(ui.active_processor_ == target && !transition.busy());
+          CHECK(!ui.processor_cue_pending_ && ui.gestures_.cue_time());
+          const OptionValue expected = FindOptionValue(FEATURE_PROCESSOR, target);
+          CHECK(ui.gestures_.cue().pulses == expected.pulses);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_R] == expected.color.r);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_G] == expected.color.g);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_B] == expected.color.b);
+          if (target == PROCESSOR_ABYSS) {
+            r.Tick(520, true);
+            CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 0);
+          }
+          r.Tick(1100, true);
+          const Leds::Color quality = ui.media_palette_[settings.state().media];
+          CHECK(ui.leds_.intensity_[LED_MEDIA_R] == quality.r);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
+        }
+        FlashProfile(factory_profile);
+      }
+    }
+  }
+}
+
+void TestSpectralRefusals() {
+  test_checker.Start("TestSpectralRefusals");
+  for (int chord = 0; chord < 2; ++chord) {
+    const Switch button = chord ? SWITCH_FREEZE : SWITCH_SEED;
+    Rig r(false, false);
+    ConfigureProcessorAction(&r, button, PROCESSOR_GRANULAR, true);
+    for (int refusal = 0; refusal < 6; ++refusal) {
+      if (refusal == 0) {
+        ui.set_freeze_button_state(true);
+      } else if (refusal == 1) {
+        test_freeze_input = true;
+      } else if (refusal == 2) {
+        ui.mode_ = Ui::MODE_CALIBRATION_1;
+      } else if (refusal == 3) {
+        ui.mode_ = Ui::MODE_DISPLAY_AUTOSAVE;
+      } else if (refusal == 4) {
+        test_down[SWITCH_ASSIGN] = true;
+        r.Tick(3020, true);
+        test_down[SWITCH_ASSIGN] = false;
+        r.Tick(20, true);
+        CHECK(ui.options_.active());
+      } else {
+        PressMediaChord(&r, button);
+        CHECK(ui.processor_cue_pending_);
+      }
+      const ProcessorMode before = settings.processor_mode();
+      const uint32_t writes = test_writes;
+      PressMediaChord(&r, button);
+      CHECK(settings.processor_mode() == before && test_writes == writes);
+      CHECK(ui.gestures_.cue().pulses == PULSE_DOUBLE);
+      CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 255);
+      CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 0);
+      if (refusal == 5) {
+        const uint32_t warning = ui.gestures_.cue_time();
+        while (system_clock.milliseconds() - warning < 264) {
+          r.Tick(1, true);
+        }
+        CHECK(ui.active_processor_ == before && !transition.busy());
+        CHECK(ui.gestures_.cue_time() == warning);
+        CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 255);
+      }
+      ui.set_freeze_button_state(false);
+      test_freeze_input = false;
+      ui.mode_ = Ui::MODE_NORMAL;
+      r.Tick(400, true);
+      CHECK(ui.active_processor_ == before);
+    }
+    FlashProfile(factory_profile);
+  }
 }
 
 // Characterization of the transitions and option fan-out before they move
@@ -4239,6 +4806,9 @@ int main() {
   TestCustomScaleCallbackChain();
   TestCloudsSwitch();
   TestAutomaticSelfPlay();
+  TestSynthFadeSurvivesTimerReset();
+  TestSynthSwapResume();
+  TestSynthEntryCancelsBackup();
   TestRequestedSelfPlay();
   TestSelfPlayRequestLifecycle();
   TestMonoStereo();
@@ -4247,19 +4817,24 @@ int main() {
   TestTriggerOutput();
   TestStartupBranches();
   TestStorageWarning();
+  TestSuppressedStorageChord();
+  TestWarningChordDebounceBoundary();
   TestStorageRepair();
   TestFailedBufferLoad();
   TestCallbackCvRouting();
+  TestFineTimeCvProfile();
   TestPitchChain();
   TestQuantizedPitchChain();
   TestRandomIntervalsChain();
   TestRecentNotesChain();
   TestSelfPlayFrozenBackup();
+  TestLegacyPackedStereoBackup();
   TestPlaitsSynthSelection();
   TestRingsSynthOwnership();
   TestFreezeGestureFollowsPlayingSynth();
   TestSpectralEngine();
   TestCodecRestartFade();
+  TestCodecRestartRetry();
   TestCodecKeepsClocks();
   TestSynthLevel();
   TestSynthStopClearsReverb();
@@ -4280,6 +4855,8 @@ int main() {
   TestDelayOptionsProfile();
   TestResonatorProfile();
   TestResonatorPage();
+  TestSpectralResonatorAssignment();
+  TestEffectResonatorAssignment();
   TestResonatorDampingCv();
   TestResonatorSeedCallback();
   TestManualDelayAction();
@@ -4288,8 +4865,12 @@ int main() {
   TestSlowMediaGestures();
   TestEngineChangeWhileFrozen();
   TestProcessorToggle();
+  TestSpectralRoundTrips();
+  TestSpectralRefusals();
   TestCalibrationStepOnRelease();
+  TestCalibrationExitResumesNormalization();
   TestRejectedCalibrationCue();
+  TestFinalCalibrationPersistence();
   TestUnfinishedCalibrationKept();
   TestLockedCalibrationCue();
   TestFactoryCalibrationRepeat();

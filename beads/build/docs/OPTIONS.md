@@ -45,23 +45,23 @@ Scale (tap SEED to step through):
 |---|---|---|---|
 | FEEDBACK | Frozen feedback | Stock / Evolving | green; steady / yellow; steady |
 | DRY/WET | Delay mode | Auto (Stock) / Disabled / Wide/smooth filter | green; steady / yellow; steady / red; steady |
-| REVERB | Reverb character | Stock / Clouds-style | green; steady / yellow; steady |
+| REVERB | Reverb character | Stock / Clouds-style / Plate / Bloom | green; steady / yellow; steady / red; steady / green; slow blink |
 
 ## Page 3 — REVERB LED pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Processor | Granular (Stock) / Spectral | green; steady / yellow; steady |
+| FEEDBACK | Processor | Granular (Stock) / Spectral / Oliverb / Abyss | green; steady / yellow; steady / red; steady / red; slow blink |
 | DRY/WET | Synth | Beads (Stock) / Plaits / Rings | green; steady / yellow; steady / red; steady |
 | REVERB | Synth start | Automatic (Stock) / Manual | green; steady / yellow; steady |
 
-**Processor:** Switching clears the recording.
+**Processor:** Granular ↔ Spectral resets the recording.
 
 ## Page 4 — FEEDBACK and DRY/WET LEDs pulsing
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | LED brightness | 100% / 66% / 33% | green; steady / yellow; steady / red; steady |
+| FEEDBACK | LED brightness | 100% / 66% / 33% / 15% | green; steady / yellow; steady / red; steady / red; slow blink |
 | DRY/WET | SEED latch | Off / Ignore / Sync / Add | green; steady / yellow; steady / red; steady / green; slow blink |
 | REVERB | Limiter | Stock / Fast release / Off | green; steady / yellow; steady / red; steady |
 
@@ -69,7 +69,7 @@ Scale (tap SEED to step through):
 
 | Knob | Setting | Values left to right | [A] LED per value |
 |---|---|---|---|
-| FEEDBACK | Resonator | Off (stock) / After the grains / Before the buffer / In the feedback | green; steady / yellow; steady / red; steady / yellow; slow blink |
+| FEEDBACK | Resonator | Off (stock) / After the grains / Before the buffer / In the feedback / Chord | green; steady / yellow; steady / red; steady / yellow; slow blink / green; slow blink |
 | DRY/WET | Resonator material | Wood / String / Glass / Bell / Marimba / Drum / Bowl / Gong | green; steady / yellow; steady / red; steady / green; slow blink / yellow; slow blink / red; slow blink / green; fast blink / yellow; fast blink |
 | REVERB | Resonator ring time | Short / Medium / Long / Very long | green; steady / yellow; steady / red; steady / green; slow blink |
 
@@ -95,11 +95,11 @@ When a page opens, the quality LED [A] shows each stored value in turn, left to 
 
 A Hygrostat profile can skip the stored values, so [A] shows the page's first setting at once ([preview](FEATURES.md#options-page-preview)), and always open on the first page instead of the last one used ([opening page](FEATURES.md#options-page-on-opening)).
 
-Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Delay mode, Attacks, Limiter and LED brightness use the knob's three thirds; SEED latch uses four quarters; Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
+Move a knob more than a tenth of its travel to take it over; smaller bumps are ignored. Pitch scale, Random pitch steps, Delay mode, Attacks and Limiter use thirds. LED brightness, Processor, Reverb character, SEED latch and Resonator ring time use quarters; Resonator uses fifths and Resonator material eighths. Synth uses thirds with the Rings synth installed, halves without; the remaining settings use two halves. Near a boundary, turn a little past it to switch.
 
 Settings save by themselves about a second after you stop turning. Closing keeps your changes, and there is no cancel. A Hygrostat profile can also close the pages after a chosen time without interaction ([idle timeout](FEATURES.md#options-page-idle-timeout)); by default they stay open. The page LED flashes when you open, close, and when a change is saved.
 
-After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
+After the stored values, [A] shows the page's first setting, then the last knob you took over. The first value of every setting is steady green. Other values use yellow and red, with a slow red blink for 15% brightness. The factory scale bank uses warm major and cool minor colours, with slow blinks for pentatonics. Raag Shri is two pink pulses and a pause. Unused knobs leave the LED alone.
 
 Scale: on page 1, tap SEED [C] to step through the eight scales instead of closing; a long press does not step, and the taps do not play grains. Pitch scale snaps each new grain's final pitch after combining PITCH, CV and randomness, including Beads wavetable grains. Plaits and Spectral also follow Pitch scale. Grains already playing, the continuous wavetable oscillator and delay pitch keep their pitch. The root is the unshifted pitch, and +1 V is still one octave. Pelog and the raags are microtonal.
 
@@ -125,11 +125,19 @@ Grain stealing follows the 2021 and 2024 firmware by default; a Hygrostat profil
 
 In delay, a Hygrostat profile can give FEEDBACK a unity notch for sound on sound ([Delay feedback](FEATURES.md#delay-feedback)) and make DENSITY crossfade to a new delay time instead of bending the pitch ([Delay time](FEATURES.md#delay-time)).
 
-Resonator, on page 5, places Rings' modal resonator after the grains or before the buffer ([Resonator](FEATURES.md#resonator)); PITCH tunes it and Attacks hits strike it.
+On page 5, choose where the resonator sits in the signal path. In Chord, each new grain strikes one of three voices at its own pitch ([Resonator](FEATURES.md#resonator)).
 
 Frozen feedback Evolving runs frozen grains, or frozen delay slices in delay mode, through a slowly moving all-pass loop; FEEDBACK sets how far they drift.
 
-Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, stereo width, monophonic grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or wavetable synth; the R gate follows the grain clock DENSITY would set. A new processor takes over when the page closes and FREEZE is off, clearing the recording; until then the current one plays on. A frozen buffer saved to flash comes back with Granular.
+Processor Spectral: Clouds' spectral processing replaces the grains. TIME picks the stored spectrum, SIZE warps it, SHAPE quantizes it and PITCH shifts it (following the pitch scale). DENSITY sets how quickly the spectrum is renewed, and scrambles its phases towards either end. Holding SEED glitches it; FREEZE holds it. There is no grain diffusion, stereo width, monophonic grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay mode, buffer trim, FREEZE autosave or wavetable synth; the R gate follows the grain clock DENSITY would set. The new processor takes over when the page closes and FREEZE is off. A frozen buffer saved to flash comes back with Granular.
+
+Processor Oliverb uses Clouds Parasites' pitch-shifting reverb. TIME sets pre-delay, SIZE sets tank size, PITCH shifts the feedback by up to two octaves each way. DENSITY and DENSITY CV set decay. SHAPE sweeps from low-pass to high-pass through noon. The Diffusion setting and assigned Diffusion CV set diffusion, with noon as the default. TIME, SIZE, PITCH and SHAPE attenuverters set signed CV depth. Unpatched, the controls stay steady.
+
+In Oliverb, DRY/WET crossfades, FEEDBACK sets modulation rate and REVERB sets modulation depth. Assign CV can still reach those knobs. FREEZE mutes the reverb input, sets loop gain to one and opens the damping filters. Pitch shift and modulation continue. SEED has no audio effect, and OUT R is silent in gate mode.
+
+Oliverb runs at the quality's native codec rate. Release FREEZE to change Processor or quality. The shared reverb tail resets at handoff. Returning from Oliverb keeps a suspended recording when its engine, quality and input channel count still match. See [Abyss](ABYSS.md) for its controls.
+
+If a Hygrostat profile assigns Processor to [A]+SEED or [A]+FREEZE, hold [A] and press the assigned button to switch to Spectral. Repeat to return to the previous engine. After booting into Spectral, the shortcut returns to Granular. Each selection saves. Once the new engine is ready, [A] shows its Processor colour, then returns to quality. Two red flashes signal a refused switch, for example while FREEZE is held or an engine is switching. During Plaits or Rings play, [A]+FREEZE still steps the bank or polyphony.
 
 Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains, except for models with their own envelope. With DENSITY at noon and SEED unpatched the last voice drones until SEED plays a note. The models in each bank are listed in the README's "Plaits synth" section.
 

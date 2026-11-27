@@ -17,6 +17,7 @@ Needs Python 3, `unicorn==2.1.4` and `pyelftools`:
     transition_emu.py BASE.elf base.json
     transition_emu.py CANDIDATE.elf candidate.json
     transition_emu.py --compare base.json candidate.json  # fails on any change
+    transition_emu.py --compare-audio base.json candidate.json
     transition_emu.py --check BASE.elf  # block counts vs instruction hooks
     transition_emu.py --summary BASE.elf summary.json
 
@@ -26,6 +27,10 @@ blocks and one tick, as `firmware_test.cc` does. The synth timer's 10 s runs
 the main loop and tick only. Phase labels (steady, fading, silent, blanking,
 synth) come from the firmware's globals and are informative; `--compare`
 checks the per-call counts, silence and output hashes.
+
+Use `--compare-audio` for UI changes. It requires full traces and checks each
+audio interrupt's instruction count, silence flag and inclusive counts,
+then compares the audio SHA-256.
 `baseline-fd5a17a.json` is the `--summary` of that release ELF.
 
 `region_boots.py ELF REGION.bin OUT.json` checks the section-fault table in
@@ -63,3 +68,8 @@ synth mode, switches Plaits/Rings/Plaits/Beads, checks shared bank ownership,
 steps the Plaits bank and model control, then checks exit on plugged inputs.
 It is excluded from the default erased-region scenarios. Release publication
 waits for these checks; JSON evidence is retained per shard.
+
+CI also checks `saved_clouds`, which boots with a saved Clouds-style reverb
+record and verifies that audio starts at full fade gain. With the release
+region installed, `chiptune_drone` checks the gate and output on Chiptune drone
+exit, with and without a preceding note.

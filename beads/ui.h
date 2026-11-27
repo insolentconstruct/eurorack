@@ -82,6 +82,9 @@ class Ui {
   void LoadOptions();
   void Poll();
   void DoEvents();
+  inline void ObserveProcessor(ProcessorMode active, bool busy) {
+    gestures_.ObserveProcessor(active, busy);
+  }
   void FlushEvents();
   void Panic() {
     mode_ = MODE_PANIC;
@@ -152,6 +155,7 @@ class Ui {
   }
   
   OutputLimiterMode output_limiter_mode() const;
+  inline uint8_t reverb_character() const { return reverb_character_; }
   inline bool clouds_style() const { return clouds_style_; }
   inline bool evolving_feedback() const { return evolving_feedback_; }
   // The selected synth, previewed while its page is open; a SynthEngine.
@@ -172,10 +176,20 @@ class Ui {
   inline uint8_t resonator_ring() const { return resonator_ring_; }
   // The assignable CV moves the resonator's damping; not saved yet.
   inline bool resonator_assigned() const { return resonator_assigned_; }
+  inline bool resonator_available() const {
+    return resonator_available_ && resonator_ && !synth_mode_;
+  }
+  inline void set_resonator_available(bool available) {
+    resonator_available_ = available;
+    if (!available) {
+      resonator_assigned_ = false;
+    }
+  }
   inline uint8_t seed_latch() const { return seed_latch_; }
   inline bool time_scan() const { return time_scan_; }
 
   // The saved engine, applied once the options page has closed.
+  inline ProcessorMode processor_mode() const { return processor_mode_; }
   inline bool spectral() const { return spectral_; }
 
   void ProcessPot(MixParameter parameter, float value) {
@@ -227,6 +241,10 @@ class Ui {
   void UpdateLeds();
   void NextCalibrationStep();
 
+  inline bool chord_modifier(Switch s) const {
+    return switches_.pressed(s) && !suppressed_press_[s];
+  }
+
   inline bool showing_storage_status() const {
     return mode_ >= MODE_STORAGE_WARNING;
   }
@@ -243,6 +261,7 @@ class Ui {
   uint32_t press_time_[SWITCH_LAST];
   static const uint32_t long_press_duration[SWITCH_LAST];
   bool ignore_release_[SWITCH_LAST];
+  bool suppressed_press_[SWITCH_LAST];
   Mode mode_;
   
   bool no_input_;
@@ -295,11 +314,20 @@ class Ui {
   volatile uint8_t resonator_material_;
   volatile uint8_t resonator_ring_;
   volatile bool resonator_assigned_;
+  volatile bool resonator_available_;
   volatile uint8_t seed_latch_;
   volatile bool time_scan_;
   volatile uint8_t gain_ceiling_;
 
   GestureController gestures_;
+  volatile uint8_t reverb_character_;
+  volatile ProcessorMode processor_mode_;
+
+  ProcessorMode return_processor_;
+  ProcessorMode active_processor_;
+  bool processor_busy_;
+  bool processor_cue_pending_;
+  volatile bool processor_warning_;
 
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

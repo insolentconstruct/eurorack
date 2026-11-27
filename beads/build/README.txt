@@ -132,8 +132,8 @@ in standard firmware:
 
 Page 4 controls:
 
-- LED brightness selects 100%, 66% or 33%, fixed or adjustable in thirds
-  with preview; warnings dim too. The default is 100%; use FEEDBACK on
+- LED brightness selects 100%, 66%, 33% or 15%, fixed or adjustable in
+  quarters with preview; warnings dim too. The default is 100%; use FEEDBACK on
   page 4. There is no power-on gesture.
 - SEED latch selects Off (Stock), Ignore, Sync or Add in quarters with
   DRY/WET on page 4. With a cable patched and SEED latched, Off retains
@@ -313,16 +313,16 @@ grains (at noon, hits only) and while frozen too. Only granular playback
 uses hits: not delay, Spectral or the synths. SEED and its cable work as
 usual.
 
-Reverb character selects Stock or Clouds-style, which adds diffusion
-until manually set. In delay and wavetable synth, only reverb changes.
-Switching fades sound and clears the tail.
+Reverb character selects Stock, Clouds-style, Plate or Bloom in
+quarters. Clouds-style adds diffusion until manually set. Switching
+fades sound and clears the tail.
 
 Frozen feedback selects Stock or Evolving. Evolving fades in to soften
 and drift frozen grains, or frozen delay slices in delay mode,
 controlled by FEEDBACK; it stops with FREEZE off.
 
-Processor: Lower half selects Granular (Stock); upper half selects
-Spectral, using Mutable Instruments Clouds. TIME selects a spectrum,
+Processor selects Granular (green), Spectral (yellow), Oliverb (red)
+or Abyss (pulsing red) in quarters. Spectral uses Mutable Instruments Clouds. TIME selects a spectrum,
 SIZE warps it, SHAPE quantizes it, PITCH shifts it and DENSITY controls
 renewal and phase scrambling. SEED glitches; FREEZE holds. Random
 controls update per spectrum. Mixing, quality and assignable CV work
@@ -330,9 +330,20 @@ normally; the R gate follows the grain clock that DENSITY would set, not
 the spectrum renewal. Unavailable: diffusion, stereo width, monophonic
 grains, Evolving, Attacks, Random pitch steps, TIME Scan, delay, buffer
 trim, FREEZE autosave and the wavetable synth.
-Closing fades the change and clears recording; while FREEZE is on, the
-current engine plays on and the change waits for FREEZE to be released.
-The saved frozen buffer returns with Granular.
+Switching between Granular and Spectral resets the recording. A saved
+frozen buffer returns with Granular. Processor changes fade and wait for
+FREEZE to be released.
+
+With PITCH modulation at zero, Abyss PITCH is off near noon. Either side
+adds subtle detune in both directions. Farther out, the fifth and octave
+shift up clockwise and down counterclockwise. PITCH CV follows the same
+sweep.
+
+Oliverb is Clouds Parasites' modulated pitch-shifting reverb. TIME sets
+pre-delay, SIZE sets tank size, PITCH shifts feedback, DENSITY sets
+decay and SHAPE sweeps the damping filters. DRY/WET crossfades, FEEDBACK
+controls modulation rate and REVERB controls modulation depth. FREEZE
+holds the loop while pitch shift and modulation continue.
 
 Synth selects Beads (Stock) or six Plaits voices. Triggers advance
 voices, retaining pitch and random settings. FEEDBACK selects one of
@@ -353,14 +364,16 @@ the same hold restarts automatic gain. The hold acts on release, and not
 at all if a knob or button was used while [A] was down.
 
 Resonator, on page 5 with FEEDBACK, places Rings' modal resonator: Off
-(Stock), After the grains, Before the buffer or In the feedback,
-in quarters. In the feedback is After the grains whose resonance is also
+(Stock), After the grains, Before the buffer, In the feedback or Chord,
+in fifths. In the feedback is After the grains whose resonance is also
 recorded: FEEDBACK sends half its loop through the resonator, so each
 pass rings the modes again, while the level stays near After the
-grains'. Where After the grains dies away, so does it. DRY/WET picks its
-Material in eighths: Wood, String, Glass, Bell, Marimba, Drum, Bowl or
-Gong (a Drum strike starts sharp and bends down, a Gong strike starts
-flat and bends up; Bowl and Gong beat between left and right); REVERB
+grains'. Where After the grains dies away, so does it.
+In Chord, each new grain strikes one of three voices at the grain's pitch.
+DRY/WET picks its Material in eighths: Wood, String, Glass, Bell, Marimba,
+Drum, Bowl or Gong (a Drum strike starts sharp and bends down, a Gong
+strike starts flat and bends up; Bowl and Gong beat between left and
+right); REVERB
 its Ring time: Short, Medium, Long or Very long, each about four times
 longer. String and Medium are the defaults; page 5 saves like the other
 pages. PITCH tunes it and Pitch scale snaps it. Attacks hits strike it,
@@ -395,8 +408,12 @@ page	LED	knob	setting	value	colour	pulse
 2	DRY/WET	DRY/WET	Delay mode	Wide/smooth filter	red	steady
 2	DRY/WET	REVERB	Reverb character	Stock	green	steady
 2	DRY/WET	REVERB	Reverb character	Clouds-style	yellow	steady
+2	DRY/WET	REVERB	Reverb character	Plate	red	steady
+2	DRY/WET	REVERB	Reverb character	Bloom	green	slow (0.98 Hz)
 3	REVERB	FEEDBACK	Processor	Granular (Stock)	green	steady
 3	REVERB	FEEDBACK	Processor	Spectral	yellow	steady
+3	REVERB	FEEDBACK	Processor	Oliverb	red	steady
+3	REVERB	FEEDBACK	Processor	Abyss	red	slow (0.98 Hz)
 3	REVERB	DRY/WET	Synth	Beads (Stock)	green	steady
 3	REVERB	DRY/WET	Synth	Plaits	yellow	steady
 3	REVERB	DRY/WET	Synth	Rings	red	steady
@@ -405,6 +422,7 @@ page	LED	knob	setting	value	colour	pulse
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	100%	green	steady
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	66%	yellow	steady
 4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	33%	red	steady
+4	FEEDBACK and DRY/WET	FEEDBACK	LED brightness	15%	red	slow (0.98 Hz)
 4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Off	green	steady
 4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Ignore	yellow	steady
 4	FEEDBACK and DRY/WET	DRY/WET	SEED latch	Sync	red	steady
@@ -416,6 +434,7 @@ page	LED	knob	setting	value	colour	pulse
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	After the grains	yellow	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	Before the buffer	red	steady
 5	FEEDBACK and REVERB	FEEDBACK	Resonator	In the feedback	yellow	slow (0.98 Hz)
+5	FEEDBACK and REVERB	FEEDBACK	Resonator	Chord	green	slow (0.98 Hz)
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Wood	green	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	String	yellow	steady
 5	FEEDBACK and REVERB	DRY/WET	Resonator material	Glass	red	steady

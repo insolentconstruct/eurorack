@@ -315,7 +315,7 @@ void GranularProcessor<resolution, max_delay, ratio>::ProcessSendInternal(
   }
 }
 
-#ifndef BEADS_FIXED_REVERB_DECAY
+#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 // 1.5 x feedback squared is the delay loop gain of one tap.
 const float kUnityFeedback = 0.8164966f;
 const float kUnityNotchWidth = 0.03f;
@@ -342,11 +342,14 @@ void Processor::SetFeedbackCutoff(bool low) {
   processor_dirty_tape_.set_feedback_cutoff(cutoff / 24000.0f);
   SetOption(OPTION_FLAG_LOW_CUTOFF, low);
 }
-#endif  // BEADS_FIXED_REVERB_DECAY
+#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
-template<bool resonator, bool manual_delay>
+#ifdef BEADS_EXTENDED_REVERB
+void Processor::ProcessWithOptionsCharacter(
+#else
 void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
-    bool delay_requested,
+#endif  // BEADS_EXTENDED_REVERB
+    bool manual_delay, bool delay_requested,
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
     const bool* freeze,
@@ -356,6 +359,8 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
+  const bool resonator =
+      options_ & (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT);
   const float sr = sample_rate();
   Parameters scanned;
   const bool scan = (options_ & OPTION_FLAG_TIME_SCAN) && !spectral_ &&
@@ -441,7 +446,8 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
   const bool send = (options_ & OPTION_FLAG_SEND_MIX) &&
       !delay_mode && !spectral_;
   FloatFrame dry_signal[size];
-  const float feedback = resonator && resonator_controls_.hold_feedback
+  const float feedback =
+      resonator && !spectral_ && resonator_controls_.hold_feedback
       ? resonator_controls_.feedback : mix_parameters.feedback;
   float loop_feedback = feedback;
   if (unity) {
@@ -527,6 +533,8 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
     if (resonator && (options_ & OPTION_FLAG_RESONATOR_GRAINS)) {
       if (options_ & OPTION_FLAG_RESONATOR_INPUT) {
         ProcessResonatorLoop(parameters.pitch, strike, out, size);
+      } else if (options_ & OPTION_FLAG_RESONATOR_CHORD) {
+        ProcessChord(strike, grain_triggers, out, size);
       } else {
         ProcessResonator(parameters.pitch, strike, out, size);
       }
@@ -576,7 +584,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
   }
 }
 
-#ifndef BEADS_FIXED_REVERB_DECAY
+#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void Processor::set_output_division(int division) {
   CONSTRAIN(division, 1, 16);
   // Init clears the flag, so the first configuration resets the divider.
@@ -601,8 +609,9 @@ void Processor::DivideOutput(
     gate[i] = triggers[i].gate && output_pulse_;
   }
 }
-#endif  // BEADS_FIXED_REVERB_DECAY
+#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
+#ifndef BEADS_EXTENDED_REVERB
 void Processor::BEADS_DECAY_RENDER(ProcessWithOptions)(
     SeedButtonState seed_button_state,
     const stmlib::GateFlags* seed_input,
@@ -613,7 +622,7 @@ void Processor::BEADS_DECAY_RENDER(ProcessWithOptions)(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  BEADS_DECAY_RENDER(ProcessOptionsBlock)<false>(false, seed_button_state,
+  BEADS_DECAY_RENDER(ProcessOptions)(false, false, seed_button_state,
       seed_input, freeze, density, parameters, mix_parameters, in, out, size);
 }
 
@@ -628,37 +637,14 @@ void Processor::BEADS_DECAY_RENDER(ProcessManualDelayWithOptions)(
     const FloatFrame* in,
     FloatFrame* out,
     size_t size) {
-  BEADS_DECAY_RENDER(ProcessOptionsBlock)<true>(delay_requested,
+  BEADS_DECAY_RENDER(ProcessOptions)(true, delay_requested,
       seed_button_state, seed_input, freeze, density, parameters,
       mix_parameters, in, out, size);
 }
 
-template<bool manual_delay>
-void Processor::BEADS_DECAY_RENDER(ProcessOptionsBlock)(
-    bool delay_requested,
-    SeedButtonState seed_button_state,
-    const stmlib::GateFlags* seed_input,
-    const bool* freeze,
-    const ModulatedParameter& density,
-    const Parameters& parameters,
-    const MixParameters& mix_parameters,
-    const FloatFrame* in,
-    FloatFrame* out,
-    size_t size) {
-  // Resonator profiles run their own instance of the block.
-  if (options_ &
-      (OPTION_FLAG_RESONATOR_GRAINS | OPTION_FLAG_RESONATOR_INPUT)) {
-    BEADS_DECAY_RENDER(ProcessOptions)<true, manual_delay>(
-        delay_requested, seed_button_state, seed_input, freeze, density, parameters,
-        mix_parameters, in, out, size);
-  } else {
-    BEADS_DECAY_RENDER(ProcessOptions)<false, manual_delay>(
-        delay_requested, seed_button_state, seed_input, freeze, density, parameters,
-        mix_parameters, in, out, size);
-  }
-}
+#endif  // BEADS_EXTENDED_REVERB
 
-#ifndef BEADS_FIXED_REVERB_DECAY
+#if !defined(BEADS_FIXED_REVERB_DECAY) && !defined(BEADS_EXTENDED_REVERB)
 void Processor::MixDryWet(
     const FloatFrame* dry_signal,
     float dry,
@@ -676,7 +662,7 @@ void Processor::MixDryWet(
     wow_and_flutter_.Process(out, size);
   }
 }
-#endif  // BEADS_FIXED_REVERB_DECAY
+#endif  // BEADS_FIXED_REVERB_DECAY || BEADS_EXTENDED_REVERB
 
 void Processor::BEADS_DECAY_RENDER(ProcessReverb)(
     float reverb, FloatFrame* out, size_t size) {
@@ -687,6 +673,11 @@ void Processor::BEADS_DECAY_RENDER(ProcessReverb)(
 #endif  // BEADS_FIXED_REVERB_DECAY
 #ifdef BEADS_FIXED_REVERB_DECAY
   reverb_.set_time(Reverb::fixed_decay());
+#elif defined(BEADS_EXTENDED_REVERB)
+  reverb_.set_time(Reverb::fixed_decay() ? Reverb::fixed_decay()
+      : caveman
+          ? (0.45f + 0.5f * reverb_time)
+          : (0.3f + 0.6f * reverb_time));
 #else
   reverb_.set_time(caveman
       ? (0.45f + 0.5f * reverb_time)
@@ -694,11 +685,15 @@ void Processor::BEADS_DECAY_RENDER(ProcessReverb)(
 #endif  // BEADS_FIXED_REVERB_DECAY
   reverb_.set_lp(
       caveman ? 0.4f : (media_ == MEDIA_VINTAGE_DIGITAL ? 0.75f : 0.6f));
+#ifdef BEADS_EXTENDED_REVERB
+  reverb_.RenderCharacter(reverb_character_, out, size);
+#else
   if (clouds_style_) {
     reverb_.ProcessClouds(out, size);
   } else {
     reverb_.Process(out, size);
   }
+#endif  // BEADS_EXTENDED_REVERB
 }
 
 }  // namespace beads
