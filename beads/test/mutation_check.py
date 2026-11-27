@@ -1958,7 +1958,7 @@ cases = [
   ('TestProfileToggles', 'options', 'beads/profile.cc',
     '{ 2, 12, true, false, true, false },  // Time scan.',
     '{ 2, 12, true, false, false, false },  // Time scan.'),
-  ('TestProcessorToggle', 'firmware', 'beads/gesture_controller.cc',
+  ('TestProfileToggles', 'options', 'beads/gesture_controller.cc',
     '? NextSynth(current, ui_->playable_synths_) : !current;',
     '? NextSynth(current, ui_->playable_synths_) : current;'),
   ('TestProcessorToggle', 'firmware', 'beads/profile.cc',
