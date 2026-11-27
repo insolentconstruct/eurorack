@@ -124,6 +124,10 @@ class EngineTransition {
   inline void Cancel() { codec_fade_ = false; }
 
   inline bool blanking() const { return codec_transition_frames_ != 0; }
+  inline bool busy() const {
+    return codec_retry_rate_ || blanking() || codec_fade_ ||
+        reverb_style_gain_ != 1.0f;
+  }
   inline bool faded_out() const { return reverb_style_gain_ == 0.0f; }
   inline bool clouds_style() const { return clouds_style_; }
   inline uint8_t reverb_character() const {

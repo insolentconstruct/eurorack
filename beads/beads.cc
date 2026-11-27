@@ -1062,6 +1062,8 @@ void Init() {
 }
 
 void MonitorStateChange() {
+  ui.ObserveProcessor(
+      ProcessorMode(active_processor_mode), transition.busy());
   if (transition.RetryCodec()) {
     return;
   }

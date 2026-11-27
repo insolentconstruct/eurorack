@@ -34,6 +34,7 @@
 #
 #   transition_emu.py [--summary] ELF OUT.json [SCENARIO ...]
 #   transition_emu.py --compare BASE.json CANDIDATE.json
+#   transition_emu.py --compare-audio BASE.json CANDIDATE.json
 #   transition_emu.py --check ELF
 
 import hashlib
@@ -79,6 +80,7 @@ STATE_GAIN, STATE_GATE_OUTPUT, STATE_NO_AUTOSAVE, STATE_MONOPHONIC = 5, 6, 8, 9
 BUDGET = 200000000
 USAGE = '''usage: transition_emu.py [--summary] [--region BIN] ELF OUT.json [SCENARIO ...]
        transition_emu.py --compare BASE.json CANDIDATE.json
+       transition_emu.py --compare-audio BASE.json CANDIDATE.json
        transition_emu.py --check ELF
 '''
 # Pots: 7 muxed (FEEDBACK, DRY_WET, REVERB, then the TIME, SIZE, SHAPE and
@@ -904,7 +906,36 @@ def scenarios(path):
   return results
 
 
-def compare(base_path, candidate_path):
+def audio_calls(scenario):
+  for fn, count, silent, repeat, _, inner in scenario['calls']:
+    if fn == 'audio':
+      for _ in range(repeat):
+        yield count, silent, inner
+
+
+def compare_audio(base, candidate):
+  from itertools import zip_longest
+
+  if 'calls' not in base or 'calls' not in candidate:
+    print('%s: audio comparison requires full traces' % base['name'])
+    return False
+  for i, (b, c) in enumerate(zip_longest(audio_calls(base),
+                                        audio_calls(candidate))):
+    if b != c:
+      print('%s: audio block %d differs: %s -> %s' % (base['name'], i, b, c))
+      return False
+  if base['out_sha256'] != candidate['out_sha256']:
+    print('%s: audio output hash differs' % base['name'])
+    return False
+  calls = sum(run[3] for run in base['calls'] if run[0] == 'audio')
+  instructions = sum(run[1] * run[3] for run in base['calls']
+                     if run[0] == 'audio')
+  print('%s: %d identical audio blocks, %d instructions, SHA-256 %s' %
+        (base['name'], calls, instructions, base['out_sha256']))
+  return True
+
+
+def compare(base_path, candidate_path, audio_only=False):
   try:
     base, candidate = scenarios(base_path), scenarios(candidate_path)
   except RuntimeError as e:
@@ -918,6 +949,9 @@ def compare(base_path, candidate_path):
   failures = 0
   keys = ('boot', 'calls_sha256', 'out_sha256', 'total', 'phases')
   for b, c in zip(base, candidate):
+    if audio_only:
+      failures += not compare_audio(b, c)
+      continue
     name = b['name']
     same = [b[k] == c[k] for k in keys]
     if all(same):
@@ -952,8 +986,8 @@ def compare(base_path, candidate_path):
 def main(argv):
   if len(argv) == 3 and argv[1] == '--check':
     return check(argv[2])
-  if len(argv) == 4 and argv[1] == '--compare':
-    return compare(argv[2], argv[3])
+  if len(argv) == 4 and argv[1] in ('--compare', '--compare-audio'):
+    return compare(argv[2], argv[3], argv[1] == '--compare-audio')
   summary = '--summary' in argv
   argv = [a for a in argv if a != '--summary']
   region = None

@@ -3275,6 +3275,22 @@ cases = [
   ('TestWarningChordDebounceBoundary', 'firmware', 'beads/ui.cc',
     '      suppressed_press_[i] = true;',
     '      suppressed_press_[i] = false;'),
+  ('TestSpectralRoundTrips', 'firmware', 'beads/gesture_controller.cc',
+    '? ui_->return_processor_ : PROCESSOR_SPECTRAL;',
+    '? PROCESSOR_GRANULAR : PROCESSOR_SPECTRAL;'),
+  ('TestSpectralRoundTrips', 'firmware', 'beads/gesture_controller.cc',
+    'ui_->processor_cue_pending_ && !busy &&',
+    'ui_->processor_cue_pending_ &&'),
+  ('TestSpectralRefusals', 'firmware', 'beads/gesture_controller.cc',
+    'ui_->options_.commit_requested() || ui_->freeze_button_state_ ||\n'
+    '      ui_->freeze_led_state_ || ui_->processor_busy_ ||',
+    'ui_->options_.commit_requested() || ui_->processor_busy_ ||'),
+  ('TestSpectralRefusals', 'firmware', 'beads/gesture_controller.cc',
+    'if (ui_->mode_ != Ui::MODE_NORMAL ||',
+    'if ('),
+  ('TestSpectralRefusals', 'firmware', 'beads/gesture_controller.cc',
+    'uint32_t(now - cue_time_) < kOptionsFastPeriod * 3 / 2',
+    'uint32_t(now - cue_time_) < 1'),
 ]
 # Validate every replacement before creating a disposable source tree.
 for name, suite, source, before, after in cases:

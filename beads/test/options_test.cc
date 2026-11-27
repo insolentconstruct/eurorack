@@ -3598,8 +3598,6 @@ uint8_t SawToggleValue(Rig* r, ProfileFeature feature) {
   switch (feature) {
     case FEATURE_REVERB:
       return r->ui.reverb_character();
-    case FEATURE_PROCESSOR:
-      return r->ui.processor_mode();
     case FEATURE_FROZEN:
       return r->ui.evolving_feedback();
     case FEATURE_SYNTH:
@@ -3614,15 +3612,15 @@ uint8_t SawToggleValue(Rig* r, ProfileFeature feature) {
 void TestProfileToggles() {
   test_checker.Start("TestProfileToggles");
   const ProfileFeature toggles[] = {
-    FEATURE_REVERB, FEATURE_PROCESSOR, FEATURE_FROZEN, FEATURE_SYNTH,
+    FEATURE_REVERB, FEATURE_FROZEN, FEATURE_SYNTH,
     FEATURE_TIME_SCAN
   };
   uint8_t b[kProfileSize];
-  for (int t = 0; t < 5; ++t) {
+  for (size_t t = 0; t < sizeof(toggles) / sizeof(toggles[0]); ++t) {
     const ProfileFeature feature = toggles[t];
     CHECK(kFeatureDefinitions[feature].action);
     CHECK(kFeatureDefinitions[feature].values ==
-        (feature == FEATURE_PROCESSOR || feature == FEATURE_REVERB ? 4
+        (feature == FEATURE_REVERB ? 4
             : feature == FEATURE_SYNTH ? 3 : 2));
     CHECK(kFeatureDefinitions[feature].field != kNoField);
     for (int slot = ACTION_SEED; slot <= ACTION_FREEZE; ++slot) {
@@ -3638,7 +3636,7 @@ void TestProfileToggles() {
       ApplyCustomProfile(&r, b);
       CHECK(r.settings.profile().Action(slot) == feature);
       const uint8_t media = r.settings.state().media;
-      const int steps = feature == FEATURE_PROCESSOR ? 4 : 2;
+      const int steps = 2;
       for (int flip = 0; flip < steps; ++flip) {
         const uint8_t value = (flip + 1) % steps;
         const uint32_t writes = test_writes;
@@ -3695,6 +3693,30 @@ void TestTogglesInPlaitsPlay() {
         CHECK(r.ui.freeze_button_state_);
       }
     }
+  }
+}
+
+void TestSpectralSynthPrecedence() {
+  test_checker.Start("TestSpectralSynthPrecedence");
+  const SynthEngine synths[] = { SYNTH_PLAITS, SYNTH_RINGS };
+  const ProfileFeature actions[] = {
+    FEATURE_PLAITS_BANK, FEATURE_RINGS_POLYPHONY
+  };
+  for (size_t i = 0; i < sizeof(synths) / sizeof(synths[0]); ++i) {
+    Rig r(false);
+    uint8_t b[kProfileSize];
+    CustomProfile(b, FEATURE_PROCESSOR, 0, 0, ACTION_FREEZE);
+    ApplyCustomProfile(&r, b);
+    r.ui.set_synth_mode(true);
+    r.ui.set_playing_synth(synths[i]);
+    const uint8_t before = r.settings.FeatureValue(actions[i]);
+    r.Down(SWITCH_MEDIA);
+    r.Down(SWITCH_FREEZE);
+    CHECK(r.settings.FeatureValue(actions[i]) == before + 1);
+    CHECK(r.settings.processor_mode() == PROCESSOR_GRANULAR);
+    CHECK(!r.ui.processor_cue_pending_);
+    r.Up(SWITCH_FREEZE);
+    r.Up(SWITCH_MEDIA);
   }
 }
 
@@ -4701,6 +4723,7 @@ int main() {
   TestProfileAmounts();
   TestProfileToggles();
   TestTogglesInPlaitsPlay();
+  TestSpectralSynthPrecedence();
   TestFeedbackAmountSlot();
   TestOptionsIdleTimeout();
   TestOptionsEntryChoices();

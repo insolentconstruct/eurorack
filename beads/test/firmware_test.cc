@@ -3433,7 +3433,7 @@ void MoveAction(uint8_t* block, uint8_t feature, uint8_t action) {
   }
 }
 
-void ToggleManualDelay(Rig* r, Switch button) {
+void PressMediaChord(Rig* r, Switch button) {
   test_down[SWITCH_MEDIA] = true;
   r->Tick(20, true);
   test_down[button] = true;
@@ -3467,13 +3467,13 @@ void TestManualDelayAction() {
     CHECK(!processor.delay_active());
 
     PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 32768;
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     CHECK(!processor.delay_active());
     CHECK(processor.delay_mode_transition_ > -kDelayModeTransitionTime);
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     r.Tick(300, true);
     CHECK(processor.delay_mode_transition_ == -kDelayModeTransitionTime);
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     r.Tick(2300, true);
     CHECK(processor.delay_active());
     CHECK(!ui.freeze_button_state() && !ui.trim_flag());
@@ -3481,12 +3481,12 @@ void TestManualDelayAction() {
         (mode == DELAY_MODE_WIDE_DETENT));
 
     PotsAdc::values_[POTS_ADC_CHANNEL_SIZE] = 65535;
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     CHECK(processor.delay_active());
     CHECK(processor.delay_mode_transition_ < kDelayModeTransitionTime);
     r.Tick(2300, true);
     CHECK(!processor.delay_active());
-    ToggleManualDelay(&r, button);
+    PressMediaChord(&r, button);
     r.Tick(2300, true);
     CHECK(processor.delay_active());
     r.Reboot(false);
@@ -4048,6 +4048,130 @@ void TestProcessorToggle() {
   CHECK(processor.spectral());
   PotsAdc::values_[POTS_ADC_CHANNEL_DRY_WET] = 0;
   FlashProfile(factory_profile);
+}
+
+void ConfigureProcessorAction(Rig* r, Switch button, ProcessorMode start,
+    bool page) {
+  uint8_t block[kProfileSize];
+  BuildProfile(block, NULL, 0);
+  MoveAction(block, button == SWITCH_SEED ? FEATURE_MONOPHONIC : FEATURE_TRIM,
+      ACTION_NONE);
+  for (int i = 0; i < block[5]; ++i) {
+    uint8_t* entry = block + 16 + 6 * i;
+    if (entry[0] == FEATURE_PROCESSOR) {
+      entry[2] = start;
+      if (!page) {
+        entry[3] = 0;
+      }
+    }
+  }
+  MoveAction(block, FEATURE_PROCESSOR,
+      button == SWITCH_SEED ? ACTION_SEED : ACTION_FREEZE);
+  FlashProfile(block);
+  r->Reboot(false);
+  CHECK(!settings.profile_locked());
+  settings.SetFeatureValue(FEATURE_PROCESSOR, start);
+  settings.SaveOptions();
+  r->Reboot(false);
+  r->Settle();
+  CHECK(ui.active_processor_ == start);
+}
+
+void TestSpectralRoundTrips() {
+  test_checker.Start("TestSpectralRoundTrips");
+  const ProcessorMode starts[] = {
+    PROCESSOR_GRANULAR, PROCESSOR_OLIVERB, PROCESSOR_ABYSS, PROCESSOR_SPECTRAL
+  };
+  for (int page = 0; page < 2; ++page) {
+    for (int chord = 0; chord < 2; ++chord) {
+      const Switch button = chord ? SWITCH_FREEZE : SWITCH_SEED;
+      for (size_t i = 0; i < sizeof(starts) / sizeof(starts[0]); ++i) {
+        Rig r(false, false);
+        const ProcessorMode start = starts[i];
+        ConfigureProcessorAction(&r, button, start, page);
+        const bool boot_spectral = start == PROCESSOR_SPECTRAL;
+        const ProcessorMode targets[] = {
+          boot_spectral ? PROCESSOR_GRANULAR : PROCESSOR_SPECTRAL, start
+        };
+        for (int pass = 0; pass < (boot_spectral ? 1 : 2); ++pass) {
+          const ProcessorMode target = targets[pass];
+          const uint32_t writes = test_writes;
+          PressMediaChord(&r, button);
+          CHECK(settings.processor_mode() == target);
+          CHECK(test_writes == writes + 2);
+          CHECK(ui.processor_cue_pending_ && !ui.gestures_.cue_time());
+          r.Tick(300, true);
+          CHECK(ui.active_processor_ == target && !transition.busy());
+          CHECK(!ui.processor_cue_pending_ && ui.gestures_.cue_time());
+          const OptionValue expected = FindOptionValue(FEATURE_PROCESSOR, target);
+          CHECK(ui.gestures_.cue().pulses == expected.pulses);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_R] == expected.color.r);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_G] == expected.color.g);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_B] == expected.color.b);
+          if (target == PROCESSOR_ABYSS) {
+            r.Tick(520, true);
+            CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 0);
+          }
+          r.Tick(1100, true);
+          const Leds::Color quality = ui.media_palette_[settings.state().media];
+          CHECK(ui.leds_.intensity_[LED_MEDIA_R] == quality.r);
+          CHECK(ui.leds_.intensity_[LED_MEDIA_G] == quality.g);
+        }
+        FlashProfile(factory_profile);
+      }
+    }
+  }
+}
+
+void TestSpectralRefusals() {
+  test_checker.Start("TestSpectralRefusals");
+  for (int chord = 0; chord < 2; ++chord) {
+    const Switch button = chord ? SWITCH_FREEZE : SWITCH_SEED;
+    Rig r(false, false);
+    ConfigureProcessorAction(&r, button, PROCESSOR_GRANULAR, true);
+    for (int refusal = 0; refusal < 6; ++refusal) {
+      if (refusal == 0) {
+        ui.set_freeze_button_state(true);
+      } else if (refusal == 1) {
+        test_freeze_input = true;
+      } else if (refusal == 2) {
+        ui.mode_ = Ui::MODE_CALIBRATION_1;
+      } else if (refusal == 3) {
+        ui.mode_ = Ui::MODE_DISPLAY_AUTOSAVE;
+      } else if (refusal == 4) {
+        test_down[SWITCH_ASSIGN] = true;
+        r.Tick(3020, true);
+        test_down[SWITCH_ASSIGN] = false;
+        r.Tick(20, true);
+        CHECK(ui.options_.active());
+      } else {
+        PressMediaChord(&r, button);
+        CHECK(ui.processor_cue_pending_);
+      }
+      const ProcessorMode before = settings.processor_mode();
+      const uint32_t writes = test_writes;
+      PressMediaChord(&r, button);
+      CHECK(settings.processor_mode() == before && test_writes == writes);
+      CHECK(ui.gestures_.cue().pulses == PULSE_DOUBLE);
+      CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 255);
+      CHECK(ui.leds_.intensity_[LED_MEDIA_G] == 0);
+      if (refusal == 5) {
+        const uint32_t warning = ui.gestures_.cue_time();
+        while (system_clock.milliseconds() - warning < 264) {
+          r.Tick(1, true);
+        }
+        CHECK(ui.active_processor_ == before && !transition.busy());
+        CHECK(ui.gestures_.cue_time() == warning);
+        CHECK(ui.leds_.intensity_[LED_MEDIA_R] == 255);
+      }
+      ui.set_freeze_button_state(false);
+      test_freeze_input = false;
+      ui.mode_ = Ui::MODE_NORMAL;
+      r.Tick(400, true);
+      CHECK(ui.active_processor_ == before);
+    }
+    FlashProfile(factory_profile);
+  }
 }
 
 // Characterization of the transitions and option fan-out before they move
@@ -4741,6 +4865,8 @@ int main() {
   TestSlowMediaGestures();
   TestEngineChangeWhileFrozen();
   TestProcessorToggle();
+  TestSpectralRoundTrips();
+  TestSpectralRefusals();
   TestCalibrationStepOnRelease();
   TestCalibrationExitResumesNormalization();
   TestRejectedCalibrationCue();
