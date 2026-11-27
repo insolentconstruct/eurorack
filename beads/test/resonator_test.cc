@@ -729,6 +729,65 @@ ResonatorControls Controls(int material, int ring) {
   return c;
 }
 
+uint64_t RunBloomResonator(
+    Processor::Media media,
+    int placement,
+    int material,
+    float amount,
+    bool reverb_on_grains,
+    float* bloom_peak) {
+  Init(media, false, placement);
+  processor.SetReverbCharacter(REVERB_BLOOM);
+  processor.SetOption(Processor::OPTION_FLAG_REVERB_ON_GRAINS, reverb_on_grains);
+  ResonatorControls controls = Controls(material, 1);
+  controls.amount = amount;
+  processor.set_resonator_controls(controls);
+  parameters.pitch.base = -36.0f;
+  mix.dry_wet = 0.85f;
+  mix.feedback = 0.6f;
+  GateFlags seed[12] = { GATE_FLAG_RISING };
+  uint64_t hash = 14695981039346656037ull;
+  for (int block = 0; block < 256; ++block) {
+    FillSine(block, 0.3f);
+    processor.ProcessCharacter(false, false, SEED_BUTTON_STATE_LOCKED,
+        seed, freeze, density, parameters, mix, input, output, BlockSize());
+    seed[0] = GATE_FLAG_LOW;
+    hash = Hash(hash, output, BlockSize());
+  }
+  *bloom_peak = processor.reverb_character_.peak;
+  return hash;
+}
+
+void TestBloomFeedbackResonator() {
+  test_checker.Start("TestBloomFeedbackResonator");
+  for (bool reverb_on_grains : { false, true }) {
+    for (int material : { 0, 1 }) {
+      float silent_peak;
+      float ringing_peak;
+      const uint64_t silent = RunBloomResonator(Processor::MEDIA_DIGITAL,
+          RESONATOR_FEEDBACK, material, 0.0f, reverb_on_grains, &silent_peak);
+      const uint64_t ringing = RunBloomResonator(Processor::MEDIA_DIGITAL,
+          RESONATOR_FEEDBACK, material, 1.0f, reverb_on_grains, &ringing_peak);
+      CHECK(ringing != silent);
+      CHECK(ringing_peak == silent_peak);
+      CHECK(processor.resonator_loop_feedback_ == 0.0f);
+      CHECK(processor.resonator_.odd_[1].state_1_[0] != 0.0f);
+      CHECK(processor.resonator_.odd_[2].state_1_[0] == 0.0f);
+      CHECK(processor.resonator_.even_[2].state_1_[0] == 0.0f);
+      processor.SetReverbCharacter(REVERB_PLATE);
+      CHECK(processor.resonator_sample_rate_ == 0.0f);
+    }
+  }
+  float peak;
+  RunBloomResonator(Processor::MEDIA_VINTAGE_DIGITAL, RESONATOR_FEEDBACK,
+      0, 1.0f, false, &peak);
+  CHECK(processor.resonator_loop_feedback_ == mix.feedback);
+  CHECK(processor.resonator_.odd_[2].state_1_[0] != 0.0f);
+  RunBloomResonator(Processor::MEDIA_DIGITAL, RESONATOR_AFTER_GRAINS,
+      0, 1.0f, false, &peak);
+  CHECK(processor.resonator_.odd_[2].state_1_[0] != 0.0f);
+}
+
 // Each Ring time rings longer than the last; the Materials sound apart, at
 // levels close to String's; Amount scales the resonance exactly.
 void TestResonatorControls() {
@@ -2438,6 +2497,7 @@ int main() {
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
 #endif  // defined(__SSE__)
+  TestBloomFeedbackResonator();
   TestResonatorDefaults();
   TestResonatorBank();
   TestResonatorPitch();

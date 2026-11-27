@@ -312,6 +312,10 @@ Bloom uses the stock tank. An onset on the mono reverb send restarts a
 250 ms ramp for diffusion and feedback. A short slew smooths the reset
 while the preceding tail is still ringing.
 
+At 48 kHz, when Bloom and the Feedback resonator are selected together,
+the resonator rings after the reverb. Its tail stays out of the recording
+buffer and uses 16 partials for a lighter sound.
+
 ## Stereo width
 
 | Allocation | Use |

@@ -4,6 +4,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 - Page 2 Reverb character adds Plate and Bloom.
+- At 48 kHz, Bloom and the Feedback resonator play in series. The 16-partial resonance rings after Bloom and stays out of the recording buffer.
 
 - Custom profiles can reduce TIME CV sensitivity to one eighth (#39).
 

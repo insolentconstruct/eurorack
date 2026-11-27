@@ -1,6 +1,7 @@
 TARGET = resonator_test
 CC_FILES       = 		resonator_test.cc \
 		processor.cc \
+		reverb_characters.cc \
 		processor_options.cc \
 		spectral_processor.cc \
 		phase_vocoder.cc \
