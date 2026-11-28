@@ -177,8 +177,8 @@ class ModalResonator {
     glide_ = modes_ ? modes_->glide : 0.0f;
   }
 
-  // Chord: strikes[v * size + i] excites voice v at sample i.
-  // A grain strikes the nearest voice at gain times Rings' strum.
+  // Chord: strikes[v * size + i] excites voice v at sample i; a grain strikes
+  // its nearest voice at gain times Rings' strum; only a quiet voice retunes.
   void StrikeVoice(
       float ratio,
       size_t offset,

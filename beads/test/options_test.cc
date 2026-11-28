@@ -2797,7 +2797,8 @@ void TestPageTwoKnobRoutingAndSavedMeaning() {
     CHECK(r.settings.delay_mode() == DELAY_MODE_WIDE_DETENT);
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.evolving_feedback() && loaded.reverb_character() == REVERB_BLOOM);
+    CHECK(loaded.evolving_feedback());
+    CHECK(loaded.reverb_character() == REVERB_BLOOM);
     CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     CHECK(loaded.profile().Page(4) == FEATURE_FROZEN);
   }
