@@ -4,12 +4,10 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 
 ## Unreleased
 - Page 2 Reverb character adds Plate and Bloom.
-- At 48 kHz, the 16-partial Feedback resonator feeds Bloom’s tank and onset detector. Its tail stays out of the recording buffer.
+- At 48 kHz, the 16-partial Feedback resonator feeds Bloom's tank and onset detector while the recording bypasses the tail.
 
 - Custom profiles can reduce TIME CV sensitivity to one eighth (#39).
-
 - A custom profile can assign Manual delay toggle to [A]+SEED or [A]+FREEZE (#309).
-
 - Custom profiles can set a fixed reverb decay while REVERB still controls the mix (#38).
 
 - LED brightness adds a 15% level on page 4. Measured RGB light curves preserve quality LED colours while dimming.
@@ -83,7 +81,7 @@ Put new changes under an `## Unreleased` heading. For a release, replace it with
 - The pitch notch cue lights [A] pure blue instead of green (#313), apart from every quality colour.
 - Resonator (#88): Rings' modal resonator, 24 modes in stereo, after the grains or before the buffer; Off by default, on options page 5 with its Material (Wood, String, Glass, Bell, and Drizzlet's own Marimba, Drum, Bowl and Gong: a Drum or Gong strike bends the pitch, Bowl and Gong beat between left and right) and Ring time (Short to Very long). PITCH tunes it with Pitch scale and Recent notes; Attacks hits and SEED strike it as Rings' strum does (SEED stays the clock in delay mode). [M] can send the CV input to its damping. Hygrostat can set exact structure, brightness, damping, pickup position and amount. All 32 grains still play.
 - Resonator: a fourth placement, In the feedback (#88): After the grains, with half of FEEDBACK's loop through the resonator, so each pass rings its modes again. The resonance is scaled by a bound on the bank's own peak gain, never by its level, so its loop gain never exceeds the grains' own; in tests it never sustained where After the grains dies away. Placement now takes quarters of FEEDBACK on page 5.
-- Resonator: Chord adds three voices of eight modes each. Each new grain strikes a voice at its own pitch, and a voice can change pitch once its tail falls 40 dB. Page 5 selects the five placements in fifths of FEEDBACK.
+- Resonator: Chord adds three voices of eight modes each. Each new grain strikes a voice at its own pitch, and a voice can change pitch once its level estimate falls at least 42 dB from its peak. Page 5 selects the five placements in fifths of FEEDBACK.
 - Resonator: its limiter starts at rest, so the first strikes after it starts are no longer about 24 dB quiet for two seconds (#352).
 - An assigned Processor chord on [A]+SEED or [A]+FREEZE switches to Spectral and back to the previous engine. Booting in Spectral returns to Granular. The selection saves, and [A] shows the destination colour after the handoff. While Plaits or Rings plays, [A]+FREEZE still steps the bank or polyphony.
 - Custom profiles can also assign Reverb character, Frozen feedback, Synth (on [A]+SEED) or TIME modulation to those chords (#301). These actions save and show the options colour.

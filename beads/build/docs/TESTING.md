@@ -43,6 +43,7 @@ permanent Plaits model and library IDs in `profile-features.json`.
 | `beads/test/trigger.mk` | Grain triggering with sanitizers: free-running rates at both ends of DENSITY, silence at noon (free and clocked), clock probability and divisions, SEED and gate enabling, one grain per press or gate at noon, density FM, and SEED latch Sync as a hard sync (a grain per edge, also with a clock faster than DENSITY's rate and at noon) |
 | `beads/test/granular.mk` | Grain playback and attenurandomizers with sanitizers: TIME, direction, SIZE, SHAPE, the PITCH notches and the smooth PITCH law, patched and unpatched knob laws, random distributions and the shared random stream; through the processor, parameters fixed at grain start, envelopes, voice stealing and the grain count, PITCH CV response, random pan, and CV channel separation; monophonic grains fading earlier grains; quantized grain pitch and trimmed-window reads; Recent notes grains |
 | `beads/test/delay.mk` | Frozen delay with sanitizers: clocked delay with short and start-up clock intervals, free-running delay with FM from −0.7 to +0.5, slice changes only at slice boundaries, every clock divider ratio, and the clock's idle counter stopping at its limit; every tap reads a valid delay. Also DENSITY and its CV, the secondary tap, SEED clocking and its crossfade, TIME multipliers, SHAPE envelopes (one shape per sample, equal to the stock per-tap envelopes) and TIME's random modulation |
+| `beads/test/abyss.mk` | Impulse delay, tail decay, FREEZE retention, onset shaping, shimmer and dry bypass at 48, 32 and 24 kHz. PITCH notch, subtle detune, fifth and octave in both directions. |
 | `beads/test/backup.mk` | Frozen-buffer save format byte by byte; no save before 10 s of FREEZE and a clean cancel; stock saves load; out-of-range headers refused when loading; corrupted audio or header refused on saves carrying the CRC tag; power lost at 428 points (including half-erased sectors) never restores a partial save; flash errors at 103 points abandon cleanly; trimmed and empty buffer saves, older saves, invalid lengths and trim under a FREEZE gate; settings saved during a save; the backoff after cut-short saves, its cap and resets, across the clock wrapping and after a restored frozen buffer |
 | `beads/test/wavetable.mk` | Synth mode with sanitizers: last-bank, last-wave reads stay inside the table, and the guard row matches the last wave; the FM bank's four frequency ratios; FEEDBACK's bank selection and its hysteresis; dry/wet, FREEZE, the output resolution of each quality, 1 V/octave and pitch spread, and the dry sine level at octaves from C3 to C9; quantized synth grains; stereo width in rendered grains (Stock, zero, small and full displacement, CV clamped at both ends, grains keep the width they started with) |
 | `beads/test/processor.mk` | The whole audio processor with sanitizers: each quality's sample rate, bit depth and buffer length, mono and stereo; FREEZE from the button and the gate; frozen grains keep playing; the crossfade when recording resumes; trim dispatch for every quality, mono and stereo |
@@ -61,34 +62,44 @@ permanent Plaits model and library IDs in `profile-features.json`.
 
 | Program | Tests | Assertion sites |
 |---|---:|---:|
+| abyss | 2 | 28 |
 | attack | 4 | 22 |
-| backup | 25 | 166 |
+| backup | 31 | 198 |
 | clouds | 5 | 17 |
-| codec | 5 | 60 |
+| codec | 7 | 74 |
 | delay | 12 | 47 |
 | delay_mode | 25 | 169 |
 | feedback_diffuser | 4 | 23 |
-| firmware | 50 | 492 |
-| gain | 6 | 29 |
+| firmware | 77 | 816 |
+| gain | 7 | 34 |
 | granular | 28 | 128 |
-| mix | 10 | 49 |
-| options | 73 | 846 |
+| mix | 14 | 73 |
+| options | 86 | 944 |
 | pitch_quantizer | 7 | 83 |
-| plaits_synth | 14 | 72 |
+| plaits_synth | 15 | 77 |
 | processor | 11 | 45 |
-| profile | 10 | 135 |
-| record | 20 | 181 |
-| resonator | 16 | 104 |
+| profile | 11 | 150 |
+| record | 27 | 241 |
+| resonator | 34 | 250 |
 | spectral | 8 | 42 |
-| storage | 31 | 466 |
+| storage | 41 | 528 |
 | trigger | 12 | 37 |
 | wavetable | 14 | 68 |
-| **Total** | **390** | **3,281** |
+| **Total** | **482** | **4,094** |
 
-Counts are named test sections and `CHECK` call sites in the test sources; loops and parameter sweeps execute those sites many times.
+Counts cover the programs listed here. They count named test sections
+and `CHECK` sites in each primary test source. Loops and parameter sweeps
+can execute a site many times.
 
-From the repository root: `make -f beads/test/<name>.mk test`. The TSV/documentation check is not in the C++ counts. Tests follow firmware over the manual (7.8 ms shortest requested grain, reset keeping calibration, [M] LED levels, input gain falling after an overload); see [MANUAL_ERRATA.md](MANUAL_ERRATA.md). Removing each backup safeguard must fail its test; `beads/test/mutation_check.py`
-injects recorded faults into newer tests, each required to fail (797 current patterns; Beta 2 had 396). It runs on GitHub Actions in 12 parallel shards of equal measured cost (`--shard K/12`) for pull requests that change the firmware or tests, weekly and on demand.
+Run `make -f beads/test/<name>.mk test` from the repository root. Tests
+follow firmware where it differs from the manual, including the shortest
+requested grain, reset, [M] LED levels and overload recovery. See
+[MANUAL_ERRATA.md](MANUAL_ERRATA.md).
+
+The mutation check requires each injected fault to fail its test. Use
+`python3 beads/test/mutation_check.py --patterns-only` to count the faults
+and verify shard coverage. GitHub Actions runs 12 cost-balanced shards
+(`--shard K/12`) on firmware and test pull requests, weekly and on demand.
 
 Saves without the CRC tag (every stock save, or a damaged tag) load after the range checks alone, so stock and Drizzlet read each other's saves.
 

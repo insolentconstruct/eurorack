@@ -297,15 +297,14 @@ changes, including settled option changes. Module listening done; module CPU 105
 
 Clouds-style modulation uses nominal 0.5/0.3 Hz rates in every recording quality; delay lengths remain in samples.
 
-Page 2 Reverb character uses four equal steps. Stock is green, the existing
-second value is yellow, Plate is red and Bloom pulses green. All four use
-the same REVERB amount and decay mapping and share the 64 KiB tank buffer.
-The legacy profile toggle returns Plate or Bloom to Stock, then toggles
-between Stock and the second value.
+Page 2 Reverb character uses quarters. Stock is green, Clouds-style is
+yellow, Plate is red and Bloom pulses green. All four share the 64 KiB tank
+and use the same REVERB amount and decay controls. A profile gesture toggles
+Stock and Clouds-style, returning to Stock from Plate or Bloom.
 
-Plate uses four input diffusers and a figure-eight tank with modulated decay
-diffusers, damping and staggered stereo output taps. Its tank follows the
-published figure-eight structure with its own delay lengths and tap mix.
+Plate uses four input diffusers and a damped figure-eight tank with
+modulated decay diffusers and staggered stereo taps. It adapts Dattorro's
+topology with its own delay lengths and tap mix.
 [Jon Dattorro, Effect Design, Part 1 (1997)](https://aes.org/publications/elibrary/elibrary-page/?id=10160)
 
 Bloom uses the stock tank. An onset on the mono reverb send restarts a
@@ -609,15 +608,14 @@ no panel slot or saved byte.
 Hygrostat feature ID 54 offers Coupled (stock), Short, Medium and Long
 (#38). A fixed decay lets you use a long tail at a low mix or a short tail
 at a high mix. REVERB and its assigned CV keep their existing mix response.
-The choice applies to both reverb characters, all qualities, granular, delay,
-spectral and all three synths. It has no panel slot or saved byte. Off and
-omitted entries use the stock coupled response. Firmware without ID 54
-uses its fallback profile if this entry is present.
+The choice applies to Stock, Clouds-style, Plate and Bloom in Granular,
+delay, Spectral and all three synths at every supported quality. It has no
+panel slot or saved byte. Off and omitted entries use the coupled response.
+Firmware without ID 54 uses its fallback profile if this entry is present.
 
 Short, Medium and Long set loop feedback to 0.30, 0.60 and 0.85. The
 resulting tail length depends on sample rate and reverb character. The
 existing mix limits are 0.90 for the processor and 0.80 for the synths.
-An optional full-wet range would need a separate choice.
 
 ### TIME CV range
 
