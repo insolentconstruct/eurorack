@@ -51,6 +51,8 @@ volatile uint32_t s1_irq_cycles;
 volatile uint32_t s1_callback_peak;
 volatile uint32_t s1_irq_peak;
 extern "C" {
+volatile uint32_t s1_callback_gate_cycles;
+volatile uint32_t s1_irq_gate_cycles;
 volatile uint32_t s1_callback_gate_peak;
 volatile uint32_t s1_irq_gate_peak;
 }
@@ -70,9 +72,11 @@ static volatile bool cue_active;
 static volatile uint32_t cue_count;
 static volatile uint32_t synth_hz = 48000;
 static volatile uint32_t target;
-static bool capture_irq;
 static uint32_t seal;
 static volatile bool flush_pending;
+// A late request 6 still reports this seal, until the next arm or startup
+// preparation starts a new acquisition.
+static bool published;
 static uint64_t begin_tick;
 // A sealed capture is a ring of `ring` callbacks; a latched one keeps `pre`
 // callbacks before its trigger flag and seals once `stop` are written.
@@ -142,6 +146,7 @@ void Init() {
   __HAL_RCC_RNG_CLK_DISABLE();
   __HAL_RCC_HSI48_DISABLE();
 
+  published = false;
   external_seal = 0;
   SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(
       s1_trace + kTraceBytes - 32), 32);
@@ -223,6 +228,7 @@ static void Seal() {
 }
 
 static void Arm(uint32_t count, uint32_t before, uint32_t status) {
+  published = false;
   external_seal = 0;
   SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(
       s1_trace + kTraceBytes - 32), 32);
@@ -255,6 +261,7 @@ static void Flush() {
   SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(
       s1_trace + kTraceBytes - 32), 32);
   flush_pending = false;
+  published = true;
   s1_mailbox.status = 2;
 }
 
@@ -266,10 +273,12 @@ uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
     const bool publish = flush_pending;
     target = 0;
     __set_PRIMASK(mask);
-    if (!publish) {
+    if (publish) {
+      Flush();
+    }
+    if (!published) {
       return request;
     }
-    Flush();
     SetStatus(2);
     return 0;
   }
@@ -290,8 +299,8 @@ uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
   } else if ((request == 7 || request == 9) && capture && codec >= 1 &&
       codec < count) {
     Arm(count, codec, request);
-  } else if (request == 8 && idle && !startup_prepared && can_force_no_input &&
-      count <= 1) {
+  } else if (request == 8 && (count == 0 ||
+      (count == 1 && idle && !startup_prepared && can_force_no_input))) {
     forced_no_input = count;
     settle_pending = true;
     s1_mailbox.status = 8;
@@ -312,6 +321,9 @@ uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
 }
 
 void SetStatus(uint32_t status) {
+  if (status == 4) {
+    published = false;
+  }
   s1_mailbox.status = status;
   __DMB();
   s1_mailbox.request = 0;
@@ -349,34 +361,38 @@ void Begin(uint32_t rate, size_t block_frames) {
   }
 }
 
-void EndIrq(uint32_t cycles, uint32_t overhead) {
-  s1_irq_cycles = cycles;
-  if (capture_irq) {
-    if (cycles > s1_irq_peak) {
-      s1_irq_peak = cycles;
-    }
-    const uint32_t corrected = SubtractCycles(cycles, overhead);
-    if (corrected > s1_irq_gate_peak) {
-      s1_irq_gate_peak = corrected;
-    }
-  }
-  capture_irq = false;
-}
+uint32_t fill_cycles;
+uint32_t callback_cycles;
+uint32_t callback_observers;
 
-void End(uint32_t cycles, uint32_t callback_cycles, uint32_t callback_observers,
-    volatile const uint32_t* dma_status,
+// Conservative allowance for the release handler's unstamped software
+// entry and return. Architectural exception stacking is outside the gate.
+const uint32_t kIrqBookendCycles = 32;
+
+void End(uint32_t irq_cycles, volatile const uint32_t* dma_status,
     uint32_t next_flag, uint32_t current_flag) {
-  frame.cycles = SubtractCycles(cycles, observer_cycles);
+  frame.cycles = SubtractCycles(fill_cycles, observer_cycles);
   s1_observer_cycles = observer_cycles;
   s1_callback_cycles = callback_cycles;
-  capture_irq = target != 0;
-  if (capture_irq) {
+  s1_irq_cycles = irq_cycles;
+  const uint32_t callback_gate =
+      SubtractCycles(callback_cycles, callback_observers);
+  const uint32_t irq_gate =
+      SubtractCycles(irq_cycles, observer_cycles) + kIrqBookendCycles;
+  s1_callback_gate_cycles = callback_gate;
+  s1_irq_gate_cycles = irq_gate;
+  if (target) {
     if (callback_cycles > s1_callback_peak) {
       s1_callback_peak = callback_cycles;
     }
-    const uint32_t corrected = SubtractCycles(callback_cycles, callback_observers);
-    if (corrected > s1_callback_gate_peak) {
-      s1_callback_gate_peak = corrected;
+    if (irq_cycles > s1_irq_peak) {
+      s1_irq_peak = irq_cycles;
+    }
+    if (callback_gate > s1_callback_gate_peak) {
+      s1_callback_gate_peak = callback_gate;
+    }
+    if (irq_gate > s1_irq_gate_peak) {
+      s1_irq_gate_peak = irq_gate;
     }
   }
   frame.sai_a = SAI1_Block_A->SR;

@@ -50,6 +50,11 @@ CALLBACK = 's1_callback_cycles'
 IRQ = 's1_irq_cycles'
 PROFILE = 0x08020400
 CEILING = 's1_ceiling'
+CEILING_ENTER = '_ZN5beads11cpu_ceiling5EnterEj'
+# Synthetic service costs in instruction-count units. Unicorn does not model
+# the NVIC here. Inject a pending interrupt at the start of Enter's observation
+# and charge it at the first unmasked instruction.
+PREEMPTION = {'none': 0, 'SysTick': 800, 'TIM8': 250}
 # Emulated core cycles per 250 us callback block: the block's own DMA flag
 # returns one budget after its interrupt, the next half's flag at once.
 BLOCK_CYCLES = 480000000 // 4000
@@ -77,6 +82,14 @@ class Machine(te.Machine):
                     begin=DMA1_LIFCR, end=DMA1_LIFCR)
     self.irq_start = None
     self.irq_half = 0
+    self.preemption = 0
+    self.preempt_pending = False
+    self.preemption_wait = None
+    self.enter_reads = 0
+    self.enter_start = image.address(CEILING_ENTER)
+    self.enter_end = min(addr for addr in image.sym.values() if addr > self.enter_start)
+    self.uc.hook_add(te.unicorn.UC_HOOK_CODE, self.service_pending,
+                     begin=self.enter_start, end=self.enter_end - 2)
     self.uc.hook_add(te.unicorn.UC_HOOK_MEM_READ, self.late_dma,
                     begin=te.DMA1_LISR, end=te.DMA1_LISR)
     self.write(RNG_SR, '<I', 1)
@@ -147,11 +160,30 @@ class Machine(te.Machine):
     # The base emulator counts whole basic blocks at their entry.
     pc = uc.reg_read(te.A.UC_ARM_REG_PC)
     tail = bytes(uc.mem_read(pc, self.block_end - pc))
-    remaining, i = 0, 0
-    while i < len(tail):
-      i += te.thumb_length(tail[i] | tail[i + 1] << 8)
-      remaining += 1
+    remaining = sum(1 for _ in te_instructions(tail))
+    if self.preemption and self.enter_start <= pc < self.enter_end:
+      self.enter_reads += 1
+      if self.enter_reads == 2:
+        assert uc.reg_read(te.A.UC_ARM_REG_PRIMASK) == 1
+        self.preempt_pending = True
+        self.preemption_start = self.count - remaining
     self.write(address, '<I', (self.count - remaining) & 0xffffffff)
+
+  def service_pending(self, uc, pc, size, user):
+    if self.preempt_pending and not uc.reg_read(te.A.UC_ARM_REG_PRIMASK):
+      self.preempt_pending = False
+      tail = bytes(uc.mem_read(pc, self.block_end - pc))
+      remaining = sum(1 for _ in te_instructions(tail))
+      self.preemption_wait = self.count - remaining - self.preemption_start
+      self.count += self.preemption
+      self.preemption = 0
+
+
+def te_instructions(code):
+  offset = 0
+  while offset < len(code):
+    yield offset
+    offset += te.thumb_length(struct.unpack_from('<H', code, offset)[0])
 
 
 class Rig(te.Rig):
@@ -270,7 +302,7 @@ class Rig(te.Rig):
     self.m.write(self.image.address('codec_transition_frames'), '<i', 0)
     self.posture(synth, seed)
 
-  def capture(self, directory, count=160, trigger_at=None, resume=False):
+  def capture(self, directory, count=160, trigger_at=None, resume=False, paired=False):
     directory.mkdir()
     (directory / 'preflight.log').write_text(self.burst())
     self.m.tick_us += 250
@@ -281,6 +313,7 @@ class Rig(te.Rig):
     del self.samples[:]
     del self.irq[:]
     observer, callback, dwt_irq = [], [], []
+    callback_gate, irq_gate, injected, waits = [], [], [], []
     button = self.image.member('ui', 'Ui', 'seed_button_state_')
     locked = self.image.member('ui', 'Ui', 'seed_button_locked_')
     for i in range(count):
@@ -289,10 +322,21 @@ class Rig(te.Rig):
         self.m.write(button, '<B', 1)
       if trigger_at is not None and i == trigger_at + 4:
         self.m.write(button, '<B', 0)
+      scenario = tuple(PREEMPTION)[i % len(PREEMPTION)] if paired else 'none'
+      self.m.preemption = PREEMPTION[scenario]
+      self.m.enter_reads = 0
+      self.m.preemption_wait = None
       self.block()
+      assert not self.m.preemption and not self.m.preempt_pending, (scenario, self.m.enter_reads)
+      if scenario != 'none':
+        assert self.m.preemption_wait > 0
+      injected.append(scenario)
+      waits.append(self.m.preemption_wait)
       observer.append(self.m.read(self.image.address(OBSERVER), '<I')[0])
       callback.append(self.m.read(self.image.address(CALLBACK), '<I')[0])
-      dwt_irq.append(self.m.read(self.image.address(IRQ), '<I')[0])
+      dwt_irq.append(self.word(IRQ))
+      callback_gate.append(self.word('s1_callback_gate_cycles'))
+      irq_gate.append(self.word('s1_irq_gate_cycles'))
     self.m.main_step()
     addr = self.image.address('s1_trace')
     header = TRACE_HEADER.unpack(self.m.uc.mem_read(addr, TRACE_HEADER.size))
@@ -305,13 +349,13 @@ class Rig(te.Rig):
     assert 0 < max(callback) == self.word('s1_callback_peak')
     assert 0 < max(dwt_irq) == self.word('s1_irq_peak')
     assert all(c < d <= n for c, d, n in zip(callback, dwt_irq, self.irq))
-    callback_gate = self.word('s1_callback_gate_peak')
-    irq_gate = self.word('s1_irq_gate_peak')
-    assert 0 < callback_gate < max(callback)
-    assert callback_gate < irq_gate < max(dwt_irq)
+    assert 0 < max(callback_gate) == self.word('s1_callback_gate_peak')
+    assert max(callback_gate) < max(callback)
+    assert max(callback_gate) < max(irq_gate) == self.word('s1_irq_gate_peak')
     (directory / 'instructions.json').write_text(json.dumps(dict(
         irq=self.irq, callback=callback, dwt_irq=dwt_irq, observer=observer,
-        callback_gate_peak=callback_gate, irq_gate_peak=irq_gate)))
+        callback_gate=callback_gate, irq_gate=irq_gate, injected=injected, waits=waits,
+        callback_gate_peak=max(callback_gate), irq_gate_peak=max(irq_gate))))
     return header
 
   def word(self, symbol):
@@ -371,11 +415,22 @@ def pair_release(image, region, fixture, name, processor, media, reverb, synth, 
   counts = json.loads((fixture / 'instructions.json').read_text())
   results = dict(case=name, audio_match=(fixture / 'output.s32').read_bytes() ==
                  struct.pack(f'<{len(r.samples)}i', *r.samples))
-  for label, release in (('callback', max(r.callbacks)), ('irq', max(r.irqs))):
-    timing = counts[label + '_gate_peak']
-    results['release_' + label] = release
-    results['timing_' + label] = timing
-    results[label + '_residual'] = timing - release
+  for label, release in (('callback', r.callbacks), ('irq', r.irqs)):
+    timing = counts[label + '_gate']
+    assert len(timing) == len(release) == len(counts['injected']) == 64
+    residual = [corrected - reference for corrected, reference in zip(timing, release)]
+    results['release_' + label] = max(release)
+    results['timing_' + label] = max(timing)
+    results[label + '_residual'] = [min(residual), max(residual)]
+    for scenario, charge in PREEMPTION.items():
+      selected = [delta for delta, kind in zip(residual, counts['injected'])
+                  if kind == scenario]
+      assert min(selected) >= charge, (name, label, scenario, selected)
+      results[label + '_' + scenario] = [min(selected), max(selected)]
+  results['max_mask_wait_instructions'] = max(wait for wait in counts['waits']
+                                              if wait is not None)
+  (fixture / 'release-instructions.json').write_text(json.dumps(
+      dict(callback=r.callbacks, irq=r.irqs)))
   print(json.dumps(results), flush=True)
   assert results['audio_match'], results
 
@@ -410,7 +465,7 @@ def replay_rc1(image, region, output, release):
         r.block()
     r.check_callback(callback)
     directory = output / name
-    r.capture(directory, count=64)
+    r.capture(directory, count=64, paired=release is not None)
     callbacks = (directory / 'callbacks.bin').read_bytes()
     for offset in range(TRACE_HEADER.size, len(callbacks), FRAME_BYTES):
       assert struct.unpack_from('<H', callbacks, offset + 8)[0] == codec
@@ -425,6 +480,7 @@ def replay_rc1(image, region, output, release):
     r.hold(2, 0)
     if processor in (2, 3):
       assert r.mailbox(8, 1)[-1] == 0xffffffff
+      assert r.mailbox(8, 0)[-1] in (8, 9)
       r.m.write(r.state + image.offsets['State']['gate_output_mode'], '<B', 1)
       for command, flags in ((3, 1 << 21), (4, 1 << 23)):
         r.hold(command, flags)
@@ -449,7 +505,7 @@ def main():
   args.output.mkdir(exist_ok=True, parents=True)
   te.Machine = Machine
   te.MEMBERS['NormalizationDetector'] += ('normalized_',)
-  te.MEMBERS['Ui'] += ('seed_button_state_', 'seed_button_locked_')
+  te.MEMBERS['Ui'] += ('seed_button_state_', 'seed_button_locked_', 'processor_mode_')
   te.MEMBERS['State'] = ('gate_output_mode',)
   image = te.Image(args.elf)
   region = args.region.read_bytes()
@@ -468,6 +524,34 @@ def main():
   r.block()
   r.block()
   assert r.mailbox(6)[-1] == 2
+
+  # Write request 6 after Poll read 0, while Flush publishes the seal.
+  assert r.mailbox(1, 2)[-1] == 1
+  r.block()
+  r.block()
+  request = image.address('s1_mailbox')
+  seal = image.address('s1_trace') + SEAL_OFFSET
+  def cancel_during_flush(uc, access, address, size, value, user):
+    assert value and r.word('s1_mailbox') == 0
+    r.m.write(request, '<I', 6)
+  hook = r.m.uc.hook_add(te.unicorn.UC_HOOK_MEM_WRITE, cancel_during_flush,
+                        begin=seal, end=seal)
+  r.m.main_step()
+  r.m.uc.hook_del(hook)
+  assert r.word('s1_mailbox') == 6
+  published_seal, = r.m.read(seal, '<I')
+  r.m.main_step()
+  assert r.m.read(request, '<5I')[::4] == (0, 2)
+  assert r.m.read(seal, '<I') == (published_seal,)
+  assert published_seal > 0
+
+  for mode in (2, 3):
+    r = Rig(image, region)
+    r.configure(False)
+    assert r.word('active_processor_mode') & 0xff == 0
+    r.m.write(image.member('ui', 'Ui', 'processor_mode_'), '<B', mode)
+    assert r.mailbox(8, 1)[-1] == 0xffffffff
+  print('Mailbox races and dedicated-mode refusal verified', flush=True)
 
   for codec, synth in ((48000, 24000), (32000, 48000),
                        (24000, 32000), (48000, 48000)):

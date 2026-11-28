@@ -144,10 +144,11 @@ void SetStatus(uint32_t status);
 bool armed();
 void FaultCue(bool active);
 void Begin(uint32_t codec_hz, size_t block_frames);
-void End(uint32_t cycles, uint32_t callback_cycles, uint32_t callback_observers,
-    volatile const uint32_t* dma_status,
+void End(uint32_t irq_cycles, volatile const uint32_t* dma_status,
     uint32_t next_flag, uint32_t current_flag);
-void EndIrq(uint32_t cycles, uint32_t overhead);
+extern uint32_t fill_cycles;
+extern uint32_t callback_cycles;
+extern uint32_t callback_observers;
 const uint8_t kPlacementChord = 4;
 const uint8_t kPlacementBloomFeedback = 5;
 
@@ -169,9 +170,23 @@ extern uint32_t observer_cycles;
 
 class Observe {
  public:
-  Observe() : start_(Cycles()) { }
-  ~Observe() { observer_cycles += Cycles() - start_; }
+  Observe() {
+    __asm__ volatile("mrs %0, primask\n\tcpsid i" : "=r"(mask_) :: "memory");
+    start_ = Stamp();
+  }
+  ~Observe() {
+    const uint32_t end = Stamp();
+    __asm__ volatile("msr primask, %0" :: "r"(mask_), "r"(end) : "memory");
+    observer_cycles += end - start_;
+  }
  private:
+  static uint32_t Stamp() {
+    uint32_t tick;
+    __asm__ volatile("ldr %0, [%1]" : "=r"(tick)
+        : "r"(0xe0001004u) : "memory");
+    return tick;
+  }
+  uint32_t mask_;
   uint32_t start_;
 };
 

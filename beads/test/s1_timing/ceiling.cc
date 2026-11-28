@@ -60,12 +60,18 @@ void Init() {
 
 bool Enter(size_t size) {
   block.entry = s1_timing::Cycles();
-  s1_timing::Observe observation;
   volatile Hold& hold = s1_ceiling;
-  hold.frames = size;
-  // The host owns command: read it once, never write it back.
-  const uint32_t command = hold.command;
-  if (command != hold.ack && command != block.examined) {
+  uint32_t command;
+  bool changed;
+  {
+    s1_timing::Observe observation;
+    hold.frames = size;
+    // The host owns command: read it once, never write it back.
+    command = hold.command;
+    changed = command != hold.ack && command != block.examined;
+  }
+  // Leave the command handling and its memory barrier in the measured time.
+  if (changed) {
     block.examined = command;
     if (Valid(command)) {
       hold.armed_blocks = 0;

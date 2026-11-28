@@ -154,12 +154,10 @@ void Output(FloatFrame* frames, Codec::Frame* out, size_t size,
 
 // The driver brackets each run of stores into a DMA half.
 inline void StoreBegin() {
-  s1_timing::Observe observation;
   block.before = DMA1_Stream0->NDTR;
 }
 
 inline void StoreEnd(size_t offset, size_t size, uint32_t w) {
-  s1_timing::Observe observation;
   __DSB();
   const uint32_t after = DMA1_Stream0->NDTR;
   const Store store = Classify(block.before, after, 2 * offset, 4 * size, w);
@@ -170,7 +168,6 @@ inline void StoreEnd(size_t offset, size_t size, uint32_t w) {
 
 // After the driver's last store: counts a held or observed block.
 inline void Filled(size_t offset, size_t size) {
-  s1_timing::Observe observation;
   volatile Hold& hold = s1_ceiling;
   if (block.held) {
     if (Fetched(DMA1_Stream0->NDTR, 2 * offset, 4 * size, 2)) {
