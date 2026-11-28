@@ -71,18 +71,24 @@ last. Wait for request to return to zero before writing another request.
 
 | Request | Meaning | Status |
 | --- | --- | --- |
-| 1 | Capture exactly 2–273 callbacks. Arm during steady audio or after startup preparation. | 1 while armed, 2 once published |
+| 1 | Capture exactly 2–273 callbacks. Arm during steady audio or after startup preparation. | 1 on arm, 2 on publication if still 1 |
 | 2 | Stage 24, 32 or 48 kHz Plaits and a separate 24, 32 or 48 kHz synth-mode codec rate. Codec rate 0 selects the normal rate. | 3 staged. Verify new render and rates after blanking. |
 | 4 | Pause and prepare new Plaits voices at the already verified rate and posture. | 4 prepared |
 | 5 | Start a prepared, armed Plaits acquisition at its first render. | 5 started |
 | 6 | Cancel an armed acquisition and leave startup preparation, if active. If the final IRQ already completed, report its publication, including when cancellation arrives during or after the flush. | 6 cancelled, 2 published |
-| 7 | Pre-arm 2–273 callbacks in a ring. The firmware seals on its own SEED edge, keeping the codec word's 1 to count − 1 callbacks before the edge callback. | 7 while armed, 2 once published |
+| 7 | Pre-arm 2–273 callbacks in a ring. The firmware seals on its own SEED edge, keeping the codec word's 1 to count − 1 callbacks before the edge callback. | 7 on arm, 2 on publication if still 7 |
 | 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires active and requested Granular mode and a running codec that can change mode. Count 0 is always accepted. | 8 settling, 9 settled, 10 settlement abandoned, 0xffffffff unsupported. A clear can instead preserve the acquisition status. |
-| 9 | As 7, sealing on the first missed callback instead: it keeps recording while an overload starves the main loop, and publishes once the load is released. | 9 while armed, 2 once published |
+| 9 | As 7, triggered by the advisory miss detector. It keeps recording while an overload starves the main loop and publishes once the load is released. | 9 on arm, 2 on publication if still 9 |
 | | Invalid or busy | 0xffffffff |
 
-The firmware main loop owns the status word. The audio IRQ hands it a
-pending seal, and the main loop publishes status 2 after writing the seal.
+The firmware main loop owns the status word. Acquisition publication
+writes 2 only while the status is 1, 7 or 9. Other command results remain
+visible, including request 5's startup acknowledgement and request 8's
+terminal refusal. After confirming arm consumption and acknowledgement,
+poll the existing publish word for a fresh nonzero even seal. Authenticate
+the boot and chunk, and require the same seal before and after the read
+and in the header. The seal establishes publication with any mailbox status.
+An explicit request 6 still returns 2 for an already completed acquisition.
 Serialize mailbox writes and wait for a terminal response before sending
 another command. The UI processes events before the mailbox is polled.
 Count 1 checks the active, selected and committed processor modes and
@@ -166,8 +172,8 @@ TC is clear and acknowledges after Fill. The timestamp
 gap between serviced IRQs is the primary loss signal. The first IRQ after
 arm uses the preceding serviced stamp if the codec has kept running.
 The first IRQ after startup or a codec pause seeds a new baseline.
-Unsigned CYCCNT subtraction handles
-one counter wrap. A gap strictly above 1.5 half-block periods counts
+Unsigned CYCCNT subtraction handles gaps shorter than one counter
+revolution across wrap. A gap strictly above 1.5 half-block periods counts
 the nearest whole number of periods minus one, starting with the expected
 alternating half. The period uses the current codec rate and frame count.
 The pre-acknowledgement status and RX NDTR probes also flag a pending
@@ -175,6 +181,13 @@ opposite half as a miss and supply a minimum loss count of one on detected
 coalescence. The trace marks timestamp gaps as misses and sums the per-gap
 loss counts in the retained frames. The diagnostic work is inside the IRQ
 bracket and contributes to its measured peak.
+
+The internal `lost[]` counts, the sealed `dropped` total and request 9's
+miss latch are advisory diagnostics. The first IRQ after arm, restart
+or a rate change can miss losses, especially without a valid prior stamp.
+Multiple completions coalescing within one gap can escape detection.
+Gaps of a full CYCCNT revolution or more alias to a shorter gap. Delayed
+service can also trigger request 9 early without a lost completion.
 
 | ELF symbol | Measurement |
 | --- | --- |
@@ -188,15 +201,17 @@ bracket and contributes to its measured peak.
 | `s1_irq_gate_peak` | Maximum corrected IRQ count |
 
 Subtraction saturates at zero and happens per block before the maximum.
-Read the four peak addresses from `receipt.json` after status 2 and seal
-validation. Request 1 covers the requested blocks. Requests 7 and 9 cover
-the entire armed interval, including callbacks overwritten in the ring.
-All peaks include the final IRQ and reset on the next successful arm.
+Read the four peak addresses from `receipt.json` after authenticating the
+seal and before re-arm. Request 1 covers the requested blocks. Requests 7
+and 9 cover the entire armed interval, including callbacks overwritten in
+the ring. All peaks include the final IRQ and reset on the next successful arm.
 
 The absolute RC1 limits for both corrected peaks are 104,215 cycles at
 48 kHz, 99,655 at 32 kHz and 95,095 at 24 kHz. Use natural-load captures
-for the gate. The corrections leave the cost of taking and accumulating
-timestamps, extra branches and changes to compiler code generation.
+and gate only on the two corrected peaks, callback identity, dispatched
+half, rate and posture evidence, and SAI status. Use the separate click
+scan to detect audible misses. The corrections leave the cost of taking
+and accumulating timestamps, extra branches and changes to compiler code generation.
 Emulator comparisons use instruction counts. Physical DWT measurements
 also reflect cache, memory, and pipeline timing. The SAI status and
 DMA-half check can flag overruns or delayed service. Qualification of

@@ -267,7 +267,10 @@ static void Flush() {
       s1_trace + kTraceBytes - 32), 32);
   flush_pending = false;
   published = true;
-  s1_mailbox.status = 2;
+  const uint32_t status = s1_mailbox.status;
+  if (status == 1 || status == 7 || status == 9) {
+    s1_mailbox.status = 2;
+  }
 }
 
 uint32_t Poll(bool blanking, bool startup_prepared, bool can_change_mode,

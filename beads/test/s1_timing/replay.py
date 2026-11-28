@@ -358,6 +358,8 @@ class Rig(te.Rig):
     seal, = self.m.read(addr + SEAL_OFFSET, '<I')
     assert header[5] == count and header[8] == seal and seal % 2 == 0, header
     data = self.m.uc.mem_read(addr, TRACE_HEADER.size + count * FRAME_BYTES)
+    assert seal and self.m.read(self.image.address('s1_mailbox'), '<5I')[::4] == (
+        0, 5 if resume else 2)
     if callback_id is not None:
       for i in range(count):
         offset = TRACE_HEADER.size + i * FRAME_BYTES + ROW_EVIDENCE_OFFSET
@@ -568,6 +570,27 @@ def main():
   assert r.m.read(request, '<5I')[::4] == (0, 2)
   assert r.m.read(seal, '<I') == (published_seal,)
   assert published_seal > 0
+
+  for acquisition in (1, 7, 9):
+    r = Rig(image, region)
+    if acquisition == 7:
+      r.set_feature(te.FEATURE_SYNTH, 1)
+    r.configure(acquisition == 7)
+    assert r.mailbox(acquisition, 2, codec=int(acquisition != 1))[::4] == (0, acquisition)
+    assert r.mailbox(8, 1)[::4] == (0, 0xffffffff)
+    assert r.m.read(seal, '<I') == (0,)
+    r.block()
+    if acquisition == 7:
+      r.m.write(image.member('ui', 'Ui', 'seed_button_locked_'), '<B', 0)
+      r.m.write(image.member('ui', 'Ui', 'seed_button_state_'), '<B', 1)
+    r.block(skipped=int(acquisition == 9))
+    r.m.main_step()
+    header = TRACE_HEADER.unpack(r.m.uc.mem_read(image.address('s1_trace'), TRACE_HEADER.size))
+    published_seal, = r.m.read(seal, '<I')
+    assert published_seal and published_seal % 2 == 0, acquisition
+    assert header[5] == 2 and header[8] == published_seal, header
+    assert r.m.read(request, '<5I')[::4] == (0, 0xffffffff)
+  print('Request 8 refusal survives publication for requests 1, 7 and 9', flush=True)
 
   for mode in (2, 3):
     r = Rig(image, region)
