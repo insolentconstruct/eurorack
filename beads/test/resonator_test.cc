@@ -138,9 +138,10 @@ void RunSine(Processor::Media media, int placement, float dry_wet,
   }
   *out_hash = hash;
   uint64_t recording = 14695981039346656037ull;
-  const uint8_t* bytes = &banks[0][0];
-  for (size_t i = 0; i < sizeof(banks); ++i) {
-    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  for (const auto& bank : banks) {
+    for (uint8_t byte : bank) {
+      recording = (recording ^ byte) * 1099511628211ull;
+    }
   }
   *recording_hash = recording;
 }
@@ -757,9 +758,10 @@ uint64_t RunBloomResonator(
   }
   *bloom_peak = processor.reverb_character_.peak;
   uint64_t recording = 14695981039346656037ull;
-  const uint8_t* bytes = &banks[0][0];
-  for (size_t i = 0; i < sizeof(banks); ++i) {
-    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  for (const auto& bank : banks) {
+    for (uint8_t byte : bank) {
+      recording = (recording ^ byte) * 1099511628211ull;
+    }
   }
   *recording_hash = recording;
   return hash;
@@ -1800,9 +1802,10 @@ void RunLoop(Processor::Media media, int placement, float feedback,
   }
   *out_hash = hash;
   uint64_t recording = 14695981039346656037ull;
-  const uint8_t* bytes = &banks[0][0];
-  for (size_t i = 0; i < sizeof(banks); ++i) {
-    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  for (const auto& bank : banks) {
+    for (uint8_t byte : bank) {
+      recording = (recording ^ byte) * 1099511628211ull;
+    }
   }
   *recording_hash = recording;
 }
