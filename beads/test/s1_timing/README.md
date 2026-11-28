@@ -45,8 +45,10 @@ bench ABI at `eb7809d` defines the 26 snapshot words, the 44-byte header and
 56-byte frame. The snapshot publishes about every 20 ms with an odd/even
 generation. TIM2 supplies elapsed microseconds. Boot identity comes from
 two hardware RNG words. Region status is captured from the loader.
-The fault-cue latch observes the assignment LED synth-fault branch, counting
-its lit onsets. The version display uses a separate cue.
+The main loop samples the assignment LED synth-fault predicate and counts
+its lit onsets. The version display uses a separate cue. SysTick retains the
+release watchdog, UI, and factory-test polling path. Factory-test entry is
+disabled at boot in the timing image.
 
 Each frame's former reserved word at byte offset 30 carries row evidence.
 The low byte identifies the function pointer Fill called. Values are 0 for
@@ -75,7 +77,7 @@ last. Wait for request to return to zero before writing another request.
 | 5 | Start a prepared, armed Plaits acquisition at its first render. | 5 started |
 | 6 | Cancel an armed acquisition and leave startup preparation, if active. If the final IRQ already completed, report its publication, including when cancellation arrives during or after the flush. | 6 cancelled, 2 published |
 | 7 | Pre-arm 2–273 callbacks in a ring. The firmware seals on its own SEED edge, keeping the codec word's 1 to count − 1 callbacks before the edge callback. | 7 while armed, 2 once published |
-| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires both the active and requested processor mode to support this entry. Count 0 is always accepted. | 8 accepted, 9 settled, 0xffffffff unsupported. A clear can instead preserve the acquisition status. |
+| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires active and requested Granular mode and a running codec that can change mode. Count 0 is always accepted. | 8 accepted, 9 settled, 0xffffffff unsupported. A clear can instead preserve the acquisition status. |
 | 9 | As 7, sealing on the first missed callback instead: it keeps recording while an overload starves the main loop, and publishes once the load is released. | 9 while armed, 2 once published |
 | | Invalid or busy | 0xffffffff |
 
@@ -84,11 +86,13 @@ pending seal, and the main loop publishes status 2 after writing the seal.
 Each consumed command supersedes any pending request 8 settlement. The UI
 processes its events before the mailbox is polled. Count 1 checks the active
 processor, the UI's selected processor, and the committed setting, which
-can lead the UI selection by a tick. An accepted mode change reports 8 while
-settling and 9 when the codec runs in the requested posture. A count 0
-during prepared startup clears the force and reports 9 for that policy
-change immediately. Normal input detection applies when startup releases
-the codec. A count 0 during acquisition or while status 2 is visible clears
+can lead the UI selection by a tick. Count 1 refuses while FREEZE,
+calibration, factory test, codec blanking, or startup blocks the mode
+change. An accepted mode change reports 8 while settling and 9 when the
+codec runs in the requested posture. An idle count 0 reports 9 immediately
+during prepared startup, outside Granular mode, or while the UI blocks
+mode changes. Automatic input detection resumes when the state machine
+can act on it. A count 0 during acquisition or while status 2 is visible clears
 the force and consumes the request while preserving the acquisition status.
 These clears schedule no later status write.
 
@@ -155,8 +159,10 @@ the closing stamp. The body tests TC first, rereads status to test HT when
 TC is clear and acknowledges after Fill. An additional pre-acknowledgement
 status sample detects a pending opposite half. Because the selected bit
 stays set until acknowledgement, the probe uses RX NDTR phase with the
-opposite bit to detect coalescence. Two elapsed block periods also identify
-a lost completion if the DMA has advanced into the opposite phase again.
+opposite bit to detect coalescence. The entry NDTR supplies the distance
+to the next completion of the selected half. This catches coalescence
+after late entry even when the end NDTR is already back in the opposite
+phase and fewer than two block periods have elapsed in the handler.
 The trace marks a miss for the opposite pending half and increments the
 dropped count when the selected half is inferred to have coalesced.
 

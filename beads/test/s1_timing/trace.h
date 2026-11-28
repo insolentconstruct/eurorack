@@ -139,7 +139,8 @@ extern uint32_t paused_setup_cycles;
 void Init();
 void BootStatus(uint32_t wave, uint32_t plts, uint32_t terr);
 void Publish(uint32_t requested_synth, uint32_t effective_synth);
-uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input);
+uint32_t Poll(bool blanking, bool startup_prepared, bool can_change_mode,
+    bool codec_running);
 void SetStatus(uint32_t status);
 bool armed();
 void FaultCue(bool active);

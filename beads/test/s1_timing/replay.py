@@ -92,6 +92,7 @@ class Machine(te.Machine):
                     begin=DMA1_LIFCR, end=DMA1_LIFCR)
     self.irq_start = None
     self.dma_period = BLOCK_CYCLES
+    self.dma_entry_age = 0
     self.dma_events = 0
     self.dma_half = 0
     self.dma_frames = 0
@@ -130,7 +131,7 @@ class Machine(te.Machine):
       return
     # Completions occur once at each boundary. A same-half completion ORs
     # into the still-set bit and the subsequent acknowledgement clears both.
-    elapsed = self.count - self.irq_start
+    elapsed = self.dma_entry_age + self.count - self.irq_start
     events, within_half = divmod(elapsed, self.dma_period)
     status, = self.read(te.DMA1_LISR, '<I')
     while self.dma_events < events:
@@ -185,9 +186,11 @@ class Rig(te.Rig):
     if fn == 'audio':
       self.irq.append(n)
 
-  def block(self):
+  def block(self, dma_entry_age=0):
     size, = self.m.read(self.block_size, '<I')
     half = self.half
+    assert 0 <= dma_entry_age < 2 * self.m.dma_period
+    self.m.dma_entry_age = dma_entry_age
     self.m.irq_start = self.m.count
     self.m.dma_events, self.m.dma_half, self.m.dma_frames = 0, half, size
     super().block()
@@ -506,7 +509,8 @@ def main():
   args.output.mkdir(exist_ok=True, parents=True)
   te.Machine = Machine
   te.MEMBERS['NormalizationDetector'] += ('normalized_',)
-  te.MEMBERS['Ui'] += ('seed_button_state_', 'seed_button_locked_', 'processor_mode_')
+  te.MEMBERS['Ui'] += ('seed_button_state_', 'seed_button_locked_', 'processor_mode_',
+                       'freeze_led_state_', 'mode_')
   te.MEMBERS['State'] = ('gate_output_mode',)
   image = te.Image(args.elf)
   region = args.region.read_bytes()
@@ -554,7 +558,26 @@ def main():
     r.m.write(image.member('ui', 'Ui', 'processor_mode_'), '<B', 0)
     te.Rig.set_feature(r, te.FEATURE_PROCESSOR, mode)
     assert r.mailbox(8, 1)[-1] == 0xffffffff
-  print('Mailbox races and dedicated-mode refusal verified', flush=True)
+  r = Rig(image, region)
+  r.set_feature(te.FEATURE_PROCESSOR, 1)
+  r.configure(False)
+  r.tick(600)
+  assert r.word('active_processor_mode') & 0xff == 1
+  r.posture(True)  # The inputs are unpatched, but Spectral cannot self-play.
+  assert r.mailbox(8, 0)[::4] == (0, 9)
+  assert r.mailbox(8, 1)[::4] == (0, 0xffffffff)
+
+  for member, value in (('freeze_led_state_', 1), ('mode_', 3)):
+    r = Rig(image, region)
+    r.configure(False)
+    r.m.write(image.member('ui', 'Ui', member), '<B', value)
+    assert r.mailbox(8, 1)[::4] == (0, 0xffffffff)
+    assert r.mailbox(8, 0)[::4] == (0, 9)
+  r = Rig(image, region)
+  r.configure(False)
+  r.m.write(image.address('codec_transition_frames'), '<i', 12000)
+  assert r.mailbox(8, 1)[::4] == (0, 0xffffffff)
+  print('Mailbox races and request 8 mode guards verified', flush=True)
 
   # The clear must neither consume the capture status nor schedule a 9.
   r = Rig(image, region)
@@ -588,7 +611,28 @@ def main():
     for i in range(2):
       flags, = r.m.read(address + TRACE_HEADER.size + i * FRAME_BYTES + 15, '<B')
       assert flags & 1
-  print('DMA pre-ack coalescence and lost count verified', flush=True)
+  # Enter 375 us after TC with HT already pending. A short IRQ stays in
+  # HT without losing TC. By the end of a 400 us IRQ, both flags have
+  # recurred and NDTR is back in HT.
+  lost = image.address('_ZN5beads9s1_timingL4lostE')
+  for delay, events, expected in ((0, 1, 0), (178500, 3, 1)):
+    r = Rig(image, region)
+    r.configure(False)
+    if not r.half:
+      r.block()
+    assert r.half == 1
+    assert r.mailbox(1, 2)[-1] == 1
+    r.m.preemption = delay
+    r.block(dma_entry_age=3 * BLOCK_CYCLES // 2)
+    assert r.irq[-1] < 2 * BLOCK_CYCLES
+    assert r.m.dma_events == events and r.m.dma_half == 0
+    assert r.m.read(te.DMA1_LISR, '<I') == (te.LISR_HT,)
+    assert r.m.read(lost, '<B') == (expected,)
+    r.block()
+    r.m.main_step()
+    header = TRACE_HEADER.unpack(r.m.uc.mem_read(image.address('s1_trace'), TRACE_HEADER.size))
+    assert header[5:7] == (2, expected), header
+  print('DMA pre-ack coalescence and late-entry lost count verified', flush=True)
 
   # The timing image excludes DWT_CALIBRATION. Use a Thumb tail call
   # in the emulator scratch page to exercise the fallback with live audio.
@@ -718,6 +762,18 @@ def main():
     (directory / 'ceiling.json').write_text(words)
     (directory / 'callbacks.bin').write_bytes(data)
     (directory / 'postflight.log').write_text(r.burst())
+
+  # The fault-cue counter is sampled in main, outside the release SysTick.
+  r = Rig(image, region)
+  r.configure(True)
+  r.m.write(image.address('playable_synths'), '<B', 0)
+  clock = image.address('_ZN6stmlib12system_clockE')
+  for milliseconds, expected in ((125, 0), (250, 1), (251, 1), (375, 1), (500, 2)):
+    r.m.write(clock, '<I', milliseconds)
+    r.m.tick_us += 25000
+    r.m.main_step()
+    assert r.snapshot()[-2:] == (1, expected)
+  print('Fault-cue counter verified outside SysTick', flush=True)
 
   terrain = rb.with_terrain(region)
   Machine.profile = rb.install_profile(image, terrain)

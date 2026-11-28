@@ -265,7 +265,8 @@ static void Flush() {
   s1_mailbox.status = 2;
 }
 
-uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
+uint32_t Poll(bool blanking, bool startup_prepared, bool can_change_mode,
+    bool codec_running) {
   const uint32_t request = s1_mailbox.request;
   if (request) {
     settle_pending = false;
@@ -303,12 +304,13 @@ uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
       codec < count) {
     Arm(count, codec, request);
   } else if (request == 8 && (count == 0 ||
-      (count == 1 && idle && !startup_prepared && can_force_no_input))) {
+      (count == 1 && idle && !startup_prepared && !blanking &&
+       can_change_mode && codec_running))) {
     forced_no_input = count;
     if (count == 1 || (idle && s1_mailbox.status != 2)) {
-      // Startup preparation has paused the codec. Clear the policy now;
-      // the regular mode machinery will apply it after startup resumes.
-      settle_pending = !startup_prepared;
+      // Clear the policy immediately when mode changes are blocked.
+      // The regular state machine applies it when mode changes resume.
+      settle_pending = !startup_prepared && can_change_mode;
       s1_mailbox.status = settle_pending ? 8 : 9;
     }
   } else if (request == 2 && !target && !flush_pending && !startup_prepared &&
