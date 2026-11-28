@@ -88,7 +88,7 @@ static uint32_t written;
 static uint32_t ticks[kTraceCapacity];
 static uint8_t lost[kTraceCapacity];
 static volatile bool forced_no_input;
-static volatile bool settle_pending;
+static bool settle_pending;
 
 static Chunk& chunk = *reinterpret_cast<Chunk*>(s1_trace);
 static volatile uint32_t& external_seal =
@@ -267,6 +267,9 @@ static void Flush() {
 
 uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
   const uint32_t request = s1_mailbox.request;
+  if (request) {
+    settle_pending = false;
+  }
   if (request == 6) {
     const uint32_t mask = __get_PRIMASK();
     __disable_irq();
@@ -302,8 +305,12 @@ uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
   } else if (request == 8 && (count == 0 ||
       (count == 1 && idle && !startup_prepared && can_force_no_input))) {
     forced_no_input = count;
-    settle_pending = true;
-    s1_mailbox.status = 8;
+    if (count == 1 || (idle && s1_mailbox.status != 2)) {
+      // Startup preparation has paused the codec. Clear the policy now;
+      // the regular mode machinery will apply it after startup resumes.
+      settle_pending = !startup_prepared;
+      s1_mailbox.status = settle_pending ? 8 : 9;
+    }
   } else if (request == 2 && !target && !flush_pending && !startup_prepared &&
       (!codec || ValidRate(codec)) && ValidRate(synth)) {
     codec_hz = codec;
@@ -343,7 +350,7 @@ uint32_t synth_rate() { return synth_hz; }
 bool no_input() { return forced_no_input; }
 
 void Settled(bool settled) {
-  if (settle_pending && settled) {
+  if (settle_pending && settled && !s1_mailbox.request) {
     settle_pending = false;
     s1_mailbox.status = 9;
   }
@@ -365,12 +372,7 @@ uint32_t fill_cycles;
 uint32_t callback_cycles;
 uint32_t callback_observers;
 
-// Conservative allowance for the release handler's unstamped software
-// entry and return. Architectural exception stacking is outside the gate.
-const uint32_t kIrqBookendCycles = 32;
-
-void End(uint32_t irq_cycles, volatile const uint32_t* dma_status,
-    uint32_t next_flag, uint32_t current_flag) {
+void End(uint32_t irq_cycles, uint32_t dma_result) {
   frame.cycles = SubtractCycles(fill_cycles, observer_cycles);
   s1_observer_cycles = observer_cycles;
   s1_callback_cycles = callback_cycles;
@@ -378,7 +380,7 @@ void End(uint32_t irq_cycles, volatile const uint32_t* dma_status,
   const uint32_t callback_gate =
       SubtractCycles(callback_cycles, callback_observers);
   const uint32_t irq_gate =
-      SubtractCycles(irq_cycles, observer_cycles) + kIrqBookendCycles;
+      SubtractCycles(irq_cycles, observer_cycles);
   s1_callback_gate_cycles = callback_gate;
   s1_irq_gate_cycles = irq_gate;
   if (target) {
@@ -409,12 +411,11 @@ void End(uint32_t irq_cycles, volatile const uint32_t* dma_status,
   const uint32_t index = written % ring;
   Frame& record = chunk.frames[index];
   record = frame;
-  const uint32_t status = *dma_status;
-  if (status & (next_flag | current_flag)) {
+  if (dma_result & kDmaMiss) {
     record.flags |= kFlagMiss;
   }
   ticks[index] = uint32_t(begin_tick);
-  lost[index] = status & current_flag ? 1 : 0;
+  lost[index] = (dma_result & kDmaLost) != 0;
   ++written;
   if (!stop && (record.flags & trigger)) {
     stop = written - 1 + ring - pre;

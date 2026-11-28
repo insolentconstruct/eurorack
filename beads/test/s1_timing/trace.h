@@ -144,8 +144,12 @@ void SetStatus(uint32_t status);
 bool armed();
 void FaultCue(bool active);
 void Begin(uint32_t codec_hz, size_t block_frames);
-void End(uint32_t irq_cycles, volatile const uint32_t* dma_status,
-    uint32_t next_flag, uint32_t current_flag);
+enum DmaResult {
+  kDmaFilled = 1,
+  kDmaMiss = 2,
+  kDmaLost = 4
+};
+void End(uint32_t irq_cycles, uint32_t dma_result);
 extern uint32_t fill_cycles;
 extern uint32_t callback_cycles;
 extern uint32_t callback_observers;

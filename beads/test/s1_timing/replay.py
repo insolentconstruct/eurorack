@@ -39,6 +39,7 @@ import transition_emu as te
 CYCCNT = 0xe0001004
 TIM2_CNT = 0x40000024
 DMA1_LIFCR = te.DMA1_LISR + 8
+DMA1_RX_NDTR = te.DMA1_LISR + 0x2c
 RNG_SR = 0x48021804
 RNG_DR = 0x48021808
 TRACE_HEADER = struct.Struct('<IIIQQIIII')
@@ -81,7 +82,10 @@ class Machine(te.Machine):
     self.uc.hook_add(te.unicorn.UC_HOOK_MEM_WRITE, self.clear_dma,
                     begin=DMA1_LIFCR, end=DMA1_LIFCR)
     self.irq_start = None
-    self.irq_half = 0
+    self.dma_period = BLOCK_CYCLES
+    self.dma_events = 0
+    self.dma_half = 0
+    self.dma_frames = 0
     self.preemption = 0
     self.preempt_pending = False
     self.preemption_wait = None
@@ -92,42 +96,12 @@ class Machine(te.Machine):
                      begin=self.enter_start, end=self.enter_end - 2)
     self.uc.hook_add(te.unicorn.UC_HOOK_MEM_READ, self.late_dma,
                     begin=te.DMA1_LISR, end=te.DMA1_LISR)
+    self.uc.hook_add(te.unicorn.UC_HOOK_MEM_READ, self.late_dma,
+                    begin=DMA1_RX_NDTR, end=DMA1_RX_NDTR)
     self.write(RNG_SR, '<I', 1)
     self.write(RNG_DR, '<I', Machine.epoch)
     if self.profile is not None:
       self.uc.mem_write(PROFILE, self.profile)
-
-  def boot(self, recovery=True):
-    # S1 polls the mailbox before DoEvents. Stop at the first call in that
-    # loop so a mailbox main step runs one complete iteration.
-    main = self.image.address('main')
-    init = self.image.address('_Z4Initv')
-    poll_head = self.image.address('_ZN5beads9s1_timing14codec_overrideEv')
-    code = bytes(self.uc.mem_read(main, 0x40))
-    initialized = False
-    offset = 0
-    while offset < len(code):
-      length = te.thumb_length(struct.unpack_from('<H', code, offset)[0])
-      if length == 4:
-        target = self.bl_target(main + offset, code[offset:offset + 4])
-        if initialized and target == poll_head:
-          self.loop_head = main + offset
-          break
-        if target == init:
-          initialized = True
-      offset += length
-    assert self.loop_head is not None, 'cannot locate the S1 main loop'
-    self.uc.hook_add(te.unicorn.UC_HOOK_CODE, self.on_head,
-                     begin=self.loop_head, end=self.loop_head)
-    sp, reset = self.read(self.image.address('g_pfnVectors'), '<II')
-    self.uc.reg_write(te.A.UC_ARM_REG_SP, sp)
-    self.press('seed', recovery)
-    count = self.run(reset & ~1, self.loop_head, 'boot')
-    self.head = 0
-    self.press('seed', False)
-    self.main_context = self.uc.context_save()
-    self.irq_stack = (self.uc.reg_read(te.A.UC_ARM_REG_SP) - 0x40) & ~7
-    return count
 
   def on_block(self, uc, address, size, user):
     self.block_start = address
@@ -135,23 +109,29 @@ class Machine(te.Machine):
     super().on_block(uc, address, size, user)
 
   def clear_dma(self, uc, access, address, size, value, user):
+    self.advance_dma()
     status, = self.read(te.DMA1_LISR, '<I')
     self.write(te.DMA1_LISR, '<I', status & ~value)
 
   def late_dma(self, uc, access, address, size, value, user):
-    # A callback past its block sees the next half's flag (and, two blocks
-    # late, its own again). Instruction counts stand in for cycles.
+    self.advance_dma()
+
+  def advance_dma(self):
     if self.irq_start is None:
       return
+    # Completions occur once at each boundary. A same-half completion ORs
+    # into the still-set bit and the subsequent acknowledgement clears both.
     elapsed = self.count - self.irq_start
-    current = te.LISR_TC if self.irq_half else te.LISR_HT
-    following = te.LISR_HT if self.irq_half else te.LISR_TC
+    events, within_half = divmod(elapsed, self.dma_period)
     status, = self.read(te.DMA1_LISR, '<I')
-    if elapsed >= BLOCK_CYCLES:
-      status |= following
-    if elapsed >= 2 * BLOCK_CYCLES:
-      status |= current
+    while self.dma_events < events:
+      self.dma_events += 1
+      self.dma_half ^= 1
+      status |= te.LISR_TC if self.dma_half else te.LISR_HT
     self.write(te.DMA1_LISR, '<I', status)
+    words = 2 * self.dma_frames
+    remaining = words * (1 + self.dma_half) - within_half * words // self.dma_period
+    self.write(DMA1_RX_NDTR, '<I', remaining)
 
   def peripheral(self, uc, access, address, size, value, user):
     if address == TIM2_CNT:
@@ -199,7 +179,8 @@ class Rig(te.Rig):
   def block(self):
     size, = self.m.read(self.block_size, '<I')
     half = self.half
-    self.m.irq_start, self.m.irq_half = self.m.count, half
+    self.m.irq_start = self.m.count
+    self.m.dma_events, self.m.dma_half, self.m.dma_frames = 0, half, size
     super().block()
     self.m.irq_start = None
     if size:
@@ -439,13 +420,16 @@ def replay_rc1(image, region, output, release):
   cases = (
       ('processor-48', 0, 3, 0, False, 0, 'Process', 48000),
       ('processor-32', 0, 2, 0, False, 0, 'Process', 32000),
+      ('processor-24', 0, 0, 0, False, 0, 'Process', 24000),
       ('spectral-48', 1, 3, 0, False, 0, 'Process', 48000),
       ('synth-48', 0, 3, 0, True, 0, 'Process', 48000),
       ('synth-trim-48', 0, 3, 0, True, 1, 'ProcessSynthLevel', 48000),
       ('abyss-48', 3, 3, 0, False, 0, 'ProcessAbyss', 48000),
       ('abyss-32', 3, 2, 0, False, 0, 'ProcessAbyss', 32000),
+      ('abyss-24', 3, 0, 0, False, 0, 'ProcessAbyss', 24000),
       ('oliverb-48', 2, 3, 0, False, 0, 'ProcessOliverb', 48000),
       ('oliverb-32', 2, 2, 0, False, 0, 'ProcessOliverb', 32000),
+      ('oliverb-24', 2, 0, 0, False, 0, 'ProcessOliverb', 24000),
       ('bloom-48', 0, 3, 3, False, 0, 'ProcessExtendedReverb', 48000),
       ('bloom-synth-48', 0, 3, 3, True, 1, 'ProcessExtendedReverb', 48000),
   )
@@ -511,8 +495,6 @@ def main():
   region = args.region.read_bytes()
 
   release = te.Image(args.release) if args.release else None
-  replay_rc1(image, region, args.output, release)
-
   r = Rig(image, region)
   r.configure(False)
   assert r.mailbox(1, 2)[-1] == 1
@@ -551,7 +533,47 @@ def main():
     assert r.word('active_processor_mode') & 0xff == 0
     r.m.write(image.member('ui', 'Ui', 'processor_mode_'), '<B', mode)
     assert r.mailbox(8, 1)[-1] == 0xffffffff
+    # DoEvents can commit settings before the next SysTick updates Ui.
+    r.m.write(image.member('ui', 'Ui', 'processor_mode_'), '<B', 0)
+    te.Rig.set_feature(r, te.FEATURE_PROCESSOR, mode)
+    assert r.mailbox(8, 1)[-1] == 0xffffffff
   print('Mailbox races and dedicated-mode refusal verified', flush=True)
+
+  # The clear must neither consume the capture status nor schedule a 9.
+  r = Rig(image, region)
+  r.configure(False)
+  assert r.mailbox(8, 1)[-1] in (8, 9)
+  assert r.mailbox(1, 2)[-1] == 1
+  assert r.mailbox(8, 0)[::4] == (0, 1)
+  r.block()
+  r.block()
+  assert r.mailbox(8, 0)[::4] == (0, 2)
+  assert r.mailbox(2, codec=48000, synth=48000)[-1] == 3
+  r.m.main_step()
+  assert r.m.read(request, '<5I')[::4] == (0, 3)
+
+  # One late completion leaves only the opposite bit after acknowledgement.
+  # A second, coalesced completion also leaves only that bit, but counts lost.
+  for period, expected in ((BLOCK_CYCLES, 0), (BLOCK_CYCLES // 2, 2)):
+    r = Rig(image, region)
+    r.configure(False)
+    r.m.dma_period = period
+    assert r.mailbox(1, 2)[-1] == 1
+    r.hold(1, 121200)
+    status, = r.m.read(te.DMA1_LISR, '<I')
+    assert status == (te.LISR_TC if r.half else te.LISR_HT)
+    r.block()
+    assert r.m.dma_events == (2 if expected else 1)
+    r.m.main_step()
+    address = image.address('s1_trace')
+    header = TRACE_HEADER.unpack(r.m.uc.mem_read(address, TRACE_HEADER.size))
+    assert header[5:7] == (2, expected), header
+    for i in range(2):
+      flags, = r.m.read(address + TRACE_HEADER.size + i * FRAME_BYTES + 15, '<B')
+      assert flags & 1
+  print('DMA pre-ack coalescence and lost count verified', flush=True)
+
+  replay_rc1(image, region, args.output, release)
 
   for codec, synth in ((48000, 24000), (32000, 48000),
                        (24000, 32000), (48000, 48000)):
@@ -564,6 +586,7 @@ def main():
     for _ in range(16):
       r.block()
     assert r.mailbox(4)[-1] == 4
+    assert r.mailbox(8, 0)[::4] == (0, 9)
     directory = args.output / f'startup-{codec}-{synth}'
     r.capture(directory, resume=True)
     packed = (directory / 'callbacks.bin').read_bytes()
@@ -599,8 +622,14 @@ def main():
     paths, = struct.unpack_from('<H', packed, offset + 22)
     assert paths & 0xf == 0xa, paths
   assert max(map(abs, r.samples)) > 2**31 // 1000, 'forced Plaits is silent'
-  r.request(8, 0, wanted=8)
-  assert r.settle() == 0
+  r.request(8, 0, wanted=2)
+  for _ in range(SETTLE_MS):
+    r.tick(1)
+    if not r.m.read(image.address('synth_mode'), '<B')[0]:
+      break
+  else:
+    raise AssertionError('clearing the force did not leave synth mode')
+  assert r.m.read(request, '<5I')[::4] == (0, 2)
 
   # Pre-armed SEED latch on the bench posture (inputs patched, request 8, the
   # main loop running): 136 callbacks before the edge, one sealed chunk.

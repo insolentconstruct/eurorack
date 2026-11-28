@@ -1,5 +1,5 @@
 diff --git a/beads/beads.cc b/beads/beads.cc
-index 52713f0..1a702ef 100644
+index 52713f0..57af7f5 100644
 --- a/beads/beads.cc
 +++ b/beads/beads.cc
 @@ -32,0 +33,6 @@
@@ -293,13 +293,15 @@ index 52713f0..1a702ef 100644
 -      if (synth_fade || (start && now - start >= 10000)) {
 +      if (synth_fade || s1_timing::no_input() ||
 +          (start && now - start >= 10000)) {
-@@ -1336,0 +1522,32 @@ int main(void) {
+@@ -1338 +1523,50 @@ int main(void) {
+-    MonitorStateChange();
 +    const uint32_t old_codec = s1_timing::codec_override();
 +    const SynthEngine old_engine = transition.playing_synth();
 +    const uint32_t command = s1_timing::Poll(
 +        transition.blanking() && !s1_startup_prepared, s1_startup_prepared,
 +        active_processor_mode == PROCESSOR_GRANULAR && !oliverb_mode &&
-+        ui.processor_mode() == PROCESSOR_GRANULAR);
++        ui.processor_mode() == PROCESSOR_GRANULAR &&
++        settings.processor_mode() == PROCESSOR_GRANULAR);
 +    if (command == 4 && !s1_startup_prepared && synth_mode &&
 +        transition.codec_running() && !transition.blanking() &&
 +        old_engine == SYNTH_PLAITS) {
@@ -326,8 +328,6 @@ index 52713f0..1a702ef 100644
 +         plaits_synth.sample_rate() != s1_timing::synth_rate())) {
 +      ConfigureAndStartCodec(true, true);
 +    }
-@@ -1338 +1555,17 @@ int main(void) {
--    MonitorStateChange();
 +    s1_startup_running = s1_startup_running && s1_timing::armed();
 +    if (!s1_startup_prepared && !s1_startup_running) {
 +      MonitorStateChange();
@@ -352,7 +352,7 @@ index 9f78370..fd09879 100644
 @@ -46,0 +47 @@ class WaveTerrain {
 +  float terrain_position() const { return terrain_; }
 diff --git a/beads/drivers/codec.cc b/beads/drivers/codec.cc
-index 10c2070..dde51ff 100644
+index 10c2070..1695df5 100644
 --- a/beads/drivers/codec.cc
 +++ b/beads/drivers/codec.cc
 @@ -34,0 +35,3 @@
@@ -374,43 +374,76 @@ index 10c2070..dde51ff 100644
 @@ -403,0 +412,2 @@ void Codec::Fill(size_t offset) {
 +    const uint32_t before_callback_observers = s1_timing::observer_cycles;
 +    const uint32_t callback_start = s1_timing::Cycles();
-@@ -404,0 +415,3 @@ void Codec::Fill(size_t offset) {
+@@ -404,0 +415,5 @@ void Codec::Fill(size_t offset) {
++    __DSB();
++    __ISB();
 +    const uint32_t callback_cycles = s1_timing::Cycles() - callback_start;
 +    const uint32_t callback_observers =
 +        s1_timing::observer_cycles - before_callback_observers;
-@@ -405,0 +419 @@ void Codec::Fill(size_t offset) {
+@@ -405,0 +421 @@ void Codec::Fill(size_t offset) {
 +    cpu_ceiling::StoreBegin();
-@@ -408,0 +423,2 @@ void Codec::Fill(size_t offset) {
+@@ -408,0 +425,2 @@ void Codec::Fill(size_t offset) {
 +    cpu_ceiling::StoreEnd(offset, block_size_, 2);
 +    cpu_ceiling::Filled(offset, block_size_);
-@@ -410,0 +427,3 @@ void Codec::Fill(size_t offset) {
+@@ -410,0 +429,3 @@ void Codec::Fill(size_t offset) {
 +    s1_timing::fill_cycles = s1_timing::Cycles() - start;
 +    s1_timing::callback_cycles = callback_cycles;
 +    s1_timing::callback_observers = callback_observers;
-@@ -413,0 +433 @@ void Codec::Fill(size_t offset) {
+@@ -413,0 +435 @@ void Codec::Fill(size_t offset) {
 +    return true;
-@@ -414,0 +435 @@ void Codec::Fill(size_t offset) {
+@@ -414,0 +437 @@ void Codec::Fill(size_t offset) {
 +  return false;
-@@ -422,0 +444,3 @@ void CODEC_ADC_STREAM_HANDLER(void) {
-+  const uint32_t start = beads::s1_timing::Cycles();
-+  bool filled = false;
-+  uint32_t current = 0;
-@@ -424 +448 @@ void CODEC_ADC_STREAM_HANDLER(void) {
--    beads::Codec::GetInstance()->Fill(1);
-+    filled = beads::Codec::GetInstance()->Fill(1);
-@@ -425,0 +450 @@ void CODEC_ADC_STREAM_HANDLER(void) {
-+    current = CODEC_ADC_DMA_ISR_FLAG_TC;
-@@ -427 +452 @@ void CODEC_ADC_STREAM_HANDLER(void) {
--    beads::Codec::GetInstance()->Fill(0);
-+    filled = beads::Codec::GetInstance()->Fill(0);
-@@ -428,0 +454,7 @@ void CODEC_ADC_STREAM_HANDLER(void) {
-+    current = CODEC_ADC_DMA_ISR_FLAG_HT;
+@@ -419,2 +442,23 @@ void Codec::Fill(size_t offset) {
+-// DMA & SAI related interrupts
+-extern "C" {
++// Sample the old flag before clearing it: a second completion of that
++// half coalesces into the flag that selected this interrupt.
++static uint32_t FinishHalf(uint32_t start, uint32_t current,
++    uint32_t following, bool filled) {
++  const uint32_t status = CODEC_ADC_DMA_ISR;
++  const uint32_t remaining = CODEC_ADC_DMA_STREAM->NDTR;
++  CODEC_ADC_DMA_IFCR = current;
++  uint32_t result = filled ? beads::s1_timing::kDmaFilled : 0;
++  if (filled && (status & following)) {
++    result |= beads::s1_timing::kDmaMiss;
++    // A pending opposite flag plus the selected half's RX phase
++    // identifies a wrap back to the selected half. For longer stalls,
++    // two full block periods also cover a subsequent phase change.
++    const bool tc_phase = !remaining ||
++        remaining > 2 * beads::s1_timing::frame.block_frames;
++    if ((status & current) &&
++        (tc_phase == (current == CODEC_ADC_DMA_ISR_FLAG_TC) ||
++         beads::s1_timing::Cycles() - start >= 2 * (SystemCoreClock / 4000))) {
++      result |= beads::s1_timing::kDmaLost;
++    }
 +  }
-+  const uint32_t cycles = beads::s1_timing::Cycles() - start;
-+  if (filled) {
-+    const uint32_t next = (CODEC_ADC_DMA_ISR_FLAG_HT |
-+        CODEC_ADC_DMA_ISR_FLAG_TC) ^ current;
-+    beads::s1_timing::End(cycles, &CODEC_ADC_DMA_ISR, next, current);
++  return result;
++}
+@@ -422 +466 @@ extern "C" {
+-void CODEC_ADC_STREAM_HANDLER(void) {
++extern "C" uint32_t S1DmaBody(uint32_t start) {
+@@ -424,2 +468,3 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+-    beads::Codec::GetInstance()->Fill(1);
+-    CODEC_ADC_DMA_IFCR = CODEC_ADC_DMA_ISR_FLAG_TC;
++    const bool filled = beads::Codec::GetInstance()->Fill(1);
++    return FinishHalf(start, CODEC_ADC_DMA_ISR_FLAG_TC,
++        CODEC_ADC_DMA_ISR_FLAG_HT, filled);
+@@ -427,2 +472,3 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+-    beads::Codec::GetInstance()->Fill(0);
+-    CODEC_ADC_DMA_IFCR = CODEC_ADC_DMA_ISR_FLAG_HT;
++    const bool filled = beads::Codec::GetInstance()->Fill(0);
++    return FinishHalf(start, CODEC_ADC_DMA_ISR_FLAG_HT,
++        CODEC_ADC_DMA_ISR_FLAG_TC, filled);
+@@ -429,0 +476 @@ void CODEC_ADC_STREAM_HANDLER(void) {
++  return 0;
+@@ -431,0 +479,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
++extern "C" void S1DmaFinish(uint32_t result, uint32_t start, uint32_t end) {
++  if (result & beads::s1_timing::kDmaFilled) {
++    beads::s1_timing::End(end - start, result);
++  }
+@@ -432,0 +484,2 @@ void CODEC_ADC_STREAM_HANDLER(void) {
++
++#include "beads/test/s1_timing/irq.h"
 diff --git a/beads/drivers/codec.h b/beads/drivers/codec.h
 index 2df3916..d3db5d4 100644
 --- a/beads/drivers/codec.h

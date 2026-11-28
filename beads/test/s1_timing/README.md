@@ -67,9 +67,22 @@ last. Wait for request to return to zero before writing another request.
 | 5 | Start a prepared, armed Plaits acquisition at its first render. | 5 started |
 | 6 | Cancel an armed acquisition and leave startup preparation, if active. If the final IRQ already completed, report its publication, including when cancellation arrives during or after the flush. | 6 cancelled, 2 published |
 | 7 | Pre-arm 2–273 callbacks in a ring. The firmware seals on its own SEED edge, keeping the codec word's 1 to count − 1 callbacks before the edge callback. | 7 while armed, 2 once published |
-| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires both the active and requested processor mode to support this entry. Count 0 is always accepted. | 8 accepted, 9 settled, 0xffffffff unsupported |
+| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires both the active and requested processor mode to support this entry. Count 0 is always accepted. | 8 accepted, 9 settled, 0xffffffff unsupported. A clear can instead preserve the acquisition status. |
 | 9 | As 7, sealing on the first missed callback instead: it keeps recording while an overload starves the main loop, and publishes once the load is released. | 9 while armed, 2 once published |
 | | Invalid or busy | 0xffffffff |
+
+The firmware main loop owns the status word. The audio IRQ hands it a
+pending seal, and the main loop publishes status 2 after writing the seal.
+Each consumed command supersedes any pending request 8 settlement. The UI
+processes its events before the mailbox is polled. Count 1 checks the active
+processor, the UI's selected processor, and the committed setting, which
+can lead the UI selection by a tick. An accepted mode change reports 8 while
+settling and 9 when the codec runs in the requested posture. A count 0
+during prepared startup clears the force and reports 9 for that policy
+change immediately. Normal input detection applies when startup releases
+the codec. A count 0 during acquisition or while status 2 is visible clears
+the force and consumes the request while preserving the acquisition status.
+These clears schedule no later status write.
 
 A SEED-latched chunk is in callback order, its header covering only the
 retained callbacks. A trigger earlier than the requested lead seals a shorter
@@ -118,32 +131,33 @@ Physical delay also depends on instruction and data access latency.
 The deferred service contributes to the active measurement.
 
 The common DMA1 Stream 1 IRQ services both halves. The callback delta
-straddles the indirect call in Fill, including any trim in
-`ProcessSynthLevel` and `ProcessExtendedReverb`. `Process` covers granular,
-Spectral, Beads Synth, Plaits and Rings. Oliverb, Abyss and extended reverb
-(including Bloom) have dedicated RC1 callbacks. The IRQ delta starts
-before the first DMA flag read and ends after Fill returns and its DMA
-flag is acknowledged. The handler rereads status for the half-transfer
-test and acknowledges each flag after Fill, in release order. Trace
-recording and peak bookkeeping run after the IRQ stamp. The DMA miss
-probe reads after acknowledgement and detects a pending opposite half
-or a current half reasserted since acknowledgement. The same-half flag
-can coalesce before acknowledgement during a multi-block overrun.
+starts before the indirect call in Fill and ends after the returned
+callback's DSB and ISB, matching the Seed3 phase-2 callback bracket. It
+includes any trim in `ProcessSynthLevel` and `ProcessExtendedReverb`.
+`Process` covers granular, Spectral, Beads Synth, Plaits and Rings.
+Oliverb, Abyss and extended reverb (including Bloom) have dedicated RC1
+callbacks.
 
-The Seed3 phase-2 IRQ gate used the maximum DWT delta around the whole
-software codec handler, including its entry and return instructions.
-The fixture's own probe prefix and some diagnostic updates were also in
-that bracket. The gate estimate adds 32 cycles for the release handler's
-software entry and return, covering its two-register push and pop and
-DMA base load. Architectural exception entry and return are outside both
-measurement definitions.
+The naked IRQ entry reads DWT CYCCNT before calling the DMA handler body
+and again after the body returns. The interval includes the complete
+body's entry and return instructions, DMA status and NDTR reads, Fill
+and acknowledgement. Architectural exception entry and return are
+outside this interval, as on Seed3. Trace and peak bookkeeping start after
+the closing stamp. The body tests TC first, rereads status to test HT when
+TC is clear and acknowledges after Fill. An additional pre-acknowledgement
+status sample detects a pending opposite half. Because the selected bit
+stays set until acknowledgement, the probe uses RX NDTR phase with the
+opposite bit to detect coalescence. Two elapsed block periods also identify
+a lost completion if the DMA has advanced into the opposite phase again.
+The trace marks a miss for the opposite pending half and increments the
+dropped count when the selected half is inferred to have coalesced.
 
 | ELF symbol | Measurement |
 | --- | --- |
 | `s1_callback_cycles` | Latest raw callback delta |
 | `s1_irq_cycles` | Latest raw IRQ delta |
 | `s1_callback_gate_cycles` | Latest callback delta less its measured observations |
-| `s1_irq_gate_cycles` | Latest IRQ delta less its measured observations, plus the 32-cycle software entry and return allowance |
+| `s1_irq_gate_cycles` | Latest IRQ delta less its measured observations |
 | `s1_callback_peak` | Maximum raw callback delta |
 | `s1_irq_peak` | Maximum raw IRQ delta |
 | `s1_callback_gate_peak` | Maximum corrected callback count |
