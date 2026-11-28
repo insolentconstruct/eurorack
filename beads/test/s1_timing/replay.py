@@ -56,6 +56,9 @@ BLOCK_CYCLES = 480000000 // 4000
 SETTLE_MS = 3000
 
 
+ReleaseMachine = te.Machine
+
+
 class Machine(te.Machine):
   profile = None
   epoch = 0
@@ -302,8 +305,13 @@ class Rig(te.Rig):
     assert 0 < max(callback) == self.word('s1_callback_peak')
     assert 0 < max(dwt_irq) == self.word('s1_irq_peak')
     assert all(c < d <= n for c, d, n in zip(callback, dwt_irq, self.irq))
+    callback_gate = self.word('s1_callback_gate_peak')
+    irq_gate = self.word('s1_irq_gate_peak')
+    assert 0 < callback_gate < max(callback)
+    assert callback_gate < irq_gate < max(dwt_irq)
     (directory / 'instructions.json').write_text(json.dumps(dict(
-        irq=self.irq, callback=callback, dwt_irq=dwt_irq, observer=observer)))
+        irq=self.irq, callback=callback, dwt_irq=dwt_irq, observer=observer,
+        callback_gate_peak=callback_gate, irq_gate_peak=irq_gate)))
     return header
 
   def word(self, symbol):
@@ -316,7 +324,63 @@ class Rig(te.Rig):
     assert callback & ~1 == self.image.address(symbol), (name, hex(callback))
 
 
-def replay_rc1(image, region, output):
+class ReleaseRig(te.Rig):
+  configure = Rig.configure
+  posture = Rig.posture
+  samples = None
+
+  def set_feature(self, feature, value):
+    super().set_feature(feature, value)
+    self.m.call('SysTick_Handler')
+
+  def record(self, fn, n, phase, silent=False):
+    if fn != 'audio' or self.samples is None:
+      return
+    self.irqs.append(n)
+    callback, = [count for name, count in self.m.inner if name == 'codec callback']
+    self.callbacks.append(callback)
+    tx = self.image.address('_ZN5beads5Codec14tx_dma_buffer_E')
+    count, = self.m.read(self.block_size, '<I')
+    self.samples.extend(self.m.read(
+        tx + 8 * count * (self.half ^ 1), f'<{2 * count}i'))
+
+
+def pair_release(image, region, fixture, name, processor, media, reverb, synth, trim):
+  te.Machine = ReleaseMachine
+  try:
+    r = ReleaseRig(image, region)
+  finally:
+    te.Machine = Machine
+  r.configure(False)
+  r.set_media(media)
+  for feature, value in ((te.FEATURE_SYNTH, 0), (te.FEATURE_PROCESSOR, processor),
+                         (te.FEATURE_REVERB, reverb), (50, trim)):
+    r.set_feature(feature, value)
+  r.tick(320)
+  if synth:
+    r.configure(True)
+    for _ in range(16):
+      r.block()
+  for _ in range(9):
+    r.m.main_step()
+  callback, = r.m.read(r.callback, '<I')
+  r.m.entries[callback & ~1] = 'codec callback'
+  r.samples, r.irqs, r.callbacks = [], [], []
+  for _ in range(64):
+    r.block()
+  counts = json.loads((fixture / 'instructions.json').read_text())
+  results = dict(case=name, audio_match=(fixture / 'output.s32').read_bytes() ==
+                 struct.pack(f'<{len(r.samples)}i', *r.samples))
+  for label, release in (('callback', max(r.callbacks)), ('irq', max(r.irqs))):
+    timing = counts[label + '_gate_peak']
+    results['release_' + label] = release
+    results['timing_' + label] = timing
+    results[label + '_residual'] = timing - release
+  print(json.dumps(results), flush=True)
+  assert results['audio_match'], results
+
+
+def replay_rc1(image, region, output, release):
   cases = (
       ('processor-48', 0, 3, 0, False, 0, 'Process', 48000),
       ('processor-32', 0, 2, 0, False, 0, 'Process', 32000),
@@ -359,6 +423,20 @@ def replay_rc1(image, region, output):
     assert after[5] == before[5] + 1
     assert r.word(CALLBACK) >= BLOCK_CYCLES * 9 // 10
     r.hold(2, 0)
+    if processor in (2, 3):
+      assert r.mailbox(8, 1)[-1] == 0xffffffff
+      r.m.write(r.state + image.offsets['State']['gate_output_mode'], '<B', 1)
+      for command, flags in ((3, 1 << 21), (4, 1 << 23)):
+        r.hold(command, flags)
+        # The first DMA frame carries the previous callback's last frame.
+        r.block()
+        del r.samples[:]
+        r.block()
+        assert not any(r.samples[1::2]), (name, command)
+        if flags & (1 << 23):
+          assert any(r.samples[::2]), name
+    if release:
+      pair_release(release, region, directory, name, processor, media, reverb, synth, trim)
 
 
 def main():
@@ -366,15 +444,30 @@ def main():
   parser.add_argument('elf', type=Path)
   parser.add_argument('region', type=Path)
   parser.add_argument('output', type=Path)
+  parser.add_argument('--release', type=Path, help='compare paired fixtures with this release ELF')
   args = parser.parse_args()
   args.output.mkdir(exist_ok=True, parents=True)
   te.Machine = Machine
   te.MEMBERS['NormalizationDetector'] += ('normalized_',)
   te.MEMBERS['Ui'] += ('seed_button_state_', 'seed_button_locked_')
+  te.MEMBERS['State'] = ('gate_output_mode',)
   image = te.Image(args.elf)
   region = args.region.read_bytes()
 
-  replay_rc1(image, region, args.output)
+  release = te.Image(args.release) if args.release else None
+  replay_rc1(image, region, args.output, release)
+
+  r = Rig(image, region)
+  r.configure(False)
+  assert r.mailbox(1, 2)[-1] == 1
+  r.block()
+  assert r.mailbox(6)[-1] == 6
+  r.block()
+  assert r.word('s1_mailbox') == 0
+  assert r.mailbox(1, 2)[-1] == 1
+  r.block()
+  r.block()
+  assert r.mailbox(6)[-1] == 2
 
   for codec, synth in ((48000, 24000), (32000, 48000),
                        (24000, 32000), (48000, 48000)):

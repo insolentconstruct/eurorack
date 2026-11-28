@@ -96,13 +96,18 @@ bool Enter(size_t size) {
   return true;
 }
 
-void Output(FloatFrame* frames, Codec::Frame* out, size_t size) {
+void Output(FloatFrame* frames, Codec::Frame* out, size_t size,
+    bool gate_output) {
   if (sine()) {
     // The nominal rate, as the bench's detector expects.
     const float increment = kSineHz / float(size * 4000);
     for (size_t i = 0; i < size; ++i) {
-      frames[i].l = frames[i].r =
+      const float sample =
           kSineLevel * stmlib::Interpolate(lut_sine, block.phase, 1024.0f);
+      frames[i].l = sample;
+      if (!gate_output) {
+        frames[i].r = sample;
+      }
       block.phase += increment;
       if (block.phase >= 1.0f) {
         block.phase -= 1.0f;

@@ -50,6 +50,10 @@ volatile uint32_t s1_callback_cycles;
 volatile uint32_t s1_irq_cycles;
 volatile uint32_t s1_callback_peak;
 volatile uint32_t s1_irq_peak;
+extern "C" {
+volatile uint32_t s1_callback_gate_peak;
+volatile uint32_t s1_irq_gate_peak;
+}
 Frame frame;
 uint32_t observer_cycles;
 uint32_t paused_setup_cycles;
@@ -236,24 +240,42 @@ static void Arm(uint32_t count, uint32_t before, uint32_t status) {
   written = 0;
   s1_callback_peak = 0;
   s1_irq_peak = 0;
+  s1_callback_gate_peak = 0;
+  s1_irq_gate_peak = 0;
   s1_mailbox.status = status;
   __DMB();
   target = count;
 }
 
-uint32_t Poll(bool blanking, bool startup_prepared) {
-  if (flush_pending) {
-    Seal();
-    const size_t bytes = sizeof(Header) + chunk.header.count * sizeof(Frame);
-    SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(s1_trace), bytes);
-    external_seal = seal;
-    SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(
-        s1_trace + kTraceBytes - 32), 32);
-    flush_pending = false;
-    s1_mailbox.status = 2;
-  }
+static void Flush() {
+  Seal();
+  const size_t bytes = sizeof(Header) + chunk.header.count * sizeof(Frame);
+  SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(s1_trace), bytes);
+  external_seal = seal;
+  SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(
+      s1_trace + kTraceBytes - 32), 32);
+  flush_pending = false;
+  s1_mailbox.status = 2;
+}
 
+uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input) {
   const uint32_t request = s1_mailbox.request;
+  if (request == 6) {
+    const uint32_t mask = __get_PRIMASK();
+    __disable_irq();
+    const bool publish = flush_pending;
+    target = 0;
+    __set_PRIMASK(mask);
+    if (!publish) {
+      return request;
+    }
+    Flush();
+    SetStatus(2);
+    return 0;
+  }
+  if (flush_pending) {
+    Flush();
+  }
   if (!request) {
     return 0;
   }
@@ -268,7 +290,8 @@ uint32_t Poll(bool blanking, bool startup_prepared) {
   } else if ((request == 7 || request == 9) && capture && codec >= 1 &&
       codec < count) {
     Arm(count, codec, request);
-  } else if (request == 8 && idle && !startup_prepared && count <= 1) {
+  } else if (request == 8 && idle && !startup_prepared && can_force_no_input &&
+      count <= 1) {
     forced_no_input = count;
     settle_pending = true;
     s1_mailbox.status = 8;
@@ -279,11 +302,6 @@ uint32_t Poll(bool blanking, bool startup_prepared) {
     s1_mailbox.status = 3;
   } else if ((request == 4 && !target && !flush_pending) ||
       (request == 5 && target && !flush_pending)) {
-    return request;
-  } else if (request == 6) {
-    __disable_irq();
-    target = 0;
-    __enable_irq();
     return request;
   } else {
     s1_mailbox.status = 0xffffffff;
@@ -331,23 +349,35 @@ void Begin(uint32_t rate, size_t block_frames) {
   }
 }
 
-void EndIrq(uint32_t cycles) {
+void EndIrq(uint32_t cycles, uint32_t overhead) {
   s1_irq_cycles = cycles;
-  if (capture_irq && cycles > s1_irq_peak) {
-    s1_irq_peak = cycles;
+  if (capture_irq) {
+    if (cycles > s1_irq_peak) {
+      s1_irq_peak = cycles;
+    }
+    const uint32_t corrected = SubtractCycles(cycles, overhead);
+    if (corrected > s1_irq_gate_peak) {
+      s1_irq_gate_peak = corrected;
+    }
   }
   capture_irq = false;
 }
 
-void End(uint32_t cycles, uint32_t callback_cycles,
+void End(uint32_t cycles, uint32_t callback_cycles, uint32_t callback_observers,
     volatile const uint32_t* dma_status,
     uint32_t next_flag, uint32_t current_flag) {
-  frame.cycles = cycles > observer_cycles ? cycles - observer_cycles : 0;
+  frame.cycles = SubtractCycles(cycles, observer_cycles);
   s1_observer_cycles = observer_cycles;
   s1_callback_cycles = callback_cycles;
   capture_irq = target != 0;
-  if (capture_irq && callback_cycles > s1_callback_peak) {
-    s1_callback_peak = callback_cycles;
+  if (capture_irq) {
+    if (callback_cycles > s1_callback_peak) {
+      s1_callback_peak = callback_cycles;
+    }
+    const uint32_t corrected = SubtractCycles(callback_cycles, callback_observers);
+    if (corrected > s1_callback_gate_peak) {
+      s1_callback_gate_peak = corrected;
+    }
   }
   frame.sai_a = SAI1_Block_A->SR;
   frame.sai_b = SAI1_Block_B->SR;

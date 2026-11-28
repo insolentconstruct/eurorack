@@ -149,7 +149,8 @@ void Init();
 bool Enter(size_t size);
 // Replaces the output conversion while held: the sine, the hold until the
 // target (cycles from Enter), then the conversion into the driver's buffer.
-void Output(FloatFrame* frames, Codec::Frame* out, size_t size);
+void Output(FloatFrame* frames, Codec::Frame* out, size_t size,
+    bool gate_output);
 
 // The driver brackets each run of stores into a DMA half.
 inline void StoreBegin() {

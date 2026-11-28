@@ -65,9 +65,9 @@ last. Wait for request to return to zero before writing another request.
 | 2 | Stage 24, 32 or 48 kHz Plaits and a separate 24, 32 or 48 kHz synth-mode codec rate. Codec rate 0 selects the normal rate. | 3 staged. Verify new render and rates after blanking. |
 | 4 | Pause and prepare new Plaits voices at the already verified rate and posture. | 4 prepared |
 | 5 | Start a prepared, armed Plaits acquisition at its first render. | 5 started |
-| 6 | Cancel an armed acquisition and leave startup preparation, if active. | 6 cancelled |
+| 6 | Cancel an armed acquisition and leave startup preparation, if active. If the final IRQ already completed, publish its capture. | 6 cancelled, 2 published |
 | 7 | Pre-arm 2–273 callbacks in a ring. The firmware seals on its own SEED edge, keeping the codec word's 1 to count − 1 callbacks before the edge callback. | 7 while armed, 2 once published |
-| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 returns to the detector's. | 8 accepted, 9 once the codec runs in that mode |
+| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. The current processor mode must support no-input synth entry. | 8 accepted, 9 settled, 0xffffffff unsupported |
 | 9 | As 7, sealing on the first missed callback instead: it keeps recording while an overload starves the main loop, and publishes once the load is released. | 9 while armed, 2 once published |
 | | Invalid or busy | 0xffffffff |
 
@@ -76,44 +76,72 @@ retained callbacks. A trigger earlier than the requested lead seals a shorter
 chunk. The forced path is the stock one, without the 10 s idle wait or the
 self-play MEDIA hold.
 
+Placement codes in the frame and snapshot are 0 (off), 1 (after grains),
+2 (before buffer), 3 (in feedback), 4 (Chord after grains), and 5 (48 kHz
+Bloom with both resonator flags). Code 5 selects the 16-mode resonator
+downstream of the grains, immediately before Bloom reverb. Codes 4 and 5
+extend ABI 1 without changing its layout.
+
 The ELF also exports `s1_ceiling`, the CPU ceiling hold (version 2) of the
 Beta 4 DWT build, at the receipt's `ceiling_address` in DTCM. The host writes
-its command word as before; idle, the hold's bookkeeping is an observation.
+its command word as before. The hold sine replaces the audio channels.
+Gate-output mode keeps the callback's right-channel gate or silence and
+the normal callback wrappers apply profile trim. Idle ceiling bookkeeping
+is a timed observation.
 
 A codec block stays 250 µs in nominal time. The Plaits path renders
 6, 8 or 12 frames at the selected synth rate. When the codec rate
 differs, event buckets retain SEED edges and a sample-and-hold bridges
 the output rates. Blob-local time constants still use the pinned 48 kHz
-model code. The rate override applies only to Plaits. The two rates and
+model code. The rate override applies only to Plaits. A rate change
+reinitializes Bloom's character envelope and the common reverb, trigger,
+limiter, and modulation state at the new rate. The two rates and
 the actual render path remain separate in the records.
 
 ## Measurement limits
 
-The DWT bracket runs from before driver event assembly through the DMA
-audio stores. Inline observations have their own measured bracket
-subtracted before writing the verdict field. Entry, trailing bookkeeping,
-trace publication, and any residual timestamp overhead have separate
-costs. The SAI status and DMA-half check can flag overruns or delayed
-service. Qualification of the physical first-word deadline needs an
-independent observer. Emulator values are instruction counts. AXI/cache
-effects and the swapped physical delay banks need hardware comparison.
+ABI 1 frame `cycles` is the Fill delta from immediately after `Begin`
+through event assembly, the callback and DMA audio stores, minus the
+accumulated Fill observations. `s1_observer_cycles` reports their latest
+sum, including the inline observations inside the callback and the
+driver's ceiling store observations.
 
-The common DMA1 Stream 1 IRQ services both halves. Its Fill dispatch brackets
-the full selected codec callback, including the trim in `ProcessSynthLevel`
-and `ProcessExtendedReverb`. `Process` covers granular, Spectral, Beads Synth,
-Plaits and Rings. Oliverb, Abyss and extended reverb (including Bloom) keep
-their dedicated RC1 callbacks and share the trace and hold. Blanking and
-transition holds go through the ceiling output when the ceiling is armed.
+The common DMA1 Stream 1 IRQ services both halves. The callback delta
+straddles the indirect call in Fill, including any trim in
+`ProcessSynthLevel` and `ProcessExtendedReverb`. `Process` covers granular,
+Spectral, Beads Synth, Plaits and Rings. Oliverb, Abyss and extended reverb
+(including Bloom) have dedicated RC1 callbacks. The IRQ delta starts in
+the handler before the DMA flag read and ends after Fill returns. It
+includes `Begin` and the trace recording in `End`. The C handler's
+entry and return instructions, exception entry and return, and
+`EndIrq` bookkeeping lie outside the DWT reads.
 
-The optional DTCM symbols `s1_callback_cycles` and `s1_irq_cycles` expose
-the latest raw DWT delta. The former wraps the indirect codec callback.
-The latter runs from before the DMA flag read through Fill and trace
-recording, excluding exception entry/exit and the final diagnostic write.
-`s1_callback_peak` and `s1_irq_peak` are reset when a capture is armed and
-include its last IRQ. For requests 7 and 9 the peaks cover the full armed
-interval, including callbacks replaced in the ring. Read the peaks after
-capture publication. ABI 1 frame cycles still report the original Fill
-bracket minus its timed observations.
+| ELF symbol | Measurement |
+| --- | --- |
+| `s1_callback_cycles` | Latest raw callback delta |
+| `s1_irq_cycles` | Latest raw IRQ delta |
+| `s1_callback_peak` | Maximum raw callback delta |
+| `s1_irq_peak` | Maximum raw IRQ delta |
+| `s1_callback_gate_peak` | Maximum callback delta after subtracting only the observations made inside the call |
+| `s1_irq_gate_peak` | Maximum IRQ delta after subtracting the Fill observation sum, the measured `Begin` call interval, and the measured interval from the Fill end stamp through `End`, including trace writes and callback peak bookkeeping |
+
+Subtraction saturates at zero and happens per block before the maximum.
+Read the four peak addresses from `receipt.json` after status 2 and seal
+validation. Request 1 covers the requested blocks. Requests 7 and 9 cover
+the entire armed interval, including callbacks overwritten in the ring.
+All peaks include the final IRQ and reset on the next successful arm.
+
+The absolute RC1 limits for both corrected peaks are 104,215 cycles at
+48 kHz, 99,655 at 32 kHz and 95,095 at 24 kHz. Use natural-load captures
+for the gate. The corrections leave the cost of taking and accumulating
+timestamps, extra branches and changes to compiler code generation.
+Emulator comparisons use instruction counts. Physical DWT measurements
+also reflect cache, memory, and pipeline timing. The SAI status and
+DMA-half check can flag overruns or delayed service. Qualification of
+the physical first-word deadline needs an independent observer.
+
+Synthetic `DWT_CALIBRATION` cannot share the ABI 1 trace reservation.
+The staged overlay rejects that combination at compile time.
 
 A chunk holds about 68 ms. The current single sealed buffer supports short
 offline replay and requires release before another arm. Contiguous
@@ -121,7 +149,7 @@ multi-chunk acquisition and the longer Rings windows need a qualified
 producer and transport. Physical captures also need the exact recording
 aperture, calibrated per-slot stimulus and image return.
 
-`replay.py ELF REGION OUTPUT` uses the existing transition emulator
+`replay.py ELF REGION OUTPUT [--release RELEASE_ELF]` uses the existing transition emulator
 with simulated TIM2, DMA status and RNG. Its output includes wire-format
 files, raw codec frames, callback-bracket counts and whole-IRQ
 instruction counts. A callback

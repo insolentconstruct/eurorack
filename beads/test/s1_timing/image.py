@@ -64,10 +64,16 @@ def main():
   image = image.ljust(APP_END - APP_BASE, b'\xff')
   (out / 'image.bin').write_bytes(image)
   digest = hashlib.sha256(elf.read_bytes()).hexdigest()
+  peaks = {}
+  for name in ('callback_gate_peak', 'irq_gate_peak', 'callback_peak', 'irq_peak'):
+    address = symbols['s1_' + name]
+    if address & 3 or not 0x20000000 <= address <= 0x20020000 - 4:
+      raise ValueError('Invalid timing peak address')
+    peaks[name + '_address'] = address
   receipt = dict(abi=1, elf_sha256=digest, images=[hashlib.sha256(image).hexdigest()],
                  snapshot_address=snapshot, mailbox_address=mailbox,
                  trace_address=trace, seal_offset=seal_offset, ceiling_address=ceiling,
-                 region_address=begin)
+                 region_address=begin, **peaks)
   (out / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 

@@ -139,15 +139,21 @@ extern uint32_t paused_setup_cycles;
 void Init();
 void BootStatus(uint32_t wave, uint32_t plts, uint32_t terr);
 void Publish(uint32_t requested_synth, uint32_t effective_synth);
-uint32_t Poll(bool blanking, bool startup_prepared);
+uint32_t Poll(bool blanking, bool startup_prepared, bool can_force_no_input);
 void SetStatus(uint32_t status);
 bool armed();
 void FaultCue(bool active);
 void Begin(uint32_t codec_hz, size_t block_frames);
-void End(uint32_t cycles, uint32_t callback_cycles,
+void End(uint32_t cycles, uint32_t callback_cycles, uint32_t callback_observers,
     volatile const uint32_t* dma_status,
     uint32_t next_flag, uint32_t current_flag);
-void EndIrq(uint32_t cycles);
+void EndIrq(uint32_t cycles, uint32_t overhead);
+const uint8_t kPlacementChord = 4;
+const uint8_t kPlacementBloomFeedback = 5;
+
+inline uint32_t SubtractCycles(uint32_t cycles, uint32_t overhead) {
+  return cycles > overhead ? cycles - overhead : 0;
+}
 uint32_t codec_override();
 uint32_t synth_rate();
 // Request 8: the bench's unpatched-inputs posture, and its settled report.
