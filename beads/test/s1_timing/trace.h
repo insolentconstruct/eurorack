@@ -148,8 +148,11 @@ void Begin(uint32_t codec_hz, size_t block_frames);
 enum DmaResult {
   kDmaFilled = 1,
   kDmaMiss = 2,
-  kDmaLost = 4
+  kDmaLost = 4,
+  kDmaLostShift = 3
 };
+void ResetDmaClock();
+uint32_t DmaDiagnostics(uint32_t entry, uint32_t result);
 void End(uint32_t irq_cycles, uint32_t dma_result);
 extern uint32_t fill_cycles;
 extern uint32_t callback_cycles;
@@ -164,7 +167,7 @@ uint32_t codec_override();
 uint32_t synth_rate();
 // Request 8: the bench's unpatched-inputs posture, and its settled report.
 bool no_input();
-void Settled(bool settled);
+void Settled(bool reachable, bool settled);
 uint32_t SynthCode(uint32_t engine);
 
 inline uint32_t Cycles() {

@@ -86,9 +86,14 @@ static uint8_t trigger;
 static uint32_t stop;
 static uint32_t written;
 static uint32_t ticks[kTraceCapacity];
-static uint8_t lost[kTraceCapacity];
+static uint16_t lost[kTraceCapacity];
+static uint32_t previous_irq_entry;
+static volatile bool have_irq_entry;
 static volatile bool forced_no_input;
 static bool settle_pending;
+static uint32_t settle_start;
+const uint32_t kSettlementTimeoutUs = 3000000;
+const uint32_t kSettlementAbandoned = 10;
 
 static Chunk& chunk = *reinterpret_cast<Chunk*>(s1_trace);
 static volatile uint32_t& external_seal =
@@ -215,9 +220,9 @@ static void Seal() {
   std::rotate(chunk.frames, chunk.frames + first, chunk.frames + ring);
   std::rotate(ticks, ticks + first, ticks + ring);
   std::rotate(lost, lost + first, lost + ring);
-  uint32_t dropped = lost[0];
-  for (uint32_t i = 1; i < count; ++i) {
-    dropped += lost[i] + (ticks[i] - ticks[i - 1] >= 375 ? 1 : 0);
+  uint32_t dropped = 0;
+  for (uint32_t i = 0; i < count; ++i) {
+    dropped += lost[i];
   }
   header.first_tick_us = header.end_tick_us - 250 -
       (ticks[count - 1] - ticks[0]);
@@ -268,8 +273,8 @@ static void Flush() {
 uint32_t Poll(bool blanking, bool startup_prepared, bool can_change_mode,
     bool codec_running) {
   const uint32_t request = s1_mailbox.request;
-  if (request) {
-    settle_pending = false;
+  if (settle_pending) {
+    return 0;
   }
   if (request == 6) {
     const uint32_t mask = __get_PRIMASK();
@@ -310,8 +315,13 @@ uint32_t Poll(bool blanking, bool startup_prepared, bool can_change_mode,
     if (count == 1 || (idle && s1_mailbox.status != 2)) {
       // Clear the policy immediately when mode changes are blocked.
       // The regular state machine applies it when mode changes resume.
-      settle_pending = !startup_prepared && can_change_mode;
-      s1_mailbox.status = settle_pending ? 8 : 9;
+      settle_pending = !startup_prepared && can_change_mode && codec_running;
+      if (settle_pending) {
+        settle_start = TIM2->CNT;
+        s1_mailbox.status = 8;
+      } else {
+        s1_mailbox.status = codec_running ? 9 : kSettlementAbandoned;
+      }
     }
   } else if (request == 2 && !target && !flush_pending && !startup_prepared &&
       (!codec || ValidRate(codec)) && ValidRate(synth)) {
@@ -351,11 +361,50 @@ uint32_t codec_override() { return codec_hz; }
 uint32_t synth_rate() { return synth_hz; }
 bool no_input() { return forced_no_input; }
 
-void Settled(bool settled) {
-  if (settle_pending && settled && !s1_mailbox.request) {
-    settle_pending = false;
-    s1_mailbox.status = 9;
+void Settled(bool reachable, bool settled) {
+  if (!settle_pending) {
+    return;
   }
+  if (!reachable || TIM2->CNT - settle_start >= kSettlementTimeoutUs) {
+    forced_no_input = false;
+    s1_mailbox.status = kSettlementAbandoned;
+  } else if (settled) {
+    s1_mailbox.status = 9;
+  } else {
+    return;
+  }
+  settle_pending = false;
+}
+
+void ResetDmaClock() {
+  have_irq_entry = false;
+}
+
+// Charge skipped completions to this gap, beginning with the half expected
+// after the previous serviced IRQ, which can precede arming.
+uint32_t DmaDiagnostics(uint32_t entry, uint32_t result) {
+  if (!(result & kDmaFilled)) {
+    return result;
+  }
+  const uint32_t gap = entry - previous_irq_entry;
+  const bool have_previous = have_irq_entry;
+  previous_irq_entry = entry;
+  have_irq_entry = true;
+  if (!target) {
+    return result;
+  }
+  uint32_t missing = (result & kDmaLost) != 0;
+  if (have_previous) {
+    const uint32_t period =
+        (SystemCoreClock / frame.codec_hz) * frame.block_frames;
+    if (gap > period + period / 2) {
+      const uint32_t periods = gap / period;
+      // Round without adding to the uint32_t cycle delta.
+      missing = periods - 1 + (gap - periods * period >= (period + 1) / 2);
+      result |= kDmaMiss;
+    }
+  }
+  return result | (missing << kDmaLostShift);
 }
 
 void Begin(uint32_t rate, size_t block_frames) {
@@ -417,7 +466,7 @@ void End(uint32_t irq_cycles, uint32_t dma_result) {
     record.flags |= kFlagMiss;
   }
   ticks[index] = uint32_t(begin_tick);
-  lost[index] = (dma_result & kDmaLost) != 0;
+  lost[index] = dma_result >> kDmaLostShift;
   ++written;
   if (!stop && (record.flags & trigger)) {
     stop = written - 1 + ring - pre;

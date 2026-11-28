@@ -1,5 +1,5 @@
 diff --git a/beads/beads.cc b/beads/beads.cc
-index 52713f0..0dc0619 100644
+index 52713f0c..bbde341f 100644
 --- a/beads/beads.cc
 +++ b/beads/beads.cc
 @@ -32,0 +33,6 @@
@@ -296,18 +296,21 @@ index 52713f0..0dc0619 100644
 -      if (synth_fade || (start && now - start >= 10000)) {
 +      if (synth_fade || s1_timing::no_input() ||
 +          (start && now - start >= 10000)) {
-@@ -1338 +1525,55 @@ int main(void) {
+@@ -1332,0 +1520,7 @@ void MonitorStateChange() {
++static bool S1CanChangeMode() {
++  return active_processor_mode == PROCESSOR_GRANULAR && !oliverb_mode &&
++      ui.processor_mode() == PROCESSOR_GRANULAR &&
++      settings.processor_mode() == PROCESSOR_GRANULAR &&
++      !ui.should_ignore_state_change() && !s1_startup_running;
++}
++
+@@ -1338 +1532,51 @@ int main(void) {
 -    MonitorStateChange();
 +    const uint32_t old_codec = s1_timing::codec_override();
 +    const SynthEngine old_engine = transition.playing_synth();
-+    const bool granular = active_processor_mode == PROCESSOR_GRANULAR &&
-+        !oliverb_mode && ui.processor_mode() == PROCESSOR_GRANULAR &&
-+        settings.processor_mode() == PROCESSOR_GRANULAR;
-+    const bool can_change_mode = granular &&
-+        !ui.should_ignore_state_change() && !s1_startup_running;
 +    const uint32_t command = s1_timing::Poll(
 +        transition.blanking() && !s1_startup_prepared, s1_startup_prepared,
-+        can_change_mode, transition.codec_running());
++        S1CanChangeMode(), transition.codec_running());
 +    if (command == 4 && !s1_startup_prepared && synth_mode &&
 +        transition.codec_running() && !transition.blanking() &&
 +        old_engine == SYNTH_PLAITS) {
@@ -349,8 +352,9 @@ index 52713f0..0dc0619 100644
 +    const bool manual_self_play = settings.self_play_on_request() &&
 +        !s1_timing::no_input() && NoInput();
 +    const bool wants_synth = manual_self_play ? synth_mode : NoInput();
-+    s1_timing::Settled(synth_mode == wants_synth && !transition.blanking() &&
-+        transition.codec_running());
++    s1_timing::Settled(!s1_startup_prepared && S1CanChangeMode() &&
++        transition.codec_running(),
++        synth_mode == wants_synth && !transition.blanking());
 +    s1_timing::FaultCue(ui.fault_cue_active(system_clock.milliseconds()));
 +    s1_timing::Publish(ui.synth(), transition.playing_synth());
 diff --git a/beads/blob/models/wave_terrain_engine.h b/beads/blob/models/wave_terrain_engine.h
@@ -360,7 +364,7 @@ index 9f78370..fd09879 100644
 @@ -46,0 +47 @@ class WaveTerrain {
 +  float terrain_position() const { return terrain_; }
 diff --git a/beads/drivers/codec.cc b/beads/drivers/codec.cc
-index 10c2070..315a404 100644
+index 10c2070d..648ab27b 100644
 --- a/beads/drivers/codec.cc
 +++ b/beads/drivers/codec.cc
 @@ -34,0 +35,14 @@
@@ -407,19 +411,23 @@ index 10c2070..315a404 100644
 +
 @@ -103,0 +144 @@ bool Codec::InitializeCodec(int32_t sample_rate) {
 +  s1_sample_rate_ = sample_rate;
-@@ -384 +425 @@ void Codec::Pause() {
+@@ -372,0 +414 @@ void Codec::Stop() {
++  s1_timing::ResetDmaClock();
+@@ -377,0 +420 @@ void Codec::Pause() {
++  s1_timing::ResetDmaClock();
+@@ -384 +427 @@ void Codec::Pause() {
 -void Codec::Fill(size_t offset) {
 +bool Codec::Fill(size_t half) {
-@@ -386 +427,3 @@ void Codec::Fill(size_t offset) {
+@@ -386 +429,3 @@ void Codec::Fill(size_t offset) {
 -    offset *= block_size_;
 +    s1_timing::Begin(s1_sample_rate_, block_size_);
 +    const uint32_t start = s1_timing::Cycles();
 +    const size_t offset = half * block_size_;
-@@ -392,0 +436 @@ void Codec::Fill(size_t offset) {
+@@ -392,0 +438 @@ void Codec::Fill(size_t offset) {
 +    cpu_ceiling::StoreBegin();
-@@ -393,0 +438 @@ void Codec::Fill(size_t offset) {
+@@ -393,0 +440 @@ void Codec::Fill(size_t offset) {
 +    cpu_ceiling::StoreEnd(offset, block_size_, 0);
-@@ -404,2 +449,11 @@ void Codec::Fill(size_t offset) {
+@@ -404,2 +451,11 @@ void Codec::Fill(size_t offset) {
 -    (*callback_)(event_buffer_, in, &out_buffer_[1], block_size_);
 -
 +    const FillBufferCallback callback = callback_;
@@ -433,19 +441,19 @@ index 10c2070..315a404 100644
 +        s1_timing::observer_cycles - before_callback_observers;
 +
 +    cpu_ceiling::StoreBegin();
-@@ -408,0 +463,2 @@ void Codec::Fill(size_t offset) {
+@@ -408,0 +465,2 @@ void Codec::Fill(size_t offset) {
 +    cpu_ceiling::StoreEnd(offset, block_size_, 2);
 +    cpu_ceiling::Filled(offset, block_size_);
-@@ -410,0 +467,4 @@ void Codec::Fill(size_t offset) {
+@@ -410,0 +469,4 @@ void Codec::Fill(size_t offset) {
 +    s1_timing::fill_cycles = s1_timing::Cycles() - start;
 +    s1_timing::frame.reserved = ((half + 1) << 8) | CallbackId(callback);
 +    s1_timing::callback_cycles = callback_cycles;
 +    s1_timing::callback_observers = callback_observers;
-@@ -413,0 +474 @@ void Codec::Fill(size_t offset) {
+@@ -413,0 +476 @@ void Codec::Fill(size_t offset) {
 +    return true;
-@@ -414,0 +476 @@ void Codec::Fill(size_t offset) {
+@@ -414,0 +478 @@ void Codec::Fill(size_t offset) {
 +  return false;
-@@ -419,2 +481,31 @@ void Codec::Fill(size_t offset) {
+@@ -419,2 +483,32 @@ void Codec::Fill(size_t offset) {
 -// DMA & SAI related interrupts
 -extern "C" {
 +// Sample the old flag before clearing it: a second completion of that
@@ -469,7 +477,8 @@ index 10c2070..315a404 100644
 +      const uint32_t words_to_repeat = tc ? entry_words :
 +          (entry_words > half_words ? entry_words - half_words
 +                                    : entry_words + half_words);
-+      const uint32_t period = SystemCoreClock / 4000;
++      const uint32_t period =
++          (SystemCoreClock / beads::s1_timing::frame.codec_hz) * (half_words / 2);
 +      const uint32_t elapsed = beads::s1_timing::Cycles() - start;
 +      if (tc_phase == tc || elapsed >= 2 * period ||
 +          elapsed * half_words >= period * words_to_repeat) {
@@ -477,33 +486,33 @@ index 10c2070..315a404 100644
 +      }
 +    }
 +  }
-+  return result;
++  return beads::s1_timing::DmaDiagnostics(start, result);
 +}
-@@ -422 +513 @@ extern "C" {
+@@ -422 +516 @@ extern "C" {
 -void CODEC_ADC_STREAM_HANDLER(void) {
 +extern "C" uint32_t S1DmaBody(uint32_t start) {
-@@ -424,2 +515,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+@@ -424,2 +518,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
 -    beads::Codec::GetInstance()->Fill(1);
 -    CODEC_ADC_DMA_IFCR = CODEC_ADC_DMA_ISR_FLAG_TC;
 +    const uint32_t entry_remaining = CODEC_ADC_DMA_STREAM->NDTR;
 +    const bool filled = beads::Codec::GetInstance()->Fill(1);
 +    return FinishHalf(start, CODEC_ADC_DMA_ISR_FLAG_TC,
 +        CODEC_ADC_DMA_ISR_FLAG_HT, entry_remaining, filled);
-@@ -427,2 +520,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+@@ -427,2 +523,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
 -    beads::Codec::GetInstance()->Fill(0);
 -    CODEC_ADC_DMA_IFCR = CODEC_ADC_DMA_ISR_FLAG_HT;
 +    const uint32_t entry_remaining = CODEC_ADC_DMA_STREAM->NDTR;
 +    const bool filled = beads::Codec::GetInstance()->Fill(0);
 +    return FinishHalf(start, CODEC_ADC_DMA_ISR_FLAG_HT,
 +        CODEC_ADC_DMA_ISR_FLAG_TC, entry_remaining, filled);
-@@ -429,0 +525 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+@@ -429,0 +528 @@ void CODEC_ADC_STREAM_HANDLER(void) {
 +  return 0;
-@@ -431,0 +528,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+@@ -431,0 +531,4 @@ void CODEC_ADC_STREAM_HANDLER(void) {
 +extern "C" void S1DmaFinish(uint32_t result, uint32_t start, uint32_t end) {
 +  if (result & beads::s1_timing::kDmaFilled) {
 +    beads::s1_timing::End(end - start, result);
 +  }
-@@ -432,0 +533,2 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+@@ -432,0 +536,2 @@ void CODEC_ADC_STREAM_HANDLER(void) {
 +
 +#include "beads/test/s1_timing/irq.h"
 diff --git a/beads/drivers/codec.h b/beads/drivers/codec.h

@@ -24,7 +24,7 @@ THE SOFTWARE.
 
 # RC1 S1 timing application
 
-This overlay targets RC1 firmware commit `f7608b61`. In the GCC 9 build kit,
+This overlay targets RC1 firmware commit `6d979288`. In the GCC 9 build kit,
 run `make -f beads/build/s1-timing.mk` from the source root. It applies
 the timing edits to a staged copy after checking every source preimage.
 The release uses DWARF line tables in its ELF pin, so the ordinary source
@@ -77,24 +77,30 @@ last. Wait for request to return to zero before writing another request.
 | 5 | Start a prepared, armed Plaits acquisition at its first render. | 5 started |
 | 6 | Cancel an armed acquisition and leave startup preparation, if active. If the final IRQ already completed, report its publication, including when cancellation arrives during or after the flush. | 6 cancelled, 2 published |
 | 7 | Pre-arm 2–273 callbacks in a ring. The firmware seals on its own SEED edge, keeping the codec word's 1 to count − 1 callbacks before the edge callback. | 7 while armed, 2 once published |
-| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires active and requested Granular mode and a running codec that can change mode. Count 0 is always accepted. | 8 accepted, 9 settled, 0xffffffff unsupported. A clear can instead preserve the acquisition status. |
+| 8 | Count 1 forces the no-input path (synth mode) with inputs patched; count 0 restores automatic detection. Count 1 requires active and requested Granular mode and a running codec that can change mode. Count 0 is always accepted. | 8 settling, 9 settled, 10 settlement abandoned, 0xffffffff unsupported. A clear can instead preserve the acquisition status. |
 | 9 | As 7, sealing on the first missed callback instead: it keeps recording while an overload starves the main loop, and publishes once the load is released. | 9 while armed, 2 once published |
 | | Invalid or busy | 0xffffffff |
 
 The firmware main loop owns the status word. The audio IRQ hands it a
 pending seal, and the main loop publishes status 2 after writing the seal.
-Each consumed command supersedes any pending request 8 settlement. The UI
-processes its events before the mailbox is polled. Count 1 checks the active
-processor, the UI's selected processor, and the committed setting, which
-can lead the UI selection by a tick. Count 1 refuses while FREEZE,
-calibration, factory test, codec blanking, or startup blocks the mode
-change. An accepted mode change reports 8 while settling and 9 when the
-codec runs in the requested posture. An idle count 0 reports 9 immediately
-during prepared startup, outside Granular mode, or while the UI blocks
-mode changes. Automatic input detection resumes when the state machine
-can act on it. A count 0 during acquisition or while status 2 is visible clears
-the force and consumes the request while preserving the acquisition status.
-These clears schedule no later status write.
+Serialize mailbox writes and wait for a terminal response before sending
+another command. The UI processes events before the mailbox is polled.
+Count 1 checks the active, selected and committed processor modes and
+refuses when FREEZE, calibration, factory test, codec blanking, an
+unavailable codec, startup or an acquisition blocks the change. An idle
+count 0 clears the force immediately and reports 9 if the codec is
+running and prepared startup or a mode guard prevents immediate
+transition work. It reports 10 if the codec is unavailable. A count 0
+during acquisition or while status 2 is visible preserves that status
+and completes on request consumption.
+
+While status 8 is pending, the main loop rechecks the mode guards and
+running codec every pass. It publishes 9 once the codec is running in
+the requested posture after blanking. If the posture becomes unreachable
+or remains unsettled for 3 seconds after consumption, firmware reports
+10 and restores automatic input detection. The deadline allows the
+normal fades and codec blanking to finish. Automatic policy, including
+the self-play MEDIA hold when configured, applies after clearing the force.
 
 A SEED-latched chunk is in callback order, its header covering only the
 retained callbacks. A trigger earlier than the requested lead seals a shorter
@@ -156,15 +162,19 @@ body's entry and return instructions, DMA status and NDTR reads, Fill
 and acknowledgement. Architectural exception entry and return are
 outside this interval, as on Seed3. Trace and peak bookkeeping start after
 the closing stamp. The body tests TC first, rereads status to test HT when
-TC is clear and acknowledges after Fill. An additional pre-acknowledgement
-status sample detects a pending opposite half. Because the selected bit
-stays set until acknowledgement, the probe uses RX NDTR phase with the
-opposite bit to detect coalescence. The entry NDTR supplies the distance
-to the next completion of the selected half. This catches coalescence
-after late entry even when the end NDTR is already back in the opposite
-phase and fewer than two block periods have elapsed in the handler.
-The trace marks a miss for the opposite pending half and increments the
-dropped count when the selected half is inferred to have coalesced.
+TC is clear and acknowledges after Fill. The timestamp
+gap between serviced IRQs is the primary loss signal. The first IRQ after
+arm uses the preceding serviced stamp if the codec has kept running.
+The first IRQ after startup or a codec pause seeds a new baseline.
+Unsigned CYCCNT subtraction handles
+one counter wrap. A gap strictly above 1.5 half-block periods counts
+the nearest whole number of periods minus one, starting with the expected
+alternating half. The period uses the current codec rate and frame count.
+The pre-acknowledgement status and RX NDTR probes also flag a pending
+opposite half as a miss and supply a minimum loss count of one on detected
+coalescence. The trace marks timestamp gaps as misses and sums the per-gap
+loss counts in the retained frames. The diagnostic work is inside the IRQ
+bracket and contributes to its measured peak.
 
 | ELF symbol | Measurement |
 | --- | --- |

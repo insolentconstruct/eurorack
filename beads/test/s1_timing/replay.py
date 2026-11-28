@@ -29,6 +29,7 @@
 import argparse
 import json
 from pathlib import Path
+import random
 import struct
 import sys
 
@@ -91,6 +92,10 @@ class Machine(te.Machine):
     self.uc.hook_add(te.unicorn.UC_HOOK_MEM_WRITE, self.clear_dma,
                     begin=DMA1_LIFCR, end=DMA1_LIFCR)
     self.irq_start = None
+    self.irq_clock_offset = 0
+    self.dma_reload_at_ndtr = False
+    self.dma_entry_status = None
+    self.dma_reload_remaining = None
     self.dma_period = BLOCK_CYCLES
     self.dma_entry_age = 0
     self.dma_events = 0
@@ -124,7 +129,15 @@ class Machine(te.Machine):
     self.write(te.DMA1_LISR, '<I', status & ~value)
 
   def late_dma(self, uc, access, address, size, value, user):
-    self.advance_dma()
+    if address == DMA1_RX_NDTR and self.dma_reload_at_ndtr:
+      self.dma_reload_at_ndtr = False
+      # Advance the second TC across the dispatch-to-NDTR sampling window.
+      self.dma_entry_status, = self.read(te.DMA1_LISR, '<I')
+      self.dma_entry_age = 2 * self.dma_period - (self.count - self.irq_start)
+      self.advance_dma()
+      self.dma_reload_remaining, = self.read(DMA1_RX_NDTR, '<I')
+    else:
+      self.advance_dma()
 
   def advance_dma(self):
     if self.irq_start is None:
@@ -157,7 +170,8 @@ class Machine(te.Machine):
         assert uc.reg_read(te.A.UC_ARM_REG_PRIMASK) == 1
         self.preempt_pending = True
         self.preemption_start = self.count - remaining
-    self.write(address, '<I', (self.count - remaining) & 0xffffffff)
+    offset = self.irq_clock_offset if self.irq_start is not None else 0
+    self.write(address, '<I', (self.count - remaining + offset) & 0xffffffff)
 
   def service_pending(self, uc, pc, size, user):
     if self.preempt_pending and not uc.reg_read(te.A.UC_ARM_REG_PRIMASK):
@@ -180,18 +194,24 @@ class Rig(te.Rig):
   def __init__(self, image, region):
     self.samples = []
     self.irq = []
+    self.next_irq_cycle = 0
     super().__init__(image, region)
 
   def record(self, fn, n, phase, silent=False):
     if fn == 'audio':
       self.irq.append(n)
 
-  def block(self, dma_entry_age=0):
+  def block(self, dma_entry_age=0, skipped=0):
     size, = self.m.read(self.block_size, '<I')
     half = self.half
     assert 0 <= dma_entry_age < 2 * self.m.dma_period
     self.m.dma_entry_age = dma_entry_age
     self.m.irq_start = self.m.count
+    # The DWT entry stamps follow the codec clock, independently of the
+    # instruction-count clock used for the work done by each invocation.
+    self.next_irq_cycle += skipped * BLOCK_CYCLES
+    self.m.irq_clock_offset = self.next_irq_cycle + dma_entry_age - self.m.count
+    self.next_irq_cycle += BLOCK_CYCLES
     self.m.dma_events, self.m.dma_half, self.m.dma_frames = 0, half, size
     super().block()
     self.m.irq_start = None
@@ -512,6 +532,7 @@ def main():
   te.MEMBERS['Ui'] += ('seed_button_state_', 'seed_button_locked_', 'processor_mode_',
                        'freeze_led_state_', 'mode_')
   te.MEMBERS['State'] = ('gate_output_mode',)
+  te.TRANSITION_MEMBERS += ('codec_running',)
   image = te.Image(args.elf)
   region = args.region.read_bytes()
 
@@ -577,12 +598,47 @@ def main():
   r.configure(False)
   r.m.write(image.address('codec_transition_frames'), '<i', 12000)
   assert r.mailbox(8, 1)[::4] == (0, 0xffffffff)
-  print('Mailbox races and request 8 mode guards verified', flush=True)
+  forced = image.address('_ZN5beads9s1_timingL15forced_no_inputE')
+  for count in (0, 1):
+    r = Rig(image, region)
+    r.configure(not count)
+    r.posture(False)
+    assert r.m.read(image.address('synth_mode'), '<B') == (1 - count,)
+    assert r.mailbox(8, count)[::4] == (0, 8)
+    r.freeze_gate = True
+    r.tick(4)
+    assert r.ui_flag('freeze_led_state_')
+    assert r.m.read(request, '<5I')[::4] == (0, 10)
+    assert r.m.read(forced, '<B') == (0,)
+    r.tick(4)
+    assert r.m.read(request, '<5I')[::4] == (0, 10)
+
+  r = Rig(image, region)
+  r.configure(False)
+  running = image.member('transition', 'EngineTransition', 'codec_running_')
+  r.m.write(running, '<B', 0)
+  assert r.mailbox(8, 0)[::4] == (0, 10)
+  assert r.m.read(forced, '<B') == (0,)
+
+  r = Rig(image, region)
+  r.configure(False)
+  r.m.tick_us = (1 << 32) - 1000000
+  assert r.mailbox(8, 1)[::4] == (0, 8)
+  r.m.tick_us += 2999999  # Withhold DMA so the fade cannot finish.
+  r.m.main_step()
+  assert r.m.read(request, '<5I')[::4] == (0, 8)
+  r.m.tick_us += 1
+  r.m.main_step()
+  assert r.m.read(request, '<5I')[::4] == (0, 10)
+  assert r.m.read(forced, '<B') == (0,)
+  print('Mailbox request 8 guards, held FREEZE, codec unavailable and deadline verified',
+        flush=True)
 
   # The clear must neither consume the capture status nor schedule a 9.
   r = Rig(image, region)
   r.configure(False)
-  assert r.mailbox(8, 1)[-1] in (8, 9)
+  r.request(8, 1, wanted=8)
+  assert r.settle() == 1
   assert r.mailbox(1, 2)[-1] == 1
   assert r.mailbox(8, 0)[::4] == (0, 1)
   r.block()
@@ -618,21 +674,56 @@ def main():
   for delay, events, expected in ((0, 1, 0), (178500, 3, 1)):
     r = Rig(image, region)
     r.configure(False)
-    if not r.half:
-      r.block()
-    assert r.half == 1
+    r.half = 1  # No previous IRQ stamp, so exercise the NDTR fallback.
     assert r.mailbox(1, 2)[-1] == 1
     r.m.preemption = delay
     r.block(dma_entry_age=3 * BLOCK_CYCLES // 2)
     assert r.irq[-1] < 2 * BLOCK_CYCLES
     assert r.m.dma_events == events and r.m.dma_half == 0
     assert r.m.read(te.DMA1_LISR, '<I') == (te.LISR_HT,)
-    assert r.m.read(lost, '<B') == (expected,)
-    r.block()
+    assert r.m.read(lost, '<H') == (expected,)
+    r.block(skipped=1)
     r.m.main_step()
     header = TRACE_HEADER.unpack(r.m.uc.mem_read(image.address('s1_trace'), TRACE_HEADER.size))
     assert header[5:7] == (2, expected), header
-  print('DMA pre-ack coalescence and late-entry lost count verified', flush=True)
+  # Seed with HT, then enter with TC pending. Recur TC exactly between
+  # dispatch and entry NDTR. The long IRQ acknowledges in HT phase.
+  r = Rig(image, region)
+  r.configure(False)
+  r.block()  # The previous serviced HT precedes arm.
+  assert r.mailbox(1, 2)[-1] == 1
+  r.m.dma_reload_at_ndtr = True
+  r.m.preemption = 140000
+  r.block(dma_entry_age=2 * BLOCK_CYCLES - 200)
+  assert r.m.dma_entry_status == te.LISR_HT | te.LISR_TC
+  assert r.m.dma_reload_remaining == 4 * r.m.dma_frames
+  assert r.m.dma_events == 3 and r.m.dma_half == 0
+  assert r.m.read(lost, '<H') == (2,)
+  r.block(skipped=2)
+  r.m.main_step()
+  header = TRACE_HEADER.unpack(r.m.uc.mem_read(image.address('s1_trace'), TRACE_HEADER.size))
+  assert header[5:7] == (2, 2), header
+
+  # Fixed seed keeps coverage reproducible across entry phases and wraps.
+  # Phase stays below half a period so the number missed is unambiguous.
+  rng = random.Random(0x6d979288)
+  for i in range(12):
+    r = Rig(image, region)
+    r.configure(False)
+    r.next_irq_cycle = (1 << 32) - BLOCK_CYCLES // 4
+    r.half = i % 2
+    assert r.mailbox(1, 2)[-1] == 1
+    r.block()
+    skipped = rng.randrange(5)
+    phase = rng.randrange(BLOCK_CYCLES // 2)
+    r.half ^= skipped % 2
+    r.block(dma_entry_age=phase, skipped=skipped)
+    assert r.m.read(lost, '<2H') == (0, skipped)
+    r.m.main_step()
+    header = TRACE_HEADER.unpack(r.m.uc.mem_read(image.address('s1_trace'), TRACE_HEADER.size))
+    assert header[5:7] == (2, skipped), (i, phase, skipped, header)
+  print('DMA coalescence, TC reload race, and randomized wrapped IRQ gaps verified',
+        flush=True)
 
   # The timing image excludes DWT_CALIBRATION. Use a Thumb tail call
   # in the emulator scratch page to exercise the fallback with live audio.
