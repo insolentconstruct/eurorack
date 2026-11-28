@@ -63,7 +63,7 @@ static bool PulseLit(PulsePattern pulses, uint32_t elapsed) {
           (elapsed % kOptionsFastPeriod) < kOptionsFastPeriod / 2) ||
       (pulses == PULSE_DOUBLE && (phase < kOptionsFastPeriod / 2 ||
           (phase >= kOptionsFastPeriod &&
-          phase < kOptionsFastPeriod * 3 / 2)));
+          phase < kOptionsSecondFlashEnd)));
 }
 
 // The [A] hold acts on release, so a knob or button can still follow it.

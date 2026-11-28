@@ -2157,24 +2157,24 @@ void TestOptionsZonesAndSaveBatch() {
   // Quarters retain a value inside the first boundary dead band; two knobs
   // settle in one batch.
   {
-    Rig halves(false);
-    halves.EnterPage(1);
-    halves.reverb = .38f;
-    halves.Tick(1, true);
-    halves.reverb = .25f;
-    halves.Tick(1, true);
-    CHECK(halves.ui.options_.Value(FEATURE_REVERB));
-    halves.reverb = .20f;
-    halves.Tick(1, true);
-    CHECK(!halves.ui.options_.Value(FEATURE_REVERB));
-    halves.reverb = .30f;
-    halves.Tick(1, true);
+    Rig quarters(false);
+    quarters.EnterPage(1);
+    quarters.reverb = .38f;
+    quarters.Tick(1, true);
+    quarters.reverb = .25f;
+    quarters.Tick(1, true);
+    CHECK(quarters.ui.options_.Value(FEATURE_REVERB));
+    quarters.reverb = .20f;
+    quarters.Tick(1, true);
+    CHECK(!quarters.ui.options_.Value(FEATURE_REVERB));
+    quarters.reverb = .30f;
+    quarters.Tick(1, true);
     const uint32_t writes = test_writes;
-    halves.feedback = .9f;
-    halves.Tick(1001, true);
+    quarters.feedback = .9f;
+    quarters.Tick(1001, true);
     CHECK(test_writes == writes + kRecordWords);
-    CHECK(halves.settings.clouds_style());
-    CHECK(halves.settings.evolving_feedback());
+    CHECK(quarters.settings.clouds_style());
+    CHECK(quarters.settings.evolving_feedback());
     Settings loaded;
     loaded.Init(false);
     CHECK(loaded.clouds_style() && loaded.evolving_feedback());
@@ -2793,11 +2793,11 @@ void TestPageTwoKnobRoutingAndSavedMeaning() {
       CHECK(r.settings.FeatureValue(feature) == value);
     }
     CHECK(r.settings.evolving_feedback());
-    CHECK(r.settings.reverb_character() == 3);
+    CHECK(r.settings.reverb_character() == REVERB_BLOOM);
     CHECK(r.settings.delay_mode() == DELAY_MODE_WIDE_DETENT);
     Settings loaded;
     CHECK(loaded.Init(false));
-    CHECK(loaded.evolving_feedback() && loaded.reverb_character() == 3);
+    CHECK(loaded.evolving_feedback() && loaded.reverb_character() == REVERB_BLOOM);
     CHECK(loaded.delay_mode() == DELAY_MODE_WIDE_DETENT);
     CHECK(loaded.profile().Page(4) == FEATURE_FROZEN);
   }

@@ -40,6 +40,8 @@ using namespace std;
 
 namespace {
 
+const float kMaxDiffusion = 0.67f;
+const float kSemitoneToLogRatio = 0.057762265f;
 const float kPitchDetent = 1.0f / 18.0f;
 const float kDetuneEnd = 0.33f;
 const float kFifthStart = 0.55f;
@@ -122,7 +124,7 @@ float Abyss::Diffuse(int stage, float input, int delay, float amount) {
   const float sum = input + amount * delayed;
   buffer[diffusion_write_] = sum;
   const float all_pass = delayed - amount * sum;
-  const float blend = amount / 0.67f;
+  const float blend = amount / kMaxDiffusion;
   return input + blend * (all_pass - input);
 }
 
@@ -184,7 +186,7 @@ void Abyss::Process(const Controls& c, const bool* freeze,
   }
   const float rt60 = 0.8f + 23.2f * c.decay * c.decay;
   const float seconds = 1.0f / sample_rate_;
-  const float intensity = 0.67f * c.diffusion;
+  const float intensity = kMaxDiffusion * c.diffusion;
   const float drift = c.drift * c.drift;
   const float depth = 0.003f * drift * sample_rate_;
   const float gravity_position = 2.0f * c.gravity - 1.0f;
@@ -212,7 +214,7 @@ void Abyss::Process(const Controls& c, const bool* freeze,
   }
   if (pitch_active) {
     // Approximate exp(x) - 1 for detune without quantizing either voice.
-    const float x = pitch.detune * 0.057762265f;
+    const float x = pitch.detune * kSemitoneToLogRatio;
     const float quadratic = 0.5f * x * x;
     const float inverse_width = 1.0f / pitch_width;
     pitch_step[0] = (-x - quadratic) * inverse_width;

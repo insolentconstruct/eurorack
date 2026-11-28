@@ -125,6 +125,16 @@ uint64_t Hash(uint64_t hash, const FloatFrame* frames, size_t size) {
   return hash;
 }
 
+static uint64_t HashRecording() {
+  uint64_t recording = 14695981039346656037ull;
+  for (size_t bank = 0; bank < 3; ++bank) {
+    for (size_t i = 0; i < sizeof(banks[bank]); ++i) {
+      recording = (recording ^ banks[bank][i]) * 1099511628211ull;
+    }
+  }
+  return recording;
+}
+
 // Output hash and a hash of the recording after a sine played for 0.5 s.
 void RunSine(Processor::Media media, int placement, float dry_wet,
     uint64_t* out_hash, uint64_t* recording_hash) {
@@ -137,13 +147,7 @@ void RunSine(Processor::Media media, int placement, float dry_wet,
     hash = Hash(hash, output, BlockSize());
   }
   *out_hash = hash;
-  uint64_t recording = 14695981039346656037ull;
-  for (size_t bank = 0; bank < 3; ++bank) {
-    for (size_t i = 0; i < sizeof(banks[bank]); ++i) {
-      recording = (recording ^ banks[bank][i]) * 1099511628211ull;
-    }
-  }
-  *recording_hash = recording;
+  *recording_hash = HashRecording();
 }
 
 float Goertzel(const float* x, size_t size, float frequency) {
@@ -757,20 +761,18 @@ uint64_t RunBloomResonator(
     hash = Hash(hash, output, BlockSize());
   }
   *bloom_peak = processor.reverb_character_.peak;
-  uint64_t recording = 14695981039346656037ull;
-  for (size_t bank = 0; bank < 3; ++bank) {
-    for (size_t i = 0; i < sizeof(banks[bank]); ++i) {
-      recording = (recording ^ banks[bank][i]) * 1099511628211ull;
-    }
-  }
-  *recording_hash = recording;
+  *recording_hash = HashRecording();
   return hash;
 }
 
 void TestBloomFeedbackResonator() {
   test_checker.Start("TestBloomFeedbackResonator");
-  for (bool reverb_on_grains : { false, true }) {
-    for (int material : { 0, 1 }) {
+  const bool placements[] = { false, true };
+  const int materials[] = { 0, 1 };
+  for (size_t i = 0; i < sizeof(placements) / sizeof(placements[0]); ++i) {
+    const bool reverb_on_grains = placements[i];
+    for (size_t j = 0; j < sizeof(materials) / sizeof(materials[0]); ++j) {
+      const int material = materials[j];
       float silent_peak;
       float ringing_peak;
       uint64_t silent_recording;
@@ -1801,13 +1803,7 @@ void RunLoop(Processor::Media media, int placement, float feedback,
     hash = Hash(hash, output, BlockSize());
   }
   *out_hash = hash;
-  uint64_t recording = 14695981039346656037ull;
-  for (size_t bank = 0; bank < 3; ++bank) {
-    for (size_t i = 0; i < sizeof(banks[bank]); ++i) {
-      recording = (recording ^ banks[bank][i]) * 1099511628211ull;
-    }
-  }
-  *recording_hash = recording;
+  *recording_hash = HashRecording();
 }
 
 // In the feedback: After the grains at FEEDBACK 0; with FEEDBACK, the
@@ -2144,9 +2140,8 @@ void SnapshotGrains(const Source& source, int32_t* delays, int32_t* speeds) {
   }
 }
 
-// Replays the block's strikes from the resonator as it was before it, with
-// triggers where the grains' own travel says they started: one strike each,
-// at its sample.
+// Replay from the previous resonator state with one strike at each grain's
+// start sample, inferred from its travel.
 template<typename Source>
 void CheckGrainStrikes(const Source& source, const ModalResonator& before,
     const int32_t* delays, const int32_t* speeds, bool frozen, int* starts,
@@ -2283,9 +2278,8 @@ void CheckGrainEdges(Source* source, const Line* line) {
   CHECK(fabsf(processor.resonator_.chord_ratio_[1] - 1.4983f) < 0.002f);
 }
 
-// Every grain started in a block is found once, at its sample, in each
-// quality; scale-snapped grains tune the voices to the scale; delay mode's
-// idle grains strike nothing.
+// Check sample-accurate strikes at every quality, scale tuning, and
+// silence from idle delay grains.
 void TestResonatorChordGrains() {
   test_checker.Start("TestResonatorChordGrains");
   for (int m = 0; m < 4; ++m) {

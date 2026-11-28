@@ -63,6 +63,7 @@ REGIONS = (
     (0xE0000000, 0x100000))  # System control space, as plain memory
 STOP = 0x0FF00000
 FLASH = 0x08000000
+PROFILE_ADDRESS = FLASH + 0x20400
 GPIOA_IDR = 0x58020010
 GPIOE_IDR = 0x58021010
 DMA1_LISR = 0x40020000
@@ -85,6 +86,7 @@ USAGE = '''usage: transition_emu.py [--summary] [--region BIN] ELF OUT.json [SCE
 '''
 # Pots: 7 muxed (FEEDBACK, DRY_WET, REVERB, then the TIME, SIZE, SHAPE and
 # PITCH attenuverters), then TIME, DENSITY, PITCH, SIZE, SHAPE.
+POT_REVERB = 2
 POTS = (0x6000, 0x9000, 0x6000, 0x8000, 0x8000, 0x8000, 0x8000,
         0x7000, 0xC000, 0x8000, 0x9000, 0x6000)
 SQUARE_PERIOD = 96
@@ -408,7 +410,7 @@ class Rig(object):
     if region:
       self.m.uc.mem_write(image.address('plaits_region_begin'), region)
     if profile is not None:
-      self.m.uc.mem_write(FLASH + 0x20400, profile)
+      self.m.uc.mem_write(PROFILE_ADDRESS, profile)
     self.image = image
     self.left = self.right = True
     self.seed_patched = False
@@ -429,7 +431,9 @@ class Rig(object):
     self.values = image.member('settings', 'Settings', 'values_')
     self.labels = all(n in image.sym for n in LABELS)
     self.boot_count = self.m.boot(storage is None)
-    self.m.write(image.address('_ZN5beads7PotsAdc7values_E'), '<12H', *POTS)
+    pots = image.address('_ZN5beads7PotsAdc7values_E')
+    self.reverb_pot = pots + POT_REVERB * struct.calcsize('<H')
+    self.m.write(pots, '<12H', *POTS)
 
   def probe(self):
     rng, = self.m.read(self.rng, '<I')
@@ -799,12 +803,12 @@ SCENARIOS = (
 
 
 def run(arguments):
-  path, name, region, *profile = arguments
+  path, name, region = arguments
   start = time.time()
   if name == 'saved_clouds':
     r = boot_saved_clouds(Image(path), region)
   else:
-    r = Rig(Image(path), region, *profile)
+    r = Rig(Image(path), region)
     r.settle()
     dict(SCENARIOS)[name](r)
   phases = {}

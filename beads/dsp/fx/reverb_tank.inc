@@ -27,10 +27,8 @@
 
 // Included in the Stock and Bloom renderers.
 
-    // This is the Griesinger topology described in the Dattorro paper
-    // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
-    // Modulation is applied in the loop of the first diffuser AP for additional
-    // smearing; and to the two long delays for a slow shimmer/chorus effect.
+    // Griesinger topology with four input allpasses and a two-branch tank.
+    // Modulate the first input allpass and the two long tank delays.
     typedef E::Reserve<150,
       E::Reserve<214,
       E::Reserve<319,
@@ -65,9 +63,6 @@
 
     const float input_gain = 0.2f * (1.0f - 0.333f * reverb_time_);
     const float output_gain = 0.4f / input_gain;
-
-    // const float send_amount = 1.0f;
-    // const float wet = mix_ * (2.0f - mix_) * output_gain;
 
     const float send_amount_sqrt = mix_ * (2.0f - mix_);
     const float send_amount = send_amount_sqrt * (2.0f - send_amount_sqrt);

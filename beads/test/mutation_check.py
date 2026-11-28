@@ -3323,7 +3323,7 @@ cases = [
     'if (ui_->mode_ != Ui::MODE_NORMAL ||',
     'if ('),
   ('TestSpectralRefusals', 'firmware', 'beads/gesture_controller.cc',
-    'uint32_t(now - cue_time_) < kOptionsFastPeriod * 3 / 2',
+    'uint32_t(now - cue_time_) < kOptionsSecondFlashEnd',
     'uint32_t(now - cue_time_) < 1'),
 ]
 # Validate every replacement before creating a disposable source tree.
@@ -3333,9 +3333,7 @@ for name, suite, source, before, after in cases:
   assert (root / source).read_text().count(pattern) == 1, (name, pattern)
 
 
-# Seconds on a GitHub runner, from CI logs: a suite's first build, then a
-# case's rebuild and test for most sources and for heavy ones (below).
-# Unlisted suites are small.
+# CI seconds per suite: first build, light case, heavy case.
 suite_costs = {
   'attack': (27, 2, 13), 'clouds': (28, 24, 14), 'delay': (4, 4, 4),
   'delay_mode': (26, 8, 23), 'firmware': (32, 5, 27), 'granular': (25, 2, 21),

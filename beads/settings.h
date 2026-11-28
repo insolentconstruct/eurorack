@@ -35,6 +35,7 @@
 
 #include "beads/drivers/cv_adc.h"
 #include "beads/dsp/attack_detector.h"
+#include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/limiter.h"
 #include "beads/dsp/pitch_quantizer.h"
 #include "beads/dsp/playback_options.h"
@@ -157,7 +158,9 @@ class Settings {
   }
 
   inline uint8_t reverb_character() const { return values_[FEATURE_REVERB]; }
-  inline bool clouds_style() const { return reverb_character() == 1; }
+  inline bool clouds_style() const {
+    return reverb_character() == REVERB_CLOUDS;
+  }
 
   inline void set_clouds_style(bool clouds) {
     values_[FEATURE_REVERB] = clouds;

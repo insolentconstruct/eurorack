@@ -101,6 +101,7 @@ const uint32_t kOptionsSettleTime = 1000;
 const uint32_t kOptionsFlashTime = 100;
 const uint32_t kOptionsSlowPeriod = 1024;
 const uint32_t kOptionsFastPeriod = 256;
+const uint32_t kOptionsSecondFlashEnd = kOptionsFastPeriod * 3 / 2;
 const uint32_t kOptionsPulsePeriod = 2048;
 const uint32_t kOptionsPreviewTime = 2048;
 const uint32_t kSelfPlayHoldTime = 1500;

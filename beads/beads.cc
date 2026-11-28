@@ -88,6 +88,8 @@ extern uint16_t reverb_buffer[32768];
 #endif  // DWT_CALIBRATION
 #else
 const bool skip_factory_test = false;
+const float kReverbLimiterRelease = 6.0f;
+const float kReverbLimiterThreshold = 0.9f;
 
 uint8_t delay_buffer_1[512 * 1024]
     __attribute__ ((section (".ramd1"), aligned (4)));
@@ -921,7 +923,8 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
     processor.ResetDelayTransition();
     processor.ClearReverb();
     abyss.Init(delay_buffer_1, delay_buffer_2, float(sr));
-    abyss_limiter.Init(1.0f / (float(sr) * 6.0f), 0.9f);
+    abyss_limiter.Init(
+        1.0f / (float(sr) * kReverbLimiterRelease), kReverbLimiterThreshold);
   }
   const bool dedicated_reverb =
       oliverb_mode || active_processor_mode == PROCESSOR_ABYSS;
@@ -1177,7 +1180,8 @@ void MonitorStateChange() {
       oliverb_media = media;
       const float sr = Processor::SampleRate(media);
       oliverb.Init(reverb_buffer, int(sr));
-      oliverb_limiter.Init(1.0f / (sr * 6.0f), 0.9f);
+      oliverb_limiter.Init(
+          1.0f / (sr * kReverbLimiterRelease), kReverbLimiterThreshold);
     } else {
       active_processor_mode = wanted_processor;
       const bool resume_mono = normalization_detector.mono();

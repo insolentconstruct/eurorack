@@ -195,7 +195,7 @@ void GestureController::ObserveProcessor(ProcessorMode active, bool busy) {
     const uint32_t now = system_clock.milliseconds();
     // Let both warning flashes finish before showing the destination.
     if (cue_time_ && cue_.pulses == PULSE_DOUBLE &&
-        uint32_t(now - cue_time_) < kOptionsFastPeriod * 3 / 2) {
+        uint32_t(now - cue_time_) < kOptionsSecondFlashEnd) {
       return;
     }
     const OptionValue cue = FindOptionValue(FEATURE_PROCESSOR, active);

@@ -60,9 +60,15 @@ class Oliverb {
   void Init(uint16_t* buffer, int sample_rate) {
     sample_rate_ = sample_rate;
     switch (sample_rate_) {
-      case 24000: render_ = &Oliverb::Render<3, 4>; break;
-      case 32000: render_ = &Oliverb::Render<1, 1>; break;
-      default: render_ = &Oliverb::Render<3, 2>; break;
+      case 24000:
+        render_ = &Oliverb::Render<3, 4>;
+        break;
+      case 32000:
+        render_ = &Oliverb::Render<1, 1>;
+        break;
+      default:
+        render_ = &Oliverb::Render<3, 2>;
+        break;
     }
     engine_.Init(buffer);
     engine_.SetLFOFrequency(LFO_1, 0.0f);

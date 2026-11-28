@@ -31,9 +31,7 @@ import struct
 
 import transition_emu as te
 
-PROFILE_ADDRESS = te.FLASH + 0x20400
 REVERB_INPUT, SYNTH_LEVEL, MANUAL_DELAY, REVERB_DECAY = 33, 50, 53, 54
-POTS_ADDRESS = '_ZN5beads7PotsAdc7values_E'
 ENGINES = (
     ('synth', 'Synth'),
     ('plaits_synth', 'PlaitsSynth'),
@@ -42,9 +40,9 @@ ENGINES = (
 
 def install_profile(image, value, state=1, extras=(), manual_delay=False):
   machine = te.Machine(image)
-  profile = bytearray(machine.uc.mem_read(PROFILE_ADDRESS, 16))
+  profile = bytearray(machine.uc.mem_read(te.PROFILE_ADDRESS, 16))
   count, length = struct.unpack_from('<BH', profile, 5)
-  entries = bytearray(machine.uc.mem_read(PROFILE_ADDRESS + 16, length))
+  entries = bytearray(machine.uc.mem_read(te.PROFILE_ADDRESS + 16, length))
   offset = 6 * count
   if manual_delay:
     for i in range(5, offset, 6):
@@ -64,7 +62,7 @@ def check_mix(rig, name, cls, decay, maximum, slope=0.0):
   offsets = rig.image.offsets['Reverb']
   levels = []
   for pot in (0x0800, 0xe000):
-    rig.m.write(rig.image.address(POTS_ADDRESS) + 4, '<H', pot)
+    rig.m.write(rig.reverb_pot, '<H', pot)
     rig.tick(256)
     mix, = rig.m.read(base + offsets['mix_'], '<f')
     feedback, = rig.m.read(base + offsets['reverb_time_'], '<f')
@@ -79,7 +77,7 @@ def check_assigned_cv(rig, decay):
   base = rig.image.member('processor', 'Processor', 'reverb_')
   offsets = rig.image.offsets['Reverb']
   rig.m.write(rig.state + 1, '<B', 2)  # Assign CV to REVERB.
-  rig.m.write(rig.image.address(POTS_ADDRESS) + 4, '<H', 0x8000)
+  rig.m.write(rig.reverb_pot, '<H', 0x8000)
   levels = []
   for raw in (0x4000, 0xc000):
     rig.assign_cv = raw
