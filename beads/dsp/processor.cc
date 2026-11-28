@@ -66,6 +66,7 @@ void Processor::Init(
   wet_ = 0.0f;
   
   reverb_.Init(reverb_buffer, 48000.0f);
+  reverb_character_.Init(REVERB_STOCK, 48000.0f);
 #ifdef ENABLE_HARDWARE_24K
   wow_and_flutter_.Init(24000.0f);
   wow_and_flutter_.set_lp(0.95f);
@@ -143,6 +144,12 @@ float Processor::SampleRate(Media media) {
 }
 
 void Processor::SetReverbCharacter(uint8_t character) {
+  if (sample_rate() == 48000.0f &&
+      (options_ & kResonatorFlags) == kResonatorFlags &&
+      (character == REVERB_BLOOM) !=
+          (reverb_character_.character == REVERB_BLOOM)) {
+    resonator_sample_rate_ = resonator_loop_feedback_ = 0.0f;
+  }
   reverb_character_.Init(character, sample_rate());
   SetCloudsStyle(character == REVERB_CLOUDS);
 }

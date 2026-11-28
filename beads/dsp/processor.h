@@ -588,7 +588,8 @@ class Processor {
       const RandomizedParameter& pitch,
       bool strike,
       FloatFrame* frames,
-      size_t size);
+      size_t size,
+      int num_modes = kNumResonatorModes);
   // The same, and keeps it over the bank's bound for the next recording.
   void ProcessResonatorLoop(
       const RandomizedParameter& pitch,

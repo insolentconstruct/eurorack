@@ -119,9 +119,11 @@ class ModalResonator {
   void Init(float sample_rate);
   void InitChord(float sample_rate);
   // Odd modes go to out, even modes to aux; aux == out gives the mono sum.
-  void Process(const float* in, float* out, float* aux, size_t size);
+  void Process(const float* in, float* out, float* aux, size_t size,
+      int num_modes = kNumResonatorModes);
   // Adds the limited stereo resonance to the frames.
-  void Render(const float* in, FloatFrame* frames, size_t size);
+  void Render(const float* in, FloatFrame* frames, size_t size,
+      int num_modes = kNumResonatorModes);
   // 1 over Amount and the bank's gain bound: the loop copy's gain is at most
   // 1 at every frequency; 0 for an object other than the bound's.
   float LoopGain(const ResonatorBound& bound, size_t size);
@@ -189,7 +191,8 @@ class ModalResonator {
   void RenderChord(const float* strikes, FloatFrame* frames, size_t size);
 
  private:
-  void ProcessModes(const float* in, float* out, float* aux, size_t size);
+  void ProcessModes(const float* in, float* out, float* aux, size_t size,
+      int num_modes);
   void Strike(
       int voice,
       size_t offset,

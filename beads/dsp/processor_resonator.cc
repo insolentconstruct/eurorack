@@ -59,7 +59,8 @@ void Processor::ProcessResonator(
     const RandomizedParameter& pitch,
     bool strike,
     FloatFrame* frames,
-    size_t size) {
+    size_t size,
+    int num_modes) {
   const float sr = sample_rate();
   if (sr != resonator_sample_rate_) {
     resonator_.Init(sr);
@@ -111,7 +112,7 @@ void Processor::ProcessResonator(
     }
     strike_sounding_ = level > 1.0e-6f;
   }
-  resonator_.Render(excitation, frames, size);
+  resonator_.Render(excitation, frames, size, num_modes);
 }
 
 void Processor::ProcessResonatorLoop(

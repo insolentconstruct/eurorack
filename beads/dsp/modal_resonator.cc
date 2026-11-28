@@ -190,10 +190,11 @@ void ModalResonator::InitChord(float sample_rate) {
   chord_modes_ = NULL;
 }
 
-void ModalResonator::Render(const float* in, FloatFrame* frames, size_t size) {
+void ModalResonator::Render(
+    const float* in, FloatFrame* frames, size_t size, int num_modes) {
   float l[size];
   float r[size];
-  Process(in, l, r, size);
+  Process(in, l, r, size, num_modes);
   FloatFrame resonance[size];
   for (size_t i = 0; i < size; ++i) {
     resonance[i].l = l[i] * kResonatorHeadroom;
@@ -460,9 +461,10 @@ void ModalResonator::Process(
     const float* in,
     float* out,
     float* aux,
-    size_t size) {
+    size_t size,
+    int num_modes) {
   if (modes_) {
-    ProcessModes(in, out, aux, size);
+    ProcessModes(in, out, aux, size, num_modes);
     return;
   }
   fill(&out[0], &out[size], 0.0f);
@@ -489,7 +491,7 @@ void ModalResonator::Process(
   float mode_a[2][plaits::kModeBatchSize];
   plaits::ResonatorSvf<plaits::kModeBatchSize>* odd = &odd_[0];
   plaits::ResonatorSvf<plaits::kModeBatchSize>* even = &even_[0];
-  for (int batch = 0; batch < kNumResonatorModes / 8; ++batch) {
+  for (int batch = 0; batch < num_modes / 8; ++batch) {
     bool audible = false;
     for (int i = 0; i < 8; ++i) {
       float partial_frequency = harmonic * stretch_factor;
@@ -529,7 +531,8 @@ void ModalResonator::ProcessModes(
     const float* in,
     float* out,
     float* aux,
-    size_t size) {
+    size_t size,
+    int num_modes) {
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
 
@@ -549,7 +552,7 @@ void ModalResonator::ProcessModes(
   const float* gain = modes.gain;
   plaits::ResonatorSvf<plaits::kModeBatchSize>* odd = &odd_[0];
   plaits::ResonatorSvf<plaits::kModeBatchSize>* even = &even_[0];
-  for (int batch = 0; batch < kNumResonatorModes / 8; ++batch) {
+  for (int batch = 0; batch < num_modes / 8; ++batch) {
     bool audible = false;
     for (int i = 0; i < plaits::kModeBatchSize; ++i) {
       // A pair shares its pickup; its left and right modes may differ.

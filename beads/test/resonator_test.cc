@@ -138,9 +138,10 @@ void RunSine(Processor::Media media, int placement, float dry_wet,
   }
   *out_hash = hash;
   uint64_t recording = 14695981039346656037ull;
-  const uint8_t* bytes = &banks[0][0];
-  for (size_t i = 0; i < sizeof(banks); ++i) {
-    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  for (const auto& bank : banks) {
+    for (uint8_t byte : bank) {
+      recording = (recording ^ byte) * 1099511628211ull;
+    }
   }
   *recording_hash = recording;
 }
@@ -727,6 +728,79 @@ ResonatorControls Controls(int material, int ring) {
   c.modes = kResonatorMaterials[material].modes;
   c.chord_gain = kResonatorMaterials[material].chord_gain;
   return c;
+}
+
+uint64_t RunBloomResonator(
+    Processor::Media media,
+    int placement,
+    int material,
+    float amount,
+    bool reverb_on_grains,
+    float* bloom_peak,
+    uint64_t* recording_hash) {
+  Init(media, false, placement);
+  processor.SetReverbCharacter(REVERB_BLOOM);
+  processor.SetOption(Processor::OPTION_FLAG_REVERB_ON_GRAINS, reverb_on_grains);
+  ResonatorControls controls = Controls(material, 1);
+  controls.amount = amount;
+  processor.set_resonator_controls(controls);
+  parameters.pitch.base = -36.0f;
+  mix.dry_wet = 0.85f;
+  mix.feedback = 0.6f;
+  GateFlags seed[12] = { GATE_FLAG_RISING };
+  uint64_t hash = 14695981039346656037ull;
+  for (int block = 0; block < 256; ++block) {
+    FillSine(block, 0.3f);
+    processor.ProcessCharacter(false, false, SEED_BUTTON_STATE_LOCKED,
+        seed, freeze, density, parameters, mix, input, output, BlockSize());
+    seed[0] = GATE_FLAG_LOW;
+    hash = Hash(hash, output, BlockSize());
+  }
+  *bloom_peak = processor.reverb_character_.peak;
+  uint64_t recording = 14695981039346656037ull;
+  for (const auto& bank : banks) {
+    for (uint8_t byte : bank) {
+      recording = (recording ^ byte) * 1099511628211ull;
+    }
+  }
+  *recording_hash = recording;
+  return hash;
+}
+
+void TestBloomFeedbackResonator() {
+  test_checker.Start("TestBloomFeedbackResonator");
+  for (bool reverb_on_grains : { false, true }) {
+    for (int material : { 0, 1 }) {
+      float silent_peak;
+      float ringing_peak;
+      uint64_t silent_recording;
+      uint64_t ringing_recording;
+      const uint64_t silent = RunBloomResonator(Processor::MEDIA_DIGITAL,
+          RESONATOR_FEEDBACK, material, 0.0f, reverb_on_grains,
+          &silent_peak, &silent_recording);
+      const uint64_t ringing = RunBloomResonator(Processor::MEDIA_DIGITAL,
+          RESONATOR_FEEDBACK, material, 1.0f, reverb_on_grains,
+          &ringing_peak, &ringing_recording);
+      CHECK(ringing != silent);
+      CHECK(ringing_peak != silent_peak);
+      CHECK(ringing_recording == silent_recording);
+      CHECK(processor.resonator_loop_feedback_ == 0.0f);
+      CHECK(processor.resonator_.odd_[1].state_1_[0] != 0.0f);
+      CHECK(processor.resonator_.odd_[2].state_1_[0] == 0.0f);
+      CHECK(processor.resonator_.even_[2].state_1_[0] == 0.0f);
+      processor.SetReverbCharacter(REVERB_PLATE);
+      CHECK(processor.resonator_sample_rate_ == 0.0f);
+    }
+  }
+  float peak;
+  uint64_t recording;
+  RunBloomResonator(Processor::MEDIA_VINTAGE_DIGITAL, RESONATOR_FEEDBACK,
+      0, 1.0f, false, &peak, &recording);
+  CHECK(processor.resonator_loop_feedback_ == mix.feedback);
+  CHECK(processor.resonator_.odd_[2].state_1_[0] != 0.0f);
+  RunBloomResonator(Processor::MEDIA_DIGITAL, RESONATOR_AFTER_GRAINS,
+      0, 1.0f, false, &peak, &recording);
+  CHECK(processor.resonator_.odd_[2].state_1_[0] != 0.0f);
 }
 
 // Each Ring time rings longer than the last; the Materials sound apart, at
@@ -1728,9 +1802,10 @@ void RunLoop(Processor::Media media, int placement, float feedback,
   }
   *out_hash = hash;
   uint64_t recording = 14695981039346656037ull;
-  const uint8_t* bytes = &banks[0][0];
-  for (size_t i = 0; i < sizeof(banks); ++i) {
-    recording = (recording ^ bytes[i]) * 1099511628211ull;
+  for (const auto& bank : banks) {
+    for (uint8_t byte : bank) {
+      recording = (recording ^ byte) * 1099511628211ull;
+    }
   }
   *recording_hash = recording;
 }
@@ -2438,6 +2513,7 @@ int main() {
   fpcr |= uint64_t(1) << 24;
   __asm__ volatile("msr fpcr, %0" : : "r" (fpcr));
 #endif  // defined(__SSE__)
+  TestBloomFeedbackResonator();
   TestResonatorDefaults();
   TestResonatorBank();
   TestResonatorPitch();
