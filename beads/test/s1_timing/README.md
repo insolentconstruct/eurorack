@@ -48,6 +48,14 @@ two hardware RNG words. Region status is captured from the loader.
 The fault-cue latch observes the assignment LED synth-fault branch, counting
 its lit onsets. The version display uses a separate cue.
 
+Each frame's former reserved word at byte offset 30 carries row evidence.
+The low byte identifies the function pointer Fill called. Values are 0 for
+unknown, 1 for Process, 2 for ProcessSynthLevel, 3 for ProcessAbyss, 4 for
+ProcessOliverb, 5 for ProcessExtendedReverb and 6 for calibration or any
+other callback. The high byte is 1 for half-transfer and 2 for
+transfer-complete. Older captures have zero in both bytes. The 26-word
+snapshot has no spare word and its layout stays intact.
+
 The 15 KiB AXI reservation is after the last delay bank's samples and
 freeze tail. Abyss reserves at most 471,040 bytes of that physical bank. The trace
 begins at byte 508,928. The last two delay banks trade physical locations, keeping

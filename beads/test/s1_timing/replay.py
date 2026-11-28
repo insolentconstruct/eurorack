@@ -44,6 +44,15 @@ RNG_SR = 0x48021804
 RNG_DR = 0x48021808
 TRACE_HEADER = struct.Struct('<IIIQQIIII')
 FRAME_BYTES = 56
+ROW_EVIDENCE = struct.Struct('<BB')
+ROW_EVIDENCE_OFFSET = 30
+CALLBACK_IDS = {
+    'Process': 1,
+    'ProcessSynthLevel': 2,
+    'ProcessAbyss': 3,
+    'ProcessOliverb': 4,
+    'ProcessExtendedReverb': 5,
+}
 SEAL_OFFSET = 15 * 1024 - 4
 CONFIGURE = '_Z22ConfigureAndStartCodecbb'
 OBSERVER = 's1_observer_cycles'
@@ -283,7 +292,8 @@ class Rig(te.Rig):
     self.m.write(self.image.address('codec_transition_frames'), '<i', 0)
     self.posture(synth, seed)
 
-  def capture(self, directory, count=160, trigger_at=None, resume=False, paired=False):
+  def capture(self, directory, count=160, trigger_at=None, resume=False, paired=False,
+              callback_id=None):
     directory.mkdir()
     (directory / 'preflight.log').write_text(self.burst())
     self.m.tick_us += 250
@@ -293,6 +303,7 @@ class Rig(te.Rig):
       self.posture(True, self.seed_patched)
     del self.samples[:]
     del self.irq[:]
+    first_half = self.half
     observer, callback, dwt_irq = [], [], []
     callback_gate, irq_gate, injected, waits = [], [], [], []
     button = self.image.member('ui', 'Ui', 'seed_button_state_')
@@ -324,6 +335,11 @@ class Rig(te.Rig):
     seal, = self.m.read(addr + SEAL_OFFSET, '<I')
     assert header[5] == count and header[8] == seal and seal % 2 == 0, header
     data = self.m.uc.mem_read(addr, TRACE_HEADER.size + count * FRAME_BYTES)
+    if callback_id is not None:
+      for i in range(count):
+        offset = TRACE_HEADER.size + i * FRAME_BYTES + ROW_EVIDENCE_OFFSET
+        evidence = ROW_EVIDENCE.unpack_from(data, offset)
+        assert evidence == (callback_id, 1 + (first_half ^ (i & 1))), (i, evidence)
     (directory / 'callbacks.bin').write_bytes(data)
     (directory / 'output.s32').write_bytes(struct.pack(f'<{len(self.samples)}i', *self.samples))
     (directory / 'postflight.log').write_text(self.burst())
@@ -449,7 +465,8 @@ def replay_rc1(image, region, output, release):
         r.block()
     r.check_callback(callback)
     directory = output / name
-    r.capture(directory, count=64, paired=release is not None)
+    r.capture(directory, count=64, paired=release is not None,
+              callback_id=CALLBACK_IDS[callback])
     callbacks = (directory / 'callbacks.bin').read_bytes()
     for offset in range(TRACE_HEADER.size, len(callbacks), FRAME_BYTES):
       assert struct.unpack_from('<H', callbacks, offset + 8)[0] == codec
@@ -572,6 +589,17 @@ def main():
       flags, = r.m.read(address + TRACE_HEADER.size + i * FRAME_BYTES + 15, '<B')
       assert flags & 1
   print('DMA pre-ack coalescence and lost count verified', flush=True)
+
+  # The timing image excludes DWT_CALIBRATION. Use a Thumb tail call
+  # in the emulator scratch page to exercise the fallback with live audio.
+  r = Rig(image, region)
+  r.configure(False)
+  stub = te.STOP + 4
+  process, = (addr for symbol, addr in image.sym.items() if symbol.startswith('_Z7ProcessPK'))
+  r.m.write(stub, '<HHI', 0xf8df, 0xf000, process | 1)  # ldr.w pc, [pc, #0]
+  r.m.write(r.callback, '<I', stub | 1)
+  r.capture(args.output / 'other-callback', count=2, callback_id=6)
+  print('Other callback identity verified on both halves', flush=True)
 
   replay_rc1(image, region, args.output, release)
 
