@@ -865,18 +865,21 @@ estimated 88.9% on a module against the 90% limit then in force.
 ### [A] gestures in profiles
 
 A Hygrostat profile chooses what the [A] gestures do (#301). The factory
-layout and every earlier profile keep their gestures.
+layout keeps its existing gestures.
 
 - [A]+SEED and [A]+FREEZE can take Monophonic grains, Buffer trim, Synth
-  start or a two-value toggle: Reverb character, Processor, Frozen feedback,
-  Synth or TIME modulation. A toggle flips its setting (Synth steps through
-  the playable synths), saves it, and [A]
-  shows the new value's options page colour for half a second (green first
-  value, yellow second). Processor clears the recording, as from its page;
-  while FREEZE is on, the change waits for its release. In Plaits synth
-  play [A]+FREEZE still steps the bank, so a toggle there waits for the
-  synth to stop, and Synth goes on [A]+SEED only. The [A] hold stays Synth
-  start only.
+  start, Processor, Reverb character, Frozen feedback, Synth or TIME
+  modulation. Synth goes on [A]+SEED and steps through the playable synths.
+  The [A] hold stays reserved for Synth start.
+- An assigned Processor gesture switches Granular, Oliverb or Abyss to
+  Spectral and back to the previous engine. After booting into Spectral,
+  it returns to Granular. The selection saves and the return engine lives
+  in RAM. After the handoff, [A] shows steady yellow for Spectral, green
+  for Granular, red for Oliverb or slow blinking red for Abyss, then
+  resumes the quality display. Two red flashes indicate a refusal while
+  FREEZE is held by latch or CV, options are open, calibration or service
+  is active, or a handoff is in progress. During Plaits or Rings play,
+  [A]+FREEZE still steps the bank or polyphony.
 - [A]+FEEDBACK, [A]+DRY/WET and [A]+REVERB can each take Manual gain,
   Stereo width or Diffusion, one per knob. Hygrostat feature ID 40, Manual
   gain knob, places the gain: Off keeps it on FEEDBACK; Fixed takes it off

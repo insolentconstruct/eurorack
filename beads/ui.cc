@@ -124,6 +124,7 @@ void Ui::Init(
   resonator_assigned_ = false;
   resonator_available_ = false;
   gestures_.Init(this, settings);
+  processor_warning_ = false;
   no_input_ = false;
   synth_mode_ = false;
   playable_synths_ = SynthMask(true, true, false);
@@ -249,6 +250,14 @@ void Ui::Poll() {
 
     if (switches_.just_pressed(s)) {
       ignore_release_[i] = !accept_switch_events || suppressed_press_[i];
+      if (!accept_switch_events &&
+          previous_stage != Options::STAGE_INACTIVE &&
+          switches_.pressed(SWITCH_MEDIA) &&
+          (s == SWITCH_SEED || s == SWITCH_FREEZE) &&
+          settings_->profile().Action(s == SWITCH_SEED ? ACTION_SEED
+              : ACTION_FREEZE) == FEATURE_PROCESSOR) {
+        processor_warning_ = true;
+      }
       if (!ignore_release_[i]) {
         queue_.AddEvent(CONTROL_SWITCH, i, 0);
       }
@@ -446,13 +455,6 @@ void Ui::UpdateLeds() {
             };
             leds_.set_media(cue);
           }
-          const uint32_t cue_elapsed =
-              system_clock.milliseconds() - gestures_.cue_time();
-          if (gestures_.cue_time() && cue_elapsed < kGestureCueTime) {
-            leds_.set_media(
-                gestures_.cue().color,
-                PulseLit(gestures_.cue().pulses, cue_elapsed) ? 1.0f : 0.0f);
-          }
         }
         
         if (mode_ == MODE_DISPLAY_AUTOSAVE) {
@@ -537,6 +539,21 @@ void Ui::UpdateLeds() {
       break;
   }
   
+  const uint32_t cue_elapsed =
+      system_clock.milliseconds() - gestures_.cue_time();
+  const PulsePattern pulses = gestures_.cue().pulses;
+  const uint32_t cue_duration = pulses == PULSE_SLOW
+      ? kOptionsSlowPeriod : kGestureCueTime;
+  if (gestures_.cue_time() && cue_elapsed < cue_duration &&
+      ((pulses == PULSE_DOUBLE && mode_ != MODE_FACTORY_TEST &&
+            !showing_storage_status()) ||
+        ((mode_ == MODE_NORMAL || mode_ == MODE_DISPLAY_AUTOSAVE) &&
+            !adjusting_manual_gain && !adjusting_width &&
+            !adjusting_diffusion))) {
+    leds_.set_media(
+        gestures_.cue().color, PulseLit(pulses, cue_elapsed) ? 1.0f : 0.0f);
+  }
+
   // No synth can play until a good install: [A] blinks fast, as the
   // recovery firmware shows a failure.
   if (synth_fault_ && synth_mode_ && mode_ == MODE_NORMAL) {
@@ -800,6 +817,10 @@ void Ui::set_delay_active(bool active) {
 }
 
 void Ui::DoEvents() {
+  if (processor_warning_ && !options_.active()) {
+    processor_warning_ = false;
+    gestures_.WarnProcessor();
+  }
   if (options_.commit_requested()) {
     bool changed = false;
     for (int i = 0; i < kNumPageFeatures; ++i) {
@@ -807,6 +828,10 @@ void Ui::DoEvents() {
       // Pages commit their settings; a gesture saves the Plaits bank.
       if (options_.edited(f) && settings_->profile().adjustable(f) &&
           options_.Value(f) != settings_->FeatureValue(f)) {
+        if (f == FEATURE_PROCESSOR) {
+          return_processor_ = PROCESSOR_GRANULAR;
+          processor_cue_pending_ = false;
+        }
         settings_->SetFeatureValue(f, options_.Value(f));
         changed = true;
       }

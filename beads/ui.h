@@ -82,6 +82,9 @@ class Ui {
   void LoadOptions();
   void Poll();
   void DoEvents();
+  inline void ObserveProcessor(ProcessorMode active, bool busy) {
+    gestures_.ObserveProcessor(active, busy);
+  }
   void FlushEvents();
   void Panic() {
     mode_ = MODE_PANIC;
@@ -319,6 +322,12 @@ class Ui {
   GestureController gestures_;
   volatile uint8_t reverb_character_;
   volatile ProcessorMode processor_mode_;
+
+  ProcessorMode return_processor_;
+  ProcessorMode active_processor_;
+  bool processor_busy_;
+  bool processor_cue_pending_;
+  volatile bool processor_warning_;
 
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

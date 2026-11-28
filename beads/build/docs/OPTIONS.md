@@ -135,7 +135,9 @@ Processor Oliverb uses Clouds Parasites' pitch-shifting reverb. TIME sets pre-de
 
 In Oliverb, DRY/WET crossfades, FEEDBACK sets modulation rate and REVERB sets modulation depth. Assign CV can still reach those knobs. FREEZE mutes the reverb input, sets loop gain to one and opens the damping filters. Pitch shift and modulation continue. SEED has no audio effect, and OUT R is silent in gate mode.
 
-Oliverb runs at the quality's native codec rate. Release FREEZE to change Processor or quality. The shared reverb tail resets at handoff. Returning from Oliverb keeps a suspended recording when its engine, quality and input channel count still match. A Processor gesture cycles all four modes when the profile has no Processor page slot. With a page and a gesture assigned, the shortcut switches Granular and Spectral. See [Abyss](ABYSS.md) for its controls.
+Oliverb runs at the quality's native codec rate. Release FREEZE to change Processor or quality. The shared reverb tail resets at handoff. Returning from Oliverb keeps a suspended recording when its engine, quality and input channel count still match. See [Abyss](ABYSS.md) for its controls.
+
+If a Hygrostat profile assigns Processor to [A]+SEED or [A]+FREEZE, hold [A] and press the assigned button to switch to Spectral. Repeat to return to the previous engine. After booting into Spectral, the shortcut returns to Granular. Each selection saves. Once the new engine is ready, [A] shows its Processor colour, then returns to quality. Two red flashes signal a refused switch, for example while FREEZE is held or an engine is switching. During Plaits or Rings play, [A]+FREEZE still steps the bank or polyphony.
 
 Synth Plaits plays six Plaits voices instead of the wavetable synth: FEEDBACK picks one of the eight models in the current bank, TIME, SIZE and SHAPE set HARMONICS, TIMBRE and MORPH, DRY/WET sets the decay and FREEZE sustains, except for models with their own envelope. With DENSITY at noon and SEED unpatched the last voice drones until SEED plays a note. The models in each bank are listed in the README's "Plaits synth" section.
 

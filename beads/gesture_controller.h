@@ -53,6 +53,7 @@ class GestureController {
 
   void Init(Ui* ui, Settings* settings);
   void LoadOptions();
+  void ObserveProcessor(ProcessorMode active, bool busy);
   bool OnPressed(const stmlib::Event& e, const Switches& switches);
   bool OnReleased(const stmlib::Event& e);
   void ProcessAmount(int i, PotController* p, uint32_t* press_time);
@@ -78,6 +79,8 @@ class GestureController {
   void StepPlaitsBank();
   void StepRingsPolyphony();
   bool DoAction(uint8_t slot);
+  void ToggleSpectral();
+  void WarnProcessor();
 
   Ui* ui_;
   Settings* settings_;
