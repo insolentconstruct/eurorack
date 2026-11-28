@@ -1,0 +1,640 @@
+diff --git a/beads/beads.cc b/beads/beads.cc
+index 52713f0c..a67c1b6e 100644
+--- a/beads/beads.cc
++++ b/beads/beads.cc
+@@ -32,0 +33,2 @@
++#include "beads/test/s1_timing/ceiling.h"
++#include "beads/test/s1_timing/trace.h"
+@@ -90 +92 @@ extern uint16_t reverb_buffer[32768];
+-const bool skip_factory_test = false;
++const bool skip_factory_test = true;
+@@ -102,0 +105,6 @@ STATIC_ASSERT(kPlaitsSynthRamSize < 256 * 1024, plaits_voices_in_bank_0);
++// The last logical delay bank is in AXI SRAM for SWD trace reads.
++asm(".global s1_trace\n.set s1_trace, delay_buffer_1 + 508928");
++namespace s1_layout {
++STATIC_ASSERT(768000 + 16 + 2048 + s1_timing::kTraceBytes <= 768 * 1024,
++    trace_outside_sample_storage);
++}  // namespace s1_layout
+@@ -217,0 +226,63 @@ stmlib::DelayLine<Codec::Event, 256> event_delay;
++// A held block that the firmware silences still holds, and plays the sine.
++static void CeilingSilence(FloatFrame* frames, Codec::Frame* out, size_t size) {
++  FloatFrame silence;
++  silence.l = 0.0f;
++  silence.r = 0.0f;
++  fill(&frames[0], &frames[size], silence);
++  cpu_ceiling::Output(frames, out, size);
++}
++
++// Codec and synth both run one block per 250 us at independent rates.
++template<bool fixed_decay, bool extended_reverb>
++static void RenderPlaits(SeedButtonState button, const GateFlags* seed,
++    const bool* freeze, Synth::Resolution resolution,
++    const ModulatedParameter& density, const Parameters& parameters,
++    const Processor::MixParameters& mix, FloatFrame* out, size_t size) {
++  const size_t synth_size = plaits_synth.sample_rate() / kBlockRate;
++  if (size == synth_size) {
++    if (extended_reverb) {
++      plaits_synth.RenderCharacter(button, seed, freeze, resolution, density,
++          parameters, mix, out, size);
++    } else if (fixed_decay) {
++      plaits_synth.RenderFixedDecay(button, seed, freeze, resolution, density,
++          parameters, mix, out, size);
++    } else {
++      plaits_synth.Render(button, seed, freeze, resolution, density, parameters,
++          mix, out, size);
++    }
++    return;
++  }
++
++  GateFlags synth_seed[kMaxCodecBlockSize];
++  bool synth_freeze[kMaxCodecBlockSize];
++  FloatFrame synth_out[kMaxCodecBlockSize];
++  for (size_t i = 0; i < synth_size; ++i) {
++    const size_t first = i * size / synth_size;
++    const size_t end = (i + 1) * size / synth_size;
++    uint32_t flags = seed ? seed[first] : 0;
++    synth_freeze[i] = freeze[first];
++    if (i && first == (i - 1) * size / synth_size) {
++      flags &= GATE_FLAG_HIGH;
++    }
++    for (size_t j = first + 1; j < end; ++j) {
++      flags |= seed ? seed[j] : 0;
++      synth_freeze[i] |= freeze[j];
++    }
++    synth_seed[i] = GateFlags(flags);
++  }
++  const GateFlags* resized_seed = seed ? synth_seed : NULL;
++  if (extended_reverb) {
++    plaits_synth.RenderCharacter(button, resized_seed, synth_freeze, resolution, density,
++        parameters, mix, synth_out, synth_size);
++  } else if (fixed_decay) {
++    plaits_synth.RenderFixedDecay(button, resized_seed, synth_freeze, resolution, density,
++        parameters, mix, synth_out, synth_size);
++  } else {
++    plaits_synth.Render(button, resized_seed, synth_freeze, resolution, density, parameters,
++        mix, synth_out, synth_size);
++  }
++  for (size_t i = 0; i < size; ++i) {
++    out[i] = synth_out[i * synth_size / size];
++  }
++}
++
+@@ -247,0 +319 @@ inline void ProcessAudio(
++  const bool ceiling = cpu_ceiling::Enter(size);
+@@ -334,0 +407,6 @@ inline void ProcessAudio(
++  {
++    s1_timing::Observe observation;
++    s1_timing::frame.paths = s1_timing::SynthCode(transition.playing_synth());
++    s1_timing::frame.quality = settings.state().media;
++    s1_timing::frame.flags |= freeze_block ? s1_timing::kFlagFreeze : 0;
++  }
+@@ -335,0 +414,3 @@ inline void ProcessAudio(
++    if (ceiling) {
++      CeilingSilence(float_out, out, size);
++    }
+@@ -433,0 +515,3 @@ inline void ProcessAudio(
++    if (ceiling) {
++      CeilingSilence(float_out, out, size);
++    }
+@@ -452 +536,29 @@ inline void ProcessAudio(
+-  if (play_oliverb) {
++  if (synth_mode && transition.playing_synth() != SYNTH_PLAITS &&
++      size != 48000 / kBlockRate) {
++    fill(out, out + size, Codec::Frame());
++    if (ceiling) {
++      CeilingSilence(float_out, out, size);
++    }
++    return;
++  }
++
++  {
++    s1_timing::Observe observation;
++    s1_timing::Frame& f = s1_timing::frame;
++    if (synth_mode) {
++      f.paths |= s1_timing::SynthCode(transition.playing_synth()) << 2;
++    }
++    const bool feedback_only = mix_assigned &&
++        settings.state().assignable_cv_destination == Ui::MIX_PARAMETER_FEEDBACK;
++    f.flags |= (seed_input ? s1_timing::kFlagSeedPatched : 0) |
++        (feedback_only ? s1_timing::kFlagAssignFeedback : 0);
++    f.feedback_base_q16 =
++        uint16_t(ui.mix_parameter(Ui::MIX_PARAMETER_FEEDBACK) * 65535.0f);
++  }
++
++  if (ceiling && cpu_ceiling::skip_dsp()) {
++    FloatFrame silence;
++    silence.l = 0.0f;
++    silence.r = 0.0f;
++    fill(&float_out[0], &float_out[size], silence);
++  } else if (play_oliverb) {
+@@ -526 +638 @@ inline void ProcessAudio(
+-      plaits_synth.RenderCharacter(seed_button_state, seed_input, freeze,
++      RenderPlaits<true, true>(seed_button_state, seed_input, freeze,
+@@ -529,7 +641,2 @@ inline void ProcessAudio(
+-      plaits_synth.RenderFixedDecay(
+-          seed_button_state,
+-          seed_input,
+-          freeze,
+-          Synth::Resolution(settings.state().media),
+-          d, p, m,
+-          float_out, size);
++      RenderPlaits<true, false>(seed_button_state, seed_input, freeze,
++          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+@@ -537,7 +644,2 @@ inline void ProcessAudio(
+-      plaits_synth.Render(
+-          seed_button_state,
+-          seed_input,
+-          freeze,
+-          Synth::Resolution(settings.state().media),
+-          d, p, m,
+-          float_out, size);
++      RenderPlaits<false, false>(seed_button_state, seed_input, freeze,
++          Synth::Resolution(settings.state().media), d, p, m, float_out, size);
+@@ -638,0 +741,11 @@ inline void ProcessAudio(
++  if (ceiling) {
++    // The activity the conversion loop below would have seen.
++    for (size_t i = 0; i < size; ++i) {
++      if (fabsf(float_out[i].l) > 0.01f || fabsf(float_out[i].r) > 0.01f) {
++        synth_mode_start_time = 0;
++      }
++    }
++    cpu_ceiling::Output(float_out, out, size);
++    return;
++  }
++
+@@ -737,0 +851 @@ void ProcessAbyss(
++  const bool ceiling = cpu_ceiling::Enter(size);
+@@ -767,0 +882,6 @@ void ProcessAbyss(
++  {
++    s1_timing::Observe observation;
++    s1_timing::frame.paths = s1_timing::SynthCode(transition.playing_synth());
++    s1_timing::frame.quality = settings.state().media;
++    s1_timing::frame.flags |= frozen ? s1_timing::kFlagFreeze : 0;
++  }
+@@ -768,0 +889,3 @@ void ProcessAbyss(
++    if (ceiling) {
++      CeilingSilence(output, codec_out, size);
++    }
+@@ -776,0 +900,3 @@ void ProcessAbyss(
++    if (ceiling) {
++      CeilingSilence(output, codec_out, size);
++    }
+@@ -779,0 +906,4 @@ void ProcessAbyss(
++  if (ceiling && cpu_ceiling::skip_dsp()) {
++    CeilingSilence(output, codec_out, size);
++    return;
++  }
+@@ -818,0 +949,10 @@ void ProcessAbyss(
++  if (ceiling) {
++    if (gate_output) {
++      for (size_t i = 0; i < size; ++i) {
++        output[i].l = (output[i].l + output[i].r) * 0.5f;
++        output[i].r = 0.0f;
++      }
++    }
++    cpu_ceiling::Output(output, codec_out, size);
++    return;
++  }
+@@ -853,0 +994 @@ float AbyssPitchPosition();
++bool NoInput();
+@@ -891,0 +1033,6 @@ Codec::FillBufferCallback AudioCallback(bool synth) {
++bool s1_prepare_startup;
++bool s1_startup_prepared;
++bool s1_startup_running;
++int s1_startup_rate;
++Codec::FillBufferCallback s1_startup_callback;
++
+@@ -892,0 +1040,2 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
++  transition.Pause();
++  plaits_synth.SetSampleRate(s1_timing::synth_rate());
+@@ -894 +1043 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
+-  const int sr = new_synth_mode ? 48000
++  int sr = new_synth_mode ? 48000
+@@ -895,0 +1045,4 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
++  if (new_synth_mode && transition.playing_synth() == SYNTH_PLAITS &&
++      s1_timing::codec_override()) {
++    sr = s1_timing::codec_override();
++  }
+@@ -911,10 +1064,12 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
+-  gain_control.Init(
+-      float(sr),
+-      media == Processor::MEDIA_DIRTY_TAPE
+-          ? GainControl::SOFT_CLIPPING_MODE_ON
+-          : (media == Processor::MEDIA_CLEAN_TAPE
+-                ? GainControl::SOFT_CLIPPING_MODE_DYNAMIC
+-                : GainControl::SOFT_CLIPPING_MODE_OFF),
+-      reset_gain_control);
+-  normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
+-  event_delay.Init();
++  if (!s1_prepare_startup) {
++    gain_control.Init(
++        float(sr),
++        media == Processor::MEDIA_DIRTY_TAPE
++            ? GainControl::SOFT_CLIPPING_MODE_ON
++            : (media == Processor::MEDIA_CLEAN_TAPE
++                  ? GainControl::SOFT_CLIPPING_MODE_DYNAMIC
++                  : GainControl::SOFT_CLIPPING_MODE_OFF),
++        reset_gain_control);
++    normalization_detector.Init(sr == 48000 ? 2 : (sr == 32000 ? 3 : 4));
++    event_delay.Init();
++  }
+@@ -936 +1091,8 @@ void ConfigureAndStartCodec(bool new_synth_mode, bool reset_gain_control) {
+-  transition.Start(sr, AudioCallback(new_synth_mode), true);
++  const Codec::FillBufferCallback callback = AudioCallback(new_synth_mode);
++  if (s1_prepare_startup) {
++    s1_startup_rate = sr;
++    s1_startup_callback = callback;
++    s1_startup_prepared = true;
++  } else {
++    transition.Start(sr, callback, true);
++  }
+@@ -949,0 +1112,2 @@ void Init() {
++  s1_timing::Init();
++  cpu_ceiling::Init();
+@@ -964,2 +1128,2 @@ void Init() {
+-  delay_buffers[1] = delay_buffer_1 + (256 * 1024);
+-  delay_buffers[2] = delay_buffer_2;
++  delay_buffers[1] = delay_buffer_2;
++  delay_buffers[2] = delay_buffer_1 + (256 * 1024);
+@@ -1008,0 +1173,9 @@ void Init() {
++  const PlaitsRegionIdentity& region = plaits_region.identity();
++  uint32_t status[3];
++  for (size_t i = 0; i < 3; ++i) {
++    const PlaitsBlobStatus value = PlaitsBlobStatus(region.sections[i].status);
++    status[i] = value == PLAITS_BLOB_OK ? 1 :
++        (value == PLAITS_BLOB_ERROR_NO_REGION ? 0 : 2);
++  }
++  s1_timing::BootStatus(status[PLAITS_SECTION_WAVE],
++      status[PLAITS_SECTION_PLAITS], status[PLAITS_SECTION_TERRAIN]);
+@@ -1051,0 +1225 @@ void Init() {
++  s1_timing::Publish(ui.synth(), transition.playing_synth());
+@@ -1066,0 +1241,5 @@ void Init() {
++// The bench forces the unpatched-inputs path with both inputs patched.
++bool NoInput() {
++  return normalization_detector.no_input() || s1_timing::no_input();
++}
++
+@@ -1107 +1286 @@ void MonitorStateChange() {
+-  ui.set_no_input(normalization_detector.no_input());
++  ui.set_no_input(NoInput());
+@@ -1261 +1440 @@ void MonitorStateChange() {
+-  if (normalization_detector.no_input() &&
++  if (NoInput() &&
+@@ -1263 +1442 @@ void MonitorStateChange() {
+-    if (settings.self_play_on_request()) {
++    if (settings.self_play_on_request() && !s1_timing::no_input()) {
+@@ -1284 +1463,2 @@ void MonitorStateChange() {
+-      if (synth_fade || (start && now - start >= 10000)) {
++      if (synth_fade || s1_timing::no_input() ||
++          (start && now - start >= 10000)) {
+@@ -1336,0 +1517,30 @@ int main(void) {
++    const uint32_t old_codec = s1_timing::codec_override();
++    const SynthEngine old_engine = transition.playing_synth();
++    const uint32_t command = s1_timing::Poll(
++        transition.blanking() && !s1_startup_prepared, s1_startup_prepared);
++    if (command == 4 && !s1_startup_prepared && synth_mode &&
++        transition.codec_running() && !transition.blanking() &&
++        old_engine == SYNTH_PLAITS) {
++      s1_prepare_startup = true;
++      ConfigureAndStartCodec(true, true);
++      s1_prepare_startup = false;
++      s1_timing::SetStatus(4);
++    } else if (command == 5 && s1_startup_prepared && s1_timing::armed()) {
++      transition.Start(s1_startup_rate, s1_startup_callback, false);
++      s1_startup_prepared = false;
++      s1_startup_running = true;
++      s1_timing::SetStatus(5);
++    } else if (command == 6) {
++      if (s1_startup_prepared) {
++        transition.Start(s1_startup_rate, s1_startup_callback, true);
++        s1_startup_prepared = false;
++      }
++      s1_timing::SetStatus(6);
++    } else if (command >= 4) {
++      s1_timing::SetStatus(0xffffffff);
++    } else if (!s1_startup_prepared && synth_mode &&
++        old_engine == SYNTH_PLAITS &&
++        (old_codec != s1_timing::codec_override() ||
++         plaits_synth.sample_rate() != s1_timing::synth_rate())) {
++      ConfigureAndStartCodec(true, true);
++    }
+@@ -1338 +1548,15 @@ int main(void) {
+-    MonitorStateChange();
++    s1_startup_running = s1_startup_running && s1_timing::armed();
++    if (!s1_startup_prepared && !s1_startup_running) {
++      MonitorStateChange();
++      const SynthEngine engine = transition.playing_synth();
++      const bool changed_rate = s1_timing::codec_override() &&
++          (old_engine == SYNTH_PLAITS) != (engine == SYNTH_PLAITS);
++      const bool staged_synth = engine == SYNTH_PLAITS &&
++          plaits_synth.sample_rate() != s1_timing::synth_rate();
++      if (synth_mode && (changed_rate || staged_synth)) {
++        ConfigureAndStartCodec(true, true);
++      }
++    }
++    s1_timing::Settled(synth_mode == NoInput() && !transition.blanking() &&
++        transition.codec_running());
++    s1_timing::Publish(ui.synth(), transition.playing_synth());
+diff --git a/beads/blob/models/wave_terrain_engine.h b/beads/blob/models/wave_terrain_engine.h
+index 9f78370c..fd098792 100644
+--- a/beads/blob/models/wave_terrain_engine.h
++++ b/beads/blob/models/wave_terrain_engine.h
+@@ -46,0 +47 @@ class WaveTerrain {
++  float terrain_position() const { return terrain_; }
+diff --git a/beads/drivers/codec.cc b/beads/drivers/codec.cc
+index 10c2070d..d1b9e6c8 100644
+--- a/beads/drivers/codec.cc
++++ b/beads/drivers/codec.cc
+@@ -34,0 +35,3 @@
++#include "beads/test/s1_timing/ceiling.h"
++#include "beads/test/s1_timing/trace.h"
++
+@@ -103,0 +107 @@ bool Codec::InitializeCodec(int32_t sample_rate) {
++  s1_sample_rate_ = sample_rate;
+@@ -385,0 +390,3 @@ void Codec::Fill(size_t offset) {
++    const bool second_half = offset != 0;
++    s1_timing::Begin(s1_sample_rate_, block_size_);
++    const uint32_t start = s1_timing::Cycles();
+@@ -392,0 +400 @@ void Codec::Fill(size_t offset) {
++    cpu_ceiling::StoreBegin();
+@@ -393,0 +402 @@ void Codec::Fill(size_t offset) {
++    cpu_ceiling::StoreEnd(offset, block_size_, 0);
+@@ -403,0 +413 @@ void Codec::Fill(size_t offset) {
++    const uint32_t callback_start = s1_timing::Cycles();
+@@ -404,0 +415 @@ void Codec::Fill(size_t offset) {
++    const uint32_t callback_cycles = s1_timing::Cycles() - callback_start;
+@@ -405,0 +417 @@ void Codec::Fill(size_t offset) {
++    cpu_ceiling::StoreBegin();
+@@ -408,0 +421,2 @@ void Codec::Fill(size_t offset) {
++    cpu_ceiling::StoreEnd(offset, block_size_, 2);
++    cpu_ceiling::Filled(offset, block_size_);
+@@ -410,0 +425,6 @@ void Codec::Fill(size_t offset) {
++    const uint32_t cycles = s1_timing::Cycles() - start;
++    const uint32_t current = second_half
++        ? CODEC_ADC_DMA_ISR_FLAG_TC : CODEC_ADC_DMA_ISR_FLAG_HT;
++    const uint32_t next = second_half
++        ? CODEC_ADC_DMA_ISR_FLAG_HT : CODEC_ADC_DMA_ISR_FLAG_TC;
++    s1_timing::End(cycles, callback_cycles, &CODEC_ADC_DMA_ISR, next, current);
+@@ -423,2 +443,3 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+-  if (CODEC_ADC_DMA_ISR & CODEC_ADC_DMA_ISR_FLAG_TC) {
+-    beads::Codec::GetInstance()->Fill(1);
++  const uint32_t start = beads::s1_timing::Cycles();
++  const uint32_t flags = CODEC_ADC_DMA_ISR;
++  if (flags & CODEC_ADC_DMA_ISR_FLAG_TC) {
+@@ -426,2 +447,2 @@ void CODEC_ADC_STREAM_HANDLER(void) {
+-  } else if (CODEC_ADC_DMA_ISR & CODEC_ADC_DMA_ISR_FLAG_HT) {
+-    beads::Codec::GetInstance()->Fill(0);
++    beads::Codec::GetInstance()->Fill(1);
++  } else if (flags & CODEC_ADC_DMA_ISR_FLAG_HT) {
+@@ -428,0 +450 @@ void CODEC_ADC_STREAM_HANDLER(void) {
++    beads::Codec::GetInstance()->Fill(0);
+@@ -429,0 +452 @@ void CODEC_ADC_STREAM_HANDLER(void) {
++  beads::s1_timing::EndIrq(beads::s1_timing::Cycles() - start);
+diff --git a/beads/drivers/codec.h b/beads/drivers/codec.h
+index 2df3916f..30b6b69a 100644
+--- a/beads/drivers/codec.h
++++ b/beads/drivers/codec.h
+@@ -100,0 +101 @@ class Codec {
++  uint32_t s1_sample_rate_;
+diff --git a/beads/dsp/delay_line.h b/beads/dsp/delay_line.h
+index 9dde7912..6d3f4ebf 100644
+--- a/beads/dsp/delay_line.h
++++ b/beads/dsp/delay_line.h
+@@ -210 +210,2 @@ template<
+-    size_t num_banks=3>
++    size_t num_banks=3,
++    size_t reserved_tail=0>
+@@ -260 +261 @@ class DelayLine {
+-        &buffers[num_banks - 1][bank_size - freeze_tail_size_in_bytes()]));
++        &buffers[num_banks - 1][bank_size - reserved_tail - freeze_tail_size_in_bytes()]));
+@@ -306 +307,3 @@ class DelayLine {
+-        std::fill(&items_[bank][0], &items_[bank][items_per_bank()], zero_item);
++        const size_t count = bank == num_banks - 1 && reserved_tail
++            ? (bank_size - reserved_tail) / sizeof(ItemType) : items_per_bank();
++        std::fill(&items_[bank][0], &items_[bank][count], zero_item);
+diff --git a/beads/dsp/granular_processor.h b/beads/dsp/granular_processor.h
+index d02382b7..813b41df 100644
+--- a/beads/dsp/granular_processor.h
++++ b/beads/dsp/granular_processor.h
+@@ -41,0 +42 @@
++#include "beads/test/s1_timing/trace.h"
+@@ -84,0 +86,4 @@ class GranularProcessor {
++  inline int active_grains() const {
++    return granular_player_.CountActiveGrains();
++  }
++
+@@ -535,2 +540,4 @@ class GranularProcessor {
+-  DelayLine<resolution, max_delay, 2> stereo_delay_line_;
+-  DelayLine<resolution, max_delay * 2, 1> mono_delay_line_;
++  DelayLine<resolution, max_delay, 2, 262144, 3, s1_timing::kTraceBytes>
++      stereo_delay_line_;
++  DelayLine<resolution, max_delay * 2, 1, 262144, 3, s1_timing::kTraceBytes>
++      mono_delay_line_;
+diff --git a/beads/dsp/plaits_synth.cc b/beads/dsp/plaits_synth.cc
+index f69114c0..2f50f6b8 100644
+--- a/beads/dsp/plaits_synth.cc
++++ b/beads/dsp/plaits_synth.cc
+@@ -59 +59,3 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
+-  const float sr = kSynthSampleRate;
++  sample_rate_ = kSynthSampleRate;
++  note_offset_ = 0.0f;
++  const float sr = sample_rate_;
+@@ -81,0 +84,17 @@ void PlaitsSynth::Init(uint16_t* reverb_buffer) {
++void PlaitsSynth::SetSampleRate(uint32_t sample_rate) {
++  if (sample_rate == sample_rate_) {
++    return;
++  }
++  sample_rate_ = sample_rate;
++  note_offset_ = sample_rate == 48000 ? 0.0f :
++      (sample_rate == 32000 ? 7.01955f : 12.0f);
++  const float sr = sample_rate;
++  reverb_.Reset(sr, false);
++  trigger_generator_.Init(sr);
++  pre_reverb_limiter_.Init(1.0f / (sr * 4.0f), 0.9f);
++  output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
++  harmonics_modulation_.Init(1.01f / sr);
++  timbre_modulation_.Init(1.01f / sr);
++  morph_modulation_.Init(1.01f / sr);
++}
++
+@@ -110,0 +130,2 @@ void PlaitsSynth::InitVoices(uint8_t* ram) {
++  s1_first_render_ = true;
++  s1_button_was_on_ = false;
+@@ -206,2 +227,4 @@ void PlaitsSynth::RenderBlock(
+-  const int model = bank_models_[
+-      model_quantizer_.Process(mix_parameters.feedback)];
++  const int slot = model_quantizer_.Process(mix_parameters.feedback);
++  const uint8_t* const bank = bank_models_;
++  const int model = bank[slot];
++  const int previous_model = patch_[active_voice_].model;
+@@ -238,0 +262 @@ void PlaitsSynth::RenderBlock(
++    voice_[v].set_note_offset(note_offset_);
+@@ -254,0 +279,34 @@ void PlaitsSynth::RenderBlock(
++  {
++    s1_timing::Observe observation;
++    s1_timing::Frame& f = s1_timing::frame;
++    f.synth_hz = sample_rate_;
++    f.slot = slot;
++    const size_t bank_offset = reinterpret_cast<uintptr_t>(bank) -
++        reinterpret_cast<uintptr_t>(bank_table_);
++    f.bank = (bank_offset / kPlaitsBankSize) | ((active_voice_ >> 2) << 7);
++    f.paths |= ((active_voice_ & 3) << 14) |
++        (s1_first_render_ ? 1 << 7 : 0);
++    s1_first_render_ = false;
++    const bool button_on = seed_button_state == SEED_BUTTON_STATE_ON;
++    bool seed_edge = button_on && !s1_button_was_on_ && triggers[0].trigger;
++    s1_button_was_on_ = button_on;
++    if (seed_input) {
++      for (size_t i = 0; i < size; ++i) {
++        seed_edge |= triggers[i].trigger && (seed_input[i] & GATE_FLAG_RISING);
++      }
++    }
++    f.flags |= (seed_edge ? s1_timing::kFlagSeedEdge : 0) |
++        (drone_ ? s1_timing::kFlagDrone : 0) |
++        (drone_ && previous_model != model ? s1_timing::kFlagDroneUpdate : 0);
++    uint8_t terrain = 0;
++    for (int i = 0; i < kNumPlaitsVoices; ++i) {
++      f.models[i] = voice_[i].rendered_model();
++      f.init_serials[i] = voice_[i].init_serial();
++      const uint8_t source = voice_[i].terrain();
++      if (source) {
++        terrain = terrain && terrain != source ? 3 : source;
++      }
++    }
++    f.paths |= (terrain == 3 ? 0 : terrain) << 4;
++  }
++
+@@ -276 +334 @@ void PlaitsSynth::RenderBlock(
+-      out, size, output_limiter_mode_, kSynthSampleRate);
++      out, size, output_limiter_mode_, sample_rate_);
+diff --git a/beads/dsp/plaits_synth.h b/beads/dsp/plaits_synth.h
+index 8ab30aad..d2696cdf 100644
+--- a/beads/dsp/plaits_synth.h
++++ b/beads/dsp/plaits_synth.h
+@@ -68,0 +69,2 @@ class PlaitsSynth {
++  void SetSampleRate(uint32_t sample_rate);
++  uint32_t sample_rate() const { return sample_rate_; }
+@@ -73 +75 @@ class PlaitsSynth {
+-    reverb_.Reset(kSynthSampleRate, clear);
++    reverb_.Reset(sample_rate_, clear);
+@@ -170,0 +173,4 @@ class PlaitsSynth {
++  bool s1_first_render_;
++  bool s1_button_was_on_;
++  uint32_t sample_rate_;
++  float note_offset_;
+diff --git a/beads/dsp/plaits_voice.cc b/beads/dsp/plaits_voice.cc
+index a89a3289..5505c54c 100644
+--- a/beads/dsp/plaits_voice.cc
++++ b/beads/dsp/plaits_voice.cc
+@@ -30,0 +31,3 @@
++#include "beads/test/s1_timing/trace.h"
++#include "beads/blob/models/wave_terrain_engine.h"
++
+@@ -149,0 +153,3 @@ void PlaitsVoice::Init(uint8_t* ram) {
++  s1_rendered_model_ = -1;
++  s1_init_serial_ = 0;
++  s1_terrain_ = 0;
+@@ -254,0 +261,2 @@ void PlaitsVoice::Render(
++    s1_timing::Observe observation;
++    ++s1_init_serial_;
+@@ -304 +312 @@ void PlaitsVoice::Render(
+-  p.note = patch.note;
++  p.note = patch.note + s1_note_offset_;
+@@ -311,0 +320,10 @@ void PlaitsVoice::Render(
++  float terrain_start = 0.0f;
++  const WaveTerrain* terrain = NULL;
++  {
++    s1_timing::Observe observation;
++    if (model_ == 5 && region_->num_terrains()) {
++      // For the approved Wave Terrain binary, Init constructs at the slot base.
++      terrain = reinterpret_cast<const WaveTerrain*>(e->state());
++      terrain_start = terrain->terrain_position();
++    }
++  }
+@@ -312,0 +331,11 @@ void PlaitsVoice::Render(
++  {
++    s1_timing::Observe observation;
++    s1_rendered_model_ = model_;
++    s1_terrain_ = model_ == 5 ? 1 : 0;
++    if (terrain) {
++      const float terrain_end = terrain->terrain_position();
++      const bool stock = terrain_start <= 7.0f && terrain_end <= 7.0f;
++      const bool custom = terrain_start >= 8.0f && terrain_end >= 8.0f;
++      s1_terrain_ = stock ? 1 : (custom ? 2 : 3);
++    }
++  }
+diff --git a/beads/dsp/plaits_voice.h b/beads/dsp/plaits_voice.h
+index bcb6c028..10298da4 100644
+--- a/beads/dsp/plaits_voice.h
++++ b/beads/dsp/plaits_voice.h
+@@ -107,0 +108,4 @@ class PlaitsVoice {
++  int rendered_model() const { return s1_rendered_model_; }
++  uint32_t init_serial() const { return s1_init_serial_; }
++  uint8_t terrain() const { return s1_terrain_; }
++  void set_note_offset(float offset) { s1_note_offset_ = offset; }
+@@ -151,0 +156,4 @@ class PlaitsVoice {
++  int s1_rendered_model_;
++  uint32_t s1_init_serial_;
++  float s1_note_offset_;
++  uint8_t s1_terrain_;
+diff --git a/beads/dsp/processor_options.cc b/beads/dsp/processor_options.cc
+index 35f686db..1487c71e 100644
+--- a/beads/dsp/processor_options.cc
++++ b/beads/dsp/processor_options.cc
+@@ -541,0 +542,17 @@ void Processor::BEADS_DECAY_RENDER(ProcessOptions)(
++    if (resonator) {
++      s1_timing::Observe observation;
++      const int grains = media_ == MEDIA_DIGITAL
++          ? processor_digital_.active_grains()
++          : (media_ == MEDIA_VINTAGE_DIGITAL
++              ? processor_vintage_digital_.active_grains()
++              : (media_ == MEDIA_CLEAN_TAPE
++                  ? processor_clean_tape_.active_grains()
++                  : processor_dirty_tape_.active_grains()));
++      s1_timing::frame.paths |= grains << 8;
++      const bool before = options_ & OPTION_FLAG_RESONATOR_INPUT;
++      const bool after = options_ & OPTION_FLAG_RESONATOR_GRAINS;
++      s1_timing::frame.placement = before
++          ? (after ? RESONATOR_FEEDBACK : RESONATOR_BEFORE_BUFFER)
++          : RESONATOR_AFTER_GRAINS;
++      s1_timing::frame.flags |= s1_timing::kFlagRings;
++    }
+diff --git a/beads/engine_transition.cc b/beads/engine_transition.cc
+index e5fcd67b..e5d7d3d1 100644
+--- a/beads/engine_transition.cc
++++ b/beads/engine_transition.cc
+@@ -31,0 +32 @@
++#include "beads/test/s1_timing/trace.h"
+@@ -122,0 +124 @@ void EngineTransition::TakeBank(SynthEngine owner) {
++    const uint32_t start = s1_timing::Cycles();
+@@ -123,0 +126 @@ void EngineTransition::TakeBank(SynthEngine owner) {
++    s1_timing::paused_setup_cycles = s1_timing::Cycles() - start;
+diff --git a/beads/engine_transition.h b/beads/engine_transition.h
+index 691de70d..418eaac3 100644
+--- a/beads/engine_transition.h
++++ b/beads/engine_transition.h
+@@ -125,0 +126 @@ class EngineTransition {
++  bool codec_running() const { return codec_running_; }
+diff --git a/beads/makefile b/beads/makefile
+index 077ee244..44115209 100755
+--- a/beads/makefile
++++ b/beads/makefile
+@@ -69 +69 @@ ifeq ($(PLAITS_BLOBS),1)
+-PACKAGES      += beads/blob
++PACKAGES      += beads/blob beads/test/s1_timing
+diff --git a/beads/ui.cc b/beads/ui.cc
+index 5ddf60a9..27c86882 100644
+--- a/beads/ui.cc
++++ b/beads/ui.cc
+@@ -32,0 +33,2 @@
++#include "beads/test/s1_timing/trace.h"
++
+@@ -559,2 +561,6 @@ void Ui::UpdateLeds() {
+-  if (synth_fault_ && synth_mode_ && mode_ == MODE_NORMAL) {
+-    const bool fast_blink = (system_clock.milliseconds() % 250) < 125;
++  const bool fault = synth_fault_ && synth_mode_ && mode_ == MODE_NORMAL;
++  const bool fast_blink = fault && (system_clock.milliseconds() % 250) < 125;
++  s1_timing::FaultCue(fast_blink &&
++      options_.stage() != Options::STAGE_WAIT_RELEASE &&
++      options_.stage() != Options::STAGE_EDITING);
++  if (fault) {
